@@ -8,7 +8,9 @@ real YAML, swap in ruamel and delete miniyaml().
 import pathlib, re, sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-REQUIRED = ["schema", "id", "type", "title", "content", "tags", "status"]
+REQUIRED = ["schema", "id", "body", "type", "title", "content", "tags", "status"]
+BODIES = ['ietf', 'nist', 'w3c', 'iso', 'oasis', 'c2pa', 'openssf', 'google', 'academic', 'vendor', 'community', 'regulator', 'other']
+VERDICTS = {"useful", "marginal", "not-useful", "unassessed"}
 STATUS = {"stub", "queued", "fetched", "reading", "read", "summarized", "distilled"}
 TYPES = {"rfc", "draft", "spec", "paper", "book", "article", "repo", "dataset",
          "consortium", "hierarchy", "spreadsheet", "web", "note", "ietf", "url", "md"}
@@ -45,11 +47,16 @@ def miniyaml(text):
 
 def main():
     errs, warns, n = [], [], 0
-    for rec in sorted((ROOT / "records").glob("*/record.yaml")):
+    for rec in sorted((ROOT / "records").glob("*/*/record.yaml")):
         n += 1
         rid = rec.parent.name
+        body_dir = rec.parent.parent.name
         d = miniyaml(rec.read_text())
-        where = f"records/{rid}"
+        where = f"records/{body_dir}/{rid}"
+        if body_dir not in BODIES:
+            errs.append(f"{where}: '{body_dir}' is not a known body directory {BODIES}")
+        if d.get("body") and d["body"] != body_dir:
+            errs.append(f"{where}: body '{d['body']}' does not match its directory '{body_dir}'")
         for k in REQUIRED:
             if k not in d:
                 errs.append(f"{where}: missing required field '{k}'")
@@ -68,6 +75,14 @@ def main():
                 errs.append(f"{where}: content.local must be false — we do not commit third-party files")
             if st in {"read", "summarized", "distilled"} and not c.get("sha256"):
                 warns.append(f"{where}: status={st} but no content digest")
+        u = d.get("usefulness", {})
+        if isinstance(u, dict) and u:
+            vd = u.get("verdict")
+            if vd and vd not in VERDICTS:
+                errs.append(f"{where}: usefulness.verdict '{vd}' not in {sorted(VERDICTS)}")
+            if vd in {"not-useful", "marginal"} and not u.get("reason"):
+                errs.append(f"{where}: usefulness.verdict={vd} requires a reason — "
+                            f"an unexplained negative verdict gets re-litigated")
         rel = d.get("relations", {})
         if isinstance(rel, dict):
             for k in rel:
@@ -88,7 +103,7 @@ def main():
             errs.append(f"{where}: distilled.md needs YAML front matter")
         if st == "distilled" and not dist.exists():
             errs.append(f"{where}: status=distilled requires distilled.md (the compacted form)")
-        for f in rec.parent.iterdir():
+        for f in rec.parent.rglob("*"):
             if f.suffix.lower() in {".pdf", ".xlsx", ".epub", ".docx", ".zip"}:
                 errs.append(f"{where}: third-party file committed ({f.name}) — record the digest, not the bytes")
 

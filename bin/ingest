@@ -119,6 +119,7 @@ def main():
     ap.add_argument("type", nargs="?", help=f"one of: {', '.join(known_types())}")
     ap.add_argument("source", nargs="?", help="URL, path, RFC number, or identifier")
     ap.add_argument("--id"); ap.add_argument("--title")
+    ap.add_argument("--body", help="issuing organisation: " + ", ".join(['ietf', 'nist', 'w3c', 'iso', 'oasis', 'c2pa', 'openssf', 'google', 'academic', 'vendor', 'community', 'regulator', 'other']))
     ap.add_argument("--topic", help="topic id that owns this record")
     ap.add_argument("--bears-on", default="", help="comma-separated DEC-*/R-* ids")
     ap.add_argument("--fetch", action="store_true", help="retrieve + hash (network)")
@@ -143,9 +144,14 @@ def main():
     else:
         meta = {**meta, "url": a.source, "id": meta.get("id") or slug(a.source)}
     rid = meta["id"]
-    d = RECORDS / rid
-    if d.exists():
-        die(f"record already exists: records/{rid}/  (ids are stable; never reused)")
+    body = a.body or meta.get("body") or ("ietf" if a.type in ("rfc", "draft", "ietf") else "other")
+    if body not in ['ietf', 'nist', 'w3c', 'iso', 'oasis', 'c2pa', 'openssf', 'google', 'academic', 'vendor', 'community', 'regulator', 'other']:
+        die(f"unknown body '{body}'")
+    existing = list(RECORDS.glob(f"*/{rid}/record.yaml"))
+    if existing:
+        die(f"record already exists: {existing[0].parent.relative_to(ROOT)}/  "
+            f"(ids are stable and never reused; a new VERSION folds into that record)")
+    d = RECORDS / body / rid
 
     if a.fetch and meta.get("url", "").startswith("http"):
         try:
@@ -160,7 +166,7 @@ def main():
     ident_yaml = "\n".join(f"  {k}: {v}" for k, v in ident.items())
     bears = [x.strip() for x in a.bears_on.split(",") if x.strip()]
 
-    body = (tmpl
+    rendered = (tmpl
             .replace("{{id}}", rid)
             .replace("{{type}}", meta.get("type", a.type))
             .replace("{{title}}", meta.get("title") or f"TODO — title for {rid}")
@@ -171,12 +177,12 @@ def main():
             .replace("{{media_type}}", meta.get("media_type", ""))
             .replace("{{pages}}", str(meta.get("pages", "")))
             .replace("{{commit}}", meta.get("commit", ""))
-            .replace("{{topic}}", a.topic or "")
+            .replace("{{topic}}", a.topic or "").replace("{{body}}", body)
             .replace("{{bears_on}}", "\n".join(f"  - {b}" for b in bears) or "  []")
             .replace("{{status}}", "stub" if a.stub else ("fetched" if meta.get("sha256") else "queued")))
 
     d.mkdir(parents=True)
-    (d / "record.yaml").write_text(body)
+    (d / "record.yaml").write_text(rendered)
     tmpl_sum = (ROOT / "schema" / "summary.template.md").read_text()
     ident_primary = next((f"{k}: {v}" for k, v in ident.items() if k != "url"), meta.get("url", ""))
     (d / "summary.md").write_text(
@@ -187,7 +193,7 @@ def main():
                 .replace("{{url}}", meta.get("url", a.source))
                 .replace("{{sha256}}", meta.get("sha256", "not fetched"))
                 .replace("{{today}}", TODAY))
-    print(f"created records/{rid}/  (type={meta.get('type', a.type)})")
+    print(f"created records/{body}/{rid}/  (type={meta.get('type', a.type)})")
     print("  next: fill summary.md, then bin/validate")
 
 

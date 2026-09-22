@@ -1,5 +1,5 @@
-schema: "library-record-schema/v2"
-version: "0.2.0"
+schema: "library-record-schema/v3"
+version: "0.3.0"
 updated: "2026-09-21"
 description: Normative shape of library/records/<id>/record.yaml
 basis: >
@@ -17,10 +17,36 @@ okf_extensions:
   - implementations — open source and commercial, for build-on-it decisions
   - status/confidence review workflow
 
-required: [schema, id, type, title, content, tags, status]
+storage:
+  path: "records/<body>/<id>/"
+  note: >
+    Hierarchical by ISSUING BODY. Standards bodies are unique, durable
+    creators, so they are the natural top-level organisation — records/ietf/,
+    records/nist/, records/w3c/. `body` MUST be a value from
+    schema/tags.yaml:body, or `other`. Ids stay globally unique; the body
+    directory is organisation, not namespace.
+  versions: >
+    ONE record per document LINE, tracking the CURRENT version. Superseded
+    versions go in `versions/<version>/` inside the same record — not as
+    sibling records. Per-version records explode the library and we are
+    largely interested in the latest. An RFC that OBSOLETES another is a
+    different line and gets its own record, linked by `supersedes`.
+
+required: [schema, id, body, type, title, content, tags, status]
 
 fields:
   id:          {type: string, pattern: "^[a-z0-9][a-z0-9-]*$", note: "stable; never reused"}
+
+  body:
+    type: enum
+    values: [ietf, nist, w3c, iso, oasis, c2pa, openssf, google, academic,
+             vendor, community, regulator, other]
+    note: "issuing organisation; also the storage directory"
+
+  version:
+    type: string
+    required: false
+    note: "the version this record currently tracks, e.g. '2.4', '-18', '1.1'"
 
   # WHAT IT IS
   type:        {type: enum, values: [rfc, draft, spec, paper, book, article, repo,
@@ -89,6 +115,18 @@ fields:
       commercial: {type: list, note: "name + url"}
       searched: {type: string, note: "YYYY-MM-DD the search was run; blank = not searched"}
 
+  usefulness:
+    type: map
+    required: false
+    note: >
+      An explicit verdict, including a NEGATIVE one. A reference judged not
+      useful is recorded as such, never silently dropped — otherwise the same
+      document is re-evaluated every few weeks and the judgement is lost.
+    keys:
+      verdict: {type: enum, values: [useful, marginal, not-useful, unassessed]}
+      reason: {type: string, note: "one line; required when verdict is not-useful or marginal"}
+      assessed: {type: string, note: "YYYY-MM-DD"}
+
   tags:       {type: list, of: string, note: "free tags; see schema/tags.yaml for the controlled set"}
   topic:      {type: string, required: false}
   status:     {type: enum, values: [stub, queued, fetched, reading, read, summarized, distilled]}
@@ -108,6 +146,9 @@ companions:
       OPTIONAL and SECONDARY. A concise, compacted rendering suitable for
       requirements extraction — typically for long PDFs, to make them
       agent-friendly. Never a substitute for summary.md.
+  versions/:
+    required: false
+    note: "versions/<version>/ — superseded versions of this same document line"
   requirements/:
     required: false
     note: "YAML, one file per extracted requirement set. Derived from distilled.md."
