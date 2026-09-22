@@ -3,7 +3,7 @@
 
 # Records
 
-9 records across 3 bodies.
+12 records across 4 bodies.
 
 
 ## community
@@ -23,6 +23,14 @@
 | [`rfc-9052`](../records/ietf/rfc-9052/) | CBOR Object Signing and Encryption (COSE): Structures and  | rfc | — | queued | — | — |
 | [`rfc-9804`](../records/ietf/rfc-9804/) | Simple Public Key Infrastructure (SPKI) S-Expressions | rfc | — | queued | — | — |
 | [`rfc-9943`](../records/ietf/rfc-9943/) | An Architecture for Trustworthy and Transparent Digital Su | rfc | — | queued | — | — |
+
+## nist
+
+| id | title | type | maturity | status | useful | versions |
+|---|---|---|---|---|---|---|
+| [`fips-186-4`](../records/nist/fips-186-4/) | Digital Signature Standard (DSS), FIPS 186-4 | spec | historic | stub | — | — |
+| [`fips-186-5`](../records/nist/fips-186-5/) | Digital Signature Standard (DSS) | spec | standard | summarized | useful | — |
+| [`sp-800-186`](../records/nist/sp-800-186/) | Recommendations for Discrete Logarithm-based Cryptography: | spec | recommendation | stub | — | — |
 
 ## w3c
 

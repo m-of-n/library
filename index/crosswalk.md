@@ -9,8 +9,18 @@ write `supersedes` on one record and `superseded_by` appears on the other.
 `cites` is what a document itself references (fact). Everything else is
 our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 
-0 of 9 records have at least one edge.
+3 of 12 records have at least one edge.
 
+
+### `fips-186-4`
+- **superseded_by** → `fips-186-5`
+
+### `fips-186-5`
+- **see_also** → `sp-800-186`
+- **supersedes** → `fips-186-4`
+
+### `sp-800-186`
+- **see_also** → `fips-186-5`
 
 ## Orphans
 

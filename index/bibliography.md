@@ -3,7 +3,7 @@
 
 # Bibliography
 
-9 records.
+12 records.
 
 
 ## community
@@ -27,6 +27,15 @@
   `rfc-9804` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9804.html)
 - **An Architecture for Trustworthy and Transparent Digital Supply Chains** — RFC 9943  
   `rfc-9943` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9943.html)
+
+## nist
+
+- **Digital Signature Standard (DSS), FIPS 186-4**  
+  `fips-186-4` · spec · historic · [source](https://csrc.nist.gov/pubs/fips/186-4/final)
+- **Digital Signature Standard (DSS)** — 2023-02-03. 10.6028/NIST.FIPS.186-5  
+  `fips-186-5` · spec · standard · [source](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf)
+- **Recommendations for Discrete Logarithm-based Cryptography: Elliptic Curve Domain Parameters**  
+  `sp-800-186` · spec · recommendation · [source](https://csrc.nist.gov/pubs/sp/800/186/final)
 
 ## w3c
 

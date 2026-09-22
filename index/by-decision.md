@@ -7,6 +7,11 @@ Which records bear on which `DEC-*` / `R-*`.
 This is the query the library exists to answer.
 
 
+### (none — stub or unassessed)
+
+- [`fips-186-4`](../records/nist/fips-186-4/) — Digital Signature Standard (DSS), FIPS 186-4
+- [`sp-800-186`](../records/nist/sp-800-186/) — Recommendations for Discrete Logarithm-based Cryptography: Elliptic Cu
+
 ### DEC-002
 
 - [`rfc-8949`](../records/ietf/rfc-8949/) — Concise Binary Object Representation (CBOR)
@@ -24,6 +29,10 @@ This is the query the library exists to answer.
 - [`draft-mih-scitt-agent-action-capsule-02`](../records/ietf/draft-mih-scitt-agent-action-capsule-02/) — An Agent Action Capsule Profile for SCITT
 - [`rfc-9943`](../records/ietf/rfc-9943/) — An Architecture for Trustworthy and Transparent Digital Supply Chains
 - [`w3-org-pics`](../records/w3c/w3-org-pics/) — W3C Platform for Internet Content Selection (PICS)
+
+### R-M-02
+
+- [`fips-186-5`](../records/nist/fips-186-5/) — Digital Signature Standard (DSS)
 
 ### R-M-05
 
@@ -45,4 +54,5 @@ This is the query the library exists to answer.
 
 ### R-O-05
 
+- [`fips-186-5`](../records/nist/fips-186-5/) — Digital Signature Standard (DSS)
 - [`secure-systems-lab-dsse`](../records/community/secure-systems-lab-dsse/) — Dead Simple Signing Envelope (DSSE)
