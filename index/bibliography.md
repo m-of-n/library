@@ -16,7 +16,8 @@
 ## ietf
 
 - **The JSON format for vCon - Conversation Data Container** — 2026-09  
-  `draft-ietf-vcon-vcon-core-04` · draft · draft · [source](https://www.ietf.org/archive/id/draft-ietf-vcon-vcon-core-04.txt)
+  `draft-ietf-vcon-vcon-core-04` · draft · **distilled** · [source](https://www.ietf.org/archive/id/draft-ietf-vcon-vcon-core-04.txt)  
+  _An independently-designed signed container with must-understand extension semantics and a supersession model - the best available test of whether our statement form can express something we did not design._
 - **An Agent Action Capsule Profile for SCITT**  
   `draft-mih-scitt-agent-action-capsule-02` · draft · [source](https://datatracker.ietf.org/doc/draft-mih-scitt-agent-action-capsule-02/)
 - **IETF vCon Working Group**  
@@ -66,7 +67,8 @@
 - **Digital Signature Standard (DSS), FIPS 186-4**  
   `fips-186-4` · spec · historic · [source](https://csrc.nist.gov/pubs/fips/186-4/final)
 - **Digital Signature Standard (DSS)** — 2023-02-03. 10.6028/NIST.FIPS.186-5  
-  `fips-186-5` · spec · standard · [source](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf)
+  `fips-186-5` · spec · standard · **summarized** · [source](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf)  
+  _Defines the signature schemes a key-centric model will actually use; supplies publisher test vectors for PROC-0002 stage 8._
 - **Recommendations for Discrete Logarithm-based Cryptography: Elliptic Curve Domain Parameters**  
   `sp-800-186` · spec · recommendation · [source](https://csrc.nist.gov/pubs/sp/800/186/final)
 

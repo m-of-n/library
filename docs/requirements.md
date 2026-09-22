@@ -81,6 +81,34 @@ Rules:
 - **`reviewed_by` empty means unusable.** An unreviewed extraction may be read,
   but nothing may be built on it.
 
+## 3b. External reference — a requirement must be citable
+
+**Every extracted requirement gets an identifier that resolves to a specific
+statement in a specific version of a specific document.**
+
+```
+draft-ietf-vcon-vcon-core-04#R-0004
+└── record id ──────────────┘ └seq┘
+```
+
+Resolving it yields:
+
+| | |
+|---|---|
+| `locator` | `§4.1.4` — where in the source |
+| `source_version` | `-04` — which revision |
+| `source_digest` | the bytes we read |
+| `verb` | MUST / MUST NOT / … |
+| `text` | verbatim |
+
+That is what makes a requirement **qualified**: another document can cite
+`draft-ietf-vcon-vcon-core-04#R-0004` and a reader can get back to the exact
+sentence, in the exact revision, that we read. A requirement without all five
+is an assertion about a document, not a reference into one.
+
+**Sequence numbers are stable and never reused.** A withdrawn requirement keeps
+its id and is marked withdrawn — renumbering silently retargets every citation.
+
 ## 4. Why ids are namespaced by record
 
 `rfc-9943-R-012` carries its provenance in its name. A bare `R-012` collides

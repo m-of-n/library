@@ -52,7 +52,15 @@ def parse(text):
                 continue
             if ":" in item and not item.startswith(("http", "\"", "'")):
                 k, _, v = item.partition(":")
-                cur.append({k.strip(): _scalar(v)})
+                d = {k.strip(): _scalar(v)}
+                cur.append(d)
+                # A sequence item that is a map: its remaining keys sit at the
+                # indent of this first key, so push the dict so they attach to
+                # it rather than being dropped. Without this, every list of
+                # multi-key maps silently collapses to its first key.
+                stack.append((indent + 2, d))
+                if not v:
+                    pending_key = (indent + 2, d, k.strip())
             else:
                 cur.append(_scalar(item))
         elif ":" in line:

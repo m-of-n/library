@@ -76,11 +76,19 @@ def main():
                     errs.append(f"{where}: summary.md needs YAML front matter (OKF alignment)")
                 if "_TODO" in body or "_Two to five sentences" in body:
                     errs.append(f"{where}: status={st} but summary.md is still a template")
-        dist = rec.parent / "distilled.md"
-        if dist.exists() and not dist.read_text().startswith("---"):
-            errs.append(f"{where}: distilled.md needs YAML front matter")
-        if st == "distilled" and not dist.exists():
-            errs.append(f"{where}: status=distilled requires distilled.md (the compacted form)")
+        # Distillation is progressive: a SET of artifacts under distilled/,
+        # not one file. `distilled` means at least one artifact exists.
+        dd = rec.parent / "distilled"
+        if st == "distilled":
+            if not dd.is_dir() or not any(dd.rglob("*")):
+                errs.append(f"{where}: status=distilled requires at least one artifact in distilled/")
+            elif not (dd / "README.md").exists():
+                errs.append(f"{where}: distilled/ needs a README.md indexing its artifacts and their coverage")
+        for md in dd.glob("*.md") if dd.is_dir() else []:
+            if not md.read_text().startswith("---"):
+                errs.append(f"{where}: distilled/{md.name} needs YAML front matter")
+        if (rec.parent / "distilled.md").exists():
+            errs.append(f"{where}: distilled.md is superseded by distilled/ (schema v5)")
         for f in rec.parent.rglob("*"):
             if f.suffix.lower() in {".pdf", ".xlsx", ".epub", ".docx", ".zip"}:
                 errs.append(f"{where}: third-party file committed ({f.name}) — record the digest, not the bytes")
