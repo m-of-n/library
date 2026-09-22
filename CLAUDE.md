@@ -36,14 +36,26 @@ query.
 Every record names what it `bears_on`. A reference that informs no decision is
 one we did not need yet.
 
+## Skills — open this repo as the project
+
+Claude Code loads skills from the **project root only**, never transitively
+through a submodule. Opening `mofn/` does **not** load these.
+
+**Working on records? Open `library/` as the project.**
+
+`.claude/skills/` — `ingest-reference`, `summarize`, `distill`. They carry the
+judgement the tools do not.
+
 ## Before any PR
 
 ```sh
-bin/validate && bin/export
+bin/validate && bin/export && bin/reindex
 ```
 
-Commit the regenerated `exports/`. Procedure and judgment live in the m-of-n
-skills `ingest-reference` and `distill`.
+Commit the regenerated `exports/` **and `index/`**. Ingestion makes every
+derived view stale — records, folded versions, crosswalk, bibliography,
+frontier, by-decision. The human-visible bibliography silently rotting is the
+normal failure here, which is why CI gates it.
 
 **Shelfmark:** no merger of record data. Convergence of *requirements* first,
 then *schema*. Backlog T-023.
