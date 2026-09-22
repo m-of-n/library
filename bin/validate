@@ -9,7 +9,7 @@ import pathlib, re, sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 REQUIRED = ["schema", "id", "type", "title", "content", "tags", "status"]
-STATUS = {"queued", "fetched", "reading", "read", "distilled"}
+STATUS = {"stub", "queued", "fetched", "reading", "read", "summarized", "distilled"}
 TYPES = {"rfc", "draft", "spec", "paper", "book", "article", "repo", "dataset",
          "consortium", "hierarchy", "spreadsheet", "web", "note", "ietf", "url", "md"}
 REL = {"supersedes", "superseded_by", "updates", "updated_by", "cited_by",
@@ -66,19 +66,28 @@ def main():
         if isinstance(c, dict):
             if str(c.get("local", "false")).lower() == "true":
                 errs.append(f"{where}: content.local must be false — we do not commit third-party files")
-            if st in {"read", "distilled"} and not c.get("sha256"):
+            if st in {"read", "summarized", "distilled"} and not c.get("sha256"):
                 warns.append(f"{where}: status={st} but no content digest")
         rel = d.get("relations", {})
         if isinstance(rel, dict):
             for k in rel:
                 if k not in REL:
                     errs.append(f"{where}: relation '{k}' is not a typed relation {sorted(REL)}")
+        summ = rec.parent / "summary.md"
+        if st in {"read", "summarized", "distilled"}:
+            if not summ.exists():
+                errs.append(f"{where}: status={st} requires summary.md")
+            else:
+                body = summ.read_text()
+                if not body.startswith("---"):
+                    errs.append(f"{where}: summary.md needs YAML front matter (OKF alignment)")
+                if "_TODO" in body or "_Two to five sentences" in body:
+                    errs.append(f"{where}: status={st} but summary.md is still a template")
         dist = rec.parent / "distilled.md"
-        if st == "distilled":
-            if not dist.exists():
-                errs.append(f"{where}: status=distilled but no distilled.md")
-            elif "TODO" in dist.read_text():
-                errs.append(f"{where}: status=distilled but distilled.md still has TODOs")
+        if dist.exists() and not dist.read_text().startswith("---"):
+            errs.append(f"{where}: distilled.md needs YAML front matter")
+        if st == "distilled" and not dist.exists():
+            errs.append(f"{where}: status=distilled requires distilled.md (the compacted form)")
         for f in rec.parent.iterdir():
             if f.suffix.lower() in {".pdf", ".xlsx", ".epub", ".docx", ".zip"}:
                 errs.append(f"{where}: third-party file committed ({f.name}) — record the digest, not the bytes")

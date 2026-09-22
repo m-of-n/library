@@ -29,7 +29,7 @@ def die(msg):
 
 
 def known_types():
-    return sorted(p.stem for p in ADAPTERS.glob("*.yaml"))
+    return sorted(p.stem for p in ADAPTERS.glob("*.yaml") if not p.stem.startswith("_"))
 
 
 # ---------------------------------------------------------------- enrichers
@@ -122,6 +122,7 @@ def main():
     ap.add_argument("--topic", help="topic id that owns this record")
     ap.add_argument("--bears-on", default="", help="comma-separated DEC-*/R-* ids")
     ap.add_argument("--fetch", action="store_true", help="retrieve + hash (network)")
+    ap.add_argument("--stub", action="store_true", help="keep-for-later: no bears_on required")
     ap.add_argument("--list", action="store_true")
     a = ap.parse_args()
 
@@ -172,18 +173,22 @@ def main():
             .replace("{{commit}}", meta.get("commit", ""))
             .replace("{{topic}}", a.topic or "")
             .replace("{{bears_on}}", "\n".join(f"  - {b}" for b in bears) or "  []")
-            .replace("{{status}}", "fetched" if meta.get("sha256") else "queued"))
+            .replace("{{status}}", "stub" if a.stub else ("fetched" if meta.get("sha256") else "queued")))
 
     d.mkdir(parents=True)
     (d / "record.yaml").write_text(body)
-    (d / "distilled.md").write_text(
-        f"# {meta.get('title') or rid}\n\n"
-        f"> Status: **stub**. Required before `status: distilled`.\n\n"
-        f"## What it says\n\n_TODO — the argument, not a table of contents._\n\n"
-        f"## Why it matters here\n\n_TODO — name the DEC-* or R-* it bears on._\n\n"
-        f"## What it does not settle\n\n_TODO — the honest limits._\n")
+    tmpl_sum = (ROOT / "schema" / "summary.template.md").read_text()
+    ident_primary = next((f"{k}: {v}" for k, v in ident.items() if k != "url"), meta.get("url", ""))
+    (d / "summary.md").write_text(
+        tmpl_sum.replace("{{id}}", rid)
+                .replace("{{title}}", meta.get("title") or rid)
+                .replace("{{type}}", meta.get("type", a.type))
+                .replace("{{primary_id}}", ident_primary)
+                .replace("{{url}}", meta.get("url", a.source))
+                .replace("{{sha256}}", meta.get("sha256", "not fetched"))
+                .replace("{{today}}", TODAY))
     print(f"created records/{rid}/  (type={meta.get('type', a.type)})")
-    print("  next: fill distilled.md, then bin/validate")
+    print("  next: fill summary.md, then bin/validate")
 
 
 if __name__ == "__main__":

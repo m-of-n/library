@@ -1,57 +1,119 @@
-schema: "library-record-schema/v1"
-version: "0.1.0"
+schema: "library-record-schema/v2"
+version: "0.2.0"
+updated: "2026-09-21"
 description: Normative shape of library/records/<id>/record.yaml
+basis: >
+  Envelope aligns with Google Cloud Open Knowledge Format (OKF) v0.1 — a
+  directory of Markdown files with YAML front matter, readable by humans and
+  agents. OKF requires only `type`; we extend it (see okf_extensions below).
+  `maturity` follows RFC 2026 maturity levels. Interchange is CSL-JSON.
 
-required: [id, type, title, content, tags, status]
+okf_extensions:
+  - typed cross-references (OKF has flat tags only)
+  - content digest and retrieval date — provenance of the source document
+  - bears_on — linkage to an open decision
+  - bibliographic fields — authors, identifiers, DOI/RFC/ISBN
+  - maturity — standing of the document, not just its kind
+  - implementations — open source and commercial, for build-on-it decisions
+  - status/confidence review workflow
+
+required: [schema, id, type, title, content, tags, status]
 
 fields:
   id:          {type: string, pattern: "^[a-z0-9][a-z0-9-]*$", note: "stable; never reused"}
-  type:        {type: enum, values: [rfc, draft, spec, paper, book, article, repo, dataset, consortium, hierarchy, spreadsheet, web, note]}
+
+  # WHAT IT IS
+  type:        {type: enum, values: [rfc, draft, spec, paper, book, article, repo,
+                                     dataset, consortium, hierarchy, spreadsheet, web, note]}
+  # ITS STANDING — RFC 2026 maturity levels, extended for non-IETF sources
+  maturity:
+    type: enum
+    required: false
+    values: [standard, best-practice, informational, experimental, historic,
+             draft, recommendation, white-paper, implementation, unofficial]
+    note: >
+      standard = ratified (RFC Standards Track, ISO, W3C REC).
+      best-practice = IETF BCP, NIST SP, CIS-style guidance.
+      recommendation = W3C REC-track or vendor guidance.
+      Do not guess: leave unset rather than assert standing you did not check.
+
   title:       {type: string}
   short_title: {type: string, required: false}
   authors:     {type: list, of: string, required: false}
-  date:        {type: string, note: "YYYY or YYYY-MM or YYYY-MM-DD"}
+  date:        {type: string, note: "YYYY | YYYY-MM | YYYY-MM-DD"}
   publisher:   {type: string, required: false}
 
-  identifiers:
-    type: map
-    note: "any of: rfc, draft, doi, isbn, url, urn, arxiv, w3c, iso, git"
+  identifiers: {type: map, note: "rfc, bcp, draft, doi, isbn, urn, arxiv, w3c, iso, nist, git, url"}
 
   content:
     type: map
     required_keys: [url, retrieved]
     keys:
-      url:       {type: string}
-      sha256:    {type: string, required: false, note: "digest of retrieved bytes; blank if not fetched"}
-      retrieved: {type: string, note: "YYYY-MM-DD"}
-      local:     {type: bool, default: false, note: "MUST stay false — we do not commit third-party files"}
+      url: {type: string}
+      sha256: {type: string, required: false, note: "digest of retrieved bytes"}
+      retrieved: {type: string}
+      local: {type: bool, default: false, note: "MUST stay false"}
       media_type: {type: string, required: false}
-      pages:     {type: int, required: false}
+      pages: {type: int, required: false}
 
   relations:
     type: map
-    note: "TYPED cross-references. Values are record ids, optionally <library-id>:<record-id>."
-    keys:
-      supersedes:         {type: list}
-      superseded_by:      {type: list}
-      updates:            {type: list}
-      updated_by:         {type: list}
-      cited_by:           {type: list, note: "our own documents that cite this"}
-      see_also:           {type: list}
-      implements_concept: {type: list, note: "topic ids"}
-      contradicts:        {type: list}
-      part_of:            {type: list, note: "parent hierarchy or consortium record"}
+    note: "TYPED cross-references. Values are record ids, or <library-id>:<record-id>."
+    keys: {supersedes: {}, superseded_by: {}, updates: {}, updated_by: {},
+           cited_by: {}, see_also: {}, implements_concept: {}, contradicts: {},
+           part_of: {note: "parent consortium or hierarchy record"}}
 
   bears_on:
     type: list
-    note: "ARCH-0001 decision or requirement ids this record informs, e.g. DEC-002, R-M-12"
+    required: false
+    note: >
+      ARCH-0001 DEC-*/R-* ids this record informs. MAY be empty for a stub —
+      a reference kept because it may matter later. Empty bears_on plus
+      status: stub is a legitimate, cheap record. Do not invent relevance.
 
-  tags:       {type: list, of: string}
-  status:     {type: enum, values: [queued, fetched, reading, read, distilled]}
+  applicability:
+    type: map
+    required: false
+    note: "why this matters, scored per axis; feeds review triage"
+    keys:
+      security: {type: enum, values: [core, adjacent, none]}
+      cryptography: {type: enum, values: [core, adjacent, none]}
+      this_project: {type: enum, values: [core, adjacent, none, unknown]}
+
+  implementations:
+    type: map
+    required: false
+    note: "what exists that we could build on — surfaced to humans in summary.md"
+    keys:
+      open_source: {type: list, note: "name + url + license"}
+      commercial: {type: list, note: "name + url"}
+      searched: {type: string, note: "YYYY-MM-DD the search was run; blank = not searched"}
+
+  tags:       {type: list, of: string, note: "free tags; see schema/tags.yaml for the controlled set"}
+  topic:      {type: string, required: false}
+  status:     {type: enum, values: [stub, queued, fetched, reading, read, summarized, distilled]}
   confidence: {type: enum, values: [low, medium, high], required: false}
   owner:      {type: string, required: false}
 
 companions:
-  distilled.md: {required_at_status: distilled, note: "our summary: what it says, why it matters here"}
-  quotes.md:    {required: false, note: "verbatim excerpts WITH locators, for citation"}
-  artifacts/:   {required: false, note: "derived: extracted grammars, generated code, diagrams, vectors"}
+  summary.md:
+    required_at_status: [read, summarized, distilled]
+    note: >
+      PRIMARY human- and AI-facing document. Bibliographic header, overview,
+      applicability, artifact inventory, implementations. This is what a human
+      reviews. Always written first.
+  distilled.md:
+    required: false
+    note: >
+      OPTIONAL and SECONDARY. A concise, compacted rendering suitable for
+      requirements extraction — typically for long PDFs, to make them
+      agent-friendly. Never a substitute for summary.md.
+  requirements/:
+    required: false
+    note: "YAML, one file per extracted requirement set. Derived from distilled.md."
+  quotes.md:  {required: false, note: "verbatim excerpts WITH locators"}
+  artifacts/: {required: false, note: "derived: grammars, generated code, diagrams, vectors"}
+
+markdown_rule: >
+  Every .md file in a record directory carries YAML front matter (OKF
+  alignment, library#1 item 11): schema, id, record, type, updated.
