@@ -4,21 +4,23 @@ id: scope
 title: "Ingestion scope — what belongs in this library"
 type: policy
 status: draft
-version: "0.1.0"
+version: "0.2.0"
 updated: "2026-09-22"
 needs_review: true
 reviewed: false
 backlog: L-018
-source: "library#1 item 10"
+source: "library#1 item 10; sponsor review of library#4"
 ---
 
 # Ingestion scope
 
-**Status: draft. Open for review.** Decisions marked **[?]** need the sponsor.
+**Status: draft, revision 2.** Sponsor review answered the four open questions;
+they are now rules. What remains open is marked **[?]**.
 
-The library fails in one of two ways: too narrow and it misses the evidence a
-decision needed; too broad and nobody reads it, which is the same as it being
-empty. This document draws the line.
+The library is **for collecting as well as deciding.** Breadth is allowed. What
+is not allowed is silent loss: a reference judged unhelpful is *recorded as
+unhelpful*, never dropped, or the same document gets re-evaluated every few
+weeks and the judgement evaporates.
 
 ---
 
@@ -38,19 +40,31 @@ empty. This document draws the line.
 | Registries and datasets | `dataset` | IANA COSE Header Parameters |
 | Regulation | `spec` | EU CRA, EU AI Act Art. 50 |
 
-## 2. Out of scope
+**Cryptographic standards are in scope and summarised, not stubbed.** We
+implement cryptography; NIST is core. FIPS 186-5, 180-4, 202 and SP 800-57 are
+first-class records even though ARCH-0001 NG3 defers the algorithm suite and
+they bear on no open DEC. *Do not apply the "bears on a decision" test
+literally* — it is a prompt for judgement, not a gate.
 
-- **News coverage and blog posts**, unless the post *is* the primary source for
-  a claim we make — then `role: evidence`, and say why in `summary.md`.
+**Paywalled work is recorded.** Digest the abstract or landing page, set the
+locator, `status: stub`. We may get access later, and a record we cannot read
+today is still a record we can find tomorrow. We never store bytes we may not
+redistribute.
+
+## 2. Out of scope — a short list, applied with judgement
+
 - **Marketing material.** A vendor architecture paper is in; a product page is
   an `implementations` entry, not a record.
-- **Secondary summaries of primary sources we already hold.** If we have RFC
-  9943, an explainer about RFC 9943 adds nothing unless it *disagrees* — in
-  which case ingest it and set `contradicts`.
-- **Anything without a stable locator.** If it cannot be cited and re-retrieved,
-  it cannot be evidence. A screenshot is not a source.
-- **Anything we cannot lawfully record.** We store digest and URL, never bytes —
-  but do not record paywalled material in a way that implies we redistribute it.
+- **Secondary summaries of primary sources we already hold** — unless they
+  *disagree*, in which case ingest and set `contradicts`.
+- **Anything without a stable locator.** If it cannot be cited and
+  re-retrieved, it cannot be evidence. A screenshot is not a source.
+
+News and blog posts are not excluded outright: if a post is the primary source
+for a claim we make, it is a record with `role: evidence`.
+
+When in doubt, **ingest as a stub.** A stub costs one directory. A missed
+source costs a decision.
 
 ## 3. The rule that does most of the work
 
@@ -67,50 +81,79 @@ specification lives there and nowhere else. `in-toto/attestation` qualifies;
 This is the difference between a library of ~60 useful records and one of ~400
 that nobody reads.
 
-## 4. Depth and granularity
+## 4. Higher-level organisation — storage is hierarchical
 
-- **One record per document *version*.** A new version is a new record linked by
-  `supersedes`, never an edit in place. Citations must not silently retarget.
-- **Do not ingest a whole working group.** Ingest the WG as one `consortium`
-  record, then only the documents that bear on something, each with `part_of`.
+Records live at **`records/<body>/<id>/`**. Standards bodies are unique, durable
+creators, so they are the natural top-level organisation: `records/ietf/`,
+`records/nist/`, `records/w3c/`, `records/academic/`.
+
+This is *organisation*, not namespace — ids stay globally unique and an id
+cannot be reused under a different body. `bin/ingest` checks across all bodies
+before creating anything.
+
+Bodies come from `schema/tags.yaml:body`, plus `other`. A body directory is
+cheap; add one by PR when a genuinely new issuer appears.
+
+## 5. Versions fold into the record
+
+**One record per document *line*, tracking the current version.** Superseded
+versions go in **`versions/<version>/`** inside that same record, not as
+sibling records.
+
+Per-version sibling records explode the library, and we are largely interested
+in the latest. `draft-…-11` through `-18` is one record; C2PA 2.2 → 2.4 is one
+record with `version: "2.4"`.
+
+The exception is obsolescence across document lines: **an RFC that OBSOLETES
+another is a different line** and keeps its own record, linked by `supersedes`.
+RFC 9943 does not fold into the draft it came from.
+
+Other granularity rules:
+
+- **Do not ingest a whole working group.** One `consortium` record, then the
+  documents that matter, each with `part_of`.
 - **Families get a `hierarchy` parent.** Forty sibling records with no parent is
   a failure, not thoroughness.
 - **Registries are one record**, not one per entry. The IANA COSE Header
   Parameters registry is a single `dataset` record even though it bears heavily
   on R-M-12.
 
-## 5. Stubs — the cheap path
+## 6. No caps — but no silent discards
 
-A reference that is interesting but bears on no open decision is ingested as
-`status: stub` with empty `bears_on`. It costs one directory and preserves the
-find.
+There is **no record cap.** Collecting is a legitimate mode and breadth is
+allowed.
 
-**Never invent relevance to justify a record.** A stub is honest; a fabricated
-`bears_on` corrupts the one query the library exists to answer.
+What replaces the cap is an explicit verdict. Every record carries
+`usefulness`:
 
-## 6. Caps
+```yaml
+usefulness:
+  verdict: useful | marginal | not-useful | unassessed
+  reason: "one line — required for not-useful and marginal"
+  assessed: 2026-09-22
+```
 
-| | |
-|---|---|
-| D2 v1 target | **~40 records**, depth over breadth |
-| Per topic | ~6–10 records; more suggests the topic is too broad |
-| Stub ratio | if over half the library is stubs, we are collecting, not researching |
+**Recording that something is not useful is the deliverable**, not a failure.
+An unexplained negative verdict gets re-litigated; `bin/validate` requires the
+reason.
 
-The library is infrastructure for decisions, not the deliverable. PLAN-0001 §13
-names "the library could quietly become the project" as a live risk.
+Two rules survive the removal of caps:
+
+- **Never invent relevance.** A fabricated `bears_on` corrupts the one query
+  the library exists to answer. A stub is the honest alternative.
+- **A topic with 40 records has probably become two topics.** That is a signal
+  to split, not a limit to enforce.
 
 ---
 
 ## 7. Open questions **[?]**
 
-1. **Does NIST cryptographic algorithm coverage (L-011) belong here at all?**
-   FIPS 186-5, 180-4, 202 and SP 800-57 are foundational but bear on no open
-   DEC — ARCH-0001 NG3 defers the algorithm suite. They may be a `stub` cluster
-   rather than summarised records. This is the largest single scope call open.
-2. **Does regulation get summarised or stubbed?** EU CRA and the AI Act drive
-   the market analysis (D9) but touch no architectural decision.
-3. **Is the ~40 cap right**, given L-011 through L-014 each imply 10+ records?
-   Those four tasks alone could exceed it. Either the cap moves or those tasks
-   produce stubs.
-4. **Paywalled academic work** — record with digest of the abstract page, or
-   skip? Affects the trust-management gather (L-014) most.
+1. **Does `versions/` hold the full record or just the metadata?** Keeping a
+   `summary.md` per superseded version preserves what changed; keeping only
+   `record.yaml` is cheaper. Proposed: metadata plus a one-line delta note.
+2. **When does a body directory get created?** `regulator` currently collapses
+   EU and US sources. If regulation grows, `eu` and `us-federal` may be truer
+   than one bucket.
+3. **Does `usefulness` need review dating?** A verdict of `not-useful` from
+   before a decision was reopened may be stale. `assessed` records when, but
+   nothing forces re-assessment.
