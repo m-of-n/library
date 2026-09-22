@@ -9,8 +9,12 @@ write `supersedes` on one record and `superseded_by` appears on the other.
 `cites` is what a document itself references (fact). Everything else is
 our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 
-3 of 12 records have at least one edge.
+9 of 28 records have at least one edge.
 
+
+### `draft-ietf-vcon-vcon-core-04`
+- **part_of** → `ietf-vcon-wg`
+- **see_also** → `iana-cose-algorithms`, `rfc-7515`, `rfc-7516`, `rfc-8259`
 
 ### `fips-186-4`
 - **superseded_by** → `fips-186-5`
@@ -18,6 +22,21 @@ our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 ### `fips-186-5`
 - **see_also** → `sp-800-186`
 - **supersedes** → `fips-186-4`
+
+### `iana-cose-algorithms`
+- **see_also** → `draft-ietf-vcon-vcon-core-04`
+
+### `ietf-vcon-wg`
+- **has_part** → `draft-ietf-vcon-vcon-core-04`
+
+### `rfc-7515`
+- **see_also** → `draft-ietf-vcon-vcon-core-04`
+
+### `rfc-7516`
+- **see_also** → `draft-ietf-vcon-vcon-core-04`
+
+### `rfc-8259`
+- **see_also** → `draft-ietf-vcon-vcon-core-04`
 
 ### `sp-800-186`
 - **see_also** → `fips-186-5`
@@ -29,13 +48,23 @@ is a record nothing will surface.
 
 - `draft-mih-scitt-agent-action-capsule-02`
 - `in-toto-attestation-v1`
+- `rfc-1952`
 - `rfc-2693`
+- `rfc-3339`
+- `rfc-3966`
+- `rfc-4119`
+- `rfc-4122`
+- `rfc-5321`
+- `rfc-6068`
+- `rfc-8620`
 - `rfc-8949`
 - `rfc-9052`
+- `rfc-9110`
 - `rfc-9804`
 - `rfc-9943`
 - `secure-systems-lab-dsse`
 - `w3-org-pics`
+- `w3c-did-core`
 
 ## Dangling relations
 

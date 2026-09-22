@@ -10,7 +10,21 @@ This is the query the library exists to answer.
 ### (none — stub or unassessed)
 
 - [`fips-186-4`](../records/nist/fips-186-4/) — Digital Signature Standard (DSS), FIPS 186-4
+- [`ietf-vcon-wg`](../records/ietf/ietf-vcon-wg/) — IETF vCon Working Group
+- [`rfc-1952`](../records/ietf/rfc-1952/) — GZIP
+- [`rfc-3339`](../records/ietf/rfc-3339/) — Timestamps
+- [`rfc-3966`](../records/ietf/rfc-3966/) — tel URI
+- [`rfc-4119`](../records/ietf/rfc-4119/) — GEOPRIV
+- [`rfc-4122`](../records/ietf/rfc-4122/) — UUID
+- [`rfc-5321`](../records/ietf/rfc-5321/) — SMTP
+- [`rfc-6068`](../records/ietf/rfc-6068/) — mailto URI
+- [`rfc-7515`](../records/ietf/rfc-7515/) — JWS
+- [`rfc-7516`](../records/ietf/rfc-7516/) — JWE
+- [`rfc-8259`](../records/ietf/rfc-8259/) — JSON
+- [`rfc-8620`](../records/ietf/rfc-8620/) — JMAP
+- [`rfc-9110`](../records/ietf/rfc-9110/) — HTTP Semantics
 - [`sp-800-186`](../records/nist/sp-800-186/) — Recommendations for Discrete Logarithm-based Cryptography: Elliptic Cu
+- [`w3c-did-core`](../records/w3c/w3c-did-core/) — Decentralized Identifiers (DIDs) v1.0
 
 ### DEC-002
 
@@ -23,6 +37,10 @@ This is the query the library exists to answer.
 ### DEC-004
 
 - [`rfc-2693`](../records/ietf/rfc-2693/) — SPKI Certificate Theory
+
+### DEC-005
+
+- [`draft-ietf-vcon-vcon-core-04`](../records/ietf/draft-ietf-vcon-vcon-core-04/) — The JSON format for vCon - Conversation Data Container
 
 ### DEC-007
 
@@ -44,10 +62,12 @@ This is the query the library exists to answer.
 
 ### R-M-11
 
+- [`draft-ietf-vcon-vcon-core-04`](../records/ietf/draft-ietf-vcon-vcon-core-04/) — The JSON format for vCon - Conversation Data Container
 - [`in-toto-attestation-v1`](../records/community/in-toto-attestation-v1/) — in-toto Attestation Framework v1
 
 ### R-M-12
 
+- [`iana-cose-algorithms`](../records/iso/iana-cose-algorithms/) — IANA COSE Algorithms registry
 - [`rfc-8949`](../records/ietf/rfc-8949/) — Concise Binary Object Representation (CBOR)
 - [`rfc-9052`](../records/ietf/rfc-9052/) — CBOR Object Signing and Encryption (COSE): Structures and Process
 - [`rfc-9943`](../records/ietf/rfc-9943/) — An Architecture for Trustworthy and Transparent Digital Supply Chains

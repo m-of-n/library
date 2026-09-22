@@ -3,7 +3,7 @@
 
 # Bibliography
 
-12 records.
+28 records.
 
 
 ## community
@@ -15,18 +15,51 @@
 
 ## ietf
 
+- **The JSON format for vCon - Conversation Data Container** — 2026-09  
+  `draft-ietf-vcon-vcon-core-04` · draft · draft · [source](https://www.ietf.org/archive/id/draft-ietf-vcon-vcon-core-04.txt)
 - **An Agent Action Capsule Profile for SCITT**  
   `draft-mih-scitt-agent-action-capsule-02` · draft · [source](https://datatracker.ietf.org/doc/draft-mih-scitt-agent-action-capsule-02/)
+- **IETF vCon Working Group**  
+  `ietf-vcon-wg` · web · [source](https://datatracker.ietf.org/wg/vcon/about/)
+- **GZIP** — RFC 1952  
+  `rfc-1952` · rfc · [source](https://www.rfc-editor.org/rfc/rfc1952.html)
 - **SPKI Certificate Theory** — RFC 2693  
   `rfc-2693` · rfc · [source](https://www.rfc-editor.org/rfc/rfc2693.html)
+- **Timestamps** — RFC 3339  
+  `rfc-3339` · rfc · [source](https://www.rfc-editor.org/rfc/rfc3339.html)
+- **tel URI** — RFC 3966  
+  `rfc-3966` · rfc · [source](https://www.rfc-editor.org/rfc/rfc3966.html)
+- **GEOPRIV** — RFC 4119  
+  `rfc-4119` · rfc · [source](https://www.rfc-editor.org/rfc/rfc4119.html)
+- **UUID** — RFC 4122  
+  `rfc-4122` · rfc · [source](https://www.rfc-editor.org/rfc/rfc4122.html)
+- **SMTP** — RFC 5321  
+  `rfc-5321` · rfc · [source](https://www.rfc-editor.org/rfc/rfc5321.html)
+- **mailto URI** — RFC 6068  
+  `rfc-6068` · rfc · [source](https://www.rfc-editor.org/rfc/rfc6068.html)
+- **JWS** — RFC 7515  
+  `rfc-7515` · rfc · [source](https://www.rfc-editor.org/rfc/rfc7515.html)
+- **JWE** — RFC 7516  
+  `rfc-7516` · rfc · [source](https://www.rfc-editor.org/rfc/rfc7516.html)
+- **JSON** — RFC 8259  
+  `rfc-8259` · rfc · [source](https://www.rfc-editor.org/rfc/rfc8259.html)
+- **JMAP** — RFC 8620  
+  `rfc-8620` · rfc · [source](https://www.rfc-editor.org/rfc/rfc8620.html)
 - **Concise Binary Object Representation (CBOR)** — RFC 8949  
   `rfc-8949` · rfc · [source](https://www.rfc-editor.org/rfc/rfc8949.html)
 - **CBOR Object Signing and Encryption (COSE): Structures and Process** — RFC 9052  
   `rfc-9052` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9052.html)
+- **HTTP Semantics** — RFC 9110  
+  `rfc-9110` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9110.html)
 - **Simple Public Key Infrastructure (SPKI) S-Expressions** — RFC 9804  
   `rfc-9804` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9804.html)
 - **An Architecture for Trustworthy and Transparent Digital Supply Chains** — RFC 9943  
   `rfc-9943` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9943.html)
+
+## iso
+
+- **IANA COSE Algorithms registry**  
+  `iana-cose-algorithms` · dataset · [source](https://www.iana.org/assignments/cose/cose.xhtml)
 
 ## nist
 
@@ -41,3 +74,5 @@
 
 - **W3C Platform for Internet Content Selection (PICS)**  
   `w3-org-pics` · web · [source](https://www.w3.org/PICS/)
+- **Decentralized Identifiers (DIDs) v1.0**  
+  `w3c-did-core` · spec · [source](https://www.w3.org/TR/did-core/)

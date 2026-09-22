@@ -3,7 +3,7 @@
 
 # Records
 
-12 records across 4 bodies.
+28 records across 5 bodies.
 
 
 ## community
@@ -17,12 +17,32 @@
 
 | id | title | type | maturity | status | useful | versions |
 |---|---|---|---|---|---|---|
+| [`draft-ietf-vcon-vcon-core-04`](../records/ietf/draft-ietf-vcon-vcon-core-04/) | The JSON format for vCon - Conversation Data Container | draft | draft | distilled | useful | — |
 | [`draft-mih-scitt-agent-action-capsule-02`](../records/ietf/draft-mih-scitt-agent-action-capsule-02/) | An Agent Action Capsule Profile for SCITT | draft | — | queued | — | — |
+| [`ietf-vcon-wg`](../records/ietf/ietf-vcon-wg/) | IETF vCon Working Group | web | — | stub | — | — |
+| [`rfc-1952`](../records/ietf/rfc-1952/) | GZIP | rfc | — | stub | — | — |
 | [`rfc-2693`](../records/ietf/rfc-2693/) | SPKI Certificate Theory | rfc | — | queued | — | — |
+| [`rfc-3339`](../records/ietf/rfc-3339/) | Timestamps | rfc | — | stub | — | — |
+| [`rfc-3966`](../records/ietf/rfc-3966/) | tel URI | rfc | — | stub | — | — |
+| [`rfc-4119`](../records/ietf/rfc-4119/) | GEOPRIV | rfc | — | stub | — | — |
+| [`rfc-4122`](../records/ietf/rfc-4122/) | UUID | rfc | — | stub | — | — |
+| [`rfc-5321`](../records/ietf/rfc-5321/) | SMTP | rfc | — | stub | — | — |
+| [`rfc-6068`](../records/ietf/rfc-6068/) | mailto URI | rfc | — | stub | — | — |
+| [`rfc-7515`](../records/ietf/rfc-7515/) | JWS | rfc | — | stub | — | — |
+| [`rfc-7516`](../records/ietf/rfc-7516/) | JWE | rfc | — | stub | — | — |
+| [`rfc-8259`](../records/ietf/rfc-8259/) | JSON | rfc | — | stub | — | — |
+| [`rfc-8620`](../records/ietf/rfc-8620/) | JMAP | rfc | — | stub | — | — |
 | [`rfc-8949`](../records/ietf/rfc-8949/) | Concise Binary Object Representation (CBOR) | rfc | — | queued | — | — |
 | [`rfc-9052`](../records/ietf/rfc-9052/) | CBOR Object Signing and Encryption (COSE): Structures and  | rfc | — | queued | — | — |
+| [`rfc-9110`](../records/ietf/rfc-9110/) | HTTP Semantics | rfc | — | stub | — | — |
 | [`rfc-9804`](../records/ietf/rfc-9804/) | Simple Public Key Infrastructure (SPKI) S-Expressions | rfc | — | queued | — | — |
 | [`rfc-9943`](../records/ietf/rfc-9943/) | An Architecture for Trustworthy and Transparent Digital Su | rfc | — | queued | — | — |
+
+## iso
+
+| id | title | type | maturity | status | useful | versions |
+|---|---|---|---|---|---|---|
+| [`iana-cose-algorithms`](../records/iso/iana-cose-algorithms/) | IANA COSE Algorithms registry | dataset | — | stub | — | — |
 
 ## nist
 
@@ -37,3 +57,4 @@
 | id | title | type | maturity | status | useful | versions |
 |---|---|---|---|---|---|---|
 | [`w3-org-pics`](../records/w3c/w3-org-pics/) | W3C Platform for Internet Content Selection (PICS) | web | — | queued | — | — |
+| [`w3c-did-core`](../records/w3c/w3c-did-core/) | Decentralized Identifiers (DIDs) v1.0 | spec | — | stub | — | — |
