@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """reindex — regenerate every derived view of the library.
 
+Output is DETERMINISTIC: no timestamps. A generated file that embeds the
+current date changes every day, so a staleness check can never pass on a
+later day — the gate then cries wolf and gets disabled. Provenance comes
+from git log, which is what it is for.
+
 index/ is GENERATED. Never edit it; regenerate it.
 
 Produces:
@@ -14,12 +19,11 @@ Produces:
 Inverse relations are DERIVED here, never authored, so the two sides cannot
 drift. Run after any ingestion or relation edit; CI fails if stale.
 """
-import pathlib, re, sys, collections, datetime
+import pathlib, re, sys, collections
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "bin"))
 from _yaml import parse as miniyaml
 IDX = ROOT / "index"
-TODAY = datetime.date.today().isoformat()
 
 INVERSE = {"supersedes": "superseded_by", "superseded_by": "supersedes",
            "updates": "updated_by", "updated_by": "updates",
@@ -77,7 +81,7 @@ def main():
     by_body = collections.defaultdict(list)
     for rid, d in recs.items():
         by_body[d["_body"]].append((rid, d))
-    out = [BANNER, f"# Records\n\n{len(recs)} records across {len(by_body)} bodies. Regenerated {TODAY}.\n"]
+    out = [BANNER, f"# Records\n\n{len(recs)} records across {len(by_body)} bodies.\n"]
     for body in sorted(by_body):
         out.append(f"\n## {body}\n\n| id | title | type | maturity | status | useful | versions |\n|---|---|---|---|---|---|---|")
         for rid, d in sorted(by_body[body]):
@@ -151,7 +155,7 @@ def main():
     (IDX / "by-decision.md").write_text("\n".join(out) + "\n")
 
     # ---- bibliography.md
-    out = [BANNER, "# Bibliography\n", f"{len(recs)} records. Regenerated {TODAY}.\n"]
+    out = [BANNER, "# Bibliography\n", f"{len(recs)} records.\n"]
     for body in sorted(by_body):
         out.append(f"\n## {body}\n")
         for rid, d in sorted(by_body[body]):

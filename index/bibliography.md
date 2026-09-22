@@ -3,7 +3,7 @@
 
 # Bibliography
 
-9 records. Regenerated 2026-09-21.
+9 records.
 
 
 ## community

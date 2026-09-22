@@ -3,7 +3,7 @@
 
 # Records
 
-9 records across 3 bodies. Regenerated 2026-09-21.
+9 records across 3 bodies.
 
 
 ## community
