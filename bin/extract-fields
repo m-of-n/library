@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+"""extract-fields — pull field definitions out of a converted IETF text spec.
+
+    bin/extract-fields <clean.txt> <object-name> <section-prefix>
+
+Produces requirements/fields.yaml entries on stdout. It is a FIRST PASS, not an
+answer: every entry needs a human to confirm semantics and set `kind`.
+
+What it does reliably:
+  - finds each subsection under the prefix and its body
+  - reads the `*  name: "Type"` declaration IETF drafts use
+  - picks the STRONGEST normative verb anywhere in the section body, not just
+    the definition line. Four of five defects in the first manual extraction
+    were MUSTs sitting in prose - this is that lesson, mechanised.
+  - captures the verbatim sentence carrying that verb, with its locator
+
+What it cannot do: judge semantics, decide `kind: inferred`, or tell whether a
+quote's neighbours matter. Those stay human.
+"""
+import re, sys, pathlib
+
+STRENGTH = ["MUST NOT", "SHALL NOT", "MUST", "SHALL", "REQUIRED", "SHOULD NOT",
+            "SHOULD", "RECOMMENDED", "MAY", "OPTIONAL"]
+
+TYPE_MAP = {"String": "string", "String[]": "string[]", "Integer": "integer",
+            "Number": "number", "Boolean": "boolean", "Date": "string",
+            "Object": "object", "Object[]": "object[]", "Array": "array"}
+
+
+def sections(text, prefix):
+    pat = re.compile(rf'^({re.escape(prefix)}\.\d+(?:\.\d+)*)\.\s+(\S.*?)$', re.M)
+    hits = list(pat.finditer(text))
+    for i, m in enumerate(hits):
+        end = hits[i + 1].start() if i + 1 < len(hits) else len(text)
+        nxt = re.search(r'^\d+(?:\.\d+)*\.\s+\S', text[m.end():end], re.M)
+        body = text[m.end():m.end() + nxt.start()] if nxt else text[m.end():end]
+        yield m.group(1), m.group(2).strip(), body
+
+
+def strongest(body):
+    flat = re.sub(r'\s+', ' ', body)
+    for v in STRENGTH:
+        if re.search(rf'\b{v}\b', flat):
+            for s in re.split(r'(?<=[.])\s+', flat):
+                if re.search(rf'\b{v}\b', s):
+                    return v, s.strip()
+    return "none", ""
+
+
+def main():
+    if len(sys.argv) < 4:
+        sys.exit(__doc__)
+    text = pathlib.Path(sys.argv[1]).read_text()
+    obj, prefix = sys.argv[2], sys.argv[3]
+    n = 0
+    for sec, title, body in sections(text, prefix):
+        if re.search(r'Object$|Applicability|Content$', title):
+            continue
+        decl = re.search(r'^\s*\*\s+' + re.escape(title) + r':\s*"([^"]+)"', body, re.M)
+        jt = TYPE_MAP.get(decl.group(1), decl.group(1).lower()) if decl else "unknown"
+        verb, quote = strongest(body)
+        req = "true" if verb in ("MUST", "SHALL", "REQUIRED") else "false"
+        print(f'''  - object: {obj}
+    field: {title}
+    json_type: {jt}
+    cardinality: {"1" if req == "true" else "0..1"}
+    required: {req}
+    verb: {verb}
+    locator: "§{sec}"''')
+        if quote:
+            print(f'    text: "{quote.replace(chr(34), chr(39))}"')
+        print(f'''    semantics: "TODO - human"
+    kind: stated
+    testable: TODO''')
+        n += 1
+    print(f"\n# {n} fields extracted from {prefix} - ALL semantics/testable need a human",
+          file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()

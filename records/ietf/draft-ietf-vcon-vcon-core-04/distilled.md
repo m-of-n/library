@@ -8,7 +8,7 @@ source_digest: "sha256:cc2a2cb5051b860e2f29478a9ff946e3…"
 extracted: "2026-09-22"
 extracted_by: agent
 reviewed_by: ""
-coverage: "top-level vCon object (§4.1) complete; Party, Dialog, Attachment, Analysis pending"
+coverage: "complete - §4.1 vCon, §4.2 Party, §4.3 Dialog, §4.4 Attachment, §4.5 Analysis; 54 fields"
 updated: "2026-09-22"
 ---
 
@@ -107,18 +107,69 @@ lose the redaction chain, which for them is the point.
 
 ---
 
-## 3. Sub-objects — §4.2–4.5 · **NOT YET EXTRACTED**
+## 3. Sub-objects — §4.2–4.5 · extracted
 
-| object | §  | status |
+**54 fields total.** Full definitions in `requirements/fields.yaml`.
+
+| object | § | fields | notes |
+|---|---|---|---|
+| Party | 4.2 | 13 | `tel`, `sip`, `stir`, `mailto`, `did` — five competing identity forms, none required |
+| Dialog | 4.3 | 21 | `type` drives everything; see below |
+| Attachment | 4.4 | 6 | indexes into `parties` and `dialog` |
+| Analysis | 4.5 | 8 | `vendor` / `product` / `schema` — provenance of the analysis itself |
+
+### `Dialog.type` is the load-bearing field — §4.3.1
+
+Enumeration: `recording`, `recording-set`, `text`, `transfer`, `incomplete`
+(§4.3.1.1–5). **§4.3.1.6 tabulates which parameters apply to which type.**
+
+That table is the thing an implementer will get wrong: *a field being present is
+not sufficient — it must be valid **for the type**.* A schema that validates
+Dialog structurally without consulting §4.3.1.6 will accept nonsense.
+
+### Party identity — five forms, none required
+
+`tel`, `sip`, `stir`, `mailto`, `did`, plus `name`, `uuid`, `validation`. **A
+Party may carry none of them.** The container does not require a participant to
+be identifiable at all, which is a deliberate accommodation of real
+conversations and a hard problem for anything trying to attest *who was there*.
+
+## 4. Mapping to our model — can *A says B has C* express a vCon?
+
+Step 8 of library#9. **Answer: partly, and the gaps are informative.**
+
+| vCon | our model | fit |
 |---|---|---|
-| Party | 4.2 | pending |
-| Dialog — recording, text, transfer, incomplete, recording-set | 4.3 | pending |
-| Attachment | 4.4 | pending |
-| Analysis | 4.5 | pending |
-| Party_History | 4.3.13.1 | pending |
+| the container | `ArtifactStatement` subject | **poor** — a vCon is a subject, but its **speaker is absent** |
+| JWS signature | `says` | good — signature *is* the saying (P2) |
+| `parties[]` | — | **no analogue.** Parties are content, not speakers |
+| `uuid` | `ArtifactId` | good, `locator` mode (R-M-11) |
+| `dialog[]` content hashes | `ArtifactId` digest mode | good |
+| `analysis[].vendor/product` | a nested statement — *tool T says dialog D has summary S* | **good, and unexpressed in vCon** |
+| `extensions` / `critical` | must-understand, P5 | close; theirs is producer opt-in |
+| `redacted` / `amended` | `supersedes` | structurally similar, opposite retention policy |
 
-Deliberately marked pending rather than skimmed. **A partial extraction that
-says so is usable; one that pretends to be complete is not.**
+### The finding
+
+**A vCon has no speaker.** It is signed by *whoever assembled it*, and that
+signer is nowhere in the data model — not a Party, not a field. The JWS carries
+a key; the container carries no claim about whose statement it is.
+
+Under P2 that is a statement with the **A** missing. You can say *"key K says
+this vCon exists and hashes thus"* — which is what the JWS actually means — but
+you cannot say *"K asserts that these parties said these things"*, because vCon
+never distinguishes **assembled** from **asserted**.
+
+This is not a defect in vCon; it is a container format, not an attestation
+format. It is a finding about **us**: our statement form makes a distinction
+vCon does not, and `analysis[]` is where that distinction would pay. An analysis
+object records `vendor`, `product` and `schema` — everything except *who
+vouches for it*. **That is exactly an `A says B has C` shaped hole in a live
+specification**, and it is the strongest evidence so far that the form is worth
+having.
+
+### Recorded as a topic answer
+See `topics/artifact-statements.yaml`.
 
 ---
 

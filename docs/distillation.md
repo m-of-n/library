@@ -74,19 +74,36 @@ Then a human confirms `kind: inferred` is honest and sets `reviewed_by`.
 - **Verbatim is not enough; preserve contiguity.** Two true quotes joined
   assert an adjacency the source may not have. Keep them as separate fields.
 
-## 5. Record what the review found
+## 5. Use the extractor, then correct it
+
+`bin/extract-fields <clean.txt> <Object> <section-prefix>` produces a first
+pass: one entry per subsection, with the JSON type from the `*  name: "Type"`
+declaration and **the strongest normative verb found anywhere in the section
+body** — which is the dropped-MUST lesson mechanised.
+
+**It cannot judge semantics, and it will make structural mistakes.** On vCon it
+treated the five `Dialog.type` *values* as fields, because an enumerated value
+and a field definition have the same shape in an IETF draft. **A tool that reads
+structure cannot tell a value from a field.** Two legitimate fields were also
+nearly lost by a filter that dropped anything without hand-written semantics —
+absence of semantics is not evidence of not being a field.
+
+Record every correction in `extraction_notes`. The corrections are how the next
+person knows what to check.
+
+## 6. Record what the review found
 
 In the distillation itself, with the defects named. A review that found nothing
 and says nothing is indistinguishable from a review that did not run.
 
-## 6. Done when
+## 7. Done when
 
 - `reviewed_by` is set — **empty means readable but unusable**
 - Coverage stated per object
 - Verb counts recorded
 - The three checks pass and their result is written down
 
-## 7. The test of this document
+## 8. The test of this document
 
 **A second person distils a different specification from this alone.** Until
 that has happened, this is a description of one run, not a procedure.
