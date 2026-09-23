@@ -9,12 +9,34 @@ write `supersedes` on one record and `superseded_by` appears on the other.
 `cites` is what a document itself references (fact). Everything else is
 our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 
-9 of 28 records have at least one edge.
+59 of 77 records have at least one edge.
 
+
+### `draft-ietf-cbor-cddl-modules`
+- **part_of** → `ietf-cbor-wg`
+- **see_also** → `rfc-8610`
+
+### `draft-ietf-cbor-cde`
+- **part_of** → `ietf-cbor-wg`
+- **see_also** → `draft-ietf-cbor-serialization`
+
+### `draft-ietf-cbor-edn-literals`
+- **part_of** → `ietf-cbor-wg`
+
+### `draft-ietf-cbor-packed`
+- **part_of** → `ietf-cbor-wg`
+
+### `draft-ietf-cbor-serialization`
+- **part_of** → `ietf-cbor-wg`
+- **see_also** → `draft-ietf-cbor-cde`, `draft-mcnally-deterministic-cbor`
 
 ### `draft-ietf-vcon-vcon-core-04`
 - **part_of** → `ietf-vcon-wg`
 - **see_also** → `iana-cose-algorithms`, `rfc-7515`, `rfc-7516`, `rfc-8259`
+
+### `draft-mcnally-deterministic-cbor`
+- **cites** → `iana-cbor-simple-values`, `iana-cbor-tags`
+- **see_also** → `draft-ietf-cbor-serialization`, `rfc-8949`
 
 ### `fips-186-4`
 - **superseded_by** → `fips-186-5`
@@ -26,8 +48,18 @@ our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 ### `iana-cose-algorithms`
 - **see_also** → `draft-ietf-vcon-vcon-core-04`
 
+### `ietf-cbor-wg`
+- **has_part** → `draft-ietf-cbor-cddl-modules`, `draft-ietf-cbor-cde`, `draft-ietf-cbor-edn-literals`, `draft-ietf-cbor-packed`, `draft-ietf-cbor-serialization`, `rfc-7049`, `rfc-8610`, `rfc-8742`, `rfc-8746`, `rfc-8943`, `rfc-8949`, `rfc-9090`, `rfc-9164`, `rfc-9165`, `rfc-9254`, `rfc-9277`, `rfc-9581`, `rfc-9682`, `rfc-9741`, `rfc-9781`, `rfc-9997`
+
+### `ietf-cose-wg`
+- **has_part** → `rfc-8152`, `rfc-8230`, `rfc-8392`, `rfc-8747`, `rfc-8769`, `rfc-8778`, `rfc-8812`, `rfc-9021`, `rfc-9052`, `rfc-9053`, `rfc-9054`, `rfc-9338`, `rfc-9360`, `rfc-9459`, `rfc-9528`, `rfc-9529`, `rfc-9596`, `rfc-9597`, `rfc-9668`, `rfc-9679`, `rfc-9864`, `rfc-9921`, `rfc-9942`, `rfc-9964`, `rfc-9995`
+
 ### `ietf-vcon-wg`
 - **has_part** → `draft-ietf-vcon-vcon-core-04`
+
+### `rfc-7049`
+- **part_of** → `ietf-cbor-wg`
+- **superseded_by** → `rfc-8949`
 
 ### `rfc-7515`
 - **see_also** → `draft-ietf-vcon-vcon-core-04`
@@ -35,8 +67,145 @@ our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 ### `rfc-7516`
 - **see_also** → `draft-ietf-vcon-vcon-core-04`
 
+### `rfc-8152`
+- **part_of** → `ietf-cose-wg`
+- **superseded_by** → `rfc-9052`
+
+### `rfc-8230`
+- **part_of** → `ietf-cose-wg`
+
 ### `rfc-8259`
 - **see_also** → `draft-ietf-vcon-vcon-core-04`
+
+### `rfc-8392`
+- **part_of** → `ietf-cose-wg`
+
+### `rfc-8610`
+- **part_of** → `ietf-cbor-wg`
+- **see_also** → `draft-ietf-cbor-cddl-modules`, `rfc-9165`, `rfc-9741`
+- **updated_by** → `rfc-9682`
+
+### `rfc-8742`
+- **part_of** → `ietf-cbor-wg`
+
+### `rfc-8746`
+- **part_of** → `ietf-cbor-wg`
+
+### `rfc-8747`
+- **part_of** → `ietf-cose-wg`
+
+### `rfc-8769`
+- **part_of** → `ietf-cose-wg`
+
+### `rfc-8778`
+- **part_of** → `ietf-cose-wg`
+
+### `rfc-8812`
+- **part_of** → `ietf-cose-wg`
+
+### `rfc-8943`
+- **part_of** → `ietf-cbor-wg`
+
+### `rfc-8949`
+- **part_of** → `ietf-cbor-wg`
+- **see_also** → `draft-mcnally-deterministic-cbor`
+- **supersedes** → `rfc-7049`
+
+### `rfc-9021`
+- **part_of** → `ietf-cose-wg`
+
+### `rfc-9052`
+- **part_of** → `ietf-cose-wg`
+- **supersedes** → `rfc-8152`
+- **updated_by** → `rfc-9338`
+
+### `rfc-9053`
+- **part_of** → `ietf-cose-wg`
+- **updated_by** → `rfc-9864`
+
+### `rfc-9054`
+- **part_of** → `ietf-cose-wg`
+
+### `rfc-9090`
+- **part_of** → `ietf-cbor-wg`
+
+### `rfc-9164`
+- **part_of** → `ietf-cbor-wg`
+
+### `rfc-9165`
+- **part_of** → `ietf-cbor-wg`
+- **see_also** → `rfc-8610`
+
+### `rfc-9254`
+- **part_of** → `ietf-cbor-wg`
+
+### `rfc-9277`
+- **part_of** → `ietf-cbor-wg`
+
+### `rfc-9338`
+- **part_of** → `ietf-cose-wg`
+- **updates** → `rfc-9052`
+
+### `rfc-9360`
+- **part_of** → `ietf-cose-wg`
+
+### `rfc-9459`
+- **part_of** → `ietf-cose-wg`
+
+### `rfc-9528`
+- **part_of** → `ietf-cose-wg`
+
+### `rfc-9529`
+- **part_of** → `ietf-cose-wg`
+
+### `rfc-9581`
+- **part_of** → `ietf-cbor-wg`
+
+### `rfc-9596`
+- **part_of** → `ietf-cose-wg`
+
+### `rfc-9597`
+- **part_of** → `ietf-cose-wg`
+
+### `rfc-9668`
+- **part_of** → `ietf-cose-wg`
+
+### `rfc-9679`
+- **part_of** → `ietf-cose-wg`
+
+### `rfc-9682`
+- **part_of** → `ietf-cbor-wg`
+- **updates** → `rfc-8610`
+
+### `rfc-9741`
+- **part_of** → `ietf-cbor-wg`
+- **see_also** → `rfc-8610`
+
+### `rfc-9781`
+- **part_of** → `ietf-cbor-wg`
+
+### `rfc-9864`
+- **part_of** → `ietf-cose-wg`
+- **updates** → `rfc-9053`
+
+### `rfc-9921`
+- **part_of** → `ietf-cose-wg`
+
+### `rfc-9942`
+- **part_of** → `ietf-cose-wg`
+- **see_also** → `rfc-9943`
+
+### `rfc-9943`
+- **see_also** → `rfc-9942`
+
+### `rfc-9964`
+- **part_of** → `ietf-cose-wg`
+
+### `rfc-9995`
+- **part_of** → `ietf-cose-wg`
+
+### `rfc-9997`
+- **part_of** → `ietf-cbor-wg`
 
 ### `sp-800-186`
 - **see_also** → `fips-186-5`
@@ -47,6 +216,8 @@ No edges in or out. Not wrong — but a record connected to nothing
 is a record nothing will surface.
 
 - `draft-mih-scitt-agent-action-capsule-02`
+- `iana-cbor-simple-values`
+- `iana-cbor-tags`
 - `in-toto-attestation-v1`
 - `rfc-1952`
 - `rfc-2693`
@@ -57,11 +228,8 @@ is a record nothing will surface.
 - `rfc-5321`
 - `rfc-6068`
 - `rfc-8620`
-- `rfc-8949`
-- `rfc-9052`
 - `rfc-9110`
 - `rfc-9804`
-- `rfc-9943`
 - `secure-systems-lab-dsse`
 - `w3-org-pics`
 - `w3c-did-core`

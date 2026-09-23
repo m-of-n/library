@@ -6,5 +6,6 @@
 Documents cited by records we hold, that we do **not** hold.
 This is the snowballing queue (Wohlin backward pass).
 
-_Empty — no `cites` recorded yet. Populated as documents are converted and their_
-_reference sections extracted._
+| cited by | target |
+|---|---|
+| `draft-mcnally-deterministic-cbor` | IANA Concise Data Definition Language (CDDL) registry <https://www.iana.org/assignments/cddl> |

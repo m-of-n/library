@@ -9,6 +9,7 @@ This is the query the library exists to answer.
 
 ### (none — stub or unassessed)
 
+- [`draft-ietf-cbor-packed`](../records/ietf/draft-ietf-cbor-packed/) — Packed CBOR
 - [`fips-186-4`](../records/nist/fips-186-4/) — Digital Signature Standard (DSS), FIPS 186-4
 - [`ietf-vcon-wg`](../records/ietf/ietf-vcon-wg/) — IETF vCon Working Group
 - [`rfc-1952`](../records/ietf/rfc-1952/) — GZIP
@@ -20,19 +21,59 @@ This is the query the library exists to answer.
 - [`rfc-6068`](../records/ietf/rfc-6068/) — mailto URI
 - [`rfc-7515`](../records/ietf/rfc-7515/) — JWS
 - [`rfc-7516`](../records/ietf/rfc-7516/) — JWE
+- [`rfc-8230`](../records/ietf/rfc-8230/) — Using RSA Algorithms with CBOR Object Signing and Encryption (COSE) Me
 - [`rfc-8259`](../records/ietf/rfc-8259/) — JSON
 - [`rfc-8620`](../records/ietf/rfc-8620/) — JMAP
+- [`rfc-8747`](../records/ietf/rfc-8747/) — Proof-of-Possession Key Semantics for CBOR Web Tokens (CWTs)
+- [`rfc-8769`](../records/ietf/rfc-8769/) — Cryptographic Message Syntax (CMS) Content Types for Concise Binary Ob
+- [`rfc-8778`](../records/ietf/rfc-8778/) — Use of the HSS/LMS Hash-Based Signature Algorithm with CBOR Object Sig
+- [`rfc-8812`](../records/ietf/rfc-8812/) — CBOR Object Signing and Encryption (COSE) and JSON Object Signing and 
+- [`rfc-9021`](../records/ietf/rfc-9021/) — Use of the Walnut Digital Signature Algorithm with CBOR Object Signing
 - [`rfc-9110`](../records/ietf/rfc-9110/) — HTTP Semantics
+- [`rfc-9254`](../records/ietf/rfc-9254/) — Encoding of Data Modeled with YANG in the Concise Binary Object Repres
+- [`rfc-9459`](../records/ietf/rfc-9459/) — CBOR Object Signing and Encryption (COSE): AES-CTR and AES-CBC
+- [`rfc-9528`](../records/ietf/rfc-9528/) — Ephemeral Diffie-Hellman Over COSE (EDHOC)
+- [`rfc-9529`](../records/ietf/rfc-9529/) — Traces of Ephemeral Diffie-Hellman Over COSE (EDHOC)
+- [`rfc-9668`](../records/ietf/rfc-9668/) — Using Ephemeral Diffie-Hellman Over COSE (EDHOC) with the Constrained 
+- [`rfc-9921`](../records/ietf/rfc-9921/) — CBOR Object Signing and Encryption (COSE) Header Parameter for Timesta
+- [`rfc-9964`](../records/ietf/rfc-9964/) — ML-DSA for JSON Object Signing and Encryption (JOSE) and CBOR Object S
+- [`rfc-9997`](../records/ietf/rfc-9997/) — YANG-CBOR: Allocating SID Ranges for Private Enterprise Number (PEN) H
 - [`sp-800-186`](../records/nist/sp-800-186/) — Recommendations for Discrete Logarithm-based Cryptography: Elliptic Cu
 - [`w3c-did-core`](../records/w3c/w3c-did-core/) — Decentralized Identifiers (DIDs) v1.0
 
 ### DEC-002
 
+- [`draft-ietf-cbor-cddl-modules`](../records/ietf/draft-ietf-cbor-cddl-modules/) — CDDL Module Structure
+- [`draft-ietf-cbor-cde`](../records/ietf/draft-ietf-cbor-cde/) — CBOR Common Deterministic Encoding (CDE)
+- [`draft-ietf-cbor-edn-literals`](../records/ietf/draft-ietf-cbor-edn-literals/) — Concise Diagnostic Notation (CDN)
+- [`draft-ietf-cbor-serialization`](../records/ietf/draft-ietf-cbor-serialization/) — CBOR Serialization and Determinism
+- [`draft-mcnally-deterministic-cbor`](../records/community/draft-mcnally-deterministic-cbor/) — dCBOR: Deterministic CBOR
+- [`iana-cbor-simple-values`](../records/iso/iana-cbor-simple-values/) — IANA Concise Binary Object Representation (CBOR) Simple Values Registr
+- [`iana-cbor-tags`](../records/iso/iana-cbor-tags/) — IANA Concise Binary Object Representation (CBOR) Tags Registry
+- [`ietf-cbor-wg`](../records/ietf/ietf-cbor-wg/) — IETF Concise Binary Object Representation Maintenance and Extensions (
+- [`rfc-7049`](../records/ietf/rfc-7049/) — Concise Binary Object Representation (CBOR)
+- [`rfc-8610`](../records/ietf/rfc-8610/) — Concise Data Definition Language (CDDL): A Notational Convention to Ex
+- [`rfc-8742`](../records/ietf/rfc-8742/) — Concise Binary Object Representation (CBOR) Sequences
+- [`rfc-8746`](../records/ietf/rfc-8746/) — Concise Binary Object Representation (CBOR) Tags for Typed Arrays
+- [`rfc-8943`](../records/ietf/rfc-8943/) — Concise Binary Object Representation (CBOR) Tags for Date
 - [`rfc-8949`](../records/ietf/rfc-8949/) — Concise Binary Object Representation (CBOR)
 - [`rfc-9052`](../records/ietf/rfc-9052/) — CBOR Object Signing and Encryption (COSE): Structures and Process
+- [`rfc-9090`](../records/ietf/rfc-9090/) — Concise Binary Object Representation (CBOR) Tags for Object Identifier
+- [`rfc-9164`](../records/ietf/rfc-9164/) — Concise Binary Object Representation (CBOR) Tags for IPv4 and IPv6 Add
+- [`rfc-9165`](../records/ietf/rfc-9165/) — Additional Control Operators for the Concise Data Definition Language 
+- [`rfc-9277`](../records/ietf/rfc-9277/) — On Stable Storage for Items in Concise Binary Object Representation (C
+- [`rfc-9581`](../records/ietf/rfc-9581/) — Concise Binary Object Representation (CBOR) Tags for Time, Duration, a
+- [`rfc-9682`](../records/ietf/rfc-9682/) — Updates to the Concise Data Definition Language (CDDL) Grammar
+- [`rfc-9741`](../records/ietf/rfc-9741/) — Concise Data Definition Language (CDDL): Additional Control Operators 
 - [`rfc-9804`](../records/ietf/rfc-9804/) — Simple Public Key Infrastructure (SPKI) S-Expressions
 - [`rfc-9943`](../records/ietf/rfc-9943/) — An Architecture for Trustworthy and Transparent Digital Supply Chains
 - [`secure-systems-lab-dsse`](../records/community/secure-systems-lab-dsse/) — Dead Simple Signing Envelope (DSSE)
+
+### DEC-003
+
+- [`rfc-8392`](../records/ietf/rfc-8392/) — CBOR Web Token (CWT)
+- [`rfc-9360`](../records/ietf/rfc-9360/) — CBOR Object Signing and Encryption (COSE): Header Parameters for Carry
+- [`rfc-9679`](../records/ietf/rfc-9679/) — CBOR Object Signing and Encryption (COSE) Key Thumbprint
 
 ### DEC-004
 
@@ -41,6 +82,19 @@ This is the query the library exists to answer.
 ### DEC-005
 
 - [`draft-ietf-vcon-vcon-core-04`](../records/ietf/draft-ietf-vcon-vcon-core-04/) — The JSON format for vCon - Conversation Data Container
+- [`ietf-cose-wg`](../records/ietf/ietf-cose-wg/) — IETF CBOR Object Signing and Encryption (COSE) Working Group
+- [`rfc-8152`](../records/ietf/rfc-8152/) — CBOR Object Signing and Encryption (COSE)
+- [`rfc-8392`](../records/ietf/rfc-8392/) — CBOR Web Token (CWT)
+- [`rfc-9052`](../records/ietf/rfc-9052/) — CBOR Object Signing and Encryption (COSE): Structures and Process
+- [`rfc-9053`](../records/ietf/rfc-9053/) — CBOR Object Signing and Encryption (COSE): Initial Algorithms
+- [`rfc-9054`](../records/ietf/rfc-9054/) — CBOR Object Signing and Encryption (COSE): Hash Algorithms
+- [`rfc-9338`](../records/ietf/rfc-9338/) — CBOR Object Signing and Encryption (COSE): Countersignatures
+- [`rfc-9360`](../records/ietf/rfc-9360/) — CBOR Object Signing and Encryption (COSE): Header Parameters for Carry
+- [`rfc-9596`](../records/ietf/rfc-9596/) — CBOR Object Signing and Encryption (COSE) "typ" (type) Header Paramete
+- [`rfc-9597`](../records/ietf/rfc-9597/) — CBOR Web Token (CWT) Claims in COSE Headers
+- [`rfc-9864`](../records/ietf/rfc-9864/) — Fully-Specified Algorithms for JSON Object Signing and Encryption (JOS
+- [`rfc-9942`](../records/ietf/rfc-9942/) — CBOR Object Signing and Encryption (COSE) Receipts
+- [`rfc-9995`](../records/ietf/rfc-9995/) — CBOR Object Signing and Encryption (COSE) Hash Envelope
 
 ### DEC-007
 
@@ -60,6 +114,11 @@ This is the query the library exists to answer.
 
 - [`rfc-2693`](../records/ietf/rfc-2693/) — SPKI Certificate Theory
 
+### R-M-07
+
+- [`rfc-9054`](../records/ietf/rfc-9054/) — CBOR Object Signing and Encryption (COSE): Hash Algorithms
+- [`rfc-9995`](../records/ietf/rfc-9995/) — CBOR Object Signing and Encryption (COSE) Hash Envelope
+
 ### R-M-11
 
 - [`draft-ietf-vcon-vcon-core-04`](../records/ietf/draft-ietf-vcon-vcon-core-04/) — The JSON format for vCon - Conversation Data Container
@@ -67,9 +126,17 @@ This is the query the library exists to answer.
 
 ### R-M-12
 
+- [`iana-cbor-simple-values`](../records/iso/iana-cbor-simple-values/) — IANA Concise Binary Object Representation (CBOR) Simple Values Registr
+- [`iana-cbor-tags`](../records/iso/iana-cbor-tags/) — IANA Concise Binary Object Representation (CBOR) Tags Registry
 - [`iana-cose-algorithms`](../records/iso/iana-cose-algorithms/) — IANA COSE Algorithms registry
+- [`rfc-8746`](../records/ietf/rfc-8746/) — Concise Binary Object Representation (CBOR) Tags for Typed Arrays
+- [`rfc-8943`](../records/ietf/rfc-8943/) — Concise Binary Object Representation (CBOR) Tags for Date
 - [`rfc-8949`](../records/ietf/rfc-8949/) — Concise Binary Object Representation (CBOR)
 - [`rfc-9052`](../records/ietf/rfc-9052/) — CBOR Object Signing and Encryption (COSE): Structures and Process
+- [`rfc-9090`](../records/ietf/rfc-9090/) — Concise Binary Object Representation (CBOR) Tags for Object Identifier
+- [`rfc-9164`](../records/ietf/rfc-9164/) — Concise Binary Object Representation (CBOR) Tags for IPv4 and IPv6 Add
+- [`rfc-9581`](../records/ietf/rfc-9581/) — Concise Binary Object Representation (CBOR) Tags for Time, Duration, a
+- [`rfc-9781`](../records/ietf/rfc-9781/) — A Concise Binary Object Representation (CBOR) Tag for Unprotected CBOR
 - [`rfc-9943`](../records/ietf/rfc-9943/) — An Architecture for Trustworthy and Transparent Digital Supply Chains
 
 ### R-O-05

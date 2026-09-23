@@ -3,11 +3,14 @@
 
 # Bibliography
 
-28 records.
+77 records.
 
 
 ## community
 
+- **dCBOR: Deterministic CBOR** — 2026-08-10  
+  `draft-mcnally-deterministic-cbor` · draft · [source](https://www.ietf.org/archive/id/draft-mcnally-deterministic-cbor-18.txt)  
+  _An INDIVIDUAL draft with no IETF stream and no WG standing, widely miscited as 'the' deterministic CBOR profile. At -18 it narrows RFC 8949 Sec.4.2 directly and does not mention CDE, contrary to common secondary accounts._
 - **in-toto Attestation Framework v1**  
   `in-toto-attestation-v1` · spec · [source](https://in-toto.io/)
 - **Dead Simple Signing Envelope (DSSE)**  
@@ -15,11 +18,32 @@
 
 ## ietf
 
+- **CDDL Module Structure** — 2026-09-02  
+  `draft-ietf-cbor-cddl-modules` · draft · [source](https://www.ietf.org/archive/id/draft-ietf-cbor-cddl-modules-07.txt)  
+  _Module structure for CDDL. Relevant the moment our schema stops being one file, which WP1 will reach quickly._
+- **CBOR Common Deterministic Encoding (CDE)** — 2026-04-16  
+  `draft-ietf-cbor-cde` · draft · [source](https://www.ietf.org/archive/id/draft-ietf-cbor-cde-13.txt)  
+  _EXPIRED 2026-04-17 and parked. Recorded because it is still widely cited as the deterministic CBOR profile; the live work is draft-ietf-cbor-serialization._
+- **Concise Diagnostic Notation (CDN)** — 2026-07-20  
+  `draft-ietf-cbor-edn-literals` · draft · [source](https://www.ietf.org/archive/id/draft-ietf-cbor-edn-literals-27.txt)  
+  _Diagnostic notation is how test vectors and spec examples are written. A product without it has no readable debug path._
+- **Packed CBOR** — 2026-08-06  
+  `draft-ietf-cbor-packed` · draft · [source](https://www.ietf.org/archive/id/draft-ietf-cbor-packed-19.txt)  
+  _EXPIRED 2026-08-06 and not progressing. A compression layer we do not need; recorded so it is not presented as near-term._
+- **CBOR Serialization and Determinism** — 2026-07-30  
+  `draft-ietf-cbor-serialization` · draft · [source](https://www.ietf.org/archive/id/draft-ietf-cbor-serialization-08.txt)  
+  _The live WG determinism work and the document a signing profile must target. The WG has not said it replaces CDE, so the edge is see_also, not supersedes._
 - **The JSON format for vCon - Conversation Data Container** — 2026-09  
   `draft-ietf-vcon-vcon-core-04` · draft · **distilled** · [source](https://www.ietf.org/archive/id/draft-ietf-vcon-vcon-core-04.txt)  
   _An independently-designed signed container with must-understand extension semantics and a supersession model - the best available test of whether our statement form can express something we did not design._
 - **An Agent Action Capsule Profile for SCITT**  
   `draft-mih-scitt-agent-action-capsule-02` · draft · [source](https://datatracker.ietf.org/doc/draft-mih-scitt-agent-action-capsule-02/)
+- **IETF Concise Binary Object Representation Maintenance and Extensions (CBOR) Working Group**  
+  `ietf-cbor-wg` · consortium · [source](https://datatracker.ietf.org/wg/cbor/about/)  
+  _The body that controls the CBOR spec line and its extension points. Parent record for every CBOR WG document held here._
+- **IETF CBOR Object Signing and Encryption (COSE) Working Group**  
+  `ietf-cose-wg` · consortium · [source](https://datatracker.ietf.org/wg/cose/about/)  
+  _The body that controls the COSE spec line. Parent record for every COSE document held here._
 - **IETF vCon Working Group**  
   `ietf-vcon-wg` · web · [source](https://datatracker.ietf.org/wg/vcon/about/)
 - **GZIP** — RFC 1952  
@@ -38,27 +62,152 @@
   `rfc-5321` · rfc · [source](https://www.rfc-editor.org/rfc/rfc5321.html)
 - **mailto URI** — RFC 6068  
   `rfc-6068` · rfc · [source](https://www.rfc-editor.org/rfc/rfc6068.html)
+- **Concise Binary Object Representation (CBOR)** — C. Bormann, P. Hoffman. 2013-10. RFC 7049  
+  `rfc-7049` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc7049.txt)  
+  _Obsoleted by RFC 8949; kept because deployed decoders and older profiles still cite it._
 - **JWS** — RFC 7515  
   `rfc-7515` · rfc · [source](https://www.rfc-editor.org/rfc/rfc7515.html)
 - **JWE** — RFC 7516  
   `rfc-7516` · rfc · [source](https://www.rfc-editor.org/rfc/rfc7516.html)
+- **CBOR Object Signing and Encryption (COSE)** — J. Schaad. 2017-07. RFC 8152  
+  `rfc-8152` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc8152.txt)  
+  _Obsoleted by RFC 9052 and RFC 9053; kept because deployed COSE stacks and older profiles still cite it._
+- **Using RSA Algorithms with CBOR Object Signing and Encryption (COSE) Messages** — M. Jones. 2017-09. RFC 8230  
+  `rfc-8230` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc8230.txt)  
+  _Algorithm profile. ARCH-0001 NG3 defers the algorithm suite, so this is needed only if RSA is later admitted._
 - **JSON** — RFC 8259  
   `rfc-8259` · rfc · [source](https://www.rfc-editor.org/rfc/rfc8259.html)
+- **CBOR Web Token (CWT)** — M. Jones, E. Wahlstroem, S. Erdtman, H. Tschofenig. 2018-05. RFC 8392  
+  `rfc-8392` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc8392.txt)  
+  _ARCH-0001 Sec.6 names COSE_Sign1 + CWT as an envelope candidate and asks that iss/sub align with the KeyId profile._
+- **Concise Data Definition Language (CDDL): A Notational Convention to Express Concise Binary Object Representation (CBOR) and JSON Data Structures** — H. Birkholz, C. Vigano, C. Bormann. 2019-06. RFC 8610  
+  `rfc-8610` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc8610.txt)  
+  _DEC-002 option 2 is 'CBOR + CDDL as canonical'; this is the schema half of that option._
 - **JMAP** — RFC 8620  
   `rfc-8620` · rfc · [source](https://www.rfc-editor.org/rfc/rfc8620.html)
-- **Concise Binary Object Representation (CBOR)** — RFC 8949  
-  `rfc-8949` · rfc · [source](https://www.rfc-editor.org/rfc/rfc8949.html)
-- **CBOR Object Signing and Encryption (COSE): Structures and Process** — RFC 9052  
-  `rfc-9052` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9052.html)
+- **Concise Binary Object Representation (CBOR) Sequences** — C. Bormann. 2020-02. RFC 8742  
+  `rfc-8742` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc8742.txt)  
+  _Framing for concatenated items: how a log or stream of statements is carried without an outer array._
+- **Concise Binary Object Representation (CBOR) Tags for Typed Arrays** — C. Bormann, Ed.. 2020-02. RFC 8746  
+  `rfc-8746` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc8746.txt)  
+  _A registry-allocated extension point — the exact shape R-M-12 rules out of the native model._
+- **Proof-of-Possession Key Semantics for CBOR Web Tokens (CWTs)** — M. Jones, L. Seitz, G. Selander, S. Erdtman, H. Tschofenig. 2020-03. RFC 8747  
+  `rfc-8747` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc8747.txt)  
+  _PoP confirmation claim for CWT. Prior art for binding a token to a key; not required by the current envelope options._
+- **Cryptographic Message Syntax (CMS) Content Types for Concise Binary Object Representation (CBOR)** — J. Schaad. 2020-03. RFC 8769  
+  `rfc-8769` · rfc · informational · [source](https://www.rfc-editor.org/rfc/rfc8769.txt)  
+  _Wraps CBOR in CMS. m-of-n does not use CMS; recorded so the question is not reopened._
+- **Use of the HSS/LMS Hash-Based Signature Algorithm with CBOR Object Signing and Encryption (COSE)** — R. Housley. 2020-04. RFC 8778  
+  `rfc-8778` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc8778.txt)  
+  _Stateful hash-based signatures in COSE. Algorithm suite is deferred by NG3; relevant if post-quantum signing is admitted._
+- **CBOR Object Signing and Encryption (COSE) and JSON Object Signing and Encryption (JOSE) Registrations for Web Authentication (WebAuthn) Algorithms** — M. Jones. 2020-08. RFC 8812  
+  `rfc-8812` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc8812.txt)  
+  _The WebAuthn/COSE algorithm bridge. Evidence for the FIDO half of the ecosystem survey, not for our envelope._
+- **Concise Binary Object Representation (CBOR) Tags for Date** — M. Jones, A. Nadalin, J. Richter. 2020-11. RFC 8943  
+  `rfc-8943` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc8943.txt)  
+  _Date tags 100/1004. Registry-dependent extension point; evidence for the R-M-12 argument._
+- **Concise Binary Object Representation (CBOR)** — C. Bormann, P. Hoffman. 2020-12. RFC 8949  
+  `rfc-8949` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc8949.txt)  
+  _STD 94. DEC-002 option 2 makes this the candidate native encoding, and Sec.4.2 is the deterministic-encoding text every signing profile starts from._
+- **Use of the Walnut Digital Signature Algorithm with CBOR Object Signing and Encryption (COSE)** — D. Atkins. 2021-05. RFC 9021  
+  `rfc-9021` · rfc · informational · [source](https://www.rfc-editor.org/rfc/rfc9021.txt)  
+  _Informational registration for an algorithm outside any suite m-of-n would consider. Recorded so it is not re-evaluated._
+- **CBOR Object Signing and Encryption (COSE): Structures and Process** — J. Schaad. 2022-08. RFC 9052  
+  `rfc-9052` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9052.txt)  
+  _STD 96 with RFC 9338. COSE_Sign1 is one of the two envelope options in DEC-005, and its header parameters are IANA-allocated, so R-M-12 applies._
+- **CBOR Object Signing and Encryption (COSE): Initial Algorithms** — J. Schaad. 2022-08. RFC 9053  
+  `rfc-9053` · rfc · informational · [source](https://www.rfc-editor.org/rfc/rfc9053.txt)  
+  _The algorithm half of COSE. Updated by RFC 9864 — read them together or you will implement under-specified algorithm identifiers._
+- **CBOR Object Signing and Encryption (COSE): Hash Algorithms** — J. Schaad. 2022-08. RFC 9054  
+  `rfc-9054` · rfc · informational · [source](https://www.rfc-editor.org/rfc/rfc9054.txt)  
+  _R-M-07 requires artifact statements to bind a content digest; this registers the COSE hash algorithm identifiers for doing so._
+- **Concise Binary Object Representation (CBOR) Tags for Object Identifiers** — C. Bormann. 2021-07. RFC 9090  
+  `rfc-9090` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9090.txt)  
+  _OID tags — a second global naming authority inside the encoding. Directly contrary to key-relative naming (ARCH-0002 P1)._
 - **HTTP Semantics** — RFC 9110  
   `rfc-9110` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9110.html)
+- **Concise Binary Object Representation (CBOR) Tags for IPv4 and IPv6 Addresses and Prefixes** — M. Richardson, C. Bormann. 2021-12. RFC 9164  
+  `rfc-9164` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9164.txt)  
+  _Address tags are not in our data model; kept as further evidence of registry-dependent extension points._
+- **Additional Control Operators for the Concise Data Definition Language (CDDL)** — C. Bormann. 2021-12. RFC 9165  
+  `rfc-9165` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9165.txt)  
+  _Control operators a real CDDL schema needs; a CDDL tool that omits them cannot validate our fixtures._
+- **Encoding of Data Modeled with YANG in the Concise Binary Object Representation (CBOR)** — M. Veillette, Ed., I. Petrov, Ed., A. Pelov, C. Bormann, M. Richardson. 2022-07. RFC 9254  
+  `rfc-9254` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9254.txt)  
+  _An application of CBOR (CORECONF), not a component of implementing it. Kept as prior art for schema-driven integer-key maps._
+- **On Stable Storage for Items in Concise Binary Object Representation (CBOR)** — M. Richardson, C. Bormann. 2022-08. RFC 9277  
+  `rfc-9277` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9277.txt)  
+  _Defines the CBOR file magic / labelled-content convention — how a stored statement file identifies itself._
+- **CBOR Object Signing and Encryption (COSE): Countersignatures** — J. Schaad. 2022-12. RFC 9338  
+  `rfc-9338` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9338.txt)  
+  _Part of STD 96 with RFC 9052. Countersignature is the closest COSE primitive to an endorsement over someone else's statement._
+- **CBOR Object Signing and Encryption (COSE): Header Parameters for Carrying and Referencing X.509 Certificates** — J. Schaad. 2023-02. RFC 9360  
+  `rfc-9360` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9360.txt)  
+  _X.509 carriage is the identifier model m-of-n is arguing against, but DEC-003 must say why, and interop may need it._
+- **CBOR Object Signing and Encryption (COSE): AES-CTR and AES-CBC** — R. Housley, H. Tschofenig. 2023-09. RFC 9459  
+  `rfc-9459` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9459.txt)  
+  _Content encryption modes. m-of-n signs rather than encrypts; kept for completeness of the COSE algorithm picture._
+- **Ephemeral Diffie-Hellman Over COSE (EDHOC)** — G. Selander, J. Preuss Mattsson, F. Palombini. 2024-03. RFC 9528  
+  `rfc-9528` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9528.txt)  
+  _A key exchange over COSE for constrained devices. Ecosystem evidence — m-of-n does not do key agreement._
+- **Traces of Ephemeral Diffie-Hellman Over COSE (EDHOC)** — G. Selander, J. Preuss Mattsson, M. Serafin, M. Tiloca, M. Vucinic. 2024-03. RFC 9529  
+  `rfc-9529` · rfc · informational · [source](https://www.rfc-editor.org/rfc/rfc9529.txt)  
+  _Test vectors for EDHOC, which we do not implement. Recorded to close the question._
+- **Concise Binary Object Representation (CBOR) Tags for Time, Duration, and Period** — C. Bormann, B. Gamari, H. Birkholz. 2024-08. RFC 9581  
+  `rfc-9581` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9581.txt)  
+  _Validity windows on a certificate are time values; this is the registry-based way to carry them._
+- **CBOR Object Signing and Encryption (COSE) "typ" (type) Header Parameter** — M.B. Jones, O. Steele. 2024-06. RFC 9596  
+  `rfc-9596` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9596.txt)  
+  _Explicit typing of a signed object — the standard defence against cross-protocol confusion between statement kinds._
+- **CBOR Web Token (CWT) Claims in COSE Headers** — T. Looker, M.B. Jones. 2024-06. RFC 9597  
+  `rfc-9597` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9597.txt)  
+  _Puts CWT claims in the protected header, so a verifier reads issuer and subject without parsing the payload._
+- **Using Ephemeral Diffie-Hellman Over COSE (EDHOC) with the Constrained Application Protocol (CoAP) and Object Security for Constrained RESTful Environments (OSCORE)** — F. Palombini, M. Tiloca, R. Hoglund, S. Hristozov, G. Selander. 2024-11. RFC 9668  
+  `rfc-9668` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9668.txt)  
+  _EDHOC/CoAP integration. Outside m-of-n's transport story; recorded to close the question._
+- **CBOR Object Signing and Encryption (COSE) Key Thumbprint** — K. Isobe, H. Tschofenig, O. Steele. 2024-12. RFC 9679  
+  `rfc-9679` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9679.txt)  
+  _DEC-003 lists 'COSE key thumbprint' as an option and requires canonical key bytes before hashing. This is that specification._
+- **Updates to the Concise Data Definition Language (CDDL) Grammar** — C. Bormann. 2024-11. RFC 9682  
+  `rfc-9682` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9682.txt)  
+  _Normative grammar corrections to RFC 8610; both remain current, so an implementation must read them together._
+- **Concise Data Definition Language (CDDL): Additional Control Operators for the Conversion and Processing of Text** — C. Bormann. 2025-03. RFC 9741  
+  `rfc-9741` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9741.txt)  
+  _Text-conversion control operators; needed where a CDDL schema constrains text representations._
+- **A Concise Binary Object Representation (CBOR) Tag for Unprotected CBOR Web Token Claims Sets (UCCS)** — H. Birkholz, J. O'Donoghue, N. Cam-Winget, C. Bormann. 2025-05. RFC 9781  
+  `rfc-9781` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9781.txt)  
+  _An unsigned claims set — the shape AclEntry takes in ARCH-0001. Also another registry-allocated tag, so it bears on R-M-12._
 - **Simple Public Key Infrastructure (SPKI) S-Expressions** — RFC 9804  
   `rfc-9804` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9804.html)
+- **Fully-Specified Algorithms for JSON Object Signing and Encryption (JOSE) and CBOR Object Signing and Encryption (COSE)** — M.B. Jones, O. Steele. 2025-10. RFC 9864  
+  `rfc-9864` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9864.txt)  
+  _Removes polymorphic algorithm identifiers. Anything implementing RFC 9053 today must apply this._
+- **CBOR Object Signing and Encryption (COSE) Header Parameter for Timestamp Tokens as Defined in RFC 3161** — H. Birkholz, T. Fossati, M. Riechert. 2026-02. RFC 9921  
+  `rfc-9921` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9921.txt)  
+  _Carries an RFC 3161 timestamp in a COSE header. Relevant only if we need third-party time attestation._
+- **CBOR Object Signing and Encryption (COSE) Receipts** — O. Steele, H. Birkholz, A. Delignat-Lavaud, C. Fournet. 2026-06. RFC 9942  
+  `rfc-9942` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9942.txt)  
+  _The receipt format the SCITT architecture (RFC 9943, already held) relies on. Directly relevant to the transparency story._
 - **An Architecture for Trustworthy and Transparent Digital Supply Chains** — RFC 9943  
   `rfc-9943` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9943.html)
+- **ML-DSA for JSON Object Signing and Encryption (JOSE) and CBOR Object Signing and Encryption (COSE)** — M. Prorock, O. Steele. 2026-05. RFC 9964  
+  `rfc-9964` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9964.txt)  
+  _The current post-quantum signature binding for COSE. Algorithm suite deferred by NG3, but this is the one to revisit first._
+- **CBOR Object Signing and Encryption (COSE) Hash Envelope** — O. Steele, S. Lasker, H. Birkholz. 2026-07. RFC 9995  
+  `rfc-9995` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9995.txt)  
+  _Signing over a detached payload digest — the pattern R-M-07 describes for artifact statements that must not carry the artifact._
+- **YANG-CBOR: Allocating SID Ranges for Private Enterprise Number (PEN) Holders** — C. Bormann. 2026-07. RFC 9997  
+  `rfc-9997` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9997.txt)  
+  _SID range allocation for YANG-CBOR. Prior art for delegating an identifier space without a central registry per entry._
 
 ## iso
 
+- **IANA Concise Binary Object Representation (CBOR) Simple Values Registry**  
+  `iana-cbor-simple-values` · dataset · [source](https://www.iana.org/assignments/cbor-simple-values/cbor-simple-values.xhtml)  
+  _The second CBOR extension point. Smaller than the tag registry but governed the same way, so the R-M-12 argument must cover it._
+- **IANA Concise Binary Object Representation (CBOR) Tags Registry**  
+  `iana-cbor-tags` · dataset · [source](https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml)  
+  _The central extension point of CBOR, and the single strongest piece of evidence for R-M-12: a native model built on it is registry-dependent._
 - **IANA COSE Algorithms registry**  
   `iana-cose-algorithms` · dataset · [source](https://www.iana.org/assignments/cose/cose.xhtml)
 

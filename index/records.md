@@ -3,13 +3,14 @@
 
 # Records
 
-28 records across 5 bodies.
+77 records across 5 bodies.
 
 
 ## community
 
 | id | title | type | maturity | status | useful | versions |
 |---|---|---|---|---|---|---|
+| [`draft-mcnally-deterministic-cbor`](../records/community/draft-mcnally-deterministic-cbor/) | dCBOR: Deterministic CBOR | draft | draft | fetched | marginal | — |
 | [`in-toto-attestation-v1`](../records/community/in-toto-attestation-v1/) | in-toto Attestation Framework v1 | spec | — | queued | — | — |
 | [`secure-systems-lab-dsse`](../records/community/secure-systems-lab-dsse/) | Dead Simple Signing Envelope (DSSE) | repo | — | queued | — | — |
 
@@ -17,8 +18,15 @@
 
 | id | title | type | maturity | status | useful | versions |
 |---|---|---|---|---|---|---|
+| [`draft-ietf-cbor-cddl-modules`](../records/ietf/draft-ietf-cbor-cddl-modules/) | CDDL Module Structure | draft | draft | fetched | useful | — |
+| [`draft-ietf-cbor-cde`](../records/ietf/draft-ietf-cbor-cde/) | CBOR Common Deterministic Encoding (CDE) | draft | draft | fetched | marginal | — |
+| [`draft-ietf-cbor-edn-literals`](../records/ietf/draft-ietf-cbor-edn-literals/) | Concise Diagnostic Notation (CDN) | draft | draft | fetched | useful | — |
+| [`draft-ietf-cbor-packed`](../records/ietf/draft-ietf-cbor-packed/) | Packed CBOR | draft | draft | fetched | marginal | — |
+| [`draft-ietf-cbor-serialization`](../records/ietf/draft-ietf-cbor-serialization/) | CBOR Serialization and Determinism | draft | draft | fetched | useful | — |
 | [`draft-ietf-vcon-vcon-core-04`](../records/ietf/draft-ietf-vcon-vcon-core-04/) | The JSON format for vCon - Conversation Data Container | draft | draft | distilled | useful | — |
 | [`draft-mih-scitt-agent-action-capsule-02`](../records/ietf/draft-mih-scitt-agent-action-capsule-02/) | An Agent Action Capsule Profile for SCITT | draft | — | queued | — | — |
+| [`ietf-cbor-wg`](../records/ietf/ietf-cbor-wg/) | IETF Concise Binary Object Representation Maintenance and  | consortium | — | fetched | useful | — |
+| [`ietf-cose-wg`](../records/ietf/ietf-cose-wg/) | IETF CBOR Object Signing and Encryption (COSE) Working Gro | consortium | — | fetched | useful | — |
 | [`ietf-vcon-wg`](../records/ietf/ietf-vcon-wg/) | IETF vCon Working Group | web | — | stub | — | — |
 | [`rfc-1952`](../records/ietf/rfc-1952/) | GZIP | rfc | — | stub | — | — |
 | [`rfc-2693`](../records/ietf/rfc-2693/) | SPKI Certificate Theory | rfc | — | queued | — | — |
@@ -28,20 +36,61 @@
 | [`rfc-4122`](../records/ietf/rfc-4122/) | UUID | rfc | — | stub | — | — |
 | [`rfc-5321`](../records/ietf/rfc-5321/) | SMTP | rfc | — | stub | — | — |
 | [`rfc-6068`](../records/ietf/rfc-6068/) | mailto URI | rfc | — | stub | — | — |
+| [`rfc-7049`](../records/ietf/rfc-7049/) | Concise Binary Object Representation (CBOR) | rfc | standard | fetched | marginal | — |
 | [`rfc-7515`](../records/ietf/rfc-7515/) | JWS | rfc | — | stub | — | — |
 | [`rfc-7516`](../records/ietf/rfc-7516/) | JWE | rfc | — | stub | — | — |
+| [`rfc-8152`](../records/ietf/rfc-8152/) | CBOR Object Signing and Encryption (COSE) | rfc | standard | fetched | marginal | — |
+| [`rfc-8230`](../records/ietf/rfc-8230/) | Using RSA Algorithms with CBOR Object Signing and Encrypti | rfc | standard | fetched | marginal | — |
 | [`rfc-8259`](../records/ietf/rfc-8259/) | JSON | rfc | — | stub | — | — |
+| [`rfc-8392`](../records/ietf/rfc-8392/) | CBOR Web Token (CWT) | rfc | standard | fetched | useful | — |
+| [`rfc-8610`](../records/ietf/rfc-8610/) | Concise Data Definition Language (CDDL): A Notational Conv | rfc | standard | fetched | useful | — |
 | [`rfc-8620`](../records/ietf/rfc-8620/) | JMAP | rfc | — | stub | — | — |
-| [`rfc-8949`](../records/ietf/rfc-8949/) | Concise Binary Object Representation (CBOR) | rfc | — | queued | — | — |
-| [`rfc-9052`](../records/ietf/rfc-9052/) | CBOR Object Signing and Encryption (COSE): Structures and  | rfc | — | queued | — | — |
+| [`rfc-8742`](../records/ietf/rfc-8742/) | Concise Binary Object Representation (CBOR) Sequences | rfc | standard | fetched | useful | — |
+| [`rfc-8746`](../records/ietf/rfc-8746/) | Concise Binary Object Representation (CBOR) Tags for Typed | rfc | standard | fetched | useful | — |
+| [`rfc-8747`](../records/ietf/rfc-8747/) | Proof-of-Possession Key Semantics for CBOR Web Tokens (CWT | rfc | standard | fetched | marginal | — |
+| [`rfc-8769`](../records/ietf/rfc-8769/) | Cryptographic Message Syntax (CMS) Content Types for Conci | rfc | informational | fetched | not-useful | — |
+| [`rfc-8778`](../records/ietf/rfc-8778/) | Use of the HSS/LMS Hash-Based Signature Algorithm with CBO | rfc | standard | fetched | marginal | — |
+| [`rfc-8812`](../records/ietf/rfc-8812/) | CBOR Object Signing and Encryption (COSE) and JSON Object  | rfc | standard | fetched | marginal | — |
+| [`rfc-8943`](../records/ietf/rfc-8943/) | Concise Binary Object Representation (CBOR) Tags for Date | rfc | standard | fetched | useful | — |
+| [`rfc-8949`](../records/ietf/rfc-8949/) | Concise Binary Object Representation (CBOR) | rfc | standard | read | useful | — |
+| [`rfc-9021`](../records/ietf/rfc-9021/) | Use of the Walnut Digital Signature Algorithm with CBOR Ob | rfc | informational | fetched | not-useful | — |
+| [`rfc-9052`](../records/ietf/rfc-9052/) | CBOR Object Signing and Encryption (COSE): Structures and  | rfc | standard | fetched | useful | — |
+| [`rfc-9053`](../records/ietf/rfc-9053/) | CBOR Object Signing and Encryption (COSE): Initial Algorit | rfc | informational | fetched | useful | — |
+| [`rfc-9054`](../records/ietf/rfc-9054/) | CBOR Object Signing and Encryption (COSE): Hash Algorithms | rfc | informational | fetched | useful | — |
+| [`rfc-9090`](../records/ietf/rfc-9090/) | Concise Binary Object Representation (CBOR) Tags for Objec | rfc | standard | fetched | useful | — |
 | [`rfc-9110`](../records/ietf/rfc-9110/) | HTTP Semantics | rfc | — | stub | — | — |
+| [`rfc-9164`](../records/ietf/rfc-9164/) | Concise Binary Object Representation (CBOR) Tags for IPv4  | rfc | standard | fetched | marginal | — |
+| [`rfc-9165`](../records/ietf/rfc-9165/) | Additional Control Operators for the Concise Data Definiti | rfc | standard | fetched | useful | — |
+| [`rfc-9254`](../records/ietf/rfc-9254/) | Encoding of Data Modeled with YANG in the Concise Binary O | rfc | standard | fetched | marginal | — |
+| [`rfc-9277`](../records/ietf/rfc-9277/) | On Stable Storage for Items in Concise Binary Object Repre | rfc | standard | fetched | useful | — |
+| [`rfc-9338`](../records/ietf/rfc-9338/) | CBOR Object Signing and Encryption (COSE): Countersignatur | rfc | standard | fetched | useful | — |
+| [`rfc-9360`](../records/ietf/rfc-9360/) | CBOR Object Signing and Encryption (COSE): Header Paramete | rfc | standard | fetched | marginal | — |
+| [`rfc-9459`](../records/ietf/rfc-9459/) | CBOR Object Signing and Encryption (COSE): AES-CTR and AES | rfc | standard | fetched | marginal | — |
+| [`rfc-9528`](../records/ietf/rfc-9528/) | Ephemeral Diffie-Hellman Over COSE (EDHOC) | rfc | standard | fetched | marginal | — |
+| [`rfc-9529`](../records/ietf/rfc-9529/) | Traces of Ephemeral Diffie-Hellman Over COSE (EDHOC) | rfc | informational | fetched | not-useful | — |
+| [`rfc-9581`](../records/ietf/rfc-9581/) | Concise Binary Object Representation (CBOR) Tags for Time, | rfc | standard | fetched | useful | — |
+| [`rfc-9596`](../records/ietf/rfc-9596/) | CBOR Object Signing and Encryption (COSE) "typ" (type) Hea | rfc | standard | fetched | useful | — |
+| [`rfc-9597`](../records/ietf/rfc-9597/) | CBOR Web Token (CWT) Claims in COSE Headers | rfc | standard | fetched | useful | — |
+| [`rfc-9668`](../records/ietf/rfc-9668/) | Using Ephemeral Diffie-Hellman Over COSE (EDHOC) with the  | rfc | standard | fetched | not-useful | — |
+| [`rfc-9679`](../records/ietf/rfc-9679/) | CBOR Object Signing and Encryption (COSE) Key Thumbprint | rfc | standard | fetched | useful | — |
+| [`rfc-9682`](../records/ietf/rfc-9682/) | Updates to the Concise Data Definition Language (CDDL) Gra | rfc | standard | fetched | useful | — |
+| [`rfc-9741`](../records/ietf/rfc-9741/) | Concise Data Definition Language (CDDL): Additional Contro | rfc | standard | fetched | useful | — |
+| [`rfc-9781`](../records/ietf/rfc-9781/) | A Concise Binary Object Representation (CBOR) Tag for Unpr | rfc | standard | fetched | marginal | — |
 | [`rfc-9804`](../records/ietf/rfc-9804/) | Simple Public Key Infrastructure (SPKI) S-Expressions | rfc | — | queued | — | — |
+| [`rfc-9864`](../records/ietf/rfc-9864/) | Fully-Specified Algorithms for JSON Object Signing and Enc | rfc | standard | fetched | useful | — |
+| [`rfc-9921`](../records/ietf/rfc-9921/) | CBOR Object Signing and Encryption (COSE) Header Parameter | rfc | standard | fetched | marginal | — |
+| [`rfc-9942`](../records/ietf/rfc-9942/) | CBOR Object Signing and Encryption (COSE) Receipts | rfc | standard | fetched | useful | — |
 | [`rfc-9943`](../records/ietf/rfc-9943/) | An Architecture for Trustworthy and Transparent Digital Su | rfc | — | queued | — | — |
+| [`rfc-9964`](../records/ietf/rfc-9964/) | ML-DSA for JSON Object Signing and Encryption (JOSE) and C | rfc | standard | fetched | marginal | — |
+| [`rfc-9995`](../records/ietf/rfc-9995/) | CBOR Object Signing and Encryption (COSE) Hash Envelope | rfc | standard | fetched | useful | — |
+| [`rfc-9997`](../records/ietf/rfc-9997/) | YANG-CBOR: Allocating SID Ranges for Private Enterprise Nu | rfc | standard | fetched | marginal | — |
 
 ## iso
 
 | id | title | type | maturity | status | useful | versions |
 |---|---|---|---|---|---|---|
+| [`iana-cbor-simple-values`](../records/iso/iana-cbor-simple-values/) | IANA Concise Binary Object Representation (CBOR) Simple Va | dataset | — | fetched | useful | — |
+| [`iana-cbor-tags`](../records/iso/iana-cbor-tags/) | IANA Concise Binary Object Representation (CBOR) Tags Regi | dataset | — | fetched | useful | — |
 | [`iana-cose-algorithms`](../records/iso/iana-cose-algorithms/) | IANA COSE Algorithms registry | dataset | — | stub | — | — |
 
 ## nist
