@@ -1,0 +1,26 @@
+name: notify-mofn
+# Tell mofn the library moved, so it can open a pin-bump PR. It never merges
+# one: PROC-0003 §4 keeps the pin a human decision because reports cite
+# library@<commit>. This removes the toil, not the decision.
+on:
+  push: {branches: [main]}
+permissions: {contents: read}
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: dispatch to m-of-n/mofn
+        env:
+          TOKEN: ${{ secrets.MOFN_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::warning::MOFN_DISPATCH_TOKEN not set — mofn will pick this up"
+            echo "::warning::on its Monday backstop instead. See PROC-0003 §4."
+            exit 0
+          fi
+          curl -sSf -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/m-of-n/mofn/dispatches \
+            -d '{"event_type":"library-updated","client_payload":{"sha":"${{ github.sha }}"}}'
+          echo "dispatched ${{ github.sha }}"
