@@ -13,7 +13,15 @@ Library-specific:
    ```sh
    bin/validate && bin/export && bin/reindex
    ```
-   Commit `exports/` and `index/`. CI fails if either is stale.
+   Commit `exports/` **and** `index/`. CI enforces three things: the views are
+   not stale, **every record appears in the bibliography**, and no relation
+   dangles. Adding a record without regenerating leaves the bibliography wrong,
+   which is the most visible way this library can be untrustworthy.
+
+   **The published bibliography lags by two steps**, deliberately: merge here,
+   then the pin moves in `mofn`, then the site rebuilds. A report cites
+   `library@<commit>`, so the pin is a decision. `notify-mofn` opens the
+   pin-bump PR automatically once `MOFN_DISPATCH_TOKEN` is set.
 4. One topic per branch. Topics are sized so branches do not collide.
 5. Never commit a PDF, spreadsheet or ebook. CI rejects it.
 
