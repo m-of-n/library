@@ -9,7 +9,7 @@ write `supersedes` on one record and `superseded_by` appears on the other.
 `cites` is what a document itself references (fact). Everything else is
 our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 
-59 of 77 records have at least one edge.
+61 of 78 records have at least one edge.
 
 
 ### `draft-ietf-cbor-cddl-modules`
@@ -56,6 +56,9 @@ our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 
 ### `ietf-vcon-wg`
 - **has_part** → `draft-ietf-vcon-vcon-core-04`
+
+### `in-toto-attestation-v1`
+- **see_also** → `sp-800-161r1`
 
 ### `rfc-7049`
 - **part_of** → `ietf-cbor-wg`
@@ -196,7 +199,7 @@ our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 - **see_also** → `rfc-9943`
 
 ### `rfc-9943`
-- **see_also** → `rfc-9942`
+- **see_also** → `rfc-9942`, `sp-800-161r1`
 
 ### `rfc-9964`
 - **part_of** → `ietf-cose-wg`
@@ -206,6 +209,9 @@ our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 
 ### `rfc-9997`
 - **part_of** → `ietf-cbor-wg`
+
+### `sp-800-161r1`
+- **see_also** → `in-toto-attestation-v1`, `rfc-9943`
 
 ### `sp-800-186`
 - **see_also** → `fips-186-5`
@@ -218,7 +224,6 @@ is a record nothing will surface.
 - `draft-mih-scitt-agent-action-capsule-02`
 - `iana-cbor-simple-values`
 - `iana-cbor-tags`
-- `in-toto-attestation-v1`
 - `rfc-1952`
 - `rfc-2693`
 - `rfc-3339`

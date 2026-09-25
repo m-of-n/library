@@ -38,6 +38,7 @@ This is the query the library exists to answer.
 - [`rfc-9921`](../records/ietf/rfc-9921/) — CBOR Object Signing and Encryption (COSE) Header Parameter for Timesta
 - [`rfc-9964`](../records/ietf/rfc-9964/) — ML-DSA for JSON Object Signing and Encryption (JOSE) and CBOR Object S
 - [`rfc-9997`](../records/ietf/rfc-9997/) — YANG-CBOR: Allocating SID Ranges for Private Enterprise Number (PEN) H
+- [`sp-800-161r1`](../records/nist/sp-800-161r1/) — Cybersecurity Supply Chain Risk Management Practices for Systems and O
 - [`sp-800-186`](../records/nist/sp-800-186/) — Recommendations for Discrete Logarithm-based Cryptography: Elliptic Cu
 - [`w3c-did-core`](../records/w3c/w3c-did-core/) — Decentralized Identifiers (DIDs) v1.0
 

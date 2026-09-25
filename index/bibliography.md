@@ -3,7 +3,7 @@
 
 # Bibliography
 
-77 records.
+78 records.
 
 
 ## community
@@ -218,6 +218,9 @@
 - **Digital Signature Standard (DSS)** — 2023-02-03. 10.6028/NIST.FIPS.186-5  
   `fips-186-5` · spec · standard · **summarized** · [source](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf)  
   _Defines the signature schemes a key-centric model will actually use; supplies publisher test vectors for PROC-0002 stage 8._
+- **Cybersecurity Supply Chain Risk Management Practices for Systems and Organizations** — Jon Boyens, Angela Smith, Nadya Bartol, Kris Winkler, Alex Holbrook, Matthew Fallon. 2022-05. 10.6028/NIST.SP.800-161r1-upd1  
+  `sp-800-161r1` · spec · best-practice · [source](https://csrc.nist.gov/pubs/sp/800/161/r1/upd1/final)  
+  _Enterprise process guidance, not a mechanism specification. Supplies the vocabulary and the institutional frame that an attestation is consumed by, but we conform to no clause in it._
 - **Recommendations for Discrete Logarithm-based Cryptography: Elliptic Curve Domain Parameters**  
   `sp-800-186` · spec · recommendation · [source](https://csrc.nist.gov/pubs/sp/800/186/final)
 
