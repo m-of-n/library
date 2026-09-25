@@ -3,7 +3,7 @@
 
 # Records
 
-77 records across 5 bodies.
+78 records across 5 bodies.
 
 
 ## community
@@ -99,6 +99,7 @@
 |---|---|---|---|---|---|---|
 | [`fips-186-4`](../records/nist/fips-186-4/) | Digital Signature Standard (DSS), FIPS 186-4 | spec | historic | stub | — | — |
 | [`fips-186-5`](../records/nist/fips-186-5/) | Digital Signature Standard (DSS) | spec | standard | summarized | useful | — |
+| [`sp-800-161r1`](../records/nist/sp-800-161r1/) | Cybersecurity Supply Chain Risk Management Practices for S | spec | best-practice | stub | marginal | — |
 | [`sp-800-186`](../records/nist/sp-800-186/) | Recommendations for Discrete Logarithm-based Cryptography: | spec | recommendation | stub | — | — |
 
 ## w3c
