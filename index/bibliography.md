@@ -3,8 +3,23 @@
 
 # Bibliography
 
-77 records.
+82 records.
 
+
+## academic
+
+- **Guidelines for performing Systematic Literature Reviews in Software Engineering** — 2007  
+  `kitchenham-charters-2007` · paper · [source](https://www.elsevier.com/)  
+  _The three-stage SLR structure - protocol, conduct, report - that docs/construction.md names as our method and did not hold a record for._
+- **The PRISMA 2020 statement: an updated guideline for reporting systematic reviews** — 2021  
+  `prisma-2020` · paper · [source](https://doi.org/10.1136/bmj.n71)  
+  _Transparent reporting of what was found, screened and excluded, and why._
+- **Proactive Software Supply Chain Risk Management Framework (P-SSCRM) Version 1** — 2024  
+  `psscrm-v1` · paper · [source](https://arxiv.org/abs/2404.12300)  
+  _72 tasks unifying SSDF, 800-161r1, SLSA, S2C2F, CNCF and SCVS. The sponsor asked for a task mapping in the final report._
+- **Guidelines for snowballing in systematic literature studies and a replication in software engineering** — 2014  
+  `wohlin-2014-snowballing` · paper · [source](https://doi.org/10.1145/2601248.2601268)  
+  _Backward and forward snowballing iterated to closure. index/frontier.md is this, mechanised._
 
 ## community
 
@@ -48,6 +63,9 @@
   `ietf-vcon-wg` · web · [source](https://datatracker.ietf.org/wg/vcon/about/)
 - **GZIP** — RFC 1952  
   `rfc-1952` · rfc · [source](https://www.rfc-editor.org/rfc/rfc1952.html)
+- **SPKI Requirements** — 1999. RFC 2692  
+  `rfc-2692` · rfc · [source](https://www.rfc-editor.org/rfc/rfc2692.html)  
+  _The requirements document explaining WHY SPKI looks as it does. We held the theory (2693) without the motivation._
 - **SPKI Certificate Theory** — RFC 2693  
   `rfc-2693` · rfc · [source](https://www.rfc-editor.org/rfc/rfc2693.html)
 - **Timestamps** — RFC 3339  

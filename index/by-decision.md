@@ -12,6 +12,9 @@ This is the query the library exists to answer.
 - [`draft-ietf-cbor-packed`](../records/ietf/draft-ietf-cbor-packed/) — Packed CBOR
 - [`fips-186-4`](../records/nist/fips-186-4/) — Digital Signature Standard (DSS), FIPS 186-4
 - [`ietf-vcon-wg`](../records/ietf/ietf-vcon-wg/) — IETF vCon Working Group
+- [`kitchenham-charters-2007`](../records/academic/kitchenham-charters-2007/) — Guidelines for performing Systematic Literature Reviews in Software En
+- [`prisma-2020`](../records/academic/prisma-2020/) — The PRISMA 2020 statement: an updated guideline for reporting systemat
+- [`psscrm-v1`](../records/academic/psscrm-v1/) — Proactive Software Supply Chain Risk Management Framework (P-SSCRM) Ve
 - [`rfc-1952`](../records/ietf/rfc-1952/) — GZIP
 - [`rfc-3339`](../records/ietf/rfc-3339/) — Timestamps
 - [`rfc-3966`](../records/ietf/rfc-3966/) — tel URI
@@ -40,6 +43,7 @@ This is the query the library exists to answer.
 - [`rfc-9997`](../records/ietf/rfc-9997/) — YANG-CBOR: Allocating SID Ranges for Private Enterprise Number (PEN) H
 - [`sp-800-186`](../records/nist/sp-800-186/) — Recommendations for Discrete Logarithm-based Cryptography: Elliptic Cu
 - [`w3c-did-core`](../records/w3c/w3c-did-core/) — Decentralized Identifiers (DIDs) v1.0
+- [`wohlin-2014-snowballing`](../records/academic/wohlin-2014-snowballing/) — Guidelines for snowballing in systematic literature studies and a repl
 
 ### DEC-002
 
@@ -108,6 +112,7 @@ This is the query the library exists to answer.
 
 ### R-M-05
 
+- [`rfc-2692`](../records/ietf/rfc-2692/) — SPKI Requirements
 - [`rfc-2693`](../records/ietf/rfc-2693/) — SPKI Certificate Theory
 
 ### R-M-06

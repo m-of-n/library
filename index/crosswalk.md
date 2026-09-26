@@ -9,7 +9,7 @@ write `supersedes` on one record and `superseded_by` appears on the other.
 `cites` is what a document itself references (fact). Everything else is
 our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 
-59 of 77 records have at least one edge.
+59 of 82 records have at least one edge.
 
 
 ### `draft-ietf-cbor-cddl-modules`
@@ -219,7 +219,11 @@ is a record nothing will surface.
 - `iana-cbor-simple-values`
 - `iana-cbor-tags`
 - `in-toto-attestation-v1`
+- `kitchenham-charters-2007`
+- `prisma-2020`
+- `psscrm-v1`
 - `rfc-1952`
+- `rfc-2692`
 - `rfc-2693`
 - `rfc-3339`
 - `rfc-3966`
@@ -233,6 +237,7 @@ is a record nothing will surface.
 - `secure-systems-lab-dsse`
 - `w3-org-pics`
 - `w3c-did-core`
+- `wohlin-2014-snowballing`
 
 ## Dangling relations
 

@@ -3,8 +3,17 @@
 
 # Records
 
-77 records across 5 bodies.
+82 records across 6 bodies.
 
+
+## academic
+
+| id | title | type | maturity | status | useful | versions |
+|---|---|---|---|---|---|---|
+| [`kitchenham-charters-2007`](../records/academic/kitchenham-charters-2007/) | Guidelines for performing Systematic Literature Reviews in | paper | — | stub | useful | — |
+| [`prisma-2020`](../records/academic/prisma-2020/) | The PRISMA 2020 statement: an updated guideline for report | paper | — | stub | useful | — |
+| [`psscrm-v1`](../records/academic/psscrm-v1/) | Proactive Software Supply Chain Risk Management Framework  | paper | — | stub | useful | — |
+| [`wohlin-2014-snowballing`](../records/academic/wohlin-2014-snowballing/) | Guidelines for snowballing in systematic literature studie | paper | — | stub | useful | — |
 
 ## community
 
@@ -29,6 +38,7 @@
 | [`ietf-cose-wg`](../records/ietf/ietf-cose-wg/) | IETF CBOR Object Signing and Encryption (COSE) Working Gro | consortium | — | fetched | useful | — |
 | [`ietf-vcon-wg`](../records/ietf/ietf-vcon-wg/) | IETF vCon Working Group | web | — | stub | — | — |
 | [`rfc-1952`](../records/ietf/rfc-1952/) | GZIP | rfc | — | stub | — | — |
+| [`rfc-2692`](../records/ietf/rfc-2692/) | SPKI Requirements | rfc | — | stub | useful | — |
 | [`rfc-2693`](../records/ietf/rfc-2693/) | SPKI Certificate Theory | rfc | — | queued | — | — |
 | [`rfc-3339`](../records/ietf/rfc-3339/) | Timestamps | rfc | — | stub | — | — |
 | [`rfc-3966`](../records/ietf/rfc-3966/) | tel URI | rfc | — | stub | — | — |
