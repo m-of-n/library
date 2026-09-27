@@ -3,11 +3,13 @@
 
 # Bibliography
 
-78 records.
+83 records.
 
 
 ## community
 
+- **CycloneDX Bill of Materials Specification** — Jan Kowalleck, Steve Springett. 2025-12  
+  `cyclonedx-1-7` · spec · standard · [source](https://ecma-international.org/wp-content/uploads/ECMA-424_2nd_edition_december_2025.pdf)
 - **dCBOR: Deterministic CBOR** — 2026-08-10  
   `draft-mcnally-deterministic-cbor` · draft · [source](https://www.ietf.org/archive/id/draft-mcnally-deterministic-cbor-18.txt)  
   _An INDIVIDUAL draft with no IETF stream and no WG standing, widely miscited as 'the' deterministic CBOR profile. At -18 it narrows RFC 8949 Sec.4.2 directly and does not mention CDE, contrary to common secondary accounts._
@@ -15,6 +17,8 @@
   `in-toto-attestation-v1` · spec · [source](https://in-toto.io/)
 - **Dead Simple Signing Envelope (DSSE)**  
   `secure-systems-lab-dsse` · repo · [source](https://github.com/secure-systems-lab/dsse)
+- **System Package Data Exchange (SPDX) Specification Version 3.0.1** — The Linux Foundation and its Contributors. 2024-12-17  
+  `spdx-3-0-1` · spec · [source](https://spdx.github.io/spdx-spec/v3.0.1/)
 
 ## ietf
 
@@ -210,6 +214,9 @@
   _The central extension point of CBOR, and the single strongest piece of evidence for R-M-12: a native model built on it is registry-dependent._
 - **IANA COSE Algorithms registry**  
   `iana-cose-algorithms` · dataset · [source](https://www.iana.org/assignments/cose/cose.xhtml)
+- **Information technology — SPDX Specification V2.2.1** — ISO/IEC JTC 1/SC 7. 2021-08  
+  `iso-iec-5962-2021` · spec · standard · [source](https://www.iso.org/standard/81870.html)  
+  _Held for the standing it establishes, not for its text: it is the one SBOM format with ISO ratification, and it carries SPDX 2.2.1, which SPDX 3.0.1 has moved past. Paywalled, so we work from the 3.0.1 record._
 
 ## nist
 
@@ -223,6 +230,15 @@
   _Enterprise process guidance, not a mechanism specification. Supplies the vocabulary and the institutional frame that an attestation is consumed by, but we conform to no clause in it._
 - **Recommendations for Discrete Logarithm-based Cryptography: Elliptic Curve Domain Parameters**  
   `sp-800-186` · spec · recommendation · [source](https://csrc.nist.gov/pubs/sp/800/186/final)
+
+## regulator
+
+- **Framing Software Component Transparency: Establishing a Common Software Bill of Materials (SBOM)** — CISA SBOM Tooling and Implementation Working Group. 2024-09-03  
+  `cisa-framing-software-component-transparency` · spec · best-practice · **summarized** · [source](https://www.cisa.gov/sites/default/files/2024-10/SBOM%20Framing%20Software%20Component%20Transparency%202024.pdf)  
+  _Promotes the cryptographic hash from NTIA's recommended tier to Minimum Expected, and defines relationship completeness with an explicit open-world default. Both are directly load-bearing for R-M-07 and R-M-11._
+- **The Minimum Elements For a Software Bill of Materials (SBOM)** — National Telecommunications and Information Administration. 2021-07-12  
+  `ntia-sbom-minimum-elements` · spec · best-practice · **summarized** · [source](https://www.ntia.gov/sites/default/files/publications/sbom_minimum_elements_report_0.pdf)  
+  _Establishes the floor for what an SBOM must contain, and — decisively for us — puts the component hash OUTSIDE that floor. That omission is the evidence R-M-07 needs._
 
 ## w3c
 

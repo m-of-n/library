@@ -9,8 +9,15 @@ write `supersedes` on one record and `superseded_by` appears on the other.
 `cites` is what a document itself references (fact). Everything else is
 our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 
-61 of 78 records have at least one edge.
+67 of 83 records have at least one edge.
 
+
+### `cisa-framing-software-component-transparency`
+- **cites** → `cyclonedx-1-7`, `iso-iec-5962-2021`, `spdx-3-0-1`
+- **updates** → `ntia-sbom-minimum-elements`
+
+### `cyclonedx-1-7`
+- **see_also** → `in-toto-attestation-v1`, `secure-systems-lab-dsse`, `spdx-3-0-1`
 
 ### `draft-ietf-cbor-cddl-modules`
 - **part_of** → `ietf-cbor-wg`
@@ -58,7 +65,14 @@ our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 - **has_part** → `draft-ietf-vcon-vcon-core-04`
 
 ### `in-toto-attestation-v1`
+- **see_also** → `cyclonedx-1-7`, `sp-800-161r1`, `spdx-3-0-1`
+
+### `iso-iec-5962-2021`
+- **superseded_by** → `spdx-3-0-1`
+
+### `ntia-sbom-minimum-elements`
 - **see_also** → `sp-800-161r1`
+- **updated_by** → `cisa-framing-software-component-transparency`
 
 ### `rfc-7049`
 - **part_of** → `ietf-cbor-wg`
@@ -210,11 +224,18 @@ our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 ### `rfc-9997`
 - **part_of** → `ietf-cbor-wg`
 
+### `secure-systems-lab-dsse`
+- **see_also** → `cyclonedx-1-7`, `spdx-3-0-1`
+
 ### `sp-800-161r1`
-- **see_also** → `in-toto-attestation-v1`, `rfc-9943`
+- **see_also** → `in-toto-attestation-v1`, `ntia-sbom-minimum-elements`, `rfc-9943`
 
 ### `sp-800-186`
 - **see_also** → `fips-186-5`
+
+### `spdx-3-0-1`
+- **see_also** → `cyclonedx-1-7`, `in-toto-attestation-v1`, `secure-systems-lab-dsse`
+- **supersedes** → `iso-iec-5962-2021`
 
 ## Orphans
 
@@ -235,7 +256,6 @@ is a record nothing will surface.
 - `rfc-8620`
 - `rfc-9110`
 - `rfc-9804`
-- `secure-systems-lab-dsse`
 - `w3-org-pics`
 - `w3c-did-core`
 
