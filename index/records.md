@@ -3,7 +3,7 @@
 
 # Records
 
-78 records across 5 bodies.
+83 records across 5 bodies.
 
 
 ## community
@@ -97,10 +97,15 @@
 
 | id | title | type | maturity | status | useful | versions |
 |---|---|---|---|---|---|---|
+| [`fips-180-4`](../records/nist/fips-180-4/) | Secure Hash Standard (SHS) | spec | standard | stub | useful | — |
 | [`fips-186-4`](../records/nist/fips-186-4/) | Digital Signature Standard (DSS), FIPS 186-4 | spec | historic | stub | — | — |
 | [`fips-186-5`](../records/nist/fips-186-5/) | Digital Signature Standard (DSS) | spec | standard | summarized | useful | — |
+| [`fips-202`](../records/nist/fips-202/) | SHA-3 Standard: Permutation-Based Hash and Extendable-Outp | spec | standard | stub | useful | — |
+| [`fips-203`](../records/nist/fips-203/) | Module-Lattice-Based Key-Encapsulation Mechanism Standard | spec | standard | stub | marginal | — |
 | [`sp-800-161r1`](../records/nist/sp-800-161r1/) | Cybersecurity Supply Chain Risk Management Practices for S | spec | best-practice | stub | marginal | — |
 | [`sp-800-186`](../records/nist/sp-800-186/) | Recommendations for Discrete Logarithm-based Cryptography: | spec | recommendation | stub | — | — |
+| [`sp-800-208`](../records/nist/sp-800-208/) | Recommendation for Stateful Hash-Based Signature Schemes | spec | best-practice | stub | useful | — |
+| [`sp-800-57pt1r5`](../records/nist/sp-800-57pt1r5/) | Recommendation for Key Management: Part 1 - General | spec | best-practice | stub | useful | — |
 
 ## w3c
 

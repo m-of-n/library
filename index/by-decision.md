@@ -11,6 +11,7 @@ This is the query the library exists to answer.
 
 - [`draft-ietf-cbor-packed`](../records/ietf/draft-ietf-cbor-packed/) — Packed CBOR
 - [`fips-186-4`](../records/nist/fips-186-4/) — Digital Signature Standard (DSS), FIPS 186-4
+- [`fips-203`](../records/nist/fips-203/) — Module-Lattice-Based Key-Encapsulation Mechanism Standard
 - [`ietf-vcon-wg`](../records/ietf/ietf-vcon-wg/) — IETF vCon Working Group
 - [`rfc-1952`](../records/ietf/rfc-1952/) — GZIP
 - [`rfc-3339`](../records/ietf/rfc-3339/) — Timestamps
@@ -40,6 +41,7 @@ This is the query the library exists to answer.
 - [`rfc-9997`](../records/ietf/rfc-9997/) — YANG-CBOR: Allocating SID Ranges for Private Enterprise Number (PEN) H
 - [`sp-800-161r1`](../records/nist/sp-800-161r1/) — Cybersecurity Supply Chain Risk Management Practices for Systems and O
 - [`sp-800-186`](../records/nist/sp-800-186/) — Recommendations for Discrete Logarithm-based Cryptography: Elliptic Cu
+- [`sp-800-57pt1r5`](../records/nist/sp-800-57pt1r5/) — Recommendation for Key Management: Part 1 - General
 - [`w3c-did-core`](../records/w3c/w3c-did-core/) — Decentralized Identifiers (DIDs) v1.0
 
 ### DEC-002
@@ -105,7 +107,9 @@ This is the query the library exists to answer.
 
 ### R-M-02
 
+- [`fips-180-4`](../records/nist/fips-180-4/) — Secure Hash Standard (SHS)
 - [`fips-186-5`](../records/nist/fips-186-5/) — Digital Signature Standard (DSS)
+- [`fips-202`](../records/nist/fips-202/) — SHA-3 Standard: Permutation-Based Hash and Extendable-Output Functions
 
 ### R-M-05
 
@@ -144,3 +148,4 @@ This is the query the library exists to answer.
 
 - [`fips-186-5`](../records/nist/fips-186-5/) — Digital Signature Standard (DSS)
 - [`secure-systems-lab-dsse`](../records/community/secure-systems-lab-dsse/) — Dead Simple Signing Envelope (DSSE)
+- [`sp-800-208`](../records/nist/sp-800-208/) — Recommendation for Stateful Hash-Based Signature Schemes
