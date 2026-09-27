@@ -49,10 +49,10 @@ our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 - **supersedes** → `fips-186-4`
 
 ### `fips-202`
-- **see_also** → `fips-180-4`, `fips-186-5`
+- **see_also** → `fips-180-4`, `fips-186-5`, `fips-203`, `sp-800-208`
 
 ### `fips-203`
-- **see_also** → `fips-186-5`
+- **see_also** → `fips-186-5`, `fips-202`
 
 ### `iana-cose-algorithms`
 - **see_also** → `draft-ietf-vcon-vcon-core-04`
@@ -226,7 +226,7 @@ our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 - **see_also** → `fips-186-5`
 
 ### `sp-800-208`
-- **see_also** → `fips-180-4`, `fips-186-5`
+- **see_also** → `fips-180-4`, `fips-186-5`, `fips-202`
 
 ### `sp-800-57pt1r5`
 - **see_also** → `fips-180-4`, `fips-186-5`
