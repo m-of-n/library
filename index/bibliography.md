@@ -214,7 +214,7 @@
 ## nist
 
 - **Secure Hash Standard (SHS)** — 2015-08. 10.6028/NIST.FIPS.180-4  
-  `fips-180-4` · spec · standard · [source](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf)  
+  `fips-180-4` · spec · standard · **summarized** · [source](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf)  
   _Defines the SHA-2 family. A principal named by key digest under R-M-02 is named by one of these functions, so which are approved is load-bearing on that naming._
 - **Digital Signature Standard (DSS), FIPS 186-4**  
   `fips-186-4` · spec · historic · [source](https://csrc.nist.gov/pubs/fips/186-4/final)
@@ -222,7 +222,7 @@
   `fips-186-5` · spec · standard · **summarized** · [source](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf)  
   _Defines the signature schemes a key-centric model will actually use; supplies publisher test vectors for PROC-0002 stage 8._
 - **SHA-3 Standard: Permutation-Based Hash and Extendable-Output Functions** — 2015-08. 10.6028/NIST.FIPS.202  
-  `fips-202` · spec · standard · [source](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf)  
+  `fips-202` · spec · standard · **summarized** · [source](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf)  
   _Defines SHA-3 and the SHAKE extendable-output functions. It does not replace FIPS 180-4 — both are approved, which is itself the finding a key-digest naming scheme has to resolve._
 - **Module-Lattice-Based Key-Encapsulation Mechanism Standard** — 2024-08-13. 10.6028/NIST.FIPS.203  
   `fips-203` · spec · standard · [source](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.pdf)  
@@ -233,10 +233,10 @@
 - **Recommendations for Discrete Logarithm-based Cryptography: Elliptic Curve Domain Parameters**  
   `sp-800-186` · spec · recommendation · [source](https://csrc.nist.gov/pubs/sp/800/186/final)
 - **Recommendation for Stateful Hash-Based Signature Schemes** — 2020-10. 10.6028/NIST.SP.800-208  
-  `sp-800-208` · spec · best-practice · [source](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-208.pdf)  
+  `sp-800-208` · spec · best-practice · **summarized** · [source](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-208.pdf)  
   _Approves LMS/HSS and XMSS/XMSS-MT - signature schemes whose security rests only on the hash function, and whose STATEFULNESS makes key reuse a correctness failure rather than a weakness. That constraint bears directly on signing canonical bytes._
 - **Recommendation for Key Management: Part 1 - General** — 2020-05. 10.6028/NIST.SP.800-57pt1r5  
-  `sp-800-57pt1r5` · spec · best-practice · [source](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-57pt1r5.pdf)  
+  `sp-800-57pt1r5` · spec · best-practice · **summarized** · [source](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-57pt1r5.pdf)  
   _Supplies the key-lifecycle vocabulary - cryptoperiod, key state, algorithm strength, transition - that a model naming principals by key needs in order to say what happens when a key expires. We conform to no clause in it._
 
 ## w3c
