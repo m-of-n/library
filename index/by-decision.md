@@ -41,7 +41,6 @@ This is the query the library exists to answer.
 - [`rfc-9997`](../records/ietf/rfc-9997/) — YANG-CBOR: Allocating SID Ranges for Private Enterprise Number (PEN) H
 - [`sp-800-161r1`](../records/nist/sp-800-161r1/) — Cybersecurity Supply Chain Risk Management Practices for Systems and O
 - [`sp-800-186`](../records/nist/sp-800-186/) — Recommendations for Discrete Logarithm-based Cryptography: Elliptic Cu
-- [`sp-800-57pt1r5`](../records/nist/sp-800-57pt1r5/) — Recommendation for Key Management: Part 1 - General
 - [`w3c-did-core`](../records/w3c/w3c-did-core/) — Decentralized Identifiers (DIDs) v1.0
 
 ### DEC-002
@@ -110,6 +109,7 @@ This is the query the library exists to answer.
 - [`fips-180-4`](../records/nist/fips-180-4/) — Secure Hash Standard (SHS)
 - [`fips-186-5`](../records/nist/fips-186-5/) — Digital Signature Standard (DSS)
 - [`fips-202`](../records/nist/fips-202/) — SHA-3 Standard: Permutation-Based Hash and Extendable-Output Functions
+- [`sp-800-57pt1r5`](../records/nist/sp-800-57pt1r5/) — Recommendation for Key Management: Part 1 - General
 
 ### R-M-05
 
