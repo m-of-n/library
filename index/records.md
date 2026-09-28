@@ -79,7 +79,7 @@
 | [`rfc-9804`](../records/ietf/rfc-9804/) | Simple Public Key Infrastructure (SPKI) S-Expressions | rfc | — | queued | — | — |
 | [`rfc-9864`](../records/ietf/rfc-9864/) | Fully-Specified Algorithms for JSON Object Signing and Enc | rfc | standard | fetched | useful | — |
 | [`rfc-9921`](../records/ietf/rfc-9921/) | CBOR Object Signing and Encryption (COSE) Header Parameter | rfc | standard | fetched | marginal | — |
-| [`rfc-9942`](../records/ietf/rfc-9942/) | CBOR Object Signing and Encryption (COSE) Receipts | rfc | standard | fetched | useful | — |
+| [`rfc-9942`](../records/ietf/rfc-9942/) | CBOR Object Signing and Encryption (COSE) Receipts | rfc | standard | summarized | useful | — |
 | [`rfc-9943`](../records/ietf/rfc-9943/) | An Architecture for Trustworthy and Transparent Digital Su | rfc | standard | summarized | useful | — |
 | [`rfc-9964`](../records/ietf/rfc-9964/) | ML-DSA for JSON Object Signing and Encryption (JOSE) and C | rfc | standard | fetched | marginal | — |
 | [`rfc-9995`](../records/ietf/rfc-9995/) | CBOR Object Signing and Encryption (COSE) Hash Envelope | rfc | standard | fetched | useful | — |

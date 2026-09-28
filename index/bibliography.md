@@ -186,7 +186,7 @@
   `rfc-9921` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9921.txt)  
   _Carries an RFC 3161 timestamp in a COSE header. Relevant only if we need third-party time attestation._
 - **CBOR Object Signing and Encryption (COSE) Receipts** — O. Steele, H. Birkholz, A. Delignat-Lavaud, C. Fournet. 2026-06. RFC 9942  
-  `rfc-9942` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9942.txt)  
+  `rfc-9942` · rfc · standard · **summarized** · [source](https://www.rfc-editor.org/rfc/rfc9942.txt)  
   _The receipt format the SCITT architecture (RFC 9943, already held) relies on. Directly relevant to the transparency story._
 - **An Architecture for Trustworthy and Transparent Digital Supply Chains** — H. Birkholz, A. Delignat-Lavaud, C. Fournet, Y. Deshpande, S. Lasker. 2026-06. RFC 9943  
   `rfc-9943` · rfc · standard · **summarized** · [source](https://www.rfc-editor.org/rfc/rfc9943.txt)  

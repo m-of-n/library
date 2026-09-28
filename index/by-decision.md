@@ -138,6 +138,7 @@ This is the query the library exists to answer.
 - [`rfc-9164`](../records/ietf/rfc-9164/) — Concise Binary Object Representation (CBOR) Tags for IPv4 and IPv6 Add
 - [`rfc-9581`](../records/ietf/rfc-9581/) — Concise Binary Object Representation (CBOR) Tags for Time, Duration, a
 - [`rfc-9781`](../records/ietf/rfc-9781/) — A Concise Binary Object Representation (CBOR) Tag for Unprotected CBOR
+- [`rfc-9942`](../records/ietf/rfc-9942/) — CBOR Object Signing and Encryption (COSE) Receipts
 - [`rfc-9943`](../records/ietf/rfc-9943/) — An Architecture for Trustworthy and Transparent Digital Supply Chains
 
 ### R-O-05
