@@ -9,7 +9,7 @@ write `supersedes` on one record and `superseded_by` appears on the other.
 `cites` is what a document itself references (fact). Everything else is
 our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 
-59 of 82 records have at least one edge.
+59 of 200 records have at least one edge.
 
 
 ### `draft-ietf-cbor-cddl-modules`
@@ -215,29 +215,147 @@ our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 No edges in or out. Not wrong — but a record connected to nothing
 is a record nothing will surface.
 
+- `aclu-fahrenheit-451-2`
+- `android-key-attestation`
+- `apple-app-attest`
+- `arm-cca-den0125`
+- `aws-snp-attestation`
+- `biscuit-spec-3-3`
+- `brickell-2004-daa`
+- `c2pa-2-4`
+- `c2pa-conformance-program`
+- `c2pa-ux-2-2`
+- `ca-sb-942`
+- `cawg-identity-1-2`
+- `cnsa-2-0`
+- `cscw-2023-provenance-trust`
+- `cve-2019-13050`
+- `dennis-vanhorn-1966`
+- `did-key-method`
+- `diffie-hellman-1976`
+- `draft-asor-wimse-agent-delegation-chain`
+- `draft-ffm-rats-cca-token`
+- `draft-hamr-oauth-agent-delegation`
+- `draft-ietf-lamps-pq-composite-sigs`
+- `draft-ietf-rats-corim`
+- `draft-ietf-spki-cert-structure`
 - `draft-mih-scitt-agent-action-capsule-02`
+- `draft-niyikiza-oauth-attenuating-agent-tokens`
+- `elgamal-1985`
+- `ellison-schneier-2000-ten-risks`
+- `eu-ai-act-art-50`
+- `eu-code-of-practice-marking`
+- `fips-186`
+- `fips-186-1`
+- `fips-186-2`
+- `fips-186-3`
+- `fips-203`
+- `fips-204`
+- `fips-205`
+- `gmr-1984-paradoxical`
+- `gmr-1988-adaptive`
+- `gmy-1983-strong-signatures`
+- `gnupg-key-management`
+- `google-open-dice`
+- `gvu-1998-webmaster-survey`
+- `hardy-1988-confused-deputy`
 - `iana-cbor-simple-values`
 - `iana-cbor-tags`
+- `ide-2025-signals-of-provenance`
+- `ietf-spki-wg`
 - `in-toto-attestation-v1`
+- `in-toto-envelope-v1`
+- `intel-sgx-dcap-quotelib`
+- `intel-tdx-dcap-quoting`
+- `intel-tdx-whitepaper`
+- `iso-iec-11889-2015`
+- `keys-openpgp-org-faq`
 - `kitchenham-charters-2007`
+- `lamport-1979-one-way`
+- `macaroons-2014`
+- `merkle-1979-thesis`
+- `merkle-1980-protocols`
+- `merkle-1989-certified`
+- `moruzzi-2025-content-authenticities`
+- `nistir-8547`
+- `nistir-8610`
+- `nsa-2025-content-credentials`
+- `pics-1-1-labels`
+- `pics-1-1-services`
+- `pics-censorship-faq`
+- `pics-dsig-1-0`
+- `powder-description-resources`
+- `prakash-2026-aip`
 - `prisma-2020`
 - `psscrm-v1`
+- `ptacek-2024-macaroons`
+- `rabin-1979-tr212`
 - `rfc-1952`
 - `rfc-2692`
 - `rfc-2693`
 - `rfc-3339`
+- `rfc-3820`
 - `rfc-3966`
 - `rfc-4119`
 - `rfc-4122`
+- `rfc-4880`
+- `rfc-5280`
 - `rfc-5321`
 - `rfc-6068`
+- `rfc-6749`
+- `rfc-6750`
+- `rfc-7800`
+- `rfc-8032`
+- `rfc-8391`
+- `rfc-8554`
+- `rfc-8555`
 - `rfc-8620`
+- `rfc-9068`
 - `rfc-9110`
+- `rfc-9162`
+- `rfc-9334`
+- `rfc-9396`
+- `rfc-9421`
+- `rfc-9449`
+- `rfc-9580`
+- `rfc-9711`
 - `rfc-9804`
+- `rsa-1978`
+- `schnorr-1989-smartcards`
+- `schnorr-1991-jcryptology`
+- `sdsi-1-1`
 - `secure-systems-lab-dsse`
+- `sev-snp-primer-2026`
+- `shor-1994`
+- `shor-1997`
+- `sp-1800-38`
+- `sp-800-208`
+- `tcg-dice-cert-profiles`
+- `tcg-dice-hw-requirements`
+- `tcg-dice-implicit-identity`
+- `tcg-dice-layering`
+- `tcg-dice-symmetric`
+- `tcg-integrity-event-log`
+- `tcg-pc-client-pfp`
+- `tcg-pc-client-ptp`
+- `tcg-tpm-1-2-main`
+- `tcg-tpm-2-0-library-184`
+- `tcg-tpm-2-0-library-185`
+- `tcg-tpm2-keys-device-identity`
+- `tuf-tap-21`
+- `ucan-1-0`
+- `ulrich-2011-openpgp-wot`
+- `veski-2026-capmas`
 - `w3-org-pics`
+- `w3c-did-1-1`
 - `w3c-did-core`
+- `w3c-did-extensions-methods`
+- `w3c-tag-obsolete-powder`
+- `wang-2006-reducing-spki`
 - `wohlin-2014-snowballing`
+- `zcap-ld`
+- `zooko-2001-names`
+- `zoom-keybase-2020`
 
 ## Dangling relations
 

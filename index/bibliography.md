@@ -3,36 +3,136 @@
 
 # Bibliography
 
-82 records.
+200 records.
 
 
 ## academic
 
+- **Direct Anonymous Attestation**  
+  `brickell-2004-daa` · paper · [source](https://eprint.iacr.org/2004/205)
+- **Examining the Impact of Provenance-Enabled Media on Trust and Accuracy Perceptions**  
+  `cscw-2023-provenance-trust` · paper · [source](https://doi.org/10.1145/3610061)
+- **Programming Semantics for Multiprogrammed Computations**  
+  `dennis-vanhorn-1966` · paper · [source](https://doi.org/10.1145/365230.365252)
+- **New Directions in Cryptography**  
+  `diffie-hellman-1976` · paper · [source](https://doi.org/10.1109/TIT.1976.1055638)
+- **A Public Key Cryptosystem and a Signature Scheme Based on Discrete Logarithms**  
+  `elgamal-1985` · paper · [source](https://doi.org/10.1109/TIT.1985.1057074)
+- **Ten Risks of PKI: What You're not Being Told about Public Key Infrastructure**  
+  `ellison-schneier-2000-ten-risks` · paper · [source](https://www.schneier.com/academic/paperfiles/paper-pki.pdf)
+- **A Paradoxical Solution to The Signature Problem**  
+  `gmr-1984-paradoxical` · paper · [source](https://doi.org/10.1109/SFCS.1984.715946)
+- **A Digital Signature Scheme Secure Against Adaptive Chosen-Message Attacks**  
+  `gmr-1988-adaptive` · paper · [source](https://doi.org/10.1137/0217017)
+- **Strong Signature Schemes**  
+  `gmy-1983-strong-signatures` · paper · [source](https://doi.org/10.1145/800061.808774)
+- **GVU 10th WWW User Survey: webmaster PICS labelling rates**  
+  `gvu-1998-webmaster-survey` · dataset · [source](https://sites.cc.gatech.edu/gvu/user_surveys/survey-1998-04/graphs/webmaster/q69.htm)
+- **The Confused Deputy (or why capabilities might have been invented)**  
+  `hardy-1988-confused-deputy` · paper · [source](https://doi.org/10.1145/54289.871709)
+- **Signals of Provenance: Navigating Indicators in AI-Generated Media for Sighted and Blind Individuals**  
+  `ide-2025-signals-of-provenance` · paper · [source](https://arxiv.org/abs/2505.16057)
 - **Guidelines for performing Systematic Literature Reviews in Software Engineering** — 2007  
   `kitchenham-charters-2007` · paper · [source](https://www.elsevier.com/)  
   _The three-stage SLR structure - protocol, conduct, report - that docs/construction.md names as our method and did not hold a record for._
+- **Constructing Digital Signatures from a One Way Function**  
+  `lamport-1979-one-way` · paper · [source](https://lamport.azurewebsites.net/pubs/dig-sig.pdf)
+- **Macaroons: Cookies with Contextual Caveats for Decentralized Authorization in the Cloud**  
+  `macaroons-2014` · paper · [source](https://theory.stanford.edu/~ataly/Papers/macaroons.pdf)
+- **Secrecy, Authentication, and Public Key Systems**  
+  `merkle-1979-thesis` · paper · [source](https://www.ralphmerkle.com/papers/Thesis1979.pdf)
+- **Protocols for Public Key Cryptosystems**  
+  `merkle-1980-protocols` · paper · [source](https://doi.org/10.1109/SP.1980.10006)
+- **A Certified Digital Signature**  
+  `merkle-1989-certified` · paper · [source](https://doi.org/10.1007/0-387-34805-0_21)
+- **Content Authenticities: A Discussion on the Values of Provenance Data for Creatives and Their Audiences**  
+  `moruzzi-2025-content-authenticities` · paper · [source](https://doi.org/10.1145/3698061.3726918)
+- **AIP: Agent Identity Protocol for Verifiable Delegation Across MCP and A2A**  
+  `prakash-2026-aip` · paper · [source](https://arxiv.org/abs/2603.24775)
 - **The PRISMA 2020 statement: an updated guideline for reporting systematic reviews** — 2021  
   `prisma-2020` · paper · [source](https://doi.org/10.1136/bmj.n71)  
   _Transparent reporting of what was found, screened and excluded, and why._
 - **Proactive Software Supply Chain Risk Management Framework (P-SSCRM) Version 1** — 2024  
   `psscrm-v1` · paper · [source](https://arxiv.org/abs/2404.12300)  
   _72 tasks unifying SSDF, 800-161r1, SLSA, S2C2F, CNCF and SCVS. The sponsor asked for a task mapping in the final report._
+- **Digitalized Signatures and Public-Key Functions as Intractable as Factorization**  
+  `rabin-1979-tr212` · paper · [source](https://dspace.mit.edu/handle/1721.1/149499)
+- **A Method for Obtaining Digital Signatures and Public-Key Cryptosystems**  
+  `rsa-1978` · paper · [source](https://doi.org/10.1145/359340.359342)
+- **Efficient Identification and Signatures for Smart Cards**  
+  `schnorr-1989-smartcards` · paper · [source](https://doi.org/10.1007/0-387-34805-0_22)
+- **Efficient Signature Generation by Smart Cards**  
+  `schnorr-1991-jcryptology` · paper · [source](https://doi.org/10.1007/BF00196725)
+- **SDSI — A Simple Distributed Security Infrastructure, version 1.1**  
+  `sdsi-1-1` · spec · [source](https://people.csail.mit.edu/rivest/pubs/RL96.ver-1.1.html)
+- **AMD SEV-SNP: A Confidential Computing Primer**  
+  `sev-snp-primer-2026` · paper · [source](https://arxiv.org/abs/2608.04039)
+- **Algorithms for Quantum Computation: Discrete Logarithms and Factoring**  
+  `shor-1994` · paper · [source](https://doi.org/10.1109/SFCS.1994.365700)
+- **Polynomial-Time Algorithms for Prime Factorization and Discrete Logarithms on a Quantum Computer**  
+  `shor-1997` · paper · [source](https://doi.org/10.1137/S0097539795293172)
+- **Investigating the OpenPGP Web of Trust**  
+  `ulrich-2011-openpgp-wot` · paper · [source](https://doi.org/10.1007/978-3-642-23822-2_27)
+- **CAPMAS: Capability-Based Delegation of Privileges in Multi-Agent Systems**  
+  `veski-2026-capmas` · paper · [source](https://arxiv.org/abs/2609.06500)
+- **Reducing the Dependence of SPKI/SDSI on PKI**  
+  `wang-2006-reducing-spki` · paper · [source](https://doi.org/10.1007/11863908_11)
 - **Guidelines for snowballing in systematic literature studies and a replication in software engineering** — 2014  
   `wohlin-2014-snowballing` · paper · [source](https://doi.org/10.1145/2601248.2601268)  
   _Backward and forward snowballing iterated to closure. index/frontier.md is this, mechanised._
 
+## c2pa
+
+- **Content Credentials: C2PA Technical Specification 2.4**  
+  `c2pa-2-4` · spec · [source](https://spec.c2pa.org/specifications/specifications/2.4/specs/C2PA_Specification.html)
+- **C2PA Conformance Program and Trust List**  
+  `c2pa-conformance-program` · web · [source](https://c2pa.org/conformance/)
+- **C2PA User Experience Guidance for Implementers 2.2**  
+  `c2pa-ux-2-2` · spec · [source](https://spec.c2pa.org/specifications/specifications/2.2/ux/UX_Recommendations.html)
+
 ## community
 
+- **Biscuit Specification v3.3**  
+  `biscuit-spec-3-3` · spec · [source](https://doc.biscuitsec.org/reference/specifications.html)
+- **CAWG Identity Assertion 1.2**  
+  `cawg-identity-1-2` · spec · [source](https://cawg.io/identity/1.2/)
+- **The did:key Method v0.9**  
+  `did-key-method` · spec · [source](https://w3c-ccg.github.io/did-key-spec/)
 - **dCBOR: Deterministic CBOR** — 2026-08-10  
   `draft-mcnally-deterministic-cbor` · draft · [source](https://www.ietf.org/archive/id/draft-mcnally-deterministic-cbor-18.txt)  
   _An INDIVIDUAL draft with no IETF stream and no WG standing, widely miscited as 'the' deterministic CBOR profile. At -18 it narrows RFC 8949 Sec.4.2 directly and does not mention CDE, contrary to common secondary accounts._
+- **GnuPG manual: OpenPGP Key Management (tsign, trustspec)**  
+  `gnupg-key-management` · web · [source](https://www.gnupg.org/documentation/manuals/gnupg/OpenPGP-Key-Management.html)
 - **in-toto Attestation Framework v1**  
   `in-toto-attestation-v1` · spec · [source](https://in-toto.io/)
+- **in-toto Attestation Framework: Envelope**  
+  `in-toto-envelope-v1` · spec · [source](https://github.com/in-toto/attestation/blob/main/spec/v1/envelope.md)
+- **keys.openpgp.org FAQ: third-party certification policy**  
+  `keys-openpgp-org-faq` · web · [source](https://keys.openpgp.org/about/faq)
 - **Dead Simple Signing Envelope (DSSE)**  
   `secure-systems-lab-dsse` · repo · [source](https://github.com/secure-systems-lab/dsse)
+- **TAP 21: ML-DSA signing scheme for TUF metadata**  
+  `tuf-tap-21` · spec · [source](https://github.com/theupdateframework/taps/blob/master/tap21.md)
+- **User Controlled Authorization Network (UCAN) Specification v1.0.0**  
+  `ucan-1-0` · spec · [source](https://github.com/ucan-wg/spec)
+- **Authorization Capabilities (ZCAP-LD) v0.4.0-rc.6**  
+  `zcap-ld` · spec · [source](https://w3c-ccg.github.io/zcap-spec/)
+
+## google
+
+- **Android Key and ID Attestation**  
+  `android-key-attestation` · web · [source](https://source.android.com/docs/security/features/keystore/attestation)
+- **Open Profile for DICE**  
+  `google-open-dice` · spec · [source](https://pigweed.googlesource.com/open-dice/+/HEAD/docs/specification.md)
 
 ## ietf
 
+- **Verifiable Attenuated Delegation for AI Agent Chains**  
+  `draft-asor-wimse-agent-delegation-chain` · draft · [source](https://datatracker.ietf.org/doc//)
+- **Arm CCA Reference Attestation Token**  
+  `draft-ffm-rats-cca-token` · draft · [source](https://datatracker.ietf.org/doc//)
+- **An Attenuated Delegation Profile for Automated Agents**  
+  `draft-hamr-oauth-agent-delegation` · draft · [source](https://datatracker.ietf.org/doc//)
 - **CDDL Module Structure** — 2026-09-02  
   `draft-ietf-cbor-cddl-modules` · draft · [source](https://www.ietf.org/archive/id/draft-ietf-cbor-cddl-modules-07.txt)  
   _Module structure for CDDL. Relevant the moment our schema stops being one file, which WP1 will reach quickly._
@@ -48,17 +148,27 @@
 - **CBOR Serialization and Determinism** — 2026-07-30  
   `draft-ietf-cbor-serialization` · draft · [source](https://www.ietf.org/archive/id/draft-ietf-cbor-serialization-08.txt)  
   _The live WG determinism work and the document a signing profile must target. The WG has not said it replaces CDE, so the edge is see_also, not supersedes._
+- **Composite ML-DSA for use in X.509 Public Key Infrastructure**  
+  `draft-ietf-lamps-pq-composite-sigs` · draft · [source](https://datatracker.ietf.org/doc//)
+- **Concise Reference Integrity Manifest (CoRIM)**  
+  `draft-ietf-rats-corim` · draft · [source](https://datatracker.ietf.org/doc//)
+- **Simple Public Key Certificate (expired, never published)**  
+  `draft-ietf-spki-cert-structure` · draft · [source](https://datatracker.ietf.org/doc//)
 - **The JSON format for vCon - Conversation Data Container** — 2026-09  
   `draft-ietf-vcon-vcon-core-04` · draft · **distilled** · [source](https://www.ietf.org/archive/id/draft-ietf-vcon-vcon-core-04.txt)  
   _An independently-designed signed container with must-understand extension semantics and a supersession model - the best available test of whether our statement form can express something we did not design._
 - **An Agent Action Capsule Profile for SCITT**  
   `draft-mih-scitt-agent-action-capsule-02` · draft · [source](https://datatracker.ietf.org/doc/draft-mih-scitt-agent-action-capsule-02/)
+- **Attenuating Authorization Tokens for Agentic Delegation Chains**  
+  `draft-niyikiza-oauth-attenuating-agent-tokens` · draft · [source](https://datatracker.ietf.org/doc//)
 - **IETF Concise Binary Object Representation Maintenance and Extensions (CBOR) Working Group**  
   `ietf-cbor-wg` · consortium · [source](https://datatracker.ietf.org/wg/cbor/about/)  
   _The body that controls the CBOR spec line and its extension points. Parent record for every CBOR WG document held here._
 - **IETF CBOR Object Signing and Encryption (COSE) Working Group**  
   `ietf-cose-wg` · consortium · [source](https://datatracker.ietf.org/wg/cose/about/)  
   _The body that controls the COSE spec line. Parent record for every COSE document held here._
+- **IETF SPKI Working Group charter and documents**  
+  `ietf-spki-wg` · web · [source](https://datatracker.ietf.org/wg/spki/about/)
 - **IETF vCon Working Group**  
   `ietf-vcon-wg` · web · [source](https://datatracker.ietf.org/wg/vcon/about/)
 - **GZIP** — RFC 1952  
@@ -70,16 +180,26 @@
   `rfc-2693` · rfc · [source](https://www.rfc-editor.org/rfc/rfc2693.html)
 - **Timestamps** — RFC 3339  
   `rfc-3339` · rfc · [source](https://www.rfc-editor.org/rfc/rfc3339.html)
+- **Internet X.509 PKI Proxy Certificate Profile** — RFC 3820  
+  `rfc-3820` · rfc · [source](https://www.rfc-editor.org/rfc/rfc3820.html)
 - **tel URI** — RFC 3966  
   `rfc-3966` · rfc · [source](https://www.rfc-editor.org/rfc/rfc3966.html)
 - **GEOPRIV** — RFC 4119  
   `rfc-4119` · rfc · [source](https://www.rfc-editor.org/rfc/rfc4119.html)
 - **UUID** — RFC 4122  
   `rfc-4122` · rfc · [source](https://www.rfc-editor.org/rfc/rfc4122.html)
+- **OpenPGP Message Format** — RFC 4880  
+  `rfc-4880` · rfc · [source](https://www.rfc-editor.org/rfc/rfc4880.html)
+- **Internet X.509 Public Key Infrastructure Certificate and CRL Profile** — RFC 5280  
+  `rfc-5280` · rfc · [source](https://www.rfc-editor.org/rfc/rfc5280.html)
 - **SMTP** — RFC 5321  
   `rfc-5321` · rfc · [source](https://www.rfc-editor.org/rfc/rfc5321.html)
 - **mailto URI** — RFC 6068  
   `rfc-6068` · rfc · [source](https://www.rfc-editor.org/rfc/rfc6068.html)
+- **The OAuth 2.0 Authorization Framework** — RFC 6749  
+  `rfc-6749` · rfc · [source](https://www.rfc-editor.org/rfc/rfc6749.html)
+- **The OAuth 2.0 Authorization Framework: Bearer Token Usage** — RFC 6750  
+  `rfc-6750` · rfc · [source](https://www.rfc-editor.org/rfc/rfc6750.html)
 - **Concise Binary Object Representation (CBOR)** — C. Bormann, P. Hoffman. 2013-10. RFC 7049  
   `rfc-7049` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc7049.txt)  
   _Obsoleted by RFC 8949; kept because deployed decoders and older profiles still cite it._
@@ -87,6 +207,10 @@
   `rfc-7515` · rfc · [source](https://www.rfc-editor.org/rfc/rfc7515.html)
 - **JWE** — RFC 7516  
   `rfc-7516` · rfc · [source](https://www.rfc-editor.org/rfc/rfc7516.html)
+- **Proof-of-Possession Key Semantics for JSON Web Tokens (JWTs)** — RFC 7800  
+  `rfc-7800` · rfc · [source](https://www.rfc-editor.org/rfc/rfc7800.html)
+- **Edwards-Curve Digital Signature Algorithm (EdDSA)** — RFC 8032  
+  `rfc-8032` · rfc · [source](https://www.rfc-editor.org/rfc/rfc8032.html)
 - **CBOR Object Signing and Encryption (COSE)** — J. Schaad. 2017-07. RFC 8152  
   `rfc-8152` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc8152.txt)  
   _Obsoleted by RFC 9052 and RFC 9053; kept because deployed COSE stacks and older profiles still cite it._
@@ -95,9 +219,15 @@
   _Algorithm profile. ARCH-0001 NG3 defers the algorithm suite, so this is needed only if RSA is later admitted._
 - **JSON** — RFC 8259  
   `rfc-8259` · rfc · [source](https://www.rfc-editor.org/rfc/rfc8259.html)
+- **XMSS: eXtended Merkle Signature Scheme** — RFC 8391  
+  `rfc-8391` · rfc · [source](https://www.rfc-editor.org/rfc/rfc8391.html)
 - **CBOR Web Token (CWT)** — M. Jones, E. Wahlstroem, S. Erdtman, H. Tschofenig. 2018-05. RFC 8392  
   `rfc-8392` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc8392.txt)  
   _ARCH-0001 Sec.6 names COSE_Sign1 + CWT as an envelope candidate and asks that iss/sub align with the KeyId profile._
+- **Leighton-Micali Hash-Based Signatures** — RFC 8554  
+  `rfc-8554` · rfc · [source](https://www.rfc-editor.org/rfc/rfc8554.html)
+- **Automatic Certificate Management Environment (ACME)** — RFC 8555  
+  `rfc-8555` · rfc · [source](https://www.rfc-editor.org/rfc/rfc8555.html)
 - **Concise Data Definition Language (CDDL): A Notational Convention to Express Concise Binary Object Representation (CBOR) and JSON Data Structures** — H. Birkholz, C. Vigano, C. Bormann. 2019-06. RFC 8610  
   `rfc-8610` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc8610.txt)  
   _DEC-002 option 2 is 'CBOR + CDDL as canonical'; this is the schema half of that option._
@@ -139,11 +269,15 @@
 - **CBOR Object Signing and Encryption (COSE): Hash Algorithms** — J. Schaad. 2022-08. RFC 9054  
   `rfc-9054` · rfc · informational · [source](https://www.rfc-editor.org/rfc/rfc9054.txt)  
   _R-M-07 requires artifact statements to bind a content digest; this registers the COSE hash algorithm identifiers for doing so._
+- **JSON Web Token (JWT) Profile for OAuth 2.0 Access Tokens** — RFC 9068  
+  `rfc-9068` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9068.html)
 - **Concise Binary Object Representation (CBOR) Tags for Object Identifiers** — C. Bormann. 2021-07. RFC 9090  
   `rfc-9090` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9090.txt)  
   _OID tags — a second global naming authority inside the encoding. Directly contrary to key-relative naming (ARCH-0002 P1)._
 - **HTTP Semantics** — RFC 9110  
   `rfc-9110` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9110.html)
+- **Certificate Transparency Version 2.0** — RFC 9162  
+  `rfc-9162` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9162.html)
 - **Concise Binary Object Representation (CBOR) Tags for IPv4 and IPv6 Addresses and Prefixes** — M. Richardson, C. Bormann. 2021-12. RFC 9164  
   `rfc-9164` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9164.txt)  
   _Address tags are not in our data model; kept as further evidence of registry-dependent extension points._
@@ -156,12 +290,20 @@
 - **On Stable Storage for Items in Concise Binary Object Representation (CBOR)** — M. Richardson, C. Bormann. 2022-08. RFC 9277  
   `rfc-9277` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9277.txt)  
   _Defines the CBOR file magic / labelled-content convention — how a stored statement file identifies itself._
+- **Remote ATtestation procedureS (RATS) Architecture** — RFC 9334  
+  `rfc-9334` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9334.html)
 - **CBOR Object Signing and Encryption (COSE): Countersignatures** — J. Schaad. 2022-12. RFC 9338  
   `rfc-9338` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9338.txt)  
   _Part of STD 96 with RFC 9052. Countersignature is the closest COSE primitive to an endorsement over someone else's statement._
 - **CBOR Object Signing and Encryption (COSE): Header Parameters for Carrying and Referencing X.509 Certificates** — J. Schaad. 2023-02. RFC 9360  
   `rfc-9360` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9360.txt)  
   _X.509 carriage is the identifier model m-of-n is arguing against, but DEC-003 must say why, and interop may need it._
+- **OAuth 2.0 Rich Authorization Requests** — RFC 9396  
+  `rfc-9396` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9396.html)
+- **HTTP Message Signatures** — RFC 9421  
+  `rfc-9421` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9421.html)
+- **OAuth 2.0 Demonstrating Proof of Possession (DPoP)** — RFC 9449  
+  `rfc-9449` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9449.html)
 - **CBOR Object Signing and Encryption (COSE): AES-CTR and AES-CBC** — R. Housley, H. Tschofenig. 2023-09. RFC 9459  
   `rfc-9459` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9459.txt)  
   _Content encryption modes. m-of-n signs rather than encrypts; kept for completeness of the COSE algorithm picture._
@@ -171,6 +313,8 @@
 - **Traces of Ephemeral Diffie-Hellman Over COSE (EDHOC)** — G. Selander, J. Preuss Mattsson, M. Serafin, M. Tiloca, M. Vucinic. 2024-03. RFC 9529  
   `rfc-9529` · rfc · informational · [source](https://www.rfc-editor.org/rfc/rfc9529.txt)  
   _Test vectors for EDHOC, which we do not implement. Recorded to close the question._
+- **OpenPGP** — RFC 9580  
+  `rfc-9580` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9580.html)
 - **Concise Binary Object Representation (CBOR) Tags for Time, Duration, and Period** — C. Bormann, B. Gamari, H. Birkholz. 2024-08. RFC 9581  
   `rfc-9581` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9581.txt)  
   _Validity windows on a certificate are time values; this is the registry-based way to carry them._
@@ -189,6 +333,8 @@
 - **Updates to the Concise Data Definition Language (CDDL) Grammar** — C. Bormann. 2024-11. RFC 9682  
   `rfc-9682` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9682.txt)  
   _Normative grammar corrections to RFC 8610; both remain current, so an implementation must read them together._
+- **The Entity Attestation Token (EAT)** — RFC 9711  
+  `rfc-9711` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9711.html)
 - **Concise Data Definition Language (CDDL): Additional Control Operators for the Conversion and Processing of Text** — C. Bormann. 2025-03. RFC 9741  
   `rfc-9741` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9741.txt)  
   _Text-conversion control operators; needed where a CDDL schema constrains text representations._
@@ -228,20 +374,125 @@
   _The central extension point of CBOR, and the single strongest piece of evidence for R-M-12: a native model built on it is registry-dependent._
 - **IANA COSE Algorithms registry**  
   `iana-cose-algorithms` · dataset · [source](https://www.iana.org/assignments/cose/cose.xhtml)
+- **ISO/IEC 11889:2015 Trusted Platform Module Library**  
+  `iso-iec-11889-2015` · spec · [source](https://www.iso.org/standard/66510.html)
 
 ## nist
 
+- **FIPS 186: Digital Signature Standard (DSS), 1994**  
+  `fips-186` · spec · [source](https://csrc.nist.gov/pubs/fips/186/upd1/final)
+- **FIPS 186-1: Digital Signature Standard (DSS), 1998**  
+  `fips-186-1` · spec · [source](https://csrc.nist.gov/pubs/fips/186-1/final)
+- **FIPS 186-2: Digital Signature Standard (DSS), 2000**  
+  `fips-186-2` · spec · [source](https://doi.org/10.6028/NIST.FIPS.186-2)
+- **FIPS 186-3: Digital Signature Standard (DSS), 2009**  
+  `fips-186-3` · spec · [source](https://csrc.nist.gov/pubs/fips/186-3/final)
 - **Digital Signature Standard (DSS), FIPS 186-4**  
   `fips-186-4` · spec · historic · [source](https://csrc.nist.gov/pubs/fips/186-4/final)
 - **Digital Signature Standard (DSS)** — 2023-02-03. 10.6028/NIST.FIPS.186-5  
   `fips-186-5` · spec · standard · **summarized** · [source](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf)  
   _Defines the signature schemes a key-centric model will actually use; supplies publisher test vectors for PROC-0002 stage 8._
+- **FIPS 203: Module-Lattice-Based Key-Encapsulation Mechanism Standard**  
+  `fips-203` · spec · [source](https://doi.org/10.6028/NIST.FIPS.203)
+- **FIPS 204: Module-Lattice-Based Digital Signature Standard (ML-DSA)**  
+  `fips-204` · spec · [source](https://doi.org/10.6028/NIST.FIPS.204)
+- **FIPS 205: Stateless Hash-Based Digital Signature Standard (SLH-DSA)**  
+  `fips-205` · spec · [source](https://doi.org/10.6028/NIST.FIPS.205)
+- **NIST IR 8547 ipd: Transition to Post-Quantum Cryptography Standards**  
+  `nistir-8547` · spec · [source](https://csrc.nist.gov/pubs/ir/8547/ipd)
+- **NIST IR 8610: Status Report on the Second Round of the Additional Digital Signature Schemes**  
+  `nistir-8610` · spec · [source](https://csrc.nist.gov/pubs/ir/8610/final)
+- **SP 1800-38: Migration to Post-Quantum Cryptography**  
+  `sp-1800-38` · spec · [source](https://csrc.nist.gov/pubs/sp/1800/38/iprd)
 - **Recommendations for Discrete Logarithm-based Cryptography: Elliptic Curve Domain Parameters**  
   `sp-800-186` · spec · recommendation · [source](https://csrc.nist.gov/pubs/sp/800/186/final)
+- **SP 800-208: Recommendation for Stateful Hash-Based Signature Schemes**  
+  `sp-800-208` · spec · [source](https://doi.org/10.6028/NIST.SP.800-208)
+
+## other
+
+- **DICE Certificate Profiles r01**  
+  `tcg-dice-cert-profiles` · spec · [source](https://trustedcomputinggroup.org/wp-content/uploads/DICE-Certificate-Profiles-r01_pub.pdf)
+- **Hardware Requirements for a Device Identifier Composition Engine r78**  
+  `tcg-dice-hw-requirements` · spec · [source](https://trustedcomputinggroup.org/wp-content/uploads/Hardware-Requirements-for-Device-Identifier-Composition-Engine-r78_For-Publication.pdf)
+- **Implicit Identity Based Device Attestation v1 r0.93**  
+  `tcg-dice-implicit-identity` · spec · [source](https://trustedcomputinggroup.org/wp-content/uploads/TCG-DICE-Arch-Implicit-Identity-Based-Device-Attestation-v1-rev93.pdf)
+- **DICE Layering Architecture v1.0 r0.19**  
+  `tcg-dice-layering` · spec · [source](https://trustedcomputinggroup.org/wp-content/uploads/DICE-Layering-Architecture-r19_pub.pdf)
+- **Symmetric Identity Based Device Attestation v1 r0p94**  
+  `tcg-dice-symmetric` · spec · [source](https://trustedcomputinggroup.org/wp-content/uploads/TCG_DICE_SymIDAttest_v1_r0p94_pubrev.pdf)
+- **TCG Guidance on Integrity Measurements and Event Log Processing v1 r0p118**  
+  `tcg-integrity-event-log` · spec · [source](https://trustedcomputinggroup.org/wp-content/uploads/TCG-Guidance-Integrity-Measurements-Event-Log-Processing_v1_r0p118_24feb2022-1.pdf)
+- **TCG PC Client Platform Firmware Profile Specification r1.05**  
+  `tcg-pc-client-pfp` · spec · [source](https://trustedcomputinggroup.org/wp-content/uploads/TCG_PCClient_PFP_r1p05_05_3feb20.pdf)
+- **TCG PC Client Platform TPM Profile (PTP) for TPM 2.0 v1.06 r32**  
+  `tcg-pc-client-ptp` · spec · [source](https://trustedcomputinggroup.org/wp-content/uploads/TCG-PC-Client-Platform-TPM-Profile-for-TPM-2.0-Version-1.06-Revision-32_5April24.pdf)
+- **TPM Main Specification Version 1.2, Level 2, Revision 116**  
+  `tcg-tpm-1-2-main` · spec · [source](https://trustedcomputinggroup.org/resource/tpm-main-specification/)
+- **TPM 2.0 Library Specification, Parts 0-4, Version 184**  
+  `tcg-tpm-2-0-library-184` · spec · [source](https://trustedcomputinggroup.org/resource/tpm-library-specification/)
+- **TPM 2.0 Library Specification v1.85 (PQC: ML-KEM, ML-DSA)**  
+  `tcg-tpm-2-0-library-185` · spec · [source](https://trustedcomputinggroup.org/new-computing-specification-implements-pqc-measures-to-protect-users-from-quantum-attacks/)
+- **TPM 2.0 Keys for Device Identity and Attestation v1 r12**  
+  `tcg-tpm2-keys-device-identity` · spec · [source](https://trustedcomputinggroup.org/wp-content/uploads/TPM-2p0-Keys-for-Device-Identity-and-Attestation_v1_r12_pub10082021.pdf)
+- **Names: Decentralized, Secure, Human-Meaningful: Choose Two**  
+  `zooko-2001-names` · article · [source](https://web.archive.org/web/20011020191610/http://zooko.com/distnames.html)
+
+## regulator
+
+- **California AI Transparency Act SB 942, as amended by AB 853**  
+  `ca-sb-942` · spec · [source](https://leginfo.legislature.ca.gov/)
+- **Commercial National Security Algorithm Suite 2.0 (CNSA 2.0) Algorithms and FAQ**  
+  `cnsa-2-0` · spec · [source](https://media.defense.gov/2022/Sep/07/2003071836/-1/-1/0/CSI_CNSA_2.0_FAQ_.PDF)
+- **EU AI Act Article 50: Transparency Obligations**  
+  `eu-ai-act-art-50` · spec · [source](https://artificialintelligenceact.eu/article/50/)
+- **EU Code of Practice on marking and labelling AI-generated content**  
+  `eu-code-of-practice-marking` · web · [source](https://digital-strategy.ec.europa.eu/en/news/commission-publishes-code-practice-marking-and-labelling-ai-generated-content)
+- **Content Credentials: Strengthening Multimedia Integrity in the Generative AI Era**  
+  `nsa-2025-content-credentials` · paper · [source](https://media.defense.gov/2025/Jan/29/2003634788/-1/-1/0/CSI-CONTENT-CREDENTIALS.PDF)
+
+## vendor
+
+- **Fahrenheit 451.2: Is Cyberspace Burning?**  
+  `aclu-fahrenheit-451-2` · web · [source](https://www.aclu.org/documents/fahrenheit-4512-cyberspace-burning)
+- **DCAppAttestService / App Attest**  
+  `apple-app-attest` · web · [source](https://developer.apple.com/documentation/devicecheck)
+- **Learn the architecture: Introducing Arm Confidential Compute Architecture**  
+  `arm-cca-den0125` · spec · [source](https://developer.arm.com/documentation/den0125/400/)
+- **Attest an Amazon EC2 instance with AMD SEV-SNP**  
+  `aws-snp-attestation` · web · [source](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/snp-attestation.html)
+- **CVE-2019-13050: SKS keyserver certificate spamming attack**  
+  `cve-2019-13050` · web · [source](https://access.redhat.com/articles/4264021)
+- **Intel SGX ECDSA QuoteLibReference (DCAP API)**  
+  `intel-sgx-dcap-quotelib` · spec · [source](https://download.01.org/intel-sgx/latest/dcap-latest/linux/docs/Intel_SGX_ECDSA_QuoteLibReference_DCAP_API.pdf)
+- **Intel TDX DCAP Quoting Library API**  
+  `intel-tdx-dcap-quoting` · spec · [source](https://download.01.org/intel-sgx/latest/dcap-latest/linux/docs/Intel_TDX_DCAP_Quoting_Library_API.pdf)
+- **Intel Trust Domain Extensions (white paper)**  
+  `intel-tdx-whitepaper` · spec · [source](https://www.intel.com/content/dam/develop/external/us/en/documents/tdx-whitepaper-final9-17.pdf)
+- **Macaroons Escalated Quickly**  
+  `ptacek-2024-macaroons` · web · [source](https://fly.io/blog/macaroons-escalated-quickly/)
+- **Zoom Acquires Keybase**  
+  `zoom-keybase-2020` · web · [source](https://blog.zoom.us/zoom-acquires-keybase-and-announces-goal-of-developing-the-most-broadly-used-enterprise-end-to-end-encryption-offering/)
 
 ## w3c
 
+- **PICS 1.1 Label Distribution: Label Syntax and Communication Protocols**  
+  `pics-1-1-labels` · spec · [source](https://www.w3.org/TR/REC-PICS-labels-961031)
+- **PICS 1.1 Rating Services and Rating Systems and Their Machine Readable Descriptions**  
+  `pics-1-1-services` · spec · [source](https://www.w3.org/TR/REC-PICS-services-961031)
+- **PICS, Censorship, and Intellectual Freedom FAQ**  
+  `pics-censorship-faq` · web · [source](https://www.w3.org/PICS/PICS-FAQ-980126.html)
+- **PICS Signed Labels (DSig) 1.0 Specification**  
+  `pics-dsig-1-0` · spec · [source](https://www.w3.org/TR/1998/REC-DSig-label-19980527/)
+- **POWDER: Description Resources**  
+  `powder-description-resources` · spec · [source](https://www.w3.org/TR/powder-dr/)
 - **W3C Platform for Internet Content Selection (PICS)**  
   `w3-org-pics` · web · [source](https://www.w3.org/PICS/)
+- **Decentralized Identifiers (DIDs) v1.1**  
+  `w3c-did-1-1` · spec · [source](https://www.w3.org/TR/did-1.1/)
 - **Decentralized Identifiers (DIDs) v1.0**  
   `w3c-did-core` · spec · [source](https://www.w3.org/TR/did-core/)
+- **DID Extensions: Methods registry**  
+  `w3c-did-extensions-methods` · spec · [source](https://www.w3.org/TR/did-extensions-methods/)
+- **W3C TAG proposal to obsolete CC/PP and POWDER (issue 86)**  
+  `w3c-tag-obsolete-powder` · web · [source](https://github.com/w3c/transitions/issues/86)

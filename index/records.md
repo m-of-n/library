@@ -3,56 +3,128 @@
 
 # Records
 
-82 records across 6 bodies.
+200 records across 11 bodies.
 
 
 ## academic
 
 | id | title | type | maturity | status | useful | versions |
 |---|---|---|---|---|---|---|
+| [`brickell-2004-daa`](../records/academic/brickell-2004-daa/) | Direct Anonymous Attestation | paper | — | stub | — | — |
+| [`cscw-2023-provenance-trust`](../records/academic/cscw-2023-provenance-trust/) | Examining the Impact of Provenance-Enabled Media on Trust  | paper | — | stub | — | — |
+| [`dennis-vanhorn-1966`](../records/academic/dennis-vanhorn-1966/) | Programming Semantics for Multiprogrammed Computations | paper | — | stub | — | — |
+| [`diffie-hellman-1976`](../records/academic/diffie-hellman-1976/) | New Directions in Cryptography | paper | — | stub | — | — |
+| [`elgamal-1985`](../records/academic/elgamal-1985/) | A Public Key Cryptosystem and a Signature Scheme Based on  | paper | — | stub | — | — |
+| [`ellison-schneier-2000-ten-risks`](../records/academic/ellison-schneier-2000-ten-risks/) | Ten Risks of PKI: What You're not Being Told about Public  | paper | — | stub | — | — |
+| [`gmr-1984-paradoxical`](../records/academic/gmr-1984-paradoxical/) | A Paradoxical Solution to The Signature Problem | paper | — | stub | — | — |
+| [`gmr-1988-adaptive`](../records/academic/gmr-1988-adaptive/) | A Digital Signature Scheme Secure Against Adaptive Chosen- | paper | — | stub | — | — |
+| [`gmy-1983-strong-signatures`](../records/academic/gmy-1983-strong-signatures/) | Strong Signature Schemes | paper | — | stub | — | — |
+| [`gvu-1998-webmaster-survey`](../records/academic/gvu-1998-webmaster-survey/) | GVU 10th WWW User Survey: webmaster PICS labelling rates | dataset | — | stub | — | — |
+| [`hardy-1988-confused-deputy`](../records/academic/hardy-1988-confused-deputy/) | The Confused Deputy (or why capabilities might have been i | paper | — | stub | — | — |
+| [`ide-2025-signals-of-provenance`](../records/academic/ide-2025-signals-of-provenance/) | Signals of Provenance: Navigating Indicators in AI-Generat | paper | — | stub | — | — |
 | [`kitchenham-charters-2007`](../records/academic/kitchenham-charters-2007/) | Guidelines for performing Systematic Literature Reviews in | paper | — | stub | useful | — |
+| [`lamport-1979-one-way`](../records/academic/lamport-1979-one-way/) | Constructing Digital Signatures from a One Way Function | paper | — | stub | — | — |
+| [`macaroons-2014`](../records/academic/macaroons-2014/) | Macaroons: Cookies with Contextual Caveats for Decentraliz | paper | — | stub | — | — |
+| [`merkle-1979-thesis`](../records/academic/merkle-1979-thesis/) | Secrecy, Authentication, and Public Key Systems | paper | — | stub | — | — |
+| [`merkle-1980-protocols`](../records/academic/merkle-1980-protocols/) | Protocols for Public Key Cryptosystems | paper | — | stub | — | — |
+| [`merkle-1989-certified`](../records/academic/merkle-1989-certified/) | A Certified Digital Signature | paper | — | stub | — | — |
+| [`moruzzi-2025-content-authenticities`](../records/academic/moruzzi-2025-content-authenticities/) | Content Authenticities: A Discussion on the Values of Prov | paper | — | stub | — | — |
+| [`prakash-2026-aip`](../records/academic/prakash-2026-aip/) | AIP: Agent Identity Protocol for Verifiable Delegation Acr | paper | — | stub | — | — |
 | [`prisma-2020`](../records/academic/prisma-2020/) | The PRISMA 2020 statement: an updated guideline for report | paper | — | stub | useful | — |
 | [`psscrm-v1`](../records/academic/psscrm-v1/) | Proactive Software Supply Chain Risk Management Framework  | paper | — | stub | useful | — |
+| [`rabin-1979-tr212`](../records/academic/rabin-1979-tr212/) | Digitalized Signatures and Public-Key Functions as Intract | paper | — | stub | — | — |
+| [`rsa-1978`](../records/academic/rsa-1978/) | A Method for Obtaining Digital Signatures and Public-Key C | paper | — | stub | — | — |
+| [`schnorr-1989-smartcards`](../records/academic/schnorr-1989-smartcards/) | Efficient Identification and Signatures for Smart Cards | paper | — | stub | — | — |
+| [`schnorr-1991-jcryptology`](../records/academic/schnorr-1991-jcryptology/) | Efficient Signature Generation by Smart Cards | paper | — | stub | — | — |
+| [`sdsi-1-1`](../records/academic/sdsi-1-1/) | SDSI — A Simple Distributed Security Infrastructure, versi | spec | — | stub | — | — |
+| [`sev-snp-primer-2026`](../records/academic/sev-snp-primer-2026/) | AMD SEV-SNP: A Confidential Computing Primer | paper | — | stub | — | — |
+| [`shor-1994`](../records/academic/shor-1994/) | Algorithms for Quantum Computation: Discrete Logarithms an | paper | — | stub | — | — |
+| [`shor-1997`](../records/academic/shor-1997/) | Polynomial-Time Algorithms for Prime Factorization and Dis | paper | — | stub | — | — |
+| [`ulrich-2011-openpgp-wot`](../records/academic/ulrich-2011-openpgp-wot/) | Investigating the OpenPGP Web of Trust | paper | — | stub | — | — |
+| [`veski-2026-capmas`](../records/academic/veski-2026-capmas/) | CAPMAS: Capability-Based Delegation of Privileges in Multi | paper | — | stub | — | — |
+| [`wang-2006-reducing-spki`](../records/academic/wang-2006-reducing-spki/) | Reducing the Dependence of SPKI/SDSI on PKI | paper | — | stub | — | — |
 | [`wohlin-2014-snowballing`](../records/academic/wohlin-2014-snowballing/) | Guidelines for snowballing in systematic literature studie | paper | — | stub | useful | — |
+
+## c2pa
+
+| id | title | type | maturity | status | useful | versions |
+|---|---|---|---|---|---|---|
+| [`c2pa-2-4`](../records/c2pa/c2pa-2-4/) | Content Credentials: C2PA Technical Specification 2.4 | spec | — | stub | — | — |
+| [`c2pa-conformance-program`](../records/c2pa/c2pa-conformance-program/) | C2PA Conformance Program and Trust List | web | — | stub | — | — |
+| [`c2pa-ux-2-2`](../records/c2pa/c2pa-ux-2-2/) | C2PA User Experience Guidance for Implementers 2.2 | spec | — | stub | — | — |
 
 ## community
 
 | id | title | type | maturity | status | useful | versions |
 |---|---|---|---|---|---|---|
+| [`biscuit-spec-3-3`](../records/community/biscuit-spec-3-3/) | Biscuit Specification v3.3 | spec | — | stub | — | — |
+| [`cawg-identity-1-2`](../records/community/cawg-identity-1-2/) | CAWG Identity Assertion 1.2 | spec | — | stub | — | — |
+| [`did-key-method`](../records/community/did-key-method/) | The did:key Method v0.9 | spec | — | stub | — | — |
 | [`draft-mcnally-deterministic-cbor`](../records/community/draft-mcnally-deterministic-cbor/) | dCBOR: Deterministic CBOR | draft | draft | fetched | marginal | — |
+| [`gnupg-key-management`](../records/community/gnupg-key-management/) | GnuPG manual: OpenPGP Key Management (tsign, trustspec) | web | — | stub | — | — |
 | [`in-toto-attestation-v1`](../records/community/in-toto-attestation-v1/) | in-toto Attestation Framework v1 | spec | — | queued | — | — |
+| [`in-toto-envelope-v1`](../records/community/in-toto-envelope-v1/) | in-toto Attestation Framework: Envelope | spec | — | stub | — | — |
+| [`keys-openpgp-org-faq`](../records/community/keys-openpgp-org-faq/) | keys.openpgp.org FAQ: third-party certification policy | web | — | stub | — | — |
 | [`secure-systems-lab-dsse`](../records/community/secure-systems-lab-dsse/) | Dead Simple Signing Envelope (DSSE) | repo | — | queued | — | — |
+| [`tuf-tap-21`](../records/community/tuf-tap-21/) | TAP 21: ML-DSA signing scheme for TUF metadata | spec | — | stub | — | — |
+| [`ucan-1-0`](../records/community/ucan-1-0/) | User Controlled Authorization Network (UCAN) Specification | spec | — | stub | — | — |
+| [`zcap-ld`](../records/community/zcap-ld/) | Authorization Capabilities (ZCAP-LD) v0.4.0-rc.6 | spec | — | stub | — | — |
+
+## google
+
+| id | title | type | maturity | status | useful | versions |
+|---|---|---|---|---|---|---|
+| [`android-key-attestation`](../records/google/android-key-attestation/) | Android Key and ID Attestation | web | — | stub | — | — |
+| [`google-open-dice`](../records/google/google-open-dice/) | Open Profile for DICE | spec | — | stub | — | — |
 
 ## ietf
 
 | id | title | type | maturity | status | useful | versions |
 |---|---|---|---|---|---|---|
+| [`draft-asor-wimse-agent-delegation-chain`](../records/ietf/draft-asor-wimse-agent-delegation-chain/) | Verifiable Attenuated Delegation for AI Agent Chains | draft | — | stub | — | — |
+| [`draft-ffm-rats-cca-token`](../records/ietf/draft-ffm-rats-cca-token/) | Arm CCA Reference Attestation Token | draft | — | stub | — | — |
+| [`draft-hamr-oauth-agent-delegation`](../records/ietf/draft-hamr-oauth-agent-delegation/) | An Attenuated Delegation Profile for Automated Agents | draft | — | stub | — | — |
 | [`draft-ietf-cbor-cddl-modules`](../records/ietf/draft-ietf-cbor-cddl-modules/) | CDDL Module Structure | draft | draft | fetched | useful | — |
 | [`draft-ietf-cbor-cde`](../records/ietf/draft-ietf-cbor-cde/) | CBOR Common Deterministic Encoding (CDE) | draft | draft | fetched | marginal | — |
 | [`draft-ietf-cbor-edn-literals`](../records/ietf/draft-ietf-cbor-edn-literals/) | Concise Diagnostic Notation (CDN) | draft | draft | fetched | useful | — |
 | [`draft-ietf-cbor-packed`](../records/ietf/draft-ietf-cbor-packed/) | Packed CBOR | draft | draft | fetched | marginal | — |
 | [`draft-ietf-cbor-serialization`](../records/ietf/draft-ietf-cbor-serialization/) | CBOR Serialization and Determinism | draft | draft | fetched | useful | — |
+| [`draft-ietf-lamps-pq-composite-sigs`](../records/ietf/draft-ietf-lamps-pq-composite-sigs/) | Composite ML-DSA for use in X.509 Public Key Infrastructur | draft | — | stub | — | — |
+| [`draft-ietf-rats-corim`](../records/ietf/draft-ietf-rats-corim/) | Concise Reference Integrity Manifest (CoRIM) | draft | — | stub | — | — |
+| [`draft-ietf-spki-cert-structure`](../records/ietf/draft-ietf-spki-cert-structure/) | Simple Public Key Certificate (expired, never published) | draft | — | stub | — | — |
 | [`draft-ietf-vcon-vcon-core-04`](../records/ietf/draft-ietf-vcon-vcon-core-04/) | The JSON format for vCon - Conversation Data Container | draft | draft | distilled | useful | — |
 | [`draft-mih-scitt-agent-action-capsule-02`](../records/ietf/draft-mih-scitt-agent-action-capsule-02/) | An Agent Action Capsule Profile for SCITT | draft | — | queued | — | — |
+| [`draft-niyikiza-oauth-attenuating-agent-tokens`](../records/ietf/draft-niyikiza-oauth-attenuating-agent-tokens/) | Attenuating Authorization Tokens for Agentic Delegation Ch | draft | — | stub | — | — |
 | [`ietf-cbor-wg`](../records/ietf/ietf-cbor-wg/) | IETF Concise Binary Object Representation Maintenance and  | consortium | — | fetched | useful | — |
 | [`ietf-cose-wg`](../records/ietf/ietf-cose-wg/) | IETF CBOR Object Signing and Encryption (COSE) Working Gro | consortium | — | fetched | useful | — |
+| [`ietf-spki-wg`](../records/ietf/ietf-spki-wg/) | IETF SPKI Working Group charter and documents | web | — | stub | — | — |
 | [`ietf-vcon-wg`](../records/ietf/ietf-vcon-wg/) | IETF vCon Working Group | web | — | stub | — | — |
 | [`rfc-1952`](../records/ietf/rfc-1952/) | GZIP | rfc | — | stub | — | — |
 | [`rfc-2692`](../records/ietf/rfc-2692/) | SPKI Requirements | rfc | — | stub | useful | — |
 | [`rfc-2693`](../records/ietf/rfc-2693/) | SPKI Certificate Theory | rfc | — | queued | — | — |
 | [`rfc-3339`](../records/ietf/rfc-3339/) | Timestamps | rfc | — | stub | — | — |
+| [`rfc-3820`](../records/ietf/rfc-3820/) | Internet X.509 PKI Proxy Certificate Profile | rfc | — | stub | — | — |
 | [`rfc-3966`](../records/ietf/rfc-3966/) | tel URI | rfc | — | stub | — | — |
 | [`rfc-4119`](../records/ietf/rfc-4119/) | GEOPRIV | rfc | — | stub | — | — |
 | [`rfc-4122`](../records/ietf/rfc-4122/) | UUID | rfc | — | stub | — | — |
+| [`rfc-4880`](../records/ietf/rfc-4880/) | OpenPGP Message Format | rfc | — | stub | — | — |
+| [`rfc-5280`](../records/ietf/rfc-5280/) | Internet X.509 Public Key Infrastructure Certificate and C | rfc | — | stub | — | — |
 | [`rfc-5321`](../records/ietf/rfc-5321/) | SMTP | rfc | — | stub | — | — |
 | [`rfc-6068`](../records/ietf/rfc-6068/) | mailto URI | rfc | — | stub | — | — |
+| [`rfc-6749`](../records/ietf/rfc-6749/) | The OAuth 2.0 Authorization Framework | rfc | — | stub | — | — |
+| [`rfc-6750`](../records/ietf/rfc-6750/) | The OAuth 2.0 Authorization Framework: Bearer Token Usage | rfc | — | stub | — | — |
 | [`rfc-7049`](../records/ietf/rfc-7049/) | Concise Binary Object Representation (CBOR) | rfc | standard | fetched | marginal | — |
 | [`rfc-7515`](../records/ietf/rfc-7515/) | JWS | rfc | — | stub | — | — |
 | [`rfc-7516`](../records/ietf/rfc-7516/) | JWE | rfc | — | stub | — | — |
+| [`rfc-7800`](../records/ietf/rfc-7800/) | Proof-of-Possession Key Semantics for JSON Web Tokens (JWT | rfc | — | stub | — | — |
+| [`rfc-8032`](../records/ietf/rfc-8032/) | Edwards-Curve Digital Signature Algorithm (EdDSA) | rfc | — | stub | — | — |
 | [`rfc-8152`](../records/ietf/rfc-8152/) | CBOR Object Signing and Encryption (COSE) | rfc | standard | fetched | marginal | — |
 | [`rfc-8230`](../records/ietf/rfc-8230/) | Using RSA Algorithms with CBOR Object Signing and Encrypti | rfc | standard | fetched | marginal | — |
 | [`rfc-8259`](../records/ietf/rfc-8259/) | JSON | rfc | — | stub | — | — |
+| [`rfc-8391`](../records/ietf/rfc-8391/) | XMSS: eXtended Merkle Signature Scheme | rfc | — | stub | — | — |
 | [`rfc-8392`](../records/ietf/rfc-8392/) | CBOR Web Token (CWT) | rfc | standard | fetched | useful | — |
+| [`rfc-8554`](../records/ietf/rfc-8554/) | Leighton-Micali Hash-Based Signatures | rfc | — | stub | — | — |
+| [`rfc-8555`](../records/ietf/rfc-8555/) | Automatic Certificate Management Environment (ACME) | rfc | — | stub | — | — |
 | [`rfc-8610`](../records/ietf/rfc-8610/) | Concise Data Definition Language (CDDL): A Notational Conv | rfc | standard | fetched | useful | — |
 | [`rfc-8620`](../records/ietf/rfc-8620/) | JMAP | rfc | — | stub | — | — |
 | [`rfc-8742`](../records/ietf/rfc-8742/) | Concise Binary Object Representation (CBOR) Sequences | rfc | standard | fetched | useful | — |
@@ -67,23 +139,31 @@
 | [`rfc-9052`](../records/ietf/rfc-9052/) | CBOR Object Signing and Encryption (COSE): Structures and  | rfc | standard | fetched | useful | — |
 | [`rfc-9053`](../records/ietf/rfc-9053/) | CBOR Object Signing and Encryption (COSE): Initial Algorit | rfc | informational | fetched | useful | — |
 | [`rfc-9054`](../records/ietf/rfc-9054/) | CBOR Object Signing and Encryption (COSE): Hash Algorithms | rfc | informational | fetched | useful | — |
+| [`rfc-9068`](../records/ietf/rfc-9068/) | JSON Web Token (JWT) Profile for OAuth 2.0 Access Tokens | rfc | — | stub | — | — |
 | [`rfc-9090`](../records/ietf/rfc-9090/) | Concise Binary Object Representation (CBOR) Tags for Objec | rfc | standard | fetched | useful | — |
 | [`rfc-9110`](../records/ietf/rfc-9110/) | HTTP Semantics | rfc | — | stub | — | — |
+| [`rfc-9162`](../records/ietf/rfc-9162/) | Certificate Transparency Version 2.0 | rfc | — | stub | — | — |
 | [`rfc-9164`](../records/ietf/rfc-9164/) | Concise Binary Object Representation (CBOR) Tags for IPv4  | rfc | standard | fetched | marginal | — |
 | [`rfc-9165`](../records/ietf/rfc-9165/) | Additional Control Operators for the Concise Data Definiti | rfc | standard | fetched | useful | — |
 | [`rfc-9254`](../records/ietf/rfc-9254/) | Encoding of Data Modeled with YANG in the Concise Binary O | rfc | standard | fetched | marginal | — |
 | [`rfc-9277`](../records/ietf/rfc-9277/) | On Stable Storage for Items in Concise Binary Object Repre | rfc | standard | fetched | useful | — |
+| [`rfc-9334`](../records/ietf/rfc-9334/) | Remote ATtestation procedureS (RATS) Architecture | rfc | — | stub | — | — |
 | [`rfc-9338`](../records/ietf/rfc-9338/) | CBOR Object Signing and Encryption (COSE): Countersignatur | rfc | standard | fetched | useful | — |
 | [`rfc-9360`](../records/ietf/rfc-9360/) | CBOR Object Signing and Encryption (COSE): Header Paramete | rfc | standard | fetched | marginal | — |
+| [`rfc-9396`](../records/ietf/rfc-9396/) | OAuth 2.0 Rich Authorization Requests | rfc | — | stub | — | — |
+| [`rfc-9421`](../records/ietf/rfc-9421/) | HTTP Message Signatures | rfc | — | stub | — | — |
+| [`rfc-9449`](../records/ietf/rfc-9449/) | OAuth 2.0 Demonstrating Proof of Possession (DPoP) | rfc | — | stub | — | — |
 | [`rfc-9459`](../records/ietf/rfc-9459/) | CBOR Object Signing and Encryption (COSE): AES-CTR and AES | rfc | standard | fetched | marginal | — |
 | [`rfc-9528`](../records/ietf/rfc-9528/) | Ephemeral Diffie-Hellman Over COSE (EDHOC) | rfc | standard | fetched | marginal | — |
 | [`rfc-9529`](../records/ietf/rfc-9529/) | Traces of Ephemeral Diffie-Hellman Over COSE (EDHOC) | rfc | informational | fetched | not-useful | — |
+| [`rfc-9580`](../records/ietf/rfc-9580/) | OpenPGP | rfc | — | stub | — | — |
 | [`rfc-9581`](../records/ietf/rfc-9581/) | Concise Binary Object Representation (CBOR) Tags for Time, | rfc | standard | fetched | useful | — |
 | [`rfc-9596`](../records/ietf/rfc-9596/) | CBOR Object Signing and Encryption (COSE) "typ" (type) Hea | rfc | standard | fetched | useful | — |
 | [`rfc-9597`](../records/ietf/rfc-9597/) | CBOR Web Token (CWT) Claims in COSE Headers | rfc | standard | fetched | useful | — |
 | [`rfc-9668`](../records/ietf/rfc-9668/) | Using Ephemeral Diffie-Hellman Over COSE (EDHOC) with the  | rfc | standard | fetched | not-useful | — |
 | [`rfc-9679`](../records/ietf/rfc-9679/) | CBOR Object Signing and Encryption (COSE) Key Thumbprint | rfc | standard | fetched | useful | — |
 | [`rfc-9682`](../records/ietf/rfc-9682/) | Updates to the Concise Data Definition Language (CDDL) Gra | rfc | standard | fetched | useful | — |
+| [`rfc-9711`](../records/ietf/rfc-9711/) | The Entity Attestation Token (EAT) | rfc | — | stub | — | — |
 | [`rfc-9741`](../records/ietf/rfc-9741/) | Concise Data Definition Language (CDDL): Additional Contro | rfc | standard | fetched | useful | — |
 | [`rfc-9781`](../records/ietf/rfc-9781/) | A Concise Binary Object Representation (CBOR) Tag for Unpr | rfc | standard | fetched | marginal | — |
 | [`rfc-9804`](../records/ietf/rfc-9804/) | Simple Public Key Infrastructure (SPKI) S-Expressions | rfc | — | queued | — | — |
@@ -102,18 +182,81 @@
 | [`iana-cbor-simple-values`](../records/iso/iana-cbor-simple-values/) | IANA Concise Binary Object Representation (CBOR) Simple Va | dataset | — | fetched | useful | — |
 | [`iana-cbor-tags`](../records/iso/iana-cbor-tags/) | IANA Concise Binary Object Representation (CBOR) Tags Regi | dataset | — | fetched | useful | — |
 | [`iana-cose-algorithms`](../records/iso/iana-cose-algorithms/) | IANA COSE Algorithms registry | dataset | — | stub | — | — |
+| [`iso-iec-11889-2015`](../records/iso/iso-iec-11889-2015/) | ISO/IEC 11889:2015 Trusted Platform Module Library | spec | — | stub | — | — |
 
 ## nist
 
 | id | title | type | maturity | status | useful | versions |
 |---|---|---|---|---|---|---|
+| [`fips-186`](../records/nist/fips-186/) | FIPS 186: Digital Signature Standard (DSS), 1994 | spec | — | stub | — | — |
+| [`fips-186-1`](../records/nist/fips-186-1/) | FIPS 186-1: Digital Signature Standard (DSS), 1998 | spec | — | stub | — | — |
+| [`fips-186-2`](../records/nist/fips-186-2/) | FIPS 186-2: Digital Signature Standard (DSS), 2000 | spec | — | stub | — | — |
+| [`fips-186-3`](../records/nist/fips-186-3/) | FIPS 186-3: Digital Signature Standard (DSS), 2009 | spec | — | stub | — | — |
 | [`fips-186-4`](../records/nist/fips-186-4/) | Digital Signature Standard (DSS), FIPS 186-4 | spec | historic | stub | — | — |
 | [`fips-186-5`](../records/nist/fips-186-5/) | Digital Signature Standard (DSS) | spec | standard | summarized | useful | — |
+| [`fips-203`](../records/nist/fips-203/) | FIPS 203: Module-Lattice-Based Key-Encapsulation Mechanism | spec | — | stub | — | — |
+| [`fips-204`](../records/nist/fips-204/) | FIPS 204: Module-Lattice-Based Digital Signature Standard  | spec | — | stub | — | — |
+| [`fips-205`](../records/nist/fips-205/) | FIPS 205: Stateless Hash-Based Digital Signature Standard  | spec | — | stub | — | — |
+| [`nistir-8547`](../records/nist/nistir-8547/) | NIST IR 8547 ipd: Transition to Post-Quantum Cryptography  | spec | — | stub | — | — |
+| [`nistir-8610`](../records/nist/nistir-8610/) | NIST IR 8610: Status Report on the Second Round of the Add | spec | — | stub | — | — |
+| [`sp-1800-38`](../records/nist/sp-1800-38/) | SP 1800-38: Migration to Post-Quantum Cryptography | spec | — | stub | — | — |
 | [`sp-800-186`](../records/nist/sp-800-186/) | Recommendations for Discrete Logarithm-based Cryptography: | spec | recommendation | stub | — | — |
+| [`sp-800-208`](../records/nist/sp-800-208/) | SP 800-208: Recommendation for Stateful Hash-Based Signatu | spec | — | stub | — | — |
+
+## other
+
+| id | title | type | maturity | status | useful | versions |
+|---|---|---|---|---|---|---|
+| [`tcg-dice-cert-profiles`](../records/other/tcg-dice-cert-profiles/) | DICE Certificate Profiles r01 | spec | — | stub | — | — |
+| [`tcg-dice-hw-requirements`](../records/other/tcg-dice-hw-requirements/) | Hardware Requirements for a Device Identifier Composition  | spec | — | stub | — | — |
+| [`tcg-dice-implicit-identity`](../records/other/tcg-dice-implicit-identity/) | Implicit Identity Based Device Attestation v1 r0.93 | spec | — | stub | — | — |
+| [`tcg-dice-layering`](../records/other/tcg-dice-layering/) | DICE Layering Architecture v1.0 r0.19 | spec | — | stub | — | — |
+| [`tcg-dice-symmetric`](../records/other/tcg-dice-symmetric/) | Symmetric Identity Based Device Attestation v1 r0p94 | spec | — | stub | — | — |
+| [`tcg-integrity-event-log`](../records/other/tcg-integrity-event-log/) | TCG Guidance on Integrity Measurements and Event Log Proce | spec | — | stub | — | — |
+| [`tcg-pc-client-pfp`](../records/other/tcg-pc-client-pfp/) | TCG PC Client Platform Firmware Profile Specification r1.0 | spec | — | stub | — | — |
+| [`tcg-pc-client-ptp`](../records/other/tcg-pc-client-ptp/) | TCG PC Client Platform TPM Profile (PTP) for TPM 2.0 v1.06 | spec | — | stub | — | — |
+| [`tcg-tpm-1-2-main`](../records/other/tcg-tpm-1-2-main/) | TPM Main Specification Version 1.2, Level 2, Revision 116 | spec | — | stub | — | — |
+| [`tcg-tpm-2-0-library-184`](../records/other/tcg-tpm-2-0-library-184/) | TPM 2.0 Library Specification, Parts 0-4, Version 184 | spec | — | stub | — | — |
+| [`tcg-tpm-2-0-library-185`](../records/other/tcg-tpm-2-0-library-185/) | TPM 2.0 Library Specification v1.85 (PQC: ML-KEM, ML-DSA) | spec | — | stub | — | — |
+| [`tcg-tpm2-keys-device-identity`](../records/other/tcg-tpm2-keys-device-identity/) | TPM 2.0 Keys for Device Identity and Attestation v1 r12 | spec | — | stub | — | — |
+| [`zooko-2001-names`](../records/other/zooko-2001-names/) | Names: Decentralized, Secure, Human-Meaningful: Choose Two | article | — | stub | — | — |
+
+## regulator
+
+| id | title | type | maturity | status | useful | versions |
+|---|---|---|---|---|---|---|
+| [`ca-sb-942`](../records/regulator/ca-sb-942/) | California AI Transparency Act SB 942, as amended by AB 85 | spec | — | stub | — | — |
+| [`cnsa-2-0`](../records/regulator/cnsa-2-0/) | Commercial National Security Algorithm Suite 2.0 (CNSA 2.0 | spec | — | stub | — | — |
+| [`eu-ai-act-art-50`](../records/regulator/eu-ai-act-art-50/) | EU AI Act Article 50: Transparency Obligations | spec | — | stub | — | — |
+| [`eu-code-of-practice-marking`](../records/regulator/eu-code-of-practice-marking/) | EU Code of Practice on marking and labelling AI-generated  | web | — | stub | — | — |
+| [`nsa-2025-content-credentials`](../records/regulator/nsa-2025-content-credentials/) | Content Credentials: Strengthening Multimedia Integrity in | paper | — | stub | — | — |
+
+## vendor
+
+| id | title | type | maturity | status | useful | versions |
+|---|---|---|---|---|---|---|
+| [`aclu-fahrenheit-451-2`](../records/vendor/aclu-fahrenheit-451-2/) | Fahrenheit 451.2: Is Cyberspace Burning? | web | — | stub | — | — |
+| [`apple-app-attest`](../records/vendor/apple-app-attest/) | DCAppAttestService / App Attest | web | — | stub | — | — |
+| [`arm-cca-den0125`](../records/vendor/arm-cca-den0125/) | Learn the architecture: Introducing Arm Confidential Compu | spec | — | stub | — | — |
+| [`aws-snp-attestation`](../records/vendor/aws-snp-attestation/) | Attest an Amazon EC2 instance with AMD SEV-SNP | web | — | stub | — | — |
+| [`cve-2019-13050`](../records/vendor/cve-2019-13050/) | CVE-2019-13050: SKS keyserver certificate spamming attack | web | — | stub | — | — |
+| [`intel-sgx-dcap-quotelib`](../records/vendor/intel-sgx-dcap-quotelib/) | Intel SGX ECDSA QuoteLibReference (DCAP API) | spec | — | stub | — | — |
+| [`intel-tdx-dcap-quoting`](../records/vendor/intel-tdx-dcap-quoting/) | Intel TDX DCAP Quoting Library API | spec | — | stub | — | — |
+| [`intel-tdx-whitepaper`](../records/vendor/intel-tdx-whitepaper/) | Intel Trust Domain Extensions (white paper) | spec | — | stub | — | — |
+| [`ptacek-2024-macaroons`](../records/vendor/ptacek-2024-macaroons/) | Macaroons Escalated Quickly | web | — | stub | — | — |
+| [`zoom-keybase-2020`](../records/vendor/zoom-keybase-2020/) | Zoom Acquires Keybase | web | — | stub | — | — |
 
 ## w3c
 
 | id | title | type | maturity | status | useful | versions |
 |---|---|---|---|---|---|---|
+| [`pics-1-1-labels`](../records/w3c/pics-1-1-labels/) | PICS 1.1 Label Distribution: Label Syntax and Communicatio | spec | — | stub | — | — |
+| [`pics-1-1-services`](../records/w3c/pics-1-1-services/) | PICS 1.1 Rating Services and Rating Systems and Their Mach | spec | — | stub | — | — |
+| [`pics-censorship-faq`](../records/w3c/pics-censorship-faq/) | PICS, Censorship, and Intellectual Freedom FAQ | web | — | stub | — | — |
+| [`pics-dsig-1-0`](../records/w3c/pics-dsig-1-0/) | PICS Signed Labels (DSig) 1.0 Specification | spec | — | stub | — | — |
+| [`powder-description-resources`](../records/w3c/powder-description-resources/) | POWDER: Description Resources | spec | — | stub | — | — |
 | [`w3-org-pics`](../records/w3c/w3-org-pics/) | W3C Platform for Internet Content Selection (PICS) | web | — | queued | — | — |
+| [`w3c-did-1-1`](../records/w3c/w3c-did-1-1/) | Decentralized Identifiers (DIDs) v1.1 | spec | — | stub | — | — |
 | [`w3c-did-core`](../records/w3c/w3c-did-core/) | Decentralized Identifiers (DIDs) v1.0 | spec | — | stub | — | — |
+| [`w3c-did-extensions-methods`](../records/w3c/w3c-did-extensions-methods/) | DID Extensions: Methods registry | spec | — | stub | — | — |
+| [`w3c-tag-obsolete-powder`](../records/w3c/w3c-tag-obsolete-powder/) | W3C TAG proposal to obsolete CC/PP and POWDER (issue 86) | web | — | stub | — | — |
