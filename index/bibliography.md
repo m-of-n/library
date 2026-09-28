@@ -188,8 +188,9 @@
 - **CBOR Object Signing and Encryption (COSE) Receipts** — O. Steele, H. Birkholz, A. Delignat-Lavaud, C. Fournet. 2026-06. RFC 9942  
   `rfc-9942` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9942.txt)  
   _The receipt format the SCITT architecture (RFC 9943, already held) relies on. Directly relevant to the transparency story._
-- **An Architecture for Trustworthy and Transparent Digital Supply Chains** — RFC 9943  
-  `rfc-9943` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9943.html)
+- **An Architecture for Trustworthy and Transparent Digital Supply Chains** — H. Birkholz, A. Delignat-Lavaud, C. Fournet, Y. Deshpande, S. Lasker. 2026-06. RFC 9943  
+  `rfc-9943` · rfc · standard · **summarized** · [source](https://www.rfc-editor.org/rfc/rfc9943.txt)  
+  _The ratified, fully-worked version of the shape this project is designing — and its self-contradiction on rollback (§9.4.2 against §5.1.3) is a problem we inherit._
 - **ML-DSA for JSON Object Signing and Encryption (JOSE) and CBOR Object Signing and Encryption (COSE)** — M. Prorock, O. Steele. 2026-05. RFC 9964  
   `rfc-9964` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9964.txt)  
   _The current post-quantum signature binding for COSE. Algorithm suite deferred by NG3, but this is the one to revisit first._
