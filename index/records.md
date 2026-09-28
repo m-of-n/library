@@ -3,16 +3,18 @@
 
 # Records
 
-83 records across 5 bodies.
+88 records across 6 bodies.
 
 
 ## community
 
 | id | title | type | maturity | status | useful | versions |
 |---|---|---|---|---|---|---|
+| [`cyclonedx-1-7`](../records/community/cyclonedx-1-7/) | CycloneDX Bill of Materials Specification | spec | standard | queued | unassessed | — |
 | [`draft-mcnally-deterministic-cbor`](../records/community/draft-mcnally-deterministic-cbor/) | dCBOR: Deterministic CBOR | draft | draft | fetched | marginal | — |
 | [`in-toto-attestation-v1`](../records/community/in-toto-attestation-v1/) | in-toto Attestation Framework v1 | spec | — | queued | — | — |
 | [`secure-systems-lab-dsse`](../records/community/secure-systems-lab-dsse/) | Dead Simple Signing Envelope (DSSE) | repo | — | queued | — | — |
+| [`spdx-3-0-1`](../records/community/spdx-3-0-1/) | System Package Data Exchange (SPDX) Specification Version  | spec | — | queued | unassessed | — |
 
 ## ietf
 
@@ -92,6 +94,7 @@
 | [`iana-cbor-simple-values`](../records/iso/iana-cbor-simple-values/) | IANA Concise Binary Object Representation (CBOR) Simple Va | dataset | — | fetched | useful | — |
 | [`iana-cbor-tags`](../records/iso/iana-cbor-tags/) | IANA Concise Binary Object Representation (CBOR) Tags Regi | dataset | — | fetched | useful | — |
 | [`iana-cose-algorithms`](../records/iso/iana-cose-algorithms/) | IANA COSE Algorithms registry | dataset | — | stub | — | — |
+| [`iso-iec-5962-2021`](../records/iso/iso-iec-5962-2021/) | Information technology — SPDX Specification V2.2.1 | spec | standard | queued | marginal | — |
 
 ## nist
 
@@ -106,6 +109,13 @@
 | [`sp-800-186`](../records/nist/sp-800-186/) | Recommendations for Discrete Logarithm-based Cryptography: | spec | recommendation | stub | — | — |
 | [`sp-800-208`](../records/nist/sp-800-208/) | Recommendation for Stateful Hash-Based Signature Schemes | spec | best-practice | summarized | useful | — |
 | [`sp-800-57pt1r5`](../records/nist/sp-800-57pt1r5/) | Recommendation for Key Management: Part 1 - General | spec | best-practice | summarized | useful | — |
+
+## regulator
+
+| id | title | type | maturity | status | useful | versions |
+|---|---|---|---|---|---|---|
+| [`cisa-framing-software-component-transparency`](../records/regulator/cisa-framing-software-component-transparency/) | Framing Software Component Transparency: Establishing a Co | spec | best-practice | summarized | useful | — |
+| [`ntia-sbom-minimum-elements`](../records/regulator/ntia-sbom-minimum-elements/) | The Minimum Elements For a Software Bill of Materials (SBO | spec | best-practice | summarized | useful | — |
 
 ## w3c
 

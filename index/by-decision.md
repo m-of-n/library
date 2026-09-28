@@ -121,13 +121,23 @@ This is the query the library exists to answer.
 
 ### R-M-07
 
+- [`cisa-framing-software-component-transparency`](../records/regulator/cisa-framing-software-component-transparency/) — Framing Software Component Transparency: Establishing a Common Softwar
+- [`cyclonedx-1-7`](../records/community/cyclonedx-1-7/) — CycloneDX Bill of Materials Specification
+- [`iso-iec-5962-2021`](../records/iso/iso-iec-5962-2021/) — Information technology — SPDX Specification V2.2.1
+- [`ntia-sbom-minimum-elements`](../records/regulator/ntia-sbom-minimum-elements/) — The Minimum Elements For a Software Bill of Materials (SBOM)
 - [`rfc-9054`](../records/ietf/rfc-9054/) — CBOR Object Signing and Encryption (COSE): Hash Algorithms
 - [`rfc-9995`](../records/ietf/rfc-9995/) — CBOR Object Signing and Encryption (COSE) Hash Envelope
+- [`spdx-3-0-1`](../records/community/spdx-3-0-1/) — System Package Data Exchange (SPDX) Specification Version 3.0.1
 
 ### R-M-11
 
+- [`cisa-framing-software-component-transparency`](../records/regulator/cisa-framing-software-component-transparency/) — Framing Software Component Transparency: Establishing a Common Softwar
+- [`cyclonedx-1-7`](../records/community/cyclonedx-1-7/) — CycloneDX Bill of Materials Specification
 - [`draft-ietf-vcon-vcon-core-04`](../records/ietf/draft-ietf-vcon-vcon-core-04/) — The JSON format for vCon - Conversation Data Container
 - [`in-toto-attestation-v1`](../records/community/in-toto-attestation-v1/) — in-toto Attestation Framework v1
+- [`iso-iec-5962-2021`](../records/iso/iso-iec-5962-2021/) — Information technology — SPDX Specification V2.2.1
+- [`ntia-sbom-minimum-elements`](../records/regulator/ntia-sbom-minimum-elements/) — The Minimum Elements For a Software Bill of Materials (SBOM)
+- [`spdx-3-0-1`](../records/community/spdx-3-0-1/) — System Package Data Exchange (SPDX) Specification Version 3.0.1
 
 ### R-M-12
 
