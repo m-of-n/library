@@ -3,7 +3,7 @@
 
 # Bibliography
 
-273 records.
+271 records.
 
 
 ## academic
@@ -147,8 +147,6 @@
   `sigstore-threat-model` · web · [source](https://docs.sigstore.dev/about/threat-model/)
 - **Mini Shai-Hulud: Where SLSA's Boundaries Fall**  
   `slsa-2026-mini-shai-hulud` · web · [source](https://slsa.dev/blog/2026/05/mini-shai-hulud-what-slsa-can-and-cannot-do)
-- **SPDX Specification v3.0.1**  
-  `spdx-3-0-1` · spec · [source](https://spdx.github.io/spdx-spec/v3.0.1/)
 - **The Update Framework Specification v1.0.36**  
   `tuf-spec` · spec · [source](https://theupdateframework.github.io/specification/latest/)
 - **TAP 21: ML-DSA signing scheme for TUF metadata**  
@@ -488,8 +486,6 @@
   `nistir-8610` · spec · [source](https://csrc.nist.gov/pubs/ir/8610/final)
 - **SP 1800-38: Migration to Post-Quantum Cryptography**  
   `sp-1800-38` · spec · [source](https://csrc.nist.gov/pubs/sp/1800/38/iprd)
-- **SP 800-161r1: Cybersecurity Supply Chain Risk Management Practices**  
-  `sp-800-161r1` · spec · [source](https://doi.org/10.6028/NIST.SP.800-161r1)
 - **Recommendations for Discrete Logarithm-based Cryptography: Elliptic Curve Domain Parameters**  
   `sp-800-186` · spec · recommendation · [source](https://csrc.nist.gov/pubs/sp/800/186/final)
 - **SP 800-208: Recommendation for Stateful Hash-Based Signature Schemes**  

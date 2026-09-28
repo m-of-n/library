@@ -3,7 +3,7 @@
 
 # Records
 
-273 records across 12 bodies.
+271 records across 12 bodies.
 
 
 ## academic
@@ -84,7 +84,6 @@
 | [`secure-systems-lab-dsse`](../records/community/secure-systems-lab-dsse/) | Dead Simple Signing Envelope (DSSE) | repo | — | queued | — | — |
 | [`sigstore-threat-model`](../records/community/sigstore-threat-model/) | Sigstore Threat Model | web | — | stub | — | — |
 | [`slsa-2026-mini-shai-hulud`](../records/community/slsa-2026-mini-shai-hulud/) | Mini Shai-Hulud: Where SLSA's Boundaries Fall | web | — | stub | — | — |
-| [`spdx-3-0-1`](../records/community/spdx-3-0-1/) | SPDX Specification v3.0.1 | spec | — | stub | — | — |
 | [`tuf-spec`](../records/community/tuf-spec/) | The Update Framework Specification v1.0.36 | spec | — | stub | — | — |
 | [`tuf-tap-21`](../records/community/tuf-tap-21/) | TAP 21: ML-DSA signing scheme for TUF metadata | spec | — | stub | — | — |
 | [`tukaani-xz-backdoor`](../records/community/tukaani-xz-backdoor/) | XZ Utils backdoor (upstream project statement) | web | — | stub | — | — |
@@ -242,7 +241,6 @@
 | [`nistir-8547`](../records/nist/nistir-8547/) | NIST IR 8547 ipd: Transition to Post-Quantum Cryptography  | spec | — | stub | — | — |
 | [`nistir-8610`](../records/nist/nistir-8610/) | NIST IR 8610: Status Report on the Second Round of the Add | spec | — | stub | — | — |
 | [`sp-1800-38`](../records/nist/sp-1800-38/) | SP 1800-38: Migration to Post-Quantum Cryptography | spec | — | stub | — | — |
-| [`sp-800-161r1`](../records/nist/sp-800-161r1/) | SP 800-161r1: Cybersecurity Supply Chain Risk Management P | spec | — | stub | — | — |
 | [`sp-800-186`](../records/nist/sp-800-186/) | Recommendations for Discrete Logarithm-based Cryptography: | spec | recommendation | stub | — | — |
 | [`sp-800-208`](../records/nist/sp-800-208/) | SP 800-208: Recommendation for Stateful Hash-Based Signatu | spec | — | stub | — | — |
 | [`sp-800-218`](../records/nist/sp-800-218/) | SP 800-218: Secure Software Development Framework (SSDF) v | spec | — | stub | — | — |
