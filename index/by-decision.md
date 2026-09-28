@@ -20,10 +20,20 @@ This is the query the library exists to answer.
 - [`c2pa-conformance-program`](../records/c2pa/c2pa-conformance-program/) — C2PA Conformance Program and Trust List
 - [`c2pa-ux-2-2`](../records/c2pa/c2pa-ux-2-2/) — C2PA User Experience Guidance for Implementers 2.2
 - [`ca-sb-942`](../records/regulator/ca-sb-942/) — California AI Transparency Act SB 942, as amended by AB 853
+- [`cabforum-sc063`](../records/other/cabforum-sc063/) — Ballot SC-063v4: Make OCSP Optional, Require CRLs
+- [`cabforum-smime-br`](../records/other/cabforum-smime-br/) — CA/Browser Forum Baseline Requirements for S/MIME Certificates
+- [`cabforum-tls-br`](../records/other/cabforum-tls-br/) — CA/Browser Forum Baseline Requirements for TLS Server Certificates
 - [`cawg-identity-1-2`](../records/community/cawg-identity-1-2/) — CAWG Identity Assertion 1.2
+- [`ccadb`](../records/other/ccadb/) — Common CA Database (CCADB) public reports
+- [`chung-2018-must-staple`](../records/academic/chung-2018-must-staple/) — Is the Web Ready for OCSP Must-Staple?
+- [`cisa-2026-sbom-minimum`](../records/regulator/cisa-2026-sbom-minimum/) — 2026 Minimum Elements for a Software Bill of Materials (SBOM)
+- [`cisa-ed-21-01`](../records/regulator/cisa-ed-21-01/) — Emergency Directive 21-01: Mitigate SolarWinds Orion Code Compromise
 - [`cnsa-2-0`](../records/regulator/cnsa-2-0/) — Commercial National Security Algorithm Suite 2.0 (CNSA 2.0) Algorithms
+- [`cox-2024-xz-timeline`](../records/other/cox-2024-xz-timeline/) — Timeline of the xz open source attack
+- [`crowdstrike-sunspot`](../records/vendor/crowdstrike-sunspot/) — SUNSPOT: An Implant in the Build Process
 - [`cscw-2023-provenance-trust`](../records/academic/cscw-2023-provenance-trust/) — Examining the Impact of Provenance-Enabled Media on Trust and Accuracy
 - [`cve-2019-13050`](../records/vendor/cve-2019-13050/) — CVE-2019-13050: SKS keyserver certificate spamming attack
+- [`cve-2024-3094`](../records/nist/cve-2024-3094/) — CVE-2024-3094 (xz-utils backdoor, CVSS 10.0)
 - [`dennis-vanhorn-1966`](../records/academic/dennis-vanhorn-1966/) — Programming Semantics for Multiprogrammed Computations
 - [`did-key-method`](../records/community/did-key-method/) — The did:key Method v0.9
 - [`diffie-hellman-1976`](../records/academic/diffie-hellman-1976/) — New Directions in Cryptography
@@ -33,12 +43,20 @@ This is the query the library exists to answer.
 - [`draft-ietf-cbor-packed`](../records/ietf/draft-ietf-cbor-packed/) — Packed CBOR
 - [`draft-ietf-lamps-pq-composite-sigs`](../records/ietf/draft-ietf-lamps-pq-composite-sigs/) — Composite ML-DSA for use in X.509 Public Key Infrastructure
 - [`draft-ietf-rats-corim`](../records/ietf/draft-ietf-rats-corim/) — Concise Reference Integrity Manifest (CoRIM)
+- [`draft-ietf-scitt-scrapi`](../records/ietf/draft-ietf-scitt-scrapi/) — SCITT Reference APIs (SCRAPI)
 - [`draft-ietf-spki-cert-structure`](../records/ietf/draft-ietf-spki-cert-structure/) — Simple Public Key Certificate (expired, never published)
 - [`draft-niyikiza-oauth-attenuating-agent-tokens`](../records/ietf/draft-niyikiza-oauth-attenuating-agent-tokens/) — Attenuating Authorization Tokens for Agentic Delegation Chains
+- [`ecma-424`](../records/other/ecma-424/) — ECMA-424 CycloneDX Bill of Materials Specification, 2nd Edition
+- [`eff-2010-ssliverse`](../records/other/eff-2010-ssliverse/) — An Observatory for the SSLiverse
 - [`elgamal-1985`](../records/academic/elgamal-1985/) — A Public Key Cryptosystem and a Signature Scheme Based on Discrete Log
 - [`ellison-schneier-2000-ten-risks`](../records/academic/ellison-schneier-2000-ten-risks/) — Ten Risks of PKI: What You're not Being Told about Public Key Infrastr
+- [`eo-14028`](../records/regulator/eo-14028/) — Executive Order 14028: Improving the Nation's Cybersecurity
+- [`eo-14144`](../records/regulator/eo-14144/) — Executive Order 14144: Strengthening and Promoting Innovation in the N
+- [`eo-14306`](../records/regulator/eo-14306/) — Executive Order 14306: Sustaining Select Efforts To Strengthen the Nat
 - [`eu-ai-act-art-50`](../records/regulator/eu-ai-act-art-50/) — EU AI Act Article 50: Transparency Obligations
 - [`eu-code-of-practice-marking`](../records/regulator/eu-code-of-practice-marking/) — EU Code of Practice on marking and labelling AI-generated content
+- [`eu-cra-2024-2847`](../records/regulator/eu-cra-2024-2847/) — Regulation (EU) 2024/2847 (Cyber Resilience Act)
+- [`event-stream-issue-116`](../records/community/event-stream-issue-116/) — event-stream issue #116: I don't know what to say.
 - [`fips-186`](../records/nist/fips-186/) — FIPS 186: Digital Signature Standard (DSS), 1994
 - [`fips-186-1`](../records/nist/fips-186-1/) — FIPS 186-1: Digital Signature Standard (DSS), 1998
 - [`fips-186-2`](../records/nist/fips-186-2/) — FIPS 186-2: Digital Signature Standard (DSS), 2000
@@ -47,32 +65,58 @@ This is the query the library exists to answer.
 - [`fips-203`](../records/nist/fips-203/) — FIPS 203: Module-Lattice-Based Key-Encapsulation Mechanism Standard
 - [`fips-204`](../records/nist/fips-204/) — FIPS 204: Module-Lattice-Based Digital Signature Standard (ML-DSA)
 - [`fips-205`](../records/nist/fips-205/) — FIPS 205: Stateless Hash-Based Digital Signature Standard (SLH-DSA)
+- [`fireeye-sunburst`](../records/vendor/fireeye-sunburst/) — Highly Evasive Attacker Leverages SolarWinds Supply Chain with SUNBURS
+- [`foxit-2012-black-tulip`](../records/other/foxit-2012-black-tulip/) — Black Tulip: Report of the investigation into the DigiNotar CA breach
+- [`freund-2024-xz`](../records/community/freund-2024-xz/) — backdoor in upstream xz/liblzma leading to ssh server compromise
+- [`ghsa-event-stream`](../records/community/ghsa-event-stream/) — GHSA-mh6f-8j2x-4483 (event-stream / flatmap-stream)
+- [`gittuf-2025`](../records/academic/gittuf-2025/) — Rethinking Trust in Forge-Based Git Security (gittuf)
 - [`gmr-1984-paradoxical`](../records/academic/gmr-1984-paradoxical/) — A Paradoxical Solution to The Signature Problem
 - [`gmr-1988-adaptive`](../records/academic/gmr-1988-adaptive/) — A Digital Signature Scheme Secure Against Adaptive Chosen-Message Atta
 - [`gmy-1983-strong-signatures`](../records/academic/gmy-1983-strong-signatures/) — Strong Signature Schemes
 - [`gnupg-key-management`](../records/community/gnupg-key-management/) — GnuPG manual: OpenPGP Key Management (tsign, trustspec)
+- [`go-nameconstraint-cves`](../records/other/go-nameconstraint-cves/) — Go crypto/x509 name-constraint defects (five CVEs, 2025-2026)
+- [`golang-61963`](../records/other/golang-61963/) — TUBITAK Kamu SM root should be constrained (golang/go#61963)
+- [`google-2016-wosign`](../records/google/google-2016-wosign/) — Distrusting WoSign and StartCom Certificates
+- [`google-2017-symantec`](../records/google/google-2017-symantec/) — Chrome's Plan to Distrust Symantec Certificates
 - [`google-open-dice`](../records/google/google-open-dice/) — Open Profile for DICE
+- [`gutmann-2002-pki-not-dead`](../records/academic/gutmann-2002-pki-not-dead/) — PKI: It's Not Dead, Just Resting
 - [`gvu-1998-webmaster-survey`](../records/academic/gvu-1998-webmaster-survey/) — GVU 10th WWW User Survey: webmaster PICS labelling rates
 - [`hardy-1988-confused-deputy`](../records/academic/hardy-1988-confused-deputy/) — The Confused Deputy (or why capabilities might have been invented)
 - [`ide-2025-signals-of-provenance`](../records/academic/ide-2025-signals-of-provenance/) — Signals of Provenance: Navigating Indicators in AI-Generated Media for
 - [`ietf-spki-wg`](../records/ietf/ietf-spki-wg/) — IETF SPKI Working Group charter and documents
 - [`ietf-vcon-wg`](../records/ietf/ietf-vcon-wg/) — IETF vCon Working Group
+- [`in-toto-2019`](../records/academic/in-toto-2019/) — in-toto: Providing farm-to-table guarantees for bits and bytes
 - [`in-toto-envelope-v1`](../records/community/in-toto-envelope-v1/) — in-toto Attestation Framework: Envelope
 - [`intel-sgx-dcap-quotelib`](../records/vendor/intel-sgx-dcap-quotelib/) — Intel SGX ECDSA QuoteLibReference (DCAP API)
 - [`intel-tdx-dcap-quoting`](../records/vendor/intel-tdx-dcap-quoting/) — Intel TDX DCAP Quoting Library API
 - [`intel-tdx-whitepaper`](../records/vendor/intel-tdx-whitepaper/) — Intel Trust Domain Extensions (white paper)
 - [`iso-iec-11889-2015`](../records/iso/iso-iec-11889-2015/) — ISO/IEC 11889:2015 Trusted Platform Module Library
+- [`iso-iec-5962`](../records/iso/iso-iec-5962/) — ISO/IEC 5962:2021 SPDX Specification V2.2.1
+- [`itu-x509`](../records/iso/itu-x509/) — ITU-T X.509: The Directory - Public-key and attribute certificate fram
+- [`itu-x509-1988`](../records/iso/itu-x509-1988/) — ITU-T X.509 (1988): The Directory - Authentication framework
 - [`keys-openpgp-org-faq`](../records/community/keys-openpgp-org-faq/) — keys.openpgp.org FAQ: third-party certification policy
 - [`kitchenham-charters-2007`](../records/academic/kitchenham-charters-2007/) — Guidelines for performing Systematic Literature Reviews in Software En
 - [`lamport-1979-one-way`](../records/academic/lamport-1979-one-way/) — Constructing Digital Signatures from a One Way Function
+- [`langley-2011-revocation`](../records/other/langley-2011-revocation/) — Revocation doesn't work
+- [`langley-2014-revchecking`](../records/other/langley-2014-revchecking/) — No, don't enable revocation checking
+- [`larisch-2017-crlite`](../records/academic/larisch-2017-crlite/) — CRLite: A Scalable System for Pushing All TLS Revocations to All Brows
+- [`letsencrypt-ocsp-eol`](../records/other/letsencrypt-ocsp-eol/) — OCSP Service Has Reached End of Life
+- [`liu-2015-revocation`](../records/academic/liu-2015-revocation/) — An End-to-End Measurement of Certificate Revocation in the Web's PKI
 - [`macaroons-2014`](../records/academic/macaroons-2014/) — Macaroons: Cookies with Contextual Caveats for Decentralized Authoriza
 - [`merkle-1979-thesis`](../records/academic/merkle-1979-thesis/) — Secrecy, Authentication, and Public Key Systems
 - [`merkle-1980-protocols`](../records/academic/merkle-1980-protocols/) — Protocols for Public Key Cryptosystems
 - [`merkle-1989-certified`](../records/academic/merkle-1989-certified/) — A Certified Digital Signature
 - [`moruzzi-2025-content-authenticities`](../records/academic/moruzzi-2025-content-authenticities/) — Content Authenticities: A Discussion on the Values of Provenance Data 
+- [`mozilla-2013-anssi`](../records/vendor/mozilla-2013-anssi/) — Revoking Trust in one ANSSI Certificate
+- [`mozilla-2013-turktrust`](../records/vendor/mozilla-2013-turktrust/) — Revoking Trust in Two TurkTrust Certificates
+- [`mozilla-bug-856060`](../records/vendor/mozilla-bug-856060/) — Name Constraints ignored by libPKIX verification engine
 - [`nistir-8547`](../records/nist/nistir-8547/) — NIST IR 8547 ipd: Transition to Post-Quantum Cryptography Standards
 - [`nistir-8610`](../records/nist/nistir-8610/) — NIST IR 8610: Status Report on the Second Round of the Additional Digi
+- [`npm-event-stream`](../records/vendor/npm-event-stream/) — Details about the event-stream incident
 - [`nsa-2025-content-credentials`](../records/regulator/nsa-2025-content-credentials/) — Content Credentials: Strengthening Multimedia Integrity in the Generat
+- [`ntia-2021-sbom-minimum`](../records/regulator/ntia-2021-sbom-minimum/) — The Minimum Elements For a Software Bill of Materials (SBOM)
+- [`ohm-2020-backstabbers`](../records/academic/ohm-2020-backstabbers/) — Backstabber's Knife Collection: A Review of Open Source Software Suppl
+- [`openssl-2022-email-overflow`](../records/other/openssl-2022-email-overflow/) — CVE-2022-3786 and CVE-2022-3602: X.509 Email Address Buffer Overflows
 - [`pics-1-1-labels`](../records/w3c/pics-1-1-labels/) — PICS 1.1 Label Distribution: Label Syntax and Communication Protocols
 - [`pics-1-1-services`](../records/w3c/pics-1-1-services/) — PICS 1.1 Rating Services and Rating Systems and Their Machine Readable
 - [`pics-censorship-faq`](../records/w3c/pics-censorship-faq/) — PICS, Censorship, and Intellectual Freedom FAQ
@@ -82,8 +126,11 @@ This is the query the library exists to answer.
 - [`prisma-2020`](../records/academic/prisma-2020/) — The PRISMA 2020 statement: an updated guideline for reporting systemat
 - [`psscrm-v1`](../records/academic/psscrm-v1/) — Proactive Software Supply Chain Risk Management Framework (P-SSCRM) Ve
 - [`ptacek-2024-macaroons`](../records/vendor/ptacek-2024-macaroons/) — Macaroons Escalated Quickly
+- [`pypi-trusted-publishers`](../records/community/pypi-trusted-publishers/) — Trusted Publishers for PyPI
 - [`rabin-1979-tr212`](../records/academic/rabin-1979-tr212/) — Digitalized Signatures and Public-Key Functions as Intractable as Fact
+- [`rfc-1422`](../records/ietf/rfc-1422/) — PEM Part II: Certificate-Based Key Management
 - [`rfc-1952`](../records/ietf/rfc-1952/) — GZIP
+- [`rfc-3280`](../records/ietf/rfc-3280/) — Internet X.509 PKI Certificate and CRL Profile (2002)
 - [`rfc-3339`](../records/ietf/rfc-3339/) — Timestamps
 - [`rfc-3820`](../records/ietf/rfc-3820/) — Internet X.509 PKI Proxy Certificate Profile
 - [`rfc-3966`](../records/ietf/rfc-3966/) — tel URI
@@ -92,16 +139,24 @@ This is the query the library exists to answer.
 - [`rfc-4880`](../records/ietf/rfc-4880/) — OpenPGP Message Format
 - [`rfc-5280`](../records/ietf/rfc-5280/) — Internet X.509 Public Key Infrastructure Certificate and CRL Profile
 - [`rfc-5321`](../records/ietf/rfc-5321/) — SMTP
+- [`rfc-5914`](../records/ietf/rfc-5914/) — Trust Anchor Format
+- [`rfc-5937`](../records/ietf/rfc-5937/) — Using Trust Anchor Constraints during Certification Path Processing
 - [`rfc-6068`](../records/ietf/rfc-6068/) — mailto URI
 - [`rfc-6749`](../records/ietf/rfc-6749/) — The OAuth 2.0 Authorization Framework
 - [`rfc-6750`](../records/ietf/rfc-6750/) — The OAuth 2.0 Authorization Framework: Bearer Token Usage
+- [`rfc-6818`](../records/ietf/rfc-6818/) — Updates to the Internet X.509 PKI Certificate and CRL Profile
+- [`rfc-6960`](../records/ietf/rfc-6960/) — X.509 Internet PKI Online Certificate Status Protocol (OCSP)
+- [`rfc-6962`](../records/ietf/rfc-6962/) — Certificate Transparency
 - [`rfc-7515`](../records/ietf/rfc-7515/) — JWS
 - [`rfc-7516`](../records/ietf/rfc-7516/) — JWE
+- [`rfc-7633`](../records/ietf/rfc-7633/) — X.509v3 TLS Feature Extension (OCSP Must-Staple)
 - [`rfc-7800`](../records/ietf/rfc-7800/) — Proof-of-Possession Key Semantics for JSON Web Tokens (JWTs)
 - [`rfc-8032`](../records/ietf/rfc-8032/) — Edwards-Curve Digital Signature Algorithm (EdDSA)
 - [`rfc-8230`](../records/ietf/rfc-8230/) — Using RSA Algorithms with CBOR Object Signing and Encryption (COSE) Me
 - [`rfc-8259`](../records/ietf/rfc-8259/) — JSON
 - [`rfc-8391`](../records/ietf/rfc-8391/) — XMSS: eXtended Merkle Signature Scheme
+- [`rfc-8550`](../records/ietf/rfc-8550/) — S/MIME Version 4.0 Certificate Handling
+- [`rfc-8551`](../records/ietf/rfc-8551/) — S/MIME Version 4.0 Message Specification
 - [`rfc-8554`](../records/ietf/rfc-8554/) — Leighton-Micali Hash-Based Signatures
 - [`rfc-8555`](../records/ietf/rfc-8555/) — Automatic Certificate Management Environment (ACME)
 - [`rfc-8620`](../records/ietf/rfc-8620/) — JMAP
@@ -121,7 +176,11 @@ This is the query the library exists to answer.
 - [`rfc-9459`](../records/ietf/rfc-9459/) — CBOR Object Signing and Encryption (COSE): AES-CTR and AES-CBC
 - [`rfc-9528`](../records/ietf/rfc-9528/) — Ephemeral Diffie-Hellman Over COSE (EDHOC)
 - [`rfc-9529`](../records/ietf/rfc-9529/) — Traces of Ephemeral Diffie-Hellman Over COSE (EDHOC)
+- [`rfc-9549`](../records/ietf/rfc-9549/) — Internationalization Updates to RFC 5280
 - [`rfc-9580`](../records/ietf/rfc-9580/) — OpenPGP
+- [`rfc-9598`](../records/ietf/rfc-9598/) — Internationalized Email Addresses in X.509 Certificates
+- [`rfc-9608`](../records/ietf/rfc-9608/) — No Revocation Available for X.509 Public Key Certificates
+- [`rfc-9618`](../records/ietf/rfc-9618/) — Updates to X.509 Policy Validation
 - [`rfc-9668`](../records/ietf/rfc-9668/) — Using Ephemeral Diffie-Hellman Over COSE (EDHOC) with the Constrained 
 - [`rfc-9711`](../records/ietf/rfc-9711/) — The Entity Attestation Token (EAT)
 - [`rfc-9921`](../records/ietf/rfc-9921/) — CBOR Object Signing and Encryption (COSE) Header Parameter for Timesta
@@ -134,9 +193,18 @@ This is the query the library exists to answer.
 - [`sev-snp-primer-2026`](../records/academic/sev-snp-primer-2026/) — AMD SEV-SNP: A Confidential Computing Primer
 - [`shor-1994`](../records/academic/shor-1994/) — Algorithms for Quantum Computation: Discrete Logarithms and Factoring
 - [`shor-1997`](../records/academic/shor-1997/) — Polynomial-Time Algorithms for Prime Factorization and Discrete Logari
+- [`sigstore-2022`](../records/academic/sigstore-2022/) — Sigstore: Software Signing for Everybody
+- [`sigstore-threat-model`](../records/community/sigstore-threat-model/) — Sigstore Threat Model
+- [`slsa-1-2`](../records/openssf/slsa-1-2/) — SLSA Specification v1.2
+- [`slsa-2026-mini-shai-hulud`](../records/community/slsa-2026-mini-shai-hulud/) — Mini Shai-Hulud: Where SLSA's Boundaries Fall
+- [`solarwinds-8k`](../records/other/solarwinds-8k/) — SolarWinds Form 8-K, Item 8.01, 14 December 2020
 - [`sp-1800-38`](../records/nist/sp-1800-38/) — SP 1800-38: Migration to Post-Quantum Cryptography
+- [`sp-800-161r1`](../records/nist/sp-800-161r1/) — SP 800-161r1: Cybersecurity Supply Chain Risk Management Practices
 - [`sp-800-186`](../records/nist/sp-800-186/) — Recommendations for Discrete Logarithm-based Cryptography: Elliptic Cu
 - [`sp-800-208`](../records/nist/sp-800-208/) — SP 800-208: Recommendation for Stateful Hash-Based Signature Schemes
+- [`sp-800-218`](../records/nist/sp-800-218/) — SP 800-218: Secure Software Development Framework (SSDF) v1.1
+- [`spdx-3-0-1`](../records/community/spdx-3-0-1/) — SPDX Specification v3.0.1
+- [`survey-2026-nameconstraints-measurement`](../records/academic/survey-2026-nameconstraints-measurement/) — Name-constraint prevalence among CCADB-disclosed intermediate CA certi
 - [`tcg-dice-cert-profiles`](../records/other/tcg-dice-cert-profiles/) — DICE Certificate Profiles r01
 - [`tcg-dice-hw-requirements`](../records/other/tcg-dice-hw-requirements/) — Hardware Requirements for a Device Identifier Composition Engine r78
 - [`tcg-dice-implicit-identity`](../records/other/tcg-dice-implicit-identity/) — Implicit Identity Based Device Attestation v1 r0.93
@@ -149,10 +217,14 @@ This is the query the library exists to answer.
 - [`tcg-tpm-2-0-library-184`](../records/other/tcg-tpm-2-0-library-184/) — TPM 2.0 Library Specification, Parts 0-4, Version 184
 - [`tcg-tpm-2-0-library-185`](../records/other/tcg-tpm-2-0-library-185/) — TPM 2.0 Library Specification v1.85 (PQC: ML-KEM, ML-DSA)
 - [`tcg-tpm2-keys-device-identity`](../records/other/tcg-tpm2-keys-device-identity/) — TPM 2.0 Keys for Device Identity and Attestation v1 r12
+- [`tuf-2010`](../records/academic/tuf-2010/) — Survivable key compromise in software update systems
+- [`tuf-spec`](../records/community/tuf-spec/) — The Update Framework Specification v1.0.36
 - [`tuf-tap-21`](../records/community/tuf-tap-21/) — TAP 21: ML-DSA signing scheme for TUF metadata
+- [`tukaani-xz-backdoor`](../records/community/tukaani-xz-backdoor/) — XZ Utils backdoor (upstream project statement)
 - [`ucan-1-0`](../records/community/ucan-1-0/) — User Controlled Authorization Network (UCAN) Specification v1.0.0
 - [`ulrich-2011-openpgp-wot`](../records/academic/ulrich-2011-openpgp-wot/) — Investigating the OpenPGP Web of Trust
 - [`veski-2026-capmas`](../records/academic/veski-2026-capmas/) — CAPMAS: Capability-Based Delegation of Privileges in Multi-Agent Syste
+- [`vu-2020-typosquatting`](../records/academic/vu-2020-typosquatting/) — Typosquatting and Combosquatting Attacks on the Python Ecosystem
 - [`w3c-did-1-1`](../records/w3c/w3c-did-1-1/) — Decentralized Identifiers (DIDs) v1.1
 - [`w3c-did-core`](../records/w3c/w3c-did-core/) — Decentralized Identifiers (DIDs) v1.0
 - [`w3c-did-extensions-methods`](../records/w3c/w3c-did-extensions-methods/) — DID Extensions: Methods registry
@@ -160,6 +232,7 @@ This is the query the library exists to answer.
 - [`wang-2006-reducing-spki`](../records/academic/wang-2006-reducing-spki/) — Reducing the Dependence of SPKI/SDSI on PKI
 - [`wohlin-2014-snowballing`](../records/academic/wohlin-2014-snowballing/) — Guidelines for snowballing in systematic literature studies and a repl
 - [`zcap-ld`](../records/community/zcap-ld/) — Authorization Capabilities (ZCAP-LD) v0.4.0-rc.6
+- [`zhang-2014-heartbleed`](../records/academic/zhang-2014-heartbleed/) — Analysis of SSL Certificate Reissues and Revocations in the Wake of He
 - [`zooko-2001-names`](../records/other/zooko-2001-names/) — Names: Decentralized, Secure, Human-Meaningful: Choose Two
 - [`zoom-keybase-2020`](../records/vendor/zoom-keybase-2020/) — Zoom Acquires Keybase
 

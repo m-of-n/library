@@ -3,13 +3,15 @@
 
 # Bibliography
 
-200 records.
+273 records.
 
 
 ## academic
 
 - **Direct Anonymous Attestation**  
   `brickell-2004-daa` · paper · [source](https://eprint.iacr.org/2004/205)
+- **Is the Web Ready for OCSP Must-Staple?**  
+  `chung-2018-must-staple` · paper · [source](https://doi.org/10.1145/3278532.3278543)
 - **Examining the Impact of Provenance-Enabled Media on Trust and Accuracy Perceptions**  
   `cscw-2023-provenance-trust` · paper · [source](https://doi.org/10.1145/3610061)
 - **Programming Semantics for Multiprogrammed Computations**  
@@ -20,23 +22,33 @@
   `elgamal-1985` · paper · [source](https://doi.org/10.1109/TIT.1985.1057074)
 - **Ten Risks of PKI: What You're not Being Told about Public Key Infrastructure**  
   `ellison-schneier-2000-ten-risks` · paper · [source](https://www.schneier.com/academic/paperfiles/paper-pki.pdf)
+- **Rethinking Trust in Forge-Based Git Security (gittuf)**  
+  `gittuf-2025` · paper · [source](https://doi.org/10.14722/ndss.2025.241008)
 - **A Paradoxical Solution to The Signature Problem**  
   `gmr-1984-paradoxical` · paper · [source](https://doi.org/10.1109/SFCS.1984.715946)
 - **A Digital Signature Scheme Secure Against Adaptive Chosen-Message Attacks**  
   `gmr-1988-adaptive` · paper · [source](https://doi.org/10.1137/0217017)
 - **Strong Signature Schemes**  
   `gmy-1983-strong-signatures` · paper · [source](https://doi.org/10.1145/800061.808774)
+- **PKI: It's Not Dead, Just Resting**  
+  `gutmann-2002-pki-not-dead` · paper · [source](https://doi.org/10.1109/MC.2002.1023787)
 - **GVU 10th WWW User Survey: webmaster PICS labelling rates**  
   `gvu-1998-webmaster-survey` · dataset · [source](https://sites.cc.gatech.edu/gvu/user_surveys/survey-1998-04/graphs/webmaster/q69.htm)
 - **The Confused Deputy (or why capabilities might have been invented)**  
   `hardy-1988-confused-deputy` · paper · [source](https://doi.org/10.1145/54289.871709)
 - **Signals of Provenance: Navigating Indicators in AI-Generated Media for Sighted and Blind Individuals**  
   `ide-2025-signals-of-provenance` · paper · [source](https://arxiv.org/abs/2505.16057)
+- **in-toto: Providing farm-to-table guarantees for bits and bytes**  
+  `in-toto-2019` · paper · [source](https://www.usenix.org/conference/usenixsecurity19/presentation/torres-arias)
 - **Guidelines for performing Systematic Literature Reviews in Software Engineering** — 2007  
   `kitchenham-charters-2007` · paper · [source](https://www.elsevier.com/)  
   _The three-stage SLR structure - protocol, conduct, report - that docs/construction.md names as our method and did not hold a record for._
 - **Constructing Digital Signatures from a One Way Function**  
   `lamport-1979-one-way` · paper · [source](https://lamport.azurewebsites.net/pubs/dig-sig.pdf)
+- **CRLite: A Scalable System for Pushing All TLS Revocations to All Browsers**  
+  `larisch-2017-crlite` · paper · [source](https://doi.org/10.1109/SP.2017.17)
+- **An End-to-End Measurement of Certificate Revocation in the Web's PKI**  
+  `liu-2015-revocation` · paper · [source](https://doi.org/10.1145/2815675.2815685)
 - **Macaroons: Cookies with Contextual Caveats for Decentralized Authorization in the Cloud**  
   `macaroons-2014` · paper · [source](https://theory.stanford.edu/~ataly/Papers/macaroons.pdf)
 - **Secrecy, Authentication, and Public Key Systems**  
@@ -47,6 +59,8 @@
   `merkle-1989-certified` · paper · [source](https://doi.org/10.1007/0-387-34805-0_21)
 - **Content Authenticities: A Discussion on the Values of Provenance Data for Creatives and Their Audiences**  
   `moruzzi-2025-content-authenticities` · paper · [source](https://doi.org/10.1145/3698061.3726918)
+- **Backstabber's Knife Collection: A Review of Open Source Software Supply Chain Attacks**  
+  `ohm-2020-backstabbers` · paper · [source](https://doi.org/10.1007/978-3-030-52683-2_2)
 - **AIP: Agent Identity Protocol for Verifiable Delegation Across MCP and A2A**  
   `prakash-2026-aip` · paper · [source](https://arxiv.org/abs/2603.24775)
 - **The PRISMA 2020 statement: an updated guideline for reporting systematic reviews** — 2021  
@@ -71,15 +85,25 @@
   `shor-1994` · paper · [source](https://doi.org/10.1109/SFCS.1994.365700)
 - **Polynomial-Time Algorithms for Prime Factorization and Discrete Logarithms on a Quantum Computer**  
   `shor-1997` · paper · [source](https://doi.org/10.1137/S0097539795293172)
+- **Sigstore: Software Signing for Everybody**  
+  `sigstore-2022` · paper · [source](https://doi.org/10.1145/3548606.3560596)
+- **Name-constraint prevalence among CCADB-disclosed intermediate CA certificates (original measurement, 2026-09-26)**  
+  `survey-2026-nameconstraints-measurement` · dataset · [source](https://ccadb.my.salesforce-sites.com/mozilla/MozillaIntermediateCertsCSVReport)
+- **Survivable key compromise in software update systems**  
+  `tuf-2010` · paper · [source](https://doi.org/10.1145/1866307.1866315)
 - **Investigating the OpenPGP Web of Trust**  
   `ulrich-2011-openpgp-wot` · paper · [source](https://doi.org/10.1007/978-3-642-23822-2_27)
 - **CAPMAS: Capability-Based Delegation of Privileges in Multi-Agent Systems**  
   `veski-2026-capmas` · paper · [source](https://arxiv.org/abs/2609.06500)
+- **Typosquatting and Combosquatting Attacks on the Python Ecosystem**  
+  `vu-2020-typosquatting` · paper · [source](https://doi.org/10.1109/EuroSPW51379.2020.00074)
 - **Reducing the Dependence of SPKI/SDSI on PKI**  
   `wang-2006-reducing-spki` · paper · [source](https://doi.org/10.1007/11863908_11)
 - **Guidelines for snowballing in systematic literature studies and a replication in software engineering** — 2014  
   `wohlin-2014-snowballing` · paper · [source](https://doi.org/10.1145/2601248.2601268)  
   _Backward and forward snowballing iterated to closure. index/frontier.md is this, mechanised._
+- **Analysis of SSL Certificate Reissues and Revocations in the Wake of Heartbleed**  
+  `zhang-2014-heartbleed` · paper · [source](https://doi.org/10.1145/2663716.2663758)
 
 ## c2pa
 
@@ -101,6 +125,12 @@
 - **dCBOR: Deterministic CBOR** — 2026-08-10  
   `draft-mcnally-deterministic-cbor` · draft · [source](https://www.ietf.org/archive/id/draft-mcnally-deterministic-cbor-18.txt)  
   _An INDIVIDUAL draft with no IETF stream and no WG standing, widely miscited as 'the' deterministic CBOR profile. At -18 it narrows RFC 8949 Sec.4.2 directly and does not mention CDE, contrary to common secondary accounts._
+- **event-stream issue #116: I don't know what to say.**  
+  `event-stream-issue-116` · web · [source](https://github.com/dominictarr/event-stream/issues/116)
+- **backdoor in upstream xz/liblzma leading to ssh server compromise**  
+  `freund-2024-xz` · web · [source](https://www.openwall.com/lists/oss-security/2024/03/29/4)
+- **GHSA-mh6f-8j2x-4483 (event-stream / flatmap-stream)**  
+  `ghsa-event-stream` · web · [source](https://github.com/advisories/GHSA-mh6f-8j2x-4483)
 - **GnuPG manual: OpenPGP Key Management (tsign, trustspec)**  
   `gnupg-key-management` · web · [source](https://www.gnupg.org/documentation/manuals/gnupg/OpenPGP-Key-Management.html)
 - **in-toto Attestation Framework v1**  
@@ -109,10 +139,22 @@
   `in-toto-envelope-v1` · spec · [source](https://github.com/in-toto/attestation/blob/main/spec/v1/envelope.md)
 - **keys.openpgp.org FAQ: third-party certification policy**  
   `keys-openpgp-org-faq` · web · [source](https://keys.openpgp.org/about/faq)
+- **Trusted Publishers for PyPI**  
+  `pypi-trusted-publishers` · web · [source](https://docs.pypi.org/trusted-publishers/)
 - **Dead Simple Signing Envelope (DSSE)**  
   `secure-systems-lab-dsse` · repo · [source](https://github.com/secure-systems-lab/dsse)
+- **Sigstore Threat Model**  
+  `sigstore-threat-model` · web · [source](https://docs.sigstore.dev/about/threat-model/)
+- **Mini Shai-Hulud: Where SLSA's Boundaries Fall**  
+  `slsa-2026-mini-shai-hulud` · web · [source](https://slsa.dev/blog/2026/05/mini-shai-hulud-what-slsa-can-and-cannot-do)
+- **SPDX Specification v3.0.1**  
+  `spdx-3-0-1` · spec · [source](https://spdx.github.io/spdx-spec/v3.0.1/)
+- **The Update Framework Specification v1.0.36**  
+  `tuf-spec` · spec · [source](https://theupdateframework.github.io/specification/latest/)
 - **TAP 21: ML-DSA signing scheme for TUF metadata**  
   `tuf-tap-21` · spec · [source](https://github.com/theupdateframework/taps/blob/master/tap21.md)
+- **XZ Utils backdoor (upstream project statement)**  
+  `tukaani-xz-backdoor` · web · [source](https://tukaani.org/xz-backdoor/)
 - **User Controlled Authorization Network (UCAN) Specification v1.0.0**  
   `ucan-1-0` · spec · [source](https://github.com/ucan-wg/spec)
 - **Authorization Capabilities (ZCAP-LD) v0.4.0-rc.6**  
@@ -122,6 +164,10 @@
 
 - **Android Key and ID Attestation**  
   `android-key-attestation` · web · [source](https://source.android.com/docs/security/features/keystore/attestation)
+- **Distrusting WoSign and StartCom Certificates**  
+  `google-2016-wosign` · web · [source](https://security.googleblog.com/2016/10/distrusting-wosign-and-startcom.html)
+- **Chrome's Plan to Distrust Symantec Certificates**  
+  `google-2017-symantec` · web · [source](https://security.googleblog.com/2017/09/chromes-plan-to-distrust-symantec.html)
 - **Open Profile for DICE**  
   `google-open-dice` · spec · [source](https://pigweed.googlesource.com/open-dice/+/HEAD/docs/specification.md)
 
@@ -152,6 +198,8 @@
   `draft-ietf-lamps-pq-composite-sigs` · draft · [source](https://datatracker.ietf.org/doc//)
 - **Concise Reference Integrity Manifest (CoRIM)**  
   `draft-ietf-rats-corim` · draft · [source](https://datatracker.ietf.org/doc//)
+- **SCITT Reference APIs (SCRAPI)**  
+  `draft-ietf-scitt-scrapi` · draft · [source](https://datatracker.ietf.org/doc//)
 - **Simple Public Key Certificate (expired, never published)**  
   `draft-ietf-spki-cert-structure` · draft · [source](https://datatracker.ietf.org/doc//)
 - **The JSON format for vCon - Conversation Data Container** — 2026-09  
@@ -171,6 +219,8 @@
   `ietf-spki-wg` · web · [source](https://datatracker.ietf.org/wg/spki/about/)
 - **IETF vCon Working Group**  
   `ietf-vcon-wg` · web · [source](https://datatracker.ietf.org/wg/vcon/about/)
+- **PEM Part II: Certificate-Based Key Management** — RFC 1422  
+  `rfc-1422` · rfc · [source](https://www.rfc-editor.org/rfc/rfc1422.html)
 - **GZIP** — RFC 1952  
   `rfc-1952` · rfc · [source](https://www.rfc-editor.org/rfc/rfc1952.html)
 - **SPKI Requirements** — 1999. RFC 2692  
@@ -178,6 +228,8 @@
   _The requirements document explaining WHY SPKI looks as it does. We held the theory (2693) without the motivation._
 - **SPKI Certificate Theory** — RFC 2693  
   `rfc-2693` · rfc · [source](https://www.rfc-editor.org/rfc/rfc2693.html)
+- **Internet X.509 PKI Certificate and CRL Profile (2002)** — RFC 3280  
+  `rfc-3280` · rfc · [source](https://www.rfc-editor.org/rfc/rfc3280.html)
 - **Timestamps** — RFC 3339  
   `rfc-3339` · rfc · [source](https://www.rfc-editor.org/rfc/rfc3339.html)
 - **Internet X.509 PKI Proxy Certificate Profile** — RFC 3820  
@@ -194,12 +246,22 @@
   `rfc-5280` · rfc · [source](https://www.rfc-editor.org/rfc/rfc5280.html)
 - **SMTP** — RFC 5321  
   `rfc-5321` · rfc · [source](https://www.rfc-editor.org/rfc/rfc5321.html)
+- **Trust Anchor Format** — RFC 5914  
+  `rfc-5914` · rfc · [source](https://www.rfc-editor.org/rfc/rfc5914.html)
+- **Using Trust Anchor Constraints during Certification Path Processing** — RFC 5937  
+  `rfc-5937` · rfc · [source](https://www.rfc-editor.org/rfc/rfc5937.html)
 - **mailto URI** — RFC 6068  
   `rfc-6068` · rfc · [source](https://www.rfc-editor.org/rfc/rfc6068.html)
 - **The OAuth 2.0 Authorization Framework** — RFC 6749  
   `rfc-6749` · rfc · [source](https://www.rfc-editor.org/rfc/rfc6749.html)
 - **The OAuth 2.0 Authorization Framework: Bearer Token Usage** — RFC 6750  
   `rfc-6750` · rfc · [source](https://www.rfc-editor.org/rfc/rfc6750.html)
+- **Updates to the Internet X.509 PKI Certificate and CRL Profile** — RFC 6818  
+  `rfc-6818` · rfc · [source](https://www.rfc-editor.org/rfc/rfc6818.html)
+- **X.509 Internet PKI Online Certificate Status Protocol (OCSP)** — RFC 6960  
+  `rfc-6960` · rfc · [source](https://www.rfc-editor.org/rfc/rfc6960.html)
+- **Certificate Transparency** — RFC 6962  
+  `rfc-6962` · rfc · [source](https://www.rfc-editor.org/rfc/rfc6962.html)
 - **Concise Binary Object Representation (CBOR)** — C. Bormann, P. Hoffman. 2013-10. RFC 7049  
   `rfc-7049` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc7049.txt)  
   _Obsoleted by RFC 8949; kept because deployed decoders and older profiles still cite it._
@@ -207,6 +269,8 @@
   `rfc-7515` · rfc · [source](https://www.rfc-editor.org/rfc/rfc7515.html)
 - **JWE** — RFC 7516  
   `rfc-7516` · rfc · [source](https://www.rfc-editor.org/rfc/rfc7516.html)
+- **X.509v3 TLS Feature Extension (OCSP Must-Staple)** — RFC 7633  
+  `rfc-7633` · rfc · [source](https://www.rfc-editor.org/rfc/rfc7633.html)
 - **Proof-of-Possession Key Semantics for JSON Web Tokens (JWTs)** — RFC 7800  
   `rfc-7800` · rfc · [source](https://www.rfc-editor.org/rfc/rfc7800.html)
 - **Edwards-Curve Digital Signature Algorithm (EdDSA)** — RFC 8032  
@@ -224,6 +288,10 @@
 - **CBOR Web Token (CWT)** — M. Jones, E. Wahlstroem, S. Erdtman, H. Tschofenig. 2018-05. RFC 8392  
   `rfc-8392` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc8392.txt)  
   _ARCH-0001 Sec.6 names COSE_Sign1 + CWT as an envelope candidate and asks that iss/sub align with the KeyId profile._
+- **S/MIME Version 4.0 Certificate Handling** — RFC 8550  
+  `rfc-8550` · rfc · [source](https://www.rfc-editor.org/rfc/rfc8550.html)
+- **S/MIME Version 4.0 Message Specification** — RFC 8551  
+  `rfc-8551` · rfc · [source](https://www.rfc-editor.org/rfc/rfc8551.html)
 - **Leighton-Micali Hash-Based Signatures** — RFC 8554  
   `rfc-8554` · rfc · [source](https://www.rfc-editor.org/rfc/rfc8554.html)
 - **Automatic Certificate Management Environment (ACME)** — RFC 8555  
@@ -313,6 +381,8 @@
 - **Traces of Ephemeral Diffie-Hellman Over COSE (EDHOC)** — G. Selander, J. Preuss Mattsson, M. Serafin, M. Tiloca, M. Vucinic. 2024-03. RFC 9529  
   `rfc-9529` · rfc · informational · [source](https://www.rfc-editor.org/rfc/rfc9529.txt)  
   _Test vectors for EDHOC, which we do not implement. Recorded to close the question._
+- **Internationalization Updates to RFC 5280** — RFC 9549  
+  `rfc-9549` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9549.html)
 - **OpenPGP** — RFC 9580  
   `rfc-9580` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9580.html)
 - **Concise Binary Object Representation (CBOR) Tags for Time, Duration, and Period** — C. Bormann, B. Gamari, H. Birkholz. 2024-08. RFC 9581  
@@ -324,6 +394,12 @@
 - **CBOR Web Token (CWT) Claims in COSE Headers** — T. Looker, M.B. Jones. 2024-06. RFC 9597  
   `rfc-9597` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9597.txt)  
   _Puts CWT claims in the protected header, so a verifier reads issuer and subject without parsing the payload._
+- **Internationalized Email Addresses in X.509 Certificates** — RFC 9598  
+  `rfc-9598` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9598.html)
+- **No Revocation Available for X.509 Public Key Certificates** — RFC 9608  
+  `rfc-9608` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9608.html)
+- **Updates to X.509 Policy Validation** — RFC 9618  
+  `rfc-9618` · rfc · [source](https://www.rfc-editor.org/rfc/rfc9618.html)
 - **Using Ephemeral Diffie-Hellman Over COSE (EDHOC) with the Constrained Application Protocol (CoAP) and Object Security for Constrained RESTful Environments (OSCORE)** — F. Palombini, M. Tiloca, R. Hoglund, S. Hristozov, G. Selander. 2024-11. RFC 9668  
   `rfc-9668` · rfc · standard · [source](https://www.rfc-editor.org/rfc/rfc9668.txt)  
   _EDHOC/CoAP integration. Outside m-of-n's transport story; recorded to close the question._
@@ -376,9 +452,17 @@
   `iana-cose-algorithms` · dataset · [source](https://www.iana.org/assignments/cose/cose.xhtml)
 - **ISO/IEC 11889:2015 Trusted Platform Module Library**  
   `iso-iec-11889-2015` · spec · [source](https://www.iso.org/standard/66510.html)
+- **ISO/IEC 5962:2021 SPDX Specification V2.2.1**  
+  `iso-iec-5962` · spec · [source](https://www.iso.org/standard/81870.html)
+- **ITU-T X.509: The Directory - Public-key and attribute certificate frameworks**  
+  `itu-x509` · spec · [source](https://www.itu.int/rec/T-REC-X.509/en)
+- **ITU-T X.509 (1988): The Directory - Authentication framework**  
+  `itu-x509-1988` · spec · [source](https://www.itu.int/rec/T-REC-X.509-198811-S)
 
 ## nist
 
+- **CVE-2024-3094 (xz-utils backdoor, CVSS 10.0)**  
+  `cve-2024-3094` · dataset · [source](https://nvd.nist.gov/vuln/detail/CVE-2024-3094)
 - **FIPS 186: Digital Signature Standard (DSS), 1994**  
   `fips-186` · spec · [source](https://csrc.nist.gov/pubs/fips/186/upd1/final)
 - **FIPS 186-1: Digital Signature Standard (DSS), 1998**  
@@ -404,13 +488,52 @@
   `nistir-8610` · spec · [source](https://csrc.nist.gov/pubs/ir/8610/final)
 - **SP 1800-38: Migration to Post-Quantum Cryptography**  
   `sp-1800-38` · spec · [source](https://csrc.nist.gov/pubs/sp/1800/38/iprd)
+- **SP 800-161r1: Cybersecurity Supply Chain Risk Management Practices**  
+  `sp-800-161r1` · spec · [source](https://doi.org/10.6028/NIST.SP.800-161r1)
 - **Recommendations for Discrete Logarithm-based Cryptography: Elliptic Curve Domain Parameters**  
   `sp-800-186` · spec · recommendation · [source](https://csrc.nist.gov/pubs/sp/800/186/final)
 - **SP 800-208: Recommendation for Stateful Hash-Based Signature Schemes**  
   `sp-800-208` · spec · [source](https://doi.org/10.6028/NIST.SP.800-208)
+- **SP 800-218: Secure Software Development Framework (SSDF) v1.1**  
+  `sp-800-218` · spec · [source](https://doi.org/10.6028/NIST.SP.800-218)
+
+## openssf
+
+- **SLSA Specification v1.2**  
+  `slsa-1-2` · spec · [source](https://slsa.dev/spec/v1.2/)
 
 ## other
 
+- **Ballot SC-063v4: Make OCSP Optional, Require CRLs**  
+  `cabforum-sc063` · web · [source](https://cabforum.org/2023/07/14/ballot-sc-063-v4make-ocsp-optional-require-crls-and-incentivize-automation/)
+- **CA/Browser Forum Baseline Requirements for S/MIME Certificates**  
+  `cabforum-smime-br` · spec · [source](https://github.com/cabforum/smime/blob/main/SBR.md)
+- **CA/Browser Forum Baseline Requirements for TLS Server Certificates**  
+  `cabforum-tls-br` · spec · [source](https://github.com/cabforum/servercert/blob/main/docs/BR.md)
+- **Common CA Database (CCADB) public reports**  
+  `ccadb` · dataset · [source](https://www.ccadb.org/resources)
+- **Timeline of the xz open source attack**  
+  `cox-2024-xz-timeline` · web · [source](https://research.swtch.com/xz-timeline)
+- **ECMA-424 CycloneDX Bill of Materials Specification, 2nd Edition**  
+  `ecma-424` · spec · [source](https://ecma-international.org/publications-and-standards/standards/ecma-424/)
+- **An Observatory for the SSLiverse**  
+  `eff-2010-ssliverse` · paper · [source](https://www.eff.org/files/defconssliverse.pdf)
+- **Black Tulip: Report of the investigation into the DigiNotar CA breach**  
+  `foxit-2012-black-tulip` · article · [source](https://www.enisa.europa.eu/sites/default/files/all_files/Operation_Black_Tulip_v2.pdf)
+- **Go crypto/x509 name-constraint defects (five CVEs, 2025-2026)**  
+  `go-nameconstraint-cves` · dataset · [source](https://cveawg.mitre.org/api/cve/CVE-2025-58187)
+- **TUBITAK Kamu SM root should be constrained (golang/go#61963)**  
+  `golang-61963` · web · [source](https://github.com/golang/go/issues/61963)
+- **Revocation doesn't work**  
+  `langley-2011-revocation` · web · [source](https://www.imperialviolet.org/2011/03/18/revocation.html)
+- **No, don't enable revocation checking**  
+  `langley-2014-revchecking` · web · [source](https://www.imperialviolet.org/2014/04/19/revchecking.html)
+- **OCSP Service Has Reached End of Life**  
+  `letsencrypt-ocsp-eol` · web · [source](https://letsencrypt.org/2025/08/06/ocsp-service-has-reached-end-of-life)
+- **CVE-2022-3786 and CVE-2022-3602: X.509 Email Address Buffer Overflows**  
+  `openssl-2022-email-overflow` · web · [source](https://openssl-library.org/post/2022-11-01-email-address-overflows/)
+- **SolarWinds Form 8-K, Item 8.01, 14 December 2020**  
+  `solarwinds-8k` · web · [source](https://www.sec.gov/Archives/edgar/data/1739942/000162828020017451/swi-20201214.htm)
 - **DICE Certificate Profiles r01**  
   `tcg-dice-cert-profiles` · spec · [source](https://trustedcomputinggroup.org/wp-content/uploads/DICE-Certificate-Profiles-r01_pub.pdf)
 - **Hardware Requirements for a Device Identifier Composition Engine r78**  
@@ -442,14 +565,28 @@
 
 - **California AI Transparency Act SB 942, as amended by AB 853**  
   `ca-sb-942` · spec · [source](https://leginfo.legislature.ca.gov/)
+- **2026 Minimum Elements for a Software Bill of Materials (SBOM)**  
+  `cisa-2026-sbom-minimum` · spec · [source](https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom)
+- **Emergency Directive 21-01: Mitigate SolarWinds Orion Code Compromise**  
+  `cisa-ed-21-01` · web · [source](https://www.cisa.gov/news-events/directives/ed-21-01-mitigate-solarwinds-orion-code-compromise)
 - **Commercial National Security Algorithm Suite 2.0 (CNSA 2.0) Algorithms and FAQ**  
   `cnsa-2-0` · spec · [source](https://media.defense.gov/2022/Sep/07/2003071836/-1/-1/0/CSI_CNSA_2.0_FAQ_.PDF)
+- **Executive Order 14028: Improving the Nation's Cybersecurity**  
+  `eo-14028` · spec · [source](https://www.govinfo.gov/content/pkg/FR-2021-05-17/pdf/2021-10460.pdf)
+- **Executive Order 14144: Strengthening and Promoting Innovation in the Nation's Cybersecurity**  
+  `eo-14144` · spec · [source](https://www.govinfo.gov/content/pkg/FR-2025-01-17/pdf/2025-01470.pdf)
+- **Executive Order 14306: Sustaining Select Efforts To Strengthen the Nation's Cybersecurity**  
+  `eo-14306` · spec · [source](https://www.govinfo.gov/content/pkg/FR-2025-06-11/pdf/2025-10804.pdf)
 - **EU AI Act Article 50: Transparency Obligations**  
   `eu-ai-act-art-50` · spec · [source](https://artificialintelligenceact.eu/article/50/)
 - **EU Code of Practice on marking and labelling AI-generated content**  
   `eu-code-of-practice-marking` · web · [source](https://digital-strategy.ec.europa.eu/en/news/commission-publishes-code-practice-marking-and-labelling-ai-generated-content)
+- **Regulation (EU) 2024/2847 (Cyber Resilience Act)**  
+  `eu-cra-2024-2847` · spec · [source](http://data.europa.eu/eli/reg/2024/2847/oj)
 - **Content Credentials: Strengthening Multimedia Integrity in the Generative AI Era**  
   `nsa-2025-content-credentials` · paper · [source](https://media.defense.gov/2025/Jan/29/2003634788/-1/-1/0/CSI-CONTENT-CREDENTIALS.PDF)
+- **The Minimum Elements For a Software Bill of Materials (SBOM)**  
+  `ntia-2021-sbom-minimum` · spec · [source](https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom)
 
 ## vendor
 
@@ -461,14 +598,26 @@
   `arm-cca-den0125` · spec · [source](https://developer.arm.com/documentation/den0125/400/)
 - **Attest an Amazon EC2 instance with AMD SEV-SNP**  
   `aws-snp-attestation` · web · [source](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/snp-attestation.html)
+- **SUNSPOT: An Implant in the Build Process**  
+  `crowdstrike-sunspot` · web · [source](https://www.crowdstrike.com/en-us/blog/sunspot-malware-technical-analysis/)
 - **CVE-2019-13050: SKS keyserver certificate spamming attack**  
   `cve-2019-13050` · web · [source](https://access.redhat.com/articles/4264021)
+- **Highly Evasive Attacker Leverages SolarWinds Supply Chain with SUNBURST Backdoor**  
+  `fireeye-sunburst` · web · [source](https://cloud.google.com/blog/topics/threat-intelligence/evasive-attacker-leverages-solarwinds-supply-chain-compromises-with-sunburst-backdoor)
 - **Intel SGX ECDSA QuoteLibReference (DCAP API)**  
   `intel-sgx-dcap-quotelib` · spec · [source](https://download.01.org/intel-sgx/latest/dcap-latest/linux/docs/Intel_SGX_ECDSA_QuoteLibReference_DCAP_API.pdf)
 - **Intel TDX DCAP Quoting Library API**  
   `intel-tdx-dcap-quoting` · spec · [source](https://download.01.org/intel-sgx/latest/dcap-latest/linux/docs/Intel_TDX_DCAP_Quoting_Library_API.pdf)
 - **Intel Trust Domain Extensions (white paper)**  
   `intel-tdx-whitepaper` · spec · [source](https://www.intel.com/content/dam/develop/external/us/en/documents/tdx-whitepaper-final9-17.pdf)
+- **Revoking Trust in one ANSSI Certificate**  
+  `mozilla-2013-anssi` · web · [source](https://blog.mozilla.org/security/2013/12/09/revoking-trust-in-one-anssi-certificate/)
+- **Revoking Trust in Two TurkTrust Certificates**  
+  `mozilla-2013-turktrust` · web · [source](https://blog.mozilla.org/security/2013/01/03/revoking-trust-in-two-turktrust-certficates/)
+- **Name Constraints ignored by libPKIX verification engine**  
+  `mozilla-bug-856060` · web · [source](https://bugzilla.mozilla.org/show_bug.cgi?id=856060)
+- **Details about the event-stream incident**  
+  `npm-event-stream` · web · [source](https://blog.npmjs.org/post/180565383195/details-about-the-event-stream-incident)
 - **Macaroons Escalated Quickly**  
   `ptacek-2024-macaroons` · web · [source](https://fly.io/blog/macaroons-escalated-quickly/)
 - **Zoom Acquires Keybase**  
