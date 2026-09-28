@@ -6,7 +6,6 @@
 Superseded versions live inside their record at `versions/<version>/`,
 not as sibling records (scope §5). This index makes them findable.
 
-_No folded versions yet._
-
-A record gains one when a tracked document
-revises and the prior version is kept: `versions/<version>/`.
+| record | current | folded versions |
+|---|---|---|
+| [`draft-mih-scitt-agent-action-capsule`](../records/ietf/draft-mih-scitt-agent-action-capsule/) | -05 | `-02` |

@@ -9,7 +9,7 @@ write `supersedes` on one record and `superseded_by` appears on the other.
 `cites` is what a document itself references (fact). Everything else is
 our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 
-61 of 78 records have at least one edge.
+62 of 78 records have at least one edge.
 
 
 ### `draft-ietf-cbor-cddl-modules`
@@ -37,6 +37,9 @@ our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 ### `draft-mcnally-deterministic-cbor`
 - **cites** → `iana-cbor-simple-values`, `iana-cbor-tags`
 - **see_also** → `draft-ietf-cbor-serialization`, `rfc-8949`
+
+### `draft-mih-scitt-agent-action-capsule`
+- **see_also** → `rfc-9943`
 
 ### `fips-186-4`
 - **superseded_by** → `fips-186-5`
@@ -199,7 +202,7 @@ our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 - **see_also** → `rfc-9943`
 
 ### `rfc-9943`
-- **see_also** → `rfc-9942`, `sp-800-161r1`
+- **see_also** → `draft-mih-scitt-agent-action-capsule`, `rfc-9942`, `sp-800-161r1`
 
 ### `rfc-9964`
 - **part_of** → `ietf-cose-wg`
@@ -221,7 +224,6 @@ our curatorial judgement. See [`docs/references.md`](../docs/references.md).
 No edges in or out. Not wrong — but a record connected to nothing
 is a record nothing will surface.
 
-- `draft-mih-scitt-agent-action-capsule-02`
 - `iana-cbor-simple-values`
 - `iana-cbor-tags`
 - `rfc-1952`

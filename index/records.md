@@ -24,7 +24,7 @@
 | [`draft-ietf-cbor-packed`](../records/ietf/draft-ietf-cbor-packed/) | Packed CBOR | draft | draft | fetched | marginal | — |
 | [`draft-ietf-cbor-serialization`](../records/ietf/draft-ietf-cbor-serialization/) | CBOR Serialization and Determinism | draft | draft | fetched | useful | — |
 | [`draft-ietf-vcon-vcon-core-04`](../records/ietf/draft-ietf-vcon-vcon-core-04/) | The JSON format for vCon - Conversation Data Container | draft | draft | distilled | useful | — |
-| [`draft-mih-scitt-agent-action-capsule-02`](../records/ietf/draft-mih-scitt-agent-action-capsule-02/) | An Agent Action Capsule Profile for SCITT | draft | — | queued | — | — |
+| [`draft-mih-scitt-agent-action-capsule`](../records/ietf/draft-mih-scitt-agent-action-capsule/) | An Agent Action Capsule Profile for SCITT | draft | draft | fetched | — | 1 |
 | [`ietf-cbor-wg`](../records/ietf/ietf-cbor-wg/) | IETF Concise Binary Object Representation Maintenance and  | consortium | — | fetched | useful | — |
 | [`ietf-cose-wg`](../records/ietf/ietf-cose-wg/) | IETF CBOR Object Signing and Encryption (COSE) Working Gro | consortium | — | fetched | useful | — |
 | [`ietf-vcon-wg`](../records/ietf/ietf-vcon-wg/) | IETF vCon Working Group | web | — | stub | — | — |

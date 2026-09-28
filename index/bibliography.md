@@ -36,8 +36,8 @@
 - **The JSON format for vCon - Conversation Data Container** — 2026-09  
   `draft-ietf-vcon-vcon-core-04` · draft · **distilled** · [source](https://www.ietf.org/archive/id/draft-ietf-vcon-vcon-core-04.txt)  
   _An independently-designed signed container with must-understand extension semantics and a supersession model - the best available test of whether our statement form can express something we did not design._
-- **An Agent Action Capsule Profile for SCITT**  
-  `draft-mih-scitt-agent-action-capsule-02` · draft · [source](https://datatracker.ietf.org/doc/draft-mih-scitt-agent-action-capsule-02/)
+- **An Agent Action Capsule Profile for SCITT** — S. Mih. 2026-09-26  
+  `draft-mih-scitt-agent-action-capsule` · draft · [source](https://www.ietf.org/archive/id/draft-mih-scitt-agent-action-capsule-05.txt)
 - **IETF Concise Binary Object Representation Maintenance and Extensions (CBOR) Working Group**  
   `ietf-cbor-wg` · consortium · [source](https://datatracker.ietf.org/wg/cbor/about/)  
   _The body that controls the CBOR spec line and its extension points. Parent record for every CBOR WG document held here._

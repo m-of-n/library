@@ -99,7 +99,7 @@ This is the query the library exists to answer.
 
 ### DEC-007
 
-- [`draft-mih-scitt-agent-action-capsule-02`](../records/ietf/draft-mih-scitt-agent-action-capsule-02/) — An Agent Action Capsule Profile for SCITT
+- [`draft-mih-scitt-agent-action-capsule`](../records/ietf/draft-mih-scitt-agent-action-capsule/) — An Agent Action Capsule Profile for SCITT
 - [`rfc-9943`](../records/ietf/rfc-9943/) — An Architecture for Trustworthy and Transparent Digital Supply Chains
 - [`w3-org-pics`](../records/w3c/w3-org-pics/) — W3C Platform for Internet Content Selection (PICS)
 
