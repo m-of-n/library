@@ -9,14 +9,19 @@ Library-specific:
    directory. Records live at `records/<body>/<id>/`.
 2. Fill `summary.md` before setting `status: summarized`. It is the document a
    human reviews. `distilled.md` is a separate, optional job.
-3. **Regenerate derived views before every PR:**
+3. **Validate before every PR:**
    ```sh
-   bin/validate && bin/export && bin/reindex
+   bin/validate
    ```
-   Commit `exports/` **and** `index/`. CI enforces three things: the views are
-   not stale, **every record appears in the bibliography**, and no relation
-   dangles. Adding a record without regenerating leaves the bibliography wrong,
-   which is the most visible way this library can be untrustworthy.
+   **Do not commit `index/` or `exports/` — they are generated and ignored.**
+   CI builds them and then gates: **every record appears in the bibliography**,
+   and no relation dangles. Reviewers can download the built views from the
+   `library-views` artifact on the PR.
+
+   Regenerate them locally whenever you want to read them:
+   ```sh
+   bin/export && bin/reindex
+   ```
 
    **The published bibliography lags by two steps**, deliberately: merge here,
    then the pin moves in `mofn`, then the site rebuilds. A report cites
@@ -27,15 +32,18 @@ Library-specific:
 
 ## What regeneration owes you
 
-After ingesting anything, or editing any relation, **`index/` is stale**:
-`records`, `versions` (folded documents), `crosswalk`, `bibliography`,
-`frontier`, `by-decision`. `bin/reindex` rebuilds all of them and derives every
-inverse relation, so the two sides of an edge cannot drift.
+`bin/reindex` rebuilds `records`, `versions` (folded documents), `crosswalk`,
+`bibliography`, `frontier` and `by-decision`, and derives every inverse
+relation, so the two sides of an edge cannot drift.
 
-`index/` is **generated. Never edit it; regenerate it.**
+`index/` and `exports/` are **generated and untracked. Never edit them, never
+commit them, regenerate them.** They were tracked until 2026-09-28; every merge
+conflict the library had ever seen was in them, and none was a real
+disagreement — two branches that each add a record always rewrite the same
+sorted bibliography. See `docs/generated-views.md`.
 
-A human-visible bibliography going stale after ingestion is the normal failure
-here — the gate exists because it is easy to forget.
+Untracking them also retired the "stale derived view" failure: a file that is
+never committed cannot be stale.
 
 ## Bumping the pin in mofn/
 
