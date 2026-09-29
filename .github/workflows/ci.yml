@@ -1,8 +1,8 @@
 name: ci
-# The library had NO CI. A PR could merge with a stale index/ or exports/ and
-# nothing would notice until someone bumped the pin in mofn - or never. The
-# bibliography is the most visible generated view, so it is the one that rots
-# most conspicuously.
+# index/ and exports/ are generated and NOT tracked. Every merge conflict this
+# library ever had was in those files, and none was a real disagreement - see
+# docs/generated-views.md. CI generates them first, then gates against the
+# fresh output, so "stale derived view" is no longer a thing that can happen.
 on:
   pull_request:
   push: {branches: [main]}
@@ -18,12 +18,12 @@ jobs:
       - name: records and topics validate
         run: bin/validate
 
-      - name: derived views are current
+      - name: generate derived views
         run: |
           bin/export && bin/reindex
-          if ! git diff --exit-code -- index/ exports/; then
-            echo "::error::index/ or exports/ is stale. Run 'bin/export && bin/reindex' and commit."
-            echo "::error::Adding a record without regenerating leaves the bibliography wrong."
+          if [ -n "$(git status --porcelain -- index/ exports/)" ]; then
+            echo "::error::generated views are tracked again - they must stay ignored"
+            git status --porcelain -- index/ exports/
             exit 1
           fi
 
@@ -47,6 +47,16 @@ jobs:
             find records -type f \( -name '*.pdf' -o -name '*.xlsx' -o -name '*.epub' -o -name '*.docx' \)
             exit 1
           fi
+      - name: publish the views for reviewers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: library-views
+          path: |
+            index/
+            exports/
+          if-no-files-found: error
+
   dco:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
