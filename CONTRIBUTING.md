@@ -22,8 +22,14 @@ Library-specific:
    then the pin moves in `mofn`, then the site rebuilds. A report cites
    `library@<commit>`, so the pin is a decision. `notify-mofn` opens the
    pin-bump PR automatically once `MOFN_DISPATCH_TOKEN` is set.
-4. One topic per branch. Topics are sized so branches do not collide.
-5. Never commit a PDF, spreadsheet or ebook. CI rejects it.
+4. **Protocol and format documents are fully extracted before merge (FX-1).**
+   Any `rfc`, `draft`, `spec` or `ietf` record your PR moves past stub needs the
+   complete artifact set — requirements, schemas, messages, protocol model,
+   state machines, test vectors, design notes — from multi-agent passes at
+   maximum effort. Summaries alone do not merge. See `docs/extraction.md`;
+   start with `bin/extract-scaffold <record-dir>`.
+5. One topic per branch. Topics are sized so branches do not collide.
+6. Never commit a PDF, spreadsheet or ebook. CI rejects it.
 
 ## What regeneration owes you
 

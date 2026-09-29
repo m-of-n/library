@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+"""extract-scaffold — lay out the FX-1 artifact set for a record.
+
+    bin/extract-scaffold records/<body>/<id> [--force]
+
+Creates every artifact docs/extraction.md requires, as templates carrying
+TODO markers that bin/validate rejects under profile: full. It never
+overwrites an existing file unless --force is given, so it is safe to re-run
+after a partial extraction to see what is still missing.
+"""
+import pathlib, sys, datetime
+
+if len(sys.argv) < 2:
+    print(__doc__); sys.exit(2)
+rec = pathlib.Path(sys.argv[1]).resolve()
+if not (rec / "record.yaml").exists():
+    sys.exit(f"extract-scaffold: {rec} has no record.yaml")
+rid, force = rec.name, "--force" in sys.argv
+today = datetime.date.today().isoformat()
+fm = lambda kind, title: (f'---\nrecord: {rid}\nkind: {kind}\ntitle: "{title}"\n'
+                          f'extracted: "{today}"\nreviewed_by: ""\n---\n\n')
+
+FILES = {
+"distilled/README.md": fm("index", f"{rid} — distilled artifacts") +
+"""# Distilled artifacts
+
+FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what
+it does not.
+
+| kind | file | coverage |
+|---|---|---|
+| normative | normative.md | TODO |
+| requirements | requirements.yaml | TODO |
+| schema | schema/ | TODO |
+| messages | messages.yaml | TODO |
+| protocol | protocol.yaml, protocol.md | TODO |
+| state-machine | state-machine.yaml | TODO |
+| examples | examples/ | TODO |
+| design-notes | design-notes.md | TODO |
+""",
+"distilled/normative.md": fm("normative", f"{rid} — normative statements") +
+"""<!-- Every normative statement, VERBATIM, with its locator. Keep the source's
+section structure as headings. Drop motivation, history, acknowledgements. -->
+
+## §TODO
+- (§TODO) TODO verbatim statement
+""",
+"distilled/requirements.yaml":
+f"""schema: "library-requirements/v1"
+record: {rid}
+source_version: "TODO"
+source_digest: "TODO"
+source_keyword_count: 0        # bin/bcp14-count <source.txt>
+extracted_keyword_count: 0     # recomputed and checked by bin/validate
+reconciliation: ""             # REQUIRED if the counts differ
+reviewed_by: ""
+note: >
+  Ids are stable and never reused. Cite as {rid}#R-NNNN.
+
+requirements:
+  - id: {rid}#R-0001
+    object: TODO
+    field: TODO
+    verb: TODO
+    actor: TODO
+    locator: "§TODO"
+    text: "TODO verbatim"
+    kind: stated
+    testable: yes
+    status: active
+""",
+"distilled/schema/README.md": fm("schema", f"{rid} — schemas") +
+"""<!-- The source's own CDDL / ASN.1 / JSON Schema, VERBATIM, in *.cddl or
+*.schema.json, each file naming its source section. If the source has only
+prose, write a machine-checkable schema and mark it `derived`. -->
+TODO
+""",
+"distilled/messages.yaml":
+f"""record: {rid}
+reviewed_by: ""
+# Every message, structure, header or envelope the document defines.
+messages:
+  - name: TODO
+    locator: "§TODO"
+    encoding: TODO            # CBOR / JSON / COSE_Sign1 / HTTP / ...
+    fields:
+      - name: TODO
+        type: TODO
+        required: true
+        constrained_by: [{rid}#R-0001]
+    layout: "TODO byte-level / structural layout"
+""",
+"distilled/protocol.yaml":
+f"""record: {rid}
+reviewed_by: ""
+roles: [TODO]
+flows:
+  - name: TODO
+    locator: "§TODO"
+    steps:
+      - from: TODO
+        to: TODO
+        message: TODO          # must name a message in messages.yaml
+        on_error: TODO
+""",
+"distilled/protocol.md": fm("protocol", f"{rid} — protocol model") +
+"""```mermaid
+sequenceDiagram
+  participant TODO
+```
+""",
+"distilled/state-machine.yaml":
+f"""record: {rid}
+reviewed_by: ""
+machines:
+  - name: TODO
+    locator: "§TODO"
+    initial: TODO
+    states: [TODO]
+    transitions:
+      - from: TODO
+        to: TODO
+        trigger: TODO          # a message or event
+        guard: TODO
+    error_states: [TODO]
+""",
+"distilled/examples/README.md": fm("examples", f"{rid} — examples and test vectors") +
+"""<!-- Every example in the source as a fixture file (verbatim bytes or
+text), with the expected verification result. These drive our tests. -->
+TODO
+""",
+"distilled/design-notes.md": fm("design-notes", f"{rid} — bearing on our design") +
+"""## What we adopt
+TODO
+
+## What we adapt, and how
+TODO
+
+## What we reject, and why
+TODO
+
+## Mapping to our decisions
+<!-- ARCH-0001 / ARCH-0002 principles, DEC-*, meeting decisions D-n.
+     COSE/CBOR/envelope documents MUST address D-3 (option 5: reduced CBOR,
+     no IANA tags, COSE export only) and give the header/field mapping. -->
+TODO
+
+## Open questions
+TODO
+""",
+}
+
+made = []
+for rel, body in FILES.items():
+    p = rec / rel
+    if p.exists() and not force:
+        continue
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(body)
+    made.append(rel)
+
+print(f"extract-scaffold: {len(made)} file(s) created in {rec.relative_to(rec.parents[2])}")
+for m in made: print("  +", m)
+print("""
+Then add to record.yaml:
+
+distillation:
+  profile: full
+  artifacts: [...one entry per artifact...]
+  not_applicable: []        # {kind, reason} — only with a written reason
+  passes: []                # {pass: extract|verify|cross-check, by, effort: max, date}
+""")

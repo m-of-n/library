@@ -18,6 +18,16 @@ cloneable, forkable, and citable by projects that are not this one.
   retarget. A new version of a spec is a new record linked by `supersedes`.
 - **Never set `status: distilled` with TODOs in `distilled.md`.** CI rejects it.
 
+## Full extraction — FX-1
+
+Every `rfc` / `draft` / `spec` / `ietf` record a PR moves past stub must reach
+`distillation.profile: full`: normative text, **all** requirements with keyword
+counts reconciled, schemas, message formats, protocol model, state machines,
+test vectors, and design notes mapped to our decisions. Multi-agent passes
+(extract → verify → cross-check), **every pass at maximum effort**. A summary
+is a started record, not a finished one. `docs/extraction.md` is normative;
+`.claude/skills/extract` is the procedure; CI enforces it.
+
 ## Shape
 
 ```
@@ -43,7 +53,7 @@ through a submodule. Opening `mofn/` does **not** load these.
 
 **Working on records? Open `library/` as the project.**
 
-`.claude/skills/` — `ingest-reference`, `summarize`, `distill`. They carry the
+`.claude/skills/` — `ingest-reference`, `summarize`, `extract` (FX-1), `distill`. They carry the
 judgement the tools do not.
 
 ## Before any PR

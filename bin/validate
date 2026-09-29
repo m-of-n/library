@@ -9,6 +9,7 @@ import pathlib, re, sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from _yaml import parse as miniyaml
+import _bcp14
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 REQUIRED = ["schema", "id", "body", "type", "title", "content", "tags", "status"]
@@ -17,10 +18,77 @@ VERDICTS = {"useful", "marginal", "not-useful", "unassessed"}
 STATUS = {"stub", "queued", "fetched", "reading", "read", "summarized", "distilled"}
 TYPES = {"rfc", "draft", "spec", "paper", "book", "article", "repo", "dataset",
          "consortium", "hierarchy", "spreadsheet", "web", "note", "ietf", "url", "md"}
+# FX-1 (docs/extraction.md): the artifact set a `profile: full` record must carry.
+FX1_ALWAYS = ["normative", "requirements", "design-notes"]
+FX1_UNLESS_NA = ["schema", "messages", "protocol", "state-machine", "examples"]
+FX1_FILES = {"normative": "distilled/normative.md", "requirements": "distilled/requirements.yaml",
+             "design-notes": "distilled/design-notes.md", "schema": "distilled/schema",
+             "messages": "distilled/messages.yaml", "protocol": "distilled/protocol.yaml",
+             "state-machine": "distilled/state-machine.yaml", "examples": "distilled/examples"}
+FX1_PASSES = ["extract", "verify", "cross-check"]
+FX1_TYPES = {"rfc", "draft", "spec", "ietf"}
+
 REL = {"supersedes", "superseded_by", "updates", "updated_by", "cited_by",
        "see_also", "implements_concept", "contradicts", "part_of"}
 
 
+
+
+def check_full(recdir, d, where, errs):
+    """Enforce FX-1 on a record that declares distillation.profile: full."""
+    dist = d.get("distillation") or {}
+    na = {x.get("kind"): x.get("reason", "") for x in (dist.get("not_applicable") or [])
+          if isinstance(x, dict)}
+    for k, r in na.items():
+        if k in FX1_ALWAYS:
+            errs.append(f"{where}: FX-1 — '{k}' is never not-applicable")
+        elif not str(r).strip():
+            errs.append(f"{where}: FX-1 — not_applicable '{k}' needs a written reason")
+    for k in FX1_ALWAYS + FX1_UNLESS_NA:
+        if k in na and k not in FX1_ALWAYS:
+            continue
+        f = recdir / FX1_FILES[k]
+        if not f.exists() or (f.is_dir() and not any(f.iterdir())):
+            errs.append(f"{where}: FX-1 — missing {k} ({FX1_FILES[k]}) and not declared not_applicable")
+            continue
+        for g in ([f] if f.is_file() else [x for x in f.rglob("*") if x.is_file()]):
+            try:
+                if "TODO" in g.read_text(errors="ignore"):
+                    errs.append(f"{where}: FX-1 — {g.relative_to(recdir)} still has TODO markers")
+            except OSError:
+                pass
+    if not (recdir / "summary.md").exists():
+        errs.append(f"{where}: FX-1 — summary.md required")
+    if not d.get("tags") or not d.get("bears_on") or not d.get("topic"):
+        errs.append(f"{where}: FX-1 — labels incomplete: tags, bears_on and topic are all required")
+    done = {x.get("pass") for x in (dist.get("passes") or []) if isinstance(x, dict)}
+    for ps in FX1_PASSES:
+        if ps not in done:
+            errs.append(f"{where}: FX-1 — pass '{ps}' not recorded in distillation.passes")
+    for x in (dist.get("passes") or []):
+        if isinstance(x, dict) and str(x.get("effort", "")).lower() != "max":
+            errs.append(f"{where}: FX-1 — pass '{x.get('pass')}' ran at effort "
+                        f"'{x.get('effort')}'; extraction passes run at max")
+    rq = recdir / "distilled/requirements.yaml"
+    if rq.exists():
+        r = miniyaml(rq.read_text())
+        texts = " ".join(str(x.get("text", "")) for x in (r.get("requirements") or [])
+                         if isinstance(x, dict))
+        got = _bcp14.count(texts, boilerplate=False)
+        def num(v, dflt):
+            try:
+                return int(str(v).split("#")[0].strip().strip('"'))
+            except ValueError:
+                return dflt
+        src = num(r.get("source_keyword_count", 0), 0)
+        hdr = num(r.get("extracted_keyword_count", -1), -1)
+        if src <= 0:
+            errs.append(f"{where}: FX-1 — requirements.yaml source_keyword_count not set (bin/bcp14-count)")
+        if hdr != got:
+            errs.append(f"{where}: FX-1 — extracted_keyword_count says {hdr}, texts contain {got}")
+        if src > 0 and got != src and not str(r.get("reconciliation", "")).strip():
+            errs.append(f"{where}: FX-1 — source has {src} BCP 14 keywords, extraction has {got}, "
+                        f"and no reconciliation explains the difference")
 
 
 def main():
@@ -87,6 +155,9 @@ def main():
         for md in dd.glob("*.md") if dd.is_dir() else []:
             if not md.read_text().startswith("---"):
                 errs.append(f"{where}: distilled/{md.name} needs YAML front matter")
+        dist = d.get("distillation") or {}
+        if isinstance(dist, dict) and dist.get("profile") == "full":
+            check_full(rec.parent, d, where, errs)
         if (rec.parent / "distilled.md").exists():
             errs.append(f"{where}: distilled.md is superseded by distilled/ (schema v5)")
         for f in rec.parent.rglob("*"):

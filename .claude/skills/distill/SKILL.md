@@ -5,6 +5,11 @@ description: Use when a long document — usually a PDF standard — needs a com
 
 # Distil a reference
 
+> **Superseded for protocol and format documents by `extract` (FX-1).** Any
+> record of type rfc, draft, spec or ietf that moves past stub gets the full
+> artifact set — see `docs/extraction.md` and `.claude/skills/extract`. This
+> skill remains for papers and other long prose sources.
+
 **Secondary and optional.** `summary.md` comes first and always; this is for
 documents an agent must work *through* rather than merely know about —
 typically a long PDF standard.

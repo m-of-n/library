@@ -9,6 +9,7 @@ only the skills that act on `mofn/`.
 |---|---|
 | `ingest-reference` | creating a record: type, body, `bears_on`, stub-or-not |
 | `summarize` | `summary.md` — the document a human reviews |
-| `distill` | `distilled.md` — compaction for requirements extraction |
+| `extract` | **FX-1 full extraction** for rfc/draft/spec records: requirements, schemas, messages, protocol, state machines, test vectors, design notes — multi-agent, max effort |
+| `distill` | compaction of papers and prose sources (superseded by `extract` for specs) |
 
 Open the repo you are working in. See `CLAUDE.md` §Skills.
