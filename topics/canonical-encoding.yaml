@@ -2,7 +2,7 @@ schema: "library-topic/v1"
 id: canonical-encoding
 question: "What must hold for a canonical form to be safe to sign?"
 owner: S1
-status: open
+status: active
 bears_on:
   - DEC-002
   - R-M-02
@@ -11,6 +11,118 @@ records:
   - draft-ietf-cbor-cde
   - draft-ietf-cbor-serialization
   - draft-mcnally-deterministic-cbor
+  - rfc-8949
   - rfc-9804
   - secure-systems-lab-dsse
-answer: ""
+answer: >
+  Four conditions must hold, and the rule proposed to cover them supplies only
+  two. A canonical form is safe to sign when (1) the encoding is INJECTIVE over
+  the values it encodes, not merely deterministic, (2) the decoder REJECTS
+  non-canonical input rather than normalising it, (3) canonicalisation runs
+  once, at authoring, on trusted input, and never as part of verification, and
+  (4) the encoding profile is named by an authenticated type indicator carried
+  inside the signed bytes. R-O-05, proposed in ARCH-0001-PROPOSAL-v0.2.0 §3.4,
+  delivers (3) and (4) and ASSUMES (1) and (2). It holds, for payloads. It does
+  not reach identifiers, and that gap is this topic's finding.
+
+  DETERMINISM IS NOT UNIQUENESS, and RFC 8949 §4.2 offers only the former. It is
+  an ENCODER-side rule. A conforming encoder emits the same bytes for the same
+  item, which says nothing about whether some other byte string also decodes to
+  that item, and a conforming DECODER accepts non-deterministic input happily.
+  §4.2 then leaves tag presence, float shortening and NaN payloads to the
+  application and offers a second map ordering in §4.2.3. Four mutually
+  incompatible profiles grew in that gap — §4.2.1 core, CTAP2 canonical,
+  DAG-CBOR and dCBOR — which is why the CBOR WG is now writing CDE
+  (draft-ietf-cbor-cde) and dCBOR at all. "Use deterministic CBOR" does not
+  specify an encoding. Condition (2) is the one nobody writes down. It is absent
+  from §4.2, absent from ARCH-0001 §5.3, and absent from the spike, which has an
+  encoder and NO DECODER.
+
+  R-O-05 answers the DSSE critique rather than dodging it. That critique is
+  sound and documented. Canonicalising at verification time forces the verifier
+  to parse untrusted input BEFORE authenticating it, canonicalisation schemes
+  have been broken before, and a canonical form with no authenticated type lets
+  a signer produce in one encoding what a verifier reads as another. The DSSE
+  answer was Pre-Authentication Encoding, which signs the exact bytes with the
+  payload type length-prefixed alongside, and which abandons canonical form
+  entirely. R-O-05 takes the ordering and keeps the form. The spike under
+  prototype/statements already implements it, in that sign() calls encode() once
+  and verify() re-MACs the payload as received and never calls encode() at all.
+
+  THE GAP IS IDENTITY, NOT PAYLOADS. Where an identifier IS the digest of a
+  canonical encoding there are no received bytes to verify verbatim, and
+  canonicalisation runs before any signature exists. Three such sites exist in
+  the only code there is — keyid() under R-M-02, by_description() under R-M-11,
+  and domain_id() under ARCH-0002 P4. For these the safety condition is not
+  verify-before-decode but injectivity, because a collision there is not a
+  verification failure but TWO DISTINCT PRINCIPALS SHARING ONE NAME, or two
+  distinct vocabularies sharing one identifier. R-M-02 therefore makes
+  uniqueness a NAMING requirement and not only a signature-integrity one. That
+  is a stronger claim than the question asked, and it is the reason R-O-05 needs
+  its scope stated in §7 rather than left implicit.
+
+  Costs per candidate. RFC 8785 (JCS) fails condition (1) at numbers. It
+  canonicalises only values representable as IEEE-754 doubles, serialising them
+  by the ECMAScript shortest-round-trip rule for Number toString, and directs
+  anything outside that, such as integers past 2^53 and high-precision decimals,
+  to be carried as strings instead. A threshold k or a validity instant that does
+  not survive a double round-trip is outside the scheme. JCS also has no
+  byte-string type, so every digest becomes hex or base64 text, and no native
+  authenticated type indicator, which is why DEC-002 option 3 must pair it with
+  DSSE. CBOR under §4.2 satisfies (1) only after a profile pins what §4.2 leaves
+  open. Library availability is the best of the candidates but conformance claims
+  are unreliable, in that QCBOR 1.x does not sort map keys, kotlinx
+  serialization-cbor defaults to indefinite lengths, and serde_cbor is deprecated
+  and unpatched under RUSTSEC-2021-0127. COSE supplies (4) natively but through
+  centrally allocated header parameters, which R-M-12, accepted as ARCH-0002 P1
+  via ADR-0001, excludes from the native model, and hence proposed option 5. RFC
+  9804 canonical S-expressions satisfy (1) BY CONSTRUCTION, being
+  length-prefixed, with no optional whitespace, no alternative integer widths,
+  and no map type at all, so no key-ordering question arises. Its §3 split of
+  canonical-for-signing from advanced-for-display is the architectural ancestor
+  of R-O-05. The cost is ecosystem, ARCH-0001 §3.1 already records it as not
+  selected and the proposal records it as historical, and it lacks (4), since a
+  leading token is convention rather than an authenticated field.
+
+  The cheapest route to condition (1) found in this reading is EXCLUSION rather
+  than harder canonicalisation. The rcbor spike reaches it by removing the hard
+  cases, with no floats, so the JCS number problem cannot arise, no tags, per
+  R-M-12, definite lengths only, smallest-form integer heads, map keys sorted
+  bytewise on their ENCODED form per §4.2.1, and duplicate encoded keys rejected
+  rather than resolved, which closes the duplicate-key hole JCS leaves open. The
+  cost is expressiveness, in that a decimal must be carried as an integer or a
+  string. This is a property of that encoder and not a claim that it is the only
+  deterministic encoding.
+
+  Three defects in the spike are evidence for the identity-path gap rather than
+  incidental bugs. keyid() hashes the key bytes it is handed with NO canonical
+  encoding step, so the DEC-003 requirement to specify canonical key bytes
+  before hashing is unsatisfied in the only code that exists, and the demo hides
+  this because its keys are literal byte strings. Every identifier is truncated
+  to 128 bits, a roughly 2^64 birthday bound for something that functions as a
+  name under R-M-02, where ARCH-0001 §4.1 parameterises the digest algorithm and
+  the spike chose sha-256 truncated to 128 bits silently. And the envelope type
+  indicator is a global string naming the rcbor statement profile, which is
+  R-M-12-non-conformant, and is the one place the spike does not practise what
+  it preaches.
+
+  What would overturn this. If checking canonicality on decode cannot be done
+  without re-encoding, then condition (2) drags the canonicaliser of the
+  producer back into the verifier, the R-O-05 separation is cosmetic, and DSSE is
+  simply right, meaning abandon canonical form, sign received bytes, and
+  identify subjects by content digest only. The experiment that settles it is to
+  write the decode path in rcbor as single-pass rejection and see whether
+  bytewise key order and smallest-form heads are checkable inline. They appear
+  to be, and it is untested. The finding is also contingent on ARCH-0002 P4,
+  because if domains of discourse are not hash-identified sets then the identity
+  path loses its hardest case and the DSSE no-canonical-form answer becomes
+  sufficient for what remains. DECISIONS-0001 T1-B currently recommends HOLDING
+  P4, so this is live.
+
+  PROVISIONAL. This is written before the owned records are distilled. DSSE and
+  RFC 9804 are stubs, RFC 8785 has no record at all despite being named in
+  DEC-002 option 3, and RFC 8949 has a summary but no distilled artifact. Per
+  close-topic step 2 this topic is therefore NOT yet answered. The reasoning
+  above is drawn from the RFC 8949 summary, the v0.2.0 proposal §3.3 and §3.4,
+  and the running spike, and each claim needs its record behind it before the
+  status flips.
