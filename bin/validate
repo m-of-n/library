@@ -13,7 +13,25 @@ import _bcp14
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 REQUIRED = ["schema", "id", "body", "type", "title", "content", "tags", "status"]
-BODIES = ['ietf', 'nist', 'w3c', 'iso', 'oasis', 'c2pa', 'openssf', 'google', 'academic', 'vendor', 'community', 'regulator', 'other']
+
+
+def bodies():
+    """The legal `body` values, read from the schema rather than restated here.
+
+    This list used to be a literal in three places (here and twice in
+    bin/ingest) plus schema/tags.yaml, and the tags.yaml copy drifted out of
+    agreement with the schema — library#27. One declaration,
+    schema/record.schema.yaml:fields.body, parsed at run time.
+    """
+    f = ROOT / "schema" / "record.schema.yaml"
+    v = (miniyaml(f.read_text()).get("fields") or {}).get("body", {}).get("values")
+    if not isinstance(v, list) or not v:
+        sys.exit(f"ERROR {f}:fields.body.values is not a non-empty list — "
+                 f"it must stay a BLOCK sequence; miniyaml cannot read a flow list")
+    return v
+
+
+BODIES = bodies()
 VERDICTS = {"useful", "marginal", "not-useful", "unassessed"}
 STATUS = {"stub", "queued", "fetched", "reading", "read", "summarized", "distilled"}
 TYPES = {"rfc", "draft", "spec", "paper", "book", "article", "repo", "dataset",
@@ -121,6 +139,12 @@ def main():
                 errs.append(f"{where}: content.local must be false — we do not commit third-party files")
             if st in {"read", "summarized", "distilled"} and not c.get("sha256"):
                 warns.append(f"{where}: status={st} but no content digest")
+        # `body` is a shelf, not an authority claim (schema storage.note), so
+        # `publisher` is the only field naming who issued the document. Gated
+        # on a read status: a stub may legitimately not know yet.
+        if st in {"read", "summarized", "distilled"} and not str(d.get("publisher") or "").strip():
+            warns.append(f"{where}: status={st} but no publisher — `body` does not "
+                         f"record who published this, `publisher` does")
         u = d.get("usefulness", {})
         if isinstance(u, dict) and u:
             vd = u.get("verdict")

@@ -32,6 +32,23 @@ def known_types():
     return sorted(p.stem for p in ADAPTERS.glob("*.yaml") if not p.stem.startswith("_"))
 
 
+def known_bodies():
+    """Legal `body` values, read from the schema — the one declaration.
+
+    Restating them here is what let schema/tags.yaml drift (library#27).
+    `body` is the storage shelf, not a claim about who published the
+    document; that is `publisher`.
+    """
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+    from _yaml import parse
+    f = ROOT / "schema" / "record.schema.yaml"
+    v = (parse(f.read_text()).get("fields") or {}).get("body", {}).get("values")
+    if not isinstance(v, list) or not v:
+        die(f"{f}:fields.body.values is not a non-empty list — it must stay a "
+            f"BLOCK sequence; bin/_yaml.py cannot read a flow list")
+    return v
+
+
 # ---------------------------------------------------------------- enrichers
 def enrich_ietf(src, meta, _type=None):
     """RFC number (bare or prefixed), or a draft name. Builds canonical locators."""
@@ -119,7 +136,8 @@ def main():
     ap.add_argument("type", nargs="?", help=f"one of: {', '.join(known_types())}")
     ap.add_argument("source", nargs="?", help="URL, path, RFC number, or identifier")
     ap.add_argument("--id"); ap.add_argument("--title")
-    ap.add_argument("--body", help="issuing organisation: " + ", ".join(['ietf', 'nist', 'w3c', 'iso', 'oasis', 'c2pa', 'openssf', 'google', 'academic', 'vendor', 'community', 'regulator', 'other']))
+    ap.add_argument("--body", help="storage shelf (not the publisher — that is `publisher`): "
+                                   + ", ".join(known_bodies()))
     ap.add_argument("--topic", help="topic id that owns this record")
     ap.add_argument("--bears-on", default="", help="comma-separated DEC-*/R-* ids")
     ap.add_argument("--fetch", action="store_true", help="retrieve + hash (network)")
@@ -145,8 +163,8 @@ def main():
         meta = {**meta, "url": a.source, "id": meta.get("id") or slug(a.source)}
     rid = meta["id"]
     body = a.body or meta.get("body") or ("ietf" if a.type in ("rfc", "draft", "ietf") else "other")
-    if body not in ['ietf', 'nist', 'w3c', 'iso', 'oasis', 'c2pa', 'openssf', 'google', 'academic', 'vendor', 'community', 'regulator', 'other']:
-        die(f"unknown body '{body}'")
+    if body not in known_bodies():
+        die(f"unknown body '{body}'. known: {', '.join(known_bodies())}")
     existing = list(RECORDS.glob(f"*/{rid}/record.yaml"))
     if existing:
         die(f"record already exists: {existing[0].parent.relative_to(ROOT)}/  "

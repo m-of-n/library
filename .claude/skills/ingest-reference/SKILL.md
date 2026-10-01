@@ -26,7 +26,12 @@ is the method. This skill is the judgment around them.
 6. **Set `maturity` only if you checked it.** RFC 2026 levels — `standard`,
    `best-practice`, `informational`, `experimental`, `historic`. An RFC being an
    RFC does not make it a standard. Leave unset rather than guess.
-7. **Prefer a controlled tag** from `schema/tags.yaml` — subject, body, role.
+7. **Prefer a controlled tag** from `schema/tags.yaml` — subject and role.
+   `body` is **not** a tag there and never was one: it is the storage shelf, and
+   its values live in `schema/record.schema.yaml:fields.body`. Pick the shelf a
+   reader would look on, then **name the issuer in `publisher`** — `body` does
+   not record who published the document, and `publisher` may name two where
+   authorship and ratification differ. `docs/scope.md` §4.
 8. Typed relations only — `supersedes`, `updates`, `see_also`, `contradicts`,
    `part_of`, `implements_concept`. `contradicts` is the valuable one and the
    one everybody forgets.

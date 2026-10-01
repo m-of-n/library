@@ -52,6 +52,37 @@ def listify(v):
     return out
 
 
+# `body` is a storage shelf, not an authority claim (record.schema.yaml
+# storage.note). Two consequences for these views, both library#27:
+# the section headings say so, and `publisher` is rendered because it is now
+# the only field naming who issued a document.
+SHELF_NOTE = ("Sections are storage shelves — `records/<body>/` — **not publisher "
+              "attribution**.\nWho published a document is `publisher`; its standing is "
+              "`maturity`. See [`docs/scope.md`](../docs/scope.md) §4.\n")
+
+IDENT_SKIP = {"url", "git", "license"}      # locators and licensing, not identifiers
+IDENT_LABEL = {"rfc": "RFC ", "doi": "doi:", "isbn": "ISBN ", "arxiv": "arXiv:"}
+
+
+def idents(ident):
+    """Every identifier scheme, not just rfc and doi.
+
+    A ratifying body's number — ECMA-424, ISO/IEC 5962 — was rendered nowhere,
+    and `body` is single-valued so it cannot carry it either (library#27).
+    Values for the other schemes already carry their own prefix, so they are
+    emitted verbatim. An RFC's DOI only restates its number, so it is dropped
+    when both are present.
+    """
+    if not isinstance(ident, dict):
+        return ""
+    ks = [k for k, v in ident.items()
+          if k not in IDENT_SKIP and isinstance(v, str) and v.strip()]
+    if "rfc" in ks and "doi" in ks:
+        ks.remove("doi")
+    ks.sort(key=lambda k: ({"rfc": 0, "doi": 0, "draft": 1}.get(k, 2), k))
+    return ". ".join(f"{IDENT_LABEL.get(k, '')}{ident[k].strip()}" for k in ks)
+
+
 def load():
     recs = {}
     for f in sorted((ROOT / "records").glob("*/*/record.yaml")):
@@ -94,7 +125,8 @@ def main():
     by_body = collections.defaultdict(list)
     for rid, d in recs.items():
         by_body[d["_body"]].append((rid, d))
-    out = [BANNER, f"# Records\n\n{len(recs)} records across {len(by_body)} bodies.\n"]
+    out = [BANNER, f"# Records\n\n{len(recs)} records on {len(by_body)} shelves.\n",
+           SHELF_NOTE]
     for body in sorted(by_body):
         out.append(f"\n## {body}\n\n| id | title | type | maturity | status | useful | versions |\n|---|---|---|---|---|---|---|")
         for rid, d in sorted(by_body[body]):
@@ -168,15 +200,15 @@ def main():
     (IDX / "by-decision.md").write_text("\n".join(out) + "\n")
 
     # ---- bibliography.md
-    out = [BANNER, "# Bibliography\n", f"{len(recs)} records.\n"]
+    out = [BANNER, "# Bibliography\n", f"{len(recs)} records.\n", SHELF_NOTE]
     for body in sorted(by_body):
         out.append(f"\n## {body}\n")
         for rid, d in sorted(by_body[body]):
             a = d.get("authors")
             a = ", ".join(listify(a)) if isinstance(a, list) else ""
-            ident = d.get("identifiers", {})
-            ident = ident.get("rfc") and f"RFC {ident['rfc']}" or (ident.get("doi") or "")
-            bits = [b for b in [a, d.get("date", ""), ident] if b]
+            pub = str(d.get("publisher") or "").strip()
+            bits = [b for b in [a, pub, d.get("date", ""),
+                                idents(d.get("identifiers"))] if b]
             out.append(f"- **{d.get('title', rid)}**"
                        + (f" — {'. '.join(bits)}" if bits else "")
                        + f"  \n  `{rid}` · {d.get('type','')}"

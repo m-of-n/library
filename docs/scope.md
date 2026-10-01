@@ -4,18 +4,19 @@ id: scope
 title: "Ingestion scope — what belongs in this library"
 type: policy
 status: draft
-version: "0.2.0"
-updated: "2026-09-22"
+version: "0.3.0"
+updated: "2026-10-01"
 needs_review: true
 reviewed: false
 backlog: L-018
-source: "library#1 item 10; sponsor review of library#4"
+source: "library#1 item 10; sponsor review of library#4; library#27"
 ---
 
 # Ingestion scope
 
-**Status: draft, revision 2.** Sponsor review answered the four open questions;
-they are now rules. What remains open is marked **[?]**.
+**Status: draft, revision 3.** Sponsor review answered the four original open
+questions and §4 now answers a fifth (library#27). They are rules. What remains
+open is marked **[?]**.
 
 The library is **for collecting as well as deciding.** Breadth is allowed. What
 is not allowed is silent loss: a reference judged unhelpful is *recorded as
@@ -81,18 +82,72 @@ specification lives there and nowhere else. `in-toto/attestation` qualifies;
 This is the difference between a library of ~60 useful records and one of ~400
 that nobody reads.
 
-## 4. Higher-level organisation — storage is hierarchical
+## 4. Higher-level organisation — `body` is a shelf, not a byline
 
-Records live at **`records/<body>/<id>/`**. Standards bodies are unique, durable
-creators, so they are the natural top-level organisation: `records/ietf/`,
-`records/nist/`, `records/w3c/`, `records/academic/`.
+Records live at **`records/<body>/<id>/`**: `records/ietf/`, `records/nist/`,
+`records/w3c/`, `records/academic/`.
 
-This is *organisation*, not namespace — ids stay globally unique and an id
-cannot be reused under a different body. `bin/ingest` checks across all bodies
-before creating anything.
+**`body` is a storage key and a coarse grouping. It is not a claim about who
+published the document.** Decided 2026-10-01, library#27, where it had been
+quietly doing three jobs and only the first of them honestly. Each question now
+has exactly one field that answers it:
 
-Bodies come from `schema/tags.yaml:body`, plus `other`. A body directory is
-cheap; add one by PR when a genuinely new issuer appears.
+| the question | the field |
+|---|---|
+| where is the file | `body` — the directory, and the section heading in `index/` |
+| who published it | `publisher` — free text, and it MAY name two |
+| what is its standing | `maturity` — `standard` means ratified |
+
+`body` is **single-valued**, so it cannot represent a document with two
+affiliations, and it is no longer asked to. CycloneDX 1.7 is authored by the
+OWASP Foundation and ratified by Ecma International as ECMA-424 2nd edition.
+Both are load-bearing for a reader deciding whether to rely on it, and nothing
+is lost: `publisher` names both, `identifiers.ecma` carries the number and is
+rendered in the bibliography, `maturity: standard` carries the standing. What
+`body` records is that the file sits on the `community` shelf.
+
+So: **never reach for a new `body` value in order to assert an affiliation.** A
+value earns a directory by making records easier to find, not by a new legal
+entity appearing. `other` and `community` are legitimate shelves, not failures
+to classify, and `regulator` collapsing EU and US sources is a shelving choice
+— not a claim that CISA and the European Commission are one body. *That closes
+what revision 2 listed as open question 2.*
+
+Two corollaries:
+
+- **A re-publication of the same text under another body is an `identifiers`
+  entry, not a second record.** A different *version* is a different record
+  (§5). This is the rule library#25 wrote into `cyclonedx-1-7`, and
+  `records/other/ecma-424/` already breaks it — tracked separately, because
+  retiring a record is not a reshelving.
+- **Reshelving is cheap and ids do not move.** `body` is a directory, so
+  changing it is a `git mv` plus `bin/reindex`. Ids stay globally unique and an
+  id cannot be reused under a different body — `bin/ingest` checks across all
+  shelves before creating anything — so no citation silently retargets. Cheap
+  reversal is why this was worth deciding rather than deferring a third time.
+
+Values come from **`schema/record.schema.yaml:fields.body`** — the single
+declaration, parsed at run time by `bin/validate` and `bin/ingest`. They are
+deliberately *not* in `schema/tags.yaml`: `body` is not a tag, and the copy
+that lived there had already drifted out of agreement with the schema. Adding a
+shelf is still a PR, and it is cheap.
+
+### What was rejected, and why
+
+- **Split the field** — keep `body` as the directory, add a multi-valued
+  `publishers` or `standardized_by`. This is the honest model of dual
+  affiliation and the only option with real query power. Rejected *for now*:
+  `publisher` plus `identifiers` already answers the reader's question, while a
+  schema bump and a 280-record migration buy a field nothing queries yet.
+  Revisit the moment something does — when a report needs *"every record
+  ratified by a body other than its author"*, this becomes the right answer,
+  and the migration is mechanical.
+- **Grow the enum as needed** — add `owasp`, `ecma`, `linux-foundation`, …
+  Cheapest per case and worst at scale, and it does not even solve the case
+  that raised it: one record still gets one `body`, so dual affiliation still
+  picks a winner. It also produces single-record directories and splits SPDX
+  from CycloneDX across bibliography sections, where a reader wants them
+  adjacent.
 
 ## 5. Versions fold into the record
 
@@ -151,9 +206,6 @@ Two rules survive the removal of caps:
 1. **Does `versions/` hold the full record or just the metadata?** Keeping a
    `summary.md` per superseded version preserves what changed; keeping only
    `record.yaml` is cheaper. Proposed: metadata plus a one-line delta note.
-2. **When does a body directory get created?** `regulator` currently collapses
-   EU and US sources. If regulation grows, `eu` and `us-federal` may be truer
-   than one bucket.
-3. **Does `usefulness` need review dating?** A verdict of `not-useful` from
+2. **Does `usefulness` need review dating?** A verdict of `not-useful` from
    before a decision was reopened may be stale. `assessed` records when, but
    nothing forces re-assessment.

@@ -41,7 +41,9 @@ Rules:
 - **Disagree in writing.** If the source is wrong or contradicts another
   record, say so and set `contradicts`. Agreement is cheap; a recorded
   disagreement is what makes the library worth keeping.
-- Prefer a controlled tag from `schema/tags.yaml` when one fits.
+- Prefer a controlled tag from `schema/tags.yaml` — subject and role — when one
+  fits. `body` is not a tag; who published the document is `publisher`, and its
+  standing is `maturity` (`docs/scope.md` §4).
 - `status: summarized` only when all six sections are real. CI rejects
   template text left in place.
 

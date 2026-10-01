@@ -1,6 +1,6 @@
 schema: "library-record-schema/v5"
-version: "0.5.0"
-updated: "2026-09-21"
+version: "0.6.0"
+updated: "2026-10-01"
 description: Normative shape of library/records/<id>/record.yaml
 basis: >
   Envelope aligns with Google Cloud Open Knowledge Format (OKF) v0.1 — a
@@ -20,11 +20,19 @@ okf_extensions:
 storage:
   path: "records/<body>/<id>/"
   note: >
-    Hierarchical by ISSUING BODY. Standards bodies are unique, durable
-    creators, so they are the natural top-level organisation — records/ietf/,
-    records/nist/, records/w3c/. `body` MUST be a value from
-    schema/tags.yaml:body, or `other`. Ids stay globally unique; the body
-    directory is organisation, not namespace.
+    `body` IS A SHELVING KEY, NOT AN AUTHORITY CLAIM. It picks the directory a
+    record is filed under and the section it appears under in index/. It is
+    single-valued, so it cannot represent a document with two affiliations —
+    and it is not asked to. Publisher identity lives in `publisher`, standing
+    lives in `maturity`. Ids stay globally unique, so the body directory is
+    organisation and not a namespace; a record can be reshelved with a git mv
+    plus a reindex and no citation retargets. Rule and rejected alternatives
+    in docs/scope.md §4 (library#27).
+  values: >
+    The enum under fields.body below is the SINGLE declaration of the legal
+    values. bin/validate and bin/ingest parse it from this file. Do not
+    restate it in schema/tags.yaml and do not hard-code it in a tool — those
+    copies are what drifted and produced library#27.
   versions: >
     ONE record per document LINE, tracking the CURRENT version. Superseded
     versions go in `versions/<version>/` inside the same record — not as
@@ -39,9 +47,31 @@ fields:
 
   body:
     type: enum
-    values: [ietf, nist, w3c, iso, oasis, c2pa, openssf, google, academic,
-             vendor, community, regulator, other]
-    note: "issuing organisation; also the storage directory"
+    # A BLOCK sequence on purpose, not a flow list: this is the one declaration
+    # of the legal values and bin/_yaml.py (dependency-free, no flow
+    # collections) has to be able to read all of it. A flow list parses as a
+    # truncated string and the tools silently disagree with the schema.
+    values:
+      - ietf
+      - nist
+      - w3c
+      - iso
+      - oasis
+      - c2pa
+      - openssf
+      - google
+      - academic
+      - vendor
+      - community
+      - regulator
+      - other
+    note: >
+      The storage directory and a coarse grouping. NOT the publisher-identity
+      field — see storage.note above. One record gets one value. Where a
+      document has two affiliations, shelve it where a reader would look for
+      it and name both in `publisher`. A value earns a directory by making
+      records easier to find, not by being a distinct legal entity; `other`
+      and `community` are legitimate shelves, not failures to classify.
 
   version:
     type: string
@@ -67,9 +97,24 @@ fields:
   short_title: {type: string, required: false}
   authors:     {type: list, of: string, required: false}
   date:        {type: string, note: "YYYY | YYYY-MM | YYYY-MM-DD"}
-  publisher:   {type: string, required: false}
+  publisher:
+    type: string
+    required: false
+    note: >
+      THE PUBLISHER-IDENTITY FIELD — free text, and the one place a reader
+      learns who issued the document. Name the issuing organisation as the
+      document names itself. MAY name two where authorship and ratification
+      differ, author first, e.g. "OWASP Foundation / Ecma International".
+      Rendered in index/bibliography.md and exported to CSL-JSON. Required in
+      practice from status read onward; bin/validate warns without it.
 
-  identifiers: {type: map, note: "rfc, bcp, draft, doi, isbn, urn, arxiv, w3c, iso, nist, git, url"}
+  identifiers:
+    type: map
+    note: >
+      Open map of scheme to identifier — rfc, bcp, draft, doi, isbn, urn,
+      arxiv, w3c, iso, nist, ecma, eo, git, url. Every key is rendered in
+      index/bibliography.md, so a ratifying body's number (ECMA-424,
+      ISO/IEC 5962) is visible without needing its own `body` value.
 
   content:
     type: map
