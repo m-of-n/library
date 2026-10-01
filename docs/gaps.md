@@ -4,8 +4,8 @@ id: gaps
 title: "What is left to make this library best in class"
 type: assessment
 status: draft
-version: "0.1.0"
-updated: "2026-09-22"
+version: "0.1.1"
+updated: "2026-10-01"
 needs_review: true
 reviewed: false
 ---
@@ -82,8 +82,14 @@ This is a **provenance** project. The library:
 - records content digests but **verifies none of them on a schedule** — link rot
   and content drift are invisible until someone re-fetches by hand
 - publishes `exports/` and `index/` with **no attestation** over them
-- has no signed statement over `MANIFEST.yaml`, though `docs/scope.md` §4
-  describes exactly that as the federation integrity mechanism
+- has no signed statement over `MANIFEST.yaml`, **and no document specifies
+  one.** `docs/construction.md` decision 4 makes *content hash is identity* the
+  federation integrity mechanism, which is digest-based: two libraries that
+  never sync agree on *which document* they mean, and on nothing about *who
+  said so*. §5 above is federation's untested half; this is its undesigned
+  half. (Earlier revisions of this bullet cited `docs/scope.md` §4 for a signed
+  manifest. §4 has never mentioned federation, in either revision — the
+  citation was wrong rather than stale.)
 
 **A provenance project whose own bibliography is unattested is the sharpest
 criticism available**, and it is currently true.
