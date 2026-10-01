@@ -1,0 +1,128 @@
+rfc-8949 — well-formedness pseudocode
+=====================================
+
+VERBATIM from RFC 8949 (STD 94), "Concise Binary Object Representation
+(CBOR)", Appendix C ("Pseudocode"), reproduced in full and unaltered
+(indentation, spelling and the two figure captions included).
+
+This is the source's only formal definition of the CBOR encoding.  RFC 8949
+gives no CDDL and no ABNF: Section 8 declines a formal definition for the
+diagnostic notation ("no formal definition (as in ABNF) is given in this
+document"), and the encoding itself is specified by the prose and tables of
+Section 3 plus Table 7 (Appendix B) and this pseudocode.  Figure 1 is
+therefore the normative decision procedure for well-formedness, and every
+well-formedness rule that the derived schemas in this directory cannot
+express lives here.  Figure 2 is an encoder-side convenience for major
+types 0 and 1 and is part of the same appendix.
+
+Source lines 3089-3193 of the cached text rendering.
+
+---- BEGIN VERBATIM (RFC 8949 Appendix C) ----
+
+Appendix C.  Pseudocode
+
+   The well-formedness of a CBOR item can be checked by the pseudocode
+   in Figure 1.  The data is well-formed if and only if:
+
+   *  the pseudocode does not "fail";
+
+   *  after execution of the pseudocode, no bytes are left in the input
+      (except in streaming applications).
+
+   The pseudocode has the following prerequisites:
+
+   *  take(n) reads n bytes from the input data and returns them as a
+      byte string.  If n bytes are no longer available, take(n) fails.
+
+   *  uint() converts a byte string into an unsigned integer by
+      interpreting the byte string in network byte order.
+
+   *  Arithmetic works as in C.
+
+   *  All variables are unsigned integers of sufficient range.
+
+   Note that "well_formed" returns the major type for well-formed
+   definite-length items, but 99 for an indefinite-length item (or -1
+   for a "break" stop code, only if "breakable" is set).  This is used
+   in "well_formed_indefinite" to ascertain that indefinite-length
+   strings only contain definite-length strings as chunks.
+
+   well_formed(breakable = false) {
+     // process initial bytes
+     ib = uint(take(1));
+     mt = ib >> 5;
+     val = ai = ib & 0x1f;
+     switch (ai) {
+       case 24: val = uint(take(1)); break;
+       case 25: val = uint(take(2)); break;
+       case 26: val = uint(take(4)); break;
+       case 27: val = uint(take(8)); break;
+       case 28: case 29: case 30: fail();
+       case 31:
+         return well_formed_indefinite(mt, breakable);
+     }
+     // process content
+     switch (mt) {
+       // case 0, 1, 7 do not have content; just use val
+       case 2: case 3: take(val); break; // bytes/UTF-8
+       case 4: for (i = 0; i < val; i++) well_formed(); break;
+       case 5: for (i = 0; i < val*2; i++) well_formed(); break;
+       case 6: well_formed(); break;     // 1 embedded data item
+       case 7: if (ai == 24 && val < 32) fail(); // bad simple
+     }
+     return mt;                    // definite-length data item
+   }
+
+   well_formed_indefinite(mt, breakable) {
+     switch (mt) {
+       case 2: case 3:
+         while ((it = well_formed(true)) != -1)
+           if (it != mt)           // need definite-length chunk
+             fail();               //    of same type
+         break;
+       case 4: while (well_formed(true) != -1); break;
+       case 5: while (well_formed(true) != -1) well_formed(); break;
+       case 7:
+         if (breakable)
+           return -1;              // signal break out
+         else fail();              // no enclosing indefinite
+       default: fail();            // wrong mt
+     }
+     return 99;                    // indefinite-length data item
+   }
+
+               Figure 1: Pseudocode for Well-Formedness Check
+
+   Note that the remaining complexity of a complete CBOR decoder is
+   about presenting data that has been decoded to the application in an
+   appropriate form.
+
+   Major types 0 and 1 are designed in such a way that they can be
+   encoded in C from a signed integer without actually doing an if-then-
+   else for positive/negative (Figure 2).  This uses the fact that
+   (-1-n), the transformation for major type 1, is the same as ~n
+   (bitwise complement) in C unsigned arithmetic; ~n can then be
+   expressed as (-1)^n for the negative case, while 0^n leaves n
+   unchanged for nonnegative.  The sign of a number can be converted to
+   -1 for negative and 0 for nonnegative (0 or positive) by arithmetic-
+   shifting the number by one bit less than the bit length of the number
+   (for example, by 63 for 64-bit numbers).
+
+   void encode_sint(int64_t n) {
+     uint64t ui = n >> 63;    // extend sign to whole length
+     unsigned mt = ui & 0x20; // extract (shifted) major type
+     ui ^= n;                 // complement negatives
+     if (ui < 24)
+       *p++ = mt + ui;
+     else if (ui < 256) {
+       *p++ = mt + 24;
+       *p++ = ui;
+     } else
+          ...
+
+             Figure 2: Pseudocode for Encoding a Signed Integer
+
+   See Section 1.2 for some specific assumptions about the profile of
+   the C language used in these pieces of code.
+
+---- END VERBATIM ----

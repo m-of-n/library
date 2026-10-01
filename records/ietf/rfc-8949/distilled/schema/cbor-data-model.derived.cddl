@@ -1,0 +1,372 @@
+; =====================================================================
+; cbor-data-model.derived.cddl
+;
+; DERIVED - not verbatim.  RFC 8949 (STD 94) contains no CDDL and no ABNF
+; of its own.  Every rule below was written for this record from the prose
+; and tables of the source; it is a derivation and must never be quoted as
+; the source's own grammar.  The source's own formal material is in
+; well-formed.pseudocode.txt (Appendix C, verbatim) and
+; initial-byte-jump-table.txt (Appendix B, verbatim).
+;
+; Derived from RFC 8949:
+;   Section 2      CBOR Data Models (the basic generic data model)
+;   Section 2.1    Extended Generic Data Models
+;   Section 3      Specification of the CBOR Encoding (the argument)
+;   Section 3.1    Major Types, Table 1
+;   Section 3.2    Indefinite Lengths, Table 2
+;   Section 3.3    Floating-Point Numbers and Values with No Content,
+;                  Table 3 (additional information) and Table 4 (simple
+;                  values)
+;   Section 3.4    Tagging of Items, Table 5
+;   Sections 3.4.1 - 3.4.6   the tag content restrictions
+;   Section 4.1    Preferred Serialization
+;   Section 5.3    Validity of Items
+;   Appendix B     Table 7
+;
+; The schema language is CDDL (RFC 8610).  Only RFC 8610 syntax and the
+; RFC 8610 prelude are used (uint, nint, bstr, tstr, float16, float32,
+; float64, false, true, null, undefined).  No prelude rule is redefined,
+; so this file can be concatenated with any other CDDL without collision.
+; All rule names are prefixed "cbor-".
+;
+; ---------------------------------------------------------------------
+; TWO ROOTS.  RFC 8610 takes the first rule of a file as the root, so the
+; default root here is cbor-data-item.
+;
+;   cbor-data-item     the basic generic data model of Section 2: any
+;                      tag number with any tag content is admitted,
+;                      which is what Section 5.4 requires of a decoder
+;                      facing a tag number it does not know.
+;
+;   cbor-checked-item  the same model with the tag content restrictions
+;                      of Sections 3.4.1 - 3.4.6 enforced, and no other
+;                      tag numbers admitted.  Use it for a fixture whose
+;                      tags are all defined by this RFC; it is the
+;                      tag-validity check of Section 5.3.2.
+;
+; The split is forced: CDDL cannot say "any tag number except these", so
+; one rule cannot both admit an unknown tag number and reject tag 0 whose
+; content is an integer - the unconstrained #6(...) alternative would
+; match the latter too.  Individual cbor-tag-<n> rules are also usable as
+; roots for single-tag fixtures.
+;
+; ---------------------------------------------------------------------
+; WHAT THIS FILE CANNOT SAY.  CDDL describes data items; several CBOR
+; rules are encoding-level or value-dependent and have no expression
+; here.  They are not omissions; they live in distilled/requirements.yaml
+; and distilled/normative.md, and Figure 1 of Appendix C decides them:
+;
+;   * Definite versus indefinite length (Section 3.2).  Section 2 states
+;     that serialization variants are deliberately invisible at the
+;     generic data model level, so no CDDL rule can distinguish
+;     [1, 2] encoded as 0x820102 from the same item encoded as
+;     0x9f0102ff, nor require the chunk substructure of Section 3.2.3
+;     (an indefinite-length string may contain only definite-length
+;     strings of the same major type).
+;   * The width of the argument for major types 0 to 6 (Section 3), and
+;     therefore the "shortest form" requirement of preferred
+;     serialization (Section 4.1) and of core deterministic encoding
+;     (Section 4.2.1).  cbor-head.derived.abnf enumerates the legal
+;     widths; requiring the shortest one is value-dependent and is not
+;     expressible in either grammar.
+;   * The shortest floating-point encoding that preserves the value
+;     (Section 4.1).  The three width rules below can pin a width in a
+;     fixture, but "shortest that preserves the value" is a predicate
+;     over the value, not a shape.
+;   * Map key ordering (Section 4.2.1 bytewise lexicographic, or
+;     Section 4.2.3 length-first) - CDDL maps are unordered.
+;   * Map key uniqueness.  A map with duplicate keys may be well-formed
+;     but is invalid (Sections 3.1 and 5.3.1); CDDL cannot require
+;     distinctness across a "* keytype => valuetype" entry.
+;   * UTF-8 validity of a major type 3 item.  An invalid UTF-8 sequence
+;     is well-formed but invalid (Sections 3.1 and 5.3.1); tstr below
+;     constrains the major type only.
+;   * All well-formedness errors of Appendix F: bytes left over, bytes
+;     missing, reserved additional information 28 to 30, additional
+;     information 31 on major types 0, 1 and 6, the two-byte simple
+;     value below 0x20, a "break" outside an indefinite-length item or
+;     in a map value position, and a map with an odd number of items.
+;     CDDL describes only well-formed items, so a fixture that is not
+;     well-formed cannot even be presented to this schema.
+;     cbor-head.derived.abnf catches the head-level ones; Figure 1 of
+;     Appendix C catches all of them.
+;   * The lexical content of tags 0, 32, 33, 34 and 36.  Sections 3.4.1
+;     and 3.4.5.3 delegate these to the "date-time" production of
+;     RFC 3339 as refined by RFC 4287, to "URI-reference" of RFC 3986,
+;     to the base64url and base64 alphabets of RFC 4648 and to RFC 2045
+;     respectively.  This record does not hold those productions, so the
+;     rules below constrain the tag content's type and not its lexis; a
+;     text string that is well-typed but malformed there is well-formed
+;     and invalid (Section 5.3.2, "inadmissible value for tag content").
+;   * Tag 24 (Section 3.4.5.1) requires only that the enclosed byte
+;     string encode a *well-formed* data item; validity of the embedded
+;     item is explicitly not required.  cbor-tag-24 therefore says bstr.
+;     cbor-tag-24-embedded-checked below is the stricter variant, for
+;     use only where an application wants it.
+;
+; Note on "#7.n": the number after the dot is read here as the additional
+; information value carried in the head, as Table 3 of Section 3.3
+; enumerates it.  Check your tool against Appendix F before relying on
+; cbor-simple-value-extended: f8 00, f8 01, f8 18 and f8 1f are not
+; well-formed, while f8 20 is simple value 32.  Likewise cbor-tag uses
+; the "#6(...)" form, a tag of unspecified number; a tool that insists on
+; a tag number after #6 cannot express "any tag", and such fixtures must
+; then be validated against cbor-checked-item or a cbor-tag-<n> rule.
+; =====================================================================
+
+
+; ---------------------------------------------------------------------
+; Root 1 - the basic generic data model (Section 2, Section 3.1 Table 1)
+; ---------------------------------------------------------------------
+
+cbor-data-item = cbor-integer
+               / cbor-byte-string
+               / cbor-text-string
+               / cbor-array
+               / cbor-map
+               / cbor-tag
+               / cbor-floating-point
+               / cbor-simple-value
+
+
+; ---------------------------------------------------------------------
+; Major types 0 and 1 - integers (Section 3.1)
+; ---------------------------------------------------------------------
+
+; Major type 0: an unsigned integer in the range 0..2^64-1 inclusive.
+; The value of the encoded item is the argument itself.
+cbor-unsigned-integer = uint
+
+; Major type 1: a negative integer in the range -2^64..-1 inclusive.
+; The value of the item is -1 minus the argument.
+cbor-negative-integer = nint
+
+; Section 2: an integer in the range -2^64..2^64-1 inclusive.  Integer
+; and floating-point values are distinct in this model even when they
+; have the same numeric value.
+cbor-integer = cbor-unsigned-integer / cbor-negative-integer
+
+
+; ---------------------------------------------------------------------
+; Major types 2 and 3 - strings (Section 3.1)
+; ---------------------------------------------------------------------
+
+; Major type 2: a sequence of zero or more bytes.  The argument is the
+; length in bytes.
+cbor-byte-string = bstr
+
+; Major type 3: a sequence of zero or more Unicode code points, encoded
+; as UTF-8.  The argument is the length in bytes, not in code points.
+; A string containing an invalid UTF-8 sequence is well-formed but
+; invalid, which this rule cannot detect.
+cbor-text-string = tstr
+
+
+; ---------------------------------------------------------------------
+; Major types 4 and 5 - arrays and maps (Section 3.1)
+; ---------------------------------------------------------------------
+
+; Major type 4: a sequence of zero or more data items.  Items in an array
+; do not need to all be of the same type.
+cbor-array = [* cbor-data-item]
+
+; Major type 5: a mapping from zero or more keys, each a data item, to a
+; value, each a data item.  The argument counts pairs, so the number of
+; enclosed items is always even.  Any data item may appear in the key
+; position.  Duplicate keys are not excluded here; see the header.
+cbor-map = {* cbor-data-item => cbor-data-item}
+
+
+; ---------------------------------------------------------------------
+; Major type 6 - tags (Section 3.4)
+; ---------------------------------------------------------------------
+
+; A tag number, an integer in the range 0..2^64-1 inclusive, carried as
+; the argument, plus exactly one enclosed data item (the tag content).
+; Tags nest: if tag A encloses tag B which encloses item C, A applies to
+; the result of applying B to C.  The tag number is left unconstrained
+; here because the registries grow (Sections 2.1 and 5.4) and an
+; unrecognised tag number is not a validity error.
+cbor-tag = #6(cbor-data-item)
+
+
+; ---------------------------------------------------------------------
+; Major type 7 - floating-point numbers (Section 3.3, Table 3)
+; ---------------------------------------------------------------------
+
+; Additional information 25, 26 and 27: IEEE 754 binary16, binary32 and
+; binary64, the value carried in the 2, 4 or 8 bytes of the head.  At the
+; data model level Section 2 admits one floating-point value space, the
+; one representable by binary64 including the non-finites; the width is a
+; serialization variant and is invisible there.  These three rules exist
+; so that a fixture can pin the width it expects (Section 4.1).
+cbor-float-16 = float16
+cbor-float-32 = float32
+cbor-float-64 = float64
+
+cbor-floating-point = cbor-float-16 / cbor-float-32 / cbor-float-64
+
+
+; ---------------------------------------------------------------------
+; Major type 7 - simple values (Section 3.3, Tables 3 and 4)
+; ---------------------------------------------------------------------
+
+; A simple value is identified by a number between 0 and 255 and is
+; distinct from that number itself (Section 2).  Each simple value has
+; exactly one representation variant (Section 3.3).
+
+; Table 4: assigned simple values 20..23.
+cbor-false     = false          ; simple value 20
+cbor-true      = true           ; simple value 21
+cbor-null      = null           ; simple value 22
+cbor-undefined = undefined      ; simple value 23
+
+cbor-boolean = cbor-false / cbor-true
+
+; Table 4: simple values 0..19 are unassigned but well-formed, carried in
+; the initial byte.  A decoder may emit them to the application with an
+; indication that it did not recognise them (Section 5.4).
+cbor-simple-value-unassigned-low =
+    #7.0 / #7.1 / #7.2 / #7.3 / #7.4 / #7.5 / #7.6 / #7.7 / #7.8 / #7.9
+  / #7.10 / #7.11 / #7.12 / #7.13 / #7.14 / #7.15 / #7.16 / #7.17
+  / #7.18 / #7.19
+
+; Additional information 24: the simple value is in the following byte,
+; and only the values 32..255 are used there - a following byte below
+; 0x20 is not well-formed.  CDDL selects on the additional information,
+; so this single rule covers every simple value from 32 to 255 and
+; individual ones among them cannot be named.  Simple values 24..31 are
+; reserved (Table 4) and have no well-formed encoding at all.
+cbor-simple-value-extended = #7.24
+
+cbor-simple-value = cbor-simple-value-unassigned-low
+                  / cbor-false
+                  / cbor-true
+                  / cbor-null
+                  / cbor-undefined
+                  / cbor-simple-value-extended
+
+
+; =====================================================================
+; The tag numbers Table 5 of Section 3.4 carries, plus tag number 35
+;
+; Appendix G states "Tag 35 is not defined by this document; the
+; registration based on the definition in RFC 7049 remains in place", and
+; Table 5 omits it accordingly.  It is included below only because
+; Section 3.4.5.3 states a tag-validity rule for it, so cbor-defined-tag
+; is "the tag numbers this document gives a validity rule for", not "the
+; tag numbers this document defines".
+;
+; The content restriction on each is the tag validity rule of its
+; subsection.  A tag whose content has an inadmissible type is
+; well-formed but invalid (Section 5.3.2).  Content positions that admit
+; any data item recurse into cbor-checked-item, so that these rules stay
+; consistent with root 2; validate against root 1 instead if a nested
+; unknown tag number must be tolerated.
+; =====================================================================
+
+; Section 3.4.1 - standard date/time string.  A nested item of another
+; type is invalid; the lexical format is RFC 3339 "date-time" as refined
+; by RFC 4287, which is not checkable here.
+cbor-tag-0 = #6.0(tstr)
+
+; Section 3.4.2 - epoch-based date/time.  The tag content MUST be an
+; unsigned or negative integer (major types 0 and 1) or a floating-point
+; number (major type 7 with additional information 25, 26 or 27).  Other
+; contained types are invalid.
+cbor-tag-1 = #6.1(cbor-integer / cbor-floating-point)
+
+; Section 3.4.3 - bignums.  The content is a byte string read as an
+; unsigned integer n in network byte order; tag 2 means n, tag 3 means
+; -1-n.  Contained items of other types are invalid.  Leading zeroes are
+; decodable but are not the preferred serialization.
+cbor-tag-2 = #6.2(bstr)
+cbor-tag-3 = #6.3(bstr)
+cbor-bignum = cbor-tag-2 / cbor-tag-3
+
+; Section 3.4.4 - decimal fractions and bigfloats.  Exactly two integer
+; numbers, an exponent e and a mantissa m, in that order.  The exponent
+; MUST be an integer of major type 0 or 1; the mantissa may also be a
+; bignum.  Contained items with other structures are invalid.  Tag 4 is
+; m*(10^e), tag 5 is m*(2^e).
+cbor-tag-4 = #6.4([e10: cbor-integer, m: cbor-integer / cbor-bignum])
+cbor-tag-5 = #6.5([e2: cbor-integer, m: cbor-integer / cbor-bignum])
+
+; Section 3.4.5.2 - expected later encoding for CBOR-to-JSON converters.
+; The data item tagged can be a byte string or any other data item; in
+; the latter case the tag applies to all byte strings contained in it,
+; except those under a nested expected-conversion tag.
+cbor-tag-21 = #6.21(cbor-checked-item)   ; base64url
+cbor-tag-22 = #6.22(cbor-checked-item)   ; base64
+cbor-tag-23 = #6.23(cbor-checked-item)   ; base16, uppercase
+
+; Section 3.4.5.1 - encoded CBOR data item.  Contained items that are
+; not byte strings are invalid.  The byte string is valid if it encodes a
+; well-formed CBOR data item; validity of that item is not required.
+cbor-tag-24 = #6.24(bstr)
+
+; Stricter than Section 3.4.5.1 requires: also validate the embedded item
+; against this model.  Not referenced by either root; substitute it for
+; cbor-tag-24 in cbor-defined-tag only where an application wants that.
+cbor-tag-24-embedded-checked = #6.24(bstr .cbor cbor-checked-item)
+
+; Section 3.4.5.3 - encoded text.  Type is checkable, lexis is not.
+cbor-tag-32 = #6.32(tstr)    ; URI; an unmatched "URI-reference" is invalid
+cbor-tag-33 = #6.33(tstr)    ; base64url text
+cbor-tag-34 = #6.34(tstr)    ; base64 text
+cbor-tag-36 = #6.36(tstr)    ; MIME message, including all headers
+
+; Section 3.4.5.3 - tag number 35 was defined in RFC 7049 for regular
+; expressions and remains available; this specification notes that, given
+; how openly it was defined, any contained string value is valid at the
+; CBOR tag level even if it is not "expected" at the application level.
+;
+; "string value" is as far as RFC 8949 goes, and in CBOR a string is
+; either major type 2 or major type 3, so both are admitted here.  The
+; narrower reading - text string only - comes from the RFC 7049
+; registration, which this record does not hold and which Appendix G
+; says this document does not restate.  See "Open questions" in
+; ../design-notes.md.
+cbor-tag-35 = #6.35(tstr / bstr)
+
+; Section 3.4.6 - self-described CBOR.  Imparts no semantics; the head
+; serializes as 0xd9d9f7.
+cbor-tag-55799 = #6.55799(cbor-checked-item)
+
+; Section 3.4 - allocated as single-integer presence/absence markers and
+; not intended to occur in actual CBOR data items; an implementation MAY
+; flag an occurrence as an error.  Not referenced by either root: match
+; against this rule to detect one.
+cbor-tag-not-for-interchange =
+    #6.65535(cbor-checked-item)
+  / #6.4294967295(cbor-checked-item)
+  / #6.18446744073709551615(cbor-checked-item)
+
+cbor-defined-tag = cbor-tag-0 / cbor-tag-1 / cbor-tag-2 / cbor-tag-3
+                 / cbor-tag-4 / cbor-tag-5
+                 / cbor-tag-21 / cbor-tag-22 / cbor-tag-23 / cbor-tag-24
+                 / cbor-tag-32 / cbor-tag-33 / cbor-tag-34 / cbor-tag-35
+                 / cbor-tag-36
+                 / cbor-tag-55799
+
+
+; ---------------------------------------------------------------------
+; Root 2 - tag-checked items (Section 5.3.2)
+;
+; Identical to root 1 except that every tag must be one this RFC gives a
+; content rule for (Table 5, plus tag number 35 from Section 3.4.5.3)
+; and must satisfy that rule.  Arrays, maps and tag
+; content recurse here, so a bad tag nested at any depth is rejected.
+; ---------------------------------------------------------------------
+
+cbor-checked-item = cbor-integer
+                  / cbor-byte-string
+                  / cbor-text-string
+                  / cbor-checked-array
+                  / cbor-checked-map
+                  / cbor-defined-tag
+                  / cbor-floating-point
+                  / cbor-simple-value
+
+cbor-checked-array = [* cbor-checked-item]
+cbor-checked-map = {* cbor-checked-item => cbor-checked-item}

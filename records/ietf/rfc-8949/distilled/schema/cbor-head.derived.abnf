@@ -1,0 +1,135 @@
+; =====================================================================
+; cbor-head.derived.abnf
+;
+; DERIVED - not verbatim.  RFC 8949 (STD 94) gives no ABNF; Section 8
+; declines a formal definition even for the diagnostic notation.  The
+; rules below were written for this record from the source's prose and
+; tables and must never be quoted as the source's own grammar.  The
+; source's own formal material is in well-formed.pseudocode.txt
+; (Appendix C, verbatim) and initial-byte-jump-table.txt (Appendix B,
+; verbatim).
+;
+; Derived from RFC 8949:
+;   Section 1.2    all multi-byte values are in network byte order
+;   Section 3      the initial byte, the argument, the head, and the
+;                  reserved additional information values
+;   Section 3.1    Major Types, Table 1
+;   Section 3.2    Indefinite Lengths, Table 2; Section 3.2.1 "break"
+;   Section 3.3    Table 3 (additional information in major type 7) and
+;                  Table 4 (simple values)
+;   Appendix B     Table 7 (cross-check: every byte admitted below
+;                  appears there, and the bytes Table 7 omits as
+;                  reserved are the ones excluded below)
+;   Appendix F     the head-level well-formedness errors
+;
+; The language is ABNF (RFC 5234).  Terminals are single bytes.  No RFC
+; 5234 core rule is used or redefined.
+;
+; ---------------------------------------------------------------------
+; SCOPE.  This grammar covers exactly the *head* of a data item - the
+; initial byte plus any bytes consumed to construct the argument, which
+; is the sense of "head" given in Section 3 - and the "break" stop code.
+; It does not and cannot cover a whole data item: the number of content
+; bytes of a byte or text string, and the number of enclosed items of an
+; array or map, are given by the argument just parsed, which is a
+; context-sensitive dependency that no ABNF can express.  Nesting, the
+; chunk rule for indefinite-length strings (Section 3.2.3), the
+; placement of "break" (Sections 3.2.1 and 3.2.2), the even number of
+; items in a map (Section 3.1) and the "no bytes left over" rule
+; (Section 3, Appendix F) are all decided by Figure 1 of Appendix C.
+;
+; WHAT IT DOES DECIDE, and what nothing else in this directory can:
+;   * which of the 256 initial bytes begin a well-formed head, so the
+;     reserved additional information values 28, 29 and 30 (all major
+;     types) and additional information 31 on major types 0, 1 and 6
+;     are rejected by construction - they appear in no rule below;
+;   * the exact width of the argument, 0, 1, 2, 4 or 8 following bytes,
+;     which the CDDL in this directory cannot express for major types 0
+;     to 6;
+;   * that a two-byte simple value must carry a following byte of 0x20
+;     or greater (Section 3.3);
+;   * which four initial bytes start an indefinite-length item, and
+;     which one is the "break" stop code.
+;
+; It does NOT decide preferred serialization (Section 4.1) or the core
+; deterministic encoding requirements (Section 4.2.1): it enumerates the
+; legal argument widths but cannot require the shortest one that carries
+; the value, which is a predicate over the value.  Those live in
+; distilled/requirements.yaml.
+; =====================================================================
+
+; A head, or the "break" stop code, which Section 3.2.1 states is not
+; itself a data item but a syntactic feature closing an indefinite-length
+; item.
+head-or-break = head / break
+
+head = definite-head / indefinite-head
+
+definite-head = uint-head / nint-head / bstr-head / tstr-head
+              / array-head / map-head / tag-head
+              / simple-head / float-head
+
+; --- major type 0 (Section 3.1): unsigned integer N, 0..2^64-1 ------
+; The value of the encoded item is the argument itself.
+uint-head  = %x00-17 / %x18 arg1 / %x19 arg2 / %x1A arg4 / %x1B arg8
+
+; --- major type 1 (Section 3.1): negative integer -1-N, -2^64..-1 ---
+nint-head  = %x20-37 / %x38 arg1 / %x39 arg2 / %x3A arg4 / %x3B arg8
+
+; --- major type 2 (Section 3.1): byte string, argument = N bytes -----
+bstr-head  = %x40-57 / %x58 arg1 / %x59 arg2 / %x5A arg4 / %x5B arg8
+
+; --- major type 3 (Section 3.1): text string (UTF-8), argument = N ---
+; bytes, not code points.
+tstr-head  = %x60-77 / %x78 arg1 / %x79 arg2 / %x7A arg4 / %x7B arg8
+
+; --- major type 4 (Section 3.1): array, argument = N elements -------
+array-head = %x80-97 / %x98 arg1 / %x99 arg2 / %x9A arg4 / %x9B arg8
+
+; --- major type 5 (Section 3.1): map, argument = N *pairs*, so 2N ---
+; enclosed data items follow.
+map-head   = %xA0-B7 / %xB8 arg1 / %xB9 arg2 / %xBA arg4 / %xBB arg8
+
+; --- major type 6 (Section 3.4): tag, argument = tag number ---------
+; 0..2^64-1; exactly one data item, the tag content, follows the head.
+tag-head   = %xC0-D7 / %xD8 arg1 / %xD9 arg2 / %xDA arg4 / %xDB arg8
+
+; --- major type 7 (Section 3.3, Tables 3 and 4): simple values ------
+; 0xE0..0xF7 carry simple values 0..23 in the initial byte, which
+; includes false (0xF4), true (0xF5), null (0xF6) and undefined (0xF7).
+; 0xF8 is the one-byte extension, used only for the values 32..255: a
+; following byte below 0x20 is not well-formed, so simple values 24..31
+; have no encoding at all and each simple value has exactly one
+; representation variant.
+simple-head = %xE0-F7 / %xF8 %x20-FF
+
+; --- major type 7 (Section 3.3, Table 3): floating-point numbers ----
+; The following 2, 4 or 8 bytes are not an integer argument but an
+; IEEE 754 binary16, binary32 or binary64 value.
+float-head  = %xF9 arg2 / %xFA arg4 / %xFB arg8
+
+; --- additional information 31 on major types 2 to 5 (Section 3.2, --
+; Table 2): the item's length is indefinite.  No argument is derived, so
+; the head is the initial byte alone.  Major types 0, 1 and 6 with
+; additional information 31 are not well-formed and appear nowhere here.
+indefinite-head = bstr-indefinite-head / tstr-indefinite-head
+                / array-indefinite-head / map-indefinite-head
+
+bstr-indefinite-head  = %x5F
+tstr-indefinite-head  = %x7F
+array-indefinite-head = %x9F
+map-indefinite-head   = %xBF
+
+; --- major type 7, additional information 31 (Section 3.2.1) --------
+break = %xFF
+
+; --- the argument's following bytes (Section 3) ---------------------
+; Additional information 24, 25, 26 or 27 means the argument's value is
+; held in the following 1, 2, 4 or 8 bytes respectively, in network byte
+; order (Section 1.2).  Any byte value may appear in them.
+arg1 = 1byte
+arg2 = 2byte
+arg4 = 4byte
+arg8 = 8byte
+
+byte = %x00-FF

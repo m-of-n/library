@@ -1,0 +1,179 @@
+; =====================================================================
+; cose.cddl -- VERBATIM transcription of the CDDL in RFC 9052 (STD 96),
+; "CBOR Object Signing and Encryption (COSE): Structures and Process".
+;
+; Provenance: every line between the "; §..." markers below is copied
+; byte-for-byte from the fragment in the cited section of the RFC 9052
+; text, including the RFC's own three-space left margin, its inline
+; comments, and its internal blank lines. Nothing here is reformatted,
+; reindented, reordered within a fragment, corrected or merged.
+; Fragments appear in source order (§1.4 first, §7 last), which is also
+; the order RFC 9052 §1.4 requires: the initial nonterminal `start`
+; comes first.
+;
+; Extraction status: verbatim. Derived material lives in
+; structures.derived.cddl and never in this file.
+;
+; RFC 9052 §1.4: "The CDDL grammar is informational; the prose
+; description is normative." This file is therefore a transcription of
+; an informational grammar, not of the normative text.
+;
+; No rule is defined twice in RFC 9052; there is no duplication to
+; record here. See README.md for the dangling-reference analysis.
+; =====================================================================
+
+; §1.4 CDDL Grammar for CBOR Data Structures -- start, Internal_Types
+   start = COSE_Messages / COSE_Key / COSE_KeySet / Internal_Types
+
+   ; This is defined to make the tool quieter:
+   Internal_Types = Sig_structure / Enc_structure / MAC_structure
+
+; §1.5 CBOR-Related Terminology -- label, values
+   label = int / tstr
+   values = any
+
+; §2 Basic COSE Structure -- COSE_Messages, COSE_Untagged_Message, COSE_Tagged_Message
+   COSE_Messages = COSE_Untagged_Message / COSE_Tagged_Message
+
+   COSE_Untagged_Message = COSE_Sign / COSE_Sign1 /
+       COSE_Encrypt / COSE_Encrypt0 /
+       COSE_Mac / COSE_Mac0
+
+   COSE_Tagged_Message = COSE_Sign_Tagged / COSE_Sign1_Tagged /
+       COSE_Encrypt_Tagged / COSE_Encrypt0_Tagged /
+       COSE_Mac_Tagged / COSE_Mac0_Tagged
+
+; §3 Header Parameters -- Headers, header_map, empty_or_serialized_map
+   Headers = (
+       protected : empty_or_serialized_map,
+       unprotected : header_map
+   )
+
+   header_map = {
+       Generic_Headers,
+       * label => values
+   }
+
+   empty_or_serialized_map = bstr .cbor header_map / bstr .size 0
+
+; §3.1 Common COSE Header Parameters -- Generic_Headers
+   Generic_Headers = (
+       ? 1 => int / tstr,  ; algorithm identifier
+       ? 2 => [+label],    ; criticality
+       ? 3 => tstr / int,  ; content type
+       ? 4 => bstr,        ; key identifier
+       ? ( 5 => bstr //    ; IV
+           6 => bstr )     ; Partial IV
+   )
+
+; §4.1 Signing with One or More Signers -- COSE_Sign_Tagged
+   COSE_Sign_Tagged = #6.98(COSE_Sign)
+
+; §4.1 Signing with One or More Signers -- COSE_Sign
+   COSE_Sign = [
+       Headers,
+       payload : bstr / nil,
+       signatures : [+ COSE_Signature]
+   ]
+
+; §4.1 Signing with One or More Signers -- COSE_Signature
+   COSE_Signature =  [
+       Headers,
+       signature : bstr
+   ]
+
+; §4.2 Signing with One Signer -- COSE_Sign1_Tagged
+   COSE_Sign1_Tagged = #6.18(COSE_Sign1)
+
+; §4.2 Signing with One Signer -- COSE_Sign1
+   COSE_Sign1 = [
+       Headers,
+       payload : bstr / nil,
+       signature : bstr
+   ]
+
+; §4.4 Signing and Verification Process -- Sig_structure
+   Sig_structure = [
+       context : "Signature" / "Signature1",
+       body_protected : empty_or_serialized_map,
+       ? sign_protected : empty_or_serialized_map,
+       external_aad : bstr,
+       payload : bstr
+   ]
+
+; §5.1 Enveloped COSE Structure -- COSE_Encrypt_Tagged
+   COSE_Encrypt_Tagged = #6.96(COSE_Encrypt)
+
+; §5.1 Enveloped COSE Structure -- COSE_Encrypt
+   COSE_Encrypt = [
+       Headers,
+       ciphertext : bstr / nil,
+       recipients : [+COSE_recipient]
+   ]
+
+; §5.1 Enveloped COSE Structure -- COSE_recipient
+   COSE_recipient = [
+       Headers,
+       ciphertext : bstr / nil,
+       ? recipients : [+COSE_recipient]
+   ]
+
+; §5.2 Single Recipient Encrypted -- COSE_Encrypt0_Tagged
+   COSE_Encrypt0_Tagged = #6.16(COSE_Encrypt0)
+
+; §5.2 Single Recipient Encrypted -- COSE_Encrypt0
+   COSE_Encrypt0 = [
+       Headers,
+       ciphertext : bstr / nil,
+   ]
+
+; §5.3 How to Encrypt and Decrypt for AEAD Algorithms -- Enc_structure
+   Enc_structure = [
+       context : "Encrypt" / "Encrypt0" / "Enc_Recipient" /
+           "Mac_Recipient" / "Rec_Recipient",
+       protected : empty_or_serialized_map,
+       external_aad : bstr
+   ]
+
+; §6.1 MACed Message with Recipients -- COSE_Mac_Tagged
+   COSE_Mac_Tagged = #6.97(COSE_Mac)
+
+; §6.1 MACed Message with Recipients -- COSE_Mac
+   COSE_Mac = [
+      Headers,
+      payload : bstr / nil,
+      tag : bstr,
+      recipients : [+COSE_recipient]
+   ]
+
+; §6.2 MACed Messages with Implicit Key -- COSE_Mac0_Tagged
+   COSE_Mac0_Tagged = #6.17(COSE_Mac0)
+
+; §6.2 MACed Messages with Implicit Key -- COSE_Mac0
+   COSE_Mac0 = [
+      Headers,
+      payload : bstr / nil,
+      tag : bstr,
+   ]
+
+; §6.3 How to Compute and Verify a MAC -- MAC_structure
+   MAC_structure = [
+        context : "MAC" / "MAC0",
+        protected : empty_or_serialized_map,
+        external_aad : bstr,
+        payload : bstr
+   ]
+
+; §7 Key Objects -- COSE_Key
+   COSE_Key = {
+       1 => tstr / int,          ; kty
+       ? 2 => bstr,              ; kid
+       ? 3 => tstr / int,        ; alg
+       ? 4 => [+ (tstr / int) ], ; key_ops
+       ? 5 => bstr,              ; Base IV
+       * label => values
+   }
+
+; §7 Key Objects -- COSE_KeySet
+   COSE_KeySet = [+COSE_Key]
+

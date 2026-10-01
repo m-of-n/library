@@ -1,0 +1,461 @@
+record: rfc-9052
+reviewed_by: ""
+# RFC 9052 defines no network exchange: no request/response, no error
+# signalling between parties. Every flow below is a local procedure that the
+# document states as an ordered list of steps. See protocol.md for the framing.
+roles:
+  - signer
+  - verifier
+  - sender
+  - recipient
+  - application
+flows:
+  - name: resolve-header-parameters
+    locator: "§3"
+    kind: local-procedure
+    steps:
+      - from: application
+        to: application
+        message: header_map
+        action: "Read the protected bucket as a bstr holding the CBOR-encoded protected header map and the unprotected bucket as a CBOR map; the presence of both buckets is required."
+        on_error: "A label that is neither a text string nor an integer is an error; applications can either fail processing or process messages by ignoring incorrect labels, but MUST NOT create messages with incorrect labels (§1.5, rfc-9052#R-0002 and rfc-9052#R-0003)."
+      - from: application
+        to: application
+        message: empty_or_serialized_map
+        action: "Accept both a zero-length byte string and a zero-length map encoded in a byte string for an empty protected bucket, although senders SHOULD send the zero-length byte string."
+        on_error: "unspecified in this document"
+      - from: application
+        to: application
+        message: header_map
+        action: "Check that labels in each of the maps are unique."
+        on_error: "If a label appears multiple times, the message MUST be rejected as malformed (§3, rfc-9052#R-0012); applications MUST NOT parse and process messages with the same label used twice as a key in a single map (§9, rfc-9052#R-0092)."
+      - from: application
+        to: application
+        message: header_map
+        action: "Verify that the same label does not occur in both the protected and unprotected header parameters."
+        on_error: "The source states only that applications SHOULD verify this; it does not say what to do when the check fails."
+      - from: application
+        to: application
+        message: header_map
+        action: "Obtain attributes from the protected bucket, and only if an attribute is not found in the protected bucket obtain that attribute from the unprotected bucket."
+        on_error: "unspecified in this document"
+      - from: application
+        to: application
+        message: Generic_Headers
+        action: "Process every protected header parameter named in the crit header parameter, either in the security-library code or in the application using the library."
+        on_error: "If the crit value list includes a label for which the header parameter is not in the protected-header-parameters bucket, this is a fatal error in processing the message (§3.1, rfc-9052#R-0022)."
+  - name: sign-cose-sign
+    locator: "§4.4"
+    kind: local-procedure
+    steps:
+      - from: application
+        to: signer
+        message: COSE_Sign
+        action: "Supply the body information (COSE_Sign), the signer information (COSE_Signature) and the application data (external source) as the inputs to the signing process."
+        on_error: "If the payload is not present in the message, the application is required to supply the payload separately (§4.1)."
+      - from: signer
+        to: signer
+        message: Sig_structure
+        action: 'Create a Sig_structure and set its context text string to "Signature" for signatures using the COSE_Signature structure.'
+        on_error: "COSE_Sign and COSE_Sign1 cannot be converted between each other; because the signature computation includes a parameter identifying which structure is being used, a converted structure will fail signature validation (§4)."
+      - from: signer
+        to: signer
+        message: Sig_structure
+        action: "Set body_protected to the protected attributes from the body structure, encoded in a bstr type; if there are no protected attributes, a zero-length byte string is used."
+        on_error: "unspecified in this document"
+      - from: signer
+        to: signer
+        message: Sig_structure
+        action: "Set sign_protected to the protected attributes from the signer structure, encoded in a bstr type; if there are no protected attributes, a zero-length byte string is used."
+        on_error: "unspecified in this document"
+      - from: application
+        to: signer
+        message: Sig_structure
+        action: "Set external_aad to the externally supplied data from the application, encoded in a bstr type; if this field is not supplied, it defaults to a zero-length byte string."
+        on_error: "Applications need to ensure the byte string is going to be the same on both sides; any subsequent modification will cause the server processing of the message to result in failure (§4.3)."
+      - from: signer
+        to: signer
+        message: Sig_structure
+        action: "Set payload to the payload to be signed, encoded in a bstr type; the full payload is used here, independent of how it is transported."
+        on_error: "unspecified in this document"
+      - from: signer
+        to: signer
+        message: ToBeSigned
+        action: "Create the value ToBeSigned by encoding the Sig_structure to a byte string, using the encoding described in Section 9."
+        on_error: "unspecified in this document; §9 requires definite lengths and minimum-possible-length arguments for the encoding of the Sig_structure."
+      - from: signer
+        to: signer
+        message: ToBeSigned
+        action: "Call the signature creation algorithm, passing in K (the key to sign with), alg (the algorithm to sign with), and ToBeSigned (the value to sign)."
+        on_error: "unspecified in this document; the rules and procedures for specific signature algorithms are deferred to RFC 9053."
+      - from: signer
+        to: signer
+        message: COSE_Signature
+        action: "Place the resulting signature value in the signature field of the COSE_Signature structure."
+        on_error: "Algorithms MUST specify padding if the signature value is not a multiple of 8 bits (§4.1)."
+  - name: sign-cose-sign1
+    locator: "§4.4"
+    kind: local-procedure
+    steps:
+      - from: application
+        to: signer
+        message: COSE_Sign1
+        action: "Supply the body information (COSE_Sign1) and the application data (external source) as the inputs to the signing process; COSE_Sign1 carries the content and signature header parameters in the same pair of buckets."
+        on_error: "If the payload is not present in the message, the application is required to supply the payload separately (§4.1)."
+      - from: signer
+        to: signer
+        message: Sig_structure
+        action: 'Create a Sig_structure and set its context text string to "Signature1" for signatures using the COSE_Sign1 structure.'
+        on_error: "COSE_Sign and COSE_Sign1 cannot be converted between each other; because the signature computation includes a parameter identifying which structure is being used, a converted structure will fail signature validation (§4)."
+      - from: signer
+        to: signer
+        message: Sig_structure
+        action: "Set body_protected to the protected attributes from the body structure, encoded in a bstr type; if there are no protected attributes, a zero-length byte string is used."
+        on_error: "unspecified in this document"
+      - from: signer
+        to: signer
+        message: Sig_structure
+        action: "Omit the sign_protected field; this field is omitted for the COSE_Sign1 signature structure."
+        on_error: "unspecified in this document"
+      - from: application
+        to: signer
+        message: Sig_structure
+        action: "Set external_aad to the externally supplied data from the application, encoded in a bstr type; if this field is not supplied, it defaults to a zero-length byte string."
+        on_error: "Applications need to ensure the byte string is going to be the same on both sides; any subsequent modification will cause the server processing of the message to result in failure (§4.3)."
+      - from: signer
+        to: signer
+        message: Sig_structure
+        action: "Set payload to the payload to be signed, encoded in a bstr type; the full payload is used here, independent of how it is transported."
+        on_error: "unspecified in this document"
+      - from: signer
+        to: signer
+        message: ToBeSigned
+        action: "Create the value ToBeSigned by encoding the Sig_structure to a byte string, using the encoding described in Section 9."
+        on_error: "unspecified in this document; §9 requires definite lengths and minimum-possible-length arguments for the encoding of the Sig_structure."
+      - from: signer
+        to: signer
+        message: ToBeSigned
+        action: "Call the signature creation algorithm, passing in K (the key to sign with), alg (the algorithm to sign with), and ToBeSigned (the value to sign)."
+        on_error: "unspecified in this document; the rules and procedures for specific signature algorithms are deferred to RFC 9053."
+      - from: signer
+        to: signer
+        message: COSE_Sign1
+        action: "Place the resulting signature value in the signature field of the COSE_Sign1 structure."
+        on_error: "unspecified in this document"
+  - name: verify-cose-sign
+    locator: "§4.4"
+    kind: local-procedure
+    steps:
+      - from: application
+        to: verifier
+        message: COSE_Sign
+        action: "Supply the body information (COSE_Sign), the signer information (COSE_Signature) and the application data (external source) as the inputs to the verification process."
+        on_error: "If the payload is not present in the message, the application is required to supply the payload separately (§4.1)."
+      - from: verifier
+        to: verifier
+        message: Sig_structure
+        action: 'Create a Sig_structure and set its context text string to "Signature" for signatures using the COSE_Signature structure.'
+        on_error: "A structure converted from COSE_Sign1 will fail signature validation, because the signature computation includes a parameter identifying which structure is being used (§4)."
+      - from: verifier
+        to: verifier
+        message: Sig_structure
+        action: "Set body_protected to the protected attributes from the body structure, encoded in a bstr type; if there are no protected attributes, a zero-length byte string is used."
+        on_error: "unspecified in this document"
+      - from: verifier
+        to: verifier
+        message: Sig_structure
+        action: "Set sign_protected to the protected attributes from the signer structure, encoded in a bstr type; if there are no protected attributes, a zero-length byte string is used."
+        on_error: "unspecified in this document"
+      - from: application
+        to: verifier
+        message: Sig_structure
+        action: "Set external_aad to the externally supplied data from the application, encoded in a bstr type; if this field is not supplied, it defaults to a zero-length byte string."
+        on_error: "By including a field in the externally supplied data, any subsequent modification will cause the server processing of the message to result in failure (§4.3)."
+      - from: verifier
+        to: verifier
+        message: Sig_structure
+        action: "Set payload to the payload that was signed, encoded in a bstr type; the full payload is used here, independent of how it is transported."
+        on_error: "unspecified in this document"
+      - from: verifier
+        to: verifier
+        message: ToBeSigned
+        action: "Create the value ToBeSigned by encoding the Sig_structure to a byte string, using the encoding described in Section 9."
+        on_error: "A re-encoding of the protected bstr that is not identical to the decoded byte string will result in a failure to verify (§3)."
+      - from: verifier
+        to: verifier
+        message: ToBeSigned
+        action: "Call the signature verification algorithm, passing in K (the key to verify with), alg (the algorithm used to sign with), ToBeSigned (the value to sign), and sig (the signature to be verified)."
+        on_error: "unspecified in this document; §4.4 does not say what a verifier does when verification fails, and §8.1 states only the function valid = Verification(message content, key, signature)."
+      - from: verifier
+        to: application
+        message: COSE_Sign
+        action: "Where more than one signature is present, successful validation of one signature associated with a given signer is usually treated as a successful signature by that signer, and an application using another rule must specify it."
+        on_error: "unspecified in this document; §4.1 quotes RFC 5652 that an application employing a rule other than one valid signature for each signer must specify those rules."
+      - from: application
+        to: application
+        message: COSE_Sign
+        action: "In addition to performing the signature verification, perform the appropriate checks to ensure that the key is correctly paired with the signing identity and that the signing identity is authorized before performing actions."
+        on_error: "unspecified in this document; §12 lists the trust-decision factors but leaves the outcome of a failed check to the application."
+  - name: verify-cose-sign1
+    locator: "§4.4"
+    kind: local-procedure
+    steps:
+      - from: application
+        to: verifier
+        message: COSE_Sign1
+        action: "Supply the body information (COSE_Sign1) and the application data (external source) as the inputs to the verification process."
+        on_error: "If the payload is not present in the message, the application is required to supply the payload separately (§4.1)."
+      - from: verifier
+        to: verifier
+        message: Sig_structure
+        action: 'Create a Sig_structure and set its context text string to "Signature1" for signatures using the COSE_Sign1 structure.'
+        on_error: "A structure converted from COSE_Sign will fail signature validation, because the signature computation includes a parameter identifying which structure is being used (§4)."
+      - from: verifier
+        to: verifier
+        message: Sig_structure
+        action: "Set body_protected to the protected attributes from the body structure, encoded in a bstr type; if there are no protected attributes, a zero-length byte string is used."
+        on_error: "unspecified in this document"
+      - from: verifier
+        to: verifier
+        message: Sig_structure
+        action: "Omit the sign_protected field; this field is omitted for the COSE_Sign1 signature structure."
+        on_error: "unspecified in this document"
+      - from: application
+        to: verifier
+        message: Sig_structure
+        action: "Set external_aad to the externally supplied data from the application, encoded in a bstr type; if this field is not supplied, it defaults to a zero-length byte string."
+        on_error: "By including a field in the externally supplied data, any subsequent modification will cause the server processing of the message to result in failure (§4.3)."
+      - from: verifier
+        to: verifier
+        message: Sig_structure
+        action: "Set payload to the payload that was signed, encoded in a bstr type; the full payload is used here, independent of how it is transported."
+        on_error: "unspecified in this document"
+      - from: verifier
+        to: verifier
+        message: ToBeSigned
+        action: "Create the value ToBeSigned by encoding the Sig_structure to a byte string, using the encoding described in Section 9."
+        on_error: "A re-encoding of the protected bstr that is not identical to the decoded byte string will result in a failure to verify (§3)."
+      - from: verifier
+        to: verifier
+        message: ToBeSigned
+        action: "Call the signature verification algorithm, passing in K (the key to verify with), alg (the algorithm used to sign with), ToBeSigned (the value to sign), and sig (the signature to be verified)."
+        on_error: "unspecified in this document; §4.4 does not say what a verifier does when verification fails, and §8.1 states only the function valid = Verification(message content, key, signature)."
+      - from: application
+        to: application
+        message: COSE_Sign1
+        action: "In addition to performing the signature verification, perform the appropriate checks to ensure that the key is correctly paired with the signing identity and that the signing identity is authorized before performing actions."
+        on_error: "unspecified in this document; §12 lists the trust-decision factors but leaves the outcome of a failed check to the application."
+  - name: encrypt-aead
+    locator: "§5.3"
+    kind: local-procedure
+    steps:
+      - from: sender
+        to: sender
+        message: Enc_structure
+        action: 'Create an Enc_structure and set its context text string to "Encrypt0" for the content encryption of a COSE_Encrypt0 structure, "Encrypt" for the first layer of a COSE_Encrypt structure, or "Enc_Recipient", "Mac_Recipient" or "Rec_Recipient" for a recipient encoding.'
+        on_error: "unspecified in this document"
+      - from: sender
+        to: sender
+        message: Enc_structure
+        action: "Set protected to the protected attributes from the body structure, encoded in a bstr type; if there are no protected attributes, a zero-length byte string is used."
+        on_error: "The protected bucket MUST be empty if it is not going to be included in a cryptographic computation (§3)."
+      - from: application
+        to: sender
+        message: Enc_structure
+        action: "Set external_aad to the externally supplied data from the application, encoded in a bstr type; if this field is not supplied, it defaults to a zero-length byte string."
+        on_error: "Applications that use externally defined authenticated data need to define how that data is encoded (§10)."
+      - from: sender
+        to: sender
+        message: AAD
+        action: "Encode the Enc_structure to a byte string, the Additional Authenticated Data (AAD), using the encoding described in Section 9."
+        on_error: "unspecified in this document; §9 requires definite lengths and minimum-possible-length arguments for the encoding of the Enc_structure."
+      - from: sender
+        to: sender
+        message: COSE_recipient
+        action: "Determine the encryption key K: with no recipients from the algorithm and key at the current layer, for Direct Encryption and Direct Key Agreement from the key and algorithm in the recipient structure, and otherwise randomly generated."
+        on_error: "When direct-encryption mode is used it MUST be the only mode used on the message (§8.5.1); §12 notes that combining direct with a second recipient algorithm exposes the direct key to the second recipient."
+      - from: sender
+        to: sender
+        message: COSE_Encrypt
+        action: "Call the encryption algorithm with K (the encryption key), P (the plaintext) and AAD, and place the returned ciphertext into the ciphertext field of the structure."
+        on_error: "unspecified in this document; the rules and procedures for specific content encryption algorithms are deferred to RFC 9053."
+      - from: sender
+        to: sender
+        message: COSE_recipient
+        action: "For recipients of the message using non-direct algorithms, recursively perform the encryption algorithm for that recipient, using K (the encryption key) as the plaintext."
+        on_error: "unspecified in this document"
+  - name: decrypt-aead
+    locator: "§5.3"
+    kind: local-procedure
+    steps:
+      - from: recipient
+        to: recipient
+        message: Enc_structure
+        action: 'Create an Enc_structure and set its context text string to the value for the layer being processed: "Encrypt0", "Encrypt", "Enc_Recipient", "Mac_Recipient" or "Rec_Recipient".'
+        on_error: "unspecified in this document"
+      - from: recipient
+        to: recipient
+        message: Enc_structure
+        action: "Set protected to the protected attributes from the body structure, encoded in a bstr type; if there are no protected attributes, a zero-length byte string is used."
+        on_error: "unspecified in this document"
+      - from: application
+        to: recipient
+        message: Enc_structure
+        action: "Set external_aad to the externally supplied data from the application, encoded in a bstr type; if this field is not supplied, it defaults to a zero-length byte string."
+        on_error: "unspecified in this document"
+      - from: recipient
+        to: recipient
+        message: AAD
+        action: "Encode the Enc_structure to a byte string, the AAD, using the encoding described in Section 9."
+        on_error: "unspecified in this document"
+      - from: recipient
+        to: recipient
+        message: COSE_recipient
+        action: "Determine the decryption key: with no recipients from the algorithm and key at the current layer, for Direct Encryption and Direct Key Agreement from the key and algorithm in the recipient structure, and otherwise by decoding and decrypting one of the recipient structures."
+        on_error: "Applications MUST deal with a recipient field being present that has an unsupported algorithm; failing to decrypt that specific recipient is an acceptable way of dealing with it, and failing to process the message is not (§8.5.2, rfc-9052#R-0074 and rfc-9052#R-0099)."
+      - from: recipient
+        to: recipient
+        message: COSE_Encrypt
+        action: "Call the decryption algorithm with K (the decryption key to use), C (the ciphertext) and AAD."
+        on_error: "The message content MUST NOT be used if the decryption does not validate (§8.3, rfc-9052#R-0066); §5.3 itself states no consequence here, and §3.1 notes only that modifying the IV will cause the decryption to fail."
+  - name: encrypt-ae
+    locator: "§5.4"
+    kind: local-procedure
+    steps:
+      - from: sender
+        to: sender
+        message: COSE_recipient
+        action: "Verify that the protected field is a zero-length byte string."
+        on_error: "unspecified in this document; the protected field MUST be a zero-length byte string if the key wrap algorithm is an AE algorithm (§8.5.2) and for key transport (§8.5.3)."
+      - from: sender
+        to: sender
+        message: COSE_recipient
+        action: "Verify that there was no external additional authenticated data supplied for this operation."
+        on_error: "unspecified in this document; AE algorithms provide no associated-data service, so there is no Enc_structure in this procedure."
+      - from: sender
+        to: sender
+        message: COSE_recipient
+        action: "Determine the encryption key: with no recipients from the algorithm and key at the current layer, for Direct Encryption and Direct Key Agreement from the key and algorithm in the recipient structure, and otherwise randomly generated."
+        on_error: "When direct-encryption mode is used it MUST be the only mode used on the message (§8.5.1)."
+      - from: sender
+        to: sender
+        message: COSE_recipient
+        action: "Call the encryption algorithm with K (the encryption key to use) and P (the plaintext), and place the returned ciphertext into the ciphertext field of the structure."
+        on_error: "unspecified in this document; the rules and procedures for specific key wrap algorithms are deferred to RFC 9053 and RFC 8230."
+      - from: sender
+        to: sender
+        message: COSE_recipient
+        action: "For recipients of the message using non-direct algorithms, recursively perform the encryption algorithm for that recipient, using K (the encryption key) as the plaintext."
+        on_error: "unspecified in this document"
+  - name: decrypt-ae
+    locator: "§5.4"
+    kind: local-procedure
+    steps:
+      - from: recipient
+        to: recipient
+        message: COSE_recipient
+        action: "Verify that the protected field is a zero-length byte string."
+        on_error: "unspecified in this document; the source states the check but not the consequence of failing it."
+      - from: recipient
+        to: recipient
+        message: COSE_recipient
+        action: "Verify that there was no external additional authenticated data supplied for this operation."
+        on_error: "unspecified in this document; the source states the check but not the consequence of failing it."
+      - from: recipient
+        to: recipient
+        message: COSE_recipient
+        action: "Determine the decryption key: with no recipients from the algorithm and key at the current layer, for Direct Encryption and Direct Key Agreement from the key and algorithm in the recipient structure, and otherwise by decoding and decrypting one of the recipient structures."
+        on_error: "Applications MUST deal with a recipient field being present that has an unsupported algorithm; failing to decrypt that specific recipient is an acceptable way of dealing with it, and failing to process the message is not (§8.5.2, rfc-9052#R-0074 and rfc-9052#R-0099)."
+      - from: recipient
+        to: recipient
+        message: COSE_recipient
+        action: "Call the decryption algorithm with K (the decryption key to use) and C (the ciphertext)."
+        on_error: "Where the AE algorithm is the content encryption algorithm, the message content MUST NOT be used if the decryption does not validate (§8.3, rfc-9052#R-0066); §5.4 itself states no consequence, and for an AE key-unwrap layer the document states none at all."
+  - name: mac-compute
+    locator: "§6.3"
+    kind: local-procedure
+    steps:
+      - from: sender
+        to: sender
+        message: MAC_structure
+        action: 'Create a MAC_structure and set its context text string to "MAC" for the COSE_Mac structure or "MAC0" for the COSE_Mac0 structure.'
+        on_error: "unspecified in this document"
+      - from: sender
+        to: sender
+        message: MAC_structure
+        action: "Set protected to the protected attributes from the body structure; if there are no protected attributes, a zero-length bstr is used."
+        on_error: "unspecified in this document"
+      - from: application
+        to: sender
+        message: MAC_structure
+        action: "Set external_aad to the externally supplied data from the application, encoded as a bstr type; if this field is not supplied, it defaults to a zero-length byte string."
+        on_error: "Applications that use externally defined authenticated data need to define how that data is encoded (§10)."
+      - from: sender
+        to: sender
+        message: MAC_structure
+        action: "Set payload to the payload to be MACed, encoded in a bstr type; the full payload is used here, independent of how it is transported."
+        on_error: "If the payload is not present in the message, the application is required to supply the payload separately (§6.1)."
+      - from: sender
+        to: sender
+        message: ToBeMaced
+        action: "Create the value ToBeMaced by encoding the MAC_structure to a byte string, using the encoding described in Section 9."
+        on_error: "unspecified in this document; §9 requires definite lengths and minimum-possible-length arguments for the encoding of the MAC_structure."
+      - from: sender
+        to: sender
+        message: ToBeMaced
+        action: "Call the MAC creation algorithm, passing in K (the key to use), alg (the algorithm to MAC with) and ToBeMaced (the value to compute the MAC on)."
+        on_error: "unspecified in this document; the rules and procedures for specific MAC algorithms are deferred to RFC 9053."
+      - from: sender
+        to: sender
+        message: COSE_Mac
+        action: "Place the resulting MAC in the tag field of the COSE_Mac or COSE_Mac0 structure."
+        on_error: "unspecified in this document"
+      - from: sender
+        to: sender
+        message: COSE_recipient
+        action: "For COSE_Mac structures, encrypt and encode the MAC key for each recipient of the message."
+        on_error: "unspecified in this document"
+  - name: mac-verify
+    locator: "§6.3"
+    kind: local-procedure
+    steps:
+      - from: recipient
+        to: recipient
+        message: MAC_structure
+        action: 'Create a MAC_structure and set its context text string to "MAC" for the COSE_Mac structure or "MAC0" for the COSE_Mac0 structure.'
+        on_error: "unspecified in this document"
+      - from: recipient
+        to: recipient
+        message: MAC_structure
+        action: "Set protected to the protected attributes from the body structure; if there are no protected attributes, a zero-length bstr is used."
+        on_error: "unspecified in this document"
+      - from: application
+        to: recipient
+        message: MAC_structure
+        action: "Set external_aad to the externally supplied data from the application, encoded as a bstr type; if this field is not supplied, it defaults to a zero-length byte string."
+        on_error: "unspecified in this document"
+      - from: recipient
+        to: recipient
+        message: MAC_structure
+        action: "Set payload to the payload that was MACed, encoded in a bstr type; the full payload is used here, independent of how it is transported."
+        on_error: "unspecified in this document"
+      - from: recipient
+        to: recipient
+        message: ToBeMaced
+        action: "Create the value ToBeMaced by encoding the MAC_structure to a byte string, using the encoding described in Section 9."
+        on_error: "unspecified in this document"
+      - from: recipient
+        to: recipient
+        message: COSE_recipient
+        action: "For COSE_Mac structures, obtain the cryptographic key by decoding and decrypting one of the recipient structures."
+        on_error: "Applications MUST deal with a recipient field being present that has an unsupported algorithm; failing to decrypt that specific recipient is an acceptable way of dealing with it, and failing to process the message is not (§8.5.2, rfc-9052#R-0074 and rfc-9052#R-0099)."
+      - from: recipient
+        to: recipient
+        message: ToBeMaced
+        action: "Call the MAC creation algorithm, passing in K (the key to use), alg (the algorithm to MAC with) and ToBeMaced (the value to compute the MAC on)."
+        on_error: "unspecified in this document; the source says MAC creation algorithm here, not MAC verification, and §8.2 states the function valid = MAC_Verify(message content, key, tag) only in the algorithm taxonomy."
+      - from: recipient
+        to: recipient
+        message: COSE_Mac
+        action: "Compare the MAC value to the tag field of the COSE_Mac or COSE_Mac0 structure."
+        on_error: "unspecified in this document; §6.3 does not say what happens when the comparison fails."

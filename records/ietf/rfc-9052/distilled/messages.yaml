@@ -1,0 +1,882 @@
+record: rfc-9052
+reviewed_by: ""
+messages:
+  - name: COSE_Messages
+    locator: "§2"
+    encoding: CBOR
+    cbor_tag: none
+    structure: choice
+    fields: []
+    layout: "COSE_Messages = COSE_Untagged_Message / COSE_Tagged_Message; untagged set is COSE_Sign / COSE_Sign1 / COSE_Encrypt / COSE_Encrypt0 / COSE_Mac / COSE_Mac0, and the tagged set is each of those wrapped in its own CBOR tag"
+    notes: "Every message type is a CBOR array whose first three elements are always protected (bstr), unprotected (map), then the content (bstr when present, nil when detached); later elements are type-specific"
+  - name: COSE_message_identification
+    locator: "§2 Table 1, Table 2"
+    encoding: CBOR
+    cbor_tag: none
+    structure: table
+    fields:
+      - name: by context
+        index: 0
+        type: none
+        required: false
+        constrained_by: []
+        layout: "the message type is known from the context, e.g. a marker in the containing structure or a restriction in the application protocol"
+      - name: by CBOR tag
+        index: 1
+        type: uint
+        required: false
+        constrained_by: []
+        layout: "COSE_Sign 98, COSE_Sign1 18, COSE_Encrypt 96, COSE_Encrypt0 16, COSE_Mac 97, COSE_Mac0 17; a message carrying the tag is a tagged message, one without it is an untagged message"
+      - name: cose-type media type parameter
+        index: 2
+        type: tstr
+        required: false
+        constrained_by:
+          - "rfc-9052#R-0004"
+          - "rfc-9052#R-0005"
+        layout: "for media type application/cose the optional cose-type parameter is cose-sign, cose-sign1, cose-encrypt, cose-encrypt0, cose-mac or cose-mac0; OPTIONAL when the tagged structure is used, REQUIRED when the untagged structure is used"
+      - name: CoAP Content-Format
+        index: 3
+        type: uint
+        required: false
+        constrained_by: []
+        layout: "Table 2 IDs: cose-sign 98, cose-sign1 18, cose-encrypt 96, cose-encrypt0 16, cose-mac 97, cose-mac0 17, application/cose-key 101, application/cose-key-set 102; the CBOR tag is then not required"
+    layout: "not a wire structure; the four ways an implementation may learn which COSE structure it is holding"
+    notes: "Tag numbers and CoAP Content-Format IDs coincide for the six security messages, but they are separate registries and a Content-Format is not a tag"
+  - name: Headers
+    locator: "§3"
+    encoding: CBOR
+    cbor_tag: none
+    structure: group
+    fields:
+      - name: protected
+        index: 0
+        type: empty_or_serialized_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0006"
+          - "rfc-9052#R-0007"
+          - "rfc-9052#R-0008"
+          - "rfc-9052#R-0009"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0013"
+        layout: "CBOR bstr holding the encoded protected header_map; presence of the element is required even when the map is empty"
+      - name: unprotected
+        index: 1
+        type: header_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0009"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0013"
+          - "rfc-9052#R-0014"
+        layout: "bare CBOR map, not wrapped in a bstr"
+    layout: "CDDL group spliced into every security structure as its first two array elements, in this order: protected then unprotected; the presence of both buckets is required"
+    notes: "Both buckets are present in every security object in this document but not in keys; labels MUST be unique within each map, a repeated label means the message MUST be rejected as malformed, and an attribute found in the protected bucket takes precedence over the unprotected bucket"
+  - name: protected header bucket
+    locator: "§3"
+    encoding: CBOR
+    cbor_tag: none
+    structure: bstr
+    fields:
+      - name: wrapped header_map
+        index: 0
+        type: header_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0006"
+          - "rfc-9052#R-0007"
+          - "rfc-9052#R-0008"
+          - "rfc-9052#R-0009"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0013"
+        layout: "the header_map is CBOR-encoded first, then that encoding is placed inside a bstr; the bstr contents are transported verbatim and are the exact bytes fed to the cryptographic computation"
+    layout: "one CBOR byte string; its contents are an encoded header_map, or nothing at all when there are no protected attributes"
+    notes: "MUST be empty if it is not going to be included in a cryptographic computation; wrapping in a bstr avoids every party needing a common canonical map encoding, and a decode-and-re-encode by an intermediate breaks verification unless the bytes are identical"
+  - name: unprotected header bucket
+    locator: "§3"
+    encoding: CBOR
+    cbor_tag: none
+    structure: map
+    fields:
+      - name: header_map
+        index: 1
+        type: header_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0009"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0013"
+          - "rfc-9052#R-0014"
+        layout: "a bare CBOR map at the array position, with no bstr wrapper and no inclusion in any to-be-signed, to-be-MACed or to-be-encrypted byte string"
+    layout: "one CBOR map; an empty unprotected bucket is the empty map, written h A0 in the examples as {}"
+    notes: "Holds parameters about the current layer that are not cryptographically protected; only parameters that deal with the current layer belong at that layer"
+  - name: header_map
+    locator: "§3"
+    encoding: CBOR
+    cbor_tag: none
+    structure: map
+    fields:
+      - name: Generic_Headers
+        index: 0
+        type: group
+        required: false
+        constrained_by:
+          - "rfc-9052#R-0010"
+        layout: "the six common header parameters of §3.1, each optional, spliced into the map"
+      - name: label => values
+        index: wildcard
+        type: "label => any"
+        required: false
+        constrained_by:
+          - "rfc-9052#R-0002"
+          - "rfc-9052#R-0003"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0011"
+          - "rfc-9052#R-0012"
+          - "rfc-9052#R-0091"
+          - "rfc-9052#R-0092"
+        layout: "zero or more further entries; label = int / tstr and values = any CBOR value"
+    layout: "header_map = { Generic_Headers, * label => values }; the same map type is used for both the protected and the unprotected bucket"
+    notes: "A label that is neither a text string nor an integer is an error: applications may fail processing or ignore the incorrect label, but MUST NOT create messages with incorrect labels"
+  - name: empty_or_serialized_map
+    locator: "§3"
+    encoding: CBOR
+    cbor_tag: none
+    structure: bstr
+    fields:
+      - name: serialized map form
+        index: 0
+        type: "bstr .cbor header_map"
+        required: false
+        constrained_by:
+          - "rfc-9052#R-0006"
+          - "rfc-9052#R-0007"
+          - "rfc-9052#R-0008"
+        layout: "a byte string whose contents are one encoded header_map data item"
+      - name: empty form
+        index: 0
+        type: "bstr .size 0"
+        required: false
+        constrained_by:
+          - "rfc-9052#R-0006"
+          - "rfc-9052#R-0007"
+          - "rfc-9052#R-0008"
+        layout: "a zero-length byte string, written h in CBOR diagnostic notation as the empty byte string"
+    layout: "empty_or_serialized_map = bstr .cbor header_map / bstr .size 0; exactly one of the two forms occupies the protected element"
+    notes: "Empty-protected special case: senders SHOULD encode a zero-length map as a zero-length byte string rather than as a byte string holding the zero-length map h A0; recipients MUST accept both, and the zero-length byte string is shorter and is the form the Sig_structure, Enc_structure and MAC_structure use"
+  - name: Generic_Headers
+    locator: "§3.1 Table 3"
+    encoding: CBOR
+    cbor_tag: none
+    structure: map
+    fields:
+      - name: alg
+        index: 1
+        type: "int / tstr"
+        required: false
+        constrained_by:
+          - "rfc-9052#R-0015"
+        layout: "map label 1, not an array index; value taken from the COSE Algorithms registry; may be in either bucket, but MUST be authenticated where the ability to do so exists, either by placing it in the protected bucket or by carrying it in the externally supplied data"
+      - name: crit
+        index: 2
+        type: "[+ label]"
+        required: false
+        constrained_by:
+          - "rfc-9052#R-0016"
+          - "rfc-9052#R-0017"
+          - "rfc-9052#R-0018"
+          - "rfc-9052#R-0019"
+          - "rfc-9052#R-0020"
+          - "rfc-9052#R-0021"
+          - "rfc-9052#R-0022"
+          - "rfc-9052#R-0023"
+        layout: "map label 2; array of one or more labels that MUST have at least one value; when present it MUST be placed in the protected bucket; integer labels 0 to 7 SHOULD be omitted, -1 to -128 can be omitted, -129 to -65536 SHOULD be included; naming a label whose parameter is not in the protected bucket is a fatal processing error"
+      - name: content type
+        index: 3
+        type: "tstr / uint"
+        required: false
+        constrained_by:
+          - "rfc-9052#R-0024"
+          - "rfc-9052#R-0025"
+        layout: "map label 3; uint values come from the CoAP Content-Formats registry, tstr values are type-name/subtype-name per §4.2 of RFC 6838 with no leading or trailing whitespace; belongs only in the content layer, never in a recipient or signature layer"
+      - name: kid
+        index: 4
+        type: bstr
+        required: false
+        constrained_by:
+          - "rfc-9052#R-0026"
+        layout: "map label 4; matched against the kid member of a COSE_Key; internal structure undefined, values not assumed unique, not security critical, so it can be placed in the unprotected bucket"
+      - name: IV
+        index: 5
+        type: bstr
+        required: false
+        constrained_by:
+          - "rfc-9052#R-0027"
+        layout: "map label 5; the full Initialization Vector, also called a nonce for some algorithms; can be placed in the unprotected bucket because modifying it makes AE and AEAD decryption fail"
+      - name: Partial IV
+        index: 6
+        type: bstr
+        required: false
+        constrained_by:
+          - "rfc-9052#R-0027"
+          - "rfc-9052#R-0028"
+          - "rfc-9052#R-0029"
+        layout: "map label 6; message IV is built by left-padding the Partial IV with zeros to the algorithm IV length and XORing it with the Context IV (the Base IV of the key); can be placed in the unprotected bucket"
+    layout: "Generic_Headers = ( ? 1 => int / tstr, ? 2 => [+label], ? 3 => tstr / int, ? 4 => bstr, ? ( 5 => bstr // 6 => bstr ) ); every parameter is optional in the map itself"
+    notes: "IV (label 5) and Partial IV (label 6) MUST NOT both be present in the same security layer; parameter labels come from the IANA COSE Header Parameters registry, and counter signature label 7 from RFC 8152 must still be understood by new implementations"
+  - name: COSE_Sign
+    locator: "§4.1"
+    encoding: CBOR
+    cbor_tag: 98
+    structure: array
+    fields:
+      - name: protected
+        index: 0
+        type: empty_or_serialized_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0006"
+          - "rfc-9052#R-0007"
+          - "rfc-9052#R-0008"
+          - "rfc-9052#R-0009"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0013"
+        layout: "bstr wrapping the CBOR-encoded protected header_map for the body; zero-length bstr when there are no protected body attributes"
+      - name: unprotected
+        index: 1
+        type: header_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0009"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0013"
+          - "rfc-9052#R-0014"
+        layout: "bare CBOR map, not wrapped"
+      - name: payload
+        index: 2
+        type: "bstr / nil"
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0031"
+        layout: "the serialized content wrapped in a bstr so it travels unchanged, or the CBOR nil value when the content is detached and supplied separately by the application"
+      - name: signatures
+        index: 3
+        type: "[+ COSE_Signature]"
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0065"
+        layout: "CBOR array of one or more COSE_Signature arrays; the element itself is a plain array, not wrapped in a bstr"
+    layout: "4-element CBOR array, optionally tagged 98 as COSE_Sign_Tagged = #6.98(COSE_Sign); cose-type cose-sign, CoAP Content-Format 98"
+    notes: "Content-level and signature-level header parameters are separated: body parameters live here, per-signature parameters live in each COSE_Signature; with a message-recovery signature algorithm the transmitted payload is a zero-length byte string rather than absent when all original bytes are recovered"
+  - name: COSE_Signature
+    locator: "§4.1"
+    encoding: CBOR
+    cbor_tag: none
+    structure: array
+    fields:
+      - name: protected
+        index: 0
+        type: empty_or_serialized_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0006"
+          - "rfc-9052#R-0007"
+          - "rfc-9052#R-0008"
+          - "rfc-9052#R-0009"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0013"
+        layout: "bstr wrapping the CBOR-encoded protected header_map for this signer; zero-length bstr when empty; these are the bytes that become sign_protected in the Sig_structure"
+      - name: unprotected
+        index: 1
+        type: header_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0009"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0013"
+          - "rfc-9052#R-0014"
+        layout: "bare CBOR map, not wrapped"
+      - name: signature
+        index: 2
+        type: bstr
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0030"
+          - "rfc-9052#R-0032"
+          - "rfc-9052#R-0043"
+        layout: "the computed signature value as a byte string; algorithms MUST specify padding if the signature value is not a multiple of 8 bits"
+    layout: "3-element CBOR array, never tagged; appears only as an element of the COSE_Sign signatures array"
+    notes: "Signature algorithms are used with COSE_Signature and COSE_Sign1; the internal encoding of the signature bytes is defined by the algorithm document, not here"
+  - name: COSE_Sign1
+    locator: "§4.2"
+    encoding: CBOR
+    cbor_tag: 18
+    structure: array
+    fields:
+      - name: protected
+        index: 0
+        type: empty_or_serialized_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0006"
+          - "rfc-9052#R-0007"
+          - "rfc-9052#R-0008"
+          - "rfc-9052#R-0009"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0013"
+        layout: "bstr wrapping the CBOR-encoded protected header_map; zero-length bstr when the map is empty; carries both content and signature parameters since there is only one pair of buckets"
+      - name: unprotected
+        index: 1
+        type: header_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0009"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0013"
+          - "rfc-9052#R-0014"
+        layout: "bare CBOR map, not wrapped"
+      - name: payload
+        index: 2
+        type: "bstr / nil"
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0031"
+        layout: "as in COSE_Sign: content wrapped in a bstr, or CBOR nil for detached content"
+      - name: signature
+        index: 3
+        type: bstr
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0030"
+          - "rfc-9052#R-0032"
+          - "rfc-9052#R-0043"
+        layout: "the computed signature value as a byte string"
+    layout: "4-element CBOR array, optionally tagged 18 as COSE_Sign1_Tagged = #6.18(COSE_Sign1); cose-type cose-sign1, CoAP Content-Format 18"
+    notes: "Not convertible to or from COSE_Sign: the Sig_structure context string differs (Signature1 versus Signature) so a converted structure fails verification; RFC 9052 removed all countersignature text, which moved to COSE-COUNTERSIGN"
+  - name: COSE_Encrypt
+    locator: "§5.1"
+    encoding: CBOR
+    cbor_tag: 96
+    structure: array
+    fields:
+      - name: protected
+        index: 0
+        type: empty_or_serialized_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0006"
+          - "rfc-9052#R-0007"
+          - "rfc-9052#R-0008"
+          - "rfc-9052#R-0009"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0013"
+        layout: "bstr wrapping the CBOR-encoded protected header_map for the content layer; zero-length bstr when empty; authenticated by the content encryption algorithm through the Enc_structure"
+      - name: unprotected
+        index: 1
+        type: header_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0009"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0013"
+          - "rfc-9052#R-0014"
+        layout: "bare CBOR map, not wrapped; typically carries the IV"
+      - name: ciphertext
+        index: 2
+        type: "bstr / nil"
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0047"
+          - "rfc-9052#R-0066"
+        layout: "the ciphertext encoded as a bstr with the authentication tag combined into it, or CBOR nil when the content is detached"
+      - name: recipients
+        index: 3
+        type: "[+ COSE_recipient]"
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0048"
+          - "rfc-9052#R-0067"
+          - "rfc-9052#R-0074"
+          - "rfc-9052#R-0080"
+          - "rfc-9052#R-0099"
+        layout: "CBOR array of one or more COSE_recipient arrays; a plain array, not wrapped in a bstr"
+    layout: "4-element CBOR array, optionally tagged 96 as COSE_Encrypt_Tagged = #6.96(COSE_Encrypt); cose-type cose-encrypt, CoAP Content-Format 96"
+    notes: "Two layers: the content layer here and the recipient layer in COSE_recipient, which carries the encrypted CEK; the five content key distribution methods are direct, symmetric KEK (key wrap), key agreement, key transport and passwords"
+  - name: COSE_recipient
+    locator: "§5.1"
+    encoding: CBOR
+    cbor_tag: none
+    structure: array
+    fields:
+      - name: protected
+        index: 0
+        type: empty_or_serialized_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0006"
+          - "rfc-9052#R-0007"
+          - "rfc-9052#R-0008"
+          - "rfc-9052#R-0009"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0013"
+          - "rfc-9052#R-0050"
+          - "rfc-9052#R-0068"
+          - "rfc-9052#R-0073"
+          - "rfc-9052#R-0077"
+        layout: "bstr wrapping the encoded protected header_map for this recipient; MUST be a zero-length bstr when the recipient algorithm provides no authenticated data, and AE key wrap requires verifying that it is zero-length"
+      - name: unprotected
+        index: 1
+        type: header_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0009"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0013"
+          - "rfc-9052#R-0014"
+          - "rfc-9052#R-0069"
+          - "rfc-9052#R-0070"
+          - "rfc-9052#R-0075"
+          - "rfc-9052#R-0076"
+          - "rfc-9052#R-0078"
+          - "rfc-9052#R-0079"
+          - "rfc-9052#R-0081"
+          - "rfc-9052#R-0082"
+          - "rfc-9052#R-0083"
+          - "rfc-9052#R-0084"
+          - "rfc-9052#R-0085"
+          - "rfc-9052#R-0086"
+          - "rfc-9052#R-0087"
+        layout: "bare CBOR map, not wrapped; typically carries the recipient alg, kid and any ephemeral key"
+      - name: ciphertext
+        index: 2
+        type: "bstr / nil"
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0048"
+          - "rfc-9052#R-0054"
+          - "rfc-9052#R-0071"
+        layout: "the encrypted key as a bstr; all encoded keys are symmetric keys and the binary value of the key is the content; CBOR nil when there is no encrypted key, and the examples show a zero-length bstr for direct key agreement"
+      - name: recipients
+        index: 3
+        type: "[+ COSE_recipient]"
+        required: false
+        constrained_by:
+          - "rfc-9052#R-0067"
+          - "rfc-9052#R-0072"
+          - "rfc-9052#R-0074"
+          - "rfc-9052#R-0080"
+          - "rfc-9052#R-0099"
+        layout: "nested array of one or more further COSE_recipient structures; the whole element is ABSENT, not nil, when there are no nested recipient structures"
+    layout: "3-element CBOR array, or 4 elements when the optional nested recipients array is present; never tagged; used as an element of COSE_Encrypt recipients and COSE_Mac recipients"
+    notes: "Recursive: Appendix B shows a three-layer message (content, key wrap of the CEK, then ECDH-ES to derive the KEK) where the nested element is a COSE_recipient inside a COSE_recipient. Naming trap carried over from the source: §8.5.1-§8.5.5 call this same structure COSE_Recipient with a capital R, and that is the spelling the §8.5 requirements quote verbatim; there is only one structure, and the CDDL rule name is COSE_recipient"
+  - name: COSE_Encrypt0
+    locator: "§5.2"
+    encoding: CBOR
+    cbor_tag: 16
+    structure: array
+    fields:
+      - name: protected
+        index: 0
+        type: empty_or_serialized_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0006"
+          - "rfc-9052#R-0007"
+          - "rfc-9052#R-0008"
+          - "rfc-9052#R-0009"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0013"
+          - "rfc-9052#R-0050"
+        layout: "bstr wrapping the encoded protected header_map; zero-length bstr when empty, and AE algorithms require verifying that it is a zero-length byte string"
+      - name: unprotected
+        index: 1
+        type: header_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0009"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0013"
+          - "rfc-9052#R-0014"
+        layout: "bare CBOR map, not wrapped; the usual place for IV or Partial IV"
+      - name: ciphertext
+        index: 2
+        type: "bstr / nil"
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0047"
+          - "rfc-9052#R-0066"
+        layout: "as in COSE_Encrypt: ciphertext with combined authentication tag as a bstr, or CBOR nil when detached"
+    layout: "3-element CBOR array, optionally tagged 16 as COSE_Encrypt0_Tagged = #6.16(COSE_Encrypt0); cose-type cose-encrypt0, CoAP Content-Format 16"
+    notes: "No recipient element at all: the key is known implicitly, so if a key must be identified to the recipient the enveloped COSE_Encrypt structure ought to be used instead; the CDDL in §5.2 prints a trailing comma after the ciphertext element"
+  - name: COSE_Mac
+    locator: "§6.1"
+    encoding: CBOR
+    cbor_tag: 97
+    structure: array
+    fields:
+      - name: protected
+        index: 0
+        type: empty_or_serialized_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0006"
+          - "rfc-9052#R-0007"
+          - "rfc-9052#R-0008"
+          - "rfc-9052#R-0009"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0013"
+        layout: "bstr wrapping the encoded protected header_map; zero-length bstr when empty; these bytes become the protected element of the MAC_structure"
+      - name: unprotected
+        index: 1
+        type: header_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0009"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0013"
+          - "rfc-9052#R-0014"
+        layout: "bare CBOR map, not wrapped"
+      - name: payload
+        index: 2
+        type: "bstr / nil"
+        required: true
+        constrained_by: []
+        layout: "the serialized content to be MACed wrapped in a bstr, or CBOR nil for detached content supplied separately by the application"
+      - name: tag
+        index: 3
+        type: bstr
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0053"
+          - "rfc-9052#R-0055"
+        layout: "the MAC value as a byte string, placed here after computing it over ToBeMaced"
+      - name: recipients
+        index: 4
+        type: "[+ COSE_recipient]"
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0054"
+          - "rfc-9052#R-0067"
+          - "rfc-9052#R-0074"
+          - "rfc-9052#R-0080"
+          - "rfc-9052#R-0099"
+        layout: "CBOR array of one or more COSE_recipient arrays holding the MAC key, same structure as for COSE_Encrypt; a plain array, not wrapped"
+    layout: "5-element CBOR array, optionally tagged 97 as COSE_Mac_Tagged = #6.97(COSE_Mac); cose-type cose-mac, CoAP Content-Format 97; note that tag precedes recipients"
+    notes: "Uses the same recipient algorithm classes as encryption; the recipient context string for a recipient inside a MACed message is Mac_Recipient in the Enc_structure"
+  - name: COSE_Mac0
+    locator: "§6.2"
+    encoding: CBOR
+    cbor_tag: 17
+    structure: array
+    fields:
+      - name: protected
+        index: 0
+        type: empty_or_serialized_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0006"
+          - "rfc-9052#R-0007"
+          - "rfc-9052#R-0008"
+          - "rfc-9052#R-0009"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0013"
+        layout: "bstr wrapping the encoded protected header_map; zero-length bstr when empty"
+      - name: unprotected
+        index: 1
+        type: header_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0009"
+          - "rfc-9052#R-0010"
+          - "rfc-9052#R-0013"
+          - "rfc-9052#R-0014"
+        layout: "bare CBOR map, not wrapped"
+      - name: payload
+        index: 2
+        type: "bstr / nil"
+        required: true
+        constrained_by: []
+        layout: "as in COSE_Mac: content wrapped in a bstr, or CBOR nil when detached"
+      - name: tag
+        index: 3
+        type: bstr
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0053"
+          - "rfc-9052#R-0055"
+        layout: "the MAC value as a byte string"
+    layout: "4-element CBOR array, optionally tagged 17 as COSE_Mac0_Tagged = #6.17(COSE_Mac0); cose-type cose-mac0, CoAP Content-Format 17; the CDDL in §6.2 prints a trailing comma after the tag element"
+    notes: "Key is implicitly known so there is no recipients element; COSE_Mac0 is one of the constructions where alg can be authenticated without an AEAD algorithm"
+  - name: COSE_Key
+    locator: "§7, §7.1 Table 4"
+    encoding: CBOR
+    cbor_tag: none
+    structure: map
+    fields:
+      - name: kty
+        index: 1
+        type: "tstr / int"
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0059"
+          - "rfc-9052#R-0060"
+          - "rfc-9052#R-0061"
+          - "rfc-9052#R-0062"
+          - "rfc-9052#R-0096"
+        layout: "map label 1, not an array index; value from the COSE Key Types registry; MUST be present, MUST be verified as appropriate for the algorithm being processed, and MUST be part of the trust decision"
+      - name: kid
+        index: 2
+        type: bstr
+        required: false
+        constrained_by:
+          - "rfc-9052#R-0026"
+        layout: "map label 2; unstructured identifier, not unique, matched against the kid header parameter of a message to narrow the set of candidate keys"
+      - name: alg
+        index: 3
+        type: "tstr / int"
+        required: false
+        constrained_by:
+          - "rfc-9052#R-0063"
+          - "rfc-9052#R-0064"
+          - "rfc-9052#R-0095"
+        layout: "map label 3; value from the COSE Algorithms registry; when present the application MUST verify it matches the algorithm in use and MUST NOT use the key otherwise"
+      - name: key_ops
+        index: 4
+        type: "[+ (tstr / int)]"
+        required: false
+        constrained_by: []
+        layout: "map label 4; array of values from Table 5: sign 1, verify 2, encrypt 3, decrypt 4, wrap key 5, unwrap key 6, derive key 7, derive bits 8, MAC create 9, MAC verify 10"
+      - name: Base IV
+        index: 5
+        type: bstr
+        required: false
+        constrained_by:
+          - "rfc-9052#R-0028"
+          - "rfc-9052#R-0029"
+        layout: "map label 5; the base portion of an IV, XORed with the zero-left-padded Partial IV header parameter to give the message IV; it is protected by virtue of being used in the cryptographic computation"
+      - name: label => values
+        index: wildcard
+        type: "label => any"
+        required: false
+        constrained_by:
+          - "rfc-9052#R-0002"
+          - "rfc-9052#R-0003"
+          - "rfc-9052#R-0091"
+          - "rfc-9052#R-0092"
+        layout: "zero or more further entries, including the key-type-specific parameters from the COSE Key Type Parameters registry"
+    layout: "CBOR map, not an array and never carrying the protected/unprotected buckets; media type application/cose-key, CoAP Content-Format 101"
+    notes: "No CBOR tag is defined for COSE_Key in this document; labels 1 to 5 are the common parameters and key-type-specific labels are defined elsewhere, so a parser must dispatch on kty before reading them"
+  - name: COSE_KeySet
+    locator: "§7"
+    encoding: CBOR
+    cbor_tag: none
+    structure: array
+    fields:
+      - name: keys
+        index: 0
+        type: "[+ COSE_Key]"
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0056"
+          - "rfc-9052#R-0057"
+          - "rfc-9052#R-0058"
+        layout: "CBOR array whose elements are COSE_Key maps; MUST have at least one element"
+    layout: "COSE_KeySet = [+COSE_Key]; a bare CBOR array of maps, media type application/cose-key-set, CoAP Content-Format 102"
+    notes: "Each element MUST be processed independently: an element that is malformed or uses a key type the application does not understand is ignored and the other keys are processed normally"
+  - name: Sig_structure
+    locator: "§4.4"
+    encoding: CBOR
+    cbor_tag: none
+    structure: array
+    fields:
+      - name: context
+        index: 0
+        type: tstr
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0030"
+          - "rfc-9052#R-0034"
+          - "rfc-9052#R-0035"
+          - "rfc-9052#R-0040"
+        layout: 'CBOR text string, exactly "Signature" for a signature using the COSE_Signature structure or "Signature1" for a signature using the COSE_Sign1 structure'
+      - name: body_protected
+        index: 1
+        type: empty_or_serialized_map
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0036"
+          - "rfc-9052#R-0040"
+        layout: "the protected attributes from the body structure, encoded in a bstr; a zero-length byte string if there are no protected attributes"
+      - name: sign_protected
+        index: 2
+        type: empty_or_serialized_map
+        required: false
+        constrained_by:
+          - "rfc-9052#R-0037"
+          - "rfc-9052#R-0040"
+        layout: "the protected attributes from the signer (COSE_Signature) structure, encoded in a bstr, zero-length if empty; this element is OMITTED ENTIRELY for COSE_Sign1, which shifts the two following elements down one index"
+      - name: external_aad
+        index: 3
+        type: bstr
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0033"
+          - "rfc-9052#R-0038"
+          - "rfc-9052#R-0040"
+        layout: "the externally supplied data, encoded in a bstr, defaulting to a zero-length byte string when not supplied; index 2 in the 4-element Signature1 form"
+      - name: payload
+        index: 4
+        type: bstr
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0039"
+          - "rfc-9052#R-0040"
+        layout: "the full payload encoded in a bstr, used independently of how it is transported, so detached content is included here in full; index 3 in the 4-element Signature1 form"
+    layout: "5-element CBOR array for the Signature context, 4-element for Signature1 with sign_protected absent; never transported, never tagged"
+    notes: "ToBeSigned is the Sig_structure encoded to a byte string using the §9 restrictions (definite lengths, minimum-length arguments), and the resulting signature goes into the signature field of COSE_Signature or COSE_Sign1"
+  - name: ToBeSigned
+    locator: "§4.4"
+    encoding: CBOR
+    cbor_tag: none
+    structure: bstr
+    fields:
+      - name: encoded Sig_structure
+        index: 0
+        type: "bstr .cbor Sig_structure"
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0041"
+          - "rfc-9052#R-0088"
+          - "rfc-9052#R-0089"
+          - "rfc-9052#R-0090"
+        layout: "the Sig_structure encoded to a byte string using the §9 restrictions: definite lengths, and every encoded argument at its minimum possible length"
+    layout: "not a CBOR structure of its own: it is the byte string that results from encoding the Sig_structure, and it is the value passed to the signature creation and verification algorithms as the value to sign"
+    notes: "Named by §4.4 step 2 of both the signing and the verification procedure. Never transported: it is reconstructed by the verifier from the received message plus the application's external_aad. No populated ToBeSigned byte string appears anywhere in RFC 9052, so its construction is untestable from this source alone"
+  - name: Enc_structure
+    locator: "§5.3"
+    encoding: CBOR
+    cbor_tag: none
+    structure: array
+    fields:
+      - name: context
+        index: 0
+        type: tstr
+        required: true
+        constrained_by: []
+        layout: 'CBOR text string, one of "Encrypt0" (content encryption of COSE_Encrypt0), "Encrypt" (first layer of COSE_Encrypt, i.e. content encryption), "Enc_Recipient" (a recipient encoding placed in a COSE_Encrypt), "Mac_Recipient" (a recipient encoding placed in a MACed message) or "Rec_Recipient" (a recipient encoding placed in a recipient structure)'
+      - name: protected
+        index: 1
+        type: empty_or_serialized_map
+        required: true
+        constrained_by: []
+        layout: "the protected attributes from the body structure, encoded in a bstr; a zero-length byte string if there are no protected attributes; the source names this the body structure even for the three recipient contexts"
+      - name: external_aad
+        index: 2
+        type: bstr
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0033"
+        layout: "the externally supplied data encoded in a bstr, defaulting to a zero-length byte string when not supplied"
+    layout: "3-element CBOR array; never transported, never tagged; there is no payload element because the plaintext is passed to the algorithm separately"
+    notes: "Encoded per §9 to give the AAD passed to the AEAD algorithm alongside K and the plaintext; AE algorithms use no Enc_structure at all and instead require that protected be a zero-length byte string and that no external AAD was supplied"
+  - name: AAD
+    locator: "§5.3"
+    encoding: CBOR
+    cbor_tag: none
+    structure: bstr
+    fields:
+      - name: encoded Enc_structure
+        index: 0
+        type: "bstr .cbor Enc_structure"
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0046"
+          - "rfc-9052#R-0088"
+          - "rfc-9052#R-0089"
+          - "rfc-9052#R-0090"
+        layout: "the Enc_structure encoded to a byte string using the §9 restrictions: definite lengths, and every encoded argument at its minimum possible length"
+    layout: "not a CBOR structure of its own: it is the byte string that results from encoding the Enc_structure, and it is the Additional Authenticated Data passed to the AEAD algorithm alongside K and the plaintext"
+    notes: "Named by §5.3 step 2 of both the encryption and the decryption procedure. AE algorithms (§5.4) build no AAD at all and instead require that protected be a zero-length byte string and that no external AAD was supplied. No populated AAD byte string appears anywhere in RFC 9052, not even for §C.3.3, the one example that supplies an external AAD value"
+  - name: MAC_structure
+    locator: "§6.3"
+    encoding: CBOR
+    cbor_tag: none
+    structure: array
+    fields:
+      - name: context
+        index: 0
+        type: tstr
+        required: true
+        constrained_by: []
+        layout: 'CBOR text string, exactly "MAC" for the COSE_Mac structure or "MAC0" for the COSE_Mac0 structure'
+      - name: protected
+        index: 1
+        type: empty_or_serialized_map
+        required: true
+        constrained_by: []
+        layout: "the protected attributes from the body structure; a zero-length bstr is used if there are no protected attributes"
+      - name: external_aad
+        index: 2
+        type: bstr
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0033"
+        layout: "the externally supplied data encoded as a bstr, defaulting to a zero-length byte string when not supplied"
+      - name: payload
+        index: 3
+        type: bstr
+        required: true
+        constrained_by: []
+        layout: "the full payload to be MACed, encoded in a bstr, used independently of how it is transported"
+    layout: "4-element CBOR array; never transported, never tagged; same element order as Sig_structure minus the signer-protected element"
+    notes: "ToBeMaced is the MAC_structure encoded per §9; the result goes into the tag field of COSE_Mac or COSE_Mac0, and for COSE_Mac the MAC key is then encrypted for each recipient"
+  - name: ToBeMaced
+    locator: "§6.3"
+    encoding: CBOR
+    cbor_tag: none
+    structure: bstr
+    fields:
+      - name: encoded MAC_structure
+        index: 0
+        type: "bstr .cbor MAC_structure"
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0052"
+          - "rfc-9052#R-0088"
+          - "rfc-9052#R-0089"
+          - "rfc-9052#R-0090"
+        layout: "the MAC_structure encoded to a byte string using the §9 restrictions: definite lengths, and every encoded argument at its minimum possible length"
+    layout: "not a CBOR structure of its own: it is the byte string that results from encoding the MAC_structure, and it is the value the MAC creation algorithm computes the MAC on"
+    notes: "Named by §6.3 step 2 of both the MAC computation and the MAC verification procedure. The MAC it yields goes into the tag field of COSE_Mac or COSE_Mac0. No populated ToBeMaced byte string appears anywhere in RFC 9052"
+  - name: CBOR encoding restrictions
+    locator: "§9"
+    encoding: CBOR
+    cbor_tag: none
+    structure: rules
+    fields:
+      - name: scope
+        index: 0
+        type: none
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0088"
+        layout: "the restrictions apply to the encoding of the Sig_structure, the Enc_structure and the MAC_structure, not to the transported messages"
+      - name: definite lengths and minimum-length arguments
+        index: 1
+        type: none
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0089"
+          - "rfc-9052#R-0090"
+        layout: "encoding MUST use definite lengths and the length of the encoded argument MUST be the minimum possible, so the integer 1 is encoded as 0x01 and not 0x1801"
+      - name: duplicate map labels
+        index: 2
+        type: none
+        required: true
+        constrained_by:
+          - "rfc-9052#R-0091"
+          - "rfc-9052#R-0092"
+        layout: "applications MUST NOT generate, and MUST NOT parse and process, messages with the same label used twice as a key in a single map; the parser may fail the parse or the application may check for duplicates itself"
+    layout: "not a structure; the deterministic-encoding rules that make the to-be-signed, to-be-MACed and to-be-encrypted byte strings reproducible"
+    notes: "Aligned with the Core Deterministic Encoding Requirements in §4.2.1 of RFC 8949; the transported protected bucket needs no canonical encoding because its bytes are carried verbatim inside the bstr"

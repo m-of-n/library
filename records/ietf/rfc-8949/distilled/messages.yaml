@@ -1,0 +1,837 @@
+record: rfc-8949
+reviewed_by: ""
+messages:
+  - name: data-item-head
+    locator: "§3"
+    encoding: CBOR
+    fields:
+      - name: major_type
+        type: uint3
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0002"
+        layout: "bits 7-5 (high-order 3 bits) of the initial byte; value 0..7; initial_byte = (major_type << 5) | additional_information"
+      - name: additional_information
+        type: uint5
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0003"
+          - "rfc-8949#R-0004"
+          - "rfc-8949#R-0012"
+        layout: "bits 4-0 (low-order 5 bits) of the initial byte; value 0..31"
+      - name: argument
+        type: uint64
+        required: false
+        constrained_by:
+          - "rfc-8949#R-0011"
+          - "rfc-8949#R-0012"
+        layout: "0, 1, 2, 4 or 8 bytes immediately following the initial byte; unsigned integer in network byte order (big-endian, most significant byte first)"
+    layout: "initial byte, then 0/1/2/4/8 argument bytes; head length is therefore 1, 2, 3, 5 or 9 bytes; any content follows the head"
+    notes: "Appendix B Table 7 enumerates all 256 initial-byte values; input that ends before the item completes is not well-formed, and bytes left after the outermost item mean the encoding is not a single well-formed item"
+  - name: argument-immediate
+    locator: "§3"
+    encoding: CBOR
+    fields:
+      - name: additional_information
+        type: uint5
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+          - "rfc-8949#R-0013"
+        layout: "bits 4-0 of the initial byte, value 0..23; the argument value IS this value"
+    layout: "head is exactly 1 byte; no argument bytes follow; argument range 0..23 inclusive"
+    notes: "Applies to every major type; in major type 7 these 24 initial bytes 0xe0..0xf7 denote simple values 0..23 rather than an integer argument"
+  - name: argument-uint8
+    locator: "§3"
+    encoding: CBOR
+    fields:
+      - name: additional_information
+        type: uint5
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+          - "rfc-8949#R-0014"
+        layout: "value 24 in bits 4-0 of the initial byte"
+      - name: argument
+        type: uint8
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0005"
+          - "rfc-8949#R-0012"
+          - "rfc-8949#R-0014"
+        layout: "the 1 byte following the initial byte; argument range 0..255"
+    layout: "2-byte head: initial byte with additional information 24, then one uint8_t"
+    notes: "Exception: for major type 7 the following byte is a simple value, not an integer argument, and only 32..255 are well-formed there"
+  - name: argument-uint16
+    locator: "§3"
+    encoding: CBOR
+    fields:
+      - name: additional_information
+        type: uint5
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+          - "rfc-8949#R-0015"
+        layout: "value 25 in bits 4-0 of the initial byte"
+      - name: argument
+        type: uint16
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+          - "rfc-8949#R-0015"
+        layout: "the 2 bytes following the initial byte, network byte order; argument range 0..65535"
+    layout: "3-byte head: initial byte with additional information 25, then one uint16_t big-endian"
+    notes: "Exception: for major type 7 these 2 bytes are an IEEE 754 binary16 value, not an integer argument"
+  - name: argument-uint32
+    locator: "§3"
+    encoding: CBOR
+    fields:
+      - name: additional_information
+        type: uint5
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+          - "rfc-8949#R-0016"
+        layout: "value 26 in bits 4-0 of the initial byte"
+      - name: argument
+        type: uint32
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+          - "rfc-8949#R-0016"
+        layout: "the 4 bytes following the initial byte, network byte order; argument range 0..4294967295"
+    layout: "5-byte head: initial byte with additional information 26, then one uint32_t big-endian"
+    notes: "Exception: for major type 7 these 4 bytes are an IEEE 754 binary32 value, not an integer argument"
+  - name: argument-uint64
+    locator: "§3"
+    encoding: CBOR
+    fields:
+      - name: additional_information
+        type: uint5
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "value 27 in bits 4-0 of the initial byte"
+      - name: argument
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "the 8 bytes following the initial byte, network byte order; argument range 0..18446744073709551615 (2^(64)-1)"
+    layout: "9-byte head: initial byte with additional information 27, then one uint64_t big-endian"
+    notes: "Exception: for major type 7 these 8 bytes are an IEEE 754 binary64 value, not an integer argument"
+  - name: additional-information-reserved
+    locator: "§3"
+    encoding: CBOR
+    fields:
+      - name: additional_information
+        type: uint5
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0003"
+          - "rfc-8949#R-0004"
+        layout: "values 28, 29 and 30 in bits 4-0 of the initial byte"
+    layout: "no argument is defined; the encoded item is not well-formed in the present version of CBOR, for every major type 0..7"
+    notes: "Reserved for future additions to the CBOR format; this is one of the three syntax-error classes listed in Appendix F"
+  - name: additional-information-indefinite
+    locator: "§3"
+    encoding: CBOR
+    fields:
+      - name: additional_information
+        type: uint5
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0003"
+          - "rfc-8949#R-0004"
+          - "rfc-8949#R-0018"
+        layout: "value 31 in bits 4-0 of the initial byte"
+    layout: "1-byte head with no argument value derived; not well-formed for major types 0, 1 and 6; indefinite length for major types 2, 3, 4 and 5; terminates an indefinite-length item for major type 7"
+    notes: "Table 2 summarises this per major type; the eight initial bytes are 0x1f, 0x3f, 0x5f, 0x7f, 0x9f, 0xbf, 0xdf, 0xff, of which 0x1f, 0x3f and 0xdf are not well-formed"
+  - name: major-type-0-unsigned-integer
+    locator: "§3.1"
+    encoding: CBOR
+    fields:
+      - name: value
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0002"
+          - "rfc-8949#R-0012"
+        layout: "the argument itself; range 0..18446744073709551615 (0..2^(64)-1) inclusive"
+    layout: "head only, no content; initial bytes 0x00..0x17 carry the value 0..23 immediately, 0x18 plus uint8_t, 0x19 plus uint16_t, 0x1a plus uint32_t, 0x1b plus uint64_t; 0x1c..0x1f are not well-formed"
+    notes: "Example: 10 is the one byte 0b000_01010 (0x0a); 500 is 0b000_11001 (0x19) followed by the two bytes 0x01f4"
+  - name: major-type-1-negative-integer
+    locator: "§3.1"
+    encoding: CBOR
+    fields:
+      - name: n
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "the argument n, range 0..18446744073709551615; the value of the data item is -1 - n"
+      - name: value
+        type: int
+        required: true
+        constrained_by: []
+        layout: "derived, not encoded: -1 - argument; range -18446744073709551616..-1 (-2^(64)..-1) inclusive"
+    layout: "head only, no content; initial bytes 0x20..0x37 encode -1..-24 immediately, 0x38 plus uint8_t for n (-25..-256), 0x39 plus uint16_t (-257..-65536), 0x3a plus uint32_t (-65537..-4294967296), 0x3b plus uint64_t; 0x3c..0x3f are not well-formed"
+    notes: "Example: -500 is 0b001_11001 (0x39) followed by the two bytes 0x01f3, which is 499 decimal, since -1 - 499 = -500"
+  - name: major-type-2-byte-string
+    locator: "§3.1"
+    encoding: CBOR
+    fields:
+      - name: n
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "the argument; the number of bytes of content that follow the head"
+      - name: content
+        type: bytes
+        required: true
+        constrained_by: []
+        layout: "exactly n bytes immediately after the head; arbitrary binary, no interpretation, no terminator"
+    layout: "head then n bytes; initial bytes 0x40..0x57 give lengths 0..23 immediately, 0x58 plus uint8_t for n, 0x59 plus uint16_t, 0x5a plus uint32_t, 0x5b plus uint64_t, 0x5f starts the indefinite-length form; 0x5c..0x5e are not well-formed"
+    notes: "Example: a 5-byte string starts 0b010_00101 (0x45) then 5 bytes; a 500-byte string is 0x59 then 0x01f4 then 500 bytes"
+  - name: major-type-3-text-string
+    locator: "§3.1"
+    encoding: CBOR
+    fields:
+      - name: n
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "the argument; the number of BYTES (not characters) of UTF-8 content that follow the head"
+      - name: content
+        type: utf8-bytes
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0023"
+        layout: "exactly n bytes of UTF-8 encoded text immediately after the head; no terminator, no length prefix inside"
+    layout: "head then n bytes; initial bytes 0x60..0x77 give lengths 0..23 immediately, 0x78 plus uint8_t for n, 0x79 plus uint16_t, 0x7a plus uint32_t, 0x7b plus uint64_t, 0x7f starts the indefinite-length form; 0x7c..0x7e are not well-formed"
+    notes: "A string containing an invalid UTF-8 sequence is well-formed but invalid; Unicode characters are never escaped, so U+000A is always the byte 0x0a and never 0x5c6e or 0x5c7530303061"
+  - name: major-type-4-array
+    locator: "§3.1"
+    encoding: CBOR
+    fields:
+      - name: n
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "the argument; the number of data items (elements) that follow the head"
+      - name: elements
+        type: sequence-of-data-item
+        required: true
+        constrained_by: []
+        layout: "exactly n complete encoded data items concatenated after the head; each is self-delimiting and may be of any type, including nested arrays and maps"
+    layout: "head then n data items; initial bytes 0x80..0x97 give counts 0..23 immediately, 0x98 plus uint8_t for n, 0x99 plus uint16_t, 0x9a plus uint32_t, 0x9b plus uint64_t, 0x9f starts the indefinite-length form; 0x9c..0x9e are not well-formed"
+    notes: "Elements need not share a type; example: 0b100_01010 (0x8a) followed by the 10 element items; the definite-length encoding of [1, [2, 3], [4, 5]] is 0x8301820203820405"
+  - name: major-type-5-map
+    locator: "§3.1"
+    encoding: CBOR
+    fields:
+      - name: n
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "the argument; the number of PAIRS of data items, so 2n data items follow the head"
+      - name: entries
+        type: sequence-of-key-value-pairs
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0001"
+          - "rfc-8949#R-0019"
+          - "rfc-8949#R-0020"
+          - "rfc-8949#R-0023"
+          - "rfc-8949#R-0029"
+          - "rfc-8949#R-0030"
+          - "rfc-8949#R-0031"
+        layout: "2n data items after the head in the order key1, value1, key2, value2, and so on; each key is immediately followed by its value"
+    layout: "head then 2n data items; initial bytes 0xa0..0xb7 give pair counts 0..23 immediately, 0xb8 plus uint8_t for n, 0xb9 plus uint16_t, 0xba plus uint32_t, 0xbb plus uint64_t, 0xbf starts the indefinite-length form; 0xbc..0xbe are not well-formed"
+    notes: "The item total is always even, so a map with an odd number of items is not well-formed; duplicate keys may be well-formed but are not valid and cause indeterminate decoding; a 9-pair map is 0b101_01001 (0xa9) followed by 18 items"
+  - name: major-type-6-tag
+    locator: "§3.1, §3.4"
+    encoding: CBOR
+    fields:
+      - name: tag_number
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0007"
+          - "rfc-8949#R-0012"
+        layout: "the argument; an integer in the range 0..18446744073709551615 (0..2^(64)-1) inclusive"
+      - name: tag_content
+        type: data-item
+        required: true
+        constrained_by: []
+        layout: "exactly one complete encoded data item immediately following the head; further structure, if the tag needs it, lives inside that single item"
+    layout: "head then exactly 1 data item; initial bytes 0xc0..0xd7 carry tag numbers 0..23 immediately, 0xd8 plus uint8_t (tag numbers 24..255), 0xd9 plus uint16_t (256..65535), 0xda plus uint32_t, 0xdb plus uint64_t; 0xdc..0xdf are not well-formed"
+    notes: "Tags nest, and an outer tag applies to the result of applying the inner tag; understanding tag semantics is optional for a decoder, which may hand the tag number and content to the application uninterpreted"
+  - name: major-type-7-simple-and-float
+    locator: "§3.1, §3.3"
+    encoding: CBOR
+    fields:
+      - name: additional_information
+        type: uint5
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0005"
+          - "rfc-8949#R-0017"
+        layout: "bits 4-0 of the initial byte; each value has its own separate meaning per Table 3: 0..23 simple value, 24 one-byte simple value extension, 25 binary16, 26 binary32, 27 binary64, 28..30 reserved and not well-formed, 31 the stop code"
+    layout: "initial bytes 0xe0..0xff; items of this major type carry no content data, all information is in the head; head lengths are 1 byte (0xe0..0xf7, 0xff), 2 bytes (0xf8), 3 bytes (0xf9), 5 bytes (0xfa), 9 bytes (0xfb)"
+    notes: 'Covers simple values, the three IEEE 754 float widths, and the "break" stop code; many values in major types 6 and 7 are reserved for future specification'
+  - name: simple-value-immediate
+    locator: "§3.3"
+    encoding: CBOR
+    fields:
+      - name: simple_value
+        type: uint8
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0005"
+        layout: "equal to the 5-bit additional information, range 0..23; initial bytes 0xe0..0xf7"
+    layout: "one byte only, 0b111_00000..0b111_10111; no following bytes and no content"
+    notes: "Table 4 assignments in this range: 0..19 unassigned, 20 false (0xf4), 21 true (0xf5), 22 null (0xf6), 23 undefined (0xf7); a simple value is identified by a number but is distinct from that number"
+  - name: simple-value-one-byte-extension
+    locator: "§3.3"
+    encoding: CBOR
+    fields:
+      - name: additional_information
+        type: uint5
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0005"
+        layout: "value 24, giving the initial byte 0xf8"
+      - name: simple_value
+        type: uint8
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0005"
+        layout: "the single byte following 0xf8; only values 32..255 (0x20..0xff) are used, and a following byte less than 0x20 (32 decimal) is not well-formed"
+    layout: "exactly 2 bytes: 0xf8 then one byte holding the simple value; no content follows"
+    notes: "Table 4: 24..31 reserved, 32..255 unassigned; an encoder MUST NOT issue 0xf8 followed by a byte below 0x20, so false, true, null and undefined have only their one-byte forms and each simple value has a single representation variant"
+  - name: float-half-binary16
+    locator: "§3.3, Appendix D"
+    encoding: CBOR
+    fields:
+      - name: additional_information
+        type: uint5
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0017"
+        layout: "value 25, giving the initial byte 0xf9"
+      - name: value
+        type: ieee754-binary16
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0017"
+        layout: "the 2 bytes following 0xf9 in network byte order; as a 16-bit word: sign in bit 15 (mask 0x8000), exponent in bits 14-10 (mask 0x7c00, shift 10, 5 bits), significand in bits 9-0 (mask 0x03ff, 10 bits)"
+    layout: "exactly 3 bytes: 0xf9 then 16 bits of IEEE 754 half precision, most significant byte first"
+    notes: "Appendix D decoder: exponent 0 means value = ldexp(significand, -24) (subnormal), exponent 1..30 means ldexp(significand + 1024, exponent - 25), exponent 31 means Infinity when the significand is 0 and NaN otherwise; the sign bit negates"
+  - name: float-single-binary32
+    locator: "§3.3"
+    encoding: CBOR
+    fields:
+      - name: additional_information
+        type: uint5
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0017"
+        layout: "value 26, giving the initial byte 0xfa"
+      - name: value
+        type: ieee754-binary32
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0017"
+        layout: "the 4 bytes following 0xfa in network byte order; IEEE 754 binary32 layout: sign in bit 31, 8 exponent bits 30-23, 23 significand bits 22-0"
+    layout: "exactly 5 bytes: 0xfa then 32 bits of IEEE 754 single precision, most significant byte first"
+    notes: "The RFC states only the width and the IEEE 754 reference for this format; the field split above is IEEE 754 binary32, and Appendix D shows it decoded with a big-endian unpack of the 4 bytes"
+  - name: float-double-binary64
+    locator: "§3.3"
+    encoding: CBOR
+    fields:
+      - name: additional_information
+        type: uint5
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0017"
+        layout: "value 27, giving the initial byte 0xfb"
+      - name: value
+        type: ieee754-binary64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0017"
+        layout: "the 8 bytes following 0xfb in network byte order; IEEE 754 binary64 layout: sign in bit 63, 11 exponent bits 62-52, 52 significand bits 51-0"
+    layout: "exactly 9 bytes: 0xfb then 64 bits of IEEE 754 double precision, most significant byte first"
+    notes: "Floating-point values are distinct from integers in the generic data model even at equal numeric value, and the number of bytes used is not visible at that level"
+  - name: break-stop-code
+    locator: "§3.2.1"
+    encoding: CBOR
+    fields:
+      - name: initial_byte
+        type: uint8
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0003"
+          - "rfc-8949#R-0004"
+          - "rfc-8949#R-0018"
+        layout: "the single byte 0xff (0b111_11111): major type 7 with additional information 31"
+    layout: "exactly 1 byte, no argument and no content"
+    notes: 'Not itself a data item, only a syntactic feature closing one indefinite-length item; if it appears where a data item is expected other than directly inside an indefinite-length string, array or map, the enclosing item is not well-formed, and it may not stand in for the value after a map key'
+  - name: indefinite-length-byte-string
+    locator: "§3.2.3"
+    encoding: CBOR
+    fields:
+      - name: initial_byte
+        type: uint8
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0018"
+        layout: "0x5f (0b010_11111): major type 2 with additional information 31; no argument follows"
+      - name: chunks
+        type: sequence-of-definite-length-byte-string
+        required: false
+        constrained_by: []
+        layout: "zero or more complete definite-length major type 2 items, each with its own head and content, concatenated directly after 0x5f"
+      - name: stop_code
+        type: uint8
+        required: true
+        constrained_by: []
+        layout: "the byte 0xff closing the item"
+    layout: "0x5f, then zero or more definite-length byte strings, then 0xff; the decoded value is the concatenation of the chunk contents"
+    notes: 'With no chunks the value is the empty byte string; zero-length chunks are permitted; any item between the indicator and the stop code that is not a definite-length byte string makes the item not well-formed, and nesting an indefinite-length string as a chunk is not allowed; example 0x5f44aabbccdd43eeff99ff decodes to the seven bytes 0xaabbccddeeff99'
+  - name: indefinite-length-text-string
+    locator: "§3.2.3"
+    encoding: CBOR
+    fields:
+      - name: initial_byte
+        type: uint8
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0018"
+        layout: "0x7f (0b011_11111): major type 3 with additional information 31; no argument follows"
+      - name: chunks
+        type: sequence-of-definite-length-text-string
+        required: false
+        constrained_by:
+          - "rfc-8949#R-0023"
+        layout: "zero or more complete definite-length major type 3 items concatenated directly after 0x7f"
+      - name: stop_code
+        type: uint8
+        required: true
+        constrained_by: []
+        layout: "the byte 0xff closing the item"
+    layout: "0x7f, then zero or more definite-length UTF-8 strings, then 0xff; the decoded value is the concatenation of the chunk contents"
+    notes: "With no chunks the value is the empty text string; if any contained definite-length text string is invalid the whole item is invalid, so the UTF-8 bytes of one code point cannot be split across chunks and a chunk may start only at a code point boundary"
+  - name: indefinite-length-array
+    locator: "§3.2.2"
+    encoding: CBOR
+    fields:
+      - name: initial_byte
+        type: uint8
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0018"
+        layout: "0x9f (0b100_11111): major type 4 with additional information 31; no argument, so no element count is transmitted"
+      - name: elements
+        type: sequence-of-data-item
+        required: false
+        constrained_by: []
+        layout: "an arbitrary-length sequence of zero or more complete data items of any type, directly after 0x9f"
+      - name: stop_code
+        type: uint8
+        required: true
+        constrained_by: []
+        layout: "the byte 0xff closing this array only"
+    layout: "0x9f, then zero or more data items, then 0xff; otherwise identical on the wire to a definite-length array"
+    notes: 'Nesting is unrestricted and each stop code terminates exactly one item, so the number of stop codes needed equals the number of indefinite-length heads opened; example 0x9f018202039f0405ffff is [1, [2, 3], [4, 5]]'
+  - name: indefinite-length-map
+    locator: "§3.2.2"
+    encoding: CBOR
+    fields:
+      - name: initial_byte
+        type: uint8
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0018"
+        layout: "0xbf (0b101_11111): major type 5 with additional information 31; no argument, so no pair count is transmitted"
+      - name: entries
+        type: sequence-of-key-value-pairs
+        required: false
+        constrained_by:
+          - "rfc-8949#R-0001"
+          - "rfc-8949#R-0019"
+          - "rfc-8949#R-0020"
+          - "rfc-8949#R-0023"
+          - "rfc-8949#R-0029"
+          - "rfc-8949#R-0030"
+          - "rfc-8949#R-0031"
+        layout: "zero or more key/value pairs, each key immediately followed by its value, directly after 0xbf"
+      - name: stop_code
+        type: uint8
+        required: true
+        constrained_by: []
+        layout: "the byte 0xff closing this map only, permitted only where a key would start"
+    layout: "0xbf, then zero or more key/value data item pairs, then 0xff"
+    notes: 'A stop code appearing after a key, in place of that value, makes the map not well-formed; example 0xbf6346756ef563416d7421ff is the two-pair map with "Fun" true and "Amt" -2'
+  - name: argument-preferred-shortest-form
+    locator: "§4.1, §4.2.1"
+    encoding: CBOR
+    fields:
+      - name: argument_width
+        type: enum-of-head-widths
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0011"
+          - "rfc-8949#R-0012"
+          - "rfc-8949#R-0013"
+          - "rfc-8949#R-0014"
+          - "rfc-8949#R-0015"
+          - "rfc-8949#R-0016"
+          - "rfc-8949#R-0017"
+        layout: "the shortest additional information that represents the argument: 0..23 in the initial byte, 24..255 with uint8_t, 256..65535 with uint16_t, 65536..4294967295 with uint32_t, larger with uint64_t"
+      - name: negative_integer_ranges
+        type: ranges
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0011"
+          - "rfc-8949#R-0012"
+          - "rfc-8949#R-0013"
+          - "rfc-8949#R-0014"
+          - "rfc-8949#R-0015"
+          - "rfc-8949#R-0016"
+        layout: "for major type 1 the same widths by value: -1..-24 in the initial byte, -25..-256 with uint8_t, -257..-65536 with uint16_t, -65537..-4294967296 with uint32_t, beyond that uint64_t"
+    layout: "applies to integer values, to lengths and counts in major types 2 through 5, and to tag numbers in major type 6; floating-point values use the shortest of binary16, binary32 or binary64 that preserves the value"
+    notes: "Preferred serialization also prefers definite-length encoding when the length is known at the start; 5.5 is 0xf94580, 5555.5 is 0xfa45ad9c00, 1.5 is 0xf93e00, 1000000.5 is 0xfa49742408, and a common single NaN encoding is 0xf97e00"
+  - name: tag-0-standard-date-time-string
+    locator: "§3.4.1"
+    encoding: CBOR
+    fields:
+      - name: tag_number
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "0, encoded in the initial byte 0xc0 (major type 6, additional information 0)"
+      - name: tag_content
+        type: text-string
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0023"
+        layout: "one major type 3 item holding an RFC 3339 date-time production as refined by Section 3.3 of RFC 4287"
+    layout: "0xc0 followed by one text string data item"
+    notes: "A nested item of another type, or a text string that does not match the RFC 4287 format, is invalid"
+  - name: tag-1-epoch-based-date-time
+    locator: "§3.4.2"
+    encoding: CBOR
+    fields:
+      - name: tag_number
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "1, encoded in the initial byte 0xc1"
+      - name: tag_content
+        type: integer-or-float
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0008"
+          - "rfc-8949#R-0023"
+        layout: "one item of major type 0 or major type 1, or major type 7 with additional information 25, 26 or 27; any other contained type is invalid"
+    layout: "0xc1 followed by one numeric data item counting seconds from 1970-01-01T00:00Z UTC to the represented point in civil time"
+    notes: "Nonnegative values follow POSIX time; negative values and non-finites are application defined; fractional seconds need a float, generally binary64, and times beyond early 2106 need 64-bit integer support"
+  - name: tag-2-unsigned-bignum
+    locator: "§3.4.3"
+    encoding: CBOR
+    fields:
+      - name: tag_number
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "2, encoded in the initial byte 0xc2"
+      - name: tag_content
+        type: byte-string
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0009"
+          - "rfc-8949#R-0023"
+        layout: "one major type 2 item whose bytes are an unsigned integer n in network byte order, arbitrary length; contained items of other types are invalid"
+    layout: "0xc2 followed by one byte string; the value is n"
+    notes: "Preferred serialization drops leading zero bytes and prefers major type 0 whenever the value fits, so the empty byte string does not occur under preferred serialization, but decoders MUST accept leading zeroes; 2^(64) is 0xc249010000000000000000"
+  - name: tag-3-negative-bignum
+    locator: "§3.4.3"
+    encoding: CBOR
+    fields:
+      - name: tag_number
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "3, encoded in the initial byte 0xc3"
+      - name: tag_content
+        type: byte-string
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0009"
+          - "rfc-8949#R-0023"
+        layout: "one major type 2 item whose bytes are an unsigned integer n in network byte order; contained items of other types are invalid"
+    layout: "0xc3 followed by one byte string; the value is -1 - n"
+    notes: "Same leading-zero and preferred-serialization rules as tag number 2; choosing a bignum over a basic integer carries no application semantics"
+  - name: tag-4-decimal-fraction
+    locator: "§3.4.4"
+    encoding: CBOR
+    fields:
+      - name: tag_number
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "4, encoded in the initial byte 0xc4"
+      - name: tag_content
+        type: array
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0023"
+        layout: "one major type 4 item of exactly two elements; element 0 is the exponent e, element 1 is the mantissa m"
+      - name: exponent
+        type: integer
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0010"
+          - "rfc-8949#R-0023"
+        layout: "first array element; MUST be major type 0 or 1, never a bignum"
+      - name: mantissa
+        type: integer-or-bignum
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0010"
+          - "rfc-8949#R-0023"
+        layout: "second array element; major type 0 or 1, or a tag number 2 or 3 bignum"
+    layout: "0xc4 followed by a 2-element array [e, m]; the value is m*(10^(e)); other contained structures are invalid"
+    notes: "Example: 273.15 is 0xc48221196ab3, that is tag 4, array of 2, -2, then 27315 as a two-byte argument; no representation of Infinity, -Infinity or NaN exists here, so the half-precision forms are used instead"
+  - name: tag-5-bigfloat
+    locator: "§3.4.4"
+    encoding: CBOR
+    fields:
+      - name: tag_number
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "5, encoded in the initial byte 0xc5"
+      - name: tag_content
+        type: array
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0023"
+        layout: "one major type 4 item of exactly two elements; element 0 is the exponent e, element 1 is the mantissa m"
+      - name: exponent
+        type: integer
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0010"
+          - "rfc-8949#R-0023"
+        layout: "first array element; MUST be major type 0 or 1, never a bignum"
+      - name: mantissa
+        type: integer-or-bignum
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0010"
+          - "rfc-8949#R-0023"
+        layout: "second array element; major type 0 or 1, or a tag number 2 or 3 bignum"
+    layout: "0xc5 followed by a 2-element array [e, m]; the value is m*(2^(e)); other contained structures are invalid"
+    notes: "Example: 1.5 is 0xc5822003, that is tag 5, array of 2, -1, then 3; bigfloats can exceed the range and precision of the three IEEE 754 formats CBOR carries directly"
+  - name: tag-21-expected-conversion-base64url
+    locator: "§3.4.5.2"
+    encoding: CBOR
+    fields:
+      - name: tag_number
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "21, encoded in the initial byte 0xd5"
+      - name: tag_content
+        type: data-item
+        required: true
+        constrained_by: []
+        layout: "any single data item; when it is not a byte string the hint applies to every byte string inside it, except those inside a nested item that itself carries an expected-conversion tag"
+    layout: "0xd5 followed by one data item; a content hint only, it does not extend the generic data model"
+    notes: "Suggests conversion to RFC 4648 Section 5 base64url without padding, so all trailing equals signs are removed, padding bits zero, no line breaks or whitespace added; the empty byte string converts to the empty text string"
+  - name: tag-22-expected-conversion-base64
+    locator: "§3.4.5.2"
+    encoding: CBOR
+    fields:
+      - name: tag_number
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "22, encoded in the initial byte 0xd6"
+      - name: tag_content
+        type: data-item
+        required: true
+        constrained_by: []
+        layout: "any single data item, with the same propagation rule to contained byte strings as tag number 21"
+    layout: "0xd6 followed by one data item; a content hint only"
+    notes: "Suggests classical RFC 4648 Section 4 base64 with padding as defined there, padding bits zero, conversion performed on the byte string contents with nothing added; the empty byte string converts to the empty text string"
+  - name: tag-23-expected-conversion-base16
+    locator: "§3.4.5.2"
+    encoding: CBOR
+    fields:
+      - name: tag_number
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "23, encoded in the initial byte 0xd7"
+      - name: tag_content
+        type: data-item
+        required: true
+        constrained_by: []
+        layout: "any single data item, with the same propagation rule to contained byte strings as tag number 21"
+    layout: "0xd7 followed by one data item; a content hint only"
+    notes: "Suggests RFC 4648 Section 8 base16 (hex) with uppercase alphabetics; the empty byte string converts to the empty text string"
+  - name: tag-24-encoded-cbor-data-item
+    locator: "§3.4.5.1"
+    encoding: CBOR
+    fields:
+      - name: tag_number
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "24, encoded as the two head bytes 0xd8 0x18 (major type 6, additional information 24, argument 24)"
+      - name: tag_content
+        type: byte-string
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0023"
+        layout: "one major type 2 item whose bytes are themselves a single encoded CBOR data item; contained items that are not byte strings are invalid"
+    layout: "0xd818 followed by one byte string carrying an embedded encoded CBOR data item"
+    notes: "The byte string is valid if it encodes a well-formed CBOR data item; checking the validity of the embedded item is not required for tag validity, though a generic decoder may offer it as an option"
+  - name: tag-32-uri
+    locator: "§3.4.5.3"
+    encoding: CBOR
+    fields:
+      - name: tag_number
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "32, encoded as the two head bytes 0xd8 0x20"
+      - name: tag_content
+        type: text-string
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0023"
+        layout: "one major type 3 item holding an RFC 3986 URI"
+    layout: "0xd820 followed by one text string"
+    notes: "If the text string does not match the URI-reference production the string is invalid"
+  - name: tag-33-base64url-encoded-text
+    locator: "§3.4.5.3"
+    encoding: CBOR
+    fields:
+      - name: tag_number
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "33, encoded as the two head bytes 0xd8 0x21"
+      - name: tag_content
+        type: text-string
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0023"
+        layout: "one major type 3 item holding base64url-encoded text, alphabet per RFC 4648 Section 5; the data travels already base-encoded, unlike tag number 21"
+    layout: "0xd821 followed by one text string"
+    notes: "Invalid if the text has non-alphabet characters, only 1 alphabet character in the last block of 4, nonzero padding bits in a 2- or 3-character block, or any padding characters at all"
+  - name: tag-34-base64-encoded-text
+    locator: "§3.4.5.3"
+    encoding: CBOR
+    fields:
+      - name: tag_number
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "34, encoded as the two head bytes 0xd8 0x22"
+      - name: tag_content
+        type: text-string
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0023"
+        layout: "one major type 3 item holding base64-encoded text, alphabet per RFC 4648 Section 4; the data travels already base-encoded, unlike tag number 22"
+    layout: "0xd822 followed by one text string"
+    notes: "Invalid if the text has non-alphabet characters, only 1 alphabet character in the last block of 4, nonzero padding bits in a 2- or 3-character block, or the wrong number of padding characters"
+  - name: tag-35-regular-expression
+    locator: "§3.4.5.3"
+    encoding: CBOR
+    fields:
+      - name: tag_number
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "35, encoded as the two head bytes 0xd8 0x23"
+      - name: tag_content
+        type: text-string-or-byte-string
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0023"
+        layout: "one string value, which in CBOR is major type 2 or major type 3; any contained string value needs to be valid only at the CBOR tag level, since the tag was defined openly in RFC 7049"
+    layout: "0xd823 followed by one string data item holding a regular expression"
+    notes: "Defined in RFC 7049 for PCRE/PCRE2 or ECMA262 syntax and deliberately left out of Table 5 here; RFC 8949 does not update the references, Appendix G says it does not define the tag at all, and it never narrows 'string value' to a text string, so the text-string-only reading comes from the RFC 7049 registration rather than from this source"
+  - name: tag-36-mime-message
+    locator: "§3.4.5.3"
+    encoding: CBOR
+    fields:
+      - name: tag_number
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "36, encoded as the two head bytes 0xd8 0x24"
+      - name: tag_content
+        type: text-string
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0023"
+        layout: "one major type 3 item holding a complete RFC 2045 MIME message including all headers"
+    layout: "0xd824 followed by one text string"
+    notes: "A text string that is not a valid MIME message is invalid, though the check may be too onerous for a generic decoder to offer; binary MIME messages cannot be carried in a text string, and registered tag number 257 is the byte string counterpart"
+  - name: tag-55799-self-described-cbor
+    locator: "§3.4.6"
+    encoding: CBOR
+    fields:
+      - name: tag_number
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0012"
+        layout: "55799, encoded as the three head bytes 0xd9 0xd9 0xf7 (major type 6, additional information 25, uint16 argument 0xd9f7)"
+      - name: tag_content
+        type: data-item
+        required: true
+        constrained_by: []
+        layout: "any single data item; the semantics of the content are exactly identical to the semantics of that item untagged"
+    layout: "the 3-byte head 0xd9d9f7 followed by one data item, intended at the very start of a stored encoded CBOR data item"
+    notes: "A file magic number rather than a semantic tag: 0xd9d9f7 is not a valid start of Unicode text in any Unicode encoding when followed by a valid CBOR data item, and never begins a JSON text"
+  - name: tag-numbers-all-ones-reserved
+    locator: "§3.4"
+    encoding: CBOR
+    fields:
+      - name: tag_number
+        type: uint64
+        required: true
+        constrained_by:
+          - "rfc-8949#R-0007"
+          - "rfc-8949#R-0012"
+        layout: "65535, 4294967295 or 18446744073709551615, that is binary all-ones in 16, 32 and 64 bits; heads 0xd9ffff, 0xdaffffffff and 0xdbffffffffffffffff"
+    layout: "an ordinary major type 6 head followed by one data item, but not intended to occur in actual CBOR data items"
+    notes: "Allocated so implementers can use a single integer field to indicate either a specific tag or the absence of a tag; implementations MAY flag an actual occurrence as an error"
