@@ -3,6 +3,13 @@
 Workflow, branches, worktrees and PR discipline live in the **m-of-n** repo's
 `CONTRIBUTING.md`. They apply here identically.
 
+> **Work in this repo — never in `mofn/library/`.** That directory is a
+> submodule checkout on a **detached HEAD**: commits made there belong to no
+> branch and are orphaned by the next `git checkout`, `git submodule update` or
+> `bin/lib-sync`. A 49-record CBOR/COSE sweep was nearly lost this way (#12,
+> rescued as #13). Clone `m-of-n/library` and open *that* as your project —
+> which is also the only way this repo's skills load.
+
 Library-specific:
 
 1. `bin/ingest <type> <source> --body <org>` — never hand-create a record
