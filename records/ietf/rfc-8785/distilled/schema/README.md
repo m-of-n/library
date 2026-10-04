@@ -87,10 +87,11 @@ artifact.
 
 ## What was checked
 
-Pass 1 has no CDDL, ABNF or JSON Schema validator available in this workspace,
-so **no derived file here has been run through a real parser for its own
-language**, and that is the first job for anyone who has one. What was done
-instead is weaker but mechanical, not assertion:
+Pass 1 had no CDDL, ABNF or JSON Schema validator available in this workspace,
+so at the end of pass 1 **no derived file here had been run through a real
+parser for its own language**. Pass 3 closed that for both derived files, and
+the two results are recorded at the end of this section; everything between
+here and there is pass 1's work, which is weaker but mechanical, not assertion:
 
 - **The verbatim region was diffed against lines 518–579 of the cached source:
   byte-identical** (sha256 of the region
@@ -140,6 +141,32 @@ instead is weaker but mechanical, not assertion:
   spellings (`\u20ac`, `\ufb33`, `\ud83d\ude00`, `\u00f6`) from the literal
   characters they had been written as.
 
+**Pass 3, with real tooling installed.** Both outstanding parser checks ran:
+
+- **`i-json-input.schema.json` was validated against the JSON Schema 2020-12
+  metaschema** with `jsonschema` 4.26.0 (Python). `Draft202012Validator` is the
+  class the `$schema` keyword selects; `check_schema` raises nothing, and an
+  explicit `iter_errors` run against the full metaschema reports **0 errors** —
+  not merely the first, the complete list. The schema then instantiates and
+  every `$ref` resolves. **No schema-level error was found and nothing was
+  changed.** The `$id` remains a placeholder (`library#44`); that is a
+  publication decision, not a validity defect, and the metaschema does not care.
+- **`canonical-output.abnf` was transcribed rule-for-rule into an executable
+  validator a second time**, independently of pass 1's transcription, and
+  guarded by 36 positive and 31 negative controls before use — including `-0`,
+  `1E+30`, `1e30`, `1e+0`, `0.0000001`, an uppercase-hex escape, a `\u0008`
+  written long, an escaped solidus, an escaped non-ASCII character, a lone
+  surrogate and whitespace after a name-separator, all correctly rejected. All
+  67 controls behave. This is a transcription check, not an RFC 5234 tool run;
+  the RFC 5234 conformance of the file itself is the separate `jcs-char` /
+  `digit0-9` finding recorded in `../README.md`.
+- **Independent confirmation of gap item 4 below.** The 24 serializing Appendix
+  B rows were decoded from their IEEE 754 bit patterns and re-serialized by a
+  real ECMAScript engine (`String(d)` under Node). **24 of 24 reproduce the
+  vector's `expected` exactly.** The grammar still cannot check the digits —
+  that is the gap — but the corpus standing in for it now has an engine behind
+  it.
+
 ## What no schema here can express
 
 Stated gaps, not omissions. Each is a real RFC 8785 rule that the derived files
@@ -150,7 +177,7 @@ cannot decide; each lives in full in the file it belongs to
 
 **Unexpressible in *both* derived schema languages:**
 
-1. **No duplicate property names** (§3.1, via I-JSON). Not context-free, so no
+1. **No duplicate property names** (§3.1, via I-JSON — `rfc-8785#R-0003`). Not context-free, so no
    ABNF; and the JSON Schema data model has already collapsed duplicates
    last-wins before a validator runs, so no JSON Schema either. Confirmed:
    `{"a":1,"a":2}` parses to `{"a": 2}` and validates cleanly. **Must be
@@ -159,55 +186,75 @@ cannot decide; each lives in full in the file it belongs to
 
 **Unexpressible in the output grammar:**
 
-2. **Member sort order** (§3.2.3) — the largest gap in the ABNF. See
-   `sorting.md`.
-3. **"Array element order MUST NOT be changed"** (§3.2.3) — a relation between
+2. **Member sort order** (§3.2.3 — `rfc-8785#R-0020`, `rfc-8785#R-0021`,
+   `rfc-8785#R-0023`; the sort *predicate* those three invoke is
+   `rfc-8785#R-0025` through `rfc-8785#R-0029`) — the largest gap in the ABNF.
+   See `sorting.md`.
+3. **"Array element order MUST NOT be changed"** (§3.2.3 — `rfc-8785#R-0024`,
+   with the scan obligation `rfc-8785#R-0022`) — a relation between
    input and output; only a differential test can see it.
 4. **That a serialized number is the correct shortest round-trip decimal for
-   its double** (§3.2.2.3). The grammar pins the shape, never the value. A
+   its double** (§3.2.2.3 — `rfc-8785#R-0018`). The grammar pins the shape,
+   never the value. A
    serializer emitting `1e+31` where `1e+30` was required passes. This is why
    Appendix B exists, and it belongs to `../examples/`.
-5. **The digit-level consequences of minimal *k***: that trailing positions in
+5. **The digit-level consequences of minimal *k*** (§3.2.2.3 —
+   `rfc-8785#R-0018`, the same requirement as item 4, whose substance is the
+   ECMA-262 algorithm RFC 8785 declines to reproduce): that trailing positions in
    `int-form` are zeros, that no fractional part ends in `0`, and that there
    are at most 17 significant digits. Confirmed as a real gap — the grammar
    accepts `1.0`, `4.50`, `0.50` and `1.230`, none of which JCS can emit.
 6. **"MUST … terminate with an appropriate error"** for lone surrogates
-   (§3.2.2.2) and NaN/Infinity (§3.2.2.3). The grammar excludes all three from
+   (§3.2.2.2 — `rfc-8785#R-0017`) and NaN/Infinity (§3.2.2.3 —
+   `rfc-8785#R-0019`). The grammar excludes all three from
    the output language, but non-derivability is not termination: an
    implementation that *silently drops* a lone surrogate emits output this
    grammar accepts while violating the MUST.
-7. **Byte order mark.** RFC 8785 never mentions one. The two ABNF layers
-   together exclude a leading `ef bb bf`, but by inheritance from RFC 8259
-   §8.1, not by any JCS statement. Inherited-not-stated.
+7. **Byte order mark** (**no requirement id — and that absence is the gap**).
+   RFC 8785 never mentions one, so no `rfc-8785#R-NNNN` exists to cite: this is
+   the only one of the thirteen that names no requirement, because there is no
+   requirement to name. The nearest JCS statement is `rfc-8785#R-0030`
+   ("MUST be encoded in UTF-8"), which does not reach the question. The two
+   ABNF layers together exclude a leading `ef bb bf`, but by inheritance from
+   RFC 8259 §8.1, not by any JCS statement. Inherited-not-stated.
 
 **Unexpressible in the input schema:**
 
-8. **"MUST be expressible as IEEE 754 [IEEE754] double-precision"** (§3.1) —
+8. **"MUST be expressible as IEEE 754 [IEEE754] double-precision"** (§3.1 —
+   `rfc-8785#R-0005`) —
    only the magnitude bound is expressible. The round-trip-exactness half is not, and
    most validators have already parsed the literal to a double, destroying the
    evidence. Confirmed with the document's own example: Appendix D's
    `int64Max: 9223372036854775807` **validates cleanly** and is not expressible
    as a double (it becomes `9223372036854775808`).
-9. **Lone surrogates** (§3.1 / §3.2.2.2 note) — no portable JSON Schema
+9. **Lone surrogates** (§3.1 / §3.2.2.2 note — `rfc-8785#R-0004` for the input
+   rule, `rfc-8785#R-0017` for the termination duty) — no portable JSON Schema
    expression. JSON Schema 2020-12 does not require the ECMA-262 `u` flag, so
    the obvious pattern means different things in different validators, and most
    host parsers have already replaced or rejected the defect before validation.
    Deliberately **not** faked with a pattern. Note the asymmetry: the output
    ABNF *can* exclude lone surrogates structurally, because it sees octets.
 10. **"Parsed JSON string data MUST NOT be altered during subsequent
-    serializations"** (§3.1, Appendix E) and the §3.1 Note forbidding Unicode
-    normalization. Both are properties of the **pipeline**, not of any
+    serializations"** (§3.1, Appendix E — `rfc-8785#R-0007`, with
+    `rfc-8785#R-0041` for the Appendix E stream/schema-parser half) and the
+    §3.1 Note forbidding Unicode normalization (`rfc-8785#R-0008`).
+    Both are properties of the **pipeline**, not of any
     document. Confirmed: Appendix E's own failure case — `"055"` → `"55"`,
     `"2019-01-28T07:45:10Z"` → `"2019-01-28T07:45:10.000Z"` under a
     reviver-based parse — validates perfectly both before and after, as do NFC
     and NFD spellings of the same text.
-11. **NaN / Infinity** (§3.2.2.3, Appendix B note 3) — not representable in the
+11. **NaN / Infinity** (§3.2.2.3, Appendix B note 3 — `rfc-8785#R-0019`) — not
+    representable in the
     JSON Schema data model at all; enforcement belongs to the parser.
-12. **Appendix B note (1)'s ±9007199254740991 safe-integer range** — a SHOULD,
+12. **Appendix B note (1)'s ±9007199254740991 safe-integer range**
+    (`rfc-8785#R-0038`) — a SHOULD,
     and **deliberately not enforced**, because it is narrower than the §3.1
     MUST and the note itself says "how numbers are used in applications does
     not affect the JCS algorithm". Layer it separately if wanted.
-13. **Appendix D's "wrap big numbers as strings"** — a RECOMMENDED instruction
+13. **Appendix D's "wrap big numbers as strings"** (`rfc-8785#R-0039`, the
+    Appendix D `MUST`, together with its §3.1 twin `rfc-8785#R-0006`, the
+    `RECOMMENDED` — the same obligation at two strengths; see the
+    `reconciliation` note in `../requirements.yaml`) — an instruction
     to the author of an *application* schema, not a checkable constraint on
     arbitrary input.
 
@@ -218,9 +265,10 @@ should say so where it reports results.
 
 ## Open for the later passes
 
-- Run both derived files through a real RFC 5234 tool and a real JSON Schema
-  2020-12 validator. Neither has been parsed by its own language's
-  implementation; only their *content* has been exercised.
+- ~~Run both derived files through a real RFC 5234 tool and a real JSON Schema
+  2020-12 validator.~~ **Done, in pass 3.** The RFC 5234 run found and fixed the
+  `jcs-char` / `digit0-9` core-rule collision; the JSON Schema 2020-12
+  metaschema run reports 0 errors. See *What was checked* above.
 - Items 1 and 9 want a raw-token-level checker that is neither file. If one is
   written for this library, it serves RFC 8259 and I-JSON too, not just JCS.
 - `$id` in `i-json-input.schema.json` is a placeholder
