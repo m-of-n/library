@@ -3,54 +3,129 @@ schema: "library-summary/v1"
 id: fips-204
 record: fips-204
 type: summary
-updated: "2026-09-26"
+updated: "2026-10-03"
 ---
 
-# FIPS 204: Module-Lattice-Based Digital Signature Standard (ML-DSA)
+# Module-Lattice-Based Digital Signature Standard
 
 |  |  |
 |---|---|
 | **Type** | spec |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | https://doi.org/10.6028/NIST.FIPS.204 |
-| **Source** | https://doi.org/10.6028/NIST.FIPS.204 |
-| **Digest** | `not fetched` |
+| **Maturity** | `standard` — a US Federal Information Processing Standard, issued under 40 U.S.C. 11331 |
+| **Authors** | NIST |
+| **Published** | 2024-08-13 (effective the same day) |
+| **Identifier** | FIPS 204 · DOI 10.6028/NIST.FIPS.204 |
+| **Source** | https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.204.pdf |
+| **Digest** | `sha256:57239b9f84c03227eda3ca0991204dc7764c79af9ce2e6824eda774918d46b6b` |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+Specifies **ML-DSA**, a lattice-based digital signature scheme derived from
+CRYSTALS-Dilithium, in three parameter sets. Security rests on the **Module
+Learning With Errors** and **Module Short Integer Solution** problems, and the
+construction is **Fiat-Shamir with Aborts** (§3). The design target is
+**SUF-CMA** — strong existential unforgeability under chosen-message attack,
+meaning an adversary cannot produce even a *new signature on an
+already-signed message* (§3.1).
+
+| Parameter set | Claimed category | Private key | Public key | Signature |
+|---|---|---|---|---|
+| ML-DSA-44 | 2 | 2560 B | 1312 B | 2420 B |
+| ML-DSA-65 | 3 | 4032 B | 1952 B | 3309 B |
+| ML-DSA-87 | 5 | 4896 B | 2592 B | 4627 B |
+
+Two details matter more to this project than the lattice mathematics:
+
+**It is built on FIPS 202.** §3.7 states the standard "makes use of the
+functions SHAKE256 and SHAKE128, as defined in FIPS 202," and additionally
+uses the incremental absorb/squeeze API from **SP 800-185**. The post-quantum
+signature standard inherits the SHA-3 permutation exactly as ML-KEM does.
+
+**Signing takes a context string.** `ML-DSA.Sign` takes `(sk, M, ctx)` where
+`ctx` is a byte string of **255 or fewer bytes**, empty by default, and signing
+returns ⊥ if it is longer (§5.2, Algorithm 2 line 2). A separate,
+**domain-separated** scheme `HashML-DSA` (§5.4) adds a pre-hashing step for
+signing a digest rather than the message.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `core` | A signature standard, and the likely post-quantum default |
+| Cryptography | `core` | Normative for the primitive |
+| This project | `adjacent` | ARCH-0001 NG3 defers the suite, but this is the strongest candidate for it |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+Bears on **R-M-02** — *a principal MAY be identified solely by key or key
+digest*. ML-DSA is where that requirement gets expensive: a public key is
+**1312–2592 bytes**, against 32 for Ed25519. Naming a principal *by key*
+rather than by key digest is a design option under R-M-02, and at these sizes
+it stops being a free one. Naming by digest is unaffected.
+
+This is the record in the lane that comes closest to bearing on a real
+decision. It bears on no open `DEC-*` **today** only because NG3 defers the
+suite; if that defer is ever lifted, ML-DSA is the first thing a suite ADR
+would have to rule on.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
+Searched **2026-10-03**. Coverage is markedly better than for SLH-DSA — ML-DSA
+is the one post-quantum signature scheme with mainstream library support.
 
 | Name | Kind | License | URL |
 |---|---|---|---|
+| `pq-crystals/dilithium` | open source | CC0 / Apache-2.0 | https://github.com/pq-crystals/dilithium — reference from the submission team |
+| liboqs (Open Quantum Safe) | open source | MIT | https://openquantumsafe.org |
+| OpenSSL 3.5+ | open source | Apache-2.0 | https://openssl.org |
+| AWS-LC | open source | Apache-2.0 / ISC | https://github.com/aws/aws-lc |
+| BouncyCastle | open source | MIT | https://bouncycastle.org |
+
+**We use a vetted library. We do not implement these.** CAVP/ACVP coverage for
+ML-DSA is newer than the classical suites; treat a FIPS 204 conformance claim
+as something to check against CMVP, not to infer from a library's release
+notes.
 
 ## Artifacts in this record
-
-_Everything else in this directory and what it is for._
 
 | File | What it is |
 |---|---|
 | `record.yaml` | metadata |
+| `summary.md` | this document |
+
+No `distilled.md`. FX-1 extraction is warranted where we intend to conform or
+map; the suite is deferred, so we hold and cite rather than extract. If NG3 is
+ever lifted, this record is a candidate for promotion.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+- **Category 2 is not a typo, and ML-DSA-44 is conditional.** ML-DSA-44 is
+  claimed at category **2** — the only parameter set in this lane below
+  category 3. §3.6.1 adds a condition most summaries drop: the RBG used
+  "should have a security strength of at least 192 bits and **shall** have a
+  security strength of at least 128 bits," and at 128 the **claimed strength
+  of ML-DSA-44 is reduced from category 2 to category 1**. The headline
+  category depends on the entropy source, not on the scheme alone.
+- **The context string is a domain-separation hook with a hard ceiling.** 255
+  bytes is enough for a short label and not enough for a URI-shaped domain
+  identifier of any length. P4 holds that domains of discourse are
+  *hash-identified* — which fits a fixed-width digest comfortably inside 255
+  bytes, but only if the domain is named by its digest rather than spelled out.
+  Worth noting before any encoding decision assumes room here.
+- **Deterministic signing is permitted and is not the recommended default.**
+  §3.4 allows a fully deterministic variant for signers without reliable
+  randomness, then states that determinism "makes the risk of side-channel
+  attacks (particularly fault attacks) more difficult to manage," and that
+  implementing the hedged variant alone is sufficient for interoperability.
+  A verifier cannot tell which was used.
+- **Two schemes, not one, and a key should not cross between them.** ML-DSA and
+  HashML-DSA are domain-separated. Treating "ML-DSA" as a single algorithm
+  identifier is an error that an encoding or COSE binding must not make — see
+  `rfc-9964`, which registers the algorithm identifiers, and which this library
+  holds only at `fetched`.
+- **Its security is conditional on FIPS 202, exactly as ML-KEM's is.** H, the
+  PRFs and the expansion functions are SHAKE. Any future weakening of
+  `KECCAK-p` is an ML-DSA problem too; `fips-202` and this record are not
+  independent.
+- **Category claims are claims.** §C presents categories 2/3/5 as *claimed*,
+  benchmarked against the cost of breaking a generic block cipher. Lattice
+  cryptanalysis is young relative to factoring, and the document does not
+  pretend otherwise.

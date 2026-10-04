@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: fips-203
 record: fips-203
 type: summary
-updated: "2026-09-26"
+updated: "2026-10-03"
 ---
 
 # Module-Lattice-Based Key-Encapsulation Mechanism Standard
@@ -90,11 +90,11 @@ we intend to conform or map, and we intend neither.
 
 - **It is not a signature scheme, and must never be cited as our post-quantum
   answer.** The post-quantum *signature* standards are **FIPS 204 (ML-DSA)** and
-  **FIPS 205 (SLH-DSA)**, and the library **holds neither**. Combined with
-  `fips-186-5`'s own Limits — that treating 186-5 as "the signature standard"
-  in 2026 would be wrong — this is the open gap in the lane: we hold the
-  post-quantum KEM and none of the post-quantum signatures. Named as out of
-  scope in #21 and tracked for a later record.
+  **FIPS 205 (SLH-DSA)**, both now held and summarised in this lane. Combined
+  with `fips-186-5`'s own Limits — that treating 186-5 as "the signature
+  standard" in 2026 would be wrong — the gap this bullet used to record is
+  closed: we hold the post-quantum KEM *and* both post-quantum signature
+  standards. What remains open is the wire binding, not the primitive.
 - **Security is conditional and the conditions are elsewhere.** §13 states the
   guarantees "only hold under certain conditions (see SP 800-227)", including
   secrecy of the randomness, the decapsulation key and the shared secret
