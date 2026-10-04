@@ -34,8 +34,15 @@
 ; productions below are derived at one further remove than the rest of
 ; this file and should be read as such.
 ;
-; The language is ABNF (RFC 5234).  No RFC 5234 core rule is used or
-; redefined.  Literal strings are written as explicit %x byte/scalar
+; The language is ABNF (RFC 5234).  No RFC 5234 core rule is used, and
+; none is redefined: every terminal this file needs is spelled out
+; locally, and the two rules that would otherwise have collided with
+; Appendix B core rules are named `jcs-char` and `digit0-9` for that
+; reason.  (RFC 5234 Section 2.1 makes rule names case-insensitive, so
+; a rule named `char` or `DIGIT` IS the core rule, not a local one; a
+; conforming RFC 5234 tool rejects the grammar outright.  Pass 3 found
+; exactly that and renamed both - the language this file defines is
+; unchanged.)  Literal strings are written as explicit %x byte/scalar
 ; sequences rather than quoted strings, so that nothing depends on RFC
 ; 5234's case-insensitive string rule or on RFC 7405.
 ;
@@ -202,12 +209,12 @@ true            = %x74.72.75.65         ; true
 ; string against `string` has fully checked Section 3.2.2.2.  This is
 ; the strongest claim any file in this directory makes.
 
-string          = quotation-mark *char quotation-mark
+string          = quotation-mark *jcs-char quotation-mark
 
 quotation-mark  = %x22                  ; "
 escape          = %x5C                  ; \
 
-char            = unescaped
+jcs-char        = unescaped
                 / escape-short
                 / escape-literal
                 / escape-unicode
@@ -345,37 +352,37 @@ nonzero-number  = int-form
 ; step 6.  n digits, 1 <= n <= 21, first digit nonzero.  The digits
 ; after position k are zeros, which this grammar does not express
 ; (item 5).
-int-form        = digit1-9 *20DIGIT
+int-form        = digit1-9 *20digit0-9
 
 ; step 7.  n integer digits (1 <= n <= 21) then a point then k-n
 ; fraction digits, the last of which is nonzero (item 5).
-frac-form       = digit1-9 *20DIGIT %x2E 1*DIGIT
+frac-form       = digit1-9 *20digit0-9 %x2E 1*digit0-9
 
 ; step 8.  "0." then -n zeros (0 <= -n <= 5) then the k digits of s.
 ; The first digit of s is nonzero, so at most five zeros can follow the
 ; point - a sixth would mean n <= -6, which step 8 excludes and which
 ; therefore routes to exp-form instead.  0.000001 has five; 1e-7 is the
 ; next value down and is exponential.
-small-form      = %x30 %x2E *5%x30 digit1-9 *DIGIT
+small-form      = %x30 %x2E *5%x30 digit1-9 *digit0-9
 
 ; steps 9 and 10.
 exp-form        = exp-mantissa %x65 exp-sign exp-digits
 
-exp-mantissa    = digit1-9 [ %x2E 1*DIGIT ]
+exp-mantissa    = digit1-9 [ %x2E 1*digit0-9 ]
                                         ; step 9 is the bare digit;
                                         ; step 10 adds the point and
                                         ; the remaining k-1 digits
 exp-sign        = %x2B / %x2D           ; + or - , never absent
-exp-digits      = digit1-9 *2DIGIT      ; abs(n-1), no leading zero.
+exp-digits      = digit1-9 *2digit0-9  ; abs(n-1), no leading zero.
                                         ; For IEEE 754 binary64 the
                                         ; attainable values are 21..308
                                         ; with "+" and 7..324 with "-",
                                         ; so one to three digits; the
-                                        ; *2DIGIT bound is a property
+                                        ; *2digit0-9 bound is a property
                                         ; of binary64, not of the
                                         ; ECMA-262 algorithm text.
 
-DIGIT           = %x30-39               ; 0-9
+digit0-9        = %x30-39               ; 0-9
 digit1-9        = %x31-39               ; 1-9
 
 ; =====================================================================
@@ -467,7 +474,7 @@ UTF8-tail       = %x80-BF
 ;        trailing fractional zero);
 ;      - in every form, k <= 17 significant digits, because 17 is the
 ;        shortest round-trip bound for binary64.  The grammar's
-;        `*20DIGIT` / `1*DIGIT` bounds come from the ECMA-262 branch
+;        `*20digit0-9` / `1*digit0-9` bounds come from the ECMA-262 branch
 ;        conditions (n <= 21), not from k, and are deliberately looser
 ;        than reality so that the grammar never rejects valid output.
 ;

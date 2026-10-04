@@ -23,7 +23,36 @@ Section 2 boilerplate enumeration): 25 `MUST`, 4 `MUST NOT`, 2 `RECOMMENDED`,
 
 Entries flagged `_[lowercase/implied]_` are normative in effect but are **not**
 BCP 14 flagged in the source. They are recorded in the source's own words and
-are neither demoted nor upgraded.
+are neither demoted nor upgraded. **36 of the 91 entries carry the flag.**
+
+The test applied, so that the count is auditable rather than impressionistic: an
+entry is flagged when it states an obligation that binds an actor and carries no
+BCP 14 keyword of its own — either because the obligation is inherited from a
+keyword-bearing parent sentence (statements 35, 36 and 37 are the three §3.2.3
+"measures" that statement 34's *"the following measures MUST be adhered to"*
+governs; they were flagged by the cross-check pass, which is why the count is 36
+and not the 33 of pass 1) or because the source simply states it in lowercase
+(statements 39, 47, 81 and the Appendix notes).
+
+Two entries were assessed against that test by the cross-check pass and are
+**deliberately not flagged**:
+
+- **31**, *"The rules for lexicographic sorting of JSON object properties
+  according to JCS are as follows:"* — a lead-in to statements 32 and 33, both
+  of which carry their own `MUST`. It inherits no obligation and imposes none,
+  so flagging it would double-count 32/33. It is the structural twin of 34,
+  which *is* unflagged for the opposite reason: 34 carries a keyword itself.
+- **46**, *"This document has no IANA actions."* — a statement of fact about the
+  registry, with no actor, no behaviour and nothing testable. §4 generates no
+  requirement entry, and should not.
+
+The flag and the requirement set are related but not one-to-one: of the nine
+`verb: none` entries in `requirements.yaml`, five (R-0026, R-0027, R-0028,
+R-0029, R-0031) come from flagged statements (35, 36, 37, 39, 47) and four
+(R-0033, R-0034, R-0035, R-0036) come from *inside* statement 48, which is
+unflagged because its own lead sentence carries the `MUST`. Going the other way,
+most flagged statements generate no requirement at all; see the reconciliation
+note in `requirements.yaml`.
 
 
 ## Section 2. Terminology
@@ -283,18 +312,18 @@ are neither demoted nor upgraded.
 > When a JSON object is about to have its properties sorted, the following
 > measures MUST be adhered to:
 
-**35.** (§3.2.3 (measure 1))
+**35.** (§3.2.3 (measure 1)) _[lowercase/implied]_
 
 > The sorting process is applied to property name strings in their "raw"
 > (unescaped) form. That is, a newline character is treated as U+000A.
 
-**36.** (§3.2.3 (measure 2))
+**36.** (§3.2.3 (measure 2)) _[lowercase/implied]_
 
 > Property name strings to be sorted are formatted as arrays of UTF-16
 > [UNICODE] code units. The sorting is based on pure value comparisons, where
 > code units are treated as unsigned integers, independent of locale settings.
 
-**37.** (§3.2.3 (measure 3))
+**37.** (§3.2.3 (measure 3)) _[lowercase/implied]_
 
 > Property name strings either have different values at some index that is a
 > valid index for both strings, or their lengths are different, or both. If
