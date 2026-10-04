@@ -12,13 +12,22 @@ FX-1 full extraction of **RFC 8785, JSON Canonicalization Scheme (JCS)**.
 Source `.cache/rfc-8785.txt`, sha256 `63d52294eb0e…b240`, 984 lines, read in
 full including Appendices A–I.
 
-**Status: passes 1 and 2 complete; pass 3 (cross-check) has now run to the end
-of its checklist, across two sessions.** The record still does **not** declare
-`distillation.profile: full`, and pass 3 has deliberately not written its own
-entry into `record.yaml`'s pass list: a pass does not get to certify itself, so
-the human sets both after reading the report. What pass 3 landed is recorded
-below in two parts — before and after the session limit that cut the first
-attempt short — and what remains open is in *Known gaps*.
+**Status: all three passes complete and approved.** Pass 3 (cross-check) ran to
+the end of its checklist across two sessions, and deliberately did not write its
+own entry into `record.yaml`'s pass list — a pass does not get to certify
+itself. **A human read this report and set both on 2026-10-04**, so `record.yaml`
+now declares `distillation.profile: full` and carries the `cross-check` entry.
+What pass 3 landed is recorded below in two parts — before and after the session
+limit that cut the first attempt short — and what remains open is in *Known
+gaps*.
+
+Two things that approval did **not** settle. `reviewed_by` is still empty on
+every artifact: the approval certifies that the three passes ran and that the
+four gaps blocking `profile: full` are closed, **not** that a human has
+line-checked each artifact. And the flag-breadth question under *One thing the
+human should decide* was **deferred, not resolved** — on pass 3's own stated
+ground that no verdict in its reconciliation table depends on which reading
+wins. It stays open as item 4 of *Known gaps*.
 
 ## Artifacts
 
@@ -341,9 +350,19 @@ requirements, 31 correctly excluded.
    *not* reproducible by `bin/validate` as it stands.
 
 Gaps 1–4 above, now closed, were the reason `profile: full` was not declared.
-**This pass does not declare it**, and does not add its own entry to
-`record.yaml`'s pass list: the human sets both after reading the report, so
-that a partial run can never leave a false completeness claim behind it.
+Pass 3 did not declare it itself, and did not add its own entry to
+`record.yaml`'s pass list, so that a partial run could never leave a false
+completeness claim behind it. **A human closed that loop on 2026-10-04**, after
+reading this report, and set both.
+
+Items 1–5 under *Still open* survive that approval and were weighed in it. None
+blocks `profile: full`: two are `library#44` publication decisions, one is the
+`library#43` tooling limitation, one is a `protocol.yaml` wiring improvement,
+and one is the deferred flag-breadth question. Item 5 is the one to keep in
+view — pass 3's vector validation used `pyyaml` and is therefore **not
+reproducible by `bin/validate` as it stands**, so CI's checks over
+`vectors.yaml` values remain vacuous. The validation was real; CI cannot re-run
+it.
 
 ## A tooling warning that outlives this record
 
