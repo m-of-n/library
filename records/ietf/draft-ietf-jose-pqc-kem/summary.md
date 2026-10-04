@@ -89,11 +89,11 @@ decide.
 - **The draft name lies about its scope.** `jose` in the name, COSE in the
   content. Any future citation should give the title alongside the name, or a
   reader will look in the wrong registry.
-- **It inherits the whole AES key-wrap stack.** The `+AxxxKW` composites
-  depend on AES key wrap, which this library now holds only indirectly —
-  `fips-197` is held, but **SP 800-38F** (AES Key Wrap) is **not**. #8 lists
-  38F as optional, "ingest if the JOSE/COSE key-wrap path needs it". This
-  draft is that path. Flagged rather than recorded as a dangling relation.
+- **It inherits the whole AES key-wrap stack.** The `+AxxxKW` composites are
+  half ML-KEM and half **AES Key Wrap**. #8 lists `sp-800-38f` as optional,
+  "ingest if the JOSE/COSE key-wrap path needs it" — this draft is that path,
+  so 38F is now held and related. Note that neither this draft nor `rfc-7518`
+  states whether `AxxxKW` means KW or KWP.
 - **A KEM is not a signature and must never be cited as our post-quantum
   answer.** The same warning `fips-203` carries. The post-quantum *signature*
   bindings are `rfc-9964` and `draft-ietf-cose-sphincs-plus`.
