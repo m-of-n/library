@@ -35,11 +35,16 @@ Library-specific:
    `library@<commit>`, so the pin is a decision. `notify-mofn` opens the
    pin-bump PR automatically once `MOFN_DISPATCH_TOKEN` is set.
 4. **Protocol and format documents are fully extracted before merge (FX-1).**
-   Any `rfc`, `draft`, `spec` or `ietf` record your PR moves past stub needs the
+   Any `rfc`, `draft`, `spec` or `ietf` record your PR **extracts** needs the
    complete artifact set — requirements, schemas, messages, protocol model,
    state machines, test vectors, design notes — from multi-agent passes at
-   maximum effort. Summaries alone do not merge. See `docs/extraction.md`;
-   start with `bin/extract-scaffold <record-dir>`.
+   maximum effort. See `docs/extraction.md`; start with
+   `bin/extract-scaffold <record-dir>`.
+
+   A PR that only **summarises** such a record is held to the summary bar
+   instead (`summarized`, valid relations, `bin/validate` clean) — FX-1 fires
+   on `status: distilled`, an existing `distillation` block, or a change under
+   `distilled/`. Say which bar you are claiming in the PR body.
 5. One topic per branch. Topics are sized so branches do not collide.
 6. Never commit a PDF, spreadsheet or ebook. CI rejects it.
 

@@ -20,13 +20,20 @@ cloneable, forkable, and citable by projects that are not this one.
 
 ## Full extraction — FX-1
 
-Every `rfc` / `draft` / `spec` / `ietf` record a PR moves past stub must reach
+Every `rfc` / `draft` / `spec` / `ietf` record a PR **extracts** must reach
 `distillation.profile: full`: normative text, **all** requirements with keyword
 counts reconciled, schemas, message formats, protocol model, state machines,
 test vectors, and design notes mapped to our decisions. Multi-agent passes
 (extract → verify → cross-check), **every pass at maximum effort**. A summary
 is a started record, not a finished one. `docs/extraction.md` is normative;
 `.claude/skills/extract` is the procedure; CI enforces it.
+
+**Extracting, not touching** (amended 2026-10-03). FX-1 fires when the record
+has `status: distilled`, already declares `distillation`, or the PR changes its
+`distilled/`. Summarising a record is ingestion and is held to the summary bar
+instead — `summarized`, valid relations, `bin/validate` clean. It is a ratchet:
+an extracted record can never regress to a summary. Say in the PR body which
+bar you are claiming, and name the issue that owns the eventual extraction.
 
 ## Shape
 

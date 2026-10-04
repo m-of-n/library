@@ -1,8 +1,17 @@
 # Full extraction standard (FX-1)
 
 **Status: normative for this library from 2026-09-28.** Applies to every
-record of type `rfc`, `draft`, `spec` or `ietf` that a pull request touches.
-Older records are grandfathered until someone works on them.
+record of type `rfc`, `draft`, `spec` or `ietf` that a pull request
+**extracts**. Older records are grandfathered until someone extracts them.
+
+**Scope amended 2026-10-03 (#8, PR #42).** As first written, FX-1 was
+triggered by *touching* an in-scope record. That made the standard
+unsatisfiable in both directions: a lane could not correct a typo in a
+summary without owing four multi-agent passes, and — the case that forced
+this — issue #8 could not summarise `rfc-9053` and `rfc-9964` at all, because
+#8 assigns their extraction to **#39**. Two issues, one gate, no way to
+satisfy both. The trigger is now the **intent to extract**. See
+*What triggers FX-1* below.
 
 ## Why
 
@@ -12,7 +21,35 @@ test suite, so for every protocol or format document we hold, the goal is to
 extract **everything an implementer would otherwise have to re-read the source
 to find** — in forms a program can consume.
 
-Summaries-only is not a finished record. It is a started one.
+Summaries-only is not a finished record. It is a started one. That remains
+true: the amendment below changes **when the bar is enforced**, not what a
+finished record is.
+
+## What triggers FX-1
+
+A touched in-scope record must declare `distillation.profile: full` when any
+of these holds:
+
+| trigger | meaning |
+|---|---|
+| `status: distilled` | the record claims to be extracted |
+| a `distillation` block is present | extraction has been declared |
+| the PR adds or changes its `distilled/` | the PR is extracting it now |
+
+Otherwise the record is held to the **summary bar** — `summarized`, valid
+relations, `bin/validate` clean — and `distillation` is left alone.
+
+This is a **ratchet, not a loophole**. Once a record is extracted the first
+two triggers keep firing on every later PR that touches it, so an extracted
+record cannot quietly regress to a summary. `bin/check-pr-extraction` prints
+the records it held to each bar, so a reviewer can see what was waived.
+
+**Rejected alternatives.** Exempting `body: nist` was considered and rejected:
+it confuses *who published a document* with *what we intend to do with it*, and
+a NIST protocol document we did mean to extract would have slipped through.
+Narrowing `IN_SCOPE` to drop `spec` was rejected for the same reason — a
+`spec` record is extractable, and some should be. Both would have keyed the
+rule off the document's provenance; intent is the thing that actually varies.
 
 ## The artifact set
 
@@ -81,7 +118,11 @@ what a good artifact looks like, and the failure modes to hunt for.
 
 ## Definition of done for a lane PR
 
-A topic-lane PR that adds or changes an in-scope record is mergeable only when
-that record has `profile: full`, all artifacts present or N/A with reason, the
-keyword counts reconciled, and passes 1–3 recorded. CI enforces this on the
-records the PR touches (`bin/check-pr-extraction`).
+A topic-lane PR that **extracts** an in-scope record — by any of the triggers
+above — is mergeable only when that record has `profile: full`, all artifacts
+present or N/A with reason, the keyword counts reconciled, and passes 1–3
+recorded. CI enforces this (`bin/check-pr-extraction`).
+
+A PR that only **summarises** an in-scope record is mergeable at the summary
+bar. It should say so in its body, and name the issue that owns the eventual
+extraction if one does — as #8 names #39 for the COSE/JOSE set.

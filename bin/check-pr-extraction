@@ -1,15 +1,25 @@
 #!/usr/bin/env python3
-"""check-pr-extraction — FX-1 applies to every in-scope record a PR touches.
+"""check-pr-extraction — FX-1 applies to every record a PR extracts.
 
     bin/check-pr-extraction <base-ref>
 
-A record of type rfc/draft/spec/ietf that the PR adds or changes must declare
-distillation.profile: full; bin/validate then enforces the artifact set.
-Records the PR does not touch are grandfathered (docs/extraction.md).
+FX-1 (docs/extraction.md) is triggered by the INTENT TO EXTRACT, not by mere
+contact with a record. A PR that only summarises an in-scope record is doing
+ingestion, not extraction, and is held to the summary bar instead.
 
-A PR may add an in-scope record as a *stub* (status stub or queued) without
-extraction — that is ingestion, not a finished lane. Anything summarized or
-beyond must be fully extracted.
+A touched record of type rfc/draft/spec/ietf must declare
+distillation.profile: full when any of these is true — bin/validate then
+enforces the artifact set:
+
+  * status: distilled                     the record claims to be extracted
+  * a `distillation` block is present     extraction has been declared
+  * the PR touches its distilled/         the PR is doing extraction now
+
+Otherwise `summarized` is sufficient and `distillation` is left alone.
+
+This is a ratchet: once a record is extracted it cannot quietly regress to a
+summary, because the first two conditions keep firing on every later PR that
+touches it.
 """
 import pathlib, subprocess, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -23,8 +33,13 @@ if len(sys.argv) < 2:
     print(__doc__); sys.exit(2)
 changed = subprocess.run(["git", "diff", "--name-only", f"{sys.argv[1]}...HEAD", "--", "records/"],
                          cwd=ROOT, capture_output=True, text=True, check=True).stdout.split()
-recs = sorted({pathlib.Path(*pathlib.Path(p).parts[:3]) for p in changed if len(pathlib.Path(p).parts) >= 3})
-bad = []
+paths = [pathlib.Path(p) for p in changed if len(pathlib.Path(p).parts) >= 3]
+recs = sorted({pathlib.Path(*p.parts[:3]) for p in paths})
+# records whose distilled/ this PR adds to or changes — extraction in progress
+extracting = {pathlib.Path(*p.parts[:3]) for p in paths
+              if len(p.parts) >= 4 and p.parts[3] == "distilled"}
+
+bad, summarised_only = [], []
 for r in recs:
     y = ROOT / r / "record.yaml"
     if not y.exists():
@@ -32,13 +47,26 @@ for r in recs:
     d = parse(y.read_text())
     if d.get("type") not in IN_SCOPE or d.get("status") in STUB_OK:
         continue
-    prof = (d.get("distillation") or {}).get("profile") if isinstance(d.get("distillation"), dict) else None
+    dist = d.get("distillation") if isinstance(d.get("distillation"), dict) else None
+    prof = (dist or {}).get("profile")
+    under_fx1 = d.get("status") == "distilled" or dist is not None or r in extracting
+    if not under_fx1:
+        summarised_only.append(f"{r}  (type {d.get('type')}, status {d.get('status')})")
+        continue
     if prof != "full":
-        bad.append(f"{r}  (type {d.get('type')}, status {d.get('status')}, profile {prof or 'none'})")
+        why = ("status: distilled" if d.get("status") == "distilled"
+               else "PR touches distilled/" if r in extracting
+               else "distillation declared")
+        bad.append(f"{r}  (type {d.get('type')}, status {d.get('status')}, "
+                   f"profile {prof or 'none'} — under FX-1 because {why})")
+
 print(f"check-pr-extraction: {len(recs)} record(s) touched")
+if summarised_only:
+    print(f"\nsummary bar ({len(summarised_only)}) — not extracting, FX-1 not required:")
+    for s in summarised_only: print("  " + s)
 if bad:
-    print("\nFX-1 not met — these in-scope records are past stub but not fully extracted:")
+    print("\nFX-1 not met — these records are being extracted but are not complete:")
     for b in bad: print("  " + b)
     print("\nSee docs/extraction.md. Start with: bin/extract-scaffold <record-dir>")
     sys.exit(1)
-print("FX-1: every touched in-scope record is fully extracted or a stub")
+print("FX-1: every record this PR extracts is complete")
