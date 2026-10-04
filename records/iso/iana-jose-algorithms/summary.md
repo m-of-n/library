@@ -11,7 +11,7 @@ updated: "2026-10-03"
 |  |  |
 |---|---|
 | **Type** | dataset — a living registry |
-| **Maturity** | `standard` — the authoritative allocation, maintained by IANA |
+| **Maturity** | _unset_ — a living allocation table has no RFC 2026 standing |
 | **Publisher** | IANA |
 | **Snapshot** | **2026-10-03** (67 entries) |
 | **Identifier** | https://www.iana.org/assignments/jose/jose.xhtml |

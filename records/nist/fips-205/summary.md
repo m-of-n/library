@@ -116,12 +116,15 @@ post-quantum base, and extract only where we intend to conform.
   operational concern. The weaker *existential* rather than *strong*
   unforgeability target is the more meaningful difference from `fips-204`.
 - **Stateless removes a failure mode; it does not remove all of them.** The
-  contrast with `sp-800-208` is the point of the scheme, but §9.2 still
-  imposes a floor on the RBG: at least 8·*n* bits of security strength. And
-  §9.3 warns that signature *verification* may be sensitive for some
-  applications — bearer tokens, signatures on plaintext intended to stay
-  private — which is an unusual caution to find in a signature standard and
-  easy to miss.
+  contrast with `sp-800-208` is the point of the scheme, but **§3.1**
+  (*Additional Requirements*) still imposes a floor on the RBG under
+  "Randomness generation": PK.seed, SK.seed and SK.prf must each be fresh, and
+  the RBG "shall have a security strength of at least 8𝑛 bits". Under
+  "Destruction of sensitive data" the same section makes an unusual point for
+  a signature standard — intermediate values of the **verification** algorithm
+  may reveal information about the message, signature and public key, which
+  matters where signatures are used as bearer tokens or sit on plaintext
+  intended to stay confidential — and requires that such data be destroyed.
 - **It inherits the fate of whichever hash family you pick.** The SHA2 sets
   depend on `fips-180-4`, the SHAKE sets on `fips-202`. The scheme's selling
   point is that this is its *only* assumption — which also means the choice

@@ -125,7 +125,10 @@ ever lifted, this record is a candidate for promotion.
   PRFs and the expansion functions are SHAKE. Any future weakening of
   `KECCAK-p` is an ML-DSA problem too; `fips-202` and this record are not
   independent.
-- **Category claims are claims.** §C presents categories 2/3/5 as *claimed*,
-  benchmarked against the cost of breaking a generic block cipher. Lattice
+- **Category claims are claims.** **§4** (*Parameter Sets*) presents
+  categories 2/3/5 as *claimed*, benchmarked against the cost of breaking a
+  generic block cipher or hash function under "any realistic model of
+  computation" — and notes that different models give more or less accurate
+  estimates. Lattice
   cryptanalysis is young relative to factoring, and the document does not
   pretend otherwise.
