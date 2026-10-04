@@ -1,0 +1,430 @@
+record: rfc-8785
+reviewed_by: ""
+
+# ---------------------------------------------------------------------------
+# Single-line scalars throughout: bin/_yaml.py is not a YAML implementation and
+# supports no multi-line scalars.
+applicability: 'PARTIAL — and the partiality is a finding, not a gap in this extraction. RFC 8785 defines no wire messages, headers, envelopes or protocol elements of its own. It is a canonicalization scheme: a function from parsed JSON data to one invariant UTF-8 octet sequence. It delegates the serialization of JSON primitives wholesale to ECMAScript ("This part is identical to that of ECMAScript", §3.2.2) and constrains its input to the I-JSON subset of RFC 7493. §4 states in full: "This document has no IANA actions." There is no media type, no registry, no framing, no length prefix and no magic number to capture. What this file therefore captures — and it is the level an implementer builds from — is the canonical output form decomposed as a structure: (a) the output envelope itself, with the byte-level detail §3.2.4 gives; (b) the constraints on input data (§3.1); (c) the per-type serializations — object, object member, array, string, number, literal; (d) the complete §3.2.2.2 escaping table, enumerated code-point range by code-point range with the exact output form and octets of each; (e) the property-name sort key as an array of UTF-16 code units, the only genuinely novel structure JCS introduces; and (f) the four application-level structures the appendices define or constrain — the Appendix F signature-bearing JSON object (the closest thing in the document to a message format) together with its signature-input octets, the Appendix D big-number-as-JSON-string wrapper, the Appendix E string subtype property, and E.1 subtypes in arrays. What is deliberately NOT here, because the document does not define it: the ECMAScript Number::toString algorithm itself (§3.2.2.3 — "Due to the relative complexity of this part, the algorithm itself is not included in this document"); any signature property name, algorithm identifier, key representation or signature-value encoding (Appendix F leaves the property merely "designated", and §5 assigns locating it to "the conventions defined by the ecosystem where it is to be used"); and any transport framing. Appendix A is sample code and Appendices G, H and I are inventories, so neither yields a structure; where Appendix A is the only place a punctuation rule is visible, it is cited as such.'
+
+# ---------------------------------------------------------------------------
+note: 'constrained_by is [] throughout. It was written while distilled/requirements.yaml was still the scaffold stub; that file now carries rfc-8785#R-0001 through rfc-8785#R-0041, so the ids DO exist and nothing here is yet wired to them. Every entry below is still empty and the cross-check pass must attach them. Each field''s layout quotes the normative sentence it derives from, so that wiring is mechanical. Statements that are consequences of the text rather than the text itself are prefixed "Derived:" and name the sentence they follow from.'
+
+# ---------------------------------------------------------------------------
+messages:
+
+  - name: canonical-json-output
+    locator: "§3.2, §3.2.1, §3.2.4, Appendix C"
+    encoding: "JSON text, encoded as UTF-8 octets"
+    fields:
+      - name: value
+        type: json-value
+        required: true
+        constrained_by: []
+        layout: 'Exactly one serialized JSON value — object, array, string, number, or one of the three literals — produced by applying §3.2.2 (primitive serialization) and §3.2.3 (property sorting) recursively to the input data of §3.1. The document''s own worked examples are always objects, but no rule restricts the top-level value.'
+      - name: inter_token_whitespace
+        type: none
+        required: false
+        constrained_by: []
+        layout: '§3.2.1 in full: "Whitespace between JSON tokens MUST NOT be emitted." Zero octets appear between any two tokens; Appendix C observes that "Canonicalization also converts JSON data into a single line of text, which may be less than ideal for debugging and logging."'
+      - name: character_encoding
+        type: utf-8
+        required: true
+        constrained_by: []
+        layout: '§3.2.4: "in order to create a platform-independent representation, the result of the preceding step MUST be encoded in UTF-8". No byte order mark, length prefix, terminator or framing is specified anywhere in the document. "This data is intended to be usable as input to cryptographic methods."'
+    layout: 'A single line of JSON text with no inter-token whitespace, emitted as UTF-8 octets. Structure: one json-value, serialized per the per-type rules below. The result is itself fully valid JSON (Appendix C).'
+    notes: 'Worked end-to-end example, §3.2.2 through §3.2.4. Input as parsed: {"numbers":[333333333.33333329, 1E30, 4.50, 2e-3, 0.000000000000000000000000001], "string":"€$\u000F\u000aA''B"\\\\"\/", "literals":[null, true, false]}. Canonical output text (line wrap in the RFC is display only): {"literals":[null,true,false],"numbers":[333333333.3333333,1e+30,4.5,0.002,1e-27],"string":"€$\u000f\nA''B\"\\\\\"/"}. As UTF-8 octets, §3.2.4, 118 bytes: 7b 22 6c 69 74 65 72 61 6c 73 22 3a 5b 6e 75 6c 6c 2c 74 72 75 65 2c 66 61 6c 73 65 5d 2c 22 6e 75 6d 62 65 72 73 22 3a 5b 33 33 33 33 33 33 33 33 33 2e 33 33 33 33 33 33 33 2c 31 65 2b 33 30 2c 34 2e 35 2c 30 2e 30 30 32 2c 31 65 2d 32 37 5d 2c 22 73 74 72 69 6e 67 22 3a 22 e2 82 ac 24 5c 75 30 30 30 66 5c 6e 41 27 42 5c 22 5c 5c 5c 5c 5c 22 2f 22 7d. Verified: these octets decode to exactly the canonical text above. Contrast, §3.2.2 — plain ECMAScript JSON.stringify() of the same parsed input yields {"numbers":[333333333.3333333,1e+30,4.5,0.002,1e-27],"string":"€$\u000f\nA''B\"\\\\\"/","literals":[null,true,false]}: identical primitives, unsorted properties.'
+
+  - name: canonicalization-input-data
+    locator: "§3.1"
+    encoding: "parsed or programmatically constructed JSON data, constrained to I-JSON [RFC7493]"
+    fields:
+      - name: origin
+        type: parsed-json-or-constructed-data
+        required: true
+        constrained_by: []
+        layout: 'Data to be canonically serialized is usually created by "Parsing previously generated JSON data" or "Programmatically creating data". "Irrespective of the method used, the data to be serialized MUST be adapted for I-JSON [RFC7493] formatting".'
+      - name: object_property_names
+        type: constraint
+        required: true
+        constrained_by: []
+        layout: '"JSON objects MUST NOT exhibit duplicate property names." Derived: this is what makes the §3.2.3 sort a total order over an object''s members — no tie between equal names can arise.'
+      - name: string_data
+        type: constraint
+        required: true
+        constrained_by: []
+        layout: '"JSON string data MUST be expressible as Unicode [UNICODE]." Additionally: "parsed JSON string data MUST NOT be altered during subsequent serializations" (see Appendix E). And: although Unicode Normalization [UCNORM] exists, "JCS-compliant string processing does not take this into consideration. That is, all components involved in a scheme depending on JCS MUST preserve Unicode string data ''as is''."'
+      - name: number_data
+        type: constraint
+        required: true
+        constrained_by: []
+        layout: '"JSON number data MUST be expressible as IEEE 754 [IEEE754] double-precision values. For applications needing higher precision or longer integers than offered by IEEE 754 double precision, it is RECOMMENDED to represent such numbers as JSON strings; see Appendix D for details on how this can be performed in an interoperable and extensible way."'
+    layout: 'Not a serialized form — the in-memory value domain the canonicalizer accepts. Violations are input errors, not output variations.'
+    notes: 'This structure is why JCS "eliminates the need for specific parsers for dealing with canonicalization" (§1): the input domain is narrowed rather than the parser widened. §5 restates the first constraint as a receiver obligation: "Parse the JSON data and verify that it adheres to I-JSON."'
+
+  - name: json-object-serialization
+    locator: "§3.2.1, §3.2.3, Appendix A"
+    encoding: "JSON text, UTF-8"
+    fields:
+      - name: begin_object
+        type: literal-octet
+        required: true
+        constrained_by: []
+        layout: 'The single character { — octet 7b. Appendix A: buffer += ''{''. Confirmed as the first octet of the §3.2.4 hex dump.'
+      - name: members
+        type: sequence-of-json-object-member
+        required: true
+        constrained_by: []
+        layout: 'Zero or more members, emitted in ascending property-name-sort-key order (§3.2.3). "JSON object properties MUST be sorted recursively, which means that JSON child Objects MUST have their properties sorted as well."'
+      - name: value_separator
+        type: literal-octet
+        required: false
+        constrained_by: []
+        layout: 'The single character , — octet 2c — emitted between consecutive members and never after the last. Appendix A emits it only when a previous member was written (the "next" flag).'
+      - name: end_object
+        type: literal-octet
+        required: true
+        constrained_by: []
+        layout: 'The single character } — octet 7d. Confirmed as the final octet of the §3.2.4 hex dump.'
+    layout: '{ member (, member)* } — no whitespace anywhere, per §3.2.1.'
+    notes: 'Derived from Appendix A: an object with no properties serializes as the two octets 7b 7d; the document states no separate rule for it. The empty string "" is a legal property name and sorts first (§3.2.3 ascending-order illustration lists "", "a", "aa", "ab").'
+
+  - name: json-object-member
+    locator: "§3.2.2.2, §3.2.3, Appendix A"
+    encoding: "JSON text, UTF-8"
+    fields:
+      - name: name
+        type: json-string
+        required: true
+        constrained_by: []
+        layout: 'The property name, serialized by the full json-string rules: "For JSON string data (which includes JSON object property names as well), each Unicode code point MUST be serialized as described below". Appendix A makes this explicit — "Property names are strings, use ''JSON''" — buffer += JSON.stringify(property). Note the escaped, quoted form is what is EMITTED; the unescaped raw form is what is SORTED (§3.2.3).'
+      - name: name_separator
+        type: literal-octet
+        required: true
+        constrained_by: []
+        layout: 'The single character : — octet 3a — immediately after the closing quote of the name and immediately before the first octet of the value. No whitespace on either side (§3.2.1).'
+      - name: value
+        type: json-value
+        required: true
+        constrained_by: []
+        layout: 'Any JSON value, serialized recursively by these same rules — "Property value - Recursive expansion" (Appendix A).'
+    layout: '"name":value — three parts, no whitespace.'
+    notes: 'Members are emitted in sorted order, so the serialized member sequence generally differs from the order in which properties were created or received; Appendix C treats that as the practical cost of the scheme.'
+
+  - name: property-name-sort-key
+    locator: "§3.2.3"
+    encoding: "array of UTF-16 code units, each treated as an unsigned integer"
+    fields:
+      - name: raw_form
+        type: unescaped-code-point-sequence
+        required: true
+        constrained_by: []
+        layout: '"The sorting process is applied to property name strings in their ''raw'' (unescaped) form. That is, a newline character is treated as U+000A." The \n that will appear in the output is not what is compared; U+000A (0x000a) is.'
+      - name: code_units
+        type: array-of-uint16
+        required: true
+        constrained_by: []
+        layout: '"Property name strings to be sorted are formatted as arrays of UTF-16 [UNICODE] code units. The sorting is based on pure value comparisons, where code units are treated as unsigned integers, independent of locale settings." A non-BMP code point therefore contributes TWO units — its surrogate pair — and sorts by its lead surrogate (0xD800-0xDBFF).'
+      - name: first_difference_rule
+        type: comparison-rule
+        required: true
+        constrained_by: []
+        layout: 'Verbatim: "Property name strings either have different values at some index that is a valid index for both strings, or their lengths are different, or both. If they have different values at one or more index positions, let k be the smallest such index; then, the string whose value at position k has the smaller value, as determined by using the ''<'' operator, lexicographically precedes the other string."'
+      - name: prefix_rule
+        type: comparison-rule
+        required: true
+        constrained_by: []
+        layout: '"If there is no index position at which they differ, then the shorter string lexicographically precedes the longer string." Illustrated ascending: "" , "a" , "aa" , "ab".'
+      - name: recursion_into_objects
+        type: traversal-rule
+        required: true
+        constrained_by: []
+        layout: '"JSON object properties MUST be sorted recursively, which means that JSON child Objects MUST have their properties sorted as well."'
+      - name: traversal_of_arrays
+        type: traversal-rule
+        required: true
+        constrained_by: []
+        layout: '"JSON array data MUST also be scanned for the presence of JSON objects (if an object is found, then its properties MUST be sorted), but array element order MUST NOT be changed."'
+    layout: 'Not emitted. A derived key used only to order the members of json-object-serialization. Systems whose native string type is not UTF-16 "will need to convert JSON property name strings into arrays of UTF-16 code units before sorting. The conversion from UTF-8 or UTF-32 to UTF-16 is defined by the Unicode [UNICODE] standard."'
+    notes: 'Rationale: UTF-16 "maps directly to the string type in ECMAScript (featured in web browsers and Node.js), Java, and .NET. In addition, JSON only supports escape sequences expressed as UTF-16 code units". Interoperability hazard, stated as a Note: "sorting of data encoded in UTF-8 or UTF-32 would also work, but the outcome for JSON data like above would differ and thus be incompatible with this specification. However, in practice, property names are rarely defined outside of 7-bit ASCII". Conformance test data (§3.2.3) and its expected order: keys U+20AC, U+000D, U+FB33, "1", U+1F600, U+0080, U+00F6 sort to "Carriage Return" (000d), "One" (0031), "Control" (0080), "Latin Small Letter O With Diaeresis" (00f6), "Euro Sign" (20ac), "Emoji: Grinning Face" (d83d de00), "Hebrew Letter Dalet With Dagesh" (fb33). The emoji preceding U+FB33 is the surrogate-pair discriminator: lead unit d83d < fb33, whereas by code point U+1F600 > U+FB33 and by UTF-8 bytes it would also sort last. One test vector distinguishes a conformant sort from the two plausible wrong ones.'
+
+  - name: json-array-serialization
+    locator: "§3.2.3, Appendix A"
+    encoding: "JSON text, UTF-8"
+    fields:
+      - name: begin_array
+        type: literal-octet
+        required: true
+        constrained_by: []
+        layout: 'The single character [ — octet 5b. Appendix A: buffer += ''[''.'
+      - name: elements
+        type: sequence-of-json-value
+        required: true
+        constrained_by: []
+        layout: 'Zero or more values in their ORIGINAL order — "array element order MUST NOT be changed" — each serialized recursively ("Array element - Recursive expansion", Appendix A). Objects found among the elements must still have their own properties sorted.'
+      - name: value_separator
+        type: literal-octet
+        required: false
+        constrained_by: []
+        layout: 'The single character , — octet 2c — between consecutive elements, never after the last.'
+      - name: end_array
+        type: literal-octet
+        required: true
+        constrained_by: []
+        layout: 'The single character ] — octet 5d.'
+    layout: '[ value (, value)* ] — no whitespace, element order preserved.'
+    notes: 'The asymmetry between objects (reordered) and arrays (never reordered) is the single most load-bearing structural rule in JCS: array position is semantically significant JSON data, object property order is not. Appendix E.1 notes the consequence for mixed-type arrays.'
+
+  - name: json-string-serialization
+    locator: "§3.2.2.2"
+    encoding: "JSON text, UTF-8"
+    fields:
+      - name: opening_quote
+        type: literal-octet
+        required: true
+        constrained_by: []
+        layout: 'The single character " — octet 22.'
+      - name: code_point_sequence
+        type: sequence-of-serialized-code-points
+        required: true
+        constrained_by: []
+        layout: 'Each Unicode code point of the string value serialized per string-code-point-escaping below: "each Unicode code point MUST be serialized as described below (see Section 24.3.2.2 of [ECMA-262])". Applies identically to string VALUES and to object PROPERTY NAMES.'
+      - name: closing_quote
+        type: literal-octet
+        required: true
+        constrained_by: []
+        layout: 'The single character " — octet 22. "Finally, the resulting sequence of Unicode code points MUST be enclosed in double quotes (")."'
+    layout: '" serialized-code-point* " — minimal escaping, no whitespace, no reformatting of the string content itself.'
+    notes: 'The string content is otherwise untouched: §3.1 forbids altering parsed string data, and no Unicode Normalization is applied. Together with the escaping table this makes string serialization a pure, injective function of the code point sequence.'
+
+  - name: string-code-point-escaping
+    locator: "§3.2.2.2"
+    encoding: "per-code-point output form within a JSON string"
+    fields:
+      - name: U+0008
+        type: two-character-escape
+        required: true
+        constrained_by: []
+        layout: 'Predefined JSON control character. Output: \b — octets 5c 62.'
+      - name: U+0009
+        type: two-character-escape
+        required: true
+        constrained_by: []
+        layout: 'Predefined JSON control character. Output: \t — octets 5c 74.'
+      - name: U+000A
+        type: two-character-escape
+        required: true
+        constrained_by: []
+        layout: 'Predefined JSON control character. Output: \n — octets 5c 6e. Confirmed in the §3.2.4 hex dump (5c 6e).'
+      - name: U+000C
+        type: two-character-escape
+        required: true
+        constrained_by: []
+        layout: 'Predefined JSON control character. Output: \f — octets 5c 66.'
+      - name: U+000D
+        type: two-character-escape
+        required: true
+        constrained_by: []
+        layout: 'Predefined JSON control character. Output: \r — octets 5c 72.'
+      - name: U+0000-U+001F (other than the five above)
+        type: six-character-hex-escape
+        required: true
+        constrained_by: []
+        layout: 'Verbatim: "If the Unicode value falls within the traditional ASCII control character range (U+0000 through U+001F), it MUST be serialized using lowercase hexadecimal Unicode notation (\uhhhh) unless it is in the set of predefined JSON control characters U+0008, U+0009, U+000A, U+000C, or U+000D, which MUST be serialized as \b, \t, \n, \f, and \r, respectively." Output is exactly six characters: backslash, u, then four hex digits, LOWERCASE (a-f), zero-padded. Worked: U+000F -> \u000f -> octets 5c 75 30 30 30 66, confirmed in the §3.2.4 hex dump. The 27 code points taking this form are U+0000-U+0007, U+000B, U+000E-U+001F.'
+      - name: U+0022
+        type: two-character-escape
+        required: true
+        constrained_by: []
+        layout: 'QUOTATION MARK. Output: \" — octets 5c 22. "If the Unicode value is outside of the ASCII control character range, it MUST be serialized ''as is'' unless it is equivalent to U+005C (\) or U+0022 ("), which MUST be serialized as \\ and \", respectively."'
+      - name: U+005C
+        type: two-character-escape
+        required: true
+        constrained_by: []
+        layout: 'REVERSE SOLIDUS. Output: \\ — octets 5c 5c. Same sentence as U+0022 above.'
+      - name: all other code points
+        type: verbatim
+        required: true
+        constrained_by: []
+        layout: 'Emitted "as is" — the code point itself, then encoded as UTF-8 at §3.2.4. Worked: U+20AC EURO SIGN emits the three octets e2 82 ac (hex dump), NOT €. Derived from the same sentence, and visible in the §3.2.2/§3.2.4 example: U+002F SOLIDUS is NOT escaped (emitted as 2f, although \/ is legal JSON input) and U+0027 APOSTROPHE is NOT escaped (emitted as 27). Derived: by the literal text of the rule, U+007F DELETE, U+2028/U+2029 and the Unicode non-characters are also emitted as is — the escape set is exactly U+0000-U+001F plus U+0022 plus U+005C, and nothing else.'
+      - name: invalid Unicode (lone surrogates)
+        type: error
+        required: true
+        constrained_by: []
+        layout: 'Not an output form — a termination condition. "Note: Since invalid Unicode data like ''lone surrogates'' (e.g., U+DEAD) may lead to interoperability issues including broken signatures, occurrences of such data MUST cause a compliant JCS implementation to terminate with an appropriate error."'
+    layout: 'A total function from code point to output characters, with exactly three output shapes: a two-character escape (seven code points), a six-character lowercase hex escape (the remaining 27 C0 controls), or the code point verbatim.'
+    notes: 'This is the minimal-escaping discipline: JCS escapes only what JSON requires, and nothing more. It is also the rule that makes the output non-ASCII in general — a canonicalizer that escapes non-ASCII for safety produces different octets and therefore a different signature. The §3.2.4 example exercises all three shapes in one string: € ($ raw), \u000f (hex), \n (named), \" and \\ (quote and backslash), / and '' (unescaped).'
+
+  - name: json-number-serialization
+    locator: "§3.2.2.3, Appendix B"
+    encoding: 'ECMAScript Number::toString, per Section 7.1.12.1 of [ECMA-262], including the "Note 2" enhancement'
+    fields:
+      - name: value
+        type: ieee754-binary64
+        required: true
+        constrained_by: []
+        layout: '"ECMAScript builds on the IEEE 754 [IEEE754] double-precision standard for representing JSON number data." The input is a 64-bit double; §3.1 requires number data to be expressible as one.'
+      - name: textual_form
+        type: json-number-text
+        required: true
+        constrained_by: []
+        layout: 'Verbatim: "Such data MUST be serialized according to Section 7.1.12.1 of [ECMA-262], including the ''Note 2'' enhancement." The algorithm is NOT reproduced here — "Due to the relative complexity of this part, the algorithm itself is not included in this document." Named reference implementations: Google''s V8, and Ryu (used by the Java implementation of Appendix G).'
+      - name: nan_and_infinity
+        type: error
+        required: true
+        constrained_by: []
+        layout: 'Not an output form — a termination condition. "Note: Since Not a Number (NaN) and Infinity are not permitted in JSON, occurrences of NaN or Infinity MUST cause a compliant JCS implementation to terminate with an appropriate error." Appendix B lists IEEE 7fffffffffffffff (NaN) and 7ff0000000000000 (Infinity) with an EMPTY JSON Representation column and note (3), "Values out of range are not permitted in JSON."'
+      - name: negative_zero
+        type: normalization
+        required: true
+        constrained_by: []
+        layout: 'Appendix B: IEEE 0000000000000000 ("Zero") and 8000000000000000 ("Minus zero") BOTH serialize to the single character 0. The sign of zero is not preserved in the canonical form; two distinct IEEE 754 values map to one canonical output.'
+      - name: integer_range
+        type: recommendation
+        required: false
+        constrained_by: []
+        layout: 'Appendix B note (1): "For maximum compliance with the ECMAScript ''JSON'' object, values that are to be interpreted as true integers SHOULD be in the range -9007199254740991 to 9007199254740991. However, how numbers are used in applications does not affect the JCS algorithm."'
+    layout: 'A bare JSON number token — no quotes, no leading +, no leading zeros, no trailing decimal point. Positional or exponential form is chosen by the ECMAScript algorithm, not by the caller.'
+    notes: 'Appendix B is the normative-by-example boundary of this field and belongs in examples/, but these anchors are structural. Exponent form: lowercase e with an explicit sign for positive exponents ("1e+30", "1e+23", "1e+21") and a minus for negative ("1e-27", "5e-324", "9.999999999999997e-7"); no zero padding of the exponent. Observed thresholds in the Appendix B samples: 999999999999999900000 is positional while 1e+21 is exponential, and 0.000001 is positional while 9.999999999999997e-7 is exponential. Extremes: min positive 5e-324, max positive 1.7976931348623157e+308, max integer 9007199254740992. Note (2): "Although a set of specific integers like 2**68 could be regarded as having extended precision, the JCS/ECMAScript number serialization algorithm does not take this into consideration" — 4430000000000000 serializes as 295147905179352830000. Note (4): 43143ff3c1cb0959 "is exactly 1424953923781206.25 but will, after the ''Note 2'' rule mentioned in Section 3.2.2.3, be truncated and rounded to the closest even value" — 1424953923781206.2. The §3.2.2 example shows the input-side rewrites: 333333333.33333329 -> 333333333.3333333, 1E30 -> 1e+30, 4.50 -> 4.5, 2e-3 -> 0.002, 0.000000000000000000000000001 -> 1e-27. Adjacent-double sensitivity, which is what a conformance suite must exercise: 44b52d02c7e14af5/f6/f7 -> 9.999999999999997e+22 / 1e+23 / 1.0000000000000001e+23.'
+
+  - name: json-literal-serialization
+    locator: "§3.2.2.1"
+    encoding: "JSON text, UTF-8"
+    fields:
+      - name: "null"
+        type: literal-token
+        required: true
+        constrained_by: []
+        layout: 'Serialized as the four lowercase characters null — octets 6e 75 6c 6c. Unquoted. Confirmed in the §3.2.4 hex dump.'
+      - name: "true"
+        type: literal-token
+        required: true
+        constrained_by: []
+        layout: 'Serialized as the four lowercase characters true — octets 74 72 75 65. Unquoted. Confirmed in the §3.2.4 hex dump.'
+      - name: "false"
+        type: literal-token
+        required: true
+        constrained_by: []
+        layout: 'Serialized as the five lowercase characters false — octets 66 61 6c 73 65. Unquoted. Confirmed in the §3.2.4 hex dump.'
+    layout: 'One of exactly three byte sequences. §3.2.2.1 in full: "In accordance with JSON [RFC8259], the literals ''null'', ''true'', and ''false'' MUST be serialized as null, true, and false, respectively."'
+    notes: 'The only JCS primitive with no degrees of freedom whatsoever, and the only one whose form the document states outright rather than delegating to ECMAScript.'
+
+  - name: signed-json-object
+    locator: "Appendix F, §5, §1"
+    encoding: "JSON object; canonicalized per §3.2 for the cryptographic operation only"
+    fields:
+      - name: application_properties
+        type: json-object-members
+        required: true
+        constrained_by: []
+        layout: 'The data to be signed — "Create the data to be signed" and "Serialize the data using existing JSON tools" (Appendix F creation steps 1-2). These properties, and ONLY these, are what the canonicalizer sees. Their names, types and semantics are entirely application-defined; this document constrains only their serialization.'
+      - name: signature_property
+        type: application-defined-json-member
+        required: true
+        constrained_by: []
+        layout: 'Appendix F creation step 5: "Add the resulting signature value to the original JSON data through a designated signature property." The document gives this property NO name, NO value encoding, NO algorithm identifier and NO key representation — §5 step 2 assigns all of that to "the conventions defined by the ecosystem where it is to be used. This also includes locating the property holding the signature data." It is a member of the SAME object it protects, not a wrapper around it.'
+      - name: signature_value
+        type: application-defined
+        required: true
+        constrained_by: []
+        layout: 'The value carried by the signature property — "the resulting signature value", computed over signature-input-octets below, and checked "using the algorithm and key used for creating the signature" (verification step 6). Its encoding is outside this document.'
+    layout: 'An ordinary JSON object that, after signing, carries one extra designated member. §1: "using canonicalization enables a JSON object to remain a JSON object even after being signed. This can simplify system design, documentation, and logging." The object is transmitted in whatever serialization the application prefers — Appendix C: canonical form MAY be used as wire format, but schemes "in most cases, would not depend on that externally supplied JSON data already being canonicalized."'
+    notes: 'The signature property is NEVER present during canonicalization — in creation it does not yet exist (added at step 5, after the signing at step 4), and in verification it is removed at step 3, before the re-serialization at step 4. Derived consequence: because it is excluded on both sides, the signature property''s NAME has no effect on the sort order of the canonicalized members and may be chosen freely. Derived consequence of the exclude-and-recanonicalize design: the verifier recomputes from its own parse, so the received bytes need not themselves be canonical — only the parsed data must canonicalize to the same octets. §5 makes three operations mandatory "before acting upon received data": (1) "Parse the JSON data and verify that it adheres to I-JSON", (2) "Verify the data for correctness according to the conventions defined by the ecosystem where it is to be used. This also includes locating the property holding the signature data", (3) "Verify the signature" — and "If any of these steps fail, the operation in progress MUST be aborted." Appendix F characterises the whole arrangement as a filter: "A canonicalizer like above is effectively only a ''filter'', potentially usable with a multitude of quite different cryptographic schemes."'
+
+  - name: signature-input-octets
+    locator: "Appendix F"
+    encoding: "the canonical-json-output structure above — UTF-8 octets"
+    fields:
+      - name: octets
+        type: utf-8-byte-string
+        required: true
+        constrained_by: []
+        layout: 'The output of canonical-json-output applied to the signed-json-object WITHOUT its designated signature property. This is the exact byte string passed to the signing primitive (creation step 4, "Sign the canonicalized data") and re-derived for the verification primitive (verification steps 4-6).'
+      - name: exclusion_of_signature_property
+        type: construction-rule
+        required: true
+        constrained_by: []
+        layout: 'Creation: the property does not yet exist when steps 2-4 run; it is added only afterwards (step 5), and the completed object is then re-serialized with ordinary tools (step 6, "Serialize the completed (now signed) JSON object using existing JSON tools"). Verification: step 2 "Read and save the signature value from the designated signature property", step 3 "Remove the signature property from the parsed JSON object", step 4 "Serialize the remaining JSON data using existing JSON tools", step 5 "Let the external canonicalizer process the serialized data and return canonicalized result data", step 6 "Verify that the canonicalized data matches the saved signature value".'
+      - name: post_processor_arrangement
+        type: construction-rule
+        required: false
+        constrained_by: []
+        layout: 'The RECOMMENDED shape (§3: "Appendix F describes the RECOMMENDED way of adding JCS support to existing JSON tools"): the canonicalizer is "externally supplied canonicalizer software acting as a post processor to existing JSON serializers", so the canonicalization input is itself serialized JSON text, not an object graph. "Using a JSON serializer with integrated JCS support, the serialization performed before the canonicalization step could be eliminated for both processes" — the octets signed are the same either way.'
+    layout: 'A plain byte string. No tag, no prefix, no length field, no algorithm binding, no domain separation: JCS hands the signature algorithm the canonical JSON octets and nothing else.'
+    notes: 'Derived, and worth flagging for any adopter: nothing in these octets identifies the algorithm, the key, or even the fact that this is a signature input. Any such binding must be carried as ordinary properties INSIDE the object being canonicalized, which is exactly why the ecosystem — not JCS — defines the signature property.'
+
+  - name: big-number-as-json-string
+    locator: "Appendix D, §3.1"
+    encoding: "JSON string holding the number in its textual form"
+    fields:
+      - name: wrapped_number
+        type: json-string
+        required: true
+        constrained_by: []
+        layout: 'Verbatim: "numbers that do not have a natural place in the current JSON ecosystem MUST be wrapped using the JSON string type. This is close to a de facto standard for open systems." §3.1 states the same as a RECOMMENDED practice for data "needing higher precision or longer integers than offered by IEEE 754 double precision". The string carries the number''s own textual representation, e.g. "1.4e+9999".'
+      - name: unwrapping
+        type: application-step
+        required: true
+        constrained_by: []
+        layout: 'Conversion to the native type happens in the application, after parsing: var obj = JSON.parse(''{"giantNumber": "1.4e+9999"}''); var biggie = new BigNumber(obj.giantNumber); — "or declarative schemes like OpenAPI [OPENAPI], JCS imposes no limits on applications, including when using ECMAScript."'
+      - name: scope
+        type: applicability-rule
+        required: false
+        constrained_by: []
+        layout: '"This is also applicable for other data types that do not have direct support in JSON, like ''DateTime'' objects as described in Appendix E."'
+    layout: 'An ordinary JSON string member. Derived: because §3.1 forbids altering parsed string data and §3.2.2.2 escapes only the three classes enumerated above, the digits pass through canonicalization byte-for-byte — no rounding, no exponent normalisation, no loss. That is precisely the property the JSON number type cannot offer.'
+    notes: 'Motivating sample (Appendix D): {"giantNumber": 1.4e+9999, "payMeThis": 26000.33, "int64Max": 9223372036854775807}. "Although the sample above conforms to JSON [RFC8259], applications would normally use different native data types for storing ''giantNumber'' and ''int64Max''. In addition, monetary data like ''payMeThis'' would presumably not rely on floating-point data types due to rounding issues with respect to decimal arithmetic." The rejected alternative is named: name-based mapping mechanisms, which "greatly limits the value of using the JSON number type outside of its original, somewhat constrained JavaScript context. The ECMAScript ''JSON'' object does not support mappings to the JSON number type either."'
+
+  - name: string-subtype-property
+    locator: "Appendix E, §3.1"
+    encoding: "JSON string carrying an application subtype (BigInt, DateTime, decimal, ...)"
+    fields:
+      - name: raw_string_value
+        type: json-string
+        required: true
+        constrained_by: []
+        layout: 'The exact characters as they were parsed. Verbatim requirement: "stream- and schema-based parsing MUST treat subtypes as ''pure'' (immutable) JSON string types and perform the actual conversion to the designated native type in a subsequent step." §3.1 is the general form: "parsed JSON string data MUST NOT be altered during subsequent serializations."'
+      - name: native_subtype
+        type: application-type
+        required: false
+        constrained_by: []
+        layout: 'Not serialized. The converted value — new Date(object.time), BigInt(object.big) — exposed to application code, while the JSON-facing representation stays the untouched string. "In modern programming platforms like Go, Java, and C#, this can be achieved with moderate efforts by combining annotations, getters, and setters."'
+      - name: binding_pattern
+        type: implementation-guidance
+        required: false
+        constrained_by: []
+        layout: 'C#/Json.NET illustration: a private string field carries the JSON value — [JsonProperty("amount")] private string _amount; — while a [JsonIgnore] public decimal Amount property parses and formats it for the application. "In an application, ''Amount'' can be accessed as any other property while it is actually represented by a quoted string in JSON contexts." Note: "The example above also addresses the constraints on numeric data implied by I-JSON (the C# ''decimal'' data type has quite different characteristics compared to IEEE 754 double precision)."'
+    layout: 'An ordinary JSON string member. The subtype is a convention between schema designer and application; JCS sees only a string, and that is the point.'
+    notes: 'The failure this prevents, worked through in Appendix E. Source object: {"time": "2019-01-28T07:45:10Z", "big": "055", "val": 3.5}, where the schema designer "assigned the property ''big'' for holding a ''BigInt'' subtype and ''time'' for holding a ''DateTime'' subtype, while ''val'' is supposed to be a JSON number compliant with JCS". Parsed with plain JSON.parse and canonicalized with the Appendix A code: {"big":"055","time":"2019-01-28T07:45:10Z","val":3.5} — correct. Parsed with a reviver, (k,v) => k == ''time'' ? new Date(v) : k == ''big'' ? BigInt(v) : v, with BigInt.prototype.toJSON defined, and canonicalized: {"big":"55","time":"2019-01-28T07:45:10.000Z","val":3.5} — "the string arguments for ''big'' and ''time'' have changed with respect to the original, presumably making an application depending on JCS fail." Cause: "in stream- and schema-based JSON parsers, the original string argument is typically replaced on the fly by the native subtype that, when serialized, may exhibit a different and platform-dependent pattern." Note the dropped leading zero of "055" and the inserted milliseconds of ".000Z" — two different flavours of silent, signature-breaking mutation, neither of which the canonicalizer can detect. Appendix E opens by making this a conformance obligation: such interoperability problems "MUST be dealt with by JCS-compliant applications targeting a wider audience". Mechanism note: the Appendix A sample canonicalizer routes any value with a non-null toJSON through JSON.stringify (the object.toJSON != null test), which is how a revived native subtype re-enters serialization under its own rules.'
+
+  - name: string-subtype-in-array
+    locator: "Appendix E.1"
+    encoding: "JSON array elements"
+    fields:
+      - name: element
+        type: any-json-value
+        required: true
+        constrained_by: []
+        layout: 'E.1 in full: "Since the JSON array construct permits mixing arbitrary JSON data types, custom parsing and serialization code may be required to cope with subtypes anyway." Derived: the property-name-keyed binding patterns of Appendix E (reviver keys, [JsonProperty] annotations, schema mappings) have no handle on an array element, which has an index rather than a name — hence the escape to custom code.'
+    layout: 'No distinct serialized form; array serialization is unchanged (order preserved, elements recursive). The constraint falls on the parsing and binding layer only.'
+    notes: 'The shortest normative passage in the document and the weakest guidance in it: it identifies a real gap — per-element subtype binding — and resolves it only as "custom parsing and serialization code may be required". Any scheme that puts subtype-bearing strings inside arrays inherits an unspecified problem.'
+
+  - name: canonicalized-json-as-wire-format
+    locator: "Appendix C"
+    encoding: "the canonical-json-output octets, used as the transmitted document"
+    fields:
+      - name: octets
+        type: utf-8-byte-string
+        required: true
+        constrained_by: []
+        layout: 'Identical to canonical-json-output. "Since the result from the canonicalization process (see Section 3.2.4) is fully valid JSON, it can also be used as ''Wire Format''. However, this is just an option since cryptographic schemes based on JCS, in most cases, would not depend on that externally supplied JSON data already being canonicalized."'
+      - name: observable_property_order
+        type: consequence
+        required: true
+        constrained_by: []
+        layout: 'Members appear in sort order rather than creation order. Worked example: the object {"name": "John Doe", "address": "2000 Sunset Boulevard", "city": "Los Angeles", "zip": "90001", "state": "CA"} is emitted in the order "address", "city", "name", "state", and "zip", which "adds fuzziness to the data from a human (developer or technical support) perspective."'
+      - name: single_line
+        type: consequence
+        required: true
+        constrained_by: []
+        layout: '"Canonicalization also converts JSON data into a single line of text, which may be less than ideal for debugging and logging."'
+    layout: 'No separate structure — the same octets, used for transport instead of only for hashing. Listed here because it is the one place the document contemplates its output being a message.'
+    notes: 'Appendix C argues AGAINST this option as a default: "the ECMAScript standard way of serializing objects using ''JSON.stringify()'' produces a more ''logical'' format, where properties are kept in the order they were created or received." This is the design''s central trade — canonicalization as a transformation applied at the cryptographic boundary, not as the data format itself, which is what §1 means by "The primary advantage with a canonicalizing scheme is that data can be kept in its original form. This is the core rationale behind JCS."'

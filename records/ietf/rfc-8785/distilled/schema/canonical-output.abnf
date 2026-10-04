@@ -1,0 +1,497 @@
+; =====================================================================
+; canonical-output.abnf
+;
+; DERIVED - not verbatim.  RFC 8785 ships NO ABNF, NO CDDL and NO JSON
+; Schema of its own; its only formal artifact is the ECMAScript sample
+; canonicalizer of Appendix A (held verbatim in this directory as
+; canonicalizer.ecmascript.js).  Every rule below was written for this
+; record from the source's prose and must NEVER be quoted as RFC 8785's
+; own grammar.
+;
+; Derived from RFC 8785, "JSON Canonicalization Scheme (JCS)",
+; Rundgren, Jordan, Erdtman, June 2020, Independent Submission,
+; <https://www.rfc-editor.org/rfc/rfc8785.txt>:
+;
+;   Section 3.2.1    Whitespace - "Whitespace between JSON tokens MUST
+;                    NOT be emitted."
+;   Section 3.2.2.1  Serialization of Literals
+;   Section 3.2.2.2  Serialization of Strings (the escaping rules, in
+;                    full, including the lone-surrogate note)
+;   Section 3.2.2.3  Serialization of Numbers (by reference to
+;                    ECMA-262 Section 7.1.12.1 "Number::toString",
+;                    including its "Note 2" enhancement, and the
+;                    NaN/Infinity note)
+;   Section 3.2.3    Sorting of Object Properties (the member-order
+;                    constraint - see WHAT THIS GRAMMAR CANNOT SAY)
+;   Section 3.2.4    UTF-8 Generation
+;   Appendix B       Number Serialization Samples (cross-check corpus)
+;
+; and, for the number productions only, from the algorithm text of
+; ECMA-262 10th Edition Section 7.1.12.1, which Section 3.2.2.3 makes
+; normative by reference.  That algorithm is NOT reproduced in RFC 8785
+; ("Due to the relative complexity of this part, the algorithm itself
+; is not included in this document", Section 3.2.2.3), so the number
+; productions below are derived at one further remove than the rest of
+; this file and should be read as such.
+;
+; The language is ABNF (RFC 5234).  No RFC 5234 core rule is used or
+; redefined.  Literal strings are written as explicit %x byte/scalar
+; sequences rather than quoted strings, so that nothing depends on RFC
+; 5234's case-insensitive string rule or on RFC 7405.
+;
+; ---------------------------------------------------------------------
+; SCOPE AND THE TWO LAYERS
+;
+; JCS output is a sequence of octets (Section 3.2.4).  This file gives
+; the grammar at two layers, as RFC 8259 does:
+;
+;   PART 1  the code-point layer.  %xNN-NN denotes a Unicode scalar
+;           value.  This is where the escaping, number and structural
+;           rules live.  Root rule: jcs-text.
+;
+;   PART 2  the octet layer.  The UTF-8 encoding Section 3.2.4
+;           requires, as RFC 3629 defines it.  Root rule: jcs-octets.
+;
+; A conforming JCS output is an octet string that matches jcs-octets
+; AND whose decoding matches jcs-text.  Neither part alone is
+; sufficient, and this split is itself load-bearing - see the
+; lone-surrogate note under STRINGS.
+;
+; =====================================================================
+; PART 1 - CODE-POINT LAYER
+; =====================================================================
+
+; ---------------------------------------------------------------------
+; Root.
+;
+; RFC 8259 permits any JSON value at the top level and RFC 8785 does
+; not narrow that; the Appendix A sample serializes whatever it is
+; given.  In practice a JCS producer hands a hash or a signature
+; function an object, but nothing in the document requires it.
+;
+; There is NO leading or trailing whitespace and NO byte order mark.
+; Section 3.2.1 forbids whitespace between tokens; RFC 8259 Section 8.1
+; forbids a producer adding a BOM.  RFC 8785 does not restate the BOM
+; rule - that prohibition is inherited, not stated here.
+
+jcs-text        = value
+
+value           = object / array / string / number / literal
+
+; ---------------------------------------------------------------------
+; STRUCTURAL CHARACTERS - Section 3.2.1
+;
+; RFC 8259 wraps each of these six characters in optional whitespace
+; (`ws`).  Section 3.2.1 removes it: "Whitespace between JSON tokens
+; MUST NOT be emitted."  The whole of JCS's whitespace rule is the
+; ABSENCE of a `ws` rule from this file.  There is no production for
+; space, horizontal tab, line feed or carriage return anywhere outside
+; a string, and a canonical output is therefore always a single line.
+
+begin-array     = %x5B                  ; [
+begin-object    = %x7B                  ; {
+end-array       = %x5D                  ; ]
+end-object      = %x7D                  ; }
+name-separator  = %x3A                  ; :
+value-separator = %x2C                  ; ,
+
+; ---------------------------------------------------------------------
+; OBJECTS - Section 3.2.3
+;
+; The member ORDER constraint of Section 3.2.3 is not expressible here;
+; see WHAT THIS GRAMMAR CANNOT SAY, item 1.  Nor is the I-JSON
+; no-duplicate-names rule of Section 3.1; see item 2.
+;
+; An empty object is `{}` with nothing between the braces - there is no
+; whitespace to omit.
+
+object          = begin-object [ member *( value-separator member ) ]
+                  end-object
+
+member          = string name-separator value
+
+; ---------------------------------------------------------------------
+; ARRAYS - Section 3.2.3
+;
+; "array element order MUST NOT be changed" (Section 3.2.3).  Element
+; order is a relation between the input and the output, so no grammar
+; over the output alone can express it; see item 3.  The grammar's only
+; contribution is that an array is a comma-separated sequence with no
+; whitespace.
+
+array           = begin-array [ value *( value-separator value ) ]
+                  end-array
+
+; ---------------------------------------------------------------------
+; LITERALS - Section 3.2.2.1
+;
+; "the literals "null", "true", and "false" MUST be serialized as null,
+; true, and false, respectively."  Lowercase, exactly; the explicit %x
+; spellings below make that unambiguous without relying on RFC 7405.
+
+literal         = false / null / true
+
+false           = %x66.61.6c.73.65      ; false
+null            = %x6e.75.6c.6c         ; null
+true            = %x74.72.75.65         ; true
+
+; ---------------------------------------------------------------------
+; STRINGS - Section 3.2.2.2
+;
+; This is the one part of JCS that a grammar can decide completely, and
+; the productions below are exact.  Section 3.2.2.2 states two rules,
+; and they partition the code points:
+;
+;   (a) "If the Unicode value falls within the traditional ASCII
+;       control character range (U+0000 through U+001F), it MUST be
+;       serialized using lowercase hexadecimal Unicode notation
+;       (\uhhhh) unless it is in the set of predefined JSON control
+;       characters U+0008, U+0009, U+000A, U+000C, or U+000D, which
+;       MUST be serialized as \b, \t, \n, \f, and \r, respectively."
+;
+;   (b) "If the Unicode value is outside of the ASCII control character
+;       range, it MUST be serialized "as is" unless it is equivalent to
+;       U+005C (\) or U+0022 ("), which MUST be serialized as \\ and
+;       \", respectively."
+;
+; and then: "Finally, the resulting sequence of Unicode code points
+; MUST be enclosed in double quotes (")."
+;
+; Consequences, all of which the productions below enforce:
+;
+;   * Exactly 32 code points are escaped, and no others.  Five take a
+;     short escape; twenty-seven take \uhhhh; two (U+0022, U+005C) take
+;     a two-character escape.  Count: 5 + 27 = 32 code points in
+;     U+0000-U+001F, plus the two above.
+;
+;   * The \uhhhh set is exactly U+0000-U+0007, U+000B, U+000E-U+001F.
+;     Nothing else is ever written as \uhhhh.  In particular \u0008,
+;     \u0009, \u000a, \u000c and \u000d MUST NOT appear - rule (a)
+;     reserves those five for the short escapes - and that is why
+;     escape-unicode below excludes them one by one rather than
+;     admitting a general four-hex-digit production.
+;
+;   * The hex digits are LOWERCASE ("lowercase hexadecimal Unicode
+;     notation").  \u000F is non-conforming; \u000f is correct.  All
+;     four digits are always present, zero-padded: \u0007, not \u7.
+;     Since the escaped set is confined to U+0000-U+001F, the first two
+;     digits are always "00" and the third is always "0" or "1".
+;
+;   * U+002F (/) is NOT escaped.  JSON permits \/ ; JCS rule (b) makes
+;     it an "as is" character, so \/ MUST NOT appear in JCS output.
+;     (Confirmed by the Section 3.2.4 byte dump, which ends ... 5c 22
+;     2f 22 7d - a bare 0x2f.)
+;
+;   * U+007F (DEL) is NOT escaped.  It is outside U+0000-U+001F, so
+;     rule (b) applies and it is emitted as the raw octet 0x7f.  This
+;     differs from several non-JCS "canonical JSON" conventions.
+;
+;   * U+0080-U+009F (the C1 controls) are NOT escaped either, for the
+;     same reason.  Confirmed by the Section 3.2.3 sorting test data,
+;     whose U+0080 property name appears in canonical output as the raw
+;     UTF-8 sequence c2 80.
+;
+;   * No non-ASCII character is ever escaped.  Everything from U+0020
+;     up, apart from the two mandatory escapes, is emitted as itself
+;     and then UTF-8 encoded by Section 3.2.4.
+;
+; Because the escaped set is closed and the short escapes are
+; mandatory, the escaping is a BIJECTION on well-formed input: for each
+; code point there is exactly one admissible spelling, and the grammar
+; below admits exactly those spellings.  A validator that accepts a
+; string against `string` has fully checked Section 3.2.2.2.  This is
+; the strongest claim any file in this directory makes.
+
+string          = quotation-mark *char quotation-mark
+
+quotation-mark  = %x22                  ; "
+escape          = %x5C                  ; \
+
+char            = unescaped
+                / escape-short
+                / escape-literal
+                / escape-unicode
+
+; (b) emitted "as is": every scalar value outside U+0000-U+001F
+; except U+0022 and U+005C.  The surrogate range U+D800-U+DFFF is
+; excluded because it contains no scalar values - see the
+; lone-surrogate note below.
+unescaped       = %x20-21               ; SP and !
+                / %x23-5B               ; # through [   (skips ")
+                / %x5D-D7FF             ; ] upward      (skips \)
+                / %xE000-10FFFF         ; above the surrogate block
+
+; (a) the five predefined JSON control characters.  These spellings are
+; mandatory; the \uhhhh forms of the same five code points are not
+; admitted anywhere in this grammar.
+escape-short    = escape %x62           ; \b   U+0008 BACKSPACE
+                / escape %x74           ; \t   U+0009 CHARACTER TABULATION
+                / escape %x6E           ; \n   U+000A LINE FEED
+                / escape %x66           ; \f   U+000C FORM FEED
+                / escape %x72           ; \r   U+000D CARRIAGE RETURN
+
+; (b)'s two exceptions.
+escape-literal  = escape %x22           ; \"   U+0022 QUOTATION MARK
+                / escape %x5C           ; \\   U+005C REVERSE SOLIDUS
+
+; (a)'s general case: the twenty-seven remaining C0 controls, lowercase
+; hex, four digits, no others.  Enumerated rather than generalised so
+; that the grammar rejects \u0008 / \u0009 / \u000a / \u000c / \u000d,
+; any uppercase hex digit, and every \uhhhh above U+001F.
+escape-unicode  = escape %x75 %x30.30.30 %x30-37
+                                        ; \u0000 - \u0007
+                / escape %x75 %x30.30.30 %x62
+                                        ; \u000b  (VERTICAL TAB; note
+                                        ;  that U+000B is NOT one of
+                                        ;  the five short escapes)
+                / escape %x75 %x30.30.30 %x65-66
+                                        ; \u000e - \u000f
+                / escape %x75 %x30.30.31 hexdig-lower
+                                        ; \u0010 - \u001f
+
+hexdig-lower    = %x30-39 / %x61-66     ; 0-9 a-f   (lowercase only)
+
+; LONE SURROGATES.  Section 3.2.2.2 Note: "Since invalid Unicode data
+; like "lone surrogates" (e.g., U+DEAD) may lead to interoperability
+; issues including broken signatures, occurrences of such data MUST
+; cause a compliant JCS implementation to terminate with an appropriate
+; error."
+;
+; That MUST is honoured structurally in BOTH layers of this file, and
+; deliberately so:
+;   - `unescaped` above skips %xD800-DFFF, so no lone surrogate can be
+;     written as itself;
+;   - `escape-unicode` admits only U+0000-U+001F, so no surrogate can
+;     be smuggled in as \ud800 either - which is the only way a
+;     surrogate could appear in RFC 8259 JSON at all;
+;   - UTF8-char in PART 2 is the RFC 3629 grammar, which excludes the
+;     surrogate block by construction (see UTF8-3).
+; A paired surrogate is not an issue: a correctly paired surrogate pair
+; denotes a supplementary-plane scalar value and is covered by
+; %xE000-10FFFF / UTF8-4.
+;
+; What the grammar canNOT do is produce the required ERROR.  Rejection
+; is not termination; see item 6.
+
+; ---------------------------------------------------------------------
+; NUMBERS - Section 3.2.2.3
+;
+; "ECMAScript builds on the IEEE 754 [IEEE754] double-precision
+; standard for representing JSON number data.  Such data MUST be
+; serialized according to Section 7.1.12.1 of [ECMA-262], including
+; the "Note 2" enhancement."  RFC 8785 does not reproduce that
+; algorithm.
+;
+; The productions below are the OUTPUT LANGUAGE of ECMA-262
+; Number::toString(m), read case by case.  Writing m = s x 10^(n-k)
+; where s is a k-digit decimal integer, k minimal (so s has no leading
+; zero and no trailing zero), the algorithm's branches are:
+;
+;   step 2  m is +0 or -0           -> "0"                 -> zero
+;   step 3  m < 0                   -> "-" + toString(-m)  -> minus
+;   step 6  k <= n <= 21            -> s then n-k zeros    -> int-form
+;   step 7  0 < n <= 21             -> s with a point
+;                                      after n digits      -> frac-form
+;   step 8  -6 < n <= 0             -> "0." then -n zeros
+;                                      then s              -> small-form
+;   step 9  k = 1, otherwise        -> digit "e" sign exp  -> exp-form
+;   step 10 k > 1, otherwise        -> d "." rest "e" sign exp
+;                                                          -> exp-form
+;
+; Observable consequences, all enforced below:
+;
+;   * The exponent marker is LOWERCASE "e" and ALWAYS carries a sign:
+;     1e+30, 1e-27, 5e-324.  Never "E", never a bare "e30".
+;     n-1 = 0 would give an unsigned exponent, but n = 1 falls in step
+;     7's range, so exp-form is never reached with a zero exponent and
+;     the sign is unconditional.
+;
+;   * A number NEVER has a leading "+", a leading zero before another
+;     digit, a trailing ".", a leading ".", or a trailing zero in its
+;     fractional digits.  "4.50" canonicalizes to "4.5" and "1E30" to
+;     "1e+30" (Section 3.2.2 worked example).
+;
+;   * Negative zero is NOT representable in output.  Step 2 precedes
+;     step 3, so IEEE 8000000000000000 serializes as "0", not "-0"
+;     (Appendix B, "Minus zero").  The grammar enforces this by giving
+;     `zero` no optional minus.
+;
+;   * Integers up to 21 digits are written in full, NOT in exponential
+;     form: 295147905179352830000 (~2**68) and 9007199254740992 are
+;     both int-form (Appendix B).  The 21-digit boundary is the
+;     threshold between int-form and exp-form.
+;
+;   * Values at or below 1e-7 in magnitude go exponential:
+;     0.000001 stays positional, 9.999999999999997e-7 does not
+;     (Appendix B, rows 3eb0c6f7a0b5ed8d and 3eb0c6f7a0b5ed8c).
+;
+;   * NaN and Infinity have no production.  "Since Not a Number (NaN)
+;     and Infinity are not permitted in JSON, occurrences of NaN or
+;     Infinity MUST cause a compliant JCS implementation to terminate
+;     with an appropriate error" (Section 3.2.2.3).  As with lone
+;     surrogates, the grammar excludes them but cannot terminate; see
+;     item 6.
+
+number          = zero / [ minus ] nonzero-number
+
+zero            = %x30                  ; 0   - and never "-0"
+minus           = %x2D                  ; -
+
+nonzero-number  = int-form
+                / frac-form
+                / small-form
+                / exp-form
+
+; step 6.  n digits, 1 <= n <= 21, first digit nonzero.  The digits
+; after position k are zeros, which this grammar does not express
+; (item 5).
+int-form        = digit1-9 *20DIGIT
+
+; step 7.  n integer digits (1 <= n <= 21) then a point then k-n
+; fraction digits, the last of which is nonzero (item 5).
+frac-form       = digit1-9 *20DIGIT %x2E 1*DIGIT
+
+; step 8.  "0." then -n zeros (0 <= -n <= 5) then the k digits of s.
+; The first digit of s is nonzero, so at most five zeros can follow the
+; point - a sixth would mean n <= -6, which step 8 excludes and which
+; therefore routes to exp-form instead.  0.000001 has five; 1e-7 is the
+; next value down and is exponential.
+small-form      = %x30 %x2E *5%x30 digit1-9 *DIGIT
+
+; steps 9 and 10.
+exp-form        = exp-mantissa %x65 exp-sign exp-digits
+
+exp-mantissa    = digit1-9 [ %x2E 1*DIGIT ]
+                                        ; step 9 is the bare digit;
+                                        ; step 10 adds the point and
+                                        ; the remaining k-1 digits
+exp-sign        = %x2B / %x2D           ; + or - , never absent
+exp-digits      = digit1-9 *2DIGIT      ; abs(n-1), no leading zero.
+                                        ; For IEEE 754 binary64 the
+                                        ; attainable values are 21..308
+                                        ; with "+" and 7..324 with "-",
+                                        ; so one to three digits; the
+                                        ; *2DIGIT bound is a property
+                                        ; of binary64, not of the
+                                        ; ECMA-262 algorithm text.
+
+DIGIT           = %x30-39               ; 0-9
+digit1-9        = %x31-39               ; 1-9
+
+; =====================================================================
+; PART 2 - OCTET LAYER - Section 3.2.4
+;
+; "Finally, in order to create a platform-independent representation,
+; the result of the preceding step MUST be encoded in UTF-8."
+;
+; This is the RFC 3629 UTF-8 grammar, reproduced in the form RFC 8259
+; Section 8.1 cites it.  It is included here because the JCS output is
+; the OCTET string - that is what gets hashed and signed (Section
+; 3.2.4: "This data is intended to be usable as input to cryptographic
+; methods") - so an output checker that stops at the code-point layer
+; has not checked the artifact that the signature actually covers.
+;
+; Note the two exclusions that matter for JCS:
+;   - UTF8-3's %xED %x80-9F branch stops at U+D7FF / resumes at U+E000,
+;     so the surrogate block D800-DFFF has no encoding.  CESU-8 and
+;     WTF-8 surrogate sequences (ed a0 bd ed b8 80 for U+1F600) are
+;     rejected here, which is the octet-layer half of the
+;     Section 3.2.2.2 lone-surrogate rule.
+;   - UTF8-2 starts at %xC2, so overlong two-byte encodings of ASCII
+;     (c0 80 for NUL, c1 bf) are rejected.  An overlong encoding would
+;     be a second spelling of a code point and would break the
+;     one-output-per-input property canonicalization exists to provide.
+; Neither exclusion is stated by RFC 8785; both follow from "encoded in
+; UTF-8" meaning RFC 3629 UTF-8.
+; =====================================================================
+
+jcs-octets      = *UTF8-char
+
+UTF8-char       = UTF8-1 / UTF8-2 / UTF8-3 / UTF8-4
+
+UTF8-1          = %x00-7F
+UTF8-2          = %xC2-DF UTF8-tail
+UTF8-3          = %xE0 %xA0-BF UTF8-tail
+                / %xE1-EC 2UTF8-tail
+                / %xED %x80-9F UTF8-tail
+                / %xEE-EF 2UTF8-tail
+UTF8-4          = %xF0 %x90-BF 2UTF8-tail
+                / %xF1-F3 3UTF8-tail
+                / %xF4 %x80-8F 2UTF8-tail
+UTF8-tail       = %x80-BF
+
+; =====================================================================
+; WHAT THIS GRAMMAR CANNOT SAY
+;
+; These are stated gaps, not omissions.  Each is a real JCS rule that
+; no ABNF over the output can decide.  They are the findings this file
+; hands to the cross-check pass; each also lives in
+; ../requirements.yaml and ../normative.md.
+;
+; 1. MEMBER ORDER (Section 3.2.3).  "JSON object properties MUST be
+;    sorted recursively".  ABNF is a context-free grammar over strings;
+;    sortedness is a predicate relating adjacent members' NAMES, and it
+;    is not context-free for an unbounded alphabet.  `object` above
+;    therefore admits ANY member order.  This is the single largest
+;    gap in the file: a string can satisfy this whole grammar and still
+;    not be canonical JCS.  The decision procedure is in sorting.md,
+;    and it is the one artifact in this directory a harness MUST run
+;    separately from the grammar.
+;
+; 2. NO DUPLICATE PROPERTY NAMES (Section 3.1, via I-JSON).  Same
+;    reason: distinctness across an unbounded set of members is not
+;    context-free.  See i-json-input.schema.json, which cannot express
+;    it either - the constraint is unexpressible in BOTH of this
+;    directory's derived schema languages, which is worth carrying
+;    forward as a single finding rather than two.
+;
+; 3. ARRAY ELEMENT ORDER MUST NOT CHANGE (Section 3.2.3).  This is a
+;    relation between INPUT and OUTPUT.  No grammar over the output
+;    alone can see the input, so no grammar can express it.  Only a
+;    differential test can.
+;
+; 4. THE NUMBER VALUE (Section 3.2.2.3).  The grammar pins the SHAPE of
+;    a serialized number.  It cannot require that the digits are the
+;    correct shortest round-trip decimal for the IEEE 754 double that
+;    was the input - that is a numeric predicate, and it is the entire
+;    substance of ECMA-262 Section 7.1.12.1.  Appendix B exists
+;    precisely because this cannot be checked by grammar; it is a test
+;    corpus, and it belongs to ../examples/, not here.  A number
+;    serializer that emits "1e+31" where "1e+30" was required passes
+;    this grammar.
+;
+; 5. DIGIT-LEVEL CONSEQUENCES OF MINIMAL k.  Three sub-cases, all
+;    numeric predicates:
+;      - in int-form, the n-k digits after position k are all zeros;
+;      - in frac-form and small-form, the last digit is nonzero (no
+;        trailing fractional zero);
+;      - in every form, k <= 17 significant digits, because 17 is the
+;        shortest round-trip bound for binary64.  The grammar's
+;        `*20DIGIT` / `1*DIGIT` bounds come from the ECMA-262 branch
+;        conditions (n <= 21), not from k, and are deliberately looser
+;        than reality so that the grammar never rejects valid output.
+;
+; 6. "MUST ... TERMINATE WITH AN APPROPRIATE ERROR" (Sections 3.2.2.2
+;    and 3.2.2.3, for lone surrogates and for NaN/Infinity).  The
+;    grammar excludes all three from the output language, so a
+;    conforming output cannot contain them - but non-derivability is
+;    not termination, and an implementation that silently drops a lone
+;    surrogate produces output this grammar accepts while violating the
+;    MUST.  Behavioural requirements are not grammar requirements.
+;
+; 7. "PARSED JSON STRING DATA MUST NOT BE ALTERED DURING SUBSEQUENT
+;    SERIALIZATIONS" (Section 3.1, elaborated in Appendix E) and the
+;    Section 3.1 Note forbidding Unicode normalization.  Both are
+;    properties of the PIPELINE, not of any document.  Appendix E's own
+;    worked example - "055" becoming "55" and "2019-01-28T07:45:10Z"
+;    becoming "2019-01-28T07:45:10.000Z" under a reviver-based parse -
+;    produces output that satisfies this grammar completely and is
+;    nonetheless the exact failure Appendix E warns about.
+;
+; 8. BYTE ORDER MARK.  RFC 8785 never mentions one.  jcs-octets above
+;    would accept a leading ef bb bf as a U+FEFF character, and PART 1
+;    would then reject it because U+FEFF is not a `value` start - so
+;    the two layers together do exclude it, but by accident of RFC 8259
+;    inheritance rather than by any JCS statement.  Recorded as an
+;    inherited-not-stated gap.
+; =====================================================================

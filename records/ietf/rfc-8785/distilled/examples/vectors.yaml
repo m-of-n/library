@@ -1,0 +1,1075 @@
+schema: "library-examples/v1"
+record: rfc-8785
+kind: examples
+title: "RFC 8785 (JCS) — complete test vector set"
+source_version: "RFC 8785"
+source_digest: "63d52294eb0e3f0014174288186d388b4ddbf2c67d1ce8af1d9726eb0c3ab240"
+source_file: ".cache/rfc-8785.txt (984 lines)"
+extracted: "2026-10-03"
+pass: 1
+reviewed_by: ""
+vector_count: 44
+
+# Conventions used in this file
+#
+# Every vector carries:
+#   id        stable identifier, never reused
+#   locator   section or appendix of RFC 8785 the vector is taken from
+#   kind      what the vector tests
+#   input     the input, verbatim unless `fidelity` says otherwise
+#   expected  the expected output, verbatim; `error` for cases the spec
+#             requires an implementation to reject
+#   fidelity  verbatim      -- character-for-character from the source
+#             reconstructed -- source showed a display-only line wrap; the
+#                              true single-line value has been rejoined
+#             split         -- extracted from a larger verbatim example in
+#                              the source; the characters are the source's
+#             constructed   -- built from the source's prose, which states
+#                              the rule but prints no literal example
+#   violates  for error cases: the rule broken and its locator
+#
+# `fidelity` describes `expected`. Where the input was obtained
+# differently, an `input_fidelity` key overrides it for `input`
+# (only JCS-324-01 needs this: its expected hex block is verbatim,
+# while its input is the rejoined Section 3.2.3 canonical string).
+#
+# All `input` and `expected` values are YAML literal block scalars (|-), so
+# no escape processing is applied by the YAML parser. A backslash in a value
+# is a backslash in the data.
+#
+# The source renders every example indented 5 spaces inside the RFC text
+# margin. That uniform margin is RFC page layout, not content, and has been
+# removed. Indentation *relative* to the start of an example is preserved.
+#
+# Derived material is never mixed into `input` or `expected`. Where it is
+# useful it appears under `derived:` with `in_source: false`.
+
+vectors:
+
+  # ===================================================================
+  # Section 3.1 -- Creation of Input Data
+  # ===================================================================
+
+  - id: JCS-31-E1
+    locator: "RFC 8785 Section 3.1"
+    kind: error-duplicate-property-names
+    fidelity: constructed
+    input: |-
+      {"a":1,"a":2}
+    expected: error
+    violates:
+      rule: "JSON objects MUST NOT exhibit duplicate property names."
+      locator: "RFC 8785 Section 3.1 (I-JSON, RFC 7493)"
+    notes: >-
+      The source states the rule but prints no literal example. The input
+      above is the minimal object exhibiting the violation. Section 5 step 1
+      requires a verifier to parse and confirm I-JSON adherence before
+      acting on received data, and to abort if that step fails.
+
+  # ===================================================================
+  # Section 3.2.2 -- Serialization of Primitive Data Types
+  # ===================================================================
+
+  - id: JCS-322-01
+    locator: "RFC 8785 Section 3.2.2"
+    kind: ecmascript-stringify-divergence-not-canonical
+    fidelity: reconstructed
+    input: |-
+      {
+        "numbers": [333333333.33333329, 1E30, 4.50,
+                    2e-3, 0.000000000000000000000000001],
+        "string": "\u20ac$\u000F\u000aA'\u0042\u0022\u005c\\\"\/",
+        "literals": [null, true, false]
+      }
+    expected: |-
+      {"numbers":[333333333.3333333,1e+30,4.5,0.002,1e-27],"string":"€$\u000f\nA'B\"\\\\\"/","literals":[null,true,false]}
+    notes: >-
+      This expected value is NOT the JCS canonical form. It is the result of
+      ECMAScript "JSON.stringify()", which performs JCS-compatible primitive
+      serialization but preserves property creation/receipt order. The source
+      prints it to show how far the serialized form diverges from the parsed
+      input. The canonical form of the same object is JCS-323-01.
+    reconstruction: >-
+      The source prints the expected value across two lines and states
+      explicitly "(with a line wrap added for display purposes only)". The
+      wrap falls between `"string":` and `"€$...`. The two lines have been
+      rejoined with no separator to recover the true single-line value. This
+      reconstruction is confirmed independently: the same string appears in
+      JCS-323-01, whose byte encoding is given in full in Section 3.2.4
+      (JCS-324-01), and those bytes decode to exactly the sequence used here.
+    properties:
+      euro_sign_codepoint: "U+20AC"
+      euro_sign_utf8: "e2 82 ac"
+
+  - id: JCS-322-02
+    locator: "RFC 8785 Section 3.2.2 (string member of the sample object)"
+    kind: string-escape-serialization
+    fidelity: split
+    input: |-
+      "\u20ac$\u000F\u000aA'\u0042\u0022\u005c\\\"\/"
+    expected: |-
+      "€$\u000f\nA'B\"\\\\\"/"
+    notes: >-
+      Extracted from the `"string"` member of the JCS-322-01 object. The
+      characters are the source's; only the surrounding object has been
+      removed. The same expected value is produced by the canonical form
+      (Section 3.2.3) and is confirmed byte-for-byte by Section 3.2.4.
+    derived:
+      in_source: false
+      description: >-
+        Per-escape breakdown, derived by applying the Section 3.2.2.2 rules
+        to the input. Offered as an implementation aid; it is not in RFC 8785.
+      breakdown:
+        - input_token: '\u20ac'
+          code_point: "U+20AC EURO SIGN"
+          output: "€"
+          rule: "outside ASCII control range, not U+005C or U+0022 -> emitted as is"
+        - input_token: '$'
+          code_point: "U+0024"
+          output: "$"
+          rule: "emitted as is"
+        - input_token: '\u000F'
+          code_point: "U+000F"
+          output: '\u000f'
+          rule: "ASCII control range, not a predefined JSON control char -> lowercase \\uhhhh"
+        - input_token: '\u000a'
+          code_point: "U+000A"
+          output: '\n'
+          rule: "predefined JSON control character -> \\n"
+        - input_token: 'A'
+          code_point: "U+0041"
+          output: "A"
+          rule: "emitted as is"
+        - input_token: "'"
+          code_point: "U+0027"
+          output: "'"
+          rule: "emitted as is; apostrophe is NOT escaped"
+        - input_token: '\u0042'
+          code_point: "U+0042"
+          output: "B"
+          rule: "escape resolved on parse, then emitted as is"
+        - input_token: '\u0022'
+          code_point: "U+0022"
+          output: '\"'
+          rule: 'equivalent to U+0022 -> backslash plus double quote'
+        - input_token: '\u005c'
+          code_point: "U+005C"
+          output: '\\'
+          rule: "equivalent to U+005C -> two backslashes"
+        - input_token: '\\'
+          code_point: "U+005C"
+          output: '\\'
+          rule: "equivalent to U+005C -> two backslashes"
+        - input_token: '\"'
+          code_point: "U+0022"
+          output: '\"'
+          rule: 'equivalent to U+0022 -> backslash plus double quote'
+        - input_token: '\/'
+          code_point: "U+002F"
+          output: "/"
+          rule: >-
+            JSON permits the \/ escape on input; U+002F is outside the ASCII
+            control range and is neither U+005C nor U+0022, so it is emitted
+            as is. The escape is NOT reproduced on output.
+
+  - id: JCS-322-03
+    locator: "RFC 8785 Section 3.2.2 (numbers member of the sample object)"
+    kind: number-reserialization
+    fidelity: split
+    input: |-
+      [333333333.33333329, 1E30, 4.50, 2e-3, 0.000000000000000000000000001]
+    expected: |-
+      [333333333.3333333,1e+30,4.5,0.002,1e-27]
+    notes: >-
+      Extracted from the `"numbers"` member of the JCS-322-01 object; in the
+      source the array itself is split across two display lines inside the
+      pretty-printed input object, so the input here is that array rejoined.
+      Element-by-element: 333333333.33333329 -> 333333333.3333333 (rounded to
+      the nearest IEEE 754 double, then shortest round-trip); 1E30 -> 1e+30
+      (uppercase E normalised to lowercase, explicit + sign); 4.50 -> 4.5
+      (trailing zero dropped); 2e-3 -> 0.002 (exponent below the threshold,
+      written positionally); 0.000000000000000000000000001 -> 1e-27. Array
+      element order MUST NOT be changed (Section 3.2.3).
+
+  - id: JCS-322-04
+    locator: "RFC 8785 Sections 3.2.2 and 3.2.2.1"
+    kind: literal-serialization
+    fidelity: split
+    input: |-
+      [null, true, false]
+    expected: |-
+      [null,true,false]
+    notes: >-
+      Extracted from the `"literals"` member of the JCS-322-01 object.
+      Section 3.2.2.1: the literals null, true and false MUST be serialized
+      as null, true and false respectively. Whitespace between tokens MUST
+      NOT be emitted (Section 3.2.1).
+
+  # ===================================================================
+  # Section 3.2.2.2 -- Serialization of Strings
+  # ===================================================================
+
+  - id: JCS-3222-E1
+    locator: "RFC 8785 Section 3.2.2.2 (Note)"
+    kind: error-lone-surrogate
+    fidelity: constructed
+    input: |-
+      "\udead"
+    expected: error
+    violates:
+      rule: >-
+        Since invalid Unicode data like "lone surrogates" (e.g., U+DEAD) may
+        lead to interoperability issues including broken signatures,
+        occurrences of such data MUST cause a compliant JCS implementation to
+        terminate with an appropriate error.
+      locator: "RFC 8785 Section 3.2.2.2, Note"
+    notes: >-
+      The source names U+DEAD as its example of a lone surrogate but prints
+      no JSON literal. U+DEAD lies in the low-surrogate range
+      U+DC00..U+DFFF; expressed as a JSON string it is "\udead", with no
+      preceding high surrogate. An unpaired high surrogate such as "\ud83d"
+      is the symmetric case and must be rejected on the same rule. Compare
+      JCS-323-02, where "\ud83d\ude00" is a well-formed surrogate PAIR and
+      must be accepted.
+
+  # ===================================================================
+  # Section 3.2.2.3 -- Serialization of Numbers
+  # ===================================================================
+
+  - id: JCS-3223-E1
+    locator: "RFC 8785 Section 3.2.2.3 (Note); Appendix B note (3)"
+    kind: error-nan
+    fidelity: constructed
+    input: |-
+      NaN
+    expected: error
+    violates:
+      rule: >-
+        Since Not a Number (NaN) and Infinity are not permitted in JSON,
+        occurrences of NaN or Infinity MUST cause a compliant JCS
+        implementation to terminate with an appropriate error.
+      locator: "RFC 8785 Section 3.2.2.3, Note"
+    notes: >-
+      Stated as a rule in Section 3.2.2.3 and tabulated as IEEE 754
+      7fffffffffffffff with an empty JSON Representation cell in Appendix B
+      (see JCS-B-10, which carries the same case in IEEE 754 bit form).
+
+  - id: JCS-3223-E2
+    locator: "RFC 8785 Section 3.2.2.3 (Note); Appendix B note (3)"
+    kind: error-infinity
+    fidelity: constructed
+    input: |-
+      Infinity
+    expected: error
+    violates:
+      rule: >-
+        Since Not a Number (NaN) and Infinity are not permitted in JSON,
+        occurrences of NaN or Infinity MUST cause a compliant JCS
+        implementation to terminate with an appropriate error.
+      locator: "RFC 8785 Section 3.2.2.3, Note"
+    notes: >-
+      Tabulated as IEEE 754 7ff0000000000000 with an empty JSON
+      Representation cell in Appendix B (see JCS-B-11). Negative infinity,
+      fff0000000000000, is the symmetric case; the source tabulates only the
+      positive one.
+
+  # ===================================================================
+  # Section 3.2.3 -- Sorting of Object Properties
+  # ===================================================================
+
+  - id: JCS-323-01
+    locator: "RFC 8785 Section 3.2.3"
+    kind: canonicalization-end-to-end
+    fidelity: reconstructed
+    input: |-
+      {
+        "numbers": [333333333.33333329, 1E30, 4.50,
+                    2e-3, 0.000000000000000000000000001],
+        "string": "\u20ac$\u000F\u000aA'\u0042\u0022\u005c\\\"\/",
+        "literals": [null, true, false]
+      }
+    expected: |-
+      {"literals":[null,true,false],"numbers":[333333333.3333333,1e+30,4.5,0.002,1e-27],"string":"€$\u000f\nA'B\"\\\\\"/"}
+    notes: >-
+      The canonical form of the same object as JCS-322-01. Properties are
+      sorted "literals" < "numbers" < "string"; array element order within
+      "numbers" and "literals" is unchanged. This is the single most
+      load-bearing vector in the document: its UTF-8 encoding is given
+      byte-for-byte in Section 3.2.4 as JCS-324-01.
+    reconstruction: >-
+      The source prints the expected value across two lines and states
+      explicitly "(with a line wrap added for display purposes only)". The
+      wrap falls between `333333333.3333333,` and `1e+30`. The two lines have
+      been rejoined with no separator. Verified: the rejoined string encodes
+      to exactly the 118 bytes listed in Section 3.2.4.
+    expected_utf8_byte_count: 118
+    expected_char_count: 116
+
+  - id: JCS-323-02
+    locator: "RFC 8785 Section 3.2.3 (the document's own sorting conformance vector)"
+    kind: property-name-sorting-utf16-code-units
+    fidelity: verbatim
+    conformance: >-
+      The source introduces this as "The following JSON test data can be used
+      for verifying the correctness of the sorting scheme in a JCS
+      implementation". It is the document's designated sorting test.
+    input: |-
+      {
+        "\u20ac": "Euro Sign",
+        "\r": "Carriage Return",
+        "\ufb33": "Hebrew Letter Dalet With Dagesh",
+        "1": "One",
+        "\ud83d\ude00": "Emoji: Grinning Face",
+        "\u0080": "Control",
+        "\u00f6": "Latin Small Letter O With Diaeresis"
+      }
+    expected: |-
+      "Carriage Return"
+      "One"
+      "Control"
+      "Latin Small Letter O With Diaeresis"
+      "Euro Sign"
+      "Emoji: Grinning Face"
+      "Hebrew Letter Dalet With Dagesh"
+    expected_form: >-
+      The source gives the expectation as the property VALUES listed in the
+      order their property names take after sorting, under the heading
+      "Expected argument order after sorting property strings". Each value
+      identifies its property uniquely, so the list fixes the key order
+      exactly. The seven lines above are verbatim, in the source's order.
+    expected_key_order:
+      in_source: false
+      description: >-
+        The same expectation restated as the property-name sort key sequence,
+        derived by mapping each value back to its property name. Included
+        because an implementation compares keys, not values.
+      order:
+        - name_escaped: '"\r"'
+          code_point: "U+000D"
+          utf16_code_units: ["000d"]
+          value: "Carriage Return"
+        - name_escaped: '"1"'
+          code_point: "U+0031"
+          utf16_code_units: ["0031"]
+          value: "One"
+        - name_escaped: '"\u0080"'
+          code_point: "U+0080"
+          utf16_code_units: ["0080"]
+          value: "Control"
+        - name_escaped: '"\u00f6"'
+          code_point: "U+00F6"
+          utf16_code_units: ["00f6"]
+          value: "Latin Small Letter O With Diaeresis"
+        - name_escaped: '"\u20ac"'
+          code_point: "U+20AC"
+          utf16_code_units: ["20ac"]
+          value: "Euro Sign"
+        - name_escaped: '"\ud83d\ude00"'
+          code_point: "U+1F600"
+          utf16_code_units: ["d83d", "de00"]
+          value: "Emoji: Grinning Face"
+        - name_escaped: '"\ufb33"'
+          code_point: "U+FB33"
+          utf16_code_units: ["fb33"]
+          value: "Hebrew Letter Dalet With Dagesh"
+    derived:
+      in_source: false
+      description: >-
+        RFC 8785 stops at the sort order and never prints the canonicalized
+        document for this input. The canonical output below was derived by
+        applying Sections 3.2.1, 3.2.2.2, 3.2.3 and 3.2.4 to the input, and
+        is given in both text and hex so the vector is reproducible
+        byte-for-byte. It is NOT in RFC 8785; treat it as pass-1 derivation
+        pending verification.
+      canonical_output: |-
+        {"\r":"Carriage Return","1":"One","<U+0080>":"Control","<U+00F6>":"Latin Small Letter O With Diaeresis","<U+20AC>":"Euro Sign","<U+1F600>":"Emoji: Grinning Face","<U+FB33>":"Hebrew Letter Dalet With Dagesh"}
+      canonical_output_note: >-
+        In the text form above, the property name after "One" is the single
+        RAW character U+0080, which is not printable. The hex form below is
+        authoritative; read bytes 36-37 (c2 80) as that character.
+      canonical_output_utf8_hex: |-
+        7b 22 5c 72 22 3a 22 43 61 72 72 69 61 67 65 20 52 65 74 75
+        72 6e 22 2c 22 31 22 3a 22 4f 6e 65 22 2c 22 c2 80 22 3a 22
+        43 6f 6e 74 72 6f 6c 22 2c 22 c3 b6 22 3a 22 4c 61 74 69 6e
+        20 53 6d 61 6c 6c 20 4c 65 74 74 65 72 20 4f 20 57 69 74 68
+        20 44 69 61 65 72 65 73 69 73 22 2c 22 e2 82 ac 22 3a 22 45
+        75 72 6f 20 53 69 67 6e 22 2c 22 f0 9f 98 80 22 3a 22 45 6d
+        6f 6a 69 3a 20 47 72 69 6e 6e 69 6e 67 20 46 61 63 65 22 2c
+        22 ef ac b3 22 3a 22 48 65 62 72 65 77 20 4c 65 74 74 65 72
+        20 44 61 6c 65 74 20 57 69 74 68 20 44 61 67 65 73 68 22 7d
+      canonical_output_byte_count: 180
+      warning: >-
+        Note the trap in this vector. The "\u0080" property name is OUTSIDE
+        the ASCII control character range U+0000..U+001F, so under Section
+        3.2.2.2 it MUST be emitted "as is" -- as the raw two-byte UTF-8
+        sequence c2 80 -- and MUST NOT be re-escaped as \u0080. The canonical
+        output therefore contains a raw C1 control byte. "\r" by contrast is
+        inside the ASCII control range and is a predefined JSON control
+        character, so it becomes the two-character escape backslash-r. An
+        implementation that escapes everything non-ASCII, or that escapes all
+        control characters, fails here while passing every ASCII-only test.
+    notes: >-
+      Section 3.2.3 requires that sorting is applied to property names in
+      their "raw" (unescaped) form, formatted as arrays of UTF-16 code units
+      compared as unsigned integers, independent of locale. The emoji is the
+      discriminator: as UTF-16 its first code unit is d83d, which sorts BELOW
+      fb33, so the Grinning Face precedes the Hebrew letter. Sorting the same
+      names as UTF-8 or UTF-32 would place U+1F600 ABOVE U+FB33 and produce a
+      different, non-conforming order. The source says so explicitly in its
+      closing Note, adding that in practice property names are rarely defined
+      outside 7-bit ASCII, which makes UTF-8 or UTF-32 sorting compatible in
+      most deployments -- but not in this one.
+
+  - id: JCS-323-03
+    locator: "RFC 8785 Section 3.2.3 (plain-English ordering example)"
+    kind: property-name-sorting-prefix-rule
+    fidelity: verbatim
+    input: |-
+      ""
+      "a"
+      "aa"
+      "ab"
+    expected: |-
+      ""
+      "a"
+      "aa"
+      "ab"
+    notes: >-
+      The source prints this list as already being in ascending order, to
+      illustrate the rule that where there is no index position at which two
+      property names differ, the shorter name lexicographically precedes the
+      longer. Input and expected are the same sequence; the vector tests that
+      a sort leaves it unchanged, and equivalently that any permutation of it
+      sorts back to this order. Note the empty property name is legal and
+      sorts first.
+
+  # ===================================================================
+  # Section 3.2.4 -- UTF-8 Generation
+  # ===================================================================
+
+  - id: JCS-324-01
+    locator: "RFC 8785 Section 3.2.4"
+    kind: utf8-encoding-of-canonical-form
+    fidelity: verbatim
+    input_fidelity: reconstructed
+    input: |-
+      {"literals":[null,true,false],"numbers":[333333333.3333333,1e+30,4.5,0.002,1e-27],"string":"€$\u000f\nA'B\"\\\\\"/"}
+    expected: |-
+      7b 22 6c 69 74 65 72 61 6c 73 22 3a 5b 6e 75 6c 6c 2c 74 72
+      75 65 2c 66 61 6c 73 65 5d 2c 22 6e 75 6d 62 65 72 73 22 3a
+      5b 33 33 33 33 33 33 33 33 33 2e 33 33 33 33 33 33 33 2c 31
+      65 2b 33 30 2c 34 2e 35 2c 30 2e 30 30 32 2c 31 65 2d 32 37
+      5d 2c 22 73 74 72 69 6e 67 22 3a 22 e2 82 ac 24 5c 75 30 30
+      30 66 5c 6e 41 27 42 5c 22 5c 5c 5c 5c 5c 22 2f 22 7d
+    expected_encoding: "hexadecimal, space-separated, 20 bytes per line as printed in the source"
+    expected_byte_count: 118
+    input_char_count: 116
+    notes: >-
+      The expected block is the source's hexadecimal listing verbatim,
+      including its line breaks (which are display layout; the byte sequence
+      is contiguous). The `input` is the reconstructed single-line canonical
+      string from Section 3.2.3 (JCS-323-01); its line wrap in the source is
+      display-only. Decoding the 118 bytes as UTF-8 yields exactly that
+      string, which is what independently confirms the reconstruction in
+      JCS-322-01 and JCS-323-01. 118 bytes for 116 characters: the single
+      non-ASCII character, U+20AC EURO SIGN, occupies three bytes
+      (e2 82 ac). The source closes: "This data is intended to be usable as
+      input to cryptographic methods."
+
+  # ===================================================================
+  # Appendix B -- Number Serialization Samples (Table 1)
+  #
+  # Every row of Table 1, in source order, 26 rows. `input` is the IEEE 754
+  # column: the 64-bit double-precision bit pattern in hexadecimal,
+  # big-endian, exactly as the source prints it. `expected` is the JSON
+  # Representation column verbatim. `comment` is the Comment column
+  # verbatim, with the source's note markers resolved under `source_note`.
+  # ===================================================================
+
+  - id: JCS-B-01
+    locator: "RFC 8785 Appendix B, Table 1, row 1"
+    kind: number-serialization-ieee754
+    fidelity: verbatim
+    input: |-
+      0000000000000000
+    expected: |-
+      0
+    comment: "Zero"
+
+  - id: JCS-B-02
+    locator: "RFC 8785 Appendix B, Table 1, row 2"
+    kind: number-serialization-ieee754-negative-zero
+    fidelity: verbatim
+    input: |-
+      8000000000000000
+    expected: |-
+      0
+    comment: "Minus zero"
+    notes: >-
+      Minus zero serializes to "0", not "-0". The sign of zero is not
+      preserved through canonicalization, so negative zero and positive zero
+      produce identical canonical bytes and identical signatures.
+
+  - id: JCS-B-03
+    locator: "RFC 8785 Appendix B, Table 1, row 3"
+    kind: number-serialization-ieee754-min-subnormal
+    fidelity: verbatim
+    input: |-
+      0000000000000001
+    expected: |-
+      5e-324
+    comment: "Min pos number"
+
+  - id: JCS-B-04
+    locator: "RFC 8785 Appendix B, Table 1, row 4"
+    kind: number-serialization-ieee754-min-subnormal-negative
+    fidelity: verbatim
+    input: |-
+      8000000000000001
+    expected: |-
+      -5e-324
+    comment: "Min neg number"
+
+  - id: JCS-B-05
+    locator: "RFC 8785 Appendix B, Table 1, row 5"
+    kind: number-serialization-ieee754-max
+    fidelity: verbatim
+    input: |-
+      7fefffffffffffff
+    expected: |-
+      1.7976931348623157e+308
+    comment: "Max pos number"
+
+  - id: JCS-B-06
+    locator: "RFC 8785 Appendix B, Table 1, row 6"
+    kind: number-serialization-ieee754-max-negative
+    fidelity: verbatim
+    input: |-
+      ffefffffffffffff
+    expected: |-
+      -1.7976931348623157e+308
+    comment: "Max neg number"
+
+  - id: JCS-B-07
+    locator: "RFC 8785 Appendix B, Table 1, row 7"
+    kind: number-serialization-max-safe-integer-boundary
+    fidelity: verbatim
+    input: |-
+      4340000000000000
+    expected: |-
+      9007199254740992
+    comment: "Max pos int    (1)"
+    source_note:
+      marker: "(1)"
+      text: >-
+        For maximum compliance with the ECMAScript "JSON" object, values that
+        are to be interpreted as true integers SHOULD be in the range
+        -9007199254740991 to 9007199254740991. However, how numbers are used
+        in applications does not affect the JCS algorithm.
+
+  - id: JCS-B-08
+    locator: "RFC 8785 Appendix B, Table 1, row 8"
+    kind: number-serialization-max-safe-integer-boundary-negative
+    fidelity: verbatim
+    input: |-
+      c340000000000000
+    expected: |-
+      -9007199254740992
+    comment: "Max neg int    (1)"
+    source_note:
+      marker: "(1)"
+      text: >-
+        For maximum compliance with the ECMAScript "JSON" object, values that
+        are to be interpreted as true integers SHOULD be in the range
+        -9007199254740991 to 9007199254740991. However, how numbers are used
+        in applications does not affect the JCS algorithm.
+
+  - id: JCS-B-09
+    locator: "RFC 8785 Appendix B, Table 1, row 9"
+    kind: number-serialization-large-integer-positional
+    fidelity: verbatim
+    input: |-
+      4430000000000000
+    expected: |-
+      295147905179352830000
+    comment: "~2**68         (2)"
+    source_note:
+      marker: "(2)"
+      text: >-
+        Although a set of specific integers like 2**68 could be regarded as
+        having extended precision, the JCS/ECMAScript number serialization
+        algorithm does not take this into consideration.
+    notes: >-
+      2**68 is exactly 295147905179352825856, but the shortest round-tripping
+      decimal is 2.9514790517935283e20, which ECMAScript writes positionally
+      as 295147905179352830000 because the exponent is below the 1e+21
+      threshold. The trailing digits are padding, not precision.
+
+  - id: JCS-B-10
+    locator: "RFC 8785 Appendix B, Table 1, row 10"
+    kind: error-nan
+    fidelity: verbatim
+    input: |-
+      7fffffffffffffff
+    expected: error
+    comment: "NaN            (3)"
+    violates:
+      rule: >-
+        Since Not a Number (NaN) and Infinity are not permitted in JSON,
+        occurrences of NaN or Infinity MUST cause a compliant JCS
+        implementation to terminate with an appropriate error.
+      locator: "RFC 8785 Section 3.2.2.3, Note; Appendix B note (3)"
+    source_note:
+      marker: "(3)"
+      text: "Values out of range are not permitted in JSON.  See Section 3.2.2.3."
+    notes: >-
+      The source leaves the JSON Representation cell EMPTY for this row. The
+      empty cell means "no serialization exists"; the required behaviour is
+      termination with an error, per note (3) and Section 3.2.2.3. Recorded
+      here as `expected: error` rather than as an empty string, which would
+      be wrong. Same case as JCS-3223-E1, in IEEE 754 bit form.
+
+  - id: JCS-B-11
+    locator: "RFC 8785 Appendix B, Table 1, row 11"
+    kind: error-infinity
+    fidelity: verbatim
+    input: |-
+      7ff0000000000000
+    expected: error
+    comment: "Infinity       (3)"
+    violates:
+      rule: >-
+        Since Not a Number (NaN) and Infinity are not permitted in JSON,
+        occurrences of NaN or Infinity MUST cause a compliant JCS
+        implementation to terminate with an appropriate error.
+      locator: "RFC 8785 Section 3.2.2.3, Note; Appendix B note (3)"
+    source_note:
+      marker: "(3)"
+      text: "Values out of range are not permitted in JSON.  See Section 3.2.2.3."
+    notes: >-
+      The source leaves the JSON Representation cell EMPTY for this row. Same
+      case as JCS-3223-E2, in IEEE 754 bit form. The source tabulates only
+      positive infinity; negative infinity, fff0000000000000, is not in the
+      table and has not been invented here.
+
+  - id: JCS-B-12
+    locator: "RFC 8785 Appendix B, Table 1, row 12"
+    kind: number-serialization-exponent-threshold-neighbour
+    fidelity: verbatim
+    input: |-
+      44b52d02c7e14af5
+    expected: |-
+      9.999999999999997e+22
+    comment: ""
+    notes: >-
+      Rows 12, 13 and 14 are three adjacent doubles straddling 1e+23. They
+      test that shortest-round-trip digit generation is exact at the ULP
+      level.
+
+  - id: JCS-B-13
+    locator: "RFC 8785 Appendix B, Table 1, row 13"
+    kind: number-serialization-exponent-threshold-neighbour
+    fidelity: verbatim
+    input: |-
+      44b52d02c7e14af6
+    expected: |-
+      1e+23
+    comment: ""
+
+  - id: JCS-B-14
+    locator: "RFC 8785 Appendix B, Table 1, row 14"
+    kind: number-serialization-exponent-threshold-neighbour
+    fidelity: verbatim
+    input: |-
+      44b52d02c7e14af7
+    expected: |-
+      1.0000000000000001e+23
+    comment: ""
+
+  - id: JCS-B-15
+    locator: "RFC 8785 Appendix B, Table 1, row 15"
+    kind: number-serialization-positional-exponential-boundary
+    fidelity: verbatim
+    input: |-
+      444b1ae4d6e2ef4e
+    expected: |-
+      999999999999999700000
+    comment: ""
+    notes: >-
+      Rows 15, 16 and 17 are three adjacent doubles straddling 1e+21, the
+      exact point at which ECMAScript switches from positional to
+      exponential notation. 15 and 16 are written positionally with padding
+      zeroes; 17 crosses the threshold and is written as 1e+21. This is a
+      commonly failed boundary in number serializers.
+
+  - id: JCS-B-16
+    locator: "RFC 8785 Appendix B, Table 1, row 16"
+    kind: number-serialization-positional-exponential-boundary
+    fidelity: verbatim
+    input: |-
+      444b1ae4d6e2ef4f
+    expected: |-
+      999999999999999900000
+    comment: ""
+
+  - id: JCS-B-17
+    locator: "RFC 8785 Appendix B, Table 1, row 17"
+    kind: number-serialization-positional-exponential-boundary
+    fidelity: verbatim
+    input: |-
+      444b1ae4d6e2ef50
+    expected: |-
+      1e+21
+    comment: ""
+
+  - id: JCS-B-18
+    locator: "RFC 8785 Appendix B, Table 1, row 18"
+    kind: number-serialization-small-magnitude-boundary
+    fidelity: verbatim
+    input: |-
+      3eb0c6f7a0b5ed8c
+    expected: |-
+      9.999999999999997e-7
+    comment: ""
+    notes: >-
+      Rows 18 and 19 are adjacent doubles straddling 1e-6, the lower
+      threshold at which ECMAScript switches between exponential and
+      positional notation. 18 is written exponentially as e-7; 19, exactly
+      1e-6, is written positionally as 0.000001. Note the exponent has no
+      zero padding: "e-7", not "e-07".
+
+  - id: JCS-B-19
+    locator: "RFC 8785 Appendix B, Table 1, row 19"
+    kind: number-serialization-small-magnitude-boundary
+    fidelity: verbatim
+    input: |-
+      3eb0c6f7a0b5ed8d
+    expected: |-
+      0.000001
+    comment: ""
+
+  - id: JCS-B-20
+    locator: "RFC 8785 Appendix B, Table 1, row 20"
+    kind: number-serialization-adjacent-doubles
+    fidelity: verbatim
+    input: |-
+      41b3de4355555553
+    expected: |-
+      333333333.3333332
+    comment: ""
+    notes: >-
+      Rows 20 through 24 are five consecutive doubles around
+      333333333.3333333. Row 22 is the value reached by the "numbers" member
+      of the Section 3.2.2 sample object, tying Appendix B back to
+      JCS-322-03. Note that the digit counts differ between neighbours (17
+      significant digits for rows 21 and 24, 16 for the others): shortest
+      round-trip, not fixed precision.
+
+  - id: JCS-B-21
+    locator: "RFC 8785 Appendix B, Table 1, row 21"
+    kind: number-serialization-adjacent-doubles
+    fidelity: verbatim
+    input: |-
+      41b3de4355555554
+    expected: |-
+      333333333.33333325
+    comment: ""
+
+  - id: JCS-B-22
+    locator: "RFC 8785 Appendix B, Table 1, row 22"
+    kind: number-serialization-adjacent-doubles
+    fidelity: verbatim
+    input: |-
+      41b3de4355555555
+    expected: |-
+      333333333.3333333
+    comment: ""
+    cross_reference: >-
+      This is the double that 333333333.33333329 parses to in the Section
+      3.2.2 sample object; its serialization 333333333.3333333 appears in
+      JCS-322-01, JCS-322-03, JCS-323-01 and (as bytes) JCS-324-01.
+
+  - id: JCS-B-23
+    locator: "RFC 8785 Appendix B, Table 1, row 23"
+    kind: number-serialization-adjacent-doubles
+    fidelity: verbatim
+    input: |-
+      41b3de4355555556
+    expected: |-
+      333333333.3333334
+    comment: ""
+
+  - id: JCS-B-24
+    locator: "RFC 8785 Appendix B, Table 1, row 24"
+    kind: number-serialization-adjacent-doubles
+    fidelity: verbatim
+    input: |-
+      41b3de4355555557
+    expected: |-
+      333333333.33333343
+    comment: ""
+
+  - id: JCS-B-25
+    locator: "RFC 8785 Appendix B, Table 1, row 25"
+    kind: number-serialization-negative-small-positional
+    fidelity: verbatim
+    input: |-
+      becbf647612f3696
+    expected: |-
+      -0.0000033333333333333333
+    comment: ""
+    notes: >-
+      Magnitude is about 3.33e-6, above the 1e-6 threshold, so it is written
+      positionally with a leading "-0." and seventeen significant digits
+      rather than exponentially.
+
+  - id: JCS-B-26
+    locator: "RFC 8785 Appendix B, Table 1, row 26"
+    kind: number-serialization-round-half-to-even
+    fidelity: verbatim
+    input: |-
+      43143ff3c1cb0959
+    expected: |-
+      1424953923781206.2
+    comment: "Round to even  (4)"
+    source_note:
+      marker: "(4)"
+      text: >-
+        This number is exactly 1424953923781206.25 but will, after the
+        "Note 2" rule mentioned in Section 3.2.2.3, be truncated and rounded
+        to the closest even value.
+    notes: >-
+      The exact value of the double is 1424953923781206.25. The tie at .25 is
+      broken to even, giving .2 and not .3. An implementation using
+      round-half-away-from-zero emits 1424953923781206.3 and fails. This is
+      the only row the source flags as a rounding-mode test.
+
+  # ===================================================================
+  # Appendix C -- Canonicalized JSON as "Wire Format"
+  # ===================================================================
+
+  - id: JCS-C-01
+    locator: "RFC 8785 Appendix C"
+    kind: property-sorting-readability-cost
+    fidelity: verbatim
+    input: |-
+      {
+        "name": "John Doe",
+        "address": "2000 Sunset Boulevard",
+        "city": "Los Angeles",
+        "zip": "90001",
+        "state": "CA"
+      }
+    expected: |-
+      "address", "city", "name", "state", and "zip"
+    expected_form: >-
+      The source does not print a canonicalized string for this example. It
+      states only the resulting property order, in prose: "Using
+      canonicalization, the properties above would be output in the order
+      'address', 'city', 'name', 'state', and 'zip', which adds fuzziness to
+      the data from a human (developer or technical support) perspective."
+      The `expected` value above is that order fragment verbatim. A
+      conforming implementation's output must place the properties in this
+      order.
+    derived:
+      in_source: false
+      description: >-
+        The canonical string implied by the stated order, derived by applying
+        Sections 3.2.1 and 3.2.3. All values are plain ASCII strings needing
+        no escaping, so the derivation is unambiguous. NOT in RFC 8785.
+      canonical_output: |-
+        {"address":"2000 Sunset Boulevard","city":"Los Angeles","name":"John Doe","state":"CA","zip":"90001"}
+      canonical_output_byte_count: 101
+    notes: >-
+      Appendix C is an argument about ergonomics, not a conformance
+      requirement: the canonical output is fully valid JSON and so MAY be
+      used as wire format, but ECMAScript's creation-order serialization is
+      more readable for debugging and logging, and canonicalization collapses
+      the document to a single line. Cryptographic schemes based on JCS would
+      in most cases not depend on externally supplied JSON already being
+      canonicalized.
+
+  # ===================================================================
+  # Appendix D -- Dealing with Big Numbers
+  # ===================================================================
+
+  - id: JCS-D-01
+    locator: "RFC 8785 Appendix D"
+    kind: error-number-not-expressible-as-ieee754-double
+    fidelity: verbatim
+    input: |-
+      {
+        "giantNumber": 1.4e+9999,
+        "payMeThis": 26000.33,
+        "int64Max": 9223372036854775807
+      }
+    expected: error
+    violates:
+      rule: >-
+        JSON number data MUST be expressible as IEEE 754 [IEEE754]
+        double-precision values. Since Not a Number (NaN) and Infinity are
+        not permitted in JSON, occurrences of NaN or Infinity MUST cause a
+        compliant JCS implementation to terminate with an appropriate error.
+      rule_note: >-
+        Two sentences, each quoted verbatim, from the two sections the locator
+        names: the first from Section 3.1, the second from the Section 3.2.2.3
+        Note. They are not adjacent in the source.
+      inference: >-
+        NOT in the source. 1.4e+9999 exceeds the maximum finite binary64 value
+        (JCS-B-05, 7fefffffffffffff) and therefore overflows to Infinity when
+        parsed as a double; that is the step joining the Section 3.1 rule to
+        the Section 3.2.2.3 rule, and it is this extraction's, not RFC 8785's.
+      locator: "RFC 8785 Section 3.1 and Section 3.2.2.3, Note"
+    source_states_error: false
+    notes: >-
+      CAREFUL. The source does NOT label this object an error. It says the
+      sample "conforms to JSON [RFC8259]" and uses it to motivate wrapping
+      such numbers in JSON strings: "numbers that do not have a natural place
+      in the current JSON ecosystem MUST be wrapped using the JSON string
+      type." The `expected: error` above is this extractor's reading of
+      Section 3.1 together with Section 3.2.2.3 applied to the object as
+      written -- 1.4e+9999 exceeds the maximum double (see JCS-B-05) and
+      becomes Infinity on parse, which Section 3.2.2.3 requires an
+      implementation to reject. Flagged `source_states_error: false` so a
+      later pass can confirm or overturn it. Separately, "int64Max"
+      9223372036854775807 is not exactly representable as a double and would
+      silently round; the source makes that point in prose ("applications
+      would normally use different native data types") but prints no
+      serialization, so none has been invented here. "payMeThis" 26000.33 is
+      the monetary case: the source notes such data "would presumably not
+      rely on floating-point data types due to rounding issues with respect
+      to decimal arithmetic."
+
+  - id: JCS-D-02
+    locator: "RFC 8785 Appendix D"
+    kind: big-number-wrapped-as-json-string
+    fidelity: verbatim
+    input: |-
+      var obj = JSON.parse('{"giantNumber": "1.4e+9999"}');
+      var biggie = new BigNumber(obj.giantNumber);
+    expected: |-
+      {"giantNumber": "1.4e+9999"}
+    expected_form: >-
+      The source prints this as a two-line ECMAScript snippet, not as an
+      input/output pair. `input` is the snippet verbatim; `expected` is the
+      JSON literal embedded in it -- the remedy the appendix prescribes. The
+      source prints no canonicalized form of it.
+    derived:
+      in_source: false
+      description: >-
+        The canonical form of the embedded JSON document, derived by applying
+        Section 3.2.1 (whitespace between tokens MUST NOT be emitted). The
+        number is now a string and so passes through unaltered, which is the
+        whole point of the appendix. NOT in RFC 8785.
+      canonical_output: |-
+        {"giantNumber":"1.4e+9999"}
+    notes: >-
+      The contrast with JCS-D-01 is the vector. The same magnitude that is
+      unrepresentable as a JSON number survives canonicalization untouched as
+      a JSON string, and an application reconstitutes it with a big-number
+      type after parsing. The source: given a system using the JSON string
+      type, whether programmatic as above or declarative like OpenAPI, "JCS
+      imposes no limits on applications, including when using ECMAScript".
+      The same treatment is prescribed for other types JSON lacks, such as
+      DateTime -- see JCS-E-01.
+
+  # ===================================================================
+  # Appendix E -- String Subtype Handling
+  # ===================================================================
+
+  - id: JCS-E-01
+    locator: "RFC 8785 Appendix E"
+    kind: string-subtype-canonicalization-conformant
+    fidelity: verbatim
+    input: |-
+      {
+        "time": "2019-01-28T07:45:10Z",
+        "big": "055",
+        "val": 3.5
+      }
+    parsing_method: |-
+      var object = JSON.parse(JSON_object_featured_as_a_string);
+    expected: |-
+      {"big":"055","time":"2019-01-28T07:45:10Z","val":3.5}
+    notes: >-
+      The CONFORMANT case. The schema designer assigned "big" to hold a
+      BigInt subtype and "time" a DateTime subtype, while "val" is an
+      ordinary JCS-compliant JSON number. Parsed with plain JSON.parse, the
+      subtype properties stay pure JSON strings, so canonicalization sorts
+      them ("big" < "time" < "val") and emits their characters unchanged:
+      "055" keeps its leading zero and the timestamp keeps its "Z" form with
+      no fractional seconds. Conversion to native types happens afterwards
+      (new Date(object.time), BigInt(object.big), object.val); the source
+      notes BigInt is at the time of writing natively supported only by V8.
+      The expected output above is what the Appendix A sample canonicalizer
+      returns.
+
+  - id: JCS-E-02
+    locator: "RFC 8785 Appendix E"
+    kind: string-subtype-canonicalization-nonconformant
+    fidelity: verbatim
+    input: |-
+      {
+        "time": "2019-01-28T07:45:10Z",
+        "big": "055",
+        "val": 3.5
+      }
+    parsing_method: |-
+      // "BigInt" requires the following code to become JSON serializable
+      BigInt.prototype.toJSON = function() {
+          return this.toString();
+      };
+
+      // JSON parsing using a "stream"-based method
+      var object = JSON.parse(JSON_object_featured_as_a_string,
+          (k,v) => k == 'time' ? new Date(v) : k == 'big' ? BigInt(v) : v
+      );
+    expected: |-
+      {"big":"55","time":"2019-01-28T07:45:10.000Z","val":3.5}
+    violates:
+      rule: >-
+        An additional constraint is that parsed JSON string data MUST NOT be
+        altered during subsequent serializations. That is, stream- and
+        schema-based parsing MUST treat subtypes as "pure" (immutable) JSON
+        string types and perform the actual conversion to the designated
+        native type in a subsequent step.
+      locator: "RFC 8785 Section 3.1 and Appendix E"
+    notes: >-
+      The NON-CONFORMANT counterpart to JCS-E-01, on identical input. The
+      expected value above is what the source says the Appendix A
+      canonicalizer WOULD generate under reviver-based parsing -- a faithful
+      record of a failure mode, not a target. Two string arguments have
+      silently changed: "055" lost its leading zero to BigInt round-tripping
+      and became "55", and "2019-01-28T07:45:10Z" gained milliseconds from
+      Date serialization and became "2019-01-28T07:45:10.000Z". The source:
+      "presumably making an application depending on JCS fail." Property
+      order is identical to JCS-E-01, so the difference is invisible to any
+      test that only checks sorting. The prescribed remedy is the C#/Json.NET
+      pattern the appendix prints -- a private string field carries the JSON
+      representation ([JsonProperty("amount")] private string _amount) while
+      a [JsonIgnore] typed property exposes the native value to the
+      application. The source adds that this also addresses I-JSON's numeric
+      constraints, since the C# "decimal" type has quite different
+      characteristics from IEEE 754 double precision.
+    test_guidance: >-
+      Treat JCS-E-01 and JCS-E-02 as a pair. An implementation passes only if
+      it produces JCS-E-01's expected output from this input; producing
+      JCS-E-02's expected output is a detected defect in the surrounding
+      parser, not in the canonicalizer itself.
+
+  - id: JCS-E1-01
+    locator: "RFC 8785 Appendix E.1"
+    kind: string-subtype-in-arrays
+    fidelity: constructed
+    input: null
+    expected: null
+    notes: >-
+      NO VECTOR EXISTS. Appendix E.1 is two lines of prose in full: "Since
+      the JSON array construct permits mixing arbitrary JSON data types,
+      custom parsing and serialization code may be required to cope with
+      subtypes anyway." It prints no example, no input and no expected
+      output. This entry records that absence so a later pass does not go
+      looking for a vector that was never written. Nothing has been invented
+      to fill it. If a vector is wanted, it must be constructed from the
+      JCS-E-01 / JCS-E-02 pair with the subtype strings moved into an array,
+      and marked `derived` when it is.
