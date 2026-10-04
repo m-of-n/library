@@ -1,0 +1,515 @@
+record: rfc-9804
+reviewed_by: ""
+
+# ---------------------------------------------------------------------------
+# Single-line scalars throughout: bin/_yaml.py is not a YAML implementation and
+# supports no multi-line scalars. Apostrophes are avoided in values rather than
+# escaped, because a single-quoted YAML scalar needs them doubled and
+# bin/_yaml.py does not undo the doubling.
+applicability: 'PARTIAL — and the partiality is a finding, not a gap in this extraction. RFC 9804 defines no wire messages, no headers, no envelopes, no media type, no framing and no protocol elements. §11 states in full: "This document has no IANA actions." It is a data representation format: a grammar for writing an S-expression down, in any of three interchangeable representation types, plus two sketched in-memory layouts. What this file therefore captures — and it is the level an implementer builds from — is each representation decomposed as a structure: (a) the five octet-string representations of §4, each with its delimiters, its optional length prefix and its whitespace rule; (b) the display-hint of §4.6, which is the only modifier an octet-string can carry; (c) the list of §5; (d) the three S-expression representation types of §6, canonical, basic transport and advanced transport, with the base-64 brace wrapper of §6.1 as its own structure because it is the one form whose delimiters differ from every other; and (e) the three array-layout in-memory records of §9.2, which ARE given byte-level, with worked byte sequences, and are therefore captured at byte level here. What is deliberately NOT here, because the document does not define it: any signature, key or certificate structure (the SPKI certificate formats live in RFC 2693, not here — §1 says this memo specifies only the representation); any transport framing or length-delimiting above a single S-expression; and the list-structure memory representation of §9.1, which the source gives as prose with no layout at all and explicitly calls "only sketched" and "only suggestive". The in-memory layouts are included despite being suggestive because §9.2 prints exact octets for them; they are marked normative_status: suggestive so no implementer mistakes them for interoperability requirements.'
+
+# ---------------------------------------------------------------------------
+note: 'constrained_by is wired throughout: every field carries at least one rfc-9804#R-NNNN id and none is left empty. Matching rule, applied in order: (1) the requirement whose text the layout quotes verbatim; (2) failing a verbatim quote, the requirement at the same locator whose subject is the same field. Statements that follow from the source rather than being in it are prefixed "Derived:" in layout and name the requirement they follow from. The requirements NOT wired to any field here are R-0053, R-0060, R-0064, R-0065 and R-0066: R-0053 and R-0064 are statements about which form gets signed and live in distilled/protocol.yaml; R-0060 is a condition on a deploying application profile; R-0065 is a cross-application warning; R-0066 is the IANA non-action. None of them constrains a field of any structure.'
+
+# ---------------------------------------------------------------------------
+messages:
+
+  - name: verbatim-octet-string
+    locator: "§4.1, §7.1 (rule verbatim)"
+    encoding: "octets; the only representation that is not restricted to the §3 character set"
+    normative_status: normative
+    fields:
+      - name: length
+        type: decimal-digits
+        required: true
+        constrained_by:
+          - rfc-9804#R-0008
+        layout: '"the length (number of octets) of the octet-string, given in decimal, most significant digit first, with no leading zeros". The §7.1 production is decimal = %x30 / (%x31-39 *DIGIT), which admits a bare "0" but forbids "007" — the no-leading-zeros rule stated in prose is enforced by the grammar, the only place in this document where that is true of a length field.'
+      - name: separator
+        type: literal-colon
+        required: true
+        constrained_by:
+          - rfc-9804#R-0009
+        layout: 'A single colon ":" between the length and the octets. "There are no blanks or whitespace separating the parts."'
+      - name: octets
+        type: raw-octets
+        required: true
+        constrained_by:
+          - rfc-9804#R-0010
+          - rfc-9804#R-0006
+        layout: 'Exactly the number of octets the length field gives, copied with no transformation. "No escape sequences are interpreted in the octet-string." Derived from R-0006: this is the one representation exempt from the §3 character repertoire, so any octet value whatever may appear here, including the reserved punctuation and the unused characters. The §7.1 production is verbatim = decimal ":" *OCTET.'
+    layout: '<decimal-length> ":" <that many raw octets>. Examples from §4.1: 3:abc / 7:subject / 4:::": / 12:hello world! / 10:abcdefghij / 0: (the zero-length octet-string).'
+    notes: 'This is the only octet-string representation the canonical form admits (R-0052), which makes it the structure that matters most to us. It is self-delimiting and needs no escaping, no terminator and no lookahead: a parser reads digits to the colon, then reads exactly that many octets. The example 4:::": is the one to keep in a test suite — its four payload octets are a colon, a colon, a double quote and a colon, every one of which is punctuation that would need escaping in any other representation here.'
+
+  - name: quoted-string-octet-string
+    locator: "§4.2, §7.1 (rule quoted-string)"
+    encoding: "ASCII text with C-style backslash escapes"
+    normative_status: normative
+    fields:
+      - name: length
+        type: decimal-digits
+        required: false
+        constrained_by:
+          - rfc-9804#R-0011
+          - rfc-9804#R-0013
+        layout: '"The length is optional." When present it counts the DECODED octets: "The specified length is the length of the resulting string after any backslash escape sequences have been converted to the octet value they denote." Derived from R-0012: no terminating NULL is present and none is counted.'
+      - name: open_delimiter
+        type: literal-double-quote
+        required: true
+        constrained_by:
+          - rfc-9804#R-0013
+        layout: 'An initial double-quote ("). §4.2 lists it as the second of the four parts of the representation; the §7.1 production is quoted-string = [decimal] DQUOTE *(printable / escaped) DQUOTE.'
+      - name: body
+        type: printable-and-escaped
+        required: true
+        constrained_by:
+          - rfc-9804#R-0016
+        layout: 'The octet-string written with C [C88] escape conventions. §7.1 printable = %x20-21 / %x23-5B / %x5D-7E, that is all US-ASCII printable except double-quote and backslash, which must be escaped. The escape set is C plus "an extension for ignoring line terminators of just CR, LF, CRLF, or LFCR and more restrictive octal and hexadecimal value formats".'
+      - name: octal_escape
+        type: escape-form
+        required: false
+        constrained_by:
+          - rfc-9804#R-0014
+        layout: 'Backslash followed by exactly three octal digits: "all three digits MUST be present". §7.1 encodes this as 3(%x30-37) — fixed repetition, so the grammar and the prose agree. This is the "more restrictive" octal format R-0016 refers to; C itself admits one, two or three digits.'
+      - name: hex_escape
+        type: escape-form
+        required: false
+        constrained_by:
+          - rfc-9804#R-0015
+        layout: 'Backslash, "x", then exactly two hexadecimal digits: "both digits MUST be present". §7.1 encodes this as (%x78 2HEXDIG). This is the "more restrictive" hexadecimal format of R-0016; C admits any number of hex digits.'
+      - name: line_terminator_escape
+        type: escape-form
+        required: false
+        constrained_by:
+          - rfc-9804#R-0016
+        layout: 'Backslash immediately followed by CR, LF, CRLF or LFCR causes that line terminator to be ignored, letting one logical string be written across several physical lines. §7.1: CR / LF / (CR LF) / (LF CR). The §4.2 example is the two-line "This has \\ one line." — the escape is the extension to C, not part of C.'
+      - name: close_delimiter
+        type: literal-double-quote
+        required: true
+        constrained_by:
+          - rfc-9804#R-0013
+        layout: 'A final double-quote (").'
+    layout: '[<decimal-length>] DQUOTE <printable or escaped octets> DQUOTE. Examples from §4.2: "subject" / "hi there" / 7"subject" / "\xFE is the same octet as \376" / 3"\n\n\n" / "" (zero length).'
+    notes: 'Not admitted in the canonical form (R-0052), which takes verbatim only. The §4.2 example "\xFE is the same octet as \376" is worth a test vector precisely because it writes the SAME octet two ways inside one string, which is the ambiguity the canonical form exists to remove.'
+
+  - name: token-octet-string
+    locator: "§4.3, §7.1 (rule token)"
+    encoding: "bare ASCII text, no delimiters"
+    normative_status: normative
+    fields:
+      - name: first_character
+        type: alpha-or-simple-punc
+        required: true
+        constrained_by:
+          - rfc-9804#R-0017
+          - rfc-9804#R-0021
+        layout: 'A token "does not begin with a digit", so that a leading decimal can never be read as a length prefix. It may begin with punctuation: "A token may begin with punctuation, including :". §7.1: token = (ALPHA / simple-punc) *(ALPHA / DIGIT / simple-punc).'
+      - name: remaining_characters
+        type: alpha-digit-or-simple-punc
+        required: false
+        constrained_by:
+          - rfc-9804#R-0018
+          - rfc-9804#R-0019
+        layout: 'Alphabetic (upper or lower case), numeric, or one of the eight pseudo-alphabetic punctuation marks - . / _ : * + = (§7.1 simple-punc). The whole token "is length 1 or greater", so the empty token does not exist and a zero-length octet-string cannot be written as a token at all.'
+      - name: case
+        type: constraint
+        required: true
+        constrained_by:
+          - rfc-9804#R-0020
+        layout: '"Note: Upper and lower case are not equivalent." Derived: no case folding is applied anywhere, at parse, at comparison (R-0041) or at canonicalization.'
+    layout: 'A bare run of characters with no delimiters at all, which is why it is the only representation needing a separation rule against its neighbour (R-0043). Examples from §4.3: subject / not-before / :=.. / class-of-1997 / //example.net/names/smith / *'
+    notes: 'The absence of delimiters is the whole hazard. Because a token is not self-delimiting, "abc" followed by "def" written as two tokens with no space between them is one token abcdef, which is why §5 makes whitespace mandatory there (R-0043). The canonical form sidesteps this entirely by admitting no tokens.'
+
+  - name: hexadecimal-octet-string
+    locator: "§4.4, §7.1 (rule hexadecimal)"
+    encoding: "ASCII hexadecimal between sharp signs"
+    normative_status: normative
+    fields:
+      - name: length
+        type: decimal-digits
+        required: false
+        constrained_by:
+          - rfc-9804#R-0013
+        layout: 'An optional decimal length of the DECODED octet-string, not of the hex digits. §4.4 prints both #616263# and 3#616263# for "abc". Derived from R-0022: the digit count is always twice the decoded length.'
+      - name: open_delimiter
+        type: literal-sharp
+        required: true
+        constrained_by:
+          - rfc-9804#R-0022
+        layout: 'A sharp-sign "#".'
+      - name: digits
+        type: hex-digits
+        required: true
+        constrained_by:
+          - rfc-9804#R-0022
+          - rfc-9804#R-0023
+        layout: '"a hexadecimal encoding of the octet-string, with each octet represented with two hexadecimal digits, most significant digit first." "There MUST be an even number of such digits." §7.1: hexadecimals = 2(HEXDIG *whitespace), which enforces the even count by pairing.'
+      - name: interior_whitespace
+        type: ignorable
+        required: false
+        constrained_by:
+          - rfc-9804#R-0024
+          - rfc-9804#R-0025
+        layout: '"There may be whitespace inserted in the midst of the hexadecimal encoding arbitrarily; it is ignored." Anything else is an error: "It is an error to have characters other than whitespace and hexadecimal digits." §4.4 prints the split example "# 616 / 263 #" across two lines as still denoting "abc".'
+      - name: close_delimiter
+        type: literal-sharp
+        required: true
+        constrained_by:
+          - rfc-9804#R-0022
+        layout: 'A final sharp-sign "#". The empty form ## represents the zero-length string.'
+    layout: '[<decimal-length>] "#" <hex digits, whitespace ignored> "#". Examples from §4.4: #616263# / 3#616263# / the two-line # 616 263 # / ## (zero-length).'
+    notes: 'Not admitted in the canonical form (R-0052). The whitespace-ignored rule means the same octet-string has unboundedly many hexadecimal spellings, which is exactly the property §6.2 removes by taking verbatim only.'
+
+  - name: base-64-octet-string
+    locator: "§4.5, §7.1 (rule base-64)"
+    encoding: "RFC 4648 base-64 between vertical bars"
+    normative_status: normative
+    fields:
+      - name: length
+        type: decimal-digits
+        required: false
+        constrained_by:
+          - rfc-9804#R-0013
+        layout: 'An optional decimal length of the decoded octet-string. §4.5 prints both |YWJj| and 3|YWJj| for "abc".'
+      - name: open_delimiter
+        type: literal-vertical-bar
+        required: true
+        constrained_by:
+          - rfc-9804#R-0005
+        layout: 'A vertical bar "|". §4.5 closes with an explicit warning: "Note the difference between this base-64 encoding of an octet-string using vertical bars and the base-64 encoding of an S-expression using curly braces in Section 6.1." The two are different structures, not two spellings of one.'
+      - name: base_64_body
+        type: base-64-chars
+        required: true
+        constrained_by:
+          - rfc-9804#R-0026
+          - rfc-9804#R-0027
+        layout: 'The RFC 4648 base-64 encoding. "Base-64 encoding produces four characters of output for each three octets of input." Remainder one gives a four-character block ending in two equals signs; remainder two gives a four-character block ending in one equals sign. §7.1 base-64-char = ALPHA / DIGIT / "+" / "/" — the standard alphabet, not the URL-safe one.'
+      - name: padding
+        type: equals-signs
+        required: true
+        constrained_by:
+          - rfc-9804#R-0028
+          - rfc-9804#R-0029
+        layout: 'Asymmetric, and this is the interoperability hazard in the structure. On output: "These equals signs MUST be included on output". On input: "input routines MAY accept inputs where one or two equals signs are dropped" — a permission, not an obligation. §4.5 prints both |YWJjZA==| and |YWJjZA| as representing "abcd". Derived: a conforming generator and a conforming parser can therefore disagree about whether |YWJjZA| is well formed, because the parser is permitted either answer.'
+      - name: interior_whitespace
+        type: ignorable
+        required: false
+        constrained_by:
+          - rfc-9804#R-0030
+          - rfc-9804#R-0031
+        layout: '"Whitespace inserted in the midst of the base-64 encoding is ignored." "It is an error to have characters other than whitespace and base-64 characters." §4.5 prints the two-line "| Y W / J j |" as still denoting "abc".'
+      - name: close_delimiter
+        type: literal-vertical-bar
+        required: true
+        constrained_by:
+          - rfc-9804#R-0005
+        layout: 'A final vertical bar "|". The empty form || represents the zero-length string.'
+    layout: '[<decimal-length>] "|" <base-64, whitespace ignored> ["=" padding] "|". Examples from §4.5: |YWJj| / the two-line | Y W J j | / 3|YWJj| / |YWJjZA==| / |YWJjZA| / || (zero-length).'
+    notes: 'Not admitted in the canonical form (R-0052). The §7.1 base-64-end production is the most intricate rule in the grammar and is the one place where the optional-padding permission of R-0029 is visible in the syntax rather than only in the prose.'
+
+  - name: display-hint
+    locator: "§4.6, §7.1 (rule display)"
+    encoding: "an octet-string representation in square brackets"
+    normative_status: normative
+    fields:
+      - name: open_bracket
+        type: literal-left-bracket
+        required: true
+        constrained_by:
+          - rfc-9804#R-0033
+        layout: 'A left square bracket "[". "A display-hint is an octet-string representation surrounded by square brackets."'
+      - name: hint_string
+        type: octet-string-representation
+        required: true
+        constrained_by:
+          - rfc-9804#R-0034
+        layout: 'Any of the five legal octet-string representations, with one restriction: "a display-hint may not be applied to a display-hint string -- that is, display-hints may not be nested." So the hint is a plain octet-string, never a hinted one. Typically a media type [RFC2046]: [image/gif], [application/postscript], ["text/plain; charset=utf-8"].'
+      - name: surrounding_whitespace
+        type: ignorable
+        required: false
+        constrained_by:
+          - rfc-9804#R-0036
+        layout: '"There may be whitespace separating the display hint octet-string from the surrounding brackets" and "There may be whitespace between the close square bracket and the octet-string to which the hint applies." §4.6 prints [  text/richtext  ] with interior spaces as legal. §7.1 display = "[" *whitespace simple-string *whitespace "]" *whitespace. Derived: the canonical production §7.2 c-string = [ "[" verbatim "]" ] verbatim admits NO whitespace at any of those three points, so the canonical form removes every one of these variations.'
+      - name: close_bracket
+        type: literal-right-bracket
+        required: true
+        constrained_by:
+          - rfc-9804#R-0033
+        layout: 'A right square bracket "]".'
+      - name: cardinality
+        type: constraint
+        required: true
+        constrained_by:
+          - rfc-9804#R-0035
+          - rfc-9804#R-0038
+          - rfc-9804#R-0039
+        layout: '"Every octet-string representation is or is not preceded by a single display-hint" — zero or one, never two. Carriage: "any display-hint present is included" in whichever §6 representation is used. The default is neither added nor removed: "If a display-hint is the default, it is not suppressed nor is the default display-hint included in the representation for an octet-string without a display-hint."'
+      - name: default_when_absent
+        type: media-type
+        required: false
+        constrained_by:
+          - rfc-9804#R-0037
+        layout: 'An octet-string with no hint "may be considered to have a media type [RFC2046] specified by the application or use". Absent such a specification the default is [application/octet-stream]. Derived from R-0039: because the default is never written out, the default is NOT carried with the data, which is precisely the §10 hazard — a different application supplies a different default to the same octets.'
+    layout: '"[" [whitespace] <octet-string representation> [whitespace] "]" [whitespace] <the octet-string it qualifies>. Canonically: "[" <verbatim> "]" <verbatim>, no whitespace anywhere.'
+    notes: 'The display-hint is the only modifier in the entire format, and §4.6 is explicit about how little it means: "The purpose of a display-hint is to provide information on how to display an octet-string to a user. It has no other function." It is nonetheless signature-relevant, because R-0038 puts it inside the canonical bytes and R-0040 makes it part of octet-string equality. Two octet-strings with the same data and different hints are different S-expressions and have different canonical forms.'
+
+  - name: list
+    locator: "§2, §5, §7.1 (rule value)"
+    encoding: "parenthesised sequence"
+    normative_status: normative
+    fields:
+      - name: open_paren
+        type: literal-left-paren
+        required: true
+        constrained_by:
+          - rfc-9804#R-0004
+        layout: 'A left parenthesis "(". "A list is represented by using parentheses to surround the sequence of encodings of its elements."'
+      - name: elements
+        type: sequence-of-s-expressions
+        required: false
+        constrained_by:
+          - rfc-9804#R-0003
+        layout: 'Zero or more S-expressions, each itself an octet-string or a list: "A list is a finite sequence of zero or more simpler S-expressions." The empty list () is legal and §5 prints it. §7.1 value = string / ("(" *(value / whitespace) ")"). Derived: no length, count or terminator precedes the elements in any text representation; the close parenthesis is the only end marker. §9.2 notes that an in-memory layout can fill a length in on parse, "when you reach a right parenthesis".'
+      - name: element_separation
+        type: whitespace
+        required: false
+        constrained_by:
+          - rfc-9804#R-0042
+          - rfc-9804#R-0043
+        layout: 'Whitespace between elements is optional in general — "they are only required to separate two octet-strings when otherwise the two octet-strings might be interpreted as one, as when one token follows another" — and mandatory in one case: a token "MUST be separated by whitespace from a following token, verbatim representation, or any of the following if they are prefixed with a length: quoted-string, hexadecimal, or base-64 representation." Derived: a length prefix is what makes the difference, because an unprefixed quoted-string, hex or base-64 form starts with its own delimiter and so is already self-separating.'
+      - name: interior_whitespace
+        type: ignorable
+        required: false
+        constrained_by:
+          - rfc-9804#R-0044
+        layout: '"Also, whitespace may follow the initial left parenthesis or precede the final right parenthesis of a list." §5 prints ( a ( bob c ) ( ( d e ) ( e f ) )  ) with spacing throughout. Derived from R-0052: the canonical form admits none of this.'
+      - name: close_paren
+        type: literal-right-paren
+        required: true
+        constrained_by:
+          - rfc-9804#R-0004
+        layout: 'A right parenthesis ")".'
+    layout: '"(" [ws] <element> [ws <element>]* [ws] ")". Canonically: "(" <element><element>... ")" with no whitespace at all. Examples from §5: (a bob c) / ( a ( bob c ) ( ( d e ) ( e f ) )  ) / (11:certificate(6:issuer3:bob)(7:subject5:alice)) / (|ODpFeGFtcGxlIQ==| "1997" murphy 3:XC+) / ()'
+    notes: 'A list carries no tag, no type and no length — it is a bare sequence. There is no map, no integer, no boolean and no null in this format: everything that is not a list is an octet-string, and all meaning above that is the application. That is the whole type system, and it is the point on which this format differs most sharply from CBOR.'
+
+  - name: canonical-representation
+    locator: "§6.2, §7.2"
+    encoding: "octets; verbatim octet-strings, no whitespace"
+    normative_status: normative
+    fields:
+      - name: octet_strings
+        type: verbatim-only
+        required: true
+        constrained_by:
+          - rfc-9804#R-0052
+        layout: 'Every octet-string "in verbatim mode" — the length-colon-octets form, and no other. Derived: tokens, quoted-strings, hexadecimal and base-64 are all excluded, which collapses the five representations of §4 to one and removes every optional length, every ignorable whitespace and every padding choice at a stroke.'
+      - name: lists
+        type: no-blanks
+        required: true
+        constrained_by:
+          - rfc-9804#R-0052
+          - rfc-9804#R-0044
+        layout: 'Each list represented "with no blanks separating elements from each other or from the surrounding parentheses". Derived: this is R-0044 with the permission withdrawn.'
+      - name: display_hints
+        type: verbatim-in-brackets
+        required: false
+        constrained_by:
+          - rfc-9804#R-0038
+          - rfc-9804#R-0039
+        layout: 'Present if and only if the octet-string carries one, written "[" <verbatim> "]" per §7.2 c-string. Never defaulted in, never suppressed. Derived: the hint is inside the signed bytes.'
+      - name: uniqueness
+        type: property
+        required: true
+        constrained_by:
+          - rfc-9804#R-0051
+        layout: '"It is uniquely defined for each S-expression." This is a property of the form, asserted by the source, not a field an encoder writes. Derived: together with R-0052 it is the claim that makes the form signable — one S-expression, one octet sequence.'
+      - name: framing
+        type: none
+        required: false
+        constrained_by:
+          - rfc-9804#R-0056
+        layout: 'There is none. §7.2 c-sexp = c-string / ("(" *c-sexp ")") and nothing else: no header, no version, no length prefix on the whole, no terminator, no media type. A canonical S-expression is self-delimiting and is exactly as long as its grammar says.'
+    layout: 'c-sexp = c-string / ("(" *c-sexp ")") ; c-string = [ "[" verbatim "]" ] verbatim. Examples from §6.2: (6:issuer3:bob) / (4:icon[12:image/bitmap]9:xxxxxxxxx) / (7:subject(3:ref5:alice6:mother)) / 10:foo)]}>bar / 0:'
+    notes: 'The structure that bears on DEC-002. Two things to carry forward. First, §6.2 states uniqueness as a design goal met, not as a procedure to follow: there is no sorting step, no normalisation step and no map-key ordering, because there are no maps and no element reordering is ever permitted — uniqueness falls out of the grammar admitting one spelling per value rather than out of an algorithm. Second, the example 10:foo)]}>bar is the one to keep: its payload contains a close parenthesis, a close bracket, a close brace and a greater-than, and the verbatim length prefix means none of them needs escaping or can terminate anything early.'
+
+  - name: base-64-s-expression-wrapper
+    locator: "§6.1, §7.3 (rule b-base-64)"
+    encoding: "RFC 4648 base-64 of a canonical S-expression, between curly braces"
+    normative_status: normative
+    fields:
+      - name: open_brace
+        type: literal-left-brace
+        required: true
+        constrained_by:
+          - rfc-9804#R-0005
+        layout: 'An opening curly brace "{". §6.1 warns explicitly: "Note the difference between this base-64 encoding of an S-expression using curly braces and the base-64 encoding of an octet-string using vertical bars in Section 4.5." Braces wrap a whole S-expression; bars wrap one octet-string.'
+      - name: base_64_body
+        type: base-64-chars
+        required: true
+        constrained_by:
+          - rfc-9804#R-0054
+        layout: 'The base-64 encoding of the CANONICAL representation — §6.3 form 2 is "A base-64 representation of the canonical representation, surrounded by braces". §7.3 adds the note "encodes a c-sexp, which has a minimum length of 2", so the wrapped content is never empty.'
+      - name: padding
+        type: equals-signs
+        required: true
+        constrained_by:
+          - rfc-9804#R-0047
+          - rfc-9804#R-0048
+        layout: 'The same asymmetry as R-0028/R-0029, restated here for the S-expression case: "These equals signs MUST be included on output, but input routines MAY accept inputs where one or two equals signs are dropped." §7.3 b-base-64 requires base-64-end, unlike the octet-string rule in §7.1 where it is optional.'
+      - name: interior_whitespace
+        type: ignorable
+        required: false
+        constrained_by:
+          - rfc-9804#R-0049
+          - rfc-9804#R-0050
+        layout: '"Whitespace inserted in the midst of the base-64 encoding, after the opening curly brace, or before the closing curly brace is ignored." Anything else is an error. The §6.3 example prints {KDE6YTE6YjE / 6Yyk= } broken across two lines with a trailing space, and says it is the same S-expression as (1:a1:b1:c).'
+      - name: close_brace
+        type: literal-right-brace
+        required: true
+        constrained_by:
+          - rfc-9804#R-0005
+        layout: 'A closing curly brace "}".'
+    layout: '"{" [ws] <base-64 of the canonical octets> <padding> [ws] "}". Example from §6.3: {KDE6YTE6YjE 6Yyk= } which is (1:a1:b1:c).'
+    notes: 'This is the one structure in the document whose purpose is transport robustness rather than representation: §6.3 says it is appropriate where the channel "might be sensitive to octets of some special values, such as an octet of all zero bits (NULL) or an octet of all one bits (DEL), or if the channel is sensitive to line length". It is NOT a second canonical form — what gets signed is the canonical octets inside, and the brace form is a reversible wrapper around them.'
+
+  - name: basic-transport-representation
+    locator: "§6.3, §7.3"
+    encoding: "either the canonical octets, or the brace-wrapped base-64 of them"
+    normative_status: normative
+    fields:
+      - name: form
+        type: alternation
+        required: true
+        constrained_by:
+          - rfc-9804#R-0054
+          - rfc-9804#R-0058
+        layout: 'Exactly one of two: the canonical representation, or the base-64 of the canonical representation in braces. §7.3 b-sexp = c-sexp / b-base-64. Derived: the basic transport representation is therefore NOT uniquely defined for a given S-expression — there are always two of them, and R-0051 claims uniqueness for the canonical form only.'
+      - name: support
+        type: conformance
+        required: true
+        constrained_by:
+          - rfc-9804#R-0045
+          - rfc-9804#R-0059
+        layout: 'Mandatory to implement, with the canonical form: "The first two MUST be supported by any implementation." §8 restates it: "conformant implementations will support canonical and basic representation".'
+    layout: 'b-sexp = c-sexp / b-base-64. Examples from §6.3: (1:a1:b1:c) and the equivalent {KDE6YTE6YjE 6Yyk= }.'
+    notes: 'Worth stating plainly because the name misleads: "basic transport" is a superset of the canonical form, not an alternative to it. Form 1 IS the canonical representation. So an implementation that emits canonical octets is already emitting a basic transport representation, and the only decision at transport time is whether to wrap.'
+
+  - name: advanced-transport-representation
+    locator: "§6.4, §7.1, §8"
+    encoding: "any of the §4 octet-string forms, with whitespace, for human reading"
+    normative_status: normative
+    fields:
+      - name: octet_string_forms
+        type: any-of-five
+        required: true
+        constrained_by:
+          - rfc-9804#R-0055
+        layout: 'All of them: "quoted strings, base-64, hexadecimal, tokens, representations of strings with omitted lengths, and so on". The §7.1 grammar is the closed statement of what is actually admitted; the prose list ends open.'
+      - name: whitespace
+        type: free
+        required: false
+        constrained_by:
+          - rfc-9804#R-0042
+          - rfc-9804#R-0044
+        layout: 'Free between elements and inside the delimiters of the hexadecimal, base-64 and display-hint forms, subject only to the token separation rule R-0043. §7.1 sexp = *whitespace value *whitespace, and whitespace = SP / HTAB / vtab / CR / LF / ff — six characters, with vtab %x0B and ff %x0C defined locally because RFC 5234 has no core rules for them.'
+      - name: support
+        type: conformance
+        required: false
+        constrained_by:
+          - rfc-9804#R-0046
+          - rfc-9804#R-0059
+          - rfc-9804#R-0060
+        layout: '"the last is OPTIONAL." §8: "support for advanced representation is not generally required. Thus, advanced representation can only be used in applications that mandate its support or where a capability discovery mechanism indicates support." Derived: no capability discovery mechanism is defined anywhere in this document, so a sender has no in-band way to learn whether a receiver supports this form.'
+    layout: 'sexp = *whitespace value *whitespace, with value, string, display and simple-string as §7.1 gives them. The full grammar is in distilled/schema/advanced-transport.abnf.'
+    notes: 'The display form, and the reason this record matters to R-O-05: §6.4 says it is "intended to provide more flexible and readable notations for documentation, design, debugging, and (in some cases) user interface". The document keeps the signed form and the human form apart by construction and never asks a verifier to canonicalise what it received — §10 imposes no verification ordering at all. That separation, not the S-expression syntax, is what this record contributes.'
+
+  - name: array-layout-octet-string
+    locator: "§9.2.1"
+    encoding: "in-memory octets; type byte, k-octet length, payload"
+    normative_status: suggestive
+    fields:
+      - name: type_octet
+        type: uint8
+        required: true
+        constrained_by:
+          - rfc-9804#R-0061
+        layout: 'The single octet 01, meaning "octet-string". §9.2 gives the three codes: 01 octet-string, 02 octet-string with display-hint, 03 beginning of list, with 00 for end of list.'
+      - name: length
+        type: k-octet-integer
+        required: true
+        constrained_by:
+          - rfc-9804#R-0062
+          - rfc-9804#R-0063
+        layout: 'A k-octet integer giving the size in octets of the following representation. "k is an integer that depends on the implementation. It might be anywhere from 2 to 8, but it would be fixed for a given implementation; it determines the size of the objects that can be handled." Byte order is not stated. "The transport and canonical representations are independent of the choice of k."'
+      - name: payload
+        type: raw-octets
+        required: true
+        constrained_by:
+          - rfc-9804#R-0001
+        layout: 'The octets themselves.'
+    layout: '01 <length> <octet-string>. Worked example from §9.2.1 with k = 2: 01 0003 a b c'
+    notes: 'Marked suggestive, not normative: §9 says these layouts "are only sketched here, as they are only suggestive". Nothing interoperates on them — they never leave memory, and R-0063 says the wire forms do not depend on k. Captured at byte level only because the source prints exact bytes.'
+
+  - name: array-layout-octet-string-with-display-hint
+    locator: "§9.2.2"
+    encoding: "in-memory octets; type byte, k-octet length, two nested 01 records"
+    normative_status: suggestive
+    fields:
+      - name: type_octet
+        type: uint8
+        required: true
+        constrained_by:
+          - rfc-9804#R-0061
+        layout: 'The single octet 02, meaning "octet-string with display-hint".'
+      - name: length
+        type: k-octet-integer
+        required: true
+        constrained_by:
+          - rfc-9804#R-0062
+        layout: 'A k-octet integer giving the size in octets of everything that follows in this record.'
+      - name: display_type_record
+        type: array-layout-octet-string
+        required: true
+        constrained_by:
+          - rfc-9804#R-0033
+        layout: 'A complete nested 01 record holding the display-type. The hint comes FIRST, matching the textual order in which a display-hint precedes the string it qualifies.'
+      - name: value_record
+        type: array-layout-octet-string
+        required: true
+        constrained_by:
+          - rfc-9804#R-0001
+        layout: 'A complete nested 01 record holding the octet-string itself.'
+    layout: '02 <length> 01 <length> <display-type> 01 <length> <octet-string>. Worked example from §9.2.2, the S-expression [gif] #61626364# with k = 2: 02 000d / 01 0003 g i f / 01 0004 61 62 63 64. Checks out: the outer length 0x000d = 13 = (1+2+3) + (1+2+4).'
+    notes: 'The one place in the document where a length field can be arithmetically verified against the bytes shown, which makes it a good conformance test for an in-memory implementation even though nothing interoperates on it.'
+
+  - name: array-layout-list
+    locator: "§9.2.3"
+    encoding: "in-memory octets; type byte, k-octet length, nested records, 00 terminator"
+    normative_status: suggestive
+    fields:
+      - name: type_octet
+        type: uint8
+        required: true
+        constrained_by:
+          - rfc-9804#R-0061
+        layout: 'The single octet 03, "beginning of list".'
+      - name: length
+        type: k-octet-integer
+        required: true
+        constrained_by:
+          - rfc-9804#R-0062
+        layout: 'A k-octet integer giving the size in octets of the list body. §9.2 notes the length is not present in the text forms and is filled in during parsing: "when you reach a right parenthesis, you know how long the list representation was and where to go back to fill in the missing length."'
+      - name: items
+        type: sequence-of-records
+        required: false
+        constrained_by:
+          - rfc-9804#R-0003
+        layout: 'Zero or more complete nested records, each a 01, 02 or 03 record.'
+      - name: terminator
+        type: uint8
+        required: true
+        constrained_by:
+          - rfc-9804#R-0061
+        layout: 'The single octet 00, "end of list". Derived: the list record is therefore BOTH length-prefixed and terminated, the only redundant framing anywhere in the document.'
+    layout: '03 <length> <item1> <item2> ... 00. Worked example from §9.2.3, the list (abc [d]ef (g)) with k = 2: 03 001b / 01 0003 a b c / 02 0009 / 01 0001 d / 01 0002 e f / 03 0005 / 01 0001 g / 00 / 00'
+    notes: 'Note the two trailing 00 octets in the source example — the inner list (g) is terminated, then the outer list is. An implementer reading quickly will drop one. The nested 03 0005 record is 1+2+1+1 = 5 octets of body plus its own terminator, and the outer 0x001b = 27 covers everything between the outer length and the final 00.'
