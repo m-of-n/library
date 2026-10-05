@@ -1,0 +1,794 @@
+record: rfc-9943
+reviewed_by: ""
+
+# §3 defines Issuer, Client, Transparency Service, Relying Party and Auditor.
+# Client is carried alongside the scaffolded four because §6.3 step 1 and §7
+# make it the registering actor, distinct from the Issuer: "The Client (which
+# is not necessarily the Issuer) that registers a Signed Statement and receives
+# a Receipt" (§7). An Auditor is defined in §3 as "an example of a specialized
+# Relying Party", so it is a role but owns no distinct message.
+roles: [Issuer, Client, "Transparency Service", "Relying Party", Auditor]
+
+# Message names are the CDDL rule names the source itself defines in Figure 3
+# (§6.1) and Figure 7 (§7). Steps whose message is parenthesised have no
+# message defined anywhere in RFC 9943 and must not be expected in
+# messages.yaml; `message_defined: false` marks them.
+#
+# RFC 9943 defines NO transport binding. It registers two media types
+# (application/scitt-statement+cose, application/scitt-receipt+cose, §10.1 and
+# §10.2) and two CoAP Content-Format numbers (277, 278, §10.3) and stops there:
+# no HTTP or CoAP method, path, request or response is specified anywhere in
+# the document. Every from/to below is therefore a logical exchange, not a wire
+# operation. See `error_model` at the foot of this file.
+
+flows:
+
+  - name: information-flow
+    locator: "§5, Figure 2"
+    kind: information-flow
+    # The source is explicit that this figure is not a message sequence:
+    # "The arrows indicate the flow of information." (§5, immediately above
+    # Figure 2). Figure 2 shows no ordering, no request/response pairing and no
+    # party-to-party transport. It is rendered as a sequence in protocol.md
+    # only because a sequence diagram is the artifact's required form; the
+    # ordering shown there is the reading order of §5's bullet list, not a
+    # protocol ordering asserted by the RFC.
+    not_a_message_sequence: true
+    summary: >-
+      Issuer signs a Statement about an Artifact, producing a Signed Statement;
+      the Signed Statement is registered with one or more Transparency
+      Services; each TS produces a Receipt; Receipts are aggregated into a
+      Transparent Statement; Relying Parties then collect Receipts, verify
+      Transparent Statements, or replay the log.
+    steps:
+
+      - from: Issuer
+        to: Issuer
+        message: Signed_Statement
+        action: >-
+          "Issuers that use their credentials to create Signed Statements about
+          Artifacts." (§5). A Statement (§3, "any serializable information
+          about an Artifact") is wrapped in a COSE Envelope and signed; §4 adds
+          that "The Issuer selects additional metadata and attaches a proof of
+          endorsement (in most cases, a signature) using the identity key of
+          the Issuer that binds the Statement and its metadata."
+        on_error: >-
+          Not specified. This is a local signing act; RFC 9943 says nothing
+          about what an Issuer does when signing fails.
+
+      - from: Issuer
+        to: "Transparency Service"
+        message: Signed_Statement
+        action: >-
+          The Signed Statement is presented for Registration. Fan-out is
+          explicitly permitted - "a single Signed Statement MAY be registered
+          with one or more TS" (§5) - and §6.3 repeats it: "The same Signed
+          Statement may be independently registered in multiple TSs, producing
+          multiple independent Receipts."
+        detail: "The registration exchange is elaborated in the `registration` flow below (§6.3)."
+        on_error: "Not specified. See the `registration` flow and `error_model`."
+
+      - from: "Transparency Service"
+        to: Client
+        message: Receipt
+        action: >-
+          "TSs that evaluate Signed Statements against Registration Policies
+          producing Receipts upon successful Registration." (§5). §4 adds that
+          "A Receipt is a signature over one or more VDP that a Signed
+          Statement is registered in the VDS. It is universally verifiable
+          without online access to the TS."
+        on_error: >-
+          Not specified. §5 names only the successful branch ("upon successful
+          Registration"); the document never defines an unsuccessful
+          Registration, nor what is returned in its place.
+
+      - from: Client
+        to: Client
+        message: Transparent_Statement
+        action: >-
+          "The returned Receipt may be combined with the Signed Statement to
+          create a Transparent Statement." (§5). With multiple TSs: "Each TS
+          produces a Receipt, which may be aggregated in a single Transparent
+          Statement, demonstrating the Signed Statement was registered by
+          multiple TSs." (§5). Assembly is elaborated in the
+          `transparent-statement-assembly` flow (§7).
+        on_error: >-
+          Not specified. Assembly is a local structural operation (insertion
+          into the unprotected header); no failure mode is described.
+
+      - from: Client
+        to: "Relying Party"
+        message: Transparent_Statement
+        action: >-
+          Relying Parties consume the Transparent Statement in one of three
+          ways named by §5's third bullet, verbatim - "collect Receipts of
+          Signed Statements for subsequent registration of Transparent
+          Statements"; "retrieve Transparent Statements for analysis of
+          Statements about Artifacts themselves (e.g., verification)"; "or
+          replay all the Transparent Statements to check for the consistency
+          and correctness of the TS's VDS (e.g., auditing)". Figure 2 draws
+          these as three separate Relying Party boxes. The third is the
+          Auditor's role (§3, "an entity that checks the correctness and
+          consistency of all Transparent Statements, or the transparent
+          Statement Sequence, issued by a TS").
+        on_error: >-
+          Not specified. The RFC does not say how a Transparent Statement
+          reaches a Relying Party at all. §1 states "How these statements are
+          managed or stored as well as how participating entities discover and
+          notify each other of changes is out of scope of this document."
+
+      - from: "Relying Party"
+        to: "Relying Party"
+        message: "(verification result)"
+        message_defined: false
+        action: >-
+          Figure 2 draws a "verify" box fed from the Issuer. Verification is
+          elaborated in the `validation` flow (§7.1).
+        on_error: >-
+          Not specified as a protocol matter. §7.1 offers only a non-normative
+          suggestion that an API "may provide more details than a single
+          boolean result"; see the `validation` flow.
+
+  - name: registration
+    locator: "§6.3"
+    kind: procedure
+    summary: >-
+      The five numbered steps a TS performs to register a Signed Statement.
+      §6.3 opens - "To register a Signed Statement, the TS performs the
+      following steps" - and then gives the five steps below.
+    steps:
+
+      - step: 1
+        title: "Client Authentication"
+        from: Client
+        to: "Transparency Service"
+        message: "(none - no authentication message is defined)"
+        message_defined: false
+        normative: >-
+          No BCP 14 keyword. Verbatim: "A Client authenticates with the TS
+          before registering Signed Statements on behalf of one or more
+          Issuers. Authentication and authorization are implementation specific
+          and out of scope of the SCITT architecture."
+        note: >-
+          Explicitly implementation-specific and out of scope. There is no
+          credential type, no challenge, no token format, and no binding
+          between the authenticated Client and the Issuer identity inside the
+          Signed Statement. §7 widens the gap further: "Client applications MAY
+          request Receipts regardless of the identity of the Issuer of the
+          associated Signed Statement."
+        on_error: >-
+          Not specified. The RFC declares the whole step out of scope and
+          therefore defines no authentication failure response, status code,
+          challenge, back-off or retry rule.
+
+      - step: 2
+        title: "TS Signed Statement Verification and Validation"
+        from: "Transparency Service"
+        to: "Transparency Service"
+        message: Signed_Statement
+        normative: >-
+          Verbatim: "The TS MUST perform signature verification per Section 4.4
+          of RFC 9052 [STD96] and MUST verify the signature of the Signed
+          Statement with the signature algorithm and verification key of the
+          Issuer per [RFC9360]. The TS MUST also check that the Signed
+          Statement includes the required protected headers. The TS MAY
+          validate the Signed Statement payload in order to enforce
+          domain-specific registration policies that apply to specific content
+          types."
+        keywords: [MUST, MUST, MUST, MAY]
+        note: >-
+          "the required protected headers" is not enumerated in §6.3. The
+          requirement is set in §6 - "The protected header of a Signed
+          Statement and a Receipt MUST include the CWT Claims header parameter
+          as specified in Section 2 of [RFC9597]. The CWT Claims value MUST
+          include the Issuer Claim (Claim label 1) and the Subject Claim (Claim
+          label 2)" - and in Figure 3's CDDL, where only CWT_Claims (15) is
+          non-optional in Protected_Header and iss (1) and sub (2) are
+          non-optional in CWT_Claims. Payload validation is a MAY, so the
+          payload is opaque to a conforming TS by default (§3, Statement: "The
+          Statement is considered opaque to TS and MAY be encrypted.").
+        on_error: >-
+          Not specified. The step is written as three MUSTs and a MAY with no
+          else-branch. The RFC never states what a TS does, returns, or records
+          when the COSE signature fails to verify, when the Issuer's key cannot
+          be resolved per RFC 9360, when the certification path of §5.1.1.1
+          cannot be built, or when a required protected header is absent. There
+          is no error code, no rejection message, no distinction between a
+          retryable and a permanent failure, and no idempotency rule for a
+          resubmission of the same Signed Statement.
+
+      - step: 3
+        title: "Apply Registration Policy"
+        from: "Transparency Service"
+        to: "Transparency Service"
+        message: Protected_Header
+        normative: >-
+          Verbatim: "The TS MUST check the attributes required by a
+          Registration Policy are present in the protected headers. Custom
+          Signed Statements are evaluated given the current TS state and the
+          entire Envelope and may use information contained in the attributes
+          of named policies."
+        keywords: [MUST]
+        also_applies:
+          - locator: "§5.1.1"
+            text: >-
+              "To enable auditability, TSs MUST maintain Registration
+              Policies." and "Beyond the mandatory Registration checks, the
+              scope of additional checks, including no additional checks, is up
+              to the implementation."
+          - locator: "§5.1.1.1"
+            text: >-
+              The mandatory Registration checks that apply during this flow:
+              "During Registration, a TS MUST syntactically check the Issuer of
+              the Signed Statement by cryptographically verifying the COSE
+              signature according to [STD96]. The Issuer identity MUST be bound
+              to the Signed Statement by including an identifier in the
+              protected header. If the protected header includes multiple
+              identifiers, all those that are registered by the TS MUST be
+              checked." Also "TSs MUST maintain a list of trust anchors ... TSs
+              MUST authenticate Signed Statements as part of a Registration
+              Policy."; for X.509, "the TS MUST build and validate a complete
+              certification path from an Issuer's certificate to one of the
+              root certificates currently registered as a trust anchor by the
+              TS."; and "The TS MUST apply the Registration Policy that was
+              most recently committed to the VDS at the time of Registration."
+          - locator: "§5.1.1.1"
+            text: >-
+              "Registration Policies and trust anchors MUST be made Transparent
+              and available to all Relying Parties of the TS by Registering
+              them as Signed Statements on the VDS." - policy updates are
+              themselves instances of this same registration flow.
+          - locator: "§5.1.1.2"
+            text: >-
+              "TSs MUST ensure that for any Signed Statement they register,
+              enough information is made available to Auditors to reproduce the
+              Registration checks that were defined by the Registration
+              Policies at the time of Registration."
+        on_error: >-
+          Not specified. §6.3 step 3 states the check but never its
+          consequence, and the mandatory checks of §5.1.1.1 are stated the same
+          way - obligations with no defined failure behaviour. The only prose
+          anywhere in RFC 9943 about a statement not being registered is
+          §9.4.2's "Signed Statements can be rejected by TSs" (in the context
+          of announced key compromise) and §9.3's "Issuers can refuse to
+          register their Statements with a TS"; neither is a protocol response,
+          a status, or a defined message.
+
+      - step: 4
+        title: "Register the Signed Statement"
+        from: "Transparency Service"
+        to: "Transparency Service"
+        message: Signed_Statement
+        normative: >-
+          None. §6.3 step 4 is a bare heading with no body text whatsoever -
+          the single line "4.  Register the Signed Statement" and nothing else.
+          This is the step that commits the statement to the Verifiable Data
+          Structure, and it is the least specified step in the procedure.
+        keywords: []
+        assembled_from_elsewhere:
+          - locator: "§3, Registration"
+            text: >-
+              "the process of submitting a Signed Statement to a TS, applying
+              the TS's Registration Policy, adding to the VDS, and producing a
+              Receipt."
+          - locator: "§7"
+            text: >-
+              "The Registration time is recorded as the timestamp when the TS
+              added the Signed Statement to its VDS."
+          - locator: "§5.1.3"
+            text: >-
+              The VDS "MUST support the following security requirements:
+              Append-only ... Non-equivocation ... Replayability", which
+              constrain what committing may mean but describe no operation.
+          - locator: "§6.3"
+            text: >-
+              "However, the unprotected header of a Signed Statement MUST be
+              set to an empty map before the Signed Statement can be included
+              in a Statement Sequence." - the one concrete transformation the
+              RFC attaches to this step, and it is stated after the numbered
+              list rather than inside step 4.
+        on_error: >-
+          Not specified, and neither is the step itself. With no body text
+          there is no VDS-insertion semantics, no duplicate-detection or
+          idempotency rule for a Signed Statement registered twice, no
+          behaviour for a TS that cannot commit to its VDS, and no ordering
+          guarantee - §9.1 instead disclaims one: "Unless advertised in the TS
+          Registration Policy, the Relying Party cannot assume that the
+          ordering of Signed Statements in the VDS matches the ordering of
+          their issuance."
+
+      - step: 5
+        title: "Return the Receipt"
+        from: "Transparency Service"
+        to: Client
+        message: Receipt
+        normative: >-
+          Verbatim: "This MAY be asynchronous from Registration. The TS MUST be
+          able to provide a Receipt for all registered Signed Statements.
+          Details about generating Receipts are described in Section 7."
+        keywords: [MAY, MUST]
+        note: >-
+          The MUST is a capability obligation ("MUST be able to provide"), not
+          a delivery obligation - it does not say the Receipt is returned on
+          this exchange, and combined with the MAY it permits a TS that never
+          pushes a Receipt at all, so long as one can be obtained. §4 makes
+          Receipt production repeatable and non-deterministic: "Requesting a
+          Receipt can result in the production of a new Receipt for the same
+          Signed Statement. A Receipt's verification key, signing algorithm,
+          validity period, header parameters or other claims MAY change each
+          time a Receipt is produced." §5.1.4 mentions an Adjacent Service that
+          "can also provide the ability to request a fresh Receipt for a given
+          software package".
+        on_error: >-
+          Not specified. Asynchrony is permitted without any means of
+          expressing it - there is no pending or accepted state, no polling or
+          callback mechanism, no correlation identifier tying a later Receipt
+          to an earlier submission, no deadline or timeout, and no way for a
+          Client to learn that a Receipt will never arrive. The word "pending"
+          does not occur in the document.
+
+    constraints:
+      - locator: "§6.3"
+        text: >-
+          "The last two steps may be shared between a batch of Signed
+          Statements registered in the VDS."
+        note: >-
+          Lowercase "may", not BCP 14. Batching of steps 4-5 is permitted with
+          no batch message, no batch size bound, no partial-batch semantics and
+          no statement of whether a batch commits atomically.
+      - locator: "§6.3"
+        text: >-
+          "A TS MUST ensure that a Signed Statement is registered before
+          releasing its Receipt."
+        note: >-
+          The single ordering obligation in the flow - step 4 strictly precedes
+          the release of the step 5 artifact. It is an imperative sentence, not
+          a state transition.
+      - locator: "§6.3"
+        text: >-
+          "A TS MAY accept a Signed Statement with content in its unprotected
+          header and MAY use values from that unprotected header during
+          verification and registration policy evaluation."
+        note: >-
+          Permits policy input from bytes the Issuer did not sign. Paired with
+          §5.1.1.1's allowance that "If x5t is included in the protected
+          header, an x5chain with a leaf certificate corresponding to the x5t
+          value MAY be included in the unprotected header."
+      - locator: "§6.3"
+        text: >-
+          "However, the unprotected header of a Signed Statement MUST be set to
+          an empty map before the Signed Statement can be included in a
+          Statement Sequence."
+        note: >-
+          What is registered is not byte-identical to what was submitted. The
+          RFC does not say who performs the emptying, nor how a verifier
+          reconstructs the registered form from a Transparent Statement whose
+          unprotected header now carries Receipts (label 394).
+      - locator: "§6.3"
+        text: >-
+          "The same Signed Statement may be independently registered in
+          multiple TSs, producing multiple independent Receipts. The multiple
+          Receipts may be attached to the unprotected header of the Signed
+          Statement creating a Transparent Statement."
+      - locator: "§6.3"
+        text: >-
+          "An Issuer that knows of a changed state of quality for an Artifact
+          SHOULD Register a new Signed Statement using the same 15 CWT iss and
+          sub Claims."
+        note: >-
+          Supersession is by appending a new statement under the same iss and
+          sub, not by mutating or withdrawing an old one. §9.2: "A registered
+          Statement may be superseded by a subsequently submitted Signed
+          Statement from the same Issuer, with the same subject in the CWT
+          Claims protected header."
+
+  - name: transparent-statement-assembly
+    locator: "§7"
+    kind: procedure
+    summary: >-
+      A Client turns a Signed Statement plus one or more Receipts into a
+      Transparent Statement by writing the Receipts into the unprotected header
+      (COSE label 394).
+    steps:
+
+      - from: "Transparency Service"
+        to: Client
+        message: Receipt
+        normative: >-
+          "When a Signed Statement is registered by a TS a Receipt becomes
+          available." (§7). Non-normative in the BCP 14 sense; "becomes
+          available" is not an act of delivery.
+        on_error: >-
+          Not specified. The RFC gives no way to ask for a Receipt and no
+          defined answer for "registered, Receipt not yet available".
+
+      - from: Client
+        to: Client
+        message: Transparent_Statement
+        normative: >-
+          "The Client (which is not necessarily the Issuer) that registers a
+          Signed Statement and receives a Receipt can produce a Transparent
+          Statement by adding the Receipt to the unprotected header of the
+          Signed Statement. Client applications MAY register Signed Statements
+          on behalf of one or more Issuers. Client applications MAY request
+          Receipts regardless of the identity of the Issuer of the associated
+          Signed Statement." (§7). And "When a Receipt is included in a Signed
+          Statement, a Transparent Statement is produced."
+        keywords: [MAY, MAY]
+        structure: >-
+          Figure 7 (§7) gives the CDDL - Transparent_Statement =
+          #6.18(COSE_Sign1) with Unprotected_Header = { &(receipts: 394) => [+
+          bstr .cbor Receipt] }. Figure 8 shows two Receipts in one array. §3
+          adds that "A Transparent Statement remains a valid Signed Statement
+          and may be registered again in a different TS."
+        on_error: >-
+          Not specified. No rule governs a Receipt that does not correspond to
+          the Signed Statement it is attached to, nor a Receipt array
+          containing a Receipt from an untrusted or unknown TS - §7.1 instead
+          leaves the Relying Party free to ignore such entries.
+
+  - name: validation
+    locator: "§7.1"
+    kind: procedure
+    summary: >-
+      What a Relying Party must and may do with a Transparent Statement. Two
+      MUSTs, four MAYs, and one non-normative suggestion about result shape.
+    steps:
+
+      - title: "Signature verification"
+        from: "Relying Party"
+        to: "Relying Party"
+        message: Transparent_Statement
+        normative: >-
+          "Relying Parties MUST apply the verification process as described in
+          Section 4.4 of RFC 9052 [STD96] when checking the signature of Signed
+          Statements and Receipts."
+        keywords: [MUST]
+        on_error: >-
+          Not specified. The RFC says the verification process MUST be applied;
+          it never says what a Relying Party does when it yields a bad
+          signature. There is no defined outcome, no error taxonomy and no
+          required action.
+
+      - title: "Receipt issuer trust"
+        from: "Relying Party"
+        to: "Relying Party"
+        message: Receipt
+        normative: >-
+          "A Relying Party MUST trust the verification key or certificate and
+          the associated identity of at least one Issuer of a Receipt."
+        keywords: [MUST]
+        note: >-
+          "at least one" - a Transparent Statement carrying Receipts from
+          several TSs is acceptable if one issuer is trusted. §3 grounds this:
+          "The identity of a TS is captured by a public key that must be known
+          by Relying Parties in order to validate Receipts." How that key is
+          learned is not specified.
+        on_error: >-
+          Not specified. No behaviour is defined for a Transparent Statement
+          none of whose Receipt issuers is trusted. §9.3 only advises that "It
+          is important for Relying Parties not to accept Signed Statements for
+          which they cannot discover Receipts issued by a TS they trust."
+
+      - title: "Permitted shortcuts"
+        from: "Relying Party"
+        to: "Relying Party"
+        message: Receipt
+        normative: >-
+          "A Relying Party MAY decide to verify only a single Receipt that is
+          acceptable to them and not check the signature on the Signed
+          Statement or Receipts that rely on VDSs they do not understand."
+        keywords: [MAY]
+        note: >-
+          One sentence permits three separate omissions - verify only one
+          acceptable Receipt; skip the Signed Statement's own signature; skip
+          Receipts whose Verifiable Data Structure is unknown. A conforming
+          Relying Party may therefore accept a Transparent Statement without
+          ever checking the Issuer's signature.
+        on_error: >-
+          Not applicable - this is a permission to do less, not an obligation.
+          No error path either way.
+
+      - title: "Optional local re-verification"
+        from: "Relying Party"
+        to: "Relying Party"
+        message: Signed_Statement
+        normative: >-
+          "Relying Parties MAY be configured to re-verify the Issuer's Signed
+          Statement locally."
+        keywords: [MAY]
+        on_error: >-
+          Not specified. No outcome is defined for a re-verification that
+          disagrees with the Receipt.
+
+      - title: "Post-validation policy"
+        from: "Relying Party"
+        to: "Relying Party"
+        message: Transparent_Statement
+        normative: >-
+          "In addition, Relying Parties MAY apply arbitrary validation policies
+          after the Transparent Statement has been verified and validated. Such
+          policies may use as input all information in the Envelope, the
+          Receipt, and the Statement payload, as well as any local state."
+        keywords: [MAY]
+        note: >-
+          "arbitrary" is the RFC's own word. Nothing about these policies is
+          constrained or required to be published, in contrast to the TS's
+          Registration Policy, which §5.1.1.1 requires to be made Transparent.
+        on_error: >-
+          Not specified. The outcome of a post-validation policy is undefined
+          because the policies themselves are undefined.
+
+    result_model:
+      locator: "§7.1"
+      normative: false
+      text: >-
+        "APIs exposing verification logic for Transparent Statements may
+        provide more details than a single boolean result. For example, an API
+        may indicate if the signature on the Receipt or Signed Statement is
+        valid, if Claims related to the validity period are valid, or if the
+        inclusion proof in the Receipt is valid."
+      components:
+        - "signature on the Receipt or Signed Statement is valid"
+        - "Claims related to the validity period are valid"
+        - "inclusion proof in the Receipt is valid"
+      note: >-
+        This is the closest thing in the whole document to a result model, and
+        it is a lowercase "may" applied to an API the RFC does not define.
+        There are no names for these three components, no encoding, no
+        enumeration of the values each can take, and no statement of how they
+        combine into an accept-or-reject decision. It describes a richer
+        success report, not a failure taxonomy - all three components are
+        phrased as "is valid". An implementer cannot build an interoperable
+        verifier result from this sentence.
+
+  - name: bootstrapping
+    locator: "§5.1.2"
+    kind: procedure
+    summary: >-
+      How a TS acquires its first Registration Policy and trust anchors, given
+      that §5.1.1.1's mandatory checks presuppose a policy already registered
+      on the VDS. The RFC resolves the circularity with a three-way choice.
+    normative: >-
+      "Since the mandatory Registration checks rely on having registered Signed
+      Statements for the Registration Policy and trust anchors, TSs MUST
+      support at least one of the three following bootstrapping mechanisms:"
+    keywords: [MUST]
+    steps:
+
+      - mechanism: 1
+        title: "Preconfigured Registration Policy and trust anchors"
+        from: "(TS operator)"
+        to: "Transparency Service"
+        message: "(none - out-of-band configuration)"
+        message_defined: false
+        normative: '"Preconfigured Registration Policy and trust anchors;"'
+        assessment:
+          locator: "§9.4.3"
+          verdict: "§9.4.3: unsuitable for use in long-lived service deployments, in its no-update form"
+          text: >-
+            "Mechanisms that rely on preconfigured values and do not allow
+            updates are unsuitable for use in long-lived service deployments in
+            which the ability to patch a potentially faulty policy is
+            essential."
+        on_error: >-
+          Not specified. No format, location, integrity protection or
+          provenance is defined for the preconfigured values, so no failure of
+          that configuration can be described.
+
+      - mechanism: 2
+        title: "First Signed Statement carrying a Registration Policy"
+        from: Client
+        to: "Transparency Service"
+        message: Signed_Statement
+        normative: >-
+          "Acceptance of a first Signed Statement whose payload is a valid
+          Registration Policy, without performing Registration checks; or"
+        note: >-
+          The one bootstrapping mechanism that is an actual protocol exchange -
+          a registration performed with the checks of §6.3 steps 2-3 and
+          §5.1.1.1 deliberately skipped. It also requires the TS to read the
+          payload, which §3 otherwise declares "opaque to TS".
+        assessment:
+          locator: "§9.4.3"
+          verdict: "§9.4.3: preferable"
+          text: >-
+            "Bootstrapping mechanisms that solely rely on Statement
+            registration to set and update registration policy can be audited
+            without additional implementation-specific knowledge; therefore,
+            they are preferable."
+        on_error: >-
+          Not specified, and the exposure here is the sharpest in the document
+          - the first statement is accepted "without performing Registration
+          checks" and the RFC defines no authentication for it, no window in
+          which it is accepted, no rule that only one such statement may be
+          accepted, and no behaviour if the payload turns out not to be a valid
+          Registration Policy. "valid" is asserted, never defined.
+
+      - mechanism: 3
+        title: "Out-of-band authenticated management interface"
+        from: "(TS operator)"
+        to: "Transparency Service"
+        message: "(none - out-of-band interface)"
+        message_defined: false
+        normative: '"An out-of-band authenticated management interface."'
+        assessment:
+          locator: "§9.4.3"
+          verdict: "unranked; auditable only with implementation-specific knowledge"
+          text: >-
+            Not ranked by §9.4.3, which calls mechanisms that "solely rely on
+            Statement registration" to set and update policy "preferable", and
+            calls preconfigured values that "do not allow updates"
+            "unsuitable for use in long-lived service deployments". A
+            management interface is neither - by the reasoning given it allows
+            updates but cannot be audited without implementation-specific
+            knowledge. The ranking words used here - "preferable" and
+            "unsuitable" - are §9.4.3's own.
+        on_error: >-
+          Not specified. The interface, its authentication and its operations
+          are entirely undefined - only the words "out-of-band authenticated
+          management interface" are given.
+
+    related:
+      - locator: "§5.1.1.2"
+        text: >-
+          "The operator of a TS MAY update the Registration Policy or the trust
+          anchors of a TS at any time."
+      - locator: "§5.1.1.1"
+        text: >-
+          "The TS MUST apply the Registration Policy that was most recently
+          committed to the VDS at the time of Registration." - which gives
+          policy updates an ordering relative to registrations without defining
+          any state for either.
+
+# ---------------------------------------------------------------------------
+# error_model - the principal implementability finding of this artifact.
+# ---------------------------------------------------------------------------
+error_model:
+  defined: false
+  verdict: >-
+    RFC 9943 names no error paths. It has no failure taxonomy, no error codes,
+    no rejection response, no retry rule and no idempotency rule. Every
+    normative statement in the registration and validation flows is an
+    obligation with no else-branch - the document says what a TS and a Relying
+    Party MUST check, and never what follows from a check that does not pass.
+    Because the RFC also defines no transport binding, there is not even a
+    carrier in which an error could be expressed.
+  evidence:
+    method: >-
+      Case-insensitive search of the full source
+      (.cache/rfc-editor-org-rfc-rfc9943-txt.bin, 1772 lines). Counts are
+      occurrences of the term, not matching lines.
+    terms:
+      - term: reject
+        occurrences: 1
+        where: "§9.4.2 (line 1349)"
+        text: >-
+          "It is important for Issuers and TSs to clearly communicate when keys
+          are compromised so that Signed Statements can be rejected by TSs or
+          Receipts can be ignored by Relying Parties."
+        assessment: >-
+          Prose about key compromise. It describes a discretionary future
+          posture, not a rejection response, a reason code, or anything a
+          Client receives.
+      - term: error
+        occurrences: 0
+        where: nowhere
+        assessment: >-
+          The word does not appear in the document in any form. The only
+          near-matches are rfc-editor.org URLs and "errata" in the RFC
+          boilerplate.
+      - term: fail
+        occurrences: 1
+        where: "§2.1 (line 253)"
+        text: >-
+          "For instance, digital signatures may fail to verify past their
+          expiry date even though the signed item itself remains completely
+          valid."
+        assessment: >-
+          Motivational prose in the problem statement, before the architecture
+          is introduced. Not a protocol failure.
+      - term: invalid
+        occurrences: 0
+        where: nowhere
+        assessment: >-
+          "valid", "validate" and "validation" occur throughout; the negated
+          form never does. The document has vocabulary for success and none for
+          failure.
+      - term: retry
+        occurrences: 0
+        where: nowhere
+        assessment: >-
+          No retry, no back-off, no idempotency rule, although §6.3 step 5
+          permits an asynchronous Receipt and §6.3 permits the same Signed
+          Statement to be registered in multiple TSs.
+      - term: abort
+        occurrences: 0
+        where: nowhere
+      - term: status
+        occurrences: 2
+        where: >-
+          RFC boilerplate only - "Status of This Memo" (line 29) and "the
+          current status of this document" (line 39).
+        assessment: >-
+          Neither occurrence is in the technical body. The architecture has no
+          notion of a status.
+      - term: pending
+        occurrences: 0
+        where: nowhere
+        assessment: >-
+          Directly consequential - §6.3 step 5's "This MAY be asynchronous from
+          Registration" creates a wait with no vocabulary to describe it.
+      - term: submitted
+        occurrences: 1
+        where: "§9.2 (line 1316)"
+        text: >-
+          "A registered Statement may be superseded by a subsequently submitted
+          Signed Statement from the same Issuer, with the same subject in the
+          CWT Claims protected header."
+        assessment: >-
+          Used as an ordinary verb about a later statement, not as a state.
+          "submit" and "submitting" appear five more times - §3, §4, §8, §9.1,
+          §9.3 - all as plain verbs.
+    also_searched:
+      - >-
+        revocation / revoke - 2 occurrences: §2.1 ("fine-grained revocation is
+        too hard") and §9.4.2 ("Revocation strategies for compromised keys are
+        out of scope for this document."). Neither defines a revocation flow.
+      - >-
+        refuse - 1 occurrence, §9.3: "Issuers can refuse to register their
+        Statements with a TS or selectively submit some but not all the
+        Statements they issue." A description of Issuer discretion, not a
+        protocol response.
+      - >-
+        HTTP, response, status code, timeout, queue, deny, decline,
+        unsuccessful, idempotent - 0 occurrences each.
+      - >-
+        successful - 1 occurrence, §5: "producing Receipts upon successful
+        Registration". The only place the document acknowledges that
+        Registration has outcomes, and it names only the good one.
+  consequences:
+    - >-
+      An implementer cannot write a conformant TS response for any failed
+      check, because none exists to be conformant to. Two independent TSs will
+      fail differently and both conform.
+    - >-
+      A Client cannot distinguish "rejected by policy", "not yet registered"
+      and "lost" from anything the document defines.
+    - >-
+      Resubmission behaviour is undefined - whether registering the same Signed
+      Statement twice yields one VDS entry or two, and whether the second
+      returns the first Receipt, is not stated anywhere.
+    - >-
+      §7.1's three-component result suggestion is the only structured outcome
+      in the document, it is a lowercase "may", and all three components are
+      phrased as "is valid" - a success report, not an error model.
+  scoped_out_verbatim:
+    - locator: "§1"
+      text: >-
+        "How these statements are managed or stored as well as how
+        participating entities discover and notify each other of changes is out
+        of scope of this document."
+    - locator: "§6.3 step 1"
+      text: >-
+        "Authentication and authorization are implementation specific and out
+        of scope of the SCITT architecture."
+    - locator: "§9.4.2"
+      text: >-
+        "Revocation strategies for compromised keys are out of scope for this
+        document."
+    - locator: "§5.1.3"
+      text: >-
+        "Specific VDSs, such as those described in [RFC9162] and [RFC9942], and
+        the review of their security requirements for SCITT are out of scope
+        for this document."
+    - locator: "§6"
+      text: '"Key discovery protocols are out of scope of this document."'
+
+transport:
+  defined: false
+  note: >-
+    No HTTP or CoAP binding, no endpoint, no method, no request or response
+    structure. §10 registers the media types application/scitt-statement+cose
+    and application/scitt-receipt+cose and CoAP Content-Format numbers 277 and
+    278, which is the document's entire treatment of the wire.
