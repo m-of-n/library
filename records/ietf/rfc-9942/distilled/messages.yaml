@@ -1,0 +1,1154 @@
+schema: "library-messages/v1"
+record: rfc-9942
+source_version: "RFC 9942"
+source_digest: "da8ed24ef2d757ece900decf34a003a7b02679a16f4c1f25670ea59435372da0"
+reviewed_by: ""
+
+note: >
+  Every message, structure, header map and envelope RFC 9942 defines.
+  RFC 9942 defines its structures TWICE under two different naming
+  conventions, and this file records both names for every structure plus
+  which section is authoritative for what; see the naming_duality block.
+  Quoted normative text is verbatim. Where a field is constrained only by
+  CDDL — which carries no BCP 14 keyword and therefore correctly produces
+  no entry in distilled/requirements.yaml — the field carries a
+  constrained_by_note string instead of a fabricated requirement id.
+  Requirement ids cited here are the real ids of
+  records/ietf/rfc-9942/distilled/requirements.yaml (R-0001..R-0027).
+
+# ---------------------------------------------------------------------------
+# The label space. Read this before reading any structure below.
+# ---------------------------------------------------------------------------
+label_space:
+  header_parameter_labels:
+    394: "receipts — unprotected or protected header of an Enveloped COSE Structure"
+    395: "vds — protected header of a Receipt"
+    396: "vdp — unprotected header of a Receipt"
+  proof_labels_inside_vdp:
+    -1: "inclusion proofs (array of bstr) — VDS 1 / RFC9162_SHA256"
+    -2: "consistency proofs (array of bstr) — VDS 1 / RFC9162_SHA256"
+  there_is_no_minus_three:
+    claim: "RFC 9942 defines EXACTLY TWO proof labels: -1 inclusion and -2 consistency. There is no -3 proof label. There is no proof label of any kind other than -1 and -2."
+    confirmed_how: >
+      grep over the whole 1033-line source for the literal "-3" returns
+      exactly one line, line 206, and it is inside the COSE EC2 key analogy
+      of §4.2, not a receipt structure. Both -1 and -2 occur only at lines
+      206-208 (the same §4.2 paragraph), 285 and 324 (§4.3 CDDL), and 507
+      and 619 (§5.2.1 and §5.3.1 CDDL). No other negative label appears
+      anywhere in the document, and IANA Table 3 (§8.2.2.2) registers
+      exactly two rows, -1 and -2.
+    the_misreadable_text:
+      locator: "§4.2"
+      source_lines: "205-208"
+      verbatim: 'As is the case for COSE Key Type Parameters [IANA.cose_header-parameters], EC2 keys (1: 2) require and give meaning to specific parameters, such as -1 (crv), -2 (x), -3 (y), and -4 (d).  RFC9162_SHA256 (395: 1) supports both (-1) inclusion and (-2) consistency proofs.'
+      reading: >
+        -1 (crv), -2 (x), -3 (y) and -4 (d) are COSE EC2 KEY parameters,
+        cited only as a structural analogy for how a VDS identifier gives
+        meaning to negative labels. They have nothing to do with receipts.
+        Only the second sentence is about receipts, and it names two
+        labels: (-1) inclusion and (-2) consistency.
+    hazard: >
+      A sibling record in this library previously transcribed -3 as a
+      receipt proof label. It is not one. Any implementation or schema
+      carrying a -3 proof label is not implementing RFC 9942.
+
+# ---------------------------------------------------------------------------
+# §4.3 vs §5 — the same structures, twice, under two naming conventions
+# ---------------------------------------------------------------------------
+naming_duality:
+  statement: >
+    §4.3 (Figure 1) and §5.2.1/§5.3.1 (Figures 4, 5, 8 and the uncaptioned
+    consistency unprotected-header block) define the same four header maps
+    and the same two proof-content arrays twice, under two different naming
+    conventions. The structures are wire-identical; the names are not.
+  convention_a:
+    locator: "§4.3, Figure 1"
+    style: "RFC9162_SHA256_<Proof>_<Role>_Header — VDS-qualified, CapitalisedUnderscore"
+    examples:
+      - RFC9162_SHA256_Inclusion_Protected_Header
+      - RFC9162_SHA256_Inclusion_Unprotected_Header
+      - RFC9162_SHA256_Verifiable_Inclusion_Proofs
+      - RFC9162_SHA256_Inclusion_Proof_Content
+      - RFC9162_SHA256_Consistency_Protected_Header
+      - RFC9162_SHA256_Consistency_Unprotected_Header
+      - RFC9162_SHA256_Verifiable_Consistency_Proofs
+      - RFC9162_SHA256_Consistency_Proof_Content
+  convention_b:
+    locator: "§5.2.1 and §5.3.1, Figures 3, 4, 5, 7, 8"
+    style: "generic lower-kebab — NOT VDS-qualified, and REUSED across both proof types"
+    examples:
+      - protected-header-map
+      - unprotected-header-map
+      - verifiable-proofs
+      - inclusion-proof-content
+      - consistency-proof-content
+  collision_warning: >
+    Convention B reuses the SAME three rule names — protected-header-map,
+    unprotected-header-map and verifiable-proofs — for the inclusion profile
+    (§5.2.1) and the consistency profile (§5.3.1). The §5.2.1 and §5.3.1
+    CDDL fragments therefore cannot be concatenated into one valid CDDL
+    file without renaming: verifiable-proofs in §5.2.1 keys on -1 and
+    verifiable-proofs in §5.3.1 keys on -2. Convention A has no such
+    collision, which is why it is the one to use when merging.
+  authority:
+    field_requirement_levels: >
+      §5 is authoritative. ONLY §5.2.1 and §5.3.1 state REQUIRED for alg,
+      vds, vdp and the proof label (R-0010..R-0013, R-0015..R-0018). §4.3's
+      Figure 1 CDDL expresses mandatory membership through the CDDL `&()`
+      group-entry construct but states no BCP 14 requirement level at all.
+    outer_receipts_nesting: >
+      §4.3 is authoritative. ONLY §4.3 / Figure 1 defines the OUTER
+      envelope — Signature_With_Receipt, the receipts (394) unprotected
+      header entry, the `[+ bstr .cbor Receipt]` value type, and the
+      Receipt = Receipt_For_Inclusion / Receipt_For_Consistency union.
+      §5 never mentions label 394 and never shows a receipt nested inside
+      a host signature.
+    proof_content_field_names: >
+      The two sections disagree in a way worth knowing. §4.3 writes the
+      proof-content members with UNDERSCORES (tree_size, leaf_index,
+      inclusion_path, tree_size_1, tree_size_2, consistency_path); §5.2
+      Figure 3 and §5.3 Figure 7 write them with HYPHENS (tree-size,
+      leaf-index, inclusion-path, tree-size-1, tree-size-2,
+      consistency-path). Both are CDDL member keys in an ARRAY, so they are
+      positional documentation only and never appear on the wire; the
+      disagreement is cosmetic but will break a naive diff of the two
+      CDDL renderings. §5.2 explains its choice: 'The term leaf-index is
+      used for alignment with the use established in Section 2.1.3.2 of
+      [RFC9162].'
+    wildcard_entry_name: >
+      §4.3 defines `cose-values = any` and writes `* cose-label =>
+      cose-values` (plural). §5.2.1 and §5.3.1 write `* cose-label =>
+      cose-value` (SINGULAR), a rule name the document never defines.
+      Treat cose-value in §5 as a typo for §4.3's cose-values.
+
+# ---------------------------------------------------------------------------
+# The verifiable data structure
+# ---------------------------------------------------------------------------
+verifiable_data_structure:
+  count_defined_by_this_document: 1
+  name: RFC9162_SHA256
+  integer_identifier: 1
+  string_identifier: "RFC9162_SHA256"
+  locator: "§5.1, source lines 441-446; registered Table 2, §8.2.2.1"
+  description: "SHA256 Binary Merkle Tree"
+  change_controller: IETF
+  registry_reference: "Section 2.1 of [RFC9162]"
+  defined_wholly_by_reference: true
+  definition_text: 'The integer identifier for this VDS is 1.  The string identifier for this VDS is "RFC9162_SHA256", a Merkle Tree where SHA256 is used as the hash algorithm (see Table 2).  See Section 2.1.1 of [RFC9162] for a complete description of this VDS.'
+  by_reference_note: >
+    RFC 9942 contains no hash-input, leaf-hash, node-hash or tree-head
+    construction of its own. The Merkle tree, the Merkle Tree Hash, the
+    inclusion-proof algorithm and the consistency-proof algorithm are all
+    RFC 9162's: §5 points at RFC 9162 §2.1 and §2.1.1 for the structure,
+    §2.1.3.1 for the inclusion proof, §2.1.3.2 for leaf-index semantics
+    and §2.1.4.1 for the consistency proof. RFC 9942 contributes only the
+    CBOR/COSE envelope and the two IANA registries.
+  reserved_point:
+    value: 0
+    name: Reserved
+    description: Reserved
+    change_controller: ""
+    reference: "RFC 9942"
+    note: "Table 2 reserves 0 with an empty Change Controller cell; no VDS may use it."
+  hash_algorithm_granularity:
+    rule: "One IANA registration per hash algorithm, not one per structure family."
+    constrained_by: [rfc-9942#R-0008]
+    text: 'Where a specification supports a choice of hash algorithm, a separate IANA registration must be made for each supported algorithm.'
+    consequence: 'both "RFC9162_SHA256" and "RFC9162_SHA3_256" require entries in the relevant IANA registries.  This document only defines "RFC9162_SHA256".'
+
+# ---------------------------------------------------------------------------
+# The leaf-index bound and the leaf-only restriction
+# ---------------------------------------------------------------------------
+leaf_index_bound:
+  locator: "§5.2, source lines 470-476"
+  constrained_by: [rfc-9942#R-0009]
+  framing_text: 'Note that [RFC9162] defines inclusion proofs only for leaf nodes, and that:'
+  bound_text: 'If leaf_index is greater than or equal to tree_size, then fail the proof verification.'
+  bound_expression: "leaf_index >= tree_size  =>  verification MUST fail"
+  bound_is_a_quotation_of: "RFC 9162 (rendered in RFC 9942 as an indented block quote with a leading pipe gutter)"
+  keyword_status: >
+    The sentence carries no uppercase BCP 14 keyword — it is lower-case
+    "fail" inside a quotation of RFC 9162 — so requirements.yaml carries
+    R-0009 as kind: inferred. It is nonetheless an absolute verification
+    failure condition, and every inclusion-proof verifier must implement it.
+  leaf_only_restriction:
+    statement: "Inclusion proofs are defined ONLY for leaf nodes. There is no inclusion proof for an interior node in this specification."
+    constrained_by_note: "Stated as fact in §5.2 with no BCP 14 keyword; no requirement id carries it. The adjacent R-0009 covers only the numeric bound."
+  index_frame_of_reference:
+    text: 'The identifying index of a leaf node is relative to all nodes in the tree size for which the proof was obtained.'
+    note: >
+      leaf-index is not a global entry ordinal independent of the proof; it
+      is relative to the tree_size carried in the SAME proof. A verifier
+      must read tree-size and leaf-index as a pair.
+
+# ---------------------------------------------------------------------------
+# THE STRUCTURES
+# ---------------------------------------------------------------------------
+messages:
+
+  # === 1. The three new COSE header parameters =============================
+  - name: "COSE header parameters registered by RFC 9942"
+    also_known_as: ["Table 1: Newly Registered COSE Header Parameters"]
+    locator: "§2 (definition, source lines 121-139); §8.1 Table 1 (registration, source lines 733-777)"
+    encoding: "entries of a COSE header map (CBOR map, int label => value)"
+    registry: "COSE Header Parameters subregistry, CBOR Object Signing and Encryption (COSE) registry group"
+    registration_range: "Integer values from 256 to 65535"
+    registration_procedure: "Specification Required (see [RFC8126])"
+    registration_range_text: "These COSE header parameters fall in the 'Integer values from 256 to 65535' range (with a Specification Required registration procedure (see [RFC8126]))."
+    count: 3
+    fields:
+      - name: receipts
+        label: 394
+        type: array
+        value_type_registry: ""
+        required: false
+        appears_in: "protected and unprotected headers of an Enveloped COSE Structure (the HOST signature, not the receipt)"
+        cddl_value: "[+ bstr .cbor Receipt]"
+        description_table_1: "Priority ordered sequence of CBOR encoded Receipts"
+        definition_text_s2: '394:  A COSE header parameter named "receipts" with a value type of array where the array contains one or more COSE Receipts as specified in this document.'
+        ordering: "Priority ordered. Table 1's Description column makes array order semantically significant; §2 states only 'one or more'. Neither place says what a verifier does with the priority."
+        cardinality: "one or more (CDDL `+`); an empty receipts array is not well formed"
+        constrained_by: [rfc-9942#R-0002]
+        constrained_by_note: >
+          R-0002 is conditioned on this parameter's presence ('When the
+          "receipts" header parameter is present, the verifier MUST
+          confirm...'). The array-valued type itself, and the priority
+          ordering, carry no BCP 14 keyword and have no requirement id.
+      - name: vds
+        label: 395
+        type: int
+        value_type_registry: "COSE Verifiable Data Structure Algorithms (Table 1 cell reads 'COSE Verifiable Data Structure'; §8.1 prose reads 'COSE Verifiable Data Structure Algorithm' singular; §8.2 reads 'COSE Verifiable Data Structure Algorithms' plural — three spellings of one registry in one document)"
+        required: true
+        required_scope: "REQUIRED in the PROTECTED header of a Receipt, per §5.2.1 and §5.3.1"
+        appears_in: "protected header of a Receipt"
+        description_table_1: "Algorithm identifier for Verifiable Data Structures that is used to produce Verifiable Data Structure Proofs"
+        definition_text_s2: '395:  A COSE header parameter named "vds" (for Verifiable Data Structure), which conveys the algorithm identifier for a VDS.  Correspondingly, see Section 8.2.2.1 for a registry defining the integers used to identify VDSs.'
+        known_values: {1: RFC9162_SHA256, 0: Reserved}
+        constrained_by: [rfc-9942#R-0011, rfc-9942#R-0016, rfc-9942#R-0002]
+      - name: vdp
+        label: 396
+        type: map
+        value_type_registry: "map key in COSE Verifiable Data Structure Proofs"
+        required: true
+        required_scope: "REQUIRED in the UNPROTECTED header of a Receipt, per §5.2.1 and §5.3.1"
+        appears_in: "unprotected header of a Receipt"
+        description_table_1: "Location for Verifiable Data Structure Proofs in COSE Header Parameters"
+        definition_text_s2: '396:  A COSE header parameter named "vdp" (for VDPs), which conveys a map containing VDPs organized by Proof Type.  Correspondingly, see Section 8.2.2.2 for a registry defining the integers used to identify VDS Proof Types.'
+        map_keys: "Proof Type labels from the COSE Verifiable Data Structure Proofs subregistry — for VDS 1, exactly -1 and -2"
+        organisation: "VDPs organized by Proof Type: one map entry per proof type, whose value is an array of proofs of that type"
+        constrained_by: [rfc-9942#R-0012, rfc-9942#R-0017, rfc-9942#R-0002]
+    layout: >
+      Each is an entry in a CBOR map (the COSE header map): a negative-or-
+      positive int key followed by its value. 394 / 395 / 396 all encode as
+      two-byte CBOR unsigned ints (0x19 0x01 0x8a, 0x19 0x01 0x8b,
+      0x19 0x01 0x8c respectively). 394 lives in the HOST signature's
+      header; 395 and 396 live in the RECEIPT's own headers, 395 protected
+      and 396 unprotected. No header parameter of this document is ever
+      both.
+
+  # === 2. The outer envelope ===============================================
+  - name: Signature_With_Receipt
+    also_known_as: ["the host signature", "Enveloped COSE Structure with attached receipts"]
+    locator: "§4.3, Figure 1 (source lines 236-255, 336 caption); example Figure 2"
+    encoding: "#6.18(COSE_Sign1) — CBOR tag 18 wrapping a 4-element array"
+    cddl: |
+      Signature_With_Receipt = #6.18(COSE_Sign1)
+
+      cose-label = int / text
+      cose-values = any
+
+      Protected_Header = {
+        * cose-label => cose-values
+      }
+
+      Unprotected_Header = {
+        &(receipts: 394)  => [+ bstr .cbor Receipt]
+        * cose-label => cose-values
+      }
+
+      COSE_Sign1 = [
+        protected   : bstr .cbor Protected_Header
+        unprotected : Unprotected_Header
+        payload     : bstr / nil
+        signature   : bstr
+      ]
+    fields:
+      - name: protected
+        position: 0
+        type: "bstr .cbor Protected_Header"
+        required: true
+        content: "Protected_Header = { * cose-label => cose-values } — fully open; this document mandates nothing in the HOST protected header"
+        constrained_by_note: "CDDL-only (Figure 1). No BCP 14 keyword, no requirement id. Figure 2's informative example carries kid (4) and alg (1: -7, ES256), but neither is required by this document."
+      - name: unprotected
+        position: 1
+        type: Unprotected_Header
+        required: true
+        content: "carries receipts (394) => [+ bstr .cbor Receipt], plus any other header parameters"
+        constrained_by_note: "The `&(receipts: 394)` group entry in Figure 1 shows receipts as a member of the host unprotected header. §4.3 registers 394 for 'the protected and unprotected headers' both, so an implementation may also find it protected; Figure 1's CDDL shows only the unprotected placement. No requirement id carries either placement."
+      - name: payload
+        position: 2
+        type: "bstr / nil"
+        required: true
+        content: "the host statement being made transparent; attached (bstr) in Figure 2"
+        constrained_by_note: "CDDL-only. R-0004's detached-payload SHOULD is addressed to PROFILES of new VDSs in §4.4, not to this host envelope."
+      - name: signature
+        position: 3
+        type: bstr
+        required: true
+        constrained_by_note: "CDDL-only (Figure 1)."
+    layout: >
+      18([ bstr<<protected map>>, {unprotected map incl. 394 => [bstr<<receipt>>, ...]}, payload-bstr-or-null, signature-bstr ]).
+      Each element of the 394 array is a bstr whose BYTES are themselves a
+      complete CBOR-encoded, tag-18 Receipt (`bstr .cbor Receipt`) — a
+      one-level embedded-CBOR nesting, so a receipt must be decoded in a
+      second pass after the host envelope.
+    nesting_note: >
+      This is the only place the document shows a receipt INSIDE another
+      signature. §5 shows receipts standalone. Figure 2 shows two receipts
+      in one host signature, each a separate tag-18 COSE_Sign1 with its own
+      kid, alg and vds.
+
+  # === 3. The Receipt union ================================================
+  - name: Receipt
+    locator: "§4.3, Figure 1 (source line 257); term defined §3"
+    encoding: "CDDL type choice over two tag-18 structures"
+    cddl: |
+      Receipt = Receipt_For_Inclusion / Receipt_For_Consistency
+
+      ; Note the proof formats shown here are for RFC9162_SHA256.
+      ; Other VDSs may have different proof formats.
+    terminology_text: 'Receipt:  A COSE Single Signer Data Object, as defined in RFC 9052 of [STD96], containing the header parameters necessary to convey one or more VDP for an associated VDS.'
+    fields:
+      - name: Receipt_For_Inclusion
+        type: "#6.18(Signed_Inclusion_Proof)"
+        required: false
+        note: "one arm of the choice"
+        constrained_by: [rfc-9942#R-0003]
+      - name: Receipt_For_Consistency
+        type: "#6.18(Signed_Consistency_Proof)"
+        required: false
+        note: "the other arm of the choice"
+        constrained_by: [rfc-9942#R-0003]
+    tagging:
+      requirement: 'Receipts MUST be tagged as COSE_Sign1.'
+      constrained_by: [rfc-9942#R-0003]
+      cbor_tag: 18
+      note: "CBOR tag 18 is COSE_Sign1. Both arms carry it explicitly as #6.18(...), and R-0003 makes it a MUST."
+    layout: >
+      The union is closed for this document because this document defines
+      exactly one VDS with exactly two proof types. The inline CDDL comment
+      is explicit that the arms are RFC9162_SHA256-specific and that other
+      VDSs may differ, so the union is extensible by future registrations,
+      not by this document.
+
+  # === 4. Receipt of Inclusion: the signed structure =======================
+  - name: Signed_Inclusion_Proof
+    also_known_as: ["Receipt_For_Inclusion (as tagged)", "Receipt of Inclusion (§5.2.1 prose title)"]
+    locator: "§4.3 Figure 1 (source lines 263-271) for the structure; §5.2.1 (source lines 481-566) for field requirement levels; example Figure 6"
+    encoding: "#6.18(COSE_Sign1) — CBOR tag 18 wrapping a 4-element array"
+    authoritative_for_shape: "§4.3"
+    authoritative_for_requirement_levels: "§5.2.1"
+    cddl: |
+      Receipt_For_Inclusion = #6.18(Signed_Inclusion_Proof)
+
+      Signed_Inclusion_Proof = [
+        protected   :
+          bstr .cbor RFC9162_SHA256_Inclusion_Protected_Header,
+        unprotected : RFC9162_SHA256_Inclusion_Unprotected_Header,
+        payload     : bstr / nil,
+        signature   : bstr
+      ]
+    fields:
+      - name: protected
+        position: 0
+        type: "bstr .cbor RFC9162_SHA256_Inclusion_Protected_Header (= §5.2.1 protected-header-map)"
+        required: true
+        constrained_by: [rfc-9942#R-0010, rfc-9942#R-0011]
+      - name: unprotected
+        position: 1
+        type: "RFC9162_SHA256_Inclusion_Unprotected_Header (= §5.2.1 unprotected-header-map)"
+        required: true
+        constrained_by: [rfc-9942#R-0012, rfc-9942#R-0013]
+      - name: payload
+        position: 2
+        type: "bstr / nil"
+        required: true
+        semantics: "the Merkle Tree Hash (Merkle Tree root) corresponding to the log at size tree-size"
+        detached: "SHOULD be detached (nil on the wire); Figure 6 shows `/ payload / null`"
+        text_payload_identity: 'In a signed proof, the payload is the Merkle Tree root that corresponds to the log at size tree-size.'
+        text_payload_definition: 'The payload of an RFC9162_SHA256 inclusion proof signature is the Merkle Tree Hash as defined in [RFC9162].'
+        constrained_by: [rfc-9942#R-0004]
+        constrained_by_note: >
+          R-0004 ('The payload in such definitions SHOULD be detached.')
+          sits in §4.4 and is addressed to profiles of NEW VDSs. §5.2.1
+          itself states no keyword for the payload; it shows a detached
+          payload in Figure 6 and cross-references §4.4 in the lead-in
+          'with a detached payload (see Section 4.4)'. So the SHOULD is
+          inherited from §4.4, not restated at §5.2.1.
+        rationale_for_detaching: 'Detached payloads force verifiers to recompute the root from the proof and protect against implementation errors where the signature is verified but the payload is incompatible with the proof.'
+      - name: signature
+        position: 3
+        type: bstr
+        required: true
+        constrained_by_note: "CDDL-only (Figure 1). The signature's VERIFICATION ORDER is constrained by R-0014; its presence and type are not keyword-constrained."
+    layout: >
+      18([ bstr<<{1: int, 395: int}>>, {396: {-1: [bstr<<[uint, uint, [+bstr]]>>, ...]}}, nil, bstr ]).
+      Two levels of embedded CBOR: the protected header is a bstr wrapping
+      a CBOR map, and each inclusion proof inside the -1 array is a bstr
+      wrapping a CBOR array. With a detached payload the third element is
+      CBOR null (0xf6) and the verifier must substitute the recomputed root
+      before checking the signature.
+
+  # === 5. Inclusion protected header =======================================
+  - name: protected-header-map (inclusion)
+    also_known_as: ["RFC9162_SHA256_Inclusion_Protected_Header (§4.3 name)"]
+    locator: "§5.2.1 Figure 4 (source lines 485-492); §4.3 Figure 1 (source lines 273-277)"
+    encoding: "CBOR map, serialized inside a bstr (bstr .cbor)"
+    cddl: |
+      protected-header-map = {
+        &(alg: 1) => int
+        &(vds: 395) => int
+        * cose-label => cose-value
+      }
+    fields:
+      - name: alg
+        label: 1
+        type: int
+        required: true
+        requirement_level: REQUIRED
+        protection: protected
+        text: 'alg (label: 1):  REQUIRED.  Signature algorithm identifier.  Value type: int.'
+        description: "Signature algorithm identifier"
+        example_value: "-7 (ES256), informative, Figures 2 and 6"
+        constrained_by: [rfc-9942#R-0010]
+      - name: vds
+        label: 395
+        type: int
+        required: true
+        requirement_level: REQUIRED
+        protection: protected
+        text: 'vds (label: 395):  REQUIRED.  VDS algorithm identifier.  Value type: int.'
+        description: "VDS algorithm identifier"
+        example_value: "1 (RFC9162_SHA256), Figures 2 and 6"
+        value_source: "COSE Verifiable Data Structure Algorithms subregistry (§8.2.2.1, Table 2)"
+        why_protected: 'The VDS in the protected header is necessary to understand the inclusion proof structure in the unprotected header.'
+        constrained_by: [rfc-9942#R-0011, rfc-9942#R-0002]
+      - name: "* cose-label"
+        label: "any int / text not above"
+        type: cose-value
+        required: false
+        protection: protected
+        note: "open wildcard: any further header parameter may appear protected. Figure 2's nested receipts carry kid (4) here."
+        constrained_by: [rfc-9942#R-0005]
+        constrained_by_note: >
+          R-0005 ('Profiles of proof signatures that define additional
+          protected header parameters are encouraged to make their presence
+          mandatory...') governs what a PROFILE should do with this
+          wildcard. It is an 'encouraged', not a BCP 14 keyword, and
+          requirements.yaml carries it as kind: inferred.
+    layout: >
+      bstr wrapping { 1: int, 395: int, ... }. The bstr bytes are the
+      signed protected-header serialization and are covered by Sig_structure;
+      changing 395 therefore breaks the signature, which is precisely why
+      the VDS identifier is protected and the proofs are not.
+    identical_to: "the §5.3.1 consistency protected-header-map — byte-for-byte the same CDDL and the same two field-table entries"
+
+  # === 6. Inclusion unprotected header =====================================
+  - name: unprotected-header-map (inclusion)
+    also_known_as: ["RFC9162_SHA256_Inclusion_Unprotected_Header (§4.3 name)"]
+    locator: "§5.2.1 Figure 5 (source lines 503-517); §4.3 Figure 1 (source lines 279-282)"
+    encoding: "CBOR map, bare (NOT wrapped in a bstr, not signed)"
+    cddl: |
+      inclusion-proofs = [ + inclusion-proof ]
+
+      verifiable-proofs = {
+        &(inclusion-proof: -1) => inclusion-proofs
+      }
+
+      unprotected-header-map = {
+        &(vdp: 396) => verifiable-proofs
+        * cose-label => cose-value
+      }
+    fields:
+      - name: vdp
+        label: 396
+        type: Map
+        required: true
+        requirement_level: REQUIRED
+        protection: unprotected
+        text: 'vdp (label: 396):  REQUIRED.  Verifiable Data Structure Proofs. Value type: Map.'
+        value_type: "verifiable-proofs (= RFC9162_SHA256_Verifiable_Inclusion_Proofs)"
+        constrained_by: [rfc-9942#R-0012]
+        note: >
+          REQUIRED but UNPROTECTED — the one structurally surprising
+          combination in the document. The proof is mandatory yet outside
+          the signature, because for an inclusion receipt the proof is the
+          INPUT that reconstructs the signed payload rather than something
+          the signature covers.
+      - name: "* cose-label"
+        label: "any int / text not 396"
+        type: cose-value
+        required: false
+        protection: unprotected
+        constrained_by_note: "CDDL-only wildcard (Figure 5). No requirement id."
+    layout: "{ 396: { -1: [ bstr<<[tree-size, leaf-index, inclusion-path]>>, ... ] }, ... } — a bare CBOR map, element 1 of the COSE_Sign1 array."
+
+  # === 7. verifiable-proofs (inclusion) ====================================
+  - name: verifiable-proofs (inclusion)
+    also_known_as: ["RFC9162_SHA256_Verifiable_Inclusion_Proofs (§4.3 name)"]
+    locator: "§5.2.1 Figure 5 (source lines 505-509); §4.3 Figure 1 (source lines 284-295)"
+    encoding: "CBOR map, value of header parameter 396"
+    cddl: |
+      RFC9162_SHA256_Verifiable_Inclusion_Proofs = {
+        &(inclusion-proof: -1) => RFC9162_SHA256_Inclusion_Proofs
+      }
+
+      RFC9162_SHA256_Inclusion_Proofs = [
+        + RFC9162_SHA256_Inclusion_Proof
+      ]
+
+      RFC9162_SHA256_Inclusion_Proof =
+        bstr .cbor RFC9162_SHA256_Inclusion_Proof_Content
+    fields:
+      - name: inclusion-proof
+        label: -1
+        type: "Array of bstr"
+        required: true
+        requirement_level: REQUIRED
+        text: 'inclusion-proof (label: -1):  REQUIRED.  Inclusion proofs.  Value type: Array of bstr.'
+        cardinality: "one or more (CDDL `+`) — a receipt may carry SEVERAL inclusion proofs under the single -1 key"
+        element_type: "bstr .cbor inclusion-proof-content — each array element is a bstr whose bytes are a CBOR-encoded inclusion-proof-content array"
+        iana_row: "VDS 1 / 'inclusion proofs' / Label -1 / CBOR Type array (of bstr) / 'Proof of inclusion' / IETF / RFC 9942, Section 5.2 (Table 3, §8.2.2.2)"
+        constrained_by: [rfc-9942#R-0013, rfc-9942#R-0002]
+    layout: "{ -1: [ bstr, bstr, ... ] } — map key -1 encodes as CBOR 0x20."
+    no_other_labels: "Only -1. No -2 in an inclusion receipt's vdp, and no -3 anywhere in the document (see label_space.there_is_no_minus_three)."
+
+  # === 8. inclusion-proof-content ==========================================
+  - name: inclusion-proof-content
+    also_known_as: ["RFC9162_SHA256_Inclusion_Proof_Content (§4.3 name)"]
+    locator: "§5.2 Figure 3 (source lines 453-467); §4.3 Figure 1 (source lines 294-298)"
+    encoding: "CBOR array of 3 elements, serialized inside a bstr (bstr .cbor)"
+    cddl: |
+      inclusion-proof-content = [
+
+          ; tree size at current Merkle Tree root
+          tree-size: uint
+
+          ; index of leaf in tree
+          leaf-index: uint
+
+          ; path from leaf to current Merkle Tree root
+          inclusion-path: [ + bstr ]
+      ]
+    cddl_s4_3_variant: |
+      RFC9162_SHA256_Inclusion_Proof_Content = [
+        tree_size: uint,
+        leaf_index: uint,
+        inclusion_path:[ + bstr ]
+      ]
+    fields:
+      - name: tree-size
+        also_known_as: tree_size
+        position: 0
+        type: uint
+        required: true
+        comment: "tree size at current Merkle Tree root"
+        constrained_by: [rfc-9942#R-0009]
+        constrained_by_note: "R-0009 constrains tree-size only in RELATION to leaf-index (leaf_index >= tree_size must fail). The uint type itself is CDDL-only."
+      - name: leaf-index
+        also_known_as: leaf_index
+        position: 1
+        type: uint
+        required: true
+        comment: "index of leaf in tree"
+        bound: "MUST be strictly less than tree-size; leaf_index >= tree_size fails verification"
+        naming_text: 'The term leaf-index is used for alignment with the use established in Section 2.1.3.2 of [RFC9162].'
+        frame_of_reference: 'The identifying index of a leaf node is relative to all nodes in the tree size for which the proof was obtained.'
+        constrained_by: [rfc-9942#R-0009]
+      - name: inclusion-path
+        also_known_as: inclusion_path
+        position: 2
+        type: "[ + bstr ]"
+        required: true
+        comment: "path from leaf to current Merkle Tree root"
+        cardinality: "one or more bstr (CDDL `+`) — an EMPTY inclusion path is NOT well formed, which means a single-leaf tree (tree-size 1, where RFC 9162's path is empty) cannot be expressed by this CDDL"
+        constrained_by_note: "CDDL-only; the `+` cardinality carries no BCP 14 keyword and has no requirement id. The single-leaf edge case is an unremarked consequence, not a stated rule."
+      - name: "(no fourth element)"
+        position: 3
+        type: ""
+        required: false
+        note: "The array is exactly 3 elements. There is no algorithm field, no root field and no leaf-hash field — alg and vds live in the protected header and the root is the payload."
+    layout: >
+      bstr wrapping [ uint, uint, [bstr, bstr, ...] ]. Example (Figure 6,
+      informative): [ 20, 17, [h'fc9f050f..', h'bd0136ad..', h'd68af9d6..'] ]
+      — tree-size 20, leaf-index 17, three-element path. Figure 2 shows
+      [9, 8, [one hash]] and [6, 5, [two hashes]]. Each path element is a
+      SHA-256 digest, so 32 bytes, encoded as a 33-byte bstr (0x58 0x20 ...).
+    verification_input: "The verifier applies this proof to the bytes of a candidate entry and recomputes the root; the recomputed root becomes the COSE_Sign1 payload."
+
+  # === 9. Receipt of Consistency: the signed structure =====================
+  - name: Signed_Consistency_Proof
+    also_known_as: ["Receipt_For_Consistency (as tagged)", "Receipt of Consistency (§5.3.1 prose title)"]
+    locator: "§4.3 Figure 1 (source lines 302-310) for the structure; §5.3.1 (source lines 590-679) for field requirement levels; example Figure 9"
+    encoding: "#6.18(COSE_Sign1) — CBOR tag 18 wrapping a 4-element array"
+    authoritative_for_shape: "§4.3"
+    authoritative_for_requirement_levels: "§5.3.1"
+    cddl: |
+      Receipt_For_Consistency = #6.18(Signed_Consistency_Proof)
+
+      Signed_Consistency_Proof = [
+        protected   :
+          bstr .cbor RFC9162_SHA256_Consistency_Protected_Header,
+        unprotected : RFC9162_SHA256_Consistency_Unprotected_Header,
+        payload     : bstr / nil, ; Newer Merkle Tree root
+        signature   : bstr
+      ]
+    fields:
+      - name: protected
+        position: 0
+        type: "bstr .cbor RFC9162_SHA256_Consistency_Protected_Header (= §5.3.1 protected-header-map)"
+        required: true
+        constrained_by: [rfc-9942#R-0015, rfc-9942#R-0016]
+      - name: unprotected
+        position: 1
+        type: "RFC9162_SHA256_Consistency_Unprotected_Header (= §5.3.1 unprotected-header-map)"
+        required: true
+        constrained_by: [rfc-9942#R-0017, rfc-9942#R-0018]
+      - name: payload
+        position: 2
+        type: "bstr / nil"
+        required: true
+        semantics: "the NEWER Merkle Tree root — the one at tree-size-2, proven consistent with the older root at tree-size-1"
+        detached: "detached; §5.3.1 states this flatly ('is a detached payload'), and Figure 9 shows `/ payload / null`"
+        cddl_comment: "; Newer Merkle Tree root"
+        text_payload_identity: 'In a signed consistency proof, the newer Merkle Tree root (proven to be consistent with an older Merkle Tree root) is a detached payload and corresponds to the log at size tree-size-2.'
+        text_payload_definition: 'The payload of an RFC9162_SHA256 consistency proof signature is: The newer Merkle Tree Hash as defined in [RFC9162].'
+        constrained_by: [rfc-9942#R-0004]
+        constrained_by_note: >
+          R-0004's SHOULD again comes from §4.4. §5.3.1 is stronger than
+          §5.2.1 in wording — it asserts the payload IS detached as a flat
+          statement of fact rather than a recommendation — but states no
+          BCP 14 keyword of its own, so no requirement id is anchored at
+          §5.3.1 for the payload.
+        which_root_hazard: >
+          NEWER, not older. The payload is the root at tree-size-2, the
+          SECOND of the two sizes in the proof content. Signing the older
+          root would make the receipt attest the wrong tree head.
+      - name: signature
+        position: 3
+        type: bstr
+        required: true
+        constrained_by: [rfc-9942#R-0019]
+        constrained_by_note: "R-0019 constrains WHEN the signature is checked relative to the proof (first, here). Its presence and type are CDDL-only."
+    layout: >
+      18([ bstr<<{1: int, 395: int}>>, {396: {-2: [bstr<<[uint, uint, [+bstr]]>>, ...]}}, nil, bstr ]).
+      Structurally identical to the inclusion receipt except that the vdp
+      map keys on -2 instead of -1 and the proof content's first two uints
+      are two tree SIZES rather than a size and an index.
+
+  # === 10. Consistency protected header ====================================
+  - name: protected-header-map (consistency)
+    also_known_as: ["RFC9162_SHA256_Consistency_Protected_Header (§4.3 name)"]
+    locator: "§5.3.1 Figure 8 (source lines 598-605); §4.3 Figure 1 (source lines 313-317)"
+    encoding: "CBOR map, serialized inside a bstr (bstr .cbor)"
+    cddl: |
+      protected-header-map = {
+        &(alg: 1) => int
+        &(vds: 395) => int
+        * cose-label => cose-value
+      }
+    cddl_s4_3_variant: |
+      RFC9162_SHA256_Consistency_Protected_Header = {
+        &(alg: 1) => int,
+        &(vds: 395) => int,
+        * cose-label => cose-values
+      }
+    fields:
+      - name: alg
+        label: 1
+        type: int
+        required: true
+        requirement_level: REQUIRED
+        protection: protected
+        text: 'alg (label: 1):  REQUIRED.  Signature algorithm identifier.  Value type: int.'
+        description: "Signature algorithm identifier"
+        constrained_by: [rfc-9942#R-0015]
+      - name: vds
+        label: 395
+        type: int
+        required: true
+        requirement_level: REQUIRED
+        protection: protected
+        text: 'vds (label: 395):  REQUIRED.  VDS algorithm identifier.  Value type: int.'
+        description: "VDS algorithm identifier"
+        why_protected: 'The VDS in the protected header is necessary to understand the consistency proof structure in the unprotected header.'
+        constrained_by: [rfc-9942#R-0016, rfc-9942#R-0002]
+      - name: "* cose-label"
+        label: "any int / text not above"
+        type: cose-value
+        required: false
+        protection: protected
+        constrained_by: [rfc-9942#R-0005]
+        constrained_by_note: "Same 'encouraged' guidance as the inclusion case; R-0005 is kind: inferred."
+    layout: "bstr wrapping { 1: int, 395: int, ... } — byte-identical in form to the inclusion protected header."
+    identical_to: >
+      the §5.2.1 inclusion protected-header-map. The CDDL is character-for-
+      character the same in §5 (Figure 4 vs Figure 8), and R-0010/R-0015
+      and R-0011/R-0016 carry byte-identical text at two distinct locators.
+      Consequence: the protected header ALONE does not tell a verifier which
+      kind of receipt it holds. Only the vdp key (-1 vs -2) in the
+      UNPROTECTED header does — and that key is outside the signature.
+
+  # === 11. Consistency unprotected header ==================================
+  - name: unprotected-header-map (consistency)
+    also_known_as: ["RFC9162_SHA256_Consistency_Unprotected_Header (§4.3 name)"]
+    locator: "§5.3.1 (source lines 615-628), UNCAPTIONED — the only such structural block in §5; §4.3 Figure 1 (source lines 319-322)"
+    encoding: "CBOR map, bare (NOT wrapped in a bstr, not signed)"
+    figure_note: >
+      The inclusion counterpart is Figure 5; this block has no figure
+      caption at all, so it cannot be cited by figure number. Cite it as
+      '§5.3.1, the unprotected header CDDL block'. Figure numbering in §5
+      runs 3, 4, 5, 6, 7, 8, 9 with no caption between Figure 8 (protected
+      header) and Figure 9 (example receipt).
+    cddl: |
+      consistency-proofs = [ + consistency-proof ]
+
+      verifiable-proofs = {
+        &(consistency-proof: -2) => consistency-proofs
+      }
+
+      unprotected-header-map = {
+        &(vdp: 396) => verifiable-proofs
+        * cose-label => cose-value
+      }
+    fields:
+      - name: vdp
+        label: 396
+        type: Map
+        required: true
+        requirement_level: REQUIRED
+        protection: unprotected
+        text: 'vdp (label: 396):  REQUIRED.  VDPs.  Value type: Map.'
+        value_type: "verifiable-proofs (= RFC9162_SHA256_Verifiable_Consistency_Proofs)"
+        constrained_by: [rfc-9942#R-0017]
+        text_difference_note: >
+          R-0017's entry spells the description 'VDPs.' where R-0012's
+          spells it 'Verifiable Data Structure Proofs.' — the §5.3.1 entry
+          uses the abbreviation, the §5.2.1 entry the expansion. Same field,
+          same label, same requirement level; only the gloss differs.
+      - name: "* cose-label"
+        label: "any int / text not 396"
+        type: cose-value
+        required: false
+        protection: unprotected
+        constrained_by_note: "CDDL-only wildcard. No requirement id."
+    layout: "{ 396: { -2: [ bstr<<[tree-size-1, tree-size-2, consistency-path]>>, ... ] }, ... }"
+
+  # === 12. verifiable-proofs (consistency) =================================
+  - name: verifiable-proofs (consistency)
+    also_known_as: ["RFC9162_SHA256_Verifiable_Consistency_Proofs (§4.3 name)"]
+    locator: "§5.3.1 (source lines 617-621); §4.3 Figure 1 (source lines 323-334)"
+    encoding: "CBOR map, value of header parameter 396"
+    cddl: |
+      RFC9162_SHA256_Verifiable_Consistency_Proofs = {
+        &(consistency-proof: -2) => RFC9162_SHA256_Consistency_Proofs
+      }
+
+      RFC9162_SHA256_Consistency_Proofs = [
+        + RFC9162_SHA256_Consistency_Proof
+      ]
+
+      RFC9162_SHA256_Consistency_Proof =
+        bstr .cbor RFC9162_SHA256_Consistency_Proof_Content
+    fields:
+      - name: consistency-proof
+        label: -2
+        type: "Array of bstr"
+        required: true
+        requirement_level: REQUIRED
+        text: 'consistency-proof (label: -2):  REQUIRED.  Consistency proofs.  Value type: Array of bstr.'
+        cardinality: "one or more (CDDL `+`)"
+        element_type: "bstr .cbor consistency-proof-content"
+        iana_row: "VDS 1 / 'consistency proofs' / Label -2 / CBOR Type array (of bstr) / 'Proof of append-only property' / IETF / RFC 9942, Section 5.3 (Table 3, §8.2.2.2)"
+        constrained_by: [rfc-9942#R-0018, rfc-9942#R-0002]
+    layout: "{ -2: [ bstr, bstr, ... ] } — map key -2 encodes as CBOR 0x21."
+    no_other_labels: "Only -2. Not -3. See label_space.there_is_no_minus_three."
+
+  # === 13. consistency-proof-content =======================================
+  - name: consistency-proof-content
+    also_known_as: ["RFC9162_SHA256_Consistency_Proof_Content (§4.3 name)"]
+    locator: "§5.3 Figure 7 (source lines 573-587); §4.3 Figure 1 (source lines 332-336)"
+    encoding: "CBOR array of 3 elements, serialized inside a bstr (bstr .cbor)"
+    cddl: |
+      consistency-proof-content = [
+
+          ; older Merkle Tree size
+          tree-size-1: uint
+
+          ; newer Merkle Tree size
+          tree-size-2: uint
+
+          ; path from older Merkle Tree to newer Merkle Tree
+          consistency-path: [ + bstr ]
+
+      ]
+    cddl_s4_3_variant: |
+      RFC9162_SHA256_Consistency_Proof_Content = [
+        tree_size_1: uint,
+        tree_size_2: uint,
+        consistency_path: [ + bstr ]
+      ]
+    fields:
+      - name: tree-size-1
+        also_known_as: tree_size_1
+        position: 0
+        type: uint
+        required: true
+        comment: "older Merkle Tree size"
+        constrained_by_note: "CDDL-only. The document states NO ordering constraint between tree-size-1 and tree-size-2 — no requirement says tree-size-1 < tree-size-2 or that either be nonzero. The 'older'/'newer' comments are the only statement of intent, and they carry no keyword. R-0009's bound applies to inclusion proofs, not here."
+      - name: tree-size-2
+        also_known_as: tree_size_2
+        position: 1
+        type: uint
+        required: true
+        comment: "newer Merkle Tree size"
+        payload_link: "the detached payload is the Merkle Tree Hash at THIS size"
+        constrained_by_note: "CDDL-only; see tree-size-1. The payload-identity statement at §5.3.1 ties the payload to tree-size-2 but carries no BCP 14 keyword."
+      - name: consistency-path
+        also_known_as: consistency_path
+        position: 2
+        type: "[ + bstr ]"
+        required: true
+        comment: "path from older Merkle Tree to newer Merkle Tree"
+        cardinality: "one or more bstr (CDDL `+`)"
+        constrained_by_note: "CDDL-only; no requirement id."
+      - name: "(no fourth element)"
+        position: 3
+        type: ""
+        required: false
+        note: "Exactly 3 elements. Neither the old root nor the new root is carried in the proof: the new root is the (detached) payload and the old root must come from a previously held receipt."
+    layout: >
+      bstr wrapping [ uint, uint, [bstr, ...] ]. Example (Figure 9,
+      informative): [ 20, 104, [six 32-byte digests] ] — consistency from
+      tree size 20 to tree size 104.
+    verification_input: >
+      §5.3.1: 'the consistency proof is checked by applying a previous
+      inclusion proof to the consistency proof.' The verifier must already
+      hold a previous inclusion proof / older root; the consistency receipt
+      alone is not self-sufficient.
+
+# ---------------------------------------------------------------------------
+# THE HAZARD: the two receipt types verify in OPPOSITE order
+# ---------------------------------------------------------------------------
+verification_order_hazard:
+  summary: >
+    The two receipt profiles of this one document verify their two
+    components in OPPOSITE orders. An inclusion receipt verifies PROOF
+    FIRST, then signature, because the recomputed Merkle root BECOMES the
+    COSE_Sign1 payload and the signature cannot be checked until it exists.
+    A consistency receipt verifies SIGNATURE FIRST, then proof, and skips
+    the proof check entirely if the signature fails. This inversion is the
+    most consequential implementation fact in the document: a single
+    "verify receipt" code path that assumes one order will be wrong for the
+    other receipt type, and in the inclusion case wrong in the direction of
+    being unable to verify at all, while in the consistency case wrong in
+    the direction of reporting a valid signature over an unchecked proof.
+  inclusion:
+    locator: "§5.2.1, source lines 555-566"
+    constrained_by: [rfc-9942#R-0014]
+    order: ["inclusion proof", "signature"]
+    lead_in_text: 'Verification of the inclusion proof and signature occurs in two sequential steps:'
+    steps:
+      - n: 1
+        name: "Inclusion Proof Verification"
+        text: "1.  Inclusion Proof Verification: The verifier applies the inclusion proof to the bytes of a candidate entry.  If this fails, the proof is invalid.  If it succeeds, the resulting Merkle Tree root becomes the COSE_Sign1 payload."
+        input: "the bytes of a candidate entry, plus inclusion-proof-content"
+        output: "the recomputed Merkle Tree root, which IS the COSE_Sign1 payload"
+        failure: "the proof is invalid"
+      - n: 2
+        name: "Signature Verification"
+        text: "2.  Signature Verification: The verifier checks the COSE_Sign1 signature.  Successful verification confirms the entry's inclusion in the VDS; otherwise, the signature is invalid."
+        input: "the COSE_Sign1 with the recomputed root substituted as payload"
+        output: "confirmation of the entry's inclusion in the VDS"
+        failure: "the signature is invalid"
+    why_this_order: >
+      Forced, not chosen. With a detached payload there is nothing to
+      verify the signature over until the proof has produced the root. The
+      proof is therefore not a check performed after the signature; it is
+      the construction of the signature's own input.
+    data_flow: "candidate entry bytes + proof  ->  recomputed root  ->  substituted as COSE_Sign1 payload  ->  signature check"
+  consistency:
+    locator: "§5.3.1, source lines 670-679"
+    constrained_by: [rfc-9942#R-0019, rfc-9942#R-0020]
+    order: ["signature", "consistency proof"]
+    lead_in_text: 'The signature and consistency proof are verified in order.'
+    steps:
+      - n: 1
+        name: "Signature check"
+        text: 'First, the verifier checks the signature on the COSE_Sign1.  If the verification fails, the consistency proof is not checked.'
+        short_circuit: "on signature failure the consistency proof is NOT checked"
+      - n: 2
+        name: "Consistency proof check"
+        text: 'Second, the consistency proof is checked by applying a previous inclusion proof to the consistency proof.  If the verification fails, the append-only property of the VDS is not assured.'
+        input: "a previously held inclusion proof, applied to the consistency proof"
+        failure_meaning: "the append-only property of the VDS is not assured"
+    vds_specificity: 'This approach is specific to RFC9162_SHA256; different VDSs may not support consistency proofs.'
+    single_boolean:
+      constrained_by: [rfc-9942#R-0020]
+      text: 'It is recommended that implementations return a single boolean result for Receipt-verification operations to reduce the chance of accepting a valid signature over an invalid consistency proof.'
+      keyword_status: >
+        Lower-case 'recommended', not BCP 14 RECOMMENDED, so R-0020 is
+        kind: inferred. The stated threat is concrete and worth taking at
+        full weight anyway: an API that returns a structured result with
+        separate signature and proof outcomes invites a caller to branch on
+        the signature field and ignore the proof field.
+      api_shape_implied: "verify(receipt, ...) -> bool, NOT -> {signature_ok, proof_ok}"
+  cross_cutting:
+    both_orders_are_normatively_anchored_how: >
+      Neither order sentence carries an uppercase BCP 14 keyword. R-0014
+      and R-0019 are both kind: inferred in requirements.yaml. The orders
+      are nonetheless unambiguous in prose ('two sequential steps';
+      'First... Second...') and, for inclusion, mechanically forced.
+    detached_payload_is_the_common_cause: >
+      §4.4's rationale for R-0004 names exactly this class of bug:
+      'Detached payloads force verifiers to recompute the root from the
+      proof and protect against implementation errors where the signature
+      is verified but the payload is incompatible with the proof.' The
+      inclusion order and the single-boolean recommendation are two
+      expressions of one concern.
+
+# ---------------------------------------------------------------------------
+# IANA: the two subregistries this document creates
+# ---------------------------------------------------------------------------
+iana_subregistries:
+  established_by: "§8.2, source lines 779-784"
+  establishment_text: 'IANA has established the "COSE Verifiable Data Structure Algorithms" and "COSE Verifiable Data Structure Proofs" subregistries under a Specification Required policy as described in Section 4.6 of [RFC8126].'
+  policy: "Specification Required (RFC 8126 §4.6)"
+  count: 2
+
+  expert_review:
+    locator: "§8.2.1, source lines 786-812"
+    lead_in: 'Expert reviewers (see [RFC8126]) should take into consideration the following points:'
+    criteria_count: 5
+    promotion_outcome:
+      promoted: [rfc-9942#R-0026, rfc-9942#R-0027]
+      declined: [1, 2, 5]
+      settled_in_pass: 3
+      threshold: "the promotion threshold stated in distilled/requirements.yaml (note), taken from records/ietf/rfc-9943/distilled/requirements.yaml so that the two records apply one rule"
+      ground: >
+        Criteria 3 and 4 state absolute conditions on what may exist in the
+        two registries — 'Specifications are required for all point
+        assignments' and 'It is not permissible to assign points ... for
+        which no corresponding entry ... exists, and vice versa'. Both are
+        violable by an artifact this document already binds elsewhere: the
+        VDS specification author, whom §4.4.1 places under two uppercase
+        MUSTs (rfc-9942#R-0006, rfc-9942#R-0007), and both violations are
+        detectable by inspecting the registries. Criteria 1, 2 and 5 are
+        hortatory advice addressed to the expert reviewer's judgement; their
+        violation is not exhibited by any artifact and nothing downstream
+        fails. The dividing line is the threshold's third limb, not the
+        presence or absence of a BCP 14 keyword — all five bullets are
+        lowercase, so no resolution of this question could move either
+        keyword count.
+    criteria:
+      - n: 1
+        topic: "next available positive integer"
+        text: 'Experts are advised to assign the next available positive integer for VDSs.'
+        constrained_by_note: >
+          Declined — no requirement id. The ground is the promotion
+          threshold recorded in requirements.yaml (note), not the absence of
+          a BCP 14 keyword: this span fails the third limb, an obligation a
+          conforming implementation could violate. The actor it names is the
+          IANA designated expert, whom this document binds nowhere else and
+          whose exercise of discretion no conforming artifact exhibits; a
+          point assigned out of sequence is still a valid assignment and
+          nothing downstream fails. Note also that it addresses VDS
+          ALGORITHM points; nothing analogous is said for proof labels,
+          which this document assigns as negative integers.
+      - n: 2
+        topic: "point squatting"
+        text: 'Point squatting should be discouraged.  Reviewers are encouraged to get sufficient information for registration requests to ensure that the usage is not going to duplicate one that is already registered and that the point is likely to be used in deployments.'
+        constrained_by_note: >
+          Declined — no requirement id, on the requirements.yaml promotion
+          threshold rather than on the absence of a BCP 14 keyword. Second
+          limb: 'Point squatting should be discouraged.' names no actor at
+          all, and the only actor the span does name is the Reviewer, who is
+          bound to discourage rather than bound not to squat. Third limb: a
+          squatted point is indistinguishable in the registry from a used
+          one, so no conforming artifact could be shown to have violated it.
+      - n: 3
+        topic: "specification required for all point assignments"
+        text: 'Specifications are required for all point assignments.  Early allocation is permissible, see Section 2 of [RFC7120].'
+        constrained_by: [rfc-9942#R-0026]
+      - n: 4
+        topic: "the paired-registration invariant"
+        text: 'It is not permissible to assign points in the "COSE Verifiable Data Structure Algorithms" registry for which no corresponding entry in the "COSE Verifiable Data Structure Proofs" registry exists, and vice versa.'
+        constrained_by: [rfc-9942#R-0027]
+        significance: >
+          The invariant that keeps the two registries meaningful: a VDS
+          with no proof types is unusable and a proof label with no VDS is
+          unaddressable. It is bidirectional ('and vice versa'), so neither
+          registry may ever be ahead of the other. It is also what makes
+          the vds/vdp pair a single composite identifier on the wire: the
+          -1 and -2 rows of Table 3 are each keyed by Verifiable Data
+          Structure = 1, so a proof label is only meaningful relative to
+          a VDS, and the same negative label may be reused by a future VDS
+          with different content. A verifier must read 396's keys THROUGH
+          the 395 value, never in isolation.
+      - n: 5
+        topic: "shared change controller"
+        text: 'The change controller for related registrations of structures and proofs should be the same.'
+        constrained_by_note: >
+          Declined — no requirement id, on the requirements.yaml promotion
+          threshold rather than on the absence of a BCP 14 keyword. It is the
+          governance counterpart of criterion 4 and fails where criterion 4
+          holds. Second limb: the span names no actor, and the §8.2.1 lead-in
+          fixes the expert reviewer, who can decline a registration but
+          cannot make two change controllers the same. Third limb: unlike
+          criterion 4, nothing breaks if they differ — both registrations
+          remain valid, both labels still resolve, and no verifier, receipt
+          producer or VDS specification behaves differently. Criterion 4
+          states a checkable invariant on what may exist in the registries;
+          criterion 5 states a preference about who holds them.
+
+  algorithms_registry:
+    name: "COSE Verifiable Data Structure Algorithms"
+    locator: "§8.2.2.1, source lines 814-861"
+    template_fields:
+      - name: Name
+        text: "This is a descriptive name for the VDS that enables easier reference to the item."
+      - name: Value
+        text: "This is the value used to identify the VDS."
+      - name: Description
+        text: "This field contains a brief description of the VDS."
+      - name: Reference
+        text: "This contains a pointer to the public specification for the VDS."
+      - name: Change Controller
+        text: 'For Standards Track RFCs, list the "IETF".  For others, give the name of the responsible party.  Other details (e.g., postal address, email address, home page URI) may also be included.'
+    table: "Table 2: COSE Verifiable Data Structure Algorithms Initial Registry Contents"
+    table_columns: [Name, Value, Description, "Change Controller", Reference]
+    initial_contents:
+      - name: Reserved
+        value: 0
+        description: Reserved
+        change_controller: ""
+        reference: "RFC 9942"
+      - name: RFC9162_SHA256
+        value: 1
+        description: "SHA256 Binary Merkle Tree"
+        change_controller: IETF
+        reference: "Section 2.1 of [RFC9162]"
+    constrained_by: [rfc-9942#R-0006, rfc-9942#R-0007, rfc-9942#R-0008, rfc-9942#R-0026, rfc-9942#R-0027]
+
+  proofs_registry:
+    name: "COSE Verifiable Data Structure Proofs"
+    locator: "§8.2.2.2, source lines 863-918"
+    template_fields:
+      - name: "Verifiable Data Structure"
+        text: "This value used identifies the related VDS."
+        note: "verbatim, including the source's own grammatical slip 'This value used identifies'"
+      - name: Name
+        text: "This is a descriptive name for the Proof Type that enables easier reference to the item."
+      - name: Label
+        text: "This is the value used to identify the VDS Proof Type."
+      - name: "CBOR Type"
+        text: "This contains the CBOR type for the value portion of the label."
+      - name: Description
+        text: "This field contains a brief description of the Proof Type."
+      - name: Reference
+        text: "This contains a pointer to the public specification for the Proof Type."
+      - name: Change Controller
+        text: 'For Standards Track RFCs, list the "IETF".  For others, give the name of the responsible party.  Other details (e.g., postal address, email address, home page URI) may also be included.'
+    table: "Table 3: COSE Verifiable Data Structure Proofs Initial Registry Contents"
+    table_columns: ["Verifiable Data Structure", Name, Label, "CBOR Type", Description, "Change Controller", Reference]
+    initial_contents:
+      - verifiable_data_structure: 1
+        name: "inclusion proofs"
+        label: -1
+        cbor_type: "array (of bstr)"
+        description: "Proof of inclusion"
+        change_controller: IETF
+        reference: "RFC 9942, Section 5.2"
+      - verifiable_data_structure: 1
+        name: "consistency proofs"
+        label: -2
+        cbor_type: "array (of bstr)"
+        description: "Proof of append-only property"
+        change_controller: IETF
+        reference: "RFC 9942, Section 5.3"
+    row_count: 2
+    row_count_note: "EXACTLY TWO ROWS. The proofs registry's initial contents are -1 and -2 and nothing else. This is the authoritative confirmation that no -3 proof label exists in RFC 9942."
+    constrained_by: [rfc-9942#R-0006, rfc-9942#R-0007, rfc-9942#R-0026, rfc-9942#R-0027]
+
+  registration_requirements:
+    locator: "§4.4.1, source lines 418-432"
+    requirements:
+      - constrained_by: [rfc-9942#R-0006]
+        text: 'Each VDS specification applying for inclusion in this registry MUST define how to encode the VDS identifier and its Proof Types in CBOR.'
+      - constrained_by: [rfc-9942#R-0007]
+        text: 'Each specification MUST define how to produce and consume the supported Proof Types.'
+        cross_reference: "See Section 5 as an example."
+      - constrained_by: [rfc-9942#R-0008]
+        text: 'Where a specification supports a choice of hash algorithm, a separate IANA registration must be made for each supported algorithm.'
+
+# ---------------------------------------------------------------------------
+# Coverage ledger
+# ---------------------------------------------------------------------------
+coverage:
+  structures_documented: 13
+  structures:
+    - "COSE header parameters registered by RFC 9942 (394/395/396)"
+    - Signature_With_Receipt
+    - Receipt (union)
+    - Signed_Inclusion_Proof
+    - protected-header-map (inclusion)
+    - unprotected-header-map (inclusion)
+    - verifiable-proofs (inclusion)
+    - inclusion-proof-content
+    - Signed_Consistency_Proof
+    - protected-header-map (consistency)
+    - unprotected-header-map (consistency)
+    - verifiable-proofs (consistency)
+    - consistency-proof-content
+  non_message_blocks:
+    - label_space
+    - naming_duality
+    - verifiable_data_structure
+    - leaf_index_bound
+    - verification_order_hazard
+    - iana_subregistries
+  requirements_cited: [R-0002, R-0003, R-0004, R-0005, R-0006, R-0007, R-0008, R-0009, R-0010, R-0011, R-0012, R-0013, R-0014, R-0015, R-0016, R-0017, R-0018, R-0019, R-0020, R-0026, R-0027]
+  requirements_cited_count: 21
+  requirements_not_cited: [R-0001, R-0021, R-0022, R-0023, R-0024, R-0025]
+  requirements_not_cited_reason: >
+    R-0001 (§4.2 security analysis before VDS migration), R-0021 (§6.2
+    privacy analysis of mandatory fields), R-0022 and R-0023 (§7.1 choice
+    of signature algorithm), R-0024 (§7.2 validity periods) and R-0025
+    (§7.3 status updates) constrain PROCESS or out-of-scope claim content,
+    not the shape or fields of any structure. They belong to the
+    requirements, protocol and design-notes artifacts rather than here.
+    R-0021 and R-0024 do touch header content in spirit — R-0021 governs
+    'all mandatory fields in profiles', which for this document means
+    alg, vds, vdp and the proof label, and R-0024 permits validity-period
+    claims whose expression the document declares out of scope — but
+    neither adds or constrains a field of any structure defined here.
+  message_field_entries: 37
+  fields_carrying_a_real_requirement_id: 24
+  fields_carrying_both_an_id_and_a_clarifying_note: 7
+  fields_carrying_only_a_constrained_by_note: 11
+  fields_carrying_neither: 2
+  fields_carrying_neither_detail: >
+    Both are the deliberate "(no fourth element)" entries on
+    inclusion-proof-content and consistency-proof-content, which record the
+    absence of further members rather than a member.
+  constrained_by_occurrences_whole_file: 37
+  constrained_by_note_occurrences_whole_file: 22
+  all_cited_ids_exist_in_requirements_yaml: true
+  note_vs_id_policy: >
+    A field carries constrained_by only where a real requirement of
+    distilled/requirements.yaml bears on it. Where the only constraint is
+    CDDL — a type, a cardinality, a positional member name — there is no
+    BCP 14 keyword, requirements.yaml correctly has no entry, and the field
+    carries an honest constrained_by_note instead of a guessed id. Several
+    fields carry both: an id for the part a requirement covers and a note
+    for the part it does not.
