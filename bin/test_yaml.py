@@ -30,7 +30,7 @@ CASES = [
     ("url fragment kept", "u: https://x.org/a#frag\n", {"u": "https://x.org/a#frag"}),
     ("comment after a closing quote is dropped (from the Threat-Radar fork, #49)",
      'n: "a # b"   # trailing\n', {"n": "a # b"}),
-    ("doubled single quote inside a single-quoted scalar", "n: 'it''s'  # c\n", {"n": "it''s"}),
+    ("doubled single quote inside a single-quoted scalar", "n: 'it''s'  # c\n", {"n": "it's"}),
     ("comment-looking line inside a block is content", "b: |-\n  # not a comment\nc: 1\n",
      {"b": "# not a comment", "c": "1"}),
 ]

@@ -52,7 +52,8 @@ def _strip_comment(v):
 def _scalar(v):
     v = _strip_comment(v.strip()).strip()
     if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
-        return v[1:-1]
+        # single-quoted YAML escapes a quote by doubling it: 'it''s' -> it's
+        return v[1:-1].replace("''", "'") if v[0] == "'" else v[1:-1]
     if v == "[]":
         return []
     if v == "{}":
