@@ -3,7 +3,7 @@ record: rfc-9943
 kind: normative
 title: "rfc-9943 — normative statements"
 extracted: "2026-09-30"
-reviewed_by: ""
+reviewed_by: "davidhsiaotw 2026-10-05 — 5 of 128 locators opened in source, all resolve; no spliced quotes among the 5; completeness of the extraction not assessed"
 ---
 
 <!-- Every normative statement, VERBATIM, with its locator. Keep the source's

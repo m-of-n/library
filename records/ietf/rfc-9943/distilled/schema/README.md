@@ -3,7 +3,7 @@ record: rfc-9943
 kind: schema
 title: "rfc-9943 — schemas"
 extracted: "2026-09-30"
-reviewed_by: ""
+reviewed_by: "davidhsiaotw 2026-10-05 — Figure 3 compared against source lines 931-963, byte-identical;"
 ---
 
 RFC 9943 contains **exactly two CDDL blocks**. Together they are the entire
