@@ -3,54 +3,17 @@ schema: "library-summary/v1"
 id: ecma-424
 record: ecma-424
 type: summary
-updated: "2026-09-26"
+updated: "2026-10-05"
 ---
 
-# ECMA-424 CycloneDX Bill of Materials Specification, 2nd Edition
+# Duplicate — cite `cyclonedx-1-7`
 
-|  |  |
-|---|---|
-| **Type** | spec |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | https://ecma-international.org/publications-and-standards/standards/ecma-424/ |
-| **Source** | https://ecma-international.org/publications-and-standards/standards/ecma-424/ |
-| **Digest** | `not fetched` |
+**This record is a pointer, not a reference.** ECMA-424 2nd edition is CycloneDX 1.7 — the same text under its ratifying body. Per docs/scope.md §4 a re-publication is an `identifiers` entry on one record, not a second record (library#35).
 
-## Overview
+The id `ecma-424` is kept because ids are stable forever: anything that ever cited
+it must not silently retarget. **Do not extend this record and do not cite it.**
+Cite [`cyclonedx-1-7`](../../community/cyclonedx-1-7/) instead — that is
+where the metadata, summary and any extraction live.
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
-
-## Applicability
-
-| Axis | Rating | Why |
-|---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
-
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
-
-## Implementations
-
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
-
-| Name | Kind | License | URL |
-|---|---|---|---|
-
-## Artifacts in this record
-
-_Everything else in this directory and what it is for._
-
-| File | What it is |
-|---|---|
-| `record.yaml` | metadata |
-
-## Limits
-
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+`bin/validate` enforces the pointer: `duplicate_of` must name an existing
+record, and this record must stay a stub.

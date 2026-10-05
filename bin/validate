@@ -46,6 +46,10 @@ FX1_FILES = {"normative": "distilled/normative.md", "requirements": "distilled/r
 FX1_PASSES = ["extract", "verify", "cross-check"]
 FX1_TYPES = {"rfc", "draft", "spec", "ietf"}
 
+# The summary template's own prompt text. A summary still carrying it was never
+# written (library#45: 261 of 293 records sat like this under a green check).
+SCAFFOLD = ("_Two to five sentences", "_What this document does not settle", "_TODO")
+
 REL = {"supersedes", "superseded_by", "updates", "updated_by", "cited_by",
        "see_also", "implements_concept", "contradicts", "part_of"}
 
@@ -118,6 +122,9 @@ def check_full(recdir, d, where, errs):
 
 def main():
     errs, warns, n = [], [], 0
+    scaffolds, extracted = [], 0
+    by_url, by_ident = {}, {}
+    dup_of, all_ids, ident_text = {}, set(), {}
     for rec in sorted((ROOT / "records").glob("*/*/record.yaml")):
         n += 1
         rid = rec.parent.name
@@ -133,6 +140,31 @@ def main():
                 errs.append(f"{where}: missing required field '{k}'")
         if d.get("id") and d["id"] != rid:
             errs.append(f"{where}: id '{d['id']}' != directory name '{rid}'")
+        s_md = rec.parent / "summary.md"
+        if not s_md.exists() or any(m in s_md.read_text() for m in SCAFFOLD):
+            scaffolds.append(where)
+        if isinstance(d.get("distillation"), dict) and d["distillation"].get("profile") == "full":
+            extracted += 1
+        # duplicate detection (library#35): the same document held twice, usually
+        # because a second publisher looked like a second document
+        all_ids.add(rid)
+        if isinstance(d.get("identifiers"), dict):
+            ident_text[rid] = " ".join(str(v) for k, v in d["identifiers"].items()
+                                       if k != "url" and "://" not in str(v)).lower()
+        cu = (d.get("content") or {}).get("url") if isinstance(d.get("content"), dict) else None
+        if cu:
+            by_url.setdefault(re.sub(r"[/#?]+$", "", str(cu).lower().replace("http://", "https://")), []).append(rid)
+        ids = d.get("identifiers")
+        if isinstance(ids, dict):
+            for k, v in ids.items():
+                if k in ("url",) or not isinstance(v, str) or len(v) < 4:
+                    continue
+                by_ident.setdefault((k, v.strip().lower()), []).append(rid)
+        dup = d.get("duplicate_of")
+        if dup:
+            dup_of[rid] = dup
+            if st != "stub":
+                errs.append(f"{where}: duplicate_of {dup} — a duplicate stays a stub pointer; extend '{dup}' instead")
         if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", rid):
             errs.append(f"{where}: id must be kebab-case")
         if d.get("type") and d["type"] not in TYPES:
@@ -173,7 +205,7 @@ def main():
                 body = summ.read_text()
                 if not body.startswith("---"):
                     errs.append(f"{where}: summary.md needs YAML front matter (OKF alignment)")
-                if "_TODO" in body or "_Two to five sentences" in body:
+                if any(m in body for m in SCAFFOLD):
                     errs.append(f"{where}: status={st} but summary.md is still a template")
         # Distillation is progressive: a SET of artifacts under distilled/,
         # not one file. `distilled` means at least one artifact exists.
@@ -203,11 +235,38 @@ def main():
             if k not in d:
                 errs.append(f"topics/{top.name}: missing '{k}'")
 
+    for rid, dup in dup_of.items():
+        if dup not in all_ids:
+            errs.append(f"records/*/{rid}: duplicate_of '{dup}' is not a record")
+    known = set(dup_of) | set(dup_of.values())
+    # a record whose id names another record's identifier, e.g. ecma-424 vs
+    # cyclonedx-1-7 carrying identifiers.ecma "ECMA-424, 2nd edition"
+    for rid in sorted(all_ids):
+        pat = re.compile(r"(?<![a-z0-9])" + re.escape(rid).replace(r"\-", r"[- ]") + r"(?![a-z0-9]|-[a-z0-9])")
+        for other, txt in ident_text.items():
+            if other != rid and rid not in known and other not in known and pat.search(txt):
+                warns.append(f"possible duplicate: {rid} is named in {other}'s identifiers")
+    for url, rids in sorted(by_url.items()):
+        if set(rids) <= known and len(set(rids)) > 1:
+            continue
+        if len(set(rids)) > 1:
+            warns.append(f"possible duplicate: {', '.join(sorted(set(rids)))} share content.url {url}")
+    for (k, v), rids in sorted(by_ident.items()):
+        if len(set(rids)) > 1:
+            warns.append(f"possible duplicate: {', '.join(sorted(set(rids)))} share identifiers.{k} '{v}'")
+    if scaffolds:
+        warns.append(f"{len(scaffolds)} record(s) still have an unwritten summary scaffold "
+                     f"(bin/validate --scaffolds lists them)")
+    if "--scaffolds" in sys.argv:
+        for s in scaffolds:
+            print(f"scaffold  {s}")
+
     for w in warns:
         print(f"warn  {w}")
     for e in errs:
         print(f"ERROR {e}")
-    print(f"\n{n} records, {t} topics — {len(errs)} errors, {len(warns)} warnings")
+    print(f"\n{n} records ({n - len(scaffolds)} written, {len(scaffolds)} scaffold, "
+          f"{extracted} fully extracted), {t} topics — {len(errs)} errors, {len(warns)} warnings")
     return 1 if errs else 0
 
 

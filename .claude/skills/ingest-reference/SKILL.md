@@ -56,5 +56,21 @@ not create forty sibling records with no parent.
 `cites` entries with no record land on `index/frontier.md` — that is the
 snowballing queue, not a failure.
 
-Stop after ingest. Writing `summary.md` is the `summarize` skill; `distilled.md`
-is the `distil` skill and most records never need one.
+Stop after ingest. Writing `summary.md` is the `summarize` skill; extraction of
+an rfc/draft/spec is the `extract` skill (FX-1).
+
+**But hand off explicitly — a scaffold nobody owns stays a scaffold.** 264 of
+280 records sat as unwritten templates under a green check because ingestion
+stopped here and nothing scheduled the next pass (library#45). So before you
+finish:
+
+- name, in the PR body, **the issue that owns filling every scaffold you
+  created** — an existing lane issue, or open one;
+- check the headline: `bin/validate` reports `N records (W written, S scaffold,
+  X fully extracted)`. Ingestion raises N and S. Only the next pass raises W.
+
+**Check for a duplicate first.** If the document is already held under another
+body or id — a ratified re-publication, an ISO adoption of an IETF or industry
+spec — it is an `identifiers` entry on the existing record, not a new record
+(`docs/scope.md` §4). `bin/validate` warns on shared URLs and identifiers; a
+mistaken duplicate becomes a stub with `duplicate_of: <id>`, never a deletion.
