@@ -1,0 +1,339 @@
+; ===========================================================================
+; DERIVED ARTIFACT -- derived: true
+; This file is NOT in RFC 9942 and is NOT a verbatim copy of anything.
+; ===========================================================================
+; record:  rfc-9942 (COSE Receipts)
+; kind:    derived machine-checkable rendering, permitted by docs/extraction.md
+; sources: the seven verbatim *.cddl files in this directory, which remain
+;          the record of what the RFC actually says. This file never
+;          replaces or overwrites them.
+;
+; WHY THIS FILE EXISTS
+; RFC 9942's own CDDL does not compile if concatenated. Three rule names are
+; defined twice -- one of them with a divergent body -- one type name is
+; referenced ten times across the document under two different spellings and
+; is defined under only one of them, and two further type names are
+; referenced but defined nowhere. The verbatim files preserve every one of
+; those defects unrepaired, because that is what the RFC published. This
+; file is the minimum set of mechanical repairs that yields one model a CDDL
+; tool will accept, so the structures can be checked against the RFC's own
+; EDN examples (Figures 2, 6, 9 -> ../examples/).
+;
+; EVERY DEVIATION FROM THE SOURCE IS LISTED HERE AND MARKED [D-n] INLINE.
+;
+; [D-1] NAMESPACING of the Section 5 rules. The Section 5 blocks reuse three
+;       rule names across the inclusion side and the consistency side.
+;       RFC 8610 has no rule redefinition. Renamed, with the source line of
+;       the original head:
+;         protected-header-map   (487, Fig 4)   -> inclusion-protected-header-map
+;         verifiable-proofs      (506, Fig 5)   -> inclusion-verifiable-proofs
+;         unprotected-header-map (510, Fig 5)   -> inclusion-unprotected-header-map
+;         protected-header-map   (599, Fig 8)   -> consistency-protected-header-map
+;         verifiable-proofs      (618, S5.3.1)  -> consistency-verifiable-proofs
+;         unprotected-header-map (622, S5.3.1)  -> consistency-unprotected-header-map
+;       Only `verifiable-proofs` diverges in body -- {-1 => inclusion-proofs}
+;       at 506 versus {-2 => consistency-proofs} at 618. The two
+;       `protected-header-map` bodies are byte-identical, and so are the two
+;       `unprotected-header-map` bodies; both pairs still had to be split,
+;       because each `unprotected-header-map` has to resolve to its own
+;       `verifiable-proofs`. Textual identity there hides a semantic fork.
+;
+; [D-2] cose-value -> cose-values. RESOLUTION: the plural is correct; the
+;       singular is a typographical error in the RFC.
+;       Grounds: `cose-values = any` is defined exactly once, at line 239,
+;       and the plural is the only one of the two spellings that is ever a
+;       rule head anywhere in RFC 9942. The plural is used six times (242,
+;       247, 276, 281, 315, 320), all inside Figure 1, the block that
+;       defines it. The singular appears four times (490, 512, 602, 624),
+;       every time in the identical idiom `* cose-label => cose-value` --
+;       that is, as exactly the open-ended extension socket that Figure 1
+;       writes with the plural. They are plainly the same type. Erratum-
+;       grade. Resolved here toward the plural so the model compiles; the
+;       verbatim files keep the singular, unrepaired.
+;
+; [D-3] TWO BRIDGE RULES ADDED, which RFC 9942 has nowhere:
+;         inclusion-proof   = bstr .cbor inclusion-proof-content
+;         consistency-proof = bstr .cbor consistency-proof-content
+;       Section 5 references `inclusion-proof` (line 504) and
+;       `consistency-proof` (line 616) as types but defines neither, while
+;       defining `inclusion-proof-content` (455) and
+;       `consistency-proof-content` (575), which nothing in the document
+;       ever references. The bridge is modelled directly on Figure 1 lines
+;       292-293 and 331-332, which do spell the equivalent indirection out:
+;         RFC9162_SHA256_Inclusion_Proof =
+;           bstr .cbor RFC9162_SHA256_Inclusion_Proof_Content
+;       Section 8.2.2.2 (Table 3) independently gives the CBOR type of both
+;       proof labels as "array (of bstr)", i.e. each element is a byte
+;       string wrapping an encoded proof. Also erratum-grade.
+;       (The bareword `inclusion-proof` inside `&(inclusion-proof: -1)` is a
+;       text-string member key, not a type reference, so adding a rule of
+;       that name creates no ambiguity -- Figure 1 already relies on this.)
+;
+; [D-4] FORMATTING ONLY. Whitespace and separators are normalised; no token,
+;       name, type, cardinality or rule body is otherwise touched. The full
+;       list, so that a byte-for-byte diff against the source has no
+;       unexplained hits:
+;         - the RFC's three-column left margin is dropped;
+;         - group entries are comma-separated consistently, where the source
+;           mixes commas and bare newlines;
+;         - the two continuation lines for `protected :` in the signed-proof
+;           arrays are joined;
+;         - interior runs of spaces are collapsed to one: the TWO spaces
+;           before `=>` on the `receipts` entry (source line 246) become one;
+;         - a missing space is added after the colon in `inclusion_path:[`
+;           (source line 298) to match the other entries of the same group;
+;         - the source's two consecutive blank lines (260-262 and 299-301)
+;           become one.
+;       All six are invisible to a CDDL parser, which ignores whitespace and
+;       treats the comma as optional. Rule order and rule bodies are
+;       otherwise exactly as the source has them. The verbatim files keep
+;       every one of these spellings unrepaired; this is the only file in
+;       which they differ.
+;
+; NOTHING ELSE was changed. In particular the two parallel namings are BOTH
+; retained and NOT merged: Section 4.3's `RFC9162_SHA256_*` rules and
+; Section 5's `*-header-map` rules describe the same two structures under
+; two conventions. See README.md for which is authoritative for what.
+;
+; ROOTS. `Signature_With_Receipt` is the first rule and the root of the
+; outer envelope; it reaches 23 rules. The Section 5 half of this file is a
+; second, parallel entry point, rooted at `inclusion-unprotected-header-map`
+; / `consistency-unprotected-header-map`, which reach 10 more; nothing in
+; Section 4.3 references it, and that is true of the RFC too.
+; `inclusion-protected-header-map` and `consistency-protected-header-map`
+; are two FURTHER roots, reached from nothing -- Section 5 defines no
+; signed-proof envelope that would tie a protected header to an unprotected
+; one (see README.md, Defect 4). They are additional roots, not dead rules.
+; 23 + 10 + 2 = 35, so every rule in this file is reachable from some root.
+; ===========================================================================
+
+
+; ---------------------------------------------------------------------------
+; Section 4.3, Figure 1 -- verbatim counterpart:
+;   figure-01-cose-sign1-with-receipts.cddl (source lines 236-338)
+; 23 rules. Authoritative for the OUTER `receipts` (394) nesting.
+; ---------------------------------------------------------------------------
+
+Signature_With_Receipt = #6.18(COSE_Sign1)
+
+cose-label = int / text
+cose-values = any
+
+Protected_Header = {
+  * cose-label => cose-values
+}
+
+Unprotected_Header = {
+  &(receipts: 394) => [+ bstr .cbor Receipt],
+  * cose-label => cose-values
+}
+
+COSE_Sign1 = [
+  protected   : bstr .cbor Protected_Header,
+  unprotected : Unprotected_Header,
+  payload     : bstr / nil,
+  signature   : bstr
+]
+
+Receipt = Receipt_For_Inclusion / Receipt_For_Consistency
+
+; Note the proof formats shown here are for RFC9162_SHA256.
+; Other VDSs may have different proof formats.
+
+Receipt_For_Inclusion = #6.18(Signed_Inclusion_Proof)
+
+Signed_Inclusion_Proof = [
+  protected   : bstr .cbor RFC9162_SHA256_Inclusion_Protected_Header,
+  unprotected : RFC9162_SHA256_Inclusion_Unprotected_Header,
+  payload     : bstr / nil,
+  signature   : bstr
+]
+
+RFC9162_SHA256_Inclusion_Protected_Header = {
+  &(alg: 1) => int,
+  &(vds: 395) => int,
+  * cose-label => cose-values
+}
+
+RFC9162_SHA256_Inclusion_Unprotected_Header = {
+  &(vdp: 396) => RFC9162_SHA256_Verifiable_Inclusion_Proofs,
+  * cose-label => cose-values
+}
+
+RFC9162_SHA256_Verifiable_Inclusion_Proofs = {
+  &(inclusion-proof: -1) => RFC9162_SHA256_Inclusion_Proofs
+}
+
+RFC9162_SHA256_Inclusion_Proofs = [
+  + RFC9162_SHA256_Inclusion_Proof
+]
+
+RFC9162_SHA256_Inclusion_Proof =
+  bstr .cbor RFC9162_SHA256_Inclusion_Proof_Content
+
+RFC9162_SHA256_Inclusion_Proof_Content = [
+  tree_size: uint,
+  leaf_index: uint,
+  inclusion_path: [ + bstr ]
+]
+
+Receipt_For_Consistency = #6.18(Signed_Consistency_Proof)
+
+Signed_Consistency_Proof = [
+  protected   : bstr .cbor RFC9162_SHA256_Consistency_Protected_Header,
+  unprotected : RFC9162_SHA256_Consistency_Unprotected_Header,
+  payload     : bstr / nil, ; Newer Merkle Tree root
+  signature   : bstr
+]
+
+RFC9162_SHA256_Consistency_Protected_Header = {
+  &(alg: 1) => int,
+  &(vds: 395) => int,
+  * cose-label => cose-values
+}
+
+RFC9162_SHA256_Consistency_Unprotected_Header = {
+  &(vdp: 396) => RFC9162_SHA256_Verifiable_Consistency_Proofs,
+  * cose-label => cose-values
+}
+
+RFC9162_SHA256_Verifiable_Consistency_Proofs = {
+  &(consistency-proof: -2) => RFC9162_SHA256_Consistency_Proofs
+}
+
+RFC9162_SHA256_Consistency_Proofs = [
+  + RFC9162_SHA256_Consistency_Proof
+]
+
+RFC9162_SHA256_Consistency_Proof =
+  bstr .cbor RFC9162_SHA256_Consistency_Proof_Content
+
+RFC9162_SHA256_Consistency_Proof_Content = [
+  tree_size_1: uint,
+  tree_size_2: uint,
+  consistency_path: [ + bstr ]
+]
+
+
+; ---------------------------------------------------------------------------
+; Section 5.2, Figure 3 -- verbatim counterpart:
+;   figure-03-inclusion-proof-content.cddl (source lines 455-465)
+; Same structure as RFC9162_SHA256_Inclusion_Proof_Content above, under the
+; Section 5 naming convention (hyphens, not underscores).
+; ---------------------------------------------------------------------------
+
+inclusion-proof-content = [
+
+    ; tree size at current Merkle Tree root
+    tree-size: uint,
+
+    ; index of leaf in tree
+    leaf-index: uint,
+
+    ; path from leaf to current Merkle Tree root
+    inclusion-path: [ + bstr ]
+]
+
+; [D-3] ADDED. Not in RFC 9942. Supplies the referent of `inclusion-proof`
+; used at source line 504, modelled on Figure 1 lines 292-293.
+inclusion-proof = bstr .cbor inclusion-proof-content
+
+
+; ---------------------------------------------------------------------------
+; Section 5.2.1, Figure 4 -- verbatim counterpart:
+;   figure-04-inclusion-protected-header.cddl (source lines 487-491)
+; [D-1] renamed from `protected-header-map`.
+; [D-2] `cose-value` -> `cose-values`.
+; Section 5 is authoritative for field requirement levels: the prose at
+; source lines 495-499 makes alg (1) and vds (395) REQUIRED.
+; ---------------------------------------------------------------------------
+
+inclusion-protected-header-map = {
+  &(alg: 1) => int,
+  &(vds: 395) => int,
+  * cose-label => cose-values
+}
+
+
+; ---------------------------------------------------------------------------
+; Section 5.2.1, Figure 5 -- verbatim counterpart:
+;   figure-05-inclusion-unprotected-header.cddl (source lines 504-513)
+; [D-1] `verifiable-proofs` -> `inclusion-verifiable-proofs`,
+;       `unprotected-header-map` -> `inclusion-unprotected-header-map`.
+; [D-2] `cose-value` -> `cose-values`.
+; Source lines 517-521 make vdp (396) and inclusion-proof (-1) REQUIRED.
+; ---------------------------------------------------------------------------
+
+inclusion-proofs = [ + inclusion-proof ]
+
+inclusion-verifiable-proofs = {
+  &(inclusion-proof: -1) => inclusion-proofs
+}
+
+inclusion-unprotected-header-map = {
+  &(vdp: 396) => inclusion-verifiable-proofs,
+  * cose-label => cose-values
+}
+
+
+; ---------------------------------------------------------------------------
+; Section 5.3, Figure 7 -- verbatim counterpart:
+;   figure-07-consistency-proof-content.cddl (source lines 575-586)
+; Same structure as RFC9162_SHA256_Consistency_Proof_Content above.
+; ---------------------------------------------------------------------------
+
+consistency-proof-content = [
+
+    ; older Merkle Tree size
+    tree-size-1: uint,
+
+    ; newer Merkle Tree size
+    tree-size-2: uint,
+
+    ; path from older Merkle Tree to newer Merkle Tree
+    consistency-path: [ + bstr ]
+
+]
+
+; [D-3] ADDED. Not in RFC 9942. Supplies the referent of `consistency-proof`
+; used at source line 616, modelled on Figure 1 lines 331-332.
+consistency-proof = bstr .cbor consistency-proof-content
+
+
+; ---------------------------------------------------------------------------
+; Section 5.3.1, Figure 8 -- verbatim counterpart:
+;   figure-08-consistency-protected-header.cddl (source lines 599-603)
+; [D-1] renamed from `protected-header-map`. Body is byte-identical to
+;       Figure 4's; the rename exists only to satisfy RFC 8610.
+; [D-2] `cose-value` -> `cose-values`.
+; Source lines 607-611 make alg (1) and vds (395) REQUIRED.
+; ---------------------------------------------------------------------------
+
+consistency-protected-header-map = {
+  &(alg: 1) => int,
+  &(vds: 395) => int,
+  * cose-label => cose-values
+}
+
+
+; ---------------------------------------------------------------------------
+; Section 5.3.1, UNCAPTIONED BLOCK -- verbatim counterpart:
+;   uncaptioned-consistency-unprotected-header.cddl (source lines 616-625)
+; The only CDDL block in RFC 9942 with no figure caption.
+; [D-1] `verifiable-proofs` -> `consistency-verifiable-proofs` (this is the
+;       hard collision: body differs from line 506's),
+;       `unprotected-header-map` -> `consistency-unprotected-header-map`.
+; [D-2] `cose-value` -> `cose-values`.
+; Source lines 627-630 make vdp (396) and consistency-proof (-2) REQUIRED.
+; ---------------------------------------------------------------------------
+
+consistency-proofs = [ + consistency-proof ]
+
+consistency-verifiable-proofs = {
+  &(consistency-proof: -2) => consistency-proofs
+}
+
+consistency-unprotected-header-map = {
+  &(vdp: 396) => consistency-verifiable-proofs,
+  * cose-label => cose-values
+}
