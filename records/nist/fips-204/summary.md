@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: fips-204
 record: fips-204
 type: summary
-updated: "2026-10-03"
+updated: "2026-10-08"
 ---
 
 # Module-Lattice-Based Digital Signature Standard
@@ -79,10 +79,70 @@ is the one post-quantum signature scheme with mainstream library support.
 | AWS-LC | open source | Apache-2.0 / ISC | https://github.com/aws/aws-lc |
 | BouncyCastle | open source | MIT | https://bouncycastle.org |
 
-**We use a vetted library. We do not implement these.** CAVP/ACVP coverage for
-ML-DSA is newer than the classical suites; treat a FIPS 204 conformance claim
-as something to check against CMVP, not to infer from a library's release
-notes.
+**We use a vetted library. We do not implement these.**
+
+## Test vectors — the PROC-0002 stage 8 hook
+
+NIST's **ACVP** server publishes validation vectors for ML-DSA under four
+registered algorithm/mode/revision triples:
+
+| Registration | Revision | Notes |
+|---|---|---|
+| `ML-DSA / keyGen / FIPS204` | `FIPS204` | ≥25 tests per parameter set |
+| `ML-DSA / sigGen / FIPS204` | `FIPS204` | |
+| `ML-DSA / sigVer / FIPS204` | `FIPS204` | negative tests from server-modified signatures |
+| `ML-DSA / sigGen / FIPS204-tr1` | `FIPS204-tr1` | a **new test revision against the same standard** — adds `keyFormats`, so sigGen may receive the private key as a 32-byte seed rather than expanded |
+
+The schema is defined by **`draft-celi-acvp-ml-dsa-01`** (2 October 2026), the
+CAVP's own sub-specification; there is no `keyVer` mode for ML-DSA, unlike
+ECDSA. All three `FIPS204` revisions were enabled on ACVTS **production on
+2024-08-13** — the day FIPS 204 was published. `FIPS204-tr1` arrived with
+ACVP-Server **v1.1.0.43** (2026-08-12).
+
+This is the **publisher source** that PROC-0002 stage 8 requires: vectors come
+from the source or its publisher and are **never generated**. A self-generated
+vector proves only that the code agrees with itself. If a stage 8
+implementation of ML-DSA ships without ACVP vectors, that is a **stage 10
+failure**.
+
+**Retrievable without a CMVP account — yes, for the published sets.** Each
+registration has a directory under `gen-val/json-files/` in the public
+`usnistgov/ACVP-Server` repository holding `registration.json`, `prompt.json`,
+`expectedResults.json` and `internalProjection.json`. Verified anonymous
+HTTPS retrieval on **2026-10-08**; no certificate, account or CMVP
+relationship is needed. A *live* ACVTS session is different: `demo.acvts.nist.gov`
+and the production server require a NIST-issued TLS client certificate and a
+TOTP seed, so **freshly generated** per-session vectors are gated even though
+the published sample sets are not. Stage 8 needs the published sets.
+
+**What the vectors cover that this record cares about.** The sigGen and sigVer
+registrations carry `signatureInterfaces` (`internal`/`external`), `preHash`
+(`pure`/`preHash` — ML-DSA versus HashML-DSA), `externalMu`, and
+`contextLength`. The domain separation flagged under Limits below is therefore
+a **registered, tested distinction**, not an informal one: a conformance claim
+names which interface and which of the two schemes it covers.
+
+**What they do not cover.** `draft-celi-acvp-ml-dsa-01` §6.2.2 excludes FIPS
+204 §3.5 *Additional Requirements* — an ACVP server "will not test the
+zeroization of intermediate values, security strength of the deterministic
+random bit generators (DRBGs), or incorrect length signatures or public keys."
+Read that against the first bullet under Limits: whether ML-DSA-44 actually
+reaches category 2 depends on the RBG's security strength, and **that is
+precisely what the vectors do not check**. Passing ACVP is a correctness
+assertion, not a strength assertion.
+
+**Vector sets have a shelf life.** ACVP-Server **v1.1.0.38** (2025-02-21) added
+external-interface testing and changed the sigGen/sigVer registration format;
+vectors generated before it cannot be submitted against a later release. A
+pinned vector set must record the server release it came from.
+
+CAVP/ACVP coverage for ML-DSA is newer than the classical suites; treat a FIPS
+204 conformance claim as something to check against CMVP, not to infer from a
+library's release notes.
+
+- `usnistgov/ACVP` — protocol specification; algorithm sub-specifications at https://pages.nist.gov/ACVP/
+- `usnistgov/ACVP-Server` — the server, its releases and the published vector sets
+- https://pages.nist.gov/ACVP/draft-celi-acvp-ml-dsa.html — the ML-DSA schema
 
 ## Artifacts in this record
 
