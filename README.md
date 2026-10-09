@@ -24,15 +24,22 @@ That is why a record has three layers.
 `distilled/` is the layer that makes the library **citable at requirement
 granularity**. A statement extracted into `distilled/requirements.yaml` gets a
 stable id — `<record>#R-NNNN` — so the specification can cite *a requirement*
-rather than *a document*. `docs/extraction.md` (FX-1) is the standard, and it
-applies to every `rfc` / `draft` / `spec` / `ietf` record a pull request moves
-past stub.
+rather than *a document*. `docs/extraction.md` (FX-1) is the standard.
 
-**Distillation is deliberately rare.** Most records are stubs, and a stub is a
-legitimate resting state: it costs one directory and preserves a source we can
-find again. Full extraction is reserved for the documents we build against —
-it is the expensive layer, and spending it on a document nothing depends on is
-how a library turns into a reading list.
+**FX-1 is triggered by the intent to extract, not by contact with a record**
+(amended 2026-10-03). It fires on an in-scope `rfc` / `draft` / `spec` /
+`ietf` record when the record is `status: distilled`, already declares a
+`distillation` block, or the pull request changes its `distilled/`.
+Summarising a record is *ingestion*, and is held to the **summary bar**
+instead. `bin/check-pr-extraction` prints which bar each touched record was
+held to, so a reviewer can see what was waived.
+
+**So distillation is opt-in, and deliberately rare.** Most records are stubs,
+and a stub is a legitimate resting state: it costs one directory and preserves
+a source we can find again. Filling a scaffold into a real `summary.md` does
+**not** pull a record into FX-1. Full extraction is claimed deliberately, for
+the documents we build against — it is the expensive layer, and spending it
+on a document nothing depends on is how a library turns into a reading list.
 
 ## Rules
 
