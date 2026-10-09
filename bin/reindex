@@ -23,6 +23,19 @@ import pathlib, re, sys, collections
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "bin"))
 from _yaml import parse as miniyaml
+
+# Links to docs/ are ABSOLUTE, not repo-relative. These views are consumed by
+# projects that are not this one — the library is standalone by design — and a
+# consumer mounts a view at a path of its own choosing. `../docs/scope.md`
+# resolves here and nowhere else: mofn publishes index/bibliography.md at
+# docs/library/bibliography.md and does not publish scope.md at all, so the
+# link dangled and mkdocs --strict aborted the whole site build (library#59,
+# mofn main red 2026-10-06 to 2026-10-09).
+#
+# Record links below stay relative on purpose. They address records/ inside
+# THIS repository, no consumer republishes them, and an absolute URL would pin
+# a branch into a view whose whole point is to be read from a checkout.
+DOCS_URL = "https://github.com/m-of-n/library/blob/main/docs"
 IDX = ROOT / "index"
 
 INVERSE = {"supersedes": "superseded_by", "superseded_by": "supersedes",
@@ -58,7 +71,7 @@ def listify(v):
 # the only field naming who issued a document.
 SHELF_NOTE = ("Sections are storage shelves — `records/<body>/` — **not publisher "
               "attribution**.\nWho published a document is `publisher`; its standing is "
-              "`maturity`. See [`docs/scope.md`](../docs/scope.md) §4.\n")
+              f"`maturity`. See [`docs/scope.md`]({DOCS_URL}/scope.md) §4.\n")
 
 IDENT_SKIP = {"url", "git", "license"}      # locators and licensing, not identifiers
 IDENT_LABEL = {"rfc": "RFC ", "doi": "doi:", "isbn": "ISBN ", "arxiv": "arXiv:"}
@@ -157,7 +170,7 @@ def main():
            "How records relate. **Inverse edges are derived here, never authored** —",
            "write `supersedes` on one record and `superseded_by` appears on the other.\n",
            "`cites` is what a document itself references (fact). Everything else is",
-           "our curatorial judgement. See [`docs/references.md`](../docs/references.md).\n"]
+           f"our curatorial judgement. See [`docs/references.md`]({DOCS_URL}/references.md).\n"]
     linked = {r for r in recs if rel_out.get(r)}
     out.append(f"{len(linked)} of {len(recs)} records have at least one edge.\n")
     for rid in sorted(linked):
@@ -243,6 +256,19 @@ def main():
                 out.append(f"_{t['question']}_\n")
             out += [entry(rid, recs[rid]) for rid in sorted(members)]
     (IDX / "bibliography.md").write_text("\n".join(out) + "\n")
+
+    # A generated view must not carry a docs/ link that only resolves from this
+    # checkout. Consumers mount these pages at their own paths, and a dangling
+    # link fails a strict site build with no clue that the cause is in another
+    # repository — which is exactly how mofn main went red for three days
+    # (library#59). Scoped to ../docs/ on purpose: ../records/ links are
+    # intra-repo by design, see DOCS_URL above.
+    escaping = sorted(f.name for f in IDX.glob("*.md") if "](../docs/" in f.read_text())
+    if escaping:
+        print(f"reindex: ERROR repo-relative docs link in {', '.join(escaping)} — "
+              f"use DOCS_URL so the view survives being published elsewhere",
+              file=sys.stderr)
+        return 1
 
     stale = [r for r, d in recs.items()
              if d.get("status") in {"read", "summarized", "distilled"} and not d["_has_summary"]]
