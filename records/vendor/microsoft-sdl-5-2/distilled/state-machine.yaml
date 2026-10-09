@@ -1,0 +1,77 @@
+schema: "library-state-machine/v1"
+record: microsoft-sdl-5-2
+title: "Microsoft SDL 5.2 — the phase sequence, the Final Security Review gate, and SDL applicability"
+extracted: "2026-10-02"
+reviewed_by: ""
+note: >
+  SDL 5.2 is the only Microsoft SDL document in this library with a real gate: the Final Security Review
+  (FSR) between Verification and RTM/RTW, with three named outcomes. State names that the source names
+  are kind: stated; transitions quote the text that licenses them.
+machines:
+  - id: sdl-phases
+    subject: "a software release (project) subject to the SDL"
+    locator: "Security Development Lifecycle (SDL) overview; phase headings"
+    states:
+      - {id: pre-sdl-training, kind: stated, name: "Pre-SDL Requirements: Security Training"}
+      - {id: requirements, kind: stated, name: "Phase One: Requirements"}
+      - {id: design, kind: stated, name: "Phase Two: Design"}
+      - {id: implementation, kind: stated, name: "Phase Three: Implementation"}
+      - {id: verification, kind: stated, name: "Phase Four: Verification"}
+      - {id: release, kind: stated, name: "Phase Five: Release"}
+      - {id: response, kind: stated, name: "Post-SDL Requirement: Response"}
+    transitions:
+      - {from: pre-sdl-training, to: requirements, kind: inferred, trigger: "project inception"}
+      - {from: requirements, to: design, kind: inferred, trigger: "phase completion"}
+      - {from: design, to: implementation, kind: inferred}
+      - {from: implementation, to: verification, kind: inferred}
+      - {from: verification, to: release, kind: inferred, trigger: "security push complete (Phase Four)"}
+      - {from: release, to: response, kind: stated, trigger: "RTM/RTW after FSR sign-off", text: "After a software program is released, the product development team must be available to respond to any possible security vulnerabilities or privacy issues that warrant a response."}
+    note: "Entry guards between phases are not stated; the only explicit gate is the FSR inside Phase Five (machine fsr)."
+  - id: sdl-applicability
+    subject: "a project"
+    locator: "Phase One > Project Inception > Security Requirements, first item"
+    states:
+      - {id: undetermined, kind: inferred}
+      - {id: subject-to-sdl, kind: stated, text: "If the project is subject to SDL policies, it must be assigned a security advisor who serves as the point of contact for its Final Security Review (FSR)."}
+      - {id: exempt, kind: stated, text: "If the project is not subject to SDL policies, it is not necessary to assign a security advisor and the release is classified as exempt from SDL security requirements."}
+    transitions:
+      - {from: undetermined, to: subject-to-sdl, trigger: "SDL questionnaire answered", kind: stated}
+      - {from: undetermined, to: exempt, trigger: "SDL questionnaire answered", kind: stated}
+    error_states:
+      - {id: specious-exemption, text: "Claims of “Not subject to SDL” contrary to evidence.", effect: "immediate FSR failure", locator: "Possible FSR Outcomes", kind: stated}
+  - id: fsr
+    subject: "a release undergoing the Final Security Review"
+    locator: "Phase Five: Release > Final Security Review and Privacy Review > The FSR Process; Possible FSR Outcomes; Security Requirements"
+    states:
+      - {id: fsr-scheduled, kind: inferred, text: "Define a due date for all project information that is required to start the FSR. To minimize the likelihood of unexpected delays, plan to conduct an FSR four to six weeks before release to manufacturing (RTM) or release to web (RTW)."}
+      - {id: fsr-in-progress, kind: inferred}
+      - {id: passed, kind: stated, text: "Passed FSR. If all issues identified during the FSR are corrected before RTM/RTW, the security advisor should certify that the project has successfully met all SDL requirements."}
+      - {id: passed-with-exceptions, kind: stated, text: "Passed FSR (with exceptions). If all issues identified during the FSR are corrected before RTM/RTW or the security advisor and team can reach an acceptable compromise about any SDL requirements that the project team was unable to resolve, the security advisor should identify the exceptions and certify that all other aspects of the project have successfully met all SDL requirements."}
+      - {id: escalation, kind: stated, text: "FSR escalation. If a team does not meet all SDL requirements, and the security advisor and the product team cannot reach an acceptable compromise, the security advisor cannot approve the project, and the project cannot be released."}
+      - {id: failed, kind: stated, text: "If a team fails to follow proper FSR procedures—either by an error of omission or by willful neglect—the result is an immediate FSR failure."}
+      - {id: released, kind: stated, name: "Release to Manufacturing/Release to Web"}
+    transitions:
+      - {from: fsr-scheduled, to: fsr-in-progress, kind: stated, guard: "The FSR cannot begin until you have completed the reviews of the security milestones that were required during development. Milestones include in-depth bug reviews, threat model reviews, and running all SDL-mandated tools.", also: "The project team must provide all required information before the scheduled FSR start date."}
+      - {from: fsr-in-progress, to: passed, kind: stated, trigger: "security advisor signs off", text: "After the FSR is finished, the security advisor either signs off on the project as is or provides a list of required changes.", guard: "No software release can pass an FSR with known vulnerabilities that would be considered as Critical, Important, Moderate, or Low.", guard_locator: "The FSR Process (R-0159)", note: "verify 2026-10-03: guard moved here from passed->released — the sentence conditions passing the FSR, not the RTM step"}
+      - {from: fsr-in-progress, to: fsr-in-progress, kind: stated, trigger: "list of required changes", text: "After the FSR is finished, the security advisor either signs off on the project as is or provides a list of required changes."}
+      - {from: fsr-in-progress, to: passed-with-exceptions, kind: stated, trigger: "acceptable compromise on unresolved requirements; exceptions identified"}
+      - {from: fsr-in-progress, to: escalation, kind: stated, trigger: "no acceptable compromise"}
+      - {from: escalation, to: fsr-in-progress, kind: stated, text: "Teams must correct whatever SDL requirements that they can or escalate to higher management for a decision."}
+      - {from: "any", to: failed, kind: stated, trigger: "error of omission or willful neglect (specious claims of 'Not subject to SDL' or 'FSR pass', RTM/RTW without signoff)"}
+      - {from: passed, to: released, kind: stated, guard: "The security advisor assigned to the release must certify that your team has satisfied security requirements. Similarly, for all products that have at least one component with a privacy impact rating of P1, your privacy advisor must certify that your team has satisfied the privacy requirements before the software can be shipped.", guard_locator: "Phase Five: Release > Release to Manufacturing/Release to Web (R-0446, added by verify)", also: "Although privacy requirements must be addressed before any public release of code, security requirements need not be addressed before public release. However, you must complete a Final Security Review before final release. (R-0441)"}
+      - {from: passed-with-exceptions, to: released, kind: stated, effect: "All exceptions and security issues not addressed in the current release should be logged and then addressed and corrected in the next release."}
+    guards:
+      - {text: "For online services and/or LOB applications, projects releasing services are required to have a security score of B or above to successfully pass the FSR.", locator: "Final Security Review and Privacy Review > Security Requirements", kind: stated}
+      - {text: "The bug bar must never be relaxed, though, even as the project’s release date nears.", locator: "Phase One > Project Inception > Security Requirements", kind: stated}
+    parallel_gate:
+      id: privacy-review
+      text: "After the privacy review is finished, your privacy advisor either signs off on the product as is or provides a list of required changes."
+      locator: "Final Security Review and Privacy Review > Privacy Requirements"
+  - id: sdl-agile-cadence
+    subject: "an SDL-Agile requirement"
+    locator: "SDL-Agile Requirements (Every-Sprint, Bucket, One-Time); Appendices P-R"
+    states:
+      - {id: every-sprint, kind: stated, text: "Whether a team’s sprint is two weeks or two months long, every SDL requirement in the every-sprint category must be completed in each and every sprint, or the sprint is deemed incomplete, and the software cannot be released."}
+      - {id: bucket, kind: stated, text: "Therefore, no SDL bucket requirement can go more than six months without being completed.", also: "In this example, a team would be required to complete one verification requirement, one design review requirement, and one planning requirement in every sprint (in addition to the every-sprint requirements discussed earlier)."}
+      - {id: one-time, kind: stated, text: "To address this issue, the SDL-Agile allows a grace period to complete each one-time requirement. The period generally ranges from one month to one year after the start of the project, depending on the size and complexity of the requirement."}
+    note: "Categories are attributes with deadlines (every sprint; at most six months; a grace period of one month to one year), not a lifecycle. Full text in normative.md under SDL-Agile Requirements."

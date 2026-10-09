@@ -1,0 +1,63 @@
+schema: "library-state-machine/v1"
+record: bsi-tr-03183-1
+machines:
+  - id: SM1
+    name: "Risk"
+    object: Risk
+    locator: "§5.8-§5.13; Annex C; Annex D.2"
+    states:
+      - {id: identified, kind: stated, locator: "RH_RA.1.1.2"}
+      - {id: analysed, kind: stated, locator: "RH_RA.1.2"}
+      - {id: accepted, kind: stated, locator: "RH_RA.1.3; §5.14.3; D.2", terminal: false}
+      - {id: to_treat, kind: stated, locator: "RH_RA.1.3 'have to be treated'"}
+      - {id: controls_selected, kind: stated, locator: "RH_RT.1.1.1"}
+      - {id: shared_supplier, kind: stated, locator: "RH_RT.1.2.1"}
+      - {id: shared_user, kind: stated, locator: "RH_RT.1.2.2"}
+      - {id: implemented_verified, kind: stated, locator: "RH_RT.1.3"}
+      - {id: documented, kind: stated, locator: "RH_DOC.1"}
+      - {id: split, kind: stated, locator: "§5.9.1 split into multiple risks when impact/likelihood depends on parameters", terminal: true}
+    transitions:
+      - {from: identified, to: analysed, trigger: "impact + likelihood assessed", kind: stated}
+      - {from: identified, to: split, trigger: "impact or likelihood cannot be assessed (depends on parameters)", kind: stated}
+      - {from: analysed, to: accepted, trigger: "acceptance criteria met", guard: "§5.14.3 rules / D.2 Low or Very Low", kind: stated}
+      - {from: analysed, to: to_treat, trigger: "acceptance criteria not met", kind: stated}
+      - {from: to_treat, to: controls_selected, trigger: "controls selected into design", kind: stated}
+      - {from: to_treat, to: shared_supplier, trigger: "cannot lower risk alone; supplier legally/contractually able", kind: stated}
+      - {from: to_treat, to: shared_user, trigger: "within user expectations; guidance provided", kind: stated}
+      - {from: controls_selected, to: implemented_verified, trigger: "implementation + verification", kind: stated}
+      - {from: implemented_verified, to: analysed, trigger: "re-evaluation in updated assessment (C.7 'have to be re-evaluated')", kind: stated}
+      - {from: accepted, to: documented, trigger: "RH_DOC.1", kind: stated}
+      - {from: shared_supplier, to: documented, trigger: "RH_DOC.1", kind: inferred}
+      - {from: shared_user, to: documented, trigger: "RH_DOC.1", kind: inferred}
+      - {from: documented, to: identified, trigger: "risk context changes (update with security implications, new vulnerability, new threat)", kind: stated}
+    notes: ["D.2 NOTE: moderate risks 'have to be treated during the course of development, but can be accepted in post-market if the effort of treatment is not in relation with the potential risk and the remaining PwDE lifetime' - a guard that depends on lifecycle phase (pre/post-market)."]
+  - id: SM2
+    name: "Control assessment verdict"
+    object: AssessmentVerdict
+    locator: "§4.6"
+    states:
+      - {id: unassessed, kind: inferred}
+      - {id: PASS, kind: stated}
+      - {id: FAIL, kind: stated}
+      - {id: N/A, kind: stated}
+    transitions:
+      - {from: unassessed, to: N/A, trigger: "compensation fulfilled | target mechanism absent | 'if' condition does not apply | conflict with other regulation | risk does not apply (risk-based control)", kind: stated}
+      - {from: unassessed, to: PASS, trigger: "statement assessed true (Mechanism implemented / Activity performed with output / Documentation provided)", kind: stated}
+      - {from: unassessed, to: FAIL, trigger: "otherwise", kind: stated}
+    aggregate: "overall PASS iff every control in {PASS, N/A}"
+  - id: SM3
+    name: "PwDE market lifecycle (CRA context quoted in §3)"
+    object: PwDE
+    locator: "§3.2.2, §3.4, §3.6"
+    states:
+      - {id: in_development, kind: inferred}
+      - {id: placed_on_market, kind: stated, locator: "§3.2.2 'Placing on the market'"}
+      - {id: made_available, kind: stated, locator: "§3.2.2"}
+      - {id: substantially_modified, kind: stated, locator: "§3.4"}
+      - {id: support_period_ended, kind: stated, locator: "§3.5, §3.6 (>= 5 years; updates/docs available >= 10 years)"}
+    transitions:
+      - {from: in_development, to: placed_on_market, trigger: "conformity assessment + EU DoC + CE marking", guard: "Annex I Part I met (§3.9: 'Only PwDEs meeting the requirements of Part I may be placed on the European market')", kind: stated}
+      - {from: placed_on_market, to: made_available, trigger: "each subsequent supply", kind: stated}
+      - {from: made_available, to: substantially_modified, trigger: "type/purpose changed beyond initial risk assessment", kind: stated}
+      - {from: substantially_modified, to: in_development, trigger: "new conformity required", kind: inferred}
+      - {from: made_available, to: support_period_ended, trigger: "support period expiry", kind: stated}

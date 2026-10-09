@@ -1,0 +1,79 @@
+schema: "library-state-machine/v1"
+record: etsi-ts-104-219
+note: >
+  Lifecycles the TS implies for its tracked objects. States named in the source are stated; others inferred and flagged.
+  The TS sets one timer ('initial triage - commonly accomplished in one week', RV.1.2 #2) and no other durations.
+machines:
+  - id: SM1
+    name: "Reported vulnerability"
+    object: Vulnerability
+    locator: "RV.1.1-RV.3.3; §5.6.0"
+    states:
+      - {id: reported, kind: stated, locator: "RV.1.1"}
+      - {id: triaged, kind: stated, locator: "RV.1.2 #1 (validate, prioritize by severity)"}
+      - {id: not_credible, kind: inferred, locator: "RV.1.1 'investigate all credible reports'", terminal: true}
+      - {id: analysed, kind: stated, locator: "RV.2.1"}
+      - {id: fixed, kind: stated, locator: "RV.2.2 #1; §5.0.4 'bugs are marked \"fixed\"'"}
+      - {id: mitigated_temporarily, kind: stated, locator: "RV.2.2 example 2 (informative)"}
+      - {id: risk_accepted, kind: stated, locator: "RV.2.2 example 1 (informative: risk acceptance, risk transference)", terminal: true}
+      - {id: disclosed, kind: inferred, locator: "§5.6.0 advisories; RV.2.2 #2 identifier", terminal: false}
+      - {id: root_caused, kind: stated, locator: "RV.3.1"}
+      - {id: closed, kind: inferred, terminal: true}
+    transitions:
+      - {from: reported, to: triaged, trigger: "owning team triage", guard: "within ~one week (RV.1.2 #2)", kind: stated}
+      - {from: reported, to: not_credible, trigger: "investigation finds report not credible", kind: inferred}
+      - {from: triaged, to: analysed, trigger: "source review, risk calculation", kind: stated}
+      - {from: analysed, to: fixed, trigger: "fix implemented and tested; criticality assigned", kind: stated}
+      - {from: analysed, to: mitigated_temporarily, trigger: "permanent fix unavailable", kind: stated}
+      - {from: mitigated_temporarily, to: fixed, trigger: "permanent solution available", kind: stated}
+      - {from: analysed, to: risk_accepted, trigger: "risk-based decision not to remediate", kind: stated}
+      - {from: fixed, to: disclosed, trigger: "identifier + advisory published", kind: inferred}
+      - {from: disclosed, to: root_caused, trigger: "root cause analysis", kind: stated}
+      - {from: root_caused, to: closed, trigger: "variant review done (RV.3.3) and process update filed (RV.3.4)", kind: inferred}
+  - id: SM2
+    name: "Security bug (internal finding) vs bug bar"
+    object: SecurityBug
+    locator: "PO.4.1; PW.1.1 DG3 5-6; PW.8.2 DG3 4-9; §3.1 shall fix / should fix"
+    states:
+      - {id: open_shall_fix, kind: stated, locator: "§3.1 'shall fix'"}
+      - {id: open_should_fix, kind: stated, locator: "§3.1 'should fix'"}
+      - {id: fixed, kind: stated, locator: "§5.0.4"}
+      - {id: deferred, kind: inferred, locator: "'should fix ... can be subsequently fixed but would not prevent release'"}
+    transitions:
+      - {from: open_should_fix, to: deferred, trigger: "release with open should-fix bug", guard: "below ship threshold (PO.4.1 #6)", kind: stated}
+      - {from: open_shall_fix, to: fixed, trigger: "code change", kind: stated}
+      - {from: open_should_fix, to: fixed, trigger: "code change", kind: stated}
+      - {from: deferred, to: fixed, trigger: "later release", kind: inferred}
+      - {from: open_should_fix, to: open_shall_fix, trigger: "error class linked to >=3 external vulnerability reports and acceptably low false-positive rate", guard: "PW.8.2 DG3 7-9", kind: stated}
+    release_guard: "no bug in open_shall_fix and no finding above the bug-bar ship threshold (PO.4.1 #5-#6; PW.8.2 DG3 #4)"
+  - id: SM3
+    name: "Third-party component"
+    object: ThirdPartyComponent
+    locator: "PW.4.1; PW.4.4; PS.3.2"
+    states:
+      - {id: candidate, kind: inferred}
+      - {id: assessed, kind: stated, locator: "PW.4.1 #1-#4 (risk score)"}
+      - {id: approved, kind: stated, locator: "PS.3.2 #1 'list of approved third-party components'"}
+      - {id: rejected, kind: inferred, locator: "PW.4.1 #7 'use the TPC only if ...'", terminal: true}
+      - {id: in_use_monitored, kind: stated, locator: "PW.4.4 #1 continuous monitoring"}
+      - {id: end_of_life, kind: stated, locator: "PW.4.1 #3; PW.4.4 example 5"}
+    transitions:
+      - {from: candidate, to: assessed, trigger: "risk assessment score", kind: stated}
+      - {from: assessed, to: approved, trigger: "reported vulns mitigated by TPC updates, or risk mitigated/accepted", kind: stated}
+      - {from: assessed, to: rejected, trigger: "unmitigated reported vulnerabilities and risk not accepted", kind: inferred}
+      - {from: approved, to: in_use_monitored, trigger: "integrated into product (SBOM + where-used)", kind: stated}
+      - {from: in_use_monitored, to: assessed, trigger: "update of the consuming software (revisit risk and maintenance status)", kind: stated}
+      - {from: in_use_monitored, to: end_of_life, trigger: "TPC no longer maintained", kind: stated}
+  - id: SM4
+    name: "Secure development process document"
+    object: SecureDevelopmentProcess
+    locator: "PO.1.2 DG1/2/3 1-2; RV.3.4; §5.0.4"
+    states:
+      - {id: documented, kind: stated}
+      - {id: under_review, kind: stated, locator: "PO.1.2 #2 annual or on significant change"}
+      - {id: updated, kind: stated, locator: "RV.3.4 examples; §5.0.4"}
+    transitions:
+      - {from: documented, to: under_review, trigger: "annual timer or significant enterprise change", kind: stated}
+      - {from: under_review, to: updated, trigger: "review finds changes", kind: stated}
+      - {from: documented, to: updated, trigger: "root-cause work item against the process", kind: stated}
+      - {from: updated, to: documented, trigger: "new version published", kind: inferred}

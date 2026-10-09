@@ -1,0 +1,113 @@
+record: slsa-1-2
+reviewed_by: ""
+note: >
+  SLSA is not a wire protocol, but it defines (a) who produces, distributes and verifies which
+  attestation, and (b) explicit verification procedures with ordered steps and failure outcomes.
+  Those are modelled here. A step's `message` names a structure in messages.yaml; where a step is an
+  internal action or an out-of-band exchange it is named `event:` instead. `on_error` gives the
+  outcome the source states, or "(not stated)" where SLSA leaves it to the ecosystem ("what happens
+  on failure" is explicitly ecosystem-defined — tracks.md Build Track).
+roles:
+  - {name: tenant, source: "terminology.md Build model", notes: "untrusted user that defines build steps and external parameters"}
+  - {name: control-plane, source: "terminology.md Build model", notes: "build platform component; orchestrates builds and (L2+) generates/signs provenance"}
+  - {name: build-environment, source: "terminology.md Build model"}
+  - {name: producer, source: "terminology.md Roles"}
+  - {name: package-ecosystem / registry, source: "terminology.md Distribution model; verifying-artifacts.md Package ecosystem"}
+  - {name: transparency-log, source: "distributing-provenance.md (e.g. Rekor)"}
+  - name: source repository releases
+    source: "distributing-provenance.md § Where attestations are published (GitHub/GitLab releases)"
+    notes: "role added by verify pass 2026-10-02: the distribute-provenance flow sends to it but it was not declared"
+  - {name: verifier, source: "terminology.md Roles; verifying-artifacts.md"}
+  - {name: consumer, source: "terminology.md Roles; verifying-artifacts.md Consumer"}
+  - {name: monitor, source: "verifying-artifacts.md Monitor"}
+  - {name: vsa-issuer, source: "verification_summary.md Model (the `verifier` entity)"}
+  - {name: organization, source: "source-requirements.md Definitions"}
+  - {name: trusted-person / trusted-robot / untrusted-person / administrator, source: "source-requirements.md Source Roles"}
+  - {name: scs (change-management-interface, control-plane, verifier, storage), source: "assessing-source-systems.md SCS components"}
+  - {name: assessor, source: "assessing-build-platforms.md / assessing-source-systems.md (self-attestation or third-party auditor)"}
+flows:
+  - name: build-and-attest
+    locator: "terminology.md § Build model steps 1-4; build-requirements.md § Build platform; build-track-basics.md"
+    applies_at: "Build L1 (provenance exists) / L2 (control plane generates + signs) / L3 (unforgeable, isolated)"
+    steps:
+      - {from: tenant, to: control-plane, event: "invoke build with external parameters (directly or via trigger)", requirements: ["slsa-1-2#R-0005", "slsa-1-2#R-0006"]}
+      - {from: control-plane, to: build-environment, event: "fetch initial dependencies, initialise an (L3: ephemeral, isolated) build environment, start execution", requirements: ["slsa-1-2#R-0036", "slsa-1-2#R-0037", "slsa-1-2#R-0038", "slsa-1-2#R-0039", "slsa-1-2#R-0040", "slsa-1-2#R-0041", "slsa-1-2#R-0042", "slsa-1-2#R-0043"]}
+      - {from: build-environment, to: control-plane, event: "build steps run (may fetch more dependencies); outputs reported", requirements: ["slsa-1-2#R-0022", "slsa-1-2#R-0183"]}
+      - {from: control-plane, to: control-plane, message: provenance-v1, event: "generate provenance (L1 may be tenant/ad hoc; L2+ control plane, all fields from the platform except subject and non-L2-required fields; L3 every field generated or verified in the trusted control plane, externalParameters fully enumerated)", requirements: ["slsa-1-2#R-0010", "slsa-1-2#R-0019", "slsa-1-2#R-0020", "slsa-1-2#R-0021", "slsa-1-2#R-0031", "slsa-1-2#R-0032", "slsa-1-2#R-0034", "slsa-1-2#R-0189"]}
+      - {from: control-plane, to: control-plane, message: dsse-envelope, event: "sign provenance (L2+) with key accessible only to the generating component; L3 key in secure management system, inaccessible to build steps", requirements: ["slsa-1-2#R-0017", "slsa-1-2#R-0018", "slsa-1-2#R-0029", "slsa-1-2#R-0030"]}
+      - {from: control-plane, to: producer, message: dsse-envelope, event: "outputs + signed provenance delivered to output storage"}
+    on_error: "(not stated) — the assessing-build-platforms prompts ask 'Are there situations in which the control plane will not generate provenance for a completed build?'"
+
+  - name: distribute-provenance
+    locator: "distributing-provenance.md; build-requirements.md § Distribute provenance"
+    steps:
+      - {from: producer, to: package-ecosystem / registry, message: dsse-envelope, event: "publish provenance alongside the artifact (sidecar, 1:1 mapping) — preferred long term", requirements: ["slsa-1-2#R-0008", "slsa-1-2#R-0009", "slsa-1-2#R-0048", "slsa-1-2#R-0049", "slsa-1-2#R-0050", "slsa-1-2#R-0053"]}
+      - {from: producer, to: source repository releases, message: dsse-envelope, event: "include provenance in GitHub/GitLab releases (bootstrap path)", requirements: ["slsa-1-2#R-0051"]}
+      - {from: producer, to: transparency-log, event: "publish hash of attestation + pointer to where it is indexed", requirements: ["slsa-1-2#R-0052"]}
+    invariants: ["attestations bound to artifacts, not releases (R-0044)", "attestations immutable; re-release instead of overwrite (R-0054, R-0055)", "one artifact -> many attestations supported (R-0047)"]
+    on_error: "(not stated)"
+
+  - name: verify-build-provenance
+    locator: "verifying-artifacts.md § How to verify (Steps 1-3)"
+    preconditions: ["verifier roots of trust configured once: (builder public key identity, builder.id) -> max SLSA Build level", "expectations formed for the package name (TOFU / defined by producer / defined in source)"]
+    steps:
+      - {from: verifier, to: verifier, message: dsse-envelope, event: "Step 1.1 verify the envelope signature using the roots of trust -> recognised public keys", requirements: ["slsa-1-2#R-0016", "slsa-1-2#R-0058", "slsa-1-2#R-0214"], on_error: "reject (threats F/G 'Tamper with provenance': Verifier rejects because the cryptographic signature is no longer valid)"}
+      - {from: verifier, to: verifier, message: in-toto-statement-v1, event: "Step 1.2 statement subject matches the artifact digest", on_error: "reject (Tamper with artifact after CI/CD / after upload)"}
+      - {from: verifier, to: verifier, message: in-toto-statement-v1, event: "Step 1.3 predicateType is https://slsa.dev/provenance/v1", on_error: "reject"}
+      - {from: verifier, to: verifier, message: Builder, event: "Step 1.4 look up SLSA Build level by (recognised key, builder.id); default Build L1", requirements: ["slsa-1-2#R-0062", "slsa-1-2#R-0213"], on_error: "level falls back to L1; reject if below required level (Build with untrusted CI/CD: Verifier rejects because builder is not as expected)"}
+      - {from: verifier, to: verifier, message: BuildDefinition, event: "Step 2 compare builder identity, canonical source repository, buildType, externalParameters against expectations; reject unrecognised externalParameters unless on the ecosystem's approved ignore list", requirements: ["slsa-1-2#R-0059", "slsa-1-2#R-0060", "slsa-1-2#R-0063", "slsa-1-2#R-0064", "slsa-1-2#R-0065", "slsa-1-2#R-0193"], on_error: "reject (threat D scenarios: unofficial fork/branch/build steps/parameters)"}
+      - {from: verifier, to: verifier, message: ResourceDescriptor, event: "Step 3 (optional) recursively check resolvedDependencies, best effort; a VSA may record prior verification; trimming heuristic for L0 transitive deps", optional: true}
+    missing_provenance: "reject (Upload package without provenance: Verifier rejects because provenance is missing)"
+    where: "package ecosystem at upload (RECOMMENDED, R-0068), consumer at download, or continuous monitor; at least one SHOULD be used (R-0067)"
+
+  - name: issue-vsa
+    locator: "verification_summary.md § Model; verifying-artifacts.md Step 3"
+    steps:
+      - {from: vsa-issuer, to: vsa-issuer, event: "evaluate artifact + bundle of attestations against a policy (e.g. run verify-build-provenance)"}
+      - {from: vsa-issuer, to: consumer, message: verification-summary-v1, event: "issue signed VSA: verifier, resourceUri, policy, inputAttestations (all used, if any), verificationResult, verifiedLevels (one level per track), dependencyLevels", requirements: ["slsa-1-2#R-0228", "slsa-1-2#R-0230", "slsa-1-2#R-0231", "slsa-1-2#R-0232", "slsa-1-2#R-0234", "slsa-1-2#R-0235", "slsa-1-2#R-0236", "slsa-1-2#R-0238", "slsa-1-2#R-0164", "slsa-1-2#R-0166"]}
+    on_error: "policy failure is expressed in-band: verificationResult FAILED and verifiedLevels FAILED"
+
+  - name: verify-vsa
+    locator: "verification_summary.md § How to verify"
+    steps:
+      - {from: consumer, to: consumer, message: dsse-envelope, event: "1 verify signature on the VSA envelope using preconfigured roots of trust", requirements: ["slsa-1-2#R-0239", "slsa-1-2#R-0241"], on_error: reject}
+      - {from: consumer, to: consumer, message: in-toto-statement-v1, event: "2 subject matches the artifact digest", on_error: reject}
+      - {from: consumer, to: consumer, message: in-toto-statement-v1, event: "3 predicateType is https://slsa.dev/verification_summary/v1", on_error: reject}
+      - {from: consumer, to: consumer, message: verification-summary-v1, event: "4 verifier matches the public key used in step 1", requirements: ["slsa-1-2#R-0229"], on_error: "reject (Issue VSA from untrusted intermediary)"}
+      - {from: consumer, to: consumer, message: verification-summary-v1, event: "5 resourceUri matches the expected value", on_error: "reject (Replace package and VSA with another)"}
+      - {from: consumer, to: consumer, message: verification-summary-v1, event: "6 verificationResult is PASSED", on_error: reject}
+      - {from: consumer, to: consumer, message: verification-summary-v1, event: "7 verifiedLevels contains the expected value", on_error: reject}
+      - {from: consumer, to: consumer, message: verification-summary-v1, event: "(optional) verify additional fields", optional: true, requirements: ["slsa-1-2#R-0240"]}
+
+  - name: source-change
+    locator: "source-requirements.md § Requirements; source-example-controls.md; assessing-source-systems.md components"
+    applies_at: "Source L1 (VCS) .. L4 (two-party review)"
+    steps:
+      - {from: trusted-person / untrusted-person, to: scs (change-management-interface), event: "propose change (Proposed Change)", requirements: ["slsa-1-2#R-0075"]}
+      - {from: scs (change-management-interface), to: trusted-person, event: "present human-readable diff / informed review", requirements: ["slsa-1-2#R-0095", "slsa-1-2#R-0116", "slsa-1-2#R-0154"]}
+      - {from: trusted-person, to: scs (control-plane), event: "approve (L4: two trusted persons; approvals context-specific; re-review if changed)", requirements: ["slsa-1-2#R-0113", "slsa-1-2#R-0114", "slsa-1-2#R-0115", "slsa-1-2#R-0117", "slsa-1-2#R-0147", "slsa-1-2#R-0148"]}
+      - {from: scs (control-plane), to: scs (storage), event: "enforce technical controls on the protected Named Reference; update it only to a descendant revision (no force-push); tags immutable", requirements: ["slsa-1-2#R-0080", "slsa-1-2#R-0082", "slsa-1-2#R-0100", "slsa-1-2#R-0110", "slsa-1-2#R-0111", "slsa-1-2#R-0150"], on_error: "update refused by the SCS (control enforcement); otherwise continuity of the lapsed control resets (R-0102)"}
+      - {from: scs (control-plane), to: scs (storage), message: source-provenance-attestation, event: "record change to Named Reference (when, who, new revision id) and emit contemporaneous source provenance (L2+) incl. enforced controls (L3+)", requirements: ["slsa-1-2#R-0099", "slsa-1-2#R-0101", "slsa-1-2#R-0106", "slsa-1-2#R-0108", "slsa-1-2#R-0112"]}
+      - {from: scs (verifier), to: consumer, message: source-vsa-profile, event: "issue Source VSA with highest SLSA_SOURCE_LEVEL_n (+ ORG_SOURCE_* properties); L2+ based on SCS-issued source provenance", requirements: ["slsa-1-2#R-0096", "slsa-1-2#R-0097", "slsa-1-2#R-0098", "slsa-1-2#R-0127", "slsa-1-2#R-0133"]}
+
+  - name: verify-source-revision
+    locator: "verifying-source.md § How to verify a source revision"
+    preconditions: ["roots of trust: (SCS public key identity, VSA verifier.id) -> max SLSA Source level", "expectations per repository branch or tag"]
+    steps:
+      - {from: consumer, to: consumer, message: source-vsa-profile, event: "Step 1 trust the SCS that issued the VSA and the VSA applies to the fetched revision (run verify-vsa with the revision id as subject; verifier.id against roots of trust)", requirements: ["slsa-1-2#R-0135"], on_error: reject}
+      - {from: consumer, to: consumer, message: source-vsa-profile, event: "Step 2 compare verifier.id, subject.digest, verificationResult, resourceUri, sourceRefs, verifiedLevels against expectations", requirements: ["slsa-1-2#R-0136", "slsa-1-2#R-0137"], on_error: reject}
+      - {from: consumer, to: consumer, message: source-provenance-attestation, event: "Step 3 (optional, Source L3+) check source provenance evidence matches VSA claims", optional: true, requirements: ["slsa-1-2#R-0138"]}
+
+  - name: safe-expunge
+    locator: "source-requirements.md #safe-expunging-process"
+    steps:
+      - {from: organization, to: scs, event: "expunge request — only to meet legal or privacy compliance requirements; tracked per documented process", requirements: ["slsa-1-2#R-0083", "slsa-1-2#R-0084"]}
+      - {from: administrator + trusted-person, to: scs, event: "trigger removal (two parties)", requirements: ["slsa-1-2#R-0085"]}
+      - {from: scs, to: organization, event: "log that content was removed (log MAY be private)", requirements: ["slsa-1-2#R-0084", "slsa-1-2#R-0086", "slsa-1-2#R-0087"]}
+
+  - name: assess-platform
+    locator: "assessing-build-platforms.md; assessing-source-systems.md; terminology.md Verification model"
+    steps:
+      - {from: assessor, to: build platform / scs, event: "evaluate components (external parameters, control plane, build environments, caches, outputs | change mgmt interface, control configuration, control plane, verifier, storage) against adversary profiles using the prompts", requirements: ["slsa-1-2#R-0071", "slsa-1-2#R-0072", "slsa-1-2#R-0073", "slsa-1-2#R-0074", "slsa-1-2#R-0141", "slsa-1-2#R-0142", "slsa-1-2#R-0143"]}
+      - {from: build platform / scs, to: consumer, event: "publish self-attestation evidence or obtain third-party certification on a recurring cadence"}
+      - {from: consumer, to: verifier, event: "add (key, builder.id / scsId) to roots of trust at the assessed maximum level"}

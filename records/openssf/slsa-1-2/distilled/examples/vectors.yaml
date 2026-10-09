@@ -1,0 +1,77 @@
+record: slsa-1-2
+reviewed_by: ""
+note: >
+  Index of every example in SLSA v1.2 plus library-derived negative vectors. "verbatim/" files are
+  byte-for-byte the fenced code blocks of the release-branch Markdown (dedented only). "normalized/"
+  files are the library's mechanical JSON rendering of a verbatim fragment (wrapped in {}, // comments
+  and trailing commas removed) so it can be schema-checked. "external/" is the complete example
+  predicate published by the community buildType that build-provenance.md links from its "Index of
+  build types" (not part of the spec text). "derived/" are library-made negative vectors, each a
+  single mutation of a positive vector, named for the requirement it breaks. Results were obtained
+  with python jsonschema 4.19 (Draft 2020-12) against ../schema/*.derived.schema.json on 2026-10-02.
+vectors:
+  - file: verbatim/provenance-predicateType.json-fragment
+    source: "build-provenance.md (top)"
+    kind: fragment
+    expected: "the predicateType string a v1 provenance carries: https://slsa.dev/provenance/v1"
+  - file: verbatim/external-parameters-and-resolved-dependencies.json-fragment
+    source: "build-provenance.md § BuildDefinition (parameters vs resolvedDependencies example)"
+    kind: fragment
+    normalized: normalized/external-parameters-and-resolved-dependencies.json
+    expected: "illustrates R-0199/R-0200: the parameter carries the ref, the digest goes in resolvedDependencies; not a complete predicate"
+  - file: verbatim/migrate-provenance-0.2-to-1.0.js
+    source: "build-provenance.md § Migrating from 0.2"
+    kind: pseudocode
+    expected: "field mapping v0.2 -> v1.0 (also carried in messages.yaml as migrated_from); contains R-0223..R-0225"
+  - file: verbatim/vsa-predicateType.json-fragment
+    source: "verification_summary.md (top)"
+    kind: fragment
+    expected: "https://slsa.dev/verification_summary/v1"
+  - file: verbatim/vsa-example.jsonc
+    source: "verification_summary.md § Example (marked 'WARNING: This is just for demonstration purposes.')"
+    kind: example
+    normalized: normalized/vsa-example.json
+    schema: ../schema/vsa-v1.derived.schema.json
+    expected: valid
+    result: valid
+  - file: verbatim/source-vsa-example.json-fragment
+    source: "source-requirements.md § Source verification summary attestation > Example"
+    kind: example
+    normalized: normalized/source-vsa-example.json
+    schema: ../schema/source-vsa-v1.derived.schema.json
+    expected: valid
+    result: valid
+    defects: "fragment is not valid JSON as published (no enclosing braces; trailing commas after verifier.id and policy.uri and after verifiedLevels)"
+  - file: verbatim/build-roots-of-trust.jsonc
+    source: "verifying-artifacts.md § Step 1 (Example root of trust configuration, 'made-up syntax')"
+    kind: configuration-sketch
+    expected: "conceptual map (publicKey | sigstore identity, builderId) -> slsaBuildLevel; drives protocol.yaml step verify-build-provenance/lookup-level"
+    defects: "does not parse even as JSONC: missing comma after the third entry's sigstore object; trailing comma after slsaBuildLevel; '...' placeholder"
+  - file: verbatim/source-roots-of-trust.jsonc
+    source: "verifying-source.md § Step 1 (Example root of trust configuration)"
+    kind: configuration-sketch
+    expected: "conceptual map (publicKey | sigstore identity, scsId) -> slsaSourceLevel; parses after removing comments, trailing commas and '...'"
+  - file: external/github-actions-workflow-v1.example.json
+    source: "https://raw.githubusercontent.com/slsa-framework/github-actions-buildtypes/main/workflow/v1/example.json (sha256 c1d9302a9112b9fa1112c779f2de7c547d0d3730057a302dc5ec876ce905860c, retrieved 2026-10-02)"
+    kind: complete-example (external)
+    schema: ../schema/provenance-v1.derived.schema.json
+    expected: valid
+    result: valid
+  - {file: derived/provenance-missing-builder-id.json, breaks: "slsa-1-2#R-0210", schema: ../schema/provenance-v1.derived.schema.json, expected: invalid, result: "invalid ('id' is a required property)"}
+  - {file: derived/provenance-missing-externalParameters.json, breaks: "slsa-1-2#R-0187", schema: ../schema/provenance-v1.derived.schema.json, expected: invalid, result: "invalid ('externalParameters' is a required property)"}
+  - {file: derived/provenance-wrong-predicateType.json, breaks: "verifying-artifacts Step 1 item 3 (predicateType check)", schema: ../schema/provenance-v1.derived.schema.json, expected: invalid, result: invalid}
+  - {file: derived/vsa-custom-value-with-SLSA-prefix.json, breaks: "slsa-1-2#R-0243", schema: ../schema/vsa-v1.derived.schema.json, expected: invalid, result: invalid}
+  - {file: derived/vsa-bad-verificationResult.json, breaks: "verification_summary.md verificationResult ('Either PASSED or FAILED')", schema: ../schema/vsa-v1.derived.schema.json, expected: invalid, result: invalid}
+  - {file: derived/vsa-policy-without-uri.json, breaks: "slsa-1-2#R-0232", schema: ../schema/vsa-v1.derived.schema.json, expected: invalid, result: invalid}
+  - {file: derived/vsa-two-levels-same-track.json, breaks: "slsa-1-2#R-0236", schema: ../schema/vsa-v1.derived.schema.json, expected: "invalid per R-0236, but NOT schema-detectable", result: "schema-valid (semantic check required: one level per track)"}
+  - {file: derived/source-vsa-without-source-level.json, breaks: "slsa-1-2#R-0125", schema: ../schema/source-vsa-v1.derived.schema.json, expected: invalid, result: invalid}
+  - {file: derived/source-vsa-unqualified-git-ref.json, breaks: "slsa-1-2#R-0123", schema: ../schema/source-vsa-v1.derived.schema.json, expected: invalid, result: invalid}
+  - {file: derived/source-vsa-org-property-without-prefix.json, breaks: "slsa-1-2#R-0131", schema: ../schema/source-vsa-v1.derived.schema.json, expected: invalid, result: invalid}
+  - file: threat-scenarios.yaml
+    source: "threats.md — all 54 threat entries"
+    kind: scenarios
+    expected: "16 entries carry a source-stated verifier outcome (expected_result: REJECT ...) — negative scenarios for protocol.yaml verify-build-provenance / verify-vsa"
+  - file: vsa-verification-cases.yaml
+    source: "verification_summary.md § How to verify > Examples 1-2"
+    kind: scenarios
+    expected: "case 1 FAIL, case 2 PASS against normalized/vsa-example.json"

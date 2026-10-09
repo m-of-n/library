@@ -1,8 +1,8 @@
-# m-of-n technical reference library
+# technical reference library
 
-The bibliographic library for the [m-of-n](../) project. Standalone by design:
+The bibliographic library with generated artifacts. Standalone by design:
 independently cloneable, forkable, and citable by projects that are not this one.
-Vendored into `mofn/` as a submodule pinned to a commit, so a report's
+Vendored as a submodule pinned to a commit, so a report's
 bibliography is reproducible as `library@<commit>`.
 
 ## Rules
@@ -56,6 +56,3 @@ N repos. `MANIFEST.yaml` lists federation peers; cross-library references resolv
 as `(library-id, record-id, content-digest)`, and a digest mismatch is
 *detectable divergence* rather than silent corruption. We are not building a sync
 engine — git is one.
-
-**Shelfmark:** no merger of record data. Convergence of *requirements* first,
-then *schema*. Tracked as `T-023` in the m-of-n backlog.

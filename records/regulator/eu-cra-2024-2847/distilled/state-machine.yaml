@@ -1,0 +1,260 @@
+schema: "library-state-machine/v1"
+record: eu-cra-2024-2847
+note: >
+  Four lifecycles the Regulation implies. The CRA never names states; state names are OURS and every transition
+  carries the locator of the text that creates it. kind: stated = trigger/guard is in the text; inferred = needed
+  to make the machine total. Triggers are messages in messages.yaml or named events.
+
+machines:
+  # ------------------------------------------------------------------------------------------------
+  - id: SM1-aev-reporting
+    title: "Reporting of one actively exploited vulnerability (manufacturer side)"
+    applies_from: "2026-09-11 (Art 71(2)); to products placed before 2027-12-11 too (Art 69(3))"
+    initial: not-aware
+    states:
+      - {id: not-aware}
+      - {id: aware, note: "clock T24/T72 running from aware_at"}
+      - {id: early-warned, note: "Art 14(2)(a) submitted"}
+      - {id: notified, note: "Art 14(2)(b) submitted (or its content already provided)"}
+      - {id: awaiting-measure, note: "no corrective or mitigating measure available yet; no upper bound in the text"}
+      - {id: measure-available, note: "T14d running"}
+      - {id: final-reported, terminal: true}
+      - {id: deadline-breached, error: true, note: "Art 64(2) fine exposure; Art 64(10)(a) exempts micro/small enterprises for the 24 h deadline only. Verify pass: (1) not terminal in law - the Art 14(2) duty to submit persists after the deadline, so a late submission is still owed (machine keeps the breach flag and continues; modelled as an annotation, not a sink); (2) Art 64 is not among the provisions Art 71(2) brings forward, so the fine regime applies from 2027-12-11, although Art 14 binds from 2026-09-11 - the text sets no CRA fine for Art 14 breaches between those dates (Member States may still act under national law). Open question in design-notes."}
+    transitions:
+      - {from: not-aware, to: aware, trigger: "event: awareness (own detection | inbound-vulnerability-report showing exploitation | third-party-report-to-manufacturer)", guard: "vulnerability is actively exploited: reliable evidence that a malicious actor has exploited it in a system without permission of the system owner (Art 3(42))", locator: "Art. 14(1); Art. 3(42); Art. 15(4)", kind: stated}
+      - {from: aware, to: early-warned, trigger: "send aev-early-warning", guard: "now - aware_at <= 24h", locator: "Art. 14(2)(a)", kind: stated}
+      - {from: aware, to: deadline-breached, trigger: "timer T24 expires", locator: "Art. 14(2)(a)", kind: inferred}
+      - {from: aware, to: notified, trigger: "send aev-early-warning carrying the Art 14(2)(b) content", guard: "within 24h", locator: "Art. 14(2)(b) 'unless the relevant information has already been provided'", kind: inferred}
+      - {from: early-warned, to: notified, trigger: "send aev-vulnerability-notification", guard: "now - aware_at <= 72h", locator: "Art. 14(2)(b)", kind: stated}
+      - {from: early-warned, to: deadline-breached, trigger: "timer T72 expires", locator: "Art. 14(2)(b)", kind: inferred}
+      - {from: notified, to: awaiting-measure, trigger: "no corrective or mitigating measure yet", locator: "Art. 14(2)(c)", kind: inferred}
+      - {from: notified, to: measure-available, trigger: "event: corrective or mitigating measure available (security-update or other measure)", locator: "Art. 14(2)(c); Annex I Part II(2)", kind: stated}
+      - {from: awaiting-measure, to: measure-available, trigger: "event: corrective or mitigating measure available", locator: "Art. 14(2)(c)", kind: stated}
+      - {from: awaiting-measure, to: awaiting-measure, trigger: "intermediate-report-request -> send intermediate-report", locator: "Art. 14(6)", kind: stated}
+      - {from: notified, to: notified, trigger: "intermediate-report-request -> send intermediate-report", locator: "Art. 14(6)", kind: stated}
+      - {from: measure-available, to: final-reported, trigger: "send aev-final-report (or content already provided)", guard: "now - measure_available_at <= 14d", locator: "Art. 14(2)(c)", kind: stated}
+      - {from: measure-available, to: deadline-breached, trigger: "timer T14d expires", locator: "Art. 14(2)(c)", kind: inferred}
+    parallel_obligations:
+      - {obligation: "inform impacted users (user-information)", from_state: aware, locator: "Art. 14(8)", note: "no deadline; CSIRT may inform users if not done in a timely manner"}
+      - {obligation: "Annex I Part II handling of the same vulnerability (SM3)", locator: "Art. 13(8)"}
+
+  # ------------------------------------------------------------------------------------------------
+  - id: SM2-severe-incident-reporting
+    title: "Reporting of one severe incident having an impact on the security of the product"
+    applies_from: "2026-09-11"
+    initial: no-incident
+    states:
+      - {id: no-incident}
+      - {id: incident-aware, note: "incident (Art 3(44)) known; severity not yet decided"}
+      - {id: not-severe, terminal: true, note: "voluntary reporting still possible (Art 15(2))"}
+      - {id: severe-aware}
+      - {id: early-warned}
+      - {id: notified, note: "T1m starts at submission"}
+      - {id: final-reported, terminal: true}
+      - {id: deadline-breached, error: true}
+    transitions:
+      - {from: no-incident, to: incident-aware, trigger: "event: awareness", locator: "Art. 14(3)", kind: stated}
+      - {from: incident-aware, to: severe-aware, trigger: "classification", guard: "Art 14(5)(a): negatively affects or is capable of negatively affecting the ability to protect availability, authenticity, integrity or confidentiality of sensitive or important data or functions; OR Art 14(5)(b): has led or is capable of leading to introduction or execution of malicious code in the product or in a user's network and information systems", locator: "Art. 14(5)", kind: stated}
+      - {from: incident-aware, to: not-severe, trigger: "classification", guard: "neither 14(5)(a) nor (b)", locator: "Art. 14(5)", kind: inferred}
+      - {from: severe-aware, to: early-warned, trigger: "send incident-early-warning", guard: "within 24h of becoming aware", locator: "Art. 14(4)(a)", kind: stated}
+      - {from: severe-aware, to: deadline-breached, trigger: "timer T24 expires", locator: "Art. 14(4)(a)", kind: inferred}
+      - {from: early-warned, to: notified, trigger: "send incident-notification", guard: "within 72h of becoming aware", locator: "Art. 14(4)(b)", kind: stated}
+      - {from: severe-aware, to: notified, trigger: "send incident-early-warning carrying the Art 14(4)(b) content", guard: "within 24h", locator: "Art. 14(4)(b) 'unless the relevant information has already been provided'", kind: inferred, note: "added in the verify pass for symmetry with SM1 (aware -> notified)"}
+      - {from: early-warned, to: deadline-breached, trigger: "timer T72 expires", locator: "Art. 14(4)(b)", kind: inferred}
+      - {from: notified, to: notified, trigger: "intermediate-report-request -> send intermediate-report", locator: "Art. 14(6)", kind: stated}
+      - {from: notified, to: final-reported, trigger: "send incident-final-report", guard: "within one month after the incident-notification submission", locator: "Art. 14(4)(c)", kind: stated}
+      - {from: notified, to: deadline-breached, trigger: "timer T1m expires", locator: "Art. 14(4)(c)", kind: inferred}
+    open_issue: "Awareness-to-severity: the 24 h clock runs from awareness of the incident, but the duty attaches only to SEVERE incidents; the text does not say whether the clock starts at awareness of the incident or of its severity. Recorded in design-notes."
+
+  # ------------------------------------------------------------------------------------------------
+  - id: SM3-vulnerability-handling
+    title: "Manufacturer handling of one vulnerability (Annex I Part II; Art 13(6)-(8))"
+    applies_from: "2027-12-11"
+    initial: reported
+    states:
+      - {id: reported, note: "via contact address/SPOC, internal source, or component due diligence"}
+      - {id: documented, note: "identified and documented with affected components (SBOM)"}
+      - {id: upstream-reported, note: "component vulnerability reported to maintainer"}
+      - {id: remediating}
+      - {id: update-available, note: "security update made available; Art 13(9) availability clock starts"}
+      - {id: disclosure-deferred, note: "duly justified delay until users can patch"}
+      - {id: disclosed, terminal: true}
+      - {id: escalated-aev, note: "actively exploited → SM1 runs in parallel"}
+    transitions:
+      - {from: reported, to: documented, trigger: "identify and document", locator: "Annex I Part II(1); Art. 13(7)", kind: stated}
+      - {from: documented, to: upstream-reported, trigger: "send upstream-component-report", guard: "vulnerability is in an integrated component", locator: "Art. 13(6)", kind: stated}
+      - {from: documented, to: remediating, trigger: "address and remediate without delay", locator: "Annex I Part II(2)", kind: stated}
+      - {from: upstream-reported, to: remediating, trigger: "address and remediate", locator: "Art. 13(6)", kind: stated}
+      - {from: remediating, to: update-available, trigger: "send security-update (separate from functionality updates where technically feasible; free; with advisory)", locator: "Annex I Part II(2),(7),(8)", kind: stated}
+      - {from: update-available, to: disclosed, trigger: "send security-advisory", locator: "Annex I Part II(4)", kind: stated}
+      - {from: update-available, to: disclosure-deferred, trigger: "manufacturer decides security risks of publication outweigh benefits", guard: "duly justified", locator: "Annex I Part II(4) second limb", kind: stated}
+      - {from: disclosure-deferred, to: disclosed, trigger: "users have been given the possibility to apply the patch -> send security-advisory", locator: "Annex I Part II(4)", kind: stated}
+      - {from: "reported|documented|upstream-reported|remediating|update-available", to: escalated-aev, trigger: "event: evidence of active exploitation", locator: "Art. 14(1); Art. 3(42)", kind: inferred}
+    note: "No remediation deadline other than 'without delay' (Part II(2)); none of these states has a numeric timer except via SM1. Art 13(10) permits remediating only the latest substantially modified software version, if users can upgrade free of charge."
+
+  # ------------------------------------------------------------------------------------------------
+  - id: SM4-product-support-lifecycle
+    title: "Product with digital elements: from development to end of retention"
+    initial: in-development
+    states:
+      - {id: in-development, note: "risk assessment (Art 13(2)-(3)) drives planning, design, development, production"}
+      - {id: conformity-assessed, note: "technical documentation drawn up, Art 32 procedure done"}
+      - {id: placed-on-market, note: "DoC drawn up, CE marking affixed; support period starts"}
+      - {id: supported, note: "Annex I Part II handling; Art 14 reporting; documentation continuously updated"}
+      - {id: substantially-modified, note: "Art 3(30): treated as a new placing on the market for legacy products (Art 69(2))"}
+      - {id: non-conforming, error: true}
+      - {id: withdrawn-or-recalled, terminal: true}
+      - {id: end-of-support, note: "support period ended; security updates remain available max(10y, remainder) after issue"}
+      - {id: retention-ended, terminal: true, note: "technical documentation and DoC retained >= 10 years after placing on the market or support period, whichever longer"}
+    transitions:
+      - {from: in-development, to: conformity-assessed, trigger: "draw up technical documentation; carry out conformity assessment", locator: "Art. 13(12) first and second subparagraphs; Art. 31(2)", kind: stated}
+      - {from: conformity-assessed, to: placed-on-market, trigger: "draw up EU declaration of conformity; affix CE marking", guard: "conformity with Annex I Part I and Part II demonstrated", locator: "Art. 13(12) third subparagraph; Art. 13(1)", kind: stated}
+      - {from: placed-on-market, to: supported, trigger: "immediately", guard: "support period >= 5 years or expected use time if shorter; end date (month, year) published at purchase", locator: "Art. 13(8), 13(19)", kind: stated}
+      - {from: supported, to: non-conforming, trigger: "manufacturer knows or has reason to believe non-conformity with Annex I", locator: "Art. 13(21)", kind: stated}
+      - {from: non-conforming, to: supported, trigger: "corrective measures bring product/processes into conformity", locator: "Art. 13(21)", kind: stated}
+      - {from: non-conforming, to: withdrawn-or-recalled, trigger: "withdraw or recall", locator: "Art. 13(21)", kind: stated}
+      - {from: supported, to: substantially-modified, trigger: "change affecting compliance with Annex I Part I or the intended purpose", locator: "Art. 3(30); Art. 69(2)", kind: stated}
+      - {from: substantially-modified, to: in-development, trigger: "re-assess", locator: "Art. 3(30)", kind: inferred}
+      - {from: supported, to: end-of-support, trigger: "support period end date reached -> end-of-support-notification where technically feasible", locator: "Art. 13(19) second subparagraph", kind: stated}
+      - {from: end-of-support, to: retention-ended, trigger: "10 years after placing on the market or end of support period, whichever is longer", locator: "Art. 13(13), 13(18)", kind: stated}
+      - {from: "supported|end-of-support", to: withdrawn-or-recalled, trigger: "manufacturer ceases operations -> cessation-notice beforehand", locator: "Art. 13(23)", kind: inferred}
+    invariants:
+      - {text: "while in supported: vulnerabilities handled per Annex I Part II (SM3), Art 14 reporting (SM1, SM2)", locator: "Art. 13(8)"}
+      - {text: "each security update remains available >= max(10y, remainder of support period) after issue", locator: "Art. 13(9)"}
+      - {text: "Art 14 reporting applies from 2026-09-11 even to products placed before 2027-12-11", locator: "Art. 69(3)"}
+
+# ---- added in the cross-check pass (2026-10-02) ----
+# Catalogue of every trigger that is not a `send <message>` of a message defined in messages.yaml /
+# protocol.yaml: named events, timers and internal decisions. Text = the trigger as written above;
+# locators = union of the transitions that use it. Empty triggers are listed under empty_triggers.
+events:
+  - id: 10-years-after-placing-on-the-market-or-end-of-support-perio
+    trigger: "10 years after placing on the market or end of support period, whichever is longer"
+    machines: ["SM4-product-support-lifecycle"]
+    locators: ["Art. 13(13), 13(18)"]
+    kind: stated
+  - id: address-and-remediate
+    trigger: "address and remediate"
+    machines: ["SM3-vulnerability-handling"]
+    locators: ["Art. 13(6)"]
+    kind: stated
+  - id: address-and-remediate-without-delay
+    trigger: "address and remediate without delay"
+    machines: ["SM3-vulnerability-handling"]
+    locators: ["Annex I Part II(2)"]
+    kind: stated
+  - id: change-affecting-compliance-with-annex-i-part-i-or-the-inten
+    trigger: "change affecting compliance with Annex I Part I or the intended purpose"
+    machines: ["SM4-product-support-lifecycle"]
+    locators: ["Art. 3(30); Art. 69(2)"]
+    kind: stated
+  - id: classification
+    trigger: "classification"
+    machines: ["SM2-severe-incident-reporting"]
+    locators: ["Art. 14(5)"]
+    kind: stated
+  - id: corrective-measures-bring-product-processes-into-conformity
+    trigger: "corrective measures bring product/processes into conformity"
+    machines: ["SM4-product-support-lifecycle"]
+    locators: ["Art. 13(21)"]
+    kind: stated
+  - id: draw-up-eu-declaration-of-conformity-affix-ce-marking
+    trigger: "draw up EU declaration of conformity; affix CE marking"
+    machines: ["SM4-product-support-lifecycle"]
+    locators: ["Art. 13(12) third subparagraph; Art. 13(1)"]
+    kind: stated
+  - id: draw-up-technical-documentation-carry-out-conformity-assessm
+    trigger: "draw up technical documentation; carry out conformity assessment"
+    machines: ["SM4-product-support-lifecycle"]
+    locators: ["Art. 13(12) first and second subparagraphs; Art. 31(2)"]
+    kind: stated
+  - id: event-awareness
+    trigger: "event: awareness"
+    machines: ["SM2-severe-incident-reporting"]
+    locators: ["Art. 14(3)"]
+    kind: stated
+  - id: event-awareness-own-detection-inbound-vulnerability-report-s
+    trigger: "event: awareness (own detection | inbound-vulnerability-report showing exploitation | third-party-report-to-manufacturer)"
+    machines: ["SM1-aev-reporting"]
+    locators: ["Art. 14(1); Art. 3(42); Art. 15(4)"]
+    kind: stated
+  - id: event-corrective-or-mitigating-measure-available
+    trigger: "event: corrective or mitigating measure available"
+    machines: ["SM1-aev-reporting"]
+    locators: ["Art. 14(2)(c)"]
+    kind: stated
+  - id: event-corrective-or-mitigating-measure-available-security-up
+    trigger: "event: corrective or mitigating measure available (security-update or other measure)"
+    machines: ["SM1-aev-reporting"]
+    locators: ["Art. 14(2)(c); Annex I Part II(2)"]
+    kind: stated
+  - id: event-evidence-of-active-exploitation
+    trigger: "event: evidence of active exploitation"
+    machines: ["SM3-vulnerability-handling"]
+    locators: ["Art. 14(1); Art. 3(42)"]
+    kind: inferred
+  - id: identify-and-document
+    trigger: "identify and document"
+    machines: ["SM3-vulnerability-handling"]
+    locators: ["Annex I Part II(1); Art. 13(7)"]
+    kind: stated
+  - id: immediately
+    trigger: "immediately"
+    machines: ["SM4-product-support-lifecycle"]
+    locators: ["Art. 13(8), 13(19)"]
+    kind: stated
+  - id: manufacturer-ceases-operations-cessation-notice-beforehand
+    trigger: "manufacturer ceases operations -> cessation-notice beforehand"
+    machines: ["SM4-product-support-lifecycle"]
+    locators: ["Art. 13(23)"]
+    kind: inferred
+  - id: manufacturer-decides-security-risks-of-publication-outweigh-
+    trigger: "manufacturer decides security risks of publication outweigh benefits"
+    machines: ["SM3-vulnerability-handling"]
+    locators: ["Annex I Part II(4) second limb"]
+    kind: stated
+  - id: manufacturer-knows-or-has-reason-to-believe-non-conformity-w
+    trigger: "manufacturer knows or has reason to believe non-conformity with Annex I"
+    machines: ["SM4-product-support-lifecycle"]
+    locators: ["Art. 13(21)"]
+    kind: stated
+  - id: no-corrective-or-mitigating-measure-yet
+    trigger: "no corrective or mitigating measure yet"
+    machines: ["SM1-aev-reporting"]
+    locators: ["Art. 14(2)(c)"]
+    kind: inferred
+  - id: re-assess
+    trigger: "re-assess"
+    machines: ["SM4-product-support-lifecycle"]
+    locators: ["Art. 3(30)"]
+    kind: inferred
+  - id: support-period-end-date-reached-end-of-support-notification-
+    trigger: "support period end date reached -> end-of-support-notification where technically feasible"
+    machines: ["SM4-product-support-lifecycle"]
+    locators: ["Art. 13(19) second subparagraph"]
+    kind: stated
+  - id: timer-t14d-expires
+    trigger: "timer T14d expires"
+    machines: ["SM1-aev-reporting"]
+    locators: ["Art. 14(2)(c)"]
+    kind: inferred
+  - id: timer-t1m-expires
+    trigger: "timer T1m expires"
+    machines: ["SM2-severe-incident-reporting"]
+    locators: ["Art. 14(4)(c)"]
+    kind: inferred
+  - id: timer-t24-expires
+    trigger: "timer T24 expires"
+    machines: ["SM1-aev-reporting", "SM2-severe-incident-reporting"]
+    locators: ["Art. 14(2)(a)", "Art. 14(4)(a)"]
+    kind: inferred
+  - id: timer-t72-expires
+    trigger: "timer T72 expires"
+    machines: ["SM1-aev-reporting", "SM2-severe-incident-reporting"]
+    locators: ["Art. 14(2)(b)", "Art. 14(4)(b)"]
+    kind: inferred
+  - id: withdraw-or-recall
+    trigger: "withdraw or recall"
+    machines: ["SM4-product-support-lifecycle"]
+    locators: ["Art. 13(21)"]
+    kind: stated

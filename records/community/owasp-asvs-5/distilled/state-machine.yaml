@@ -1,0 +1,50 @@
+schema: "library-state-machine/v1"
+record: owasp-asvs-5
+reviewed_by: ""
+note: >
+  ASVS defines no protocol lifecycle, but two state-bearing notions are stated in the source: (1) the level an
+  application complies with, which is cumulative (L2 = all L1 + L2 requirements), and (2) how a compliance
+  claim survives a new ASVS release (major/minor/patch). Both are modelled here. States and guards are
+  taken from the cited text; state names are ours. Requirement ids resolve in requirements.yaml.
+machines:
+  - name: application-level-attainment
+    entity: "Application (as verified against ASVS 5.0.0, possibly a tailored fork)"
+    locator: "What is the ASVS? › Application Security Verification Levels (Level 1/2/3); Assessment and Certification › How to Verify ASVS Compliance"
+    states:
+      - {name: unverified, initial: true, definition: "no ASVS verification performed against this version"}
+      - {name: below-L1, definition: "verified; at least one in-scope L1 requirement failed", kind: inferred}
+      - {name: L1, definition: "all in-scope requirements with L = 1 pass (non-applicable ones noted in the report — F-21)"}
+      - {name: L2, definition: "all in-scope requirements with L <= 2 pass — 'all of the L1 and L2 requirements' (F-08); 253 requirements before scoping"}
+      - {name: L3, definition: "all in-scope requirements with L <= 3 pass; 345 requirements before scoping"}
+      - {name: stale, definition: "compliance was claimed against an earlier major or minor ASVS release; re-evaluation required (F-10, F-11)"}
+    transitions:
+      - {from: unverified, to: below-L1, trigger: "verification report issued", guard: "any in-scope L1 requirement fails"}
+      - {from: unverified, to: L1, trigger: "verification report issued", guard: "every in-scope L1 requirement passes or is noted not-applicable"}
+      - {from: L1, to: L2, trigger: "verification report issued", guard: "every in-scope L2 requirement also passes or is noted not-applicable"}
+      - {from: L2, to: L3, trigger: "verification report issued", guard: "every in-scope L3 requirement also passes or is noted not-applicable"}
+      - {from: "L1|L2|L3", to: below-L1, trigger: "re-verification", guard: "an in-scope L1 requirement now fails", kind: inferred}
+      - {from: "L2|L3", to: L1, trigger: "re-verification", guard: "an in-scope L2 requirement now fails (all L1 pass)", kind: inferred}
+      - {from: L3, to: L2, trigger: "re-verification", guard: "an in-scope L3 requirement now fails (all L1+L2 pass)", kind: inferred}
+      - {from: "L1|L2|L3", to: stale, trigger: "new ASVS major release (e.g. 4.0.3 -> 5.0.0) or minor release (e.g. 5.0.0 -> 5.1.0)", guard: "always", constrained_by: ["owasp-asvs-5#F-10", "owasp-asvs-5#F-11"]}
+      - {from: "L1|L2|L3", to: "same level", trigger: "new ASVS patch release (e.g. 5.0.0 -> 5.0.1)", guard: "always — 'an application that complied with the previous release will comply with the patch release as well'", constrained_by: ["owasp-asvs-5#F-12"]}
+      - {from: stale, to: unverified, trigger: "adopt new release", guard: "always"}
+    guards_note: >
+      'In-scope' is set by the verifier's declared scope (F-22, F-23); the level allocation 'may not be a 100% fit
+      for every situation' and organizations may pull higher-level requirements earlier (Level evaluation) — that
+      does not change the attained level. Level membership is monotone: levels(L) = {L..L3} for a requirement
+      with lowest level L.
+    error_states: []
+  - name: requirement-verification-outcome
+    entity: "one (application, requirement) pair in a verification"
+    locator: "What is the ASVS? › Scope of the ASVS › Verification (F-03); Assessment and Certification › Verification reporting (F-20, F-21)"
+    states:
+      - {name: not-checked, initial: true}
+      - {name: pass, definition: "verification decision 'pass' (F-03)"}
+      - {name: fail, definition: "verification decision 'fail' (F-03); listed among 'requirements where execptions were noted' (F-20)"}
+      - {name: not-applicable, definition: "requirement non-applicable to this application; 'this must be noted in the report' (F-21)"}
+    transitions:
+      - {from: not-checked, to: pass, trigger: "verification performed", guard: "requirement satisfied"}
+      - {from: not-checked, to: fail, trigger: "verification performed", guard: "requirement not satisfied"}
+      - {from: not-checked, to: not-applicable, trigger: "scoping", guard: "functionality absent (e.g. session management in stateless APIs)"}
+      - {from: fail, to: pass, trigger: "re-verification after remediation", guard: "requirement satisfied", kind: inferred}
+    notes: "For a documentation requirement and its related implementation requirement the two checks are separate activities (F-06); a documentation requirement can pass while the implementation requirement fails."

@@ -1,0 +1,103 @@
+schema: "library-messages/v1"
+record: owasp-asvs-5
+reviewed_by: ""
+note: >
+  ASVS defines no wire protocol. Its "messages" are the machine-readable structures the project publishes for
+  every release (What is the ASVS? › How to Reference ASVS Requirements: "ASVS requirement lists are made
+  available in CSV, JSON, and other formats which may be useful for reference or programmatic use."), plus the
+  requirement identifier and the verification report the standard describes. Field names below are exactly as
+  in the 5.0.0 release assets. Derived JSON Schemas in schema/.
+messages:
+  - name: requirement-identifier
+    locator: "What is the ASVS? › How to Reference ASVS Requirements"
+    encoding: "text"
+    layout: "v<version>-<chapter>.<section>.<requirement>; each element a number; the leading v always lowercase; without v<version> an id refers to the latest ASVS"
+    fields:
+      - {name: version, type: "semver string", required: true, constrained_by: ["owasp-asvs-5#F-14", "owasp-asvs-5#F-15"], layout: "ASVS version tag, e.g. 5.0.0"}
+      - {name: chapter, type: uint, required: true, layout: "1..17 in 5.0.0"}
+      - {name: section, type: uint, required: true}
+      - {name: requirement, type: uint, required: true}
+    notes: "Bare form <chapter>.<section>.<requirement> is permitted but refers to the latest ASVS (F-16). Export files carry the id with an upper-case V prefix and no version (V1.1.1) — a third form."
+  - name: asvs-export-json
+    locator: "release asset OWASP_Application_Security_Verification_Standard_5.0.0_en.json (also .xml with identical element names)"
+    encoding: "JSON (UTF-8)"
+    layout: "root object → Requirements[] (Chapter) → Items[] (Section) → Items[] (Requirement)"
+    fields:
+      - {name: Name, type: string, required: true}
+      - {name: ShortName, type: string, required: true}
+      - {name: Version, type: string, required: true, layout: "5.0.0"}
+      - {name: Description, type: string, required: true}
+      - {name: Requirements, type: "array<Chapter>", required: true}
+    structures:
+      - name: Chapter
+        fields:
+          - {name: Shortcode, type: string, required: true, layout: "V<n>"}
+          - {name: Ordinal, type: int, required: true}
+          - {name: ShortName, type: string, required: true}
+          - {name: Name, type: string, required: true}
+          - {name: Items, type: "array<Section>", required: true}
+      - name: Section
+        fields:
+          - {name: Shortcode, type: string, required: true, layout: "V<n>.<m>"}
+          - {name: Ordinal, type: int, required: true}
+          - {name: Name, type: string, required: true}
+          - {name: Items, type: "array<Requirement>", required: true}
+      - name: Requirement
+        fields:
+          - {name: Shortcode, type: string, required: true, layout: "V<n>.<m>.<k>"}
+          - {name: Ordinal, type: int, required: true}
+          - {name: Description, type: string, required: true, constrained_by: ["owasp-asvs-5#F-03"], layout: "verbatim requirement text, begins 'Verify'"}
+          - {name: L, type: string, required: true, constrained_by: ["owasp-asvs-5#F-07", "owasp-asvs-5#F-08"], layout: "\"1\" | \"2\" | \"3\" — lowest applicable level"}
+  - name: asvs-export-flat
+    locator: "release assets ..._5.0.0_en.flat.json and ..._5.0.0_en.csv"
+    encoding: "JSON object {requirements: [...]} / CSV with header row"
+    fields:
+      - {name: chapter_id, type: string, required: true}
+      - {name: chapter_name, type: string, required: true}
+      - {name: section_id, type: string, required: true}
+      - {name: section_name, type: string, required: true}
+      - {name: req_id, type: string, required: true}
+      - {name: req_description, type: string, required: true}
+      - {name: L, type: string, required: true}
+    notes: "CSV has no BOM; header row 'chapter_id,chapter_name,section_id,section_name,req_id,req_description,L', then 345 data rows, then one empty line."
+  - name: asvs-export-legacy
+    locator: "release assets ..._5.0.0_en.legacy.{json,csv,xml}; Changes Compared to v4.x › Rethinking Level Definitions"
+    encoding: "JSON / CSV / XML"
+    fields:
+      - {name: Shortcode, type: string, required: true}
+      - {name: Ordinal, type: int, required: true}
+      - {name: Description, type: string, required: true}
+      - {name: L1, type: "{Required: bool, Requirement: '' | '✓'}", required: true}
+      - {name: L2, type: "{Required: bool, Requirement: '' | '✓'}", required: true}
+      - {name: L3, type: "{Required: bool, Requirement: '' | '✓'}", required: true}
+      - {name: CWE, type: "array (always empty in 5.0.0)", required: true}
+      - {name: NIST, type: "array (always empty in 5.0.0)", required: true}
+    notes: "Generated 'for backwards compatibility' with 4.x tooling. The empty CWE/NIST arrays are the machine-visible trace of the dropped mappings."
+  - name: asvs-export-cyclonedx
+    locator: "release asset ..._5.0.0_en.cdx.json (CycloneDX specVersion 1.6, declarations.standards[0], bom-ref ASVS-5.0.0)"
+    encoding: "CycloneDX 1.6 JSON"
+    fields:
+      - {name: "declarations.standards[0].bom-ref", type: string, required: true, layout: "ASVS-5.0.0"}
+      - {name: "declarations.standards[0].name / version / description / owner", type: string, required: true}
+      - {name: "declarations.standards[0].requirements[]", type: "array<{bom-ref, identifier, title|text, parent?}>", required: true, layout: "442 flat entries: 17 chapters (title, no parent), 80 sections (title, parent=chapter), 345 requirements (text, parent=section)"}
+      - {name: "declarations.standards[0].levels[]", type: "array<{bom-ref, identifier, description, requirements[]}>", required: true, layout: "level-1, level-2, level-3"}
+      - {name: "declarations.standards[0].externalReferences[]", type: "array", required: false, layout: "website, vcs, issue-tracker, social"}
+    notes: >
+      SOURCE DEFECT: in the 5.0.0 asset all three levels[].requirements arrays are EMPTY, so the CycloneDX export
+      carries no level membership at all; a consumer of only this file cannot tell L1 from L3. Level must be taken
+      from the JSON/CSV `L` field. Texts of the 345 requirements are identical to the JSON export (checked).
+  - name: verification-report
+    locator: "Assessment and Certification › How to Verify ASVS Compliance › Verification reporting / Scope of Verification"
+    encoding: "unspecified (document)"
+    fields:
+      - {name: scope, type: text, required: true, constrained_by: ["owasp-asvs-5#F-20", "owasp-asvs-5#F-22"]}
+      - {name: target_level, type: "L1|L2|L3", required: true, constrained_by: ["owasp-asvs-5#F-22"]}
+      - {name: requirements_included, type: "list<requirement-identifier>", required: true, constrained_by: ["owasp-asvs-5#F-22", "owasp-asvs-5#F-23"]}
+      - {name: summary_of_requirements_checked, type: "list<{requirement, result: pass|fail|not-applicable}>", required: true, constrained_by: ["owasp-asvs-5#F-03", "owasp-asvs-5#F-20"]}
+      - {name: exceptions_noted, type: "list<requirement-identifier>", required: true, constrained_by: ["owasp-asvs-5#F-20"]}
+      - {name: not_applicable, type: "list<requirement-identifier>", required: true, constrained_by: ["owasp-asvs-5#F-21"]}
+      - {name: exclusion_rationale_opinion, type: text, required: false, constrained_by: ["owasp-asvs-5#F-24"]}
+      - {name: remediation_guidance, type: text, required: true, constrained_by: ["owasp-asvs-5#F-20"]}
+      - {name: testing_methods, type: text, required: false, constrained_by: ["owasp-asvs-5#F-25"]}
+      - {name: evidence, type: "work papers, screenshots, scripts, testing logs", required: false, layout: "Verification Mechanisms: 'It is standard practice to provide robust evidence of findings with detailed documentation, which may include work papers, screenshots, scripts, and testing logs.'"}
+    notes: "kind: inferred structure — the standard lists the report's contents in prose; it defines no format. Field names are ours."

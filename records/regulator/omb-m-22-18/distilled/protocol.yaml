@@ -1,0 +1,44 @@
+schema: "library-protocol/v1"
+record: omb-m-22-18
+reviewed_by: ""
+note: "Exchanges the memo names between an agency, a software producer, OMB and CISA. Message names refer to messages.yaml. Only what the memo states; inferred steps flagged."
+roles:
+  - {name: agency, description: "Federal agency (CIO with requiring offices and CAO)", locator: "§II"}
+  - {name: producer, description: "software producer of third-party software", locator: "§II"}
+  - {name: assessor, description: "FedRAMP 3PAO or agency-approved assessor", locator: "§II.1.d"}
+  - {name: omb, description: "OMB Director / OFCIO", locator: "§III.A.6-7, §III.B"}
+  - {name: cisa, description: "CISA (common form, repository)", locator: "§III.C"}
+  - {name: other-agency, description: "another Federal agency holding artifacts (reciprocity)", locator: "§II.2.c"}
+flows:
+  - name: solicitation-and-attestation
+    steps:
+      - {from: agency, to: producer, message: requirements-notice, locator: "§II.2.f, §III.A.2", note: "as early as feasible, incl. pre-solicitation"}
+      - {from: agency, to: producer, message: secure-development-confirmation-request, locator: "§II (closing)"}
+      - {from: producer, to: agency, message: self-attestation, locator: "§II.1, §II.1.c", alt: "public link to a posted attestation (§II.1.b)"}
+      - {from: agency, to: agency, message: attestation-retention, locator: "§II.1.b, §III.A.2", note: "central agency system"}
+  - name: third-party-assessment
+    steps:
+      - {from: agency, to: producer, message: third-party-assessment-requirement, locator: "§II.1.c.iv", optional: true}
+      - {from: assessor, to: agency, message: third-party-assessment, locator: "§II.1.d"}
+  - name: partial-attestation-poam
+    steps:
+      - {from: producer, to: agency, message: partial-attestation-package, locator: "§II.1.a.ii"}
+      - {from: agency, to: agency, message: poam-determination, locator: "§II.1.a.ii", note: "satisfactory -> may use; documentation never posted publicly"}
+    error_paths:
+      - {condition: "documentation not satisfactory", outcome: "software may not be used (inferred from §II 'must only use')", kind: inferred}
+  - name: artifacts
+    steps:
+      - {from: agency, to: producer, message: artifact-request, locator: "§II.2, §II.2.a, §II.2.d, §II.2.e", optional: true}
+      - {from: producer, to: agency, message: sbom, locator: "§II.2.a-b"}
+      - {from: producer, to: agency, message: other-artifact, locator: "§II.2.d"}
+      - {from: producer, to: agency, message: vdp-evidence, locator: "§II.2.e"}
+      - {from: agency, to: other-agency, message: reciprocity-lookup, locator: "§II.2.c", kind: inferred, note: "memo says only 'consider reciprocity'"}
+  - name: extension-and-waiver
+    steps:
+      - {from: agency, to: omb, message: extension-request, locator: "§III.A.6", timing: ">= 30 days before the relevant deadline"}
+      - {from: agency, to: omb, message: waiver-request, locator: "§III.A.7", timing: ">= 30 days before the relevant deadline"}
+      - {from: omb, to: agency, message: waiver-decision, locator: "§III.A.7", note: "case-by-case, with APNSA"}
+  - name: repository
+    steps:
+      - {from: omb, to: cisa, message: repository-requirements, locator: "§III.B.2"}
+      - {from: cisa, to: agency, message: common-form, locator: "§III.C.1"}

@@ -1,0 +1,74 @@
+schema: "library-state-machine/v1"
+record: owasp-samm-2
+title: "OWASP SAMM v2.2.0 — maturity levels and the assessment scoring function"
+extracted: "2026-10-02"
+reviewed_by: ""
+sources:
+  - locator: "model/maturity_levels/1.yml, 2.yml, 3.yml"
+    what: "the three maturity levels (verbatim descriptions below)"
+  - locator: "model/practice_levels/*.yml"
+    what: "45 practice-level objectives: one per (practice, maturity level)"
+  - locator: "model/answer_sets/*.yml"
+    what: "24 four-option answer sets, values 0 / 0.25 / 0.5 / 1, weight 1"
+  - locator: "release v2.2.0 asset SAMM_spreadsheet.xlsx (sha256 87d95c855138a87ace1d289bcc1a8b9e6b1fe2243f57c0a3742b84905ed4e409), sheets Interview (columns E-J) and Scorecard (columns C-J)"
+    what: "the scoring formulas. The scoring rule is NOT in the YAML model; it is only in the official toolbox spreadsheet shipped with the release."
+finding: >
+  SAMM's maturity levels are NOT a gated state machine. The official toolbox scores a practice as a
+  SUM of per-level averages, so credit at level 2 or 3 counts even when level 1 is unanswered (see
+  examples/non-cumulative.yaml: a practice answered 0 at level 1 and 1 at level 2 in both streams scores 1.0,
+  the same as a practice fully at level 1). The "level" a team is at is therefore a continuous score in
+  [0, 3], not a discrete state with entry guards. We record the discrete levels as states for the
+  roadmap use (target level per phase), and the scoring function separately, so a consumer does not
+  mistake one for the other.
+
+# --- Part 1: the discrete maturity levels (stated) ---
+states:
+  - id: L0
+    kind: inferred
+    description: "No activity of the stream credited. Level 0 is not a model file; it is implied by the answer value 0 ('No') and by the 0-3 score range."
+  - id: L1
+    kind: stated
+    locator: "model/maturity_levels/1.yml"
+    description: "The first maturity level aims at achieving an ad-hoc, best effort implementation of a particular activity within a stream."
+  - id: L2
+    kind: stated
+    locator: "model/maturity_levels/2.yml"
+    description: "The second maturity level aims to establish a consistent, repeatable process that can be relied on."
+  - id: L3
+    kind: stated
+    locator: "model/maturity_levels/3.yml"
+    description: "The third maturity level aims to maximize effectiveness through continuous improvement, based on effective and timely feedback."
+transitions:
+  - {from: L0, to: L1, trigger: "assessment: the stream's level-1 question is answered above 'No'", guard: "none in the model or toolbox", kind: inferred}
+  - {from: L1, to: L2, trigger: "assessment: the stream's level-2 question is answered above 'No'", guard: "NONE — the toolbox does not require level 1 first (see finding)", kind: inferred}
+  - {from: L2, to: L3, trigger: "assessment: the stream's level-3 question is answered above 'No'", guard: "NONE — as above", kind: inferred}
+  - {from: any, to: any_lower, trigger: "re-assessment with lower answers", guard: "none; scores are recomputed from answers each time", kind: inferred}
+roadmap:
+  kind: stated
+  locator: "SAMM_spreadsheet.xlsx Getting Started step 5 'Plan Your Roadmap' (cells B9:C9); sheets Roadmap, Roadmap Chart"
+  text: "Navigate to the Roadmap sheet to plan your improvement phases. You can set target maturity levels across different phases (Phase 1, 2, 3, etc.) and visualize your desired security journey in the Roadmap Chart sheet."
+  note: "A roadmap is a sequence of phases each carrying a target score per practice — the nearest SAMM thing to a dated gate/milestone (R-041)."
+
+# --- Part 2: the scoring function (stated in the toolbox formulas) ---
+scoring:
+  answer_value:
+    locator: "model/answer_sets/<X>.yml values[].value; spreadsheet imp-answers A_W..D_W; Interview!G = INDEX(Ans<X>TBL, MATCH(answer), 2)"
+    rule: "each question's chosen answer maps to 0, 0.25, 0.5 or 1 (unanswered -> 0 via IFERROR)"
+  level_score:
+    locator: "Interview!H18 '=IFERROR(AVERAGE(G18,G25),0)' (stream A level-n row with stream B level-n row)"
+    rule: "level_score(practice, n) = mean(answer_value(stream A, level n), answer_value(stream B, level n))"
+  practice_score:
+    locator: "Interview!J18 '=SUM(H18,H20,H22)'; Scorecard!C14 '=Interview!$J$18'"
+    rule: "practice_score = level_score(1) + level_score(2) + level_score(3); range 0..3"
+  business_function_score:
+    locator: "Scorecard!J14 '=AVERAGE(C14:C16)'"
+    rule: "mean of the function's three practice scores"
+  overall_score:
+    locator: "Scorecard!J19 '=AVERAGE(J14:J18)'"
+    rule: "mean of the five business-function scores"
+  translated_value:
+    locator: "Scorecard!G14"
+    rule: "maps the legacy textual levels '0+','1','1+','2','2+','3','3+' to 0.5,1,1.5,2,2.5,3,3.5 (a SAMM 1.x carry-over); a numeric score passes through only when it is exactly 1, 2 or 3 (IF(C14=1,1,0) etc.) — any other numeric score, e.g. 1.25, yields 0"
+    kind: stated
+  weights:
+    note: "every answer set carries weight 1 for every option; the toolbox formulas never read weight"

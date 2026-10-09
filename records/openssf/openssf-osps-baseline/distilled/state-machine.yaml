@@ -1,0 +1,112 @@
+schema: "library-state-machine/v1"
+record: openssf-osps-baseline
+reviewed_by: ""
+note: "Two lifecycles are defined or implied by the source. (1) project-maturity: the three applicability groups form an ordered progression a project climbs; the source defines the levels and which ARs apply at each, but NOT an assessment procedure, a certification, or transition triggers — those are inferred and flagged. (2) entry-lifecycle: the Gemara #Lifecycle enum on every Control and AssessmentRequirement (stated in the schema), with the OSPS maintenance rules on retirement and identifiers (stated in docs/maintenance.md). A third, release-versioning, is recorded briefly because downstream conformance claims must pin a version."
+machines:
+  - name: project-maturity
+    entity: Project
+    locator: "baseline/metadata.yaml metadata.applicability-groups; docs/versions/2026-08-28.md 'Controls Overview'; docs/versions/2026-08-28-checklist.md"
+    kind: inferred
+    states:
+      - id: below-level-1
+        definition: "Not all assessment requirements applicable at maturity-1 are met."
+        kind: inferred
+      - id: maturity-1
+        definition: "for any code or non-code project with any number of maintainers or users"
+        entry_guard: "all 24 active ARs whose applicability includes maturity-1 are met"
+        kind: stated
+        locator: "metadata.yaml applicability-groups[0]"
+      - id: maturity-2
+        definition: "for any code project that has at least 2 maintainers and a small number of consistent users"
+        entry_guard: "all 41 active ARs whose applicability includes maturity-2 are met (24 carried from L1 less OSPS-BR-07.01 and OSPS-VM-02.01, plus 19 introduced at L2)"
+        kind: stated
+        locator: "metadata.yaml applicability-groups[1]"
+      - id: maturity-3
+        definition: "for any code project that has a large number of consistent users"
+        entry_guard: "all 62 active ARs whose applicability includes maturity-3 are met (21 introduced at L3)"
+        kind: stated
+        locator: "metadata.yaml applicability-groups[2]"
+    transitions:
+      - from: below-level-1
+        to: maturity-1
+        trigger: "assessment against version 2026.08.28 finds every maturity-1 AR met"
+        kind: inferred
+      - from: maturity-1
+        to: maturity-2
+        trigger: "assessment finds every maturity-2 AR met"
+        guard: "project profile matches the level description (code project, >=2 maintainers, small number of consistent users)"
+        kind: inferred
+      - from: maturity-2
+        to: maturity-3
+        trigger: "assessment finds every maturity-3 AR met"
+        guard: "project profile matches the level description (large number of consistent users)"
+        kind: inferred
+      - from: "maturity-1 | maturity-2 | maturity-3"
+        to: "lower level"
+        trigger: "regression: a previously met AR is found unmet (e.g. branch protection removed), or the project is re-assessed against a newer Baseline version that adds ARs at its level"
+        kind: inferred
+    observations:
+      - "The levels are framed by project profile (who the project is), not only by achievement: the source says a level is 'for' a kind of project. Whether a project 'is at' L2 by meeting the L2 ARs, or 'should meet' the L2 ARs because it has L2's profile, is not settled by the source. Both readings are captured: the guard is the profile, the trigger is the assessment."
+      - "Applicability is not strictly cumulative: OSPS-BR-07.01 (no unencrypted secrets in VCS) and OSPS-VM-02.01 (security contacts) list maturity-1 only. A strictly level-filtered L3 assessment does not check them. This is recorded as a source open question in design-notes.md, not corrected here."
+      - "The guiding principle 'Controls only contain MUST entries' means every guard is a conjunction of MUSTs; there is no partial credit or scoring within a level (contrast Scorecard's 0-10)."
+  - name: entry-lifecycle
+    entity: "Control | AssessmentRequirement"
+    locator: "schema/gemara-v1.2.0/collections.cue #Lifecycle; controlcatalog.cue #Control.state, #AssessmentRequirement.state, replaced-by; docs/maintenance.md 'Identifiers'"
+    kind: stated
+    states:
+      - id: Draft
+        kind: stated
+      - id: Active
+        kind: stated
+        notes: "default (*\"Active\")"
+      - id: Deprecated
+        kind: stated
+      - id: Retired
+        kind: stated
+        invariants:
+          - "recommendation must be absent (gemara: if state == \"Retired\" { recommendation?: _|_ })"
+          - "identifier remains in the source YAML and MUST NOT be reused (docs/maintenance.md)"
+    transitions:
+      - from: Draft
+        to: Active
+        trigger: "included in a dated Baseline release; substantive additions 'must be approved by a majority of the project's maintainers' (docs/maintenance.md)"
+        kind: inferred
+      - from: Active
+        to: Active
+        trigger: "minor change — 'Minor changes, including a change in level, between Baseline versions will not result in a new identifier.'"
+        kind: stated
+      - from: Active
+        to: Retired
+        trigger: "substantive change or removal; 'Substantial changes to the meaning of a control will be treated as a new control, resulting in a new identifier.'"
+        example: "OSPS-BR-01.02 retired in release 2026-02-19 (PR #443); text replaced by 'Retired in https://github.com/ossf/security-baseline/pull/443'"
+        kind: stated
+      - from: Active
+        to: Deprecated
+        trigger: "not defined by OSPS; enum value available from Gemara only"
+        kind: inferred
+      - from: "Deprecated | Retired"
+        to: "(successor)"
+        trigger: "replaced-by EntryMapping names the superseding entry"
+        kind: stated
+        notes: "schema allows it; unused in v2026.08.28"
+  - name: baseline-release
+    entity: "Baseline version"
+    locator: "docs/maintenance.md 'Versions/releases'; docs/index.md 'Versions'"
+    kind: stated
+    states:
+      - id: devel
+        definition: "In-development version (docs/versions/devel)"
+      - id: current
+        definition: "'Only the version labeled as \"current\" should be used for new compliance efforts.'"
+      - id: previous
+        definition: "'Previous versions are presented for historical reference.' 'stable and not subject to change, except for minor changes to fix technical or typographic errors.'"
+    transitions:
+      - from: devel
+        to: current
+        trigger: "dated release (calendar version YYYY-MM-DD); 'at least annually'"
+      - from: current
+        to: previous
+        trigger: "next dated release"
+    observations:
+      - "As of 2026-10-02 the main branch already carries post-release devel changes (OSPS-AC-03.02 clarified #558, OSPS-VM-05.01 split #554); they are NOT part of v2026.08.28."
+      - "The rendered docs/versions/2026-08-28*.md committed at the tag still showed a 'While active,' qualifier that the tag's YAML had removed (#544, 2026-08-28); the pages were regenerated on main after the tag. The live site and this extraction follow the YAML."

@@ -1,0 +1,68 @@
+schema: "library-state-machine/v1"
+record: iso-iec-27034-1
+note: >
+  Two lifecycles are recoverable from free official material. Neither is fully specified in what
+  we could read: the 27034-1 body (§7, §8) and 27034-5 §6 were not read. STATES are stated where a
+  source names them; TRANSITIONS are mostly inferred (flagged per transition). Locator prefixes as
+  in object-model.yaml.
+
+machines:
+  - id: asc-lifecycle
+    subject: ApplicationSecurityControl
+    source: "XSD simpleType life-cycle-stage (TS 27034-5-1 electronic insert, sha256 c9068e6d…); used by asc/content/identification/version/@life-cycle-stage and asc/approval-e-signatures/approval-stage/approval-stage-type"
+    kind: "states stated; ordering and transitions inferred"
+    states:
+      - {id: CREATION_REQUEST, kind: stated, initial: true}
+      - {id: DESIGN, kind: stated}
+      - {id: DESIGN_REVIEW_AND_VALIDATION, kind: stated}
+      - {id: DEVELOPMENT, kind: stated}
+      - {id: VERIFICATION, kind: stated}
+      - {id: APPROVAL, kind: stated}
+      - {id: OWNERS_FINAL_APPROVAL, kind: stated}
+      - {id: PUBLISHED_FOR_TRAINING, kind: stated}
+      - {id: ACTIVE, kind: stated, note: "the state in which an ASC is usable in an ANF (inferred)"}
+      - {id: EXPIRED, kind: stated, final: true}
+      - {id: CUSTOM, kind: stated, note: "organization-defined extension state"}
+    transitions:
+      - {from: CREATION_REQUEST, to: DESIGN, trigger: "request accepted", guard: "", kind: inferred}
+      - {from: DESIGN, to: DESIGN_REVIEW_AND_VALIDATION, trigger: "design complete", guard: "", kind: inferred}
+      - {from: DESIGN_REVIEW_AND_VALIDATION, to: DEVELOPMENT, trigger: "design validated", guard: "approval-stage record with approval-stage-type=DESIGN_REVIEW_AND_VALIDATION", kind: inferred}
+      - {from: DESIGN_REVIEW_AND_VALIDATION, to: DESIGN, trigger: "design rejected", guard: "", kind: inferred, note: "rework path; not in source"}
+      - {from: DEVELOPMENT, to: VERIFICATION, trigger: "development complete", guard: "", kind: inferred}
+      - {from: VERIFICATION, to: APPROVAL, trigger: "verification passed", guard: "", kind: inferred}
+      - {from: VERIFICATION, to: DEVELOPMENT, trigger: "verification failed", guard: "", kind: inferred}
+      - {from: APPROVAL, to: OWNERS_FINAL_APPROVAL, trigger: "approved", guard: "approver e-signature (27034-5 §5.2.2: 'signable', 'cascading and multiple e-signatures')", kind: inferred}
+      - {from: OWNERS_FINAL_APPROVAL, to: PUBLISHED_FOR_TRAINING, trigger: "owner signs off", guard: "approval-stage-type=OWNERS_FINAL_APPROVAL by the ASC owner", kind: inferred}
+      - {from: PUBLISHED_FOR_TRAINING, to: ACTIVE, trigger: "training published", guard: "", kind: inferred}
+      - {from: OWNERS_FINAL_APPROVAL, to: ACTIVE, trigger: "owner signs off (no training stage)", guard: "", kind: inferred, note: "whether PUBLISHED_FOR_TRAINING is mandatory is unknown"}
+      - {from: ACTIVE, to: EXPIRED, trigger: "retired / superseded by a new version", guard: "", kind: inferred}
+    evidence_of_transition: "Each approved stage is recorded as an approval-stage {date, approval-stage-type, approver, approver-note, maturity-level-note, approver-e-signature} (XSD asc/approval-e-signatures). The ONF Committee 'approves ASCs that correctly mitigate application security risks' (27034-5 Introduction)."
+    error_states: []
+    open: "The order of the enumeration is the only ordering evidence. The ONF approval process for ASCs (27034-2 §5.5.8, 27034-1 §8.1.2.6) was not read."
+
+  - id: application-assurance
+    subject: Application (per application project, via its ANF)
+    source: "27034-1 §0.2 b), §0.4.4, §3.2; 27034-3 §5.1 a)-e), §5.3.1; DIS 27034-4 §3.3 Note 2"
+    kind: "states inferred from stated steps and definitions"
+    states:
+      - {id: requirements-and-environment-identified, kind: inferred, locator: "27034-3 §5.1 a); 27034-1 ToC 7.3.2"}
+      - {id: risks-assessed, kind: inferred, locator: "27034-3 §5.1 b); 27034-1 ToC 7.3.3"}
+      - {id: targeted-lot-assigned, kind: inferred, locator: "27034-3 §5.3.1 a); 27034-1 §0.3.2 e) (authorized by management); ToC 8.2.4-8.2.5 (owner acceptance)"}
+      - {id: anf-established, kind: inferred, locator: "27034-3 §5.1 c), §5.3.3; ASCs selected from the ONF (§5.3.1 b))"}
+      - {id: ascs-implemented, kind: inferred, locator: "27034-3 §5.1 d), §5.3.1 c)"}
+      - {id: ascs-verified, kind: inferred, locator: "27034-3 §5.3.1 c); 27034-7 §3.13 (verification measurement)"}
+      - {id: audited-secure, kind: inferred, final: true, locator: "27034-1 §0.4.4, §3.2 (Actual Level of Trust reached)"}
+      - {id: audited-not-secure, kind: inferred, locator: "27034-1 §0.4.4 (negative case); DIS 27034-4 §3.13 Note 1 (nonconformity)"}
+      - {id: context-changed, kind: inferred, locator: "27034-1 §0.4.2 (new contexts 'might impact the security requirements and the Targeted Level of Trust')"}
+    transitions:
+      - {from: requirements-and-environment-identified, to: risks-assessed, trigger: "ASMP step b)", kind: inferred}
+      - {from: risks-assessed, to: targeted-lot-assigned, trigger: "management authorizes Targeted LoT", guard: "owner acceptance", kind: inferred}
+      - {from: targeted-lot-assigned, to: anf-established, trigger: "ASMP step c): select ASCs required by the Targeted LoT from the ONF", kind: inferred}
+      - {from: anf-established, to: ascs-implemented, trigger: "ASMP step d): provisioning and operating", kind: inferred}
+      - {from: ascs-implemented, to: ascs-verified, trigger: "verification measurements executed; evidence consolidated in the ANF", kind: inferred}
+      - {from: ascs-verified, to: audited-secure, trigger: "ASMP step e): audit", guard: "auditor agrees the evidence of every applicable ASC demonstrates the Targeted LoT (27034-1 §0.4.4) — i.e. Actual LoT (3.2) established", kind: inferred}
+      - {from: ascs-verified, to: audited-not-secure, trigger: "audit", guard: "any required ASC unimplemented, unverified, or not producing expected results", kind: inferred}
+      - {from: audited-not-secure, to: ascs-implemented, trigger: "remediation", kind: inferred}
+      - {from: audited-secure, to: context-changed, trigger: "business/regulatory/technological context change", kind: inferred}
+      - {from: context-changed, to: risks-assessed, trigger: "re-assessment", kind: inferred}
+    note: "This is the gate shape tmodel R-041/R-042 needs: 'audited-secure' is guarded exactly by the conformance predicate. Part 7 adds a version branch (subsequent application with PASRs → Expected Level of Trust) not modelled here."

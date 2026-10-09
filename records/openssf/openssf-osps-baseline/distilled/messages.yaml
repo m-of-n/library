@@ -1,0 +1,294 @@
+schema: "library-messages/v1"
+record: openssf-osps-baseline
+reviewed_by: ""
+note: "OSPS Baseline exchanges no protocol messages. The 'messages' here are the data structures of the published catalog and mapping documents (Gemara v1.2.0 Layer-2 ControlCatalog + MappingDocument, OSPS profile in schema/osps.cue) — the format a conformance tool consumes. Encoding is YAML (also compiled to a single Gemara YAML and to OSCAL JSON by baseline-compiler). Field definitions quote the Gemara CUE comments verbatim. constrained_by names the requirement ids or schema rules that bind each field."
+messages:
+  - name: ControlCatalog
+    locator: "baseline/metadata.yaml + baseline/OSPS-*.yaml; schema gemara-v1.2.0/controlcatalog.cue #ControlCatalog, osps.cue #OSPSBaseline"
+    encoding: YAML
+    fields:
+      - name: title
+        type: string
+        required: true
+        value: "Open Source Project Security Baseline"
+      - name: metadata
+        type: Metadata
+        required: true
+      - name: groups
+        type: "list<Group>"
+        required: true
+        notes: "required when controls present; one per family file (AC, BR, DO, GV, LE, QA, SA, VM)"
+        constrained_by:
+          - "gemara #ControlCatalog: each control.group must be a groups[].id"
+      - name: controls
+        type: "list<Control>"
+        required: false
+        notes: "41 in v2026.08.28"
+        constrained_by:
+          - "gemara #ControlCatalog: _uniqueControlIds"
+      - name: extends
+        type: "list<ArtifactMapping>"
+        required: false
+        notes: "unused by OSPS"
+      - name: imports
+        type: "list<MultiEntryMapping>"
+        required: false
+        notes: "unused by OSPS"
+  - name: Metadata
+    locator: "baseline/metadata.yaml; gemara-v1.2.0/metadata.cue #Metadata"
+    encoding: YAML
+    fields:
+      - name: id
+        type: string
+        required: true
+        value: "osps-baseline"
+      - name: type
+        type: "enum ArtifactType"
+        required: true
+        value: "ControlCatalog"
+      - name: gemara-version
+        type: string
+        required: true
+        value: "1.2.0"
+      - name: version
+        type: string
+        required: false
+        notes: "absent in the tag's metadata.yaml; the release identity is the git tag / docs version 2026.08.28"
+      - name: date
+        type: "Datetime (RFC 3339)"
+        required: false
+        notes: "absent"
+      - name: description
+        type: string
+        required: true
+      - name: author
+        type: Actor
+        required: true
+        value: "{id: openssf, name: OSPS Baseline Authors, type: Human}"
+      - name: mapping-references
+        type: "list<MappingReference>"
+        required: false
+        notes: "14 external frameworks; ids must match ^[A-Za-z0-9][A-Za-z0-9._-]*$ (osps.cue _refID)"
+        constrained_by:
+          - "osps.cue #OSPSBaseline metadata.mapping-references[].id =~ _refID"
+          - "gemara #Metadata _uniqueRefIds"
+      - name: applicability-groups
+        type: "list<Group>"
+        required: false
+        notes: "maturity-1, maturity-2, maturity-3"
+        constrained_by:
+          - "osps.cue #OSPSBaseline: id =~ ^maturity-"
+          - "gemara #Metadata _uniqueGroupsIds"
+      - name: draft
+        type: bool
+        required: false
+        value: "true (still set on the released catalog)"
+      - name: lexicon
+        type: ArtifactMapping
+        required: false
+        notes: "absent; the lexicon is a separate non-Gemara file baseline/lexicon.yaml"
+  - name: Group
+    locator: "gemara-v1.2.0/metadata.cue #Group"
+    encoding: YAML
+    fields:
+      - name: id
+        type: string
+        required: true
+      - name: title
+        type: string
+        required: true
+      - name: description
+        type: string
+        required: true
+    notes: "used twice: control families (groups[]) and maturity levels (metadata.applicability-groups[])"
+  - name: Control
+    locator: "baseline/OSPS-*.yaml controls[]; gemara-v1.2.0/controlcatalog.cue #Control"
+    encoding: YAML
+    fields:
+      - name: id
+        type: string
+        required: true
+        layout: "OSPS-<FAMILY>-<NN>, NN assigned sequentially per family; never reused (docs/maintenance.md)"
+      - name: title
+        type: string
+        required: true
+        definition: "title describes the purpose of this control at a glance"
+      - name: objective
+        type: string
+        required: true
+        definition: "objective is a unified statement of intent, which may encompass multiple situationally applicable requirements"
+      - name: group
+        type: string
+        required: true
+        constrained_by:
+          - "gemara #ControlCatalog _groupValidation (must be a groups[].id)"
+      - name: assessment-requirements
+        type: "list<AssessmentRequirement> (min 1)"
+        required: true
+      - name: guidelines
+        type: "list<MultiEntryMapping>"
+        required: false
+        notes: "unused in v2026.08.28 (mappings moved to MappingDocuments)"
+      - name: threats
+        type: "list<MultiEntryMapping>"
+        required: false
+        notes: "unused in v2026.08.28 — OSPS names no threat catalog"
+      - name: state
+        type: "enum Lifecycle (default Active)"
+        required: true
+      - name: replaced-by
+        type: EntryMapping
+        required: false
+  - name: AssessmentRequirement
+    locator: "baseline/OSPS-*.yaml controls[].assessment-requirements[]; gemara-v1.2.0/controlcatalog.cue #AssessmentRequirement"
+    encoding: YAML
+    fields:
+      - name: id
+        type: string
+        required: true
+        layout: "<control id>.<MM>, e.g. OSPS-AC-01.01"
+      - name: text
+        type: string
+        required: true
+        definition: "text is the body of the requirement, typically written as a MUST condition"
+        constrained_by:
+          - "all 64 active openssf-osps-baseline#OSPS-* requirement entries (one keyword each)"
+      - name: applicability
+        type: "list<string> (min 1)"
+        required: true
+        definition: "applicability is a list of strings describing the situations where this text functions as a requirement for its parent control"
+        constrained_by:
+          - "gemara #ControlCatalog _applicabilityValidation (each value must be a metadata.applicability-groups[].id)"
+      - name: recommendation
+        type: string
+        required: false
+        definition: "recommendation provides readers with non-binding suggestions to aid in evaluation or enforcement of the requirement"
+        constrained_by:
+          - "gemara: forbidden when state == Retired"
+          - "openssf-osps-baseline#OSPS-LE-03.01-REC"
+          - "openssf-osps-baseline#OSPS-LE-03.02-REC"
+      - name: state
+        type: "enum Lifecycle (default Active)"
+        required: true
+        notes: "only OSPS-BR-01.02 sets it (Retired)"
+      - name: replaced-by
+        type: EntryMapping
+        required: false
+        notes: "unused (BR-01.02 retired without replaced-by; its text points at PR #443)"
+  - name: MappingDocument
+    locator: "baseline/mappings/osps-to-*.yaml (14 files); gemara-v1.2.0/mappingdocument.cue #MappingDocument; osps.cue #OSPSMapping"
+    encoding: YAML
+    fields:
+      - name: title
+        type: string
+        required: true
+      - name: metadata
+        type: Metadata
+        required: true
+        notes: "type MappingDocument; mapping-references lists osps-baseline (version \"draft\") and the target framework"
+      - name: source-reference
+        type: TypedMapping
+        required: true
+        value: "{reference-id: osps-baseline, entry-type: Control}"
+        constrained_by:
+          - "osps.cue #OSPSMapping pins reference-id to osps-baseline"
+      - name: target-reference
+        type: TypedMapping
+        required: true
+        value: "{reference-id: <framework id>, entry-type: Guideline}"
+      - name: mappings
+        type: "list<Mapping> (min 1)"
+        required: true
+        notes: "378 mappings across 14 documents, 1177 target entries"
+      - name: remarks
+        type: string
+        required: false
+  - name: Mapping
+    locator: "gemara-v1.2.0/mappingdocument.cue #Mapping / #_MappingStrict"
+    encoding: YAML
+    fields:
+      - name: id
+        type: string
+        required: true
+        layout: "M-<control id>-<framework id>, e.g. M-OSPS-AC-01-CRA"
+      - name: source
+        type: string
+        required: true
+        notes: "an OSPS control id (entry-type Control) — mappings are control-level, never AR-level"
+      - name: relationship
+        type: "enum RelationshipType: implements | implemented-by | supports | supported-by | equivalent | subsumes | no-match | relates-to"
+        required: true
+        value: "relates-to (all 378)"
+      - name: targets
+        type: "list<MappingTarget>"
+        required: "unless relationship == no-match"
+      - name: remarks
+        type: string
+        required: false
+  - name: MappingTarget
+    locator: "gemara-v1.2.0/mappingdocument.cue #MappingTarget"
+    encoding: YAML
+    fields:
+      - name: entry-id
+        type: string
+        required: true
+        notes: "framework-native id (e.g. PO.3.2, 1.2f, AC-4(21)) or, for SLSA/SAMM, prose requirement names"
+      - name: strength
+        type: "int 1..10"
+        required: false
+        notes: "unset in every OSPS mapping"
+      - name: confidence-level
+        type: "enum Undetermined | Low | Medium | High"
+        required: false
+        notes: "unset"
+      - name: applicability
+        type: "list<string>"
+        required: false
+      - name: rationale
+        type: string
+        required: false
+        notes: "unset"
+      - name: remarks
+        type: string
+        required: false
+  - name: MappingReference
+    locator: "gemara-v1.2.0/mapping_inline.cue #MappingReference"
+    encoding: YAML
+    fields:
+      - name: id
+        type: string
+        required: true
+      - name: title
+        type: string
+        required: true
+      - name: version
+        type: string
+        required: true
+      - name: description
+        type: string
+        required: false
+      - name: url
+        type: "uri (http/https/file)"
+        required: false
+  - name: LexiconEntry
+    locator: "baseline/lexicon.yaml (OSPS-native list, not gemara #Lexicon)"
+    encoding: YAML
+    fields:
+      - name: term
+        type: string
+        required: true
+      - name: definition
+        type: string
+        required: true
+      - name: synonyms
+        type: "list<string>"
+        required: false
+        notes: "\"optional and can be included to streamline automation in the event that other words or phrases should link to the term\" (file header)"
+      - name: references
+        type: "list<url>"
+        required: false
+  - name: Checklist
+    locator: "docs/versions/2026-08-28-checklist.md (generated by baseline-compiler compile --checklist-output)"
+    encoding: Markdown
+    layout: "per level heading '## Level N', one '- [ ] **<AR id>**: <text>' line per AR newly applicable at that level"
+    notes: "the self-assessment form the project publishes; derived from the catalog, not separately normative"

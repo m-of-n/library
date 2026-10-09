@@ -1,0 +1,117 @@
+schema: "library-protocol/v1"
+record: sp-800-204d
+extracted: "2026-10-02"
+reviewed_by: ""
+derived: true
+note: >
+  SP 800-204D defines no wire protocol and explicitly puts attestation and SBOM formats out of scope
+  (§1.2, §6). What it does define is a set of ordered interactions between roles in CI/CD pipelines:
+  the secure-build / attest / verify / admit chain (§5.1.1, §5.2), the PULL-PUSH contribution flow
+  with maintainer approval (§5.1.2), the commit-time push-protection check (§5.1.4), the update-signing
+  gate (§5.1.3) and the GitOps reconcile loop (§5.2.1). These flows are DERIVED from the prose: the
+  ordering of steps is stated or directly implied at the locator given; nothing here adds a step the
+  source does not name. Message names are ours; the source names no messages. Every step cites the
+  requirement ids (sp-800-204d#R-NNNN) that constrain it.
+
+roles:
+  - id: developer
+    source_term: "developer"
+    locator: "§3.2.2, §5.1.2"
+  - id: outside-contributor
+    source_term: "outside contributor"
+    locator: "§5.1.2 (PULL-PUSH-REQ-3)"
+  - id: maintainer
+    source_term: "project maintainer / maintainer with write access"
+    locator: "§5.1.2"
+  - id: scm
+    source_term: "repository or source-code management system (SCM)"
+    locator: "§3.2.2, §5.1.2"
+  - id: ci-driver
+    source_term: "driver tools or build control plane"
+    locator: "§5 prerequisite 4"
+  - id: build-step
+    source_term: "build / individual functional step"
+    locator: "§5, §5.1.1"
+  - id: attestor
+    source_term: "trusted component of the build framework that is not under the control of the developers"
+    locator: "§5.1.1"
+  - id: attestation-store
+    source_term: "storage location (tamper-proof)"
+    locator: "§5.1.1"
+  - id: policy-engine
+    source_term: "agent and policy enforcement engine"
+    locator: "§5.1.1"
+  - id: verifier
+    source_term: "verifiers"
+    locator: "§5.1.1"
+  - id: signer
+    source_term: "signing operation (software update framework)"
+    locator: "§5.1.3"
+  - id: registry
+    source_term: "registry / artifact repository"
+    locator: "§5.2 (DEPLOY-REQ-5)"
+  - id: deployment-admission
+    source_term: "verification policies for allowing or disallowing an artifact for deployment"
+    locator: "§5.2"
+  - id: gitops-controller
+    source_term: "GitOps tools (e.g., Argo CD, Flux)"
+    locator: "§5.2.1"
+  - id: administrator
+    source_term: "Administrators"
+    locator: "§5.2.1 (GitOps-REQ-4)"
+
+flows:
+  - id: F1-build-attest-verify-admit
+    title: "Secure build, attestation, verification and deployment admission"
+    locator: "§5.1.1, §5.1.3, §5.2"
+    steps:
+      - {n: 1, from: ci-driver, to: policy-engine, message: build-policy-check, text_basis: "Enforce those build policies using techniques such as an agent and policy enforcement engine.", constrained_by: ["sp-800-204d#R-0053", "sp-800-204d#R-0054"]}
+      - {n: 2, from: ci-driver, to: build-step, message: run-step, note: "driver executes at a higher level of trust than the step", constrained_by: ["sp-800-204d#R-0050", "sp-800-204d#R-0046"]}
+      - {n: 3, from: attestor, to: build-step, message: observe-and-collect-evidence, note: "concurrent generation; attestor at higher trust/isolation than the build; in-build verification", constrained_by: ["sp-800-204d#R-0055", "sp-800-204d#R-0059", "sp-800-204d#R-0060"]}
+      - {n: 4, from: attestor, to: attestor, message: assemble-attestations, note: "environment, process (best effort), materials, artifacts; hashes of artifact, materials and events", constrained_by: ["sp-800-204d#R-0056", "sp-800-204d#R-0057", "sp-800-204d#R-0061", "sp-800-204d#R-0062", "sp-800-204d#R-0063", "sp-800-204d#R-0064"]}
+      - {n: 5, from: attestor, to: attestor, message: sign-attestation, note: "signed with a secure key by a component outside developer control, using a digital certificate", constrained_by: ["sp-800-204d#R-0058", "sp-800-204d#R-0065"]}
+      - {n: 6, from: attestor, to: attestation-store, message: store-attestation, constrained_by: ["sp-800-204d#R-0066"]}
+      - {n: 7, from: ci-driver, to: registry, message: scan-then-push-image, note: "image scanned for vulnerabilities as soon as built, before push", constrained_by: ["sp-800-204d#R-0103", "sp-800-204d#R-0100"]}
+      - {n: 8, from: verifier, to: attestation-store, message: fetch-attestations-and-policy, constrained_by: ["sp-800-204d#R-0067", "sp-800-204d#R-0068"]}
+      - {n: 9, from: verifier, to: verifier, message: evaluate-policy, note: "right functionary keys used; required attestations present; evaluation method specified; outputs the two §5.1.1 assurances", constrained_by: ["sp-800-204d#R-0042", "sp-800-204d#R-0068", "sp-800-204d#R-0069", "sp-800-204d#R-0070"]}
+      - {n: 10, from: deployment-admission, to: verifier, message: admission-request, note: "artifact must come from the established secure build process; vulnerability-scan attestation present (recency matters); organization-defined allow/block; optional build horizon", constrained_by: ["sp-800-204d#R-0095", "sp-800-204d#R-0099", "sp-800-204d#R-0100", "sp-800-204d#R-0101", "sp-800-204d#R-0113"]}
+      - {n: 11, from: verifier, to: deployment-admission, message: allow-or-block, constrained_by: ["sp-800-204d#R-0101"]}
+    error_paths:
+      - {at: 1, condition: "build does not satisfy build policy", outcome: "build blocked (policy enforcement)", basis: "§5.1.1 task 2", kind: inferred}
+      - {at: 9, condition: "missing attestation, wrong functionary key, or evidence of tampering", outcome: "artifact not validated; assurance not provided", basis: "§5.1.1 (policy checks; assurances)", kind: inferred}
+      - {at: 11, condition: "artifact not generated by the secure build process, or no vulnerability-scan attestation, or policy violation", outcome: "image deployment blocked", basis: "§5.2 DEPLOY-REQ-3, DEPLOY_REQ-4", kind: stated}
+
+  - id: F2-update-signing-gate
+    title: "Signing gated by the build policy (software update framework)"
+    locator: "§5.1.3"
+    steps:
+      - {n: 1, from: signer, to: verifier, message: policy-check-before-sign, constrained_by: ["sp-800-204d#R-0077", "sp-800-204d#R-0082"]}
+      - {n: 2, from: signer, to: signer, message: sign-metadata, note: "threshold/multi-key roles; online keys not for client-trusted roles (§5.1.3 'should not'; App. A 'must not'); online keys in HSM", constrained_by: ["sp-800-204d#R-0079", "sp-800-204d#R-0081", "sp-800-204d#R-0082", "sp-800-204d#R-0117"]}
+    error_paths:
+      - {at: 1, condition: "artifact fails the §5.1.1 policy", outcome: "signing refused", basis: "§5.1.3 ('only allowing their use if the artifacts being signed pass the policy')", kind: stated}
+
+  - id: F3-pull-push-contribution
+    title: "PULL-PUSH contribution with checks and maintainer approval"
+    locator: "§3.2.2, §5.1.2, §5.1.4, §5.2"
+    steps:
+      - {n: 1, from: developer, to: scm, message: pull, note: "authenticated; request consistent with role", constrained_by: ["sp-800-204d#R-0071", "sp-800-204d#R-0031"]}
+      - {n: 2, from: developer, to: scm, message: push-or-pull-request, note: "push protection: secret scan, identity/authorization, signed commits, file-name verification", constrained_by: ["sp-800-204d#R-0090", "sp-800-204d#R-0091", "sp-800-204d#R-0093", "sp-800-204d#R-0094"]}
+      - {n: 3, from: scm, to: maintainer, message: approval-request-for-outside-contributor-ci, note: "either sandboxed CI without network/privilege/secrets, or CI delayed until a write-access maintainer approves", constrained_by: ["sp-800-204d#R-0075", "sp-800-204d#R-0120"]}
+      - {n: 4, from: ci-driver, to: build-step, message: run-automated-checks, note: "unit tests, linters, integrity tests, security checks; SAST/DAST; SCA incl. transitive deps; trusted tools only", constrained_by: ["sp-800-204d#R-0073", "sp-800-204d#R-0074", "sp-800-204d#R-0086", "sp-800-204d#R-0087", "sp-800-204d#R-0088", "sp-800-204d#R-0089"]}
+      - {n: 5, from: scm, to: maintainer, message: dependency-review, constrained_by: ["sp-800-204d#R-0098"]}
+      - {n: 6, from: maintainer, to: scm, message: code-review-and-merge, note: "reviewer is another developer; merge approvers cannot approve their own merges", constrained_by: ["sp-800-204d#R-0032", "sp-800-204d#R-0071"]}
+    error_paths:
+      - {at: 2, condition: "secret or policy violation detected", outcome: "push blocked; alert raised; documented remediation", basis: "§5.1.4 COMMIT-REQ-1", kind: stated}
+      - {at: 6, condition: "author attempts to approve own merge", outcome: "not permitted", basis: "§5.1.2 check 1", kind: stated}
+
+  - id: F4-gitops-reconcile
+    title: "GitOps release and drift reconciliation"
+    locator: "§5.2.1"
+    steps:
+      - {n: 1, from: developer, to: scm, message: commit-config-change, note: "changes made to code, never manually at runtime", constrained_by: ["sp-800-204d#R-0108", "sp-800-204d#R-0106"]}
+      - {n: 2, from: gitops-controller, to: registry, message: release, note: "package manager preserves all release data", constrained_by: ["sp-800-204d#R-0107"]}
+      - {n: 3, from: gitops-controller, to: scm, message: pull-desired-state, constrained_by: ["sp-800-204d#R-0109"]}
+      - {n: 4, from: gitops-controller, to: gitops-controller, message: compare-actual-vs-specified, constrained_by: ["sp-800-204d#R-0109"]}
+      - {n: 5, from: gitops-controller, to: administrator, message: drift-notification, constrained_by: ["sp-800-204d#R-0109"]}
+    error_paths:
+      - {at: 4, condition: "configuration deviates from specified state", outcome: "automatic resync (administrator's choice) or notification + manual remediation", basis: "§5.2.1 GitOps-REQ-4", kind: stated}

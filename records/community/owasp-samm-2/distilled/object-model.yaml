@@ -1,0 +1,176 @@
+schema: "library-object-model/v1"
+record: owasp-samm-2
+source_version: "2.2.0"
+extracted: "2026-10-02"
+reviewed_by: ""
+method: >
+  Object-model pass: the 302 YAML files were re-read with one question — what entity types and
+  relationship edges does the model define or assume? SAMM is unusual among SDL documents in that
+  its object model is EXPLICIT: every file carries `type:` (Function, Practice, Stream, MaturityLevel,
+  PracticeLevel, Activity, Question, AnswerSet) and references other files by 32-hex GUID. Those are
+  `kind: stated`. Objects the toolbox spreadsheet or the prose assume (Assessment, Scope, Answer,
+  Score, Roadmap, Benchmark) are marked as such.
+objects:
+  - name: Model
+    definition: "The SAMM model instance; business functions link to it by the `model` field (value SAMM20)."
+    attributes: [id]
+    locator: "model/business_functions/*.yml field model: SAMM20"
+    kind: stated
+    tmodel_mapping: "SDL (R-041) framework identity — a library record / CatalogSource, not a domain node"
+    notes: "Only a string key; no Model file exists. Versioning is by git tag (v2.2.0), not in the data."
+  - name: BusinessFunction
+    definition: "Governance / Design / Implementation / Verification / Operations — the top-level grouping of practices."
+    attributes: [id, name, description, color, logo, order]
+    locator: "model/business_functions/*.yml (type: Function)"
+    kind: stated
+    tmodel_mapping: "new — a grouping facet on Requirement (R-044); NOT a LifecyclePhase (Governance spans all phases)"
+    notes: "5 instances."
+  - name: SecurityPractice
+    definition: "A security practice within a function (e.g. Threat Assessment); has two streams and three practice-level objectives."
+    attributes: [id, function, name, shortName, shortDescription, longDescription, order, assignee, progress]
+    locator: "model/security_practices/*.yml (type: Practice)"
+    kind: stated
+    tmodel_mapping: "new — Requirement group / Practice (R-044); maps to MAP-0001 columns"
+    notes: "15 instances. assignee/progress are authoring workflow fields of the SAMM project, not model semantics."
+  - name: Stream
+    definition: "One of two coherent lines of activities within a practice (letter A or B), progressing across maturity levels."
+    attributes: [id, practice, name, letter, description, order]
+    locator: "model/streams/*.yml (type: Stream)"
+    kind: stated
+    tmodel_mapping: "new — the unit SAMM's own crosswalk maps at (crosswalk.yaml) — so the natural maps_to anchor for R-044"
+    notes: "30 instances. The official mappings are stream-level, not activity-level, except TMC and the OLIR SSDF workbook."
+  - name: MaturityLevel
+    definition: "Levels 1-3: ad-hoc best effort / consistent repeatable process / continuous improvement."
+    attributes: [id, number, description]
+    locator: "model/maturity_levels/*.yml (type: MaturityLevel)"
+    kind: stated
+    tmodel_mapping: "new — MaturityLevel; candidate attribute of a Gate's exit criterion ('practice X at >= level 2') under R-041"
+    notes: "3 instances. Level 0 is implied by the 0-3 score, not a file."
+  - name: PracticeLevel
+    definition: "The objective of a practice at a maturity level (reified association Practice x MaturityLevel)."
+    attributes: [id, practice, maturityLevel, objective]
+    locator: "model/practice_levels/*.yml (type: PracticeLevel)"
+    kind: stated
+    tmodel_mapping: "new — reified association; tmodel would carry it as an edge with an `objective` property or as a node if it must be cited"
+    notes: "45 instances (15 x 3). Activities point at the PracticeLevel, not at the MaturityLevel directly."
+  - name: Activity
+    definition: "What an organization does in one stream at one level; carries benefit, short and long description."
+    attributes: [id, stream, level, title, benefit, shortDescription, longDescription, results, metrics, costs, personnel, notes, relatedActivities]
+    locator: "model/activities/*.yml (type: Activity)"
+    kind: stated
+    tmodel_mapping: "Requirement (R-042/R-044) of kind practice; a process-kind Mitigation (R-040) when instantiated for a product"
+    notes: "90 instances. results/metrics are placeholders ('result1','result2') in 18 files and empty elsewhere; personnel (roles) populated in 18 Implementation activities only; costs 'TBS.'."
+  - name: Role
+    definition: "A standard role involved in implementing an activity (Developer, Security Engineer, Administrator, Architect, Security Officer, Security Champion, Product Owner, Manager)."
+    attributes: [name]
+    locator: "model/activities/I-*.yml field personnel"
+    kind: stated
+    tmodel_mapping: "Party role (R-036, §2b) — relational, so an edge type, not a node attribute"
+    notes: "Strings only; no role registry file."
+  - name: Question
+    definition: "The assessment question that measures coverage of one activity."
+    attributes: [id, activity, answerSet, text, order, quality]
+    locator: "model/questions/*.yml (type: Question)"
+    kind: stated
+    tmodel_mapping: "new — ConformanceCheck (R-042) of the interview kind (not automatable)"
+    notes: "90 instances; exactly one per activity (order 1)."
+  - name: QualityCriterion
+    definition: "A condition that must hold for the assessor to credit the answer (the question's `quality` list)."
+    attributes: [text]
+    locator: "model/questions/*.yml field quality"
+    kind: stated
+    tmodel_mapping: "Requirement exit-criterion / evidence expectation (R-042) — the closest SAMM gets to an evidence rule"
+    notes: "295 instances, unnamed in the data (we id them <activity>-Q1-C<n>). The SAMM spreadsheet calls this column 'Guidance'."
+  - name: AnswerSet
+    definition: "A four-option ordinal scale (No / some / at least half / most or all, worded per subject) with values 0, 0.25, 0.5, 1."
+    attributes: [id, values]
+    locator: "model/answer_sets/*.yml (type: AnswerSet)"
+    kind: stated
+    tmodel_mapping: "new — enumeration for a ConformanceResult value"
+    notes: "24 instances; every weight is 1 and unused by the toolbox."
+  - name: AnswerOption
+    definition: "One option of an answer set: text, value, weight, order."
+    attributes: [text, value, weight, order]
+    locator: "model/answer_sets/*.yml values[]"
+    kind: stated
+    tmodel_mapping: "enum literal"
+    notes: ""
+  - name: Assessment
+    definition: "An interview-based self-assessment of a scope against the model, producing answers, notes and scores."
+    attributes: [organization, team_or_application, interview_date, team_lead, contributors]
+    locator: "SAMM_spreadsheet.xlsx Interview!B10-B14; Getting Started steps 2-4"
+    kind: stated
+    tmodel_mapping: "Review / ConformanceAssessment (R-042) — a governed, versioned view (R-043)"
+    notes: "Stated in the release toolbox, not in the YAML model."
+  - name: Scope
+    definition: "What is assessed: a specific application, a development team, or the entire organization."
+    attributes: [kind]
+    locator: "SAMM_spreadsheet.xlsx Getting Started step 2 ('decide whether you are assessing a specific application, a development team, or the entire organization')"
+    kind: stated
+    tmodel_mapping: "Product / ProductFamily / Party(organization) as the subject of a conformance claim"
+    notes: "The answer-set wording ('for most or all of the applications') presumes a portfolio scope."
+  - name: Answer
+    definition: "The answer option chosen for a question in an assessment, plus interview notes."
+    attributes: [question, option, notes]
+    locator: "SAMM_spreadsheet.xlsx Interview columns F (Answer), I (Interview Notes)"
+    kind: stated
+    tmodel_mapping: "ConformanceResult with free-text justification; evidence is NOT required by SAMM"
+    notes: ""
+  - name: Score
+    definition: "Derived numbers: level score, practice score (0-3), business-function score, overall score."
+    attributes: [value]
+    locator: "SAMM_spreadsheet.xlsx Interview!H,J; Scorecard!C,J (see state-machine.yaml)"
+    kind: stated
+    tmodel_mapping: "derived view value (R-043), never stored as truth"
+    notes: ""
+  - name: Roadmap
+    definition: "A plan of improvement phases, each with target maturity per practice."
+    attributes: [phases, target_scores]
+    locator: "SAMM_spreadsheet.xlsx Getting Started step 5; Roadmap sheet; G-SM-2-A text ('The plan covers 1 to 3 years and includes milestones')"
+    kind: stated
+    tmodel_mapping: "SDL program plan with Milestones (R-041)"
+    notes: "The nearest SAMM thing to ordered, dated gates."
+  - name: Benchmark
+    definition: "Anonymous community submission of an assessment for industry statistics."
+    attributes: [demographics]
+    locator: "SAMM_spreadsheet.xlsx Getting Started step 6; Benchmark sheet"
+    kind: stated
+    tmodel_mapping: "none"
+    notes: ""
+  - name: Mapping
+    definition: "A published cross-reference from a SAMM stream (or activity) to an id in another framework, with an optional relationship type."
+    attributes: [samm_id, framework, target_id, relationship, remarks]
+    locator: "OWASP SAMM mappings spreadsheet (crosswalk.yaml); Lookups tab for the relationship vocabulary"
+    kind: stated
+    tmodel_mapping: "maps_to edge of Requirement (R-044) — with a typed relationship (OLIR vocabulary), which MAP-0001 currently lacks"
+    notes: "Stated by OWASP, outside the core model repository."
+edges:
+  - {name: part_of_model, from: BusinessFunction, to: Model, cardinality: "N:1", definition: "function.model = SAMM20", locator: "business_functions/*.yml model", kind: stated, tmodel_mapping: "none"}
+  - {name: belongs_to_function, from: SecurityPractice, to: BusinessFunction, cardinality: "3:1", definition: "practice.function = function.id", locator: "security_practices/*.yml function", kind: stated, tmodel_mapping: "grouping edge on Requirement"}
+  - {name: belongs_to_practice, from: Stream, to: SecurityPractice, cardinality: "2:1", definition: "stream.practice = practice.id", locator: "streams/*.yml practice", kind: stated, tmodel_mapping: "grouping edge"}
+  - {name: objective_of, from: PracticeLevel, to: SecurityPractice, cardinality: "3:1", definition: "practicelevel.practice", locator: "practice_levels/*.yml practice", kind: stated, tmodel_mapping: "edge property"}
+  - {name: at_level, from: PracticeLevel, to: MaturityLevel, cardinality: "15:1", definition: "practicelevel.maturityLevel", locator: "practice_levels/*.yml maturityLevel", kind: stated, tmodel_mapping: "edge property"}
+  - {name: in_stream, from: Activity, to: Stream, cardinality: "3:1", definition: "activity.stream", locator: "activities/*.yml stream", kind: stated, tmodel_mapping: "grouping edge"}
+  - {name: at_practice_level, from: Activity, to: PracticeLevel, cardinality: "2:1", definition: "activity.level points at the PracticeLevel (not the MaturityLevel)", locator: "activities/*.yml level", kind: stated, tmodel_mapping: "edge to MaturityLevel with practice context"}
+  - {name: related_to, from: Activity, to: Activity, cardinality: "N:M", definition: "relatedActivities — template comment varies by file: 'References to other activities that are prerequisites to implement this one.' (54 files, 13 of the 18 populated), '...that are related to this one' (18 files, 3 populated), '...that may be related to this one' (18 files, 2 populated)", locator: "activities/*.yml relatedActivities (18 activities carry them)", kind: stated, tmodel_mapping: "depends_on / precedes between Requirements — semantics inconsistent in source (related vs prerequisite)"}
+  - {name: measures, from: Question, to: Activity, cardinality: "1:1", definition: "question.activity", locator: "questions/*.yml activity", kind: stated, tmodel_mapping: "ConformanceCheck checks Requirement"}
+  - {name: answered_on, from: Question, to: AnswerSet, cardinality: "N:1", definition: "question.answerSet", locator: "questions/*.yml answerSet", kind: stated, tmodel_mapping: "value domain"}
+  - {name: has_criterion, from: Question, to: QualityCriterion, cardinality: "1:N", definition: "question.quality list", locator: "questions/*.yml quality", kind: stated, tmodel_mapping: "exit criterion of a Gate check"}
+  - {name: has_option, from: AnswerSet, to: AnswerOption, cardinality: "1:4", definition: "answerset.values", locator: "answer_sets/*.yml values", kind: stated, tmodel_mapping: "enum"}
+  - {name: performed_by, from: Activity, to: Role, cardinality: "N:M", definition: "activity.personnel", locator: "activities/I-*.yml personnel", kind: stated, tmodel_mapping: "Party role edge (R-036)"}
+  - {name: assesses, from: Assessment, to: Scope, cardinality: "N:1", definition: "an assessment is of one declared scope", locator: "spreadsheet Getting Started step 2", kind: stated, tmodel_mapping: "conformance claim subject"}
+  - {name: answers, from: Answer, to: Question, cardinality: "N:1", definition: "one answer per question per assessment", locator: "spreadsheet Interview column F", kind: stated, tmodel_mapping: "ConformanceResult -> ConformanceCheck"}
+  - {name: part_of_assessment, from: Answer, to: Assessment, cardinality: "N:1", definition: "", locator: "spreadsheet Interview sheet", kind: stated, tmodel_mapping: ""}
+  - {name: chooses, from: Answer, to: AnswerOption, cardinality: "N:1", definition: "drop-down selection", locator: "spreadsheet Interview column F; DV-Lists", kind: stated, tmodel_mapping: "value"}
+  - {name: computed_from, from: Score, to: Answer, cardinality: "1:N", definition: "scoring function", locator: "state-machine.yaml scoring", kind: stated, tmodel_mapping: "derived view"}
+  - {name: targets, from: Roadmap, to: SecurityPractice, cardinality: "N:M", definition: "target score per practice per roadmap phase", locator: "spreadsheet Roadmap sheet", kind: stated, tmodel_mapping: "Milestone exit criterion (R-041)"}
+  - {name: maps_to, from: Stream, to: "external Requirement (SSDF task / BSIMM activity / IEC 62443-4-1 requirement / CSF 2.0 subcategory / MS SDL sub-practice)", cardinality: "N:M", definition: "published cross-reference", locator: "crosswalk.yaml", kind: stated, tmodel_mapping: "Requirement.maps_to (R-044)"}
+  - {name: maps_to_activity, from: Activity, to: "external Requirement (SSDF task; TMC capability)", cardinality: "N:M", definition: "activity-level published cross-reference with OLIR relationship type", locator: "crosswalk.yaml ssdf_olir_activity_level; TMC tab", kind: stated, tmodel_mapping: "Requirement.maps_to with relationship"}
+  - {name: evidences, from: "Evidence (absent)", to: QualityCriterion, cardinality: "N:M", definition: "SAMM never names evidence; criteria are checked by interview", locator: "absence across model/questions/*.yml", kind: inferred, tmodel_mapping: "Evidence -> Requirement (R-042) — the edge tmodel needs and SAMM lacks"}
+gaps:
+  - "No Evidence/WorkProduct object: results/metrics are placeholders, so a SAMM criterion cannot be tied to an artifact; R-042 conformance needs Evidence nodes SAMM does not provide."
+  - "No Gate/Milestone with dates or approvals: the Roadmap has phases and targets but no owner, approval or planned/actual dates (R-041 must add them)."
+  - "No product/component binding: SAMM scopes are organization/team/application; it never touches ThreatInstance or MitigationInstance, so the 'threats-mitigated' check (R-042) is outside SAMM."
+  - "Maturity is a summed score, not a gated state — tmodel must not model SAMM level as a lifecycle state with guards."
+  - "relatedActivities mixes 'related' and 'prerequisite' semantics; tmodel needs separate depends_on vs see_also edge types."
+  - "Mapping relationship types exist (OLIR vocabulary in Lookups) only for the SSDF and Microsoft SDL tabs; tmodel's maps_to edge (MAP-0001) should carry a typed relationship."

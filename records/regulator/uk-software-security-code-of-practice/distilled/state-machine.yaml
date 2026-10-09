@@ -1,0 +1,141 @@
+schema: "library-state-machine/v1"
+record: uk-software-security-code-of-practice
+extracted_by: "claude (lane D)"
+date: "2026-10-02"
+reviewed_by: ""
+note: >
+  The sources define two lifecycles: a vulnerability's lifecycle (implementation guidance 3.5 names
+  the triage outcomes 'fix, acknowledge or investigate further'), and a product's support lifecycle
+  (4.1 and 4.2: supported, end-of-support notice given at least 1 year ahead, unsupported). A third,
+  an incident's lifecycle, is in 4.3. States and triggers carry their locators. Where the source
+  implies a transition without stating it, the transition is kind: inferred. The sources do not
+  define conformance states for a vendor: the APC has no levels and no pass or fail. Only the
+  claims' 'well-evidenced' condition exists. No maturity-level state machine is therefore modelled.
+
+machines:
+  - id: vulnerability
+    states:
+      - {id: reported, locator: "IG page 5 3.2", kind: stated}
+      - {id: triaged, locator: "IG page 5 3.5 'validated and triaged'", kind: stated}
+      - {id: acknowledged, locator: "IG page 5 3.5 'fix, acknowledge or investigate further'", kind: stated}
+      - {id: under-investigation, locator: "IG page 5 3.5", kind: stated}
+      - {id: mitigated-temporarily, locator: "IG page 5 3.5 'temporary fix or mitigation to begin with'", kind: stated}
+      - {id: fixed, locator: "IG page 5 3.5", kind: stated}
+      - {id: notified, locator: "IG page 5 3.4, 3.5", kind: stated}
+    initial: reported
+    transitions:
+      - {from: reported, to: triaged, trigger: "validation and triage (severity, prioritisation on risk assessment)", locator: "IG page 5 3.3, 3.5", kind: stated}
+      - {from: triaged, to: fixed, trigger: "triage outcome: fix; fix issued within a reasonable timeframe according to priority", guard: "critical => out-of-band update", locator: "IG page 5 3.5", kind: stated}
+      - {from: triaged, to: mitigated-temporarily, trigger: "temporary fix or mitigation issued", locator: "IG page 5 3.5", kind: stated}
+      - {from: mitigated-temporarily, to: fixed, trigger: "more stable solution issued", locator: "IG page 5 3.5", kind: stated}
+      - {from: triaged, to: acknowledged, trigger: "triage outcome: acknowledge", locator: "IG page 5 3.5", kind: stated}
+      - {from: triaged, to: under-investigation, trigger: "triage outcome: investigate further", locator: "IG page 5 3.5", kind: stated}
+      - {from: under-investigation, to: triaged, trigger: "investigation complete", locator: "IG page 5 3.5", kind: inferred}
+      - {from: fixed, to: notified, trigger: "update-notification to customers; reports to relevant parties", locator: "IG page 5 3.4, 3.5", kind: stated}
+      - {from: mitigated-temporarily, to: notified, trigger: "notification stating it is a temporary mitigation", locator: "IG page 5 3.5", kind: stated}
+    error_states: []
+    notes: "Notifying relevant parties may also happen 'once a vulnerability has been reported' (IG 3.4), i.e. from triaged; that notification is a side effect, not a state."
+  - id: product-support
+    states:
+      - {id: supported, locator: "Code p.6 4.1", kind: stated}
+      - {id: end-of-support-notified, locator: "Code p.6 4.2", kind: stated}
+      - {id: unsupported, locator: "Code p.6 4.2 'no longer be supported or maintained'", kind: stated}
+    initial: supported
+    transitions:
+      - {from: supported, to: end-of-support-notified, trigger: "eos-notice to customers", locator: "Code p.6 4.2", kind: stated}
+      - {from: end-of-support-notified, to: unsupported, trigger: "end-of-support date reached", guard: "end_of_support_date - notice_date >= 1 year", locator: "Code p.6 4.2; IG page 6 4.2 'should not be less than one year'", kind: stated}
+    error_states:
+      - {id: unsupported-without-notice, condition: "end of support reached with < 1 year notice; non-conformance with 4.2", locator: "Code p.6 4.2", kind: inferred}
+  - id: incident
+    states:
+      - {id: occurred, locator: "IG page 6 4.3", kind: stated}
+      - {id: notified, locator: "IG page 6 4.3", kind: stated}
+      - {id: resolved, locator: "IG page 6 4.3 'until the incident is resolved'", kind: stated}
+      - {id: reported, locator: "IG page 6 4.3 'post incident report'", kind: stated}
+    initial: occurred
+    transitions:
+      - {from: occurred, to: notified, trigger: "incident-notification as soon as possible", locator: "IG page 6 4.3", kind: stated}
+      - {from: notified, to: notified, trigger: "regular update", locator: "IG page 6 4.3", kind: stated}
+      - {from: notified, to: resolved, trigger: "resolution", locator: "IG page 6 4.3", kind: inferred}
+      - {from: resolved, to: reported, trigger: "post-incident-report", locator: "IG page 6 4.3", kind: stated}
+
+# ---- added in the cross-check pass (2026-10-02) ----
+# Catalogue of every trigger that is not a `send <message>` of a message defined in messages.yaml /
+# protocol.yaml: named events, timers and internal decisions. Text = the trigger as written above;
+# locators = union of the transitions that use it. Empty triggers are listed under empty_triggers.
+events:
+  - id: end-of-support-date-reached
+    trigger: "end-of-support date reached"
+    machines: ["product-support"]
+    locators: ["Code p.6 4.2; IG page 6 4.2 'should not be less than one year'"]
+    kind: stated
+  - id: eos-notice-to-customers
+    trigger: "eos-notice to customers"
+    machines: ["product-support"]
+    locators: ["Code p.6 4.2"]
+    kind: stated
+  - id: incident-notification-as-soon-as-possible
+    trigger: "incident-notification as soon as possible"
+    machines: ["incident"]
+    locators: ["IG page 6 4.3"]
+    kind: stated
+  - id: investigation-complete
+    trigger: "investigation complete"
+    machines: ["vulnerability"]
+    locators: ["IG page 5 3.5"]
+    kind: inferred
+  - id: more-stable-solution-issued
+    trigger: "more stable solution issued"
+    machines: ["vulnerability"]
+    locators: ["IG page 5 3.5"]
+    kind: stated
+  - id: notification-stating-it-is-a-temporary-mitigation
+    trigger: "notification stating it is a temporary mitigation"
+    machines: ["vulnerability"]
+    locators: ["IG page 5 3.5"]
+    kind: stated
+  - id: post-incident-report
+    trigger: "post-incident-report"
+    machines: ["incident"]
+    locators: ["IG page 6 4.3"]
+    kind: stated
+  - id: regular-update
+    trigger: "regular update"
+    machines: ["incident"]
+    locators: ["IG page 6 4.3"]
+    kind: stated
+  - id: resolution
+    trigger: "resolution"
+    machines: ["incident"]
+    locators: ["IG page 6 4.3"]
+    kind: inferred
+  - id: temporary-fix-or-mitigation-issued
+    trigger: "temporary fix or mitigation issued"
+    machines: ["vulnerability"]
+    locators: ["IG page 5 3.5"]
+    kind: stated
+  - id: triage-outcome-acknowledge
+    trigger: "triage outcome: acknowledge"
+    machines: ["vulnerability"]
+    locators: ["IG page 5 3.5"]
+    kind: stated
+  - id: triage-outcome-fix-fix-issued-within-a-reasonable-timeframe-
+    trigger: "triage outcome: fix; fix issued within a reasonable timeframe according to priority"
+    machines: ["vulnerability"]
+    locators: ["IG page 5 3.5"]
+    kind: stated
+  - id: triage-outcome-investigate-further
+    trigger: "triage outcome: investigate further"
+    machines: ["vulnerability"]
+    locators: ["IG page 5 3.5"]
+    kind: stated
+  - id: update-notification-to-customers-reports-to-relevant-parties
+    trigger: "update-notification to customers; reports to relevant parties"
+    machines: ["vulnerability"]
+    locators: ["IG page 5 3.4, 3.5"]
+    kind: stated
+  - id: validation-and-triage-severity-prioritisation-on-risk-assess
+    trigger: "validation and triage (severity, prioritisation on risk assessment)"
+    machines: ["vulnerability"]
+    locators: ["IG page 5 3.3, 3.5"]
+    kind: stated

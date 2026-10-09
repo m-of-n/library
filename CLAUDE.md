@@ -11,7 +11,9 @@ cloneable, forkable, and citable by projects that are not this one.
   record `content.sha256` and `content.url`. `.cache/` is gitignored. CI rejects
   the bytes.
 - **Never set `content.local: true`.**
-- **Never edit or commit `exports/` or `index/`.** Generated and gitignored.
+- **Never edit or commit `exports/`, `index/`, or `records/*/*/summary.html`.**
+  Generated and gitignored. `summary.html` is the per-record page, built
+  beside its source by `bin/render-html` (docs/generated-views.md).
   CSL-JSON is the interchange format; BibTeX is generated, never authored.
 - **Never hand-create a record directory.** `bin/ingest <type> <source>`.
 - **Never reuse an id.** Ids are stable forever — a citation must not silently
@@ -39,11 +41,12 @@ bar you are claiming, and name the issue that owns the eventual extraction.
 
 ```
 MANIFEST.yaml     library id, federation peers, schema version
-records/<id>/     record.yaml · distilled.md · quotes.md · artifacts/
+records/<body>/<id>/  record.yaml · summary.md · distilled.md · quotes.md · artifacts/
+                  summary.html (GENERATED, untracked — bin/render-html)
 topics/<id>.yaml  the unit of parallel work
 exports/          GENERATED, untracked — CSL-JSON and BibTeX
 index/            GENERATED, untracked — bibliography, crosswalk, frontier
-bin/              ingest, validate, export, new-topic
+bin/              ingest, validate, export, new-topic, render-html
 ```
 
 Cross-references are **typed** — `supersedes`, `updates`, `cited_by`,
