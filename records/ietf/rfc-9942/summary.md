@@ -79,7 +79,7 @@ Two observations:
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `quotes.md`, no `distilled/`. The normative density here is real — §4.3, §4.4.1, §5.2.1 and §5.3.1 carry MUSTs a verifier implementation must satisfy — so this is a plausible future `distill` target if we ever build a receipt verifier. Nothing is built on it yet.
+No `distilled/`. The normative density here is real — §4.3, §4.4.1, §5.2.1 and §5.3.1 carry MUSTs a verifier implementation must satisfy — so this is a plausible future `distill` target if we ever build a receipt verifier. Nothing is built on it yet.
 
 ## Limits
 
