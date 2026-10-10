@@ -19,6 +19,7 @@ A second person adds a correct record from this document alone, without asking.
 | 3 | Never commit third-party bytes | Size, licensing, publishability; digest preserves integrity | Link rot — is digest + URL enough in 5 years? |
 | 4 | Content hash is identity | Two libraries that never sync still agree what document they mean | Which digest for a *versioned* spec — the PDF, or the version string? |
 | 5 | Stable, never-reused ids | Citations must not silently retarget | Naming convention for multi-version specs |
+| 6 | Attribution by locator, not by transcription | A summary cites §n and the reader opens the source; verbatim normative text lives only in `distilled/normative.md`, where the verbatim check can reach it. The `quotes.md` companion held this convention from v0.1 and was used by **0 of 304 records** — the discipline was real, the file was not. Retired 2026-10-09 | Does a non-FX-1 record (`paper`, `web`, `dataset`) ever need a verbatim excerpt with nowhere to put it? If one does, that is the trigger to reinstate a quote file — not a reason to keep an unused one |
 
 ## Method to follow
 
