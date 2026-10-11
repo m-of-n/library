@@ -15,16 +15,16 @@ and RFC 8392 (CWT), cited only where the tag question reaches outside RFC 9052.
 `[inference]` = analysis by the extractor, not stated in any source and not
 decided by anyone. Every `[inference]` is also listed in the last section.
 
-**Decision status, stated once so nothing below over-claims.** D-3
+**Decision status, stated once so nothing below over-claims.** MD-3
 (`project/meetings/2026-09-28.md`) narrowed DEC-002 to option 5 — CBOR data
 model, no IANA tags, COSE as export only, type identity `(defining key, label)`
 per ARCH-0002 P1, YAML as the human form with a canonical one-way mapping, and
 option 2 retained only as a comparison fixture. **The ADR is not written.**
 DEC-002 is still listed open in `ARCH-0001` §7, and option 5 exists only as a
 *proposal* in `ARCH-0001-PROPOSAL-v0.2.0` §3.3. **DEC-005 (the envelope for
-`ArtifactStatement`) is also open**; D-3 constrains it to COSE-as-export but
+`ArtifactStatement`) is also open**; MD-3 constrains it to COSE-as-export but
 does not close it. R-M-12 *is* accepted (`ADR-0001`), and ARCH-0002 P1 with it;
-P2–P7 are provisional per D-2, and P4 is held. Nothing in this file is
+P2–P7 are provisional per MD-2, and P4 is held. Nothing in this file is
 normative. It is the buildable mapping that the DEC-002 ADR and the D5 fixture
 package (Oct 28, `PLAN-0003`) should be written against.
 
@@ -136,7 +136,7 @@ package (Oct 28, `PLAN-0003`) should be written against.
    discouraged. Private-use ranges are no answer for the reason `ADR-0001`
    gives: they are escape from a registry, not a namespace.
 
-2. **CBOR tags in the native form.** Rejected by D-3 — and §3 below shows the
+2. **CBOR tags in the native form.** Rejected by MD-3 — and §3 below shows the
    rejection has to be written as a decoder rule (major type 6 MUST NOT appear)
    rather than as an omission, or an imported tagged object satisfies our decoder
    silently `[8949 §4.2.2]`.
@@ -198,8 +198,8 @@ form onto `COSE_Sign1` `[9052 §4.2]`.
 | validity `{not_before?, not_after?, online_check?}` `[ARCH-0001 §4.1, R-M-09]` | payload | slot 3 | **No home in RFC 9052.** §3.1 Table 3 defines labels 1–6 and none is temporal. `exp` / `nbf` / `iat` are CWT claims (RFC 8392) and carrying them in a COSE *protected header* needs the "CWT Claims" header parameter, which is **not defined in RFC 9052** — `ARCH-0001` §3.2's "COSE protected header 15" is a claim about a different document and should be re-cited there `[inference]`. `online_check` has no analogue in COSE, CWT or anywhere adjacent: pure loss. |
 | tag / authorization payload, and its intersection semantics `[ARCH-0001 §4.1, DEC-004, ARCH-0002 P7]` | payload | slot 3 | No COSE home, and none is wanted: §4.4 and §12 put authorization outside COSE explicitly. Total loss to a COSE-only consumer, which is why §4 below insists the export is not a security-equivalent form. |
 | `delegate` flag, and `(Domain, Topic)` scope `[ARCH-0001 §4.2, ARCH-0002 P2]` | payload | slot 3 | No COSE home. |
-| threshold speaker `{k, n, members}` `[R-M-06]` | **not exportable as `COSE_Sign1`** | — | A *k*-of-*n* **subject** is payload data and exports fine. A *k*-of-*n* **speaker** needs `COSE_Sign` with *n* `COSE_Signature` entries `[9052 §4.1]`, and §4 forbids converting between the two structures. D-3 and DEC-005 name `COSE_Sign1`, so in this increment a threshold-spoken statement has no export. Recorded as an interchange gap, not resolved here. |
-| domain-of-discourse hash `[ARCH-0002 P4, held per D-2]` | payload | slot 3 | No COSE home. Key-relative and hash-identified by construction. |
+| threshold speaker `{k, n, members}` `[R-M-06]` | **not exportable as `COSE_Sign1`** | — | A *k*-of-*n* **subject** is payload data and exports fine. A *k*-of-*n* **speaker** needs `COSE_Sign` with *n* `COSE_Signature` entries `[9052 §4.1]`, and §4 forbids converting between the two structures. MD-3 and DEC-005 name `COSE_Sign1`, so in this increment a threshold-spoken statement has no export. Recorded as an interchange gap, not resolved here. |
+| domain-of-discourse hash `[ARCH-0002 P4, held per MD-2]` | payload | slot 3 | No COSE home. Key-relative and hash-identified by construction. |
 | algorithm | **protected** `alg` | label 1, `int` / `tstr` from the "COSE Algorithms" registry `[9052 §3.1 Table 3]` | See §2. `[9052 §3.1]`: this parameter "MUST be authenticated where the ability to do so exists", and for `COSE_Sign1` it does (`body_protected` and `external_aad` are both inside `Sig_structure` `[9052 §4.4]`), so **`alg` may not sit in the unprotected bucket**. The §3.1 example list names `COSE_Sign` and `COSE_Mac0` and not `COSE_Sign1`; reading the MUST as binding for `COSE_Sign1` is our reading of the general clause `[inference]`. |
 | must-understand set | **protected** `crit` | label 2, `[+ label]` `[9052 §3.1]` | Emit only for protected labels a consumer must process. §3.1's guidance: integer labels 0–7 SHOULD be omitted, so a `crit` listing only `alg` and `content type` would be empty by rule — meaning in our profile `crit` is normally **absent**, and §3.1 requires that if present the array have at least one value `[inference]`. |
 | native signature | inside **payload** | slot 3 | The native signature travels as part of the native bytes. It is **not** the COSE signature. |
@@ -375,18 +375,18 @@ is a CBOR tag:
 | method `[9052 §2]` | registry consumed | available to us? |
 |---|---|---|
 | 1 — known from context: "a marker in the containing structure or by restrictions specified by the application protocol" | **none** | Yes, and only inside a container we define. |
-| 2 — CBOR tag `#6.18` | IANA CBOR Tags | Yes, at the cost D-3 names. |
+| 2 — CBOR tag `#6.18` | IANA CBOR Tags | Yes, at the cost MD-3 names. |
 | 3 — media type `application/cose` with `cose-type="cose-sign1"` | IANA Media Types, plus the `cose-type` values fixed in Table 1 | Yes — and §2 makes the parameter **REQUIRED** when the untagged form is used, and OPTIONAL when the tagged form is. |
 | 4 — CoAP Content-Format `18` `[9052 Table 2]` | IANA CoAP Content-Formats | Not relevant to us, but a fourth registry rather than an escape. |
 
 So an **untagged export is available**, and the honest framing is: you can avoid
 the CBOR Tags registry, but not every registry — methods 3 and 4 substitute a
 different one, and method 1 works only inside bytes we wrap ourselves. "No tags"
-and "no registry dependence" are different rules, and D-3 states the first.
+and "no registry dependence" are different rules, and MD-3 states the first.
 
 **Choosing among the four is a DEC-005 decision, and this file does not make
 it.** DEC-005 (the envelope for `ArtifactStatement`) is listed open in
-`ARCH-0001` §7; D-3 constrains it to COSE-as-export and says nothing about
+`ARCH-0001` §7; MD-3 constrains it to COSE-as-export and says nothing about
 tagging. §3.4 B2 proposes a default for the D5 fixture package because a fixture
 needs one, and that proposal is Open question 4 — not a decision.
 
@@ -464,7 +464,7 @@ tags" is written as something a decoder can fail on. P5 also already argues for
 inverting exactly this default so that forgetting is safe.
 
 The same rule is what makes the domain-of-discourse hash safe `[ARCH-0002 P4,
-held per D-2]`: two serializations differing only by a tag prefix hash
+held per MD-2]`: two serializations differing only by a tag prefix hash
 differently, so admitting an optional tag anywhere in hashed bytes would mean one
 vocabulary with two identities.
 
@@ -549,7 +549,7 @@ following are ours to fix.
 | **D9** | The `alg` mapping table, pinned **by value** with its RFC 9053 name (the source's own example is `-7`, "ECDSA 256" `[9052 C.2.1]`). Because `alg` is inside `body_protected` and so inside `ToBeSigned`, a mapping change is a signature change. | `[9052 §3.1, §4.4, C.2.1]` |
 | **D10** | The tagging choice per fixture, plus the B3 assertion: tagged and untagged variants share `ToBeSigned` and the signature and differ by the single `0xd2` prefix. | `[9052 §2, §4.2, §4.4]` + `[inference]` |
 | **D11** | **Signature determinism.** ECDSA with a random per-signature nonce yields different signature bytes on every run, so with ES256 the reproducible artifact is `ToBeSigned` (and its digest), **not** the whole message. For byte-exact whole-message fixtures, use a deterministic scheme — Ed25519 (RFC 8032, which `[9052 §4.1]` names) or deterministic ECDSA. Recommendation: the primary D5 fixture is Ed25519 for byte-exactness, with an ES256 fixture that pins `ToBeSigned` and verifies rather than reproduces. **RFC 9052 does not discuss nonce determinism; this is `[inference]`, and it is the item most likely to waste a student's afternoon if it is not written down.** | `[inference]`, `[9052 §4.1]` |
-| **D12** | The fixture file set per statement: the YAML human form (D-3); the native canonical CBOR in hex; the native statement digest; the `body_protected` bytes; the `Sig_structure` / `ToBeSigned` bytes; the full `COSE_Sign1` in both tagged and untagged form; and the expected verification outcome. `[9052 C.2.1]` is the reference shape to imitate — `18([ h'a10126', {4:'11'}, payload, signature ])` — and `distilled/examples/` should hold it as the first fixture so our encoder is checked against the RFC before it is checked against itself. | `[9052 C.2.1]`, `docs/extraction.md` |
+| **D12** | The fixture file set per statement: the YAML human form (MD-3); the native canonical CBOR in hex; the native statement digest; the `body_protected` bytes; the `Sig_structure` / `ToBeSigned` bytes; the full `COSE_Sign1` in both tagged and untagged form; and the expected verification outcome. `[9052 C.2.1]` is the reference shape to imitate — `18([ h'a10126', {4:'11'}, payload, signature ])` — and `distilled/examples/` should hold it as the first fixture so our encoder is checked against the RFC before it is checked against itself. | `[9052 C.2.1]`, `docs/extraction.md` |
 
 ### 6. Counter-signatures and `Endorse`
 
@@ -635,12 +635,12 @@ Each names who decides and what it blocks. Ordered by what blocks Oct 28 first.
    is the whole of the question: tag 24 would have been unavoidable, and the
    message-type tag is optional `[9052 §4.2]`. Anyone re-opening this should read
    §3 before re-deriving it.
-5. **Is DEC-005 closed by D-3, or does "COSE as export only" still leave DSSE?**
+5. **Is DEC-005 closed by MD-3, or does "COSE as export only" still leave DSSE?**
    `R-I-03` asks for "at least one envelope in v1"; `ARCH-0001` §7 lists DEC-005
-   open; D-3 speaks about COSE and is silent on DSSE. **Paul.** Affects whether
+   open; MD-3 speaks about COSE and is silent on DSSE. **Paul.** Affects whether
    this mapping is *the* export mapping or one of two.
 6. **Does the D5 option-2 comparison fixture need its own COSE mapping?** Our
-   reading is no — D-3's comparison is about the *native* encoding, and the
+   reading is no — MD-3's comparison is about the *native* encoding, and the
    export mapping is the same either way — but that reading is not written
    anywhere. **David**, confirmed by Paul, before he builds two mappings.
 7. **Threshold export.** Accept "no export for a *k*-of-*n* speaker" as a
@@ -649,7 +649,7 @@ Each names who decides and what it blocks. Ordered by what blocks Oct 28 first.
    with Paul on the crypto-suite implication. Byte-exact fixtures need a
    deterministic scheme.
 9. **Does the domain-of-discourse hash appear in an export at all?** P4 is held
-   per D-2, so the honest answer today is "not until P4 is accepted", which
+   per MD-2, so the honest answer today is "not until P4 is accepted", which
    means the export mapping will change when it is. **Paul.**
 10. **Where does this mapping become normative** — inside the DEC-002 ADR, or in
     a separate interchange-mapping document in the `WP2`–`WP5` series

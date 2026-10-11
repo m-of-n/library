@@ -34,7 +34,7 @@ DEC-002, which is open and is accepted only in an `ADR-NNNN`.
 | protocol | — | **Not applicable**, declared in `record.yaml` with a reason. See below. |
 | state-machine | — | **Not applicable**, declared in `record.yaml` with a reason. See below. |
 | examples | `examples/vectors.yaml` | **78 vectors**, every example the source prints, across 14 section groups. Pass 1's `vector_count: 99` was a stale estimate and is corrected in `count_reconciliation`. Includes one **source defect**: the §4.6 UTF-8 example does not decode to the string its prose names. |
-| design-notes | `design-notes.md` | Option 1 scored against all six `canonical-encoding` conditions; 3 adopt, 4 adapt, 5 reject; a decision mapping across DEC-002, DEC-003, R-M-02, R-O-03, R-O-05, R-M-12/ADR-0001, ARCH-0002 P4 and P5, and D-3; 6 open questions. |
+| design-notes | `design-notes.md` | Option 1 scored against all six `canonical-encoding` conditions; 3 adopt, 4 adapt, 5 reject; a decision mapping across DEC-002, DEC-003, R-M-02, R-O-03, R-O-05, R-M-12/ADR-0001, ARCH-0002 P4 and P5, and MD-3; 6 open questions. |
 
 ## Two artifacts are not applicable, and the reason is the finding
 

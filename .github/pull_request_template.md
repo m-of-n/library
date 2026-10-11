@@ -15,7 +15,7 @@ checklist is so you are not surprised by it.
 - [ ] `protocol.yaml` + `protocol.md` — roles, flows, error paths, sequence diagram
 - [ ] `state-machine.yaml` — every lifecycle
 - [ ] `examples/` — every example as a fixture with expected result
-- [ ] `design-notes.md` — adopt / adapt / reject, mapped to our decisions (COSE/CBOR: D-3)
+- [ ] `design-notes.md` — adopt / adapt / reject, mapped to our decisions (COSE/CBOR: MD-3, **and where the source cuts against it** — `docs/extraction.md`)
 - [ ] anything not applicable is in `not_applicable` **with a reason**
 - [ ] passes recorded: extract, verify, cross-check — all at effort `max`
 

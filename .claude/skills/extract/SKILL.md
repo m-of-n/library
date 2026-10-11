@@ -32,7 +32,7 @@ Each agent reads the **source**, never the summary or another agent's output.
 | protocol | `protocol.yaml`, `protocol.md` | roles, every flow, every error path; a Mermaid sequence diagram per flow |
 | state machine | `state-machine.yaml` | anything with lifecycle — registration, issuance, receipt, verification, key rollover; states, triggers, guards, error states |
 | examples | `examples/` | every example and test vector as a fixture file, verbatim, with the expected result; hex for binary |
-| design notes | `design-notes.md` | adopt / adapt / reject, each mapped to ARCH-0001/0002, DEC-*, D-n; for COSE/CBOR/envelope documents, **D-3 explicitly** with a header-by-header mapping |
+| design notes | `design-notes.md` | adopt / adapt / reject, each mapped to ARCH-0001/0002, DEC-*, MD-n; for COSE/CBOR/envelope documents, **MD-3 explicitly** with a header-by-header mapping, **and where the source cuts against MD-3** — it narrowed DEC-002, it did not accept it; see `docs/extraction.md` |
 
 **Not applicable** is a finding, not a shortcut: record it in
 `distillation.not_applicable` with the reason (e.g. *"protocol: pure data
