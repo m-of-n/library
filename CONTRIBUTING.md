@@ -15,7 +15,9 @@ Library-specific:
 1. `bin/ingest <type> <source> --body <org>` — never hand-create a record
    directory. Records live at `records/<body>/<id>/`.
 2. Fill `summary.md` before setting `status: summarized`. It is the document a
-   human reviews. `distilled.md` is a separate, optional job.
+   human reviews. Extraction is a separate job with its own bar: it produces
+   the `distilled/` artifact set, and for protocol and format documents it is
+   FX-1 (item 4). There is no `distilled.md`.
 3. **Validate before every PR:**
    ```sh
    bin/validate

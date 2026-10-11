@@ -80,7 +80,7 @@ whose code points are still TBD. That is a result, not an omission.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled.md`. It is a draft with unassigned code points; extracting
+No `distilled/`. It is a draft with unassigned code points; extracting
 requirements from text that will change is work we would redo.
 
 ## Limits

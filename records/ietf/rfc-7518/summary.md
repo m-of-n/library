@@ -68,7 +68,7 @@ two ecosystems by a wide margin.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled.md`. Held for comparison with the COSE set; we do not intend to
+No `distilled/`. Held for comparison with the COSE set; we do not intend to
 conform to JOSE.
 
 ## Limits

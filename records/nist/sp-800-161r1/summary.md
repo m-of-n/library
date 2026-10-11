@@ -74,7 +74,7 @@ is out of scope for a build-on-it decision.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled.md` and none warranted — we extract no requirements from it.
+No `distilled/` and none warranted — we extract no requirements from it.
 
 ## Limits
 

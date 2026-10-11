@@ -81,7 +81,7 @@ any conformance claim as version-specific.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled.md`. Held to resolve `rfc-9964`'s citation; X.509 conformance is
+No `distilled/`. Held to resolve `rfc-9964`'s citation; X.509 conformance is
 not in scope for this project.
 
 ## Limits

@@ -91,7 +91,7 @@ notes.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled.md`. FX-1 extraction is warranted where we intend to conform or
+No `distilled/`. FX-1 extraction is warranted where we intend to conform or
 map; the suite is deferred, so we hold and cite rather than extract. If NG3 is
 ever lifted, this record is a candidate for promotion.
 

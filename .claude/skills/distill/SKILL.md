@@ -18,7 +18,7 @@ Purpose: a compacted rendering that preserves everything needed to extract
 requirements, and discards everything else. Not a summary. Not prose.
 
 1. **Only distil what will be mined.** If nobody is going to extract
-   requirements from it, it does not need a `distilled.md`. Most records never
+   requirements from it, it does not need a distillation. Most records never
    get one.
 2. **Preserve normative language exactly** — MUST, SHALL, SHOULD, MAY, and the
    negatives. These are the payload. Never paraphrase a normative sentence.
@@ -30,8 +30,13 @@ requirements, and discards everything else. Not a summary. Not prose.
    compaction.
 6. YAML front matter, like every markdown file in a record.
 
-Requirements extracted from it go in `requirements/` as YAML, one file per set,
-each carrying the source locator and the normative verb.
+**Where it goes.** The compacted rendering is `distilled/normative.md`, and
+requirements lifted from it are `distilled/requirements.yaml`, each carrying
+the source locator and the normative verb. There is no `distilled.md` and no
+`requirements/` — a record's extracted work is the `distilled/` directory,
+whose kinds `docs/extraction.md` defines. A prose source carries fewer of them
+than an RFC does; declare in `distillation.artifacts` exactly what it carries,
+and `docs/requirements.md` governs what may go in the requirements file.
 
 ## Hard rules
 

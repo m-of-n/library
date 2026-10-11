@@ -72,7 +72,7 @@ of the ecosystem — essentially every COSE library implements ES256 and EdDSA.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled.md`. **FX-1 extraction for this record is owned by #39** (Tier 1).
+No `distilled/`. **FX-1 extraction for this record is owned by #39** (Tier 1).
 This issue owns ingest, summary and relations only; the `distillation` block is
 deliberately untouched.
 

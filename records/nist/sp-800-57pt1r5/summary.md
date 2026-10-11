@@ -81,7 +81,7 @@ Recording the absence as a result, per the summarisation procedure.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled.md`. It uses "shall" extensively, so requirements *could* be
+No `distilled/`. It uses "shall" extensively, so requirements *could* be
 extracted — but per `docs/requirements.md` §5.1 we extract only where we intend
 to conform or map, and we intend neither. Extraction here would produce a large
 set of obligations addressed to a federal agency that we are not.

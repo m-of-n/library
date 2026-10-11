@@ -78,7 +78,7 @@ are unassigned. That is a result, not an omission.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled.md`. A draft with unassigned code points, bearing on nothing we
+No `distilled/`. A draft with unassigned code points, bearing on nothing we
 decide.
 
 ## Limits

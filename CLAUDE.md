@@ -16,7 +16,8 @@ cloneable, forkable, and citable by projects that are not this one.
 - **Never hand-create a record directory.** `bin/ingest <type> <source>`.
 - **Never reuse an id.** Ids are stable forever — a citation must not silently
   retarget. A new version of a spec is a new record linked by `supersedes`.
-- **Never set `status: distilled` with TODOs in `distilled.md`.** CI rejects it.
+- **Never set `status: distilled` with TODOs in `distilled/`.** CI rejects it —
+  `bin/validate` reads every FX-1 artifact in the directory, not one file.
 
 ## Full extraction — FX-1
 
