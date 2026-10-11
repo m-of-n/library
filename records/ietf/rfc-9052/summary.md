@@ -66,7 +66,7 @@ that each protocol wants different adjacent fields (§1).
 |---|---|---|
 | Security | core | The protected/unprotected split, the §4.4 `Sig_structure`, and §3's protected-first precedence and duplicate-label rejection *are* the integrity model — a verifier that gets them wrong verifies the wrong bytes with a strong primitive. §12 adds the key-reuse, direct-recipient-leakage and message-length traffic-analysis failure modes. |
 | Cryptography | core | It defines no primitives (§1 defers to RFC 9053 and RFC 8230; §8 is an explicitly non-exhaustive taxonomy), but it does define the cryptographic *constructions*: what bytes enter Sign/MAC/AEAD, how AAD is built, the `COSE_Key` representation with `kty`/`alg`/`key_ops` (§7), and the rule that a key's `alg` MUST match the operation. Those are the parts where a design error survives any primitive choice. |
-| This project | core | `COSE_Sign1` is one of the two candidate envelopes in **DEC-005**, and PLAN-0003 **D-3** selects COSE as the *export* form only. The §4.4 construction is what an interoperable export must reproduce byte-for-byte. |
+| This project | core | `COSE_Sign1` is one of the two candidate envelopes in **DEC-005**, and PLAN-0003 **MD-3** selects COSE as the *export* form only. The §4.4 construction is what an interoperable export must reproduce byte-for-byte. |
 
 Bears on **DEC-005** (envelope for `ArtifactStatement`: DSSE or `COSE_Sign1`,
 both over a single unsigned payload schema). RFC 9052 gives `COSE_Sign1` its
@@ -74,7 +74,7 @@ concrete advantage — `external_aad` (§4.3) lets us bind context that is not i
 the statement, which DSSE has no slot for — and its concrete cost, which is that
 `COSE_Sign1` is tagged, labelled and typed entirely out of IANA registries.
 
-Bears on **DEC-002 / D-3** (encoding). D-3 reads "Option 5: reduced CBOR, no
+Bears on **DEC-002 / MD-3** (encoding). MD-3 reads "Option 5: reduced CBOR, no
 IANA tags, COSE export only", and this document is the reason that sentence has
 two halves. COSE is unusable as a *native* model under our own rules, because
 every extension point it has is registry-allocated; it is entirely usable as an
@@ -140,7 +140,7 @@ bear on a build-on-it decision:
 | `distilled/protocol.yaml` | roles and flows; for this source that means the §4.4 / §5.3 / §5.4 / §6.3 procedures |
 | `distilled/protocol.md` | the same model as a diagram |
 | `distilled/examples/` | Appendix C examples as fixtures with expected results — currently only `README.md` (no fixture files yet) |
-| `distilled/design-notes.md` | what we adopt, adapt and reject, mapped to DEC-005, D-3 and R-M-12 |
+| `distilled/design-notes.md` | what we adopt, adapt and reject, mapped to DEC-005, MD-3 and R-M-12 |
 | `distilled/state-machine.yaml` | state machines; **expected to close as not-applicable** — see below |
 
 **These are scaffolds, not an extraction.** As of 2026-09-30 every file under
