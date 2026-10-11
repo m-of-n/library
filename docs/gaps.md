@@ -4,55 +4,83 @@ id: gaps
 title: "What is left to make this library best in class"
 type: assessment
 status: draft
-version: "0.1.1"
-updated: "2026-10-01"
+version: "0.2.0"
+updated: "2026-10-11"
 needs_review: true
 reviewed: false
 ---
 
 # What is left
 
-**State: 28 records — 1 distilled, 1 summarised, 17 stubs, 9 queued.** The
-machinery is built; the reading has barely started. This names what still
-stands between here and a library someone outside the project would use.
+**State at 2026-10-11 — 304 records, 19 topics.** Of the records: **37
+written, 267 unwritten scaffolds, 4 fully extracted** under FX-1 (6 carry any
+`distilled/` at all). Of the topics: **4 answered, 15 open.**
+
+> **This file was wrong by an order of magnitude for ten days.** Until this
+> revision it opened *"28 records — 1 distilled, 1 summarised, 17 stubs, 9
+> queued"*, written against 2026-10-01 and never updated while the library grew
+> past 300. An assessment document that reports a stale headline is worse than
+> no assessment, because it is read as current. Every number above comes from
+> `bin/validate`, and the rule going forward is that **this file is refreshed
+> from the tool, in the same PR as any change that moves a count.**
+
+The machinery is built. The reading has started hard **in one lane** and barely
+anywhere else, and that distribution — not the total — is the finding.
 
 ---
 
-## 1. Content — the largest gap, and the least interesting to fix
+## 1. Content — the shape of what is missing has changed
+
+The old version of this section said the reading had barely started. That is no
+longer true, and the replacement problem is sharper.
 
 | | |
 |---|---|
-| **9 records still carry template summaries** | The original seeds. They look done in a listing and are empty when opened |
-| **Two research sweeps not begun** | Trust management (L-014), attestation specifications (L-013) |
-| **No `cites` extracted anywhere** | So `index/frontier.md` is empty and snowballing has never actually run |
+| **267 of 304 records are unwritten scaffolds** | They look done in a listing and are empty when opened. This is the same defect the old "9 template summaries" named, at thirty times the scale (library#45) |
+| **The written work is concentrated in one area** | All 4 FX-1 extractions are CBOR/COSE/JSON canonicalisation. 4 of the 19 topics are answered and 3 of those 4 sit in the same lane |
+| **`cites` now exists, on 6 records** | All six came in through the SBOM lane. `index/frontier.md` is no longer empty, but snowballing has been demonstrated **once**, not adopted |
+| **One research sweep ingested, not written; one not begun** | L-013 attestation specifications: 26 records under `device-attestation`, ingested, unwritten. L-014 trust management: not started |
 
-**Nothing here needs a design decision.** It needs someone to read.
+**Nothing here needs a design decision.** It needs someone to read. The count
+stopped being the measure some time ago; **37 written** is the number to move.
 
-## 2. Depth — distillation is progressive and has barely progressed
+## 2. Depth — progressive distillation, now genuinely progressing
 
-One record has distilled artifacts. The model now supports many kinds —
-normative prose, fields, requirements, schema, code, examples, state machines —
-and only four are populated, for one document.
+Six records carry `distilled/`. Four reach FX-1 `full`.
 
-Missing kinds nothing has yet:
+**What the model supports and now has:** normative prose, requirements with
+reconciled keyword counts, schemas, messages, protocol models, design notes
+mapped to our decisions, and — new since the last revision — **`examples/` on
+all four full records.** The old version named `examples/` as the obvious
+missing kind and it is now the best-populated one. RFC 8785's vectors in
+particular are carried verbatim with expected results, including the ones the
+source gets wrong.
 
-- **`examples/`** — test vectors lifted from a specification. For a project that
-  publishes `spec/vectors/` as its interoperability contract, extracting other
-  people's vectors is the obvious next move and nobody has done it
-- **state machines** — vCon's `Dialog.type` transitions and `redacted`/`amended`
-  chains are state, described in prose
-- **diagrams**
+**Kinds that nothing has yet:**
 
-## 3. Review — the gap that undermines the rest
+- **`state-machine.yaml` — zero records.** vCon is the named candidate and is
+  already `distilled`: `Dialog.type` transitions and the `redacted`/`amended`
+  chains are state, described in prose. Nobody has lifted them
+- **diagrams** beyond the Mermaid sequence diagrams in two `protocol.md` files
 
-**Every artifact in the library is `reviewed_by: ""`.** The three mechanical
-checks pass; mechanical checks are not review. Until a second person checks one,
-the library's own rule says its contents are *readable but not buildable-on* —
-and that rule currently applies to everything in it.
+## 3. Review — still the gap that undermines the rest
+
+**Unchanged, and still first. Every artifact in the library is
+`reviewed_by: ""` — 73 of them, across records and topics. Not one has been
+reviewed by a second person.**
+
+The three mechanical checks pass; mechanical checks are not review. Until a
+second person checks one, the library's own rule says its contents are
+*readable but not buildable-on* — and that rule currently applies to
+everything in it, **including the four FX-1 extractions that mofn#8 is
+expected to decide DEC-002 against.**
 
 `docs/distillation.md` §8 states its own test: **a second person distils a
 different specification from it alone.** That has not happened. Until it does,
 the procedure is a description of one run.
+
+> This is the cheapest high-value item in the file and has been for a month.
+> One afternoon, one record, one second reader.
 
 ## 4. Discovery — nobody outside can find anything
 
@@ -70,7 +98,7 @@ insufficient for anyone else:
 
 ## 5. Federation — designed, never exercised
 
-`MANIFEST.yaml` carries a `federation.peers` list that has always been empty.
+`MANIFEST.yaml` carries a `federation.peers` list that is **still empty.**
 Cross-library references resolve as `(library-id, record-id, content-hash)` —
 **untested**, because there has only ever been one library. The Shelfmark
 convergence (T-023) is the obvious first peer and has not started.
@@ -92,29 +120,44 @@ This is a **provenance** project. The library:
   citation was wrong rather than stale.)
 
 **A provenance project whose own bibliography is unattested is the sharpest
-criticism available**, and it is currently true.
+criticism available**, and it is currently true. It is also now *reachable*:
+mofn's W-1 wallet engine signs statements over a file digest, and a library
+record is a file with a digest.
 
-## 7. Terminology — two live collisions
+## 7. Terminology — one collision, being fixed
 
-**`tags`** means both an SPKI authorization value and a bibliographic label.
-**`topic`** means both a unit of parallel work and a delegation scope.
-`GLOSSARY-0001`, register items 6b/6c. Every record added carries `tags:`, so
-this compounds daily.
+The two collisions this section used to name — **`tags`** and **`topic`** —
+were **withdrawn on 2026-09-22** as register items 6b and 6c. Neither survives
+the test `GLOSSARY-0001` states: two senses collide only when both can be live
+in the same context, and both of those are homonyms across separated repos.
+Carrying them here for three weeks after they were withdrawn was this file
+repeating a retracted claim.
+
+**The live one is `D-n`.** `D-1 … D-7` (mofn's dated decisions) and `D0 … D10`
+(its deliverables) are both live in one table in `PLAN-0003`, and this library
+cites `D-3` in fifteen files including its own PR template and extract skill.
+Being fixed by the rename to `MD-n` (library#65 and the mofn companion); a
+redirect note in `GLOSSARY-0001` keeps older citations resolving.
 
 ---
 
 ## Ranked — what actually moves the needle
 
-1. **Get one thing reviewed by a second person.** It unblocks the credibility of
-   everything else and costs an afternoon.
-2. **Fill the 9 queued records.** They are the ones that look done and are not.
-3. **Resolve `tags` / `topic`** before more records carry the collision.
-4. **Extract `cites` on one record** so the frontier is non-empty and snowballing
-   is demonstrated rather than described.
-5. **Attest `MANIFEST.yaml`** — small, and it removes the sharpest criticism.
-6. **A reading path**, for a person who has not read any of it.
-7. Run the two research sweeps.
+1. **Get one thing reviewed by a second person.** Unchanged at #1 for a month.
+   It unblocks the credibility of everything else, costs an afternoon, and
+   currently blocks four extractions that a DEC-002 ADR is meant to rest on.
+2. **Move `37 written` upward.** The 267 scaffolds are the ones that look done
+   and are not (library#45). Batch by topic.
+3. **Spread the written work beyond one lane.** Four answered topics, three in
+   the same area. L-013's 26 ingested attestation records are the obvious next
+   block.
+4. **Extract `cites` beyond the SBOM lane**, so the frontier reflects the whole
+   library rather than one topic.
+5. **Lift one state machine** — vCon, already distilled, prose already read.
+6. **Attest `MANIFEST.yaml`.** Small, removes the sharpest criticism, and the
+   mofn wallet engine (W-1) makes it a demo rather than a chore.
+7. **A reading path**, for a person who has not read any of it.
 8. Federate with Shelfmark.
 
-**1 through 4 are days. 5 through 8 are the difference between a working tool
+**1 through 5 are days. 6 through 8 are the difference between a working tool
 and something a stranger would adopt.**
