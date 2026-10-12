@@ -75,8 +75,26 @@ Three observations, in descending order of importance to us:
 |---|---|
 | `record.yaml` | metadata |
 | `summary.md` | this document |
+| `distilled/` | the FX-1 artifact set — `distilled/README.md` indexes it with per-artifact coverage |
 
-No `distilled/`. Nothing here is built on yet — the section locators above are the substitute, and a reader checking a claim should open the RFC at the cited §. If this record is ever used to *extract requirements* (its MUSTs are dense and mostly in §5.1.1.1, §6 and §6.3), that is a `distill` job and needs its own artifact.
+Extracted 2026-09-30 to `distillation.profile: full`: `normative.md` (every
+section walked, §1 through §11.2, 128 locators, all 50 BCP 14 keywords),
+`requirements.yaml` (64 entries, R-0001…R-0064, reconciled to 50 exactly),
+`schema/` (both CDDL figures byte-verified), `messages.yaml` (10 structures
+with 80 `constrained_by` links, and four internal inconsistencies recorded as
+INC-1…INC-4), `protocol.yaml` / `protocol.md` (5 flows, with every `on_error`
+stating where the RFC is silent) and `design-notes.md`. **`state-machine` and
+`examples` are declared not applicable**: the RFC names no states, and all 14
+`h'…'` literals are elided. Both files hold the evidence — including the four
+ordering constraints that stand in for a lifecycle, each tied to the
+requirement id carrying it.
+
+**Five artifacts are signed off** — `requirements.yaml`, `normative.md`,
+`messages.yaml`, `schema/README.md` and `state-machine.yaml`, reviewed
+2026-10-04/05, each recording what was spot-checked rather than claiming a full
+re-verification. `protocol.yaml`, `protocol.md`, `design-notes.md` and the two
+index files still carry an empty `reviewed_by`, so nothing may be built on
+those — `docs/requirements.md`.
 
 ## Limits
 

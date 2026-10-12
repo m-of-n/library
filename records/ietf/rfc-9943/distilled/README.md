@@ -36,5 +36,9 @@ to `messages.yaml` or `schema/`, every message named in a `protocol.yaml` flow
 is defined or explicitly flagged `message_defined: false`, and every ordering
 constraint in `state-machine.yaml` now carries its requirement id. All three
 passes are recorded in `record.yaml` under `distillation.passes`.
-**`reviewed_by` is empty on every artifact** — no human has signed any of them,
-so these are readable but not yet buildable-on.
+A pass-4 review signed **5 of the 10 artifacts** on 2026-10-04/05 —
+`requirements.yaml`, `normative.md`, `messages.yaml`, `schema/README.md` and
+`state-machine.yaml` — and each `reviewed_by` states what was spot-checked
+rather than claiming a full re-verification. `protocol.yaml`, `protocol.md`,
+`design-notes.md`, `examples/README.md` and this index still carry an empty
+`reviewed_by`, so those are readable but not yet buildable-on.

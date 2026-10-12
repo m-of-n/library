@@ -225,6 +225,18 @@ def main():
             check_full(rec.parent, d, where, errs)
         if (rec.parent / "distilled.md").exists():
             errs.append(f"{where}: distilled.md is superseded by distilled/ (schema v5)")
+        # A summary must not declare the absence of a distilled/ the record
+        # actually has. rfc-8949, rfc-9942 and rfc-9943 each drifted this way
+        # when their extraction landed without revisiting summary.md, and
+        # validate was clean throughout (library#68). The declared-absence
+        # line is now asked of every summary, so a wrong one propagates.
+        sm = rec.parent / "summary.md"
+        if dd.is_dir() and any(dd.rglob("*")) and sm.exists():
+            if re.search(r"(?:^|[\s,])no\s+`distilled/`", sm.read_text(), re.I | re.M):
+                errs.append(
+                    f"{where}: summary.md declares 'No `distilled/`' but distilled/ "
+                    f"exists \u2014 state the artifact set instead"
+                )
         for f in rec.parent.rglob("*"):
             if f.suffix.lower() in {".pdf", ".xlsx", ".epub", ".docx", ".zip"}:
                 errs.append(f"{where}: third-party file committed ({f.name}) — record the digest, not the bytes")
