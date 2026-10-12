@@ -1,13 +1,2381 @@
 record: rfc-2693
 reviewed_by: ""
-# Every message, structure, header or envelope the document defines.
+
+# ---------------------------------------------------------------------------
+applicability: >-
+  ABSTRACT, and the abstraction is a finding, not a gap in this extraction. RFC 2693 defines no
+  wire format: no octet layout, no ASN.1, no ABNF, no S-expression grammar for any certificate, no
+  media type, no IANA action and no transport. The Abstract says so: "This document gives the
+  theory behind SPKI certificates and ACLs without going into technical detail about those
+  structures or their uses." The document points elsewhere for the concrete forms: a validity
+  variant "is not reflected in the SPKI structure definition" (§5.7.2), and SSL key-usage tags are
+  "left to the examples document" (§6.5.7). The concrete S-expression encoding of certificates,
+  ACL entries, online tests, keys, signatures and dates is in draft-ietf-spki-cert-structure
+  (library record draft-ietf-spki-cert-structure), not here. The S-expression representation
+  itself, including the canonical form the Abstract says SPKI will "define a canonical form for
+  those S-expressions", is RFC 9804 (library record rfc-9804); this document does not define it.
+  What this file captures is therefore three kinds of thing. (a) ABSTRACT structures, decomposed to
+  the fields the source names: the 5-tuple (§6.1) and name 4-tuple (§6.2), the certificate and its
+  three categories (§1.1, §3), the ACL and ACL entry (§1.1, §3.4), validity conditions and every
+  online-test instrument (§5), the threshold intermediate form (§6.3.3), the prover's certificate
+  sequence (§6.3.4), the authorization question and the Certificate Result Certificate (§6.6). (b)
+  S-expression SHAPES the source prints as examples. They are concrete at the level of list
+  structure and type strings, but never given at octet level or in canonical form: SDSI names
+  (name ...) (§2.6-§2.9), key hashes (hash sha1 ...) (§2.8, §7.3), the authorization tag (tag ...)
+  and its four *-forms (§6.3.1), and the threshold subject (k-of-n ...) (§7.7). All are written in
+  RFC 9804 advanced transport form, with hexadecimal #..# and base-64 |..| octet-strings. (c) FIELD
+  MAPPINGS for the seven foreign or native formats §6.5 translates into tuples (X.509v1, PGP,
+  X.509v3, X9.57, SDSI 1.0, SPKI, SSL), plus the ACL-entry translation §6.5 promises but never
+  gives. The following are absent because the source does not define them: field order, and
+  field tag names beyond the type strings visible in examples; the date syntax; the public-key and
+  signature representations; the CRL, revalidation and one-time revalidation formats beyond what §5
+  names; the online-test syntax inside a certificate; and any ACL entry format, which is local by
+  design: "it is never communicated and therefore does not need to be standardized" (§3.4). Even
+  the tuples are semantic definitions, not mandated data structures: §6 calls its processing plan
+  "an example that may be followed".
+
+# ---------------------------------------------------------------------------
+note: >-
+  Conventions. (1) No BCP 14 keyword occurs anywhere in RFC 2693: a case-sensitive whole-word
+  search for MUST, SHALL, SHOULD, REQUIRED, RECOMMENDED, OPTIONAL and MAY finds none. Its
+  prescriptive sentences use lowercase verbs and prose decisions ("must", "SPKI demands", "SPKI has
+  ruled out", "the group chose"). No field here is therefore constrained by a BCP 14 requirement;
+  normative_status records the strength of each structure instead. (2) constrained_by is
+  deliberately absent. distilled/requirements.yaml was not produced in this session, so no
+  rfc-2693#R-NNNN id exists to link to. Every field instead carries source:, the section or sections
+  that state it. constrained_by will be wired in the cross-check pass (pass 3) once
+  requirements.yaml exists. (3) Text in double quotes is verbatim from the source. Only the
+  source's line wraps and runs of spaces are collapsed to one space. No quote is spliced across an
+  elision; any ... inside a quote is the source's own. Anything that follows from the source rather
+  than being stated in it carries the prefix Derived: and names what it follows from. Grammar
+  shapes such as (hash <algorithm> <digest>) are written without quotes because they are this
+  file's notation, not the source's text. (4) required is true, false
+  or unstated. unstated means the source gives no basis either way; it is never guessed. A field
+  with type none is one the source says is ABSENT (an ACL entry's issuer); it is listed because the
+  absence matters. (5) A type equal to another entry's name or alias refers to that entry. Primitive
+  types: byte-string (an SPKI byte string, an RFC 9804 octet-string); boolean; integer; date-time
+  ("date" means date and time, §6.1; syntax undefined here); date-interval (a not-before and a
+  not-after date-time, either possibly infinite); signature (format undefined here); location (a
+  fetch location, syntax undefined here); certificate-identifier (how a CRL or revalidation names a
+  certificate, undefined here); s-expression (any SPKI S-expression); literal (a fixed type string,
+  given in value:); constraint (a rule, not a stored value); none (absent by definition); unstated
+  (the source names the content but not its type); principal-or-hash (the source's recurring "a
+  public key (or its hash)", i.e. a principal or a hash entry); principal-or-hash-or-self (the
+  same, or the reserved word Self); list-of-X. (6) normative_status vocabulary, needed because RFC
+  2693 has no BCP 14 force to borrow. spki-rule: the source states it as an SPKI decision or rule
+  in prose. descriptive: the source describes SPKI's structure or semantics without stating a rule.
+  example-plan: part of §6, whose processing plan "is an example that may be followed, but its
+  primary purpose is to clarify the semantics of an SPKI certificate". The translation-* entries
+  are example-plan too, although their inputs are formats defined by other specifications.
+  illustrative: an encoding the source offers as a possibility ("might be encoded as", "for
+  example"). historical: described as history, not as part of SPKI. ruled-out: described in order to be excluded. mentioned-only:
+  named, with no structure given. derived: assembled by this extraction from statements elsewhere
+  in the source; every field is Derived. (7) aliases lists other names for the same structure,
+  from the source or from sibling artifacts. The state-machine extraction triggers on the canonical
+  names used here (acl-entry, authorization-certificate, name-certificate, attribute-certificate,
+  5-tuple, name-4-tuple, timed-crl, delta-crl, anti-matter-crl, revalidation,
+  one-time-revalidation-request, one-time-revalidation, short-lived-certificate,
+  certificate-result-certificate) and records the aliases crl, timed-revalidation and
+  id-certificate, which appear below as aliases of timed-crl, revalidation and name-certificate.
+  (8) Notation the source uses and this file keeps: 5-tuples in angle brackets <I,S,D,A,V> (§6.3);
+  name 4-tuples in square brackets [issuer, name, subject, validity] (§6.5) or arrow form
+  [(name K1 N) -> subject] (§6.4); K1, K2, Ki, Kroot are keys; N, N1..Nk, Na..Nc are names. (9)
+  Translation entries (translation-*) add input, output, cardinality and precondition. Each of
+  their fields carries maps_from, the source datum that fills that tuple field. Entries with
+  several shapes carry variants. Entries with no fields carry fields_note saying why. (10) Octet
+  values are given wherever an example's meaning depends on them: #03# is the single octet 0x03,
+  not the digit 3. (11) Operations (AIntersect, VIntersect, the 5-tuple and 4-tuple reduction rules,
+  threshold reduction, path discovery) are not structures. They appear here only as constraints on
+  fields; the procedures belong to distilled/protocol.yaml and distilled/state-machine.yaml. 49
+  entries.
+
+# ---------------------------------------------------------------------------
 messages:
-  - name: TODO
-    locator: "§TODO"
-    encoding: TODO            # CBOR / JSON / COSE_Sign1 / HTTP / ...
+
+# --- S-expression profile and identifiers ----------------------------------
+
+  - name: spki-s-expression-profile
+    locator: "Abstract, §1.1 (S-EXPRESSION)"
+    encoding: 'S-expression (RFC 9804); this entry is the SPKI restriction on it, not a grammar'
+    normative_status: descriptive
     fields:
-      - name: TODO
-        type: TODO
+      - name: no_empty_list
+        type: constraint
         required: true
-        constrained_by: [rfc-2693#R-0001]
-    layout: "TODO byte-level / structural layout"
+        source: "§1.1"
+        layout: >-
+          The glossary calls the S-expression "the data format chosen for SPKI/SDSI" and restricts
+          it: "with the limitations that empty lists are not allowed and the first element in any
+          S-expression must be a string, called the "type" of the expression." Derived: RFC 9804 §5
+          admits the empty list () (library record rfc-9804), so an SPKI processor must reject
+          input that a general S-expression parser accepts.
+      - name: type
+        type: byte-string
+        required: true
+        source: "§1.1"
+        layout: >-
+          Element 1 of every list is a byte string naming the list's type: "the first element in
+          any S-expression must be a string, called the "type" of the expression." Type strings
+          that occur in the document: name, hash, tag, k-of-n, * and null. Application tag types:
+          ftp, host, dir, foo, ssl, dns, us-crypto and acl-edit. Derived: a list whose first element
+          is itself a list, such as ((a) b), is not an SPKI S-expression.
+    layout: >-
+      Applies to every list-shaped structure in this file. Atoms are not constrained by the
+      profile, and bare byte strings occur as list elements: "(tag read)" and "(tag #26#)"
+      (§6.3.1).
+    notes: >-
+      The glossary entry is the only place RFC 2693 constrains S-expression syntax at all. Derived:
+      it is narrower than RFC 9804 in two ways, no empty list and a byte-string first element, and
+      it says nothing about display hints, which appear in no example. The Abstract's "define a
+      canonical form for those S-expressions" is not met in this memo: the canonical form is RFC
+      9804 §6.2, and the References list carries [SEXP] ("Ron Rivest, code and description of
+      S-expressions"). Every S-expression printed in RFC 2693 is in advanced transport form (bare
+      tokens, hexadecimal #..#, base-64 |..|, free whitespace). None is canonical, so none can be
+      used as signature input as printed. Derived test inputs: () and ((a) b) must be rejected by
+      an SPKI-profile parser.
+
+  - name: principal
+    locator: "§1.1 (PRINCIPAL, KEYHOLDER, SPEAKING), §2.7"
+    encoding: 'abstract; the public-key representation is not defined in this document (draft-ietf-spki-cert-structure)'
+    normative_status: descriptive
+    fields:
+      - name: public_key
+        type: byte-string
+        required: true
+        source: "§2.7, §1.1"
+        layout: >-
+          The key is its own identifier: "The public key, viewed as a byte string, is therefore an
+          identifier for the keyholder." (§2.7) §1.1: "PRINCIPAL: a cryptographic key, capable of
+          generating a digital signature." Algorithm-neutral: "We deal with public-key signatures
+          in this document but any digital signature method should apply." Derived: the octets that
+          make up "the public key" (raw key material, or an S-expression carrying algorithm and
+          parameters) are not specified here.
+    layout: >-
+      A signature-verification key used as a globally unique name for its keyholder: "each public
+      key corresponds to one private key and therefore to one keyholder" (§2.7). It fills every
+      Issuer position and is one form of Subject.
+    notes: >-
+      §1.1: "A Principal is said to "speak" by means of a digital signature. The statement made is
+      the signed object (often a certificate). The Principal is said to "speak for" the Keyholder."
+      KEYHOLDER is "the person or other entity that owns and controls a given private key." Derived:
+      because the key is the identifier, the theory has no separate key-identifier field; a key
+      appears either whole or as its hash (the hash entry). §7.7: "the keys in a threshold subject
+      do not need to have the same algorithm." Key loss is handled by certificate lifetime, not by
+      a key-revocation structure (§7): "under SPKI one does not declare a key to be bad but rather
+      stops empowering it and instead empowers some other key."
+
+  - name: hash
+    locator: "§2.7, §2.8, §7.3, §7.5, §7.6; §1.1 (SUBJECT), §6.1"
+    encoding: 'S-expression shape shown by example only: (hash <algorithm> <digest>)'
+    normative_status: illustrative
+    fields:
+      - name: type
+        type: literal
+        value: hash
+        required: true
+        source: "§2.8"
+        layout: >-
+          The type string hash. First shown in §2.8: "(name (hash sha1
+          |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|) jim therese)".
+      - name: algorithm
+        type: byte-string
+        required: true
+        source: "§2.7, §2.8"
+        layout: >-
+          The hash algorithm's name. The only value in the document is sha1. The property required
+          of it is collision resistance: "If there exists a collision-free hash function, then a
+          collision-free hash of the public key is also a globally unique identifier for the
+          keyholder, and probably a shorter one than the public key." (§2.7) No algorithm registry
+          is defined here.
+      - name: digest
+        type: byte-string
+        required: true
+        source: "§2.8, §7.3, §7.5"
+        layout: >-
+          The digest octets, printed as the RFC 9804 base-64 octet-string
+          |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|. Derived: it decodes to 20 octets,
+          4cb0a03cb165193ce051b71a60b5bc9064c49d49, which is the SHA-1 output length, so the
+          example is internally consistent. Derived: which octets of the key are hashed (raw key
+          material, or the key's canonical S-expression) is not stated.
+    layout: >-
+      (hash <algorithm> <digest>). Every occurrence hashes the same example key: §2.8, §7.3 (twice)
+      and §7.5 (twice). §7.6 then names the key by its bare digest in prose, "key
+      |TLCgPLFlGTzgUbcaYLW8kGTEnUk=| will issue a certificate", which is not an S-expression form.
+    notes: >-
+      Two roles. (1) A stand-in for a principal wherever the source says "a public key (or its
+      hash)": 5-tuple Issuer and Subject (§6.1), 4-tuple Issuer and Subject (§6.2), and the CRL
+      signer of §5.2. §7.5 shows a hash used directly as a Subject: "(hash sha1
+      |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|)". (2) For 5-tuple Subjects only, "the hash of an object"
+      (§6.1); §1.1 says "a hash of some object". Derived: no object hash is ever shown, so whether
+      it uses this same (hash ...) shape is not stated, and nothing in a hash says whether it covers
+      a key or some other object. Open question for cross-check: §6.3 chains on "S1 = I2", and the
+      source does not say whether a key and its own hash compare equal there.
+
+# --- Names (§2) --------------------------------------------------------------
+
+  - name: sdsi-basic-name
+    locator: "§2.6.1, §2.8"
+    encoding: 'S-expression shape: (name <local-name>)'
+    normative_status: descriptive
+    fields:
+      - name: type
+        type: literal
+        value: name
+        required: true
+        source: "§2.6.1"
+        layout: >-
+          "A basic SDSI 2.0 name is an S-expression with two elements: the word "name" and the
+          chosen name."
+      - name: local_name
+        type: byte-string
+        required: true
+        source: "§2.6.1"
+        layout: >-
+          The chosen name. Example: "george: (name fred)" "represents a basic SDSI name "fred" in
+          the name space defined by george." The name-space owner is not carried in the expression.
+    layout: >-
+      (name <local-name>), exactly two elements. The name space comes from context: "It is SDSI
+      1.0 convention, preserved in SPKI, that if a (local) SDSI name occurs within a certificate,
+      then the public key of the issuer is the identifier of the name space in which that name is
+      defined." (§2.8)
+    notes: >-
+      The george: prefix in the example is the source's expository notation for the name space
+      the expression is written in; it is not part of the S-expression. Derived: a basic name is meaningful only inside a
+      certificate, where the issuer supplies the name space, or once fully qualified
+      (sdsi-fully-qualified-name). Generations: §2.6.1 defines a "SDSI 2.0 name", while §6.2 and
+      §6.5.5 treat "SDSI 1.0" certificates as an input format to translate.
+
+  - name: sdsi-compound-name
+    locator: "§2.6.2, §2.7, §2.8"
+    encoding: 'S-expression shape: (name <name-1> <name-2> ...)'
+    normative_status: descriptive
+    fields:
+      - name: type
+        type: literal
+        value: name
+        required: true
+        source: "§2.6.2"
+        layout: >-
+          The type string name, as in the basic name.
+      - name: names
+        type: list-of-byte-string
+        required: true
+        source: "§2.6.2, §2.8"
+        layout: >-
+          Two or more local names. The first resolves in the writer's name space, and each later one
+          in the name space of whatever the previous one denotes: "If fred in turn defines a name,
+          for example, fred: (name sam) then george can refer to this same entity as george: (name
+          fred sam)". §2.8 calls a run of two or more names "a SDSI name chain".
+    layout: >-
+      (name <name-1> <name-2> ... <name-k>), k >= 2, resolved left to right ("SDSI's name
+      chaining", §2.8). As in the basic name, the first name's name space is implicit.
+    notes: >-
+      No length limit is stated. "Even in the examples of section 2.6.2 above, we needed to make
+      the local names more global and did so by specifying the name-space owner." (§2.7) Derived:
+      §6.4 reduces a chain one link at a time from the left: the leading (key, name) pair is
+      replaced by its definition. A class-2 definition can lengthen the chain before it shortens,
+      and §6.4 notes "one might have names that temporarily grow".
+
+  - name: sdsi-fully-qualified-name
+    locator: "§2.8, §7.3"
+    encoding: 'S-expression shape: (name <key-or-hash> <name-1> ...)'
+    normative_status: descriptive
+    fields:
+      - name: type
+        type: literal
+        value: name
+        required: true
+        source: "§2.8"
+        layout: >-
+          The type string name.
+      - name: name_space_key
+        type: principal-or-hash
+        required: true
+        source: "§2.8"
+        layout: >-
+          Element 2 identifies the name space globally: "That name is a public key followed by one
+          or more names relative to that key." The example puts a hash in this position: "(name
+          (hash sha1 |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|) jim therese) is a fully qualified SDSI name,
+          using the SHA-1 hash of a public key as the global identifier defining the name space and
+          anchoring this name string."
+      - name: names
+        type: list-of-byte-string
+        required: true
+        source: "§2.8"
+        layout: >-
+          One or more names relative to that key. "If there are two or more names, then the string
+          of names is a SDSI name chain."
+    layout: >-
+      (name <key-or-hash> <name-1> [<name-2> ...]). Needed outside certificates: "if a SDSI name is
+      ever to occur outside of a certificate, the name space within which it is defined must be
+      identified. This gives rise to the Fully Qualified SDSI Name."
+    notes: >-
+      Identity is the whole expression, key included. Of "(name (hash sha1
+      |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|) jim)", §7.3 says "the name is not "jim" but rather "(name
+      (hash sha1 |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|) jim)"". Derived: names are compared in full
+      qualified form; the same trailing string under two keys is two different names. Lifetime
+      (§7.3): "That key has a lifetime like any other key, so this name has not achieved the kind of
+      permanence (free from key lifetimes) that an inescapable name has." Open question, Derived: a
+      parser can tell a fully qualified name from a compound name only by the type of element 2 (a
+      key or hash S-expression, versus a byte string). The one example uses (hash ...). But §2.7
+      calls the key "a byte string", and a key carried bare in that position would make the two
+      forms indistinguishable. The source does not address this.
+
+  - name: x509-fully-qualified-name
+    locator: "§2.9, §6.5.1"
+    encoding: 'S-expression shape with the source''s own placeholders: (name <root key> <leaf name>) or (name <root key> <CA(1)> ... <CA(k)> <leaf name>)'
+    normative_status: spki-rule
+    fields:
+      - name: type
+        type: literal
+        value: name
+        required: true
+        source: "§2.9"
+        layout: >-
+          The type string name. An X.509 name is rewritten as a SDSI-style fully qualified name.
+      - name: root_key
+        type: principal-or-hash
+        required: true
+        source: "§2.9"
+        layout: >-
+          The key of the hierarchy's root, standing in for the single global root that never
+          arrived: "If the PEM or original X.500 vision of a single root for a global name space had
+          come true, this wouldn't be necessary because all names would be relative to that same one
+          root key. However, there is not now and is not likely ever to be a single root key."
+      - name: ca_names
+        type: list-of-byte-string
+        required: false
+        source: "§2.9"
+        layout: >-
+          Present only when "uniqueness is enforced only within each individual CA", in which case
+          "one would build a Fully Qualified Name chain from an X.509 certificate chain". Derived:
+          one entry per CA below the root, in chain order from the root down. Whether each entry is
+          a full Distinguished Name or a relative component is not stated.
+      - name: leaf_name
+        type: byte-string
+        required: true
+        source: "§2.9"
+        layout: >-
+          The end entity's X.509 name. Derived: how a Distinguished Name is rendered as an SPKI
+          byte string is not defined here.
+    layout: >-
+      Two shapes, chosen by the hierarchy's uniqueness rule. Root-unique: "every X.509 name should
+      be expressed as the pair (name <root key> <leaf name>) if all leaf names descending from that
+      root are unique." CA-unique: "(name <root key> <CA(1)> <CA(2)> ... <CA(k)> <leaf name>)." (the
+      source's full stop follows the closing parenthesis).
+    notes: >-
+      "An X.509 Distinguished Name can and sometimes must be expressed as a Fully Qualified Name."
+      §6.5.1 states the same rule as a name 4-tuple, with the root key in the Issuer position:
+      "[Kroot, (name <leaf-name>), K1, validity]" (translation-x509v1). Derived: which uniqueness
+      rule a hierarchy follows cannot be read from its certificates. It belongs to the written
+      documentation tied to the root (§6, stage 1). The "should" in "every X.509 name should be
+      expressed" is lowercase, not a BCP 14 keyword.
+
+  - name: group-name
+    locator: "§2.10, §2.8, §4.3"
+    encoding: 'abstract; no structure of its own, only a set of ordinary name certificates'
+    normative_status: descriptive
+    fields:
+      - name: issuer
+        type: principal-or-hash
+        required: true
+        source: "§2.10, §2.8"
+        layout: >-
+          Derived: the group's name space is its issuer's (the §2.8 convention), so every member
+          certificate has the same issuer. §2.10 itself says only that the certificates carry "the
+          same name".
+      - name: name
+        type: byte-string
+        required: true
+        source: "§2.10"
+        layout: >-
+          The shared name: "a named group can be defined by issuing multiple (name,key) certificates
+          with the same name -- one for each group member."
+      - name: members
+        type: list-of-subject
+        required: true
+        source: "§2.10, §2.8"
+        layout: >-
+          One name-certificate per member. "SPKI/SDSI does not claim to enforce one key per name."
+          §2.8: "Each local name maps to one or more public keys and therefore to the corresponding
+          keyholder(s)."
+    layout: >-
+      No group object exists. A group is the set of name certificates that share one (issuer,
+      name) pair, and membership is holding a currently valid one.
+    notes: >-
+      Derived: a name therefore resolves to a SET of subjects, and a grant to a name is a grant to
+      every member. Derived: a member leaves only when its certificate expires or fails an online
+      test. There is no removal instrument, consistent with §7: "SPKI defines a mechanism for giving
+      certificates limited lifetimes so that they can be replaced". §4.3 names the pattern SPKI's
+      delegation is offered against: "traditional <authorization,name> ACLs and <name,key> ID
+      certificates defining groups".
+
+# --- Subjects ----------------------------------------------------------------
+
+  - name: subject
+    locator: "§1.1 (SUBJECT, THRESHOLD SUBJECT), §6.1 element 2, §6.2 element 3, §6.4.1, §7.5"
+    encoding: 'abstract union; each alternative has the shape of the entry it names'
+    normative_status: descriptive
+    fields:
+      - name: key
+        type: principal
+        required: false
+        source: "§6.1, §6.2, §1.1"
+        layout: >-
+          "a public key (or its hash)", the first alternative in both §6.1 and §6.2.
+      - name: key_hash
+        type: hash
+        required: false
+        source: "§6.1, §6.2"
+        layout: >-
+          The parenthetical "(or its hash)" in the same phrase.
+      - name: name
+        type: sdsi-basic-name
+        required: false
+        source: "§6.1, §1.1, §6.2"
+        layout: >-
+          §6.1: "a name used to identify a public key". §1.1: "a name (with the understanding that
+          the name is mapped by certificate to some key or other object)". §6.2 says only "a name".
+          Any of sdsi-basic-name, sdsi-compound-name, sdsi-fully-qualified-name or
+          x509-fully-qualified-name.
+      - name: object_hash
+        type: hash
+        required: false
+        source: "§6.1, §1.1"
+        layout: >-
+          5-tuple Subjects only: "the hash of an object" (§6.1), "a hash of some object" (§1.1). It
+          is not in the §6.2 4-tuple Subject list.
+      - name: threshold
+        type: threshold-subject
+        required: false
+        source: "§6.1, §6.2, §1.1"
+        layout: >-
+          "a threshold function of subordinate subjects" (§6.1, §6.2).
+    layout: >-
+      Exactly one alternative. "SUBJECT: the thing empowered by a certificate or ACL entry." (§1.1)
+      In a 5-tuple it "identifies the entity being spoken about in this intermediate result"
+      (§6.1); in a 4-tuple it "defines the name" (§6.2).
+    notes: >-
+      The source's lists disagree, and a type checker must pick one. (1) §1.1 and §6.1 admit an
+      object hash; §6.2 does not. (2) The §1.1 SUBJECT entry puts "a set of keys arranged in a
+      threshold function", but the §1.1 THRESHOLD SUBJECT entry says "K of N other Subjects", §6.1
+      and §6.2 say "subordinate subjects", and §6.4.1 says subordinate subjects "might be names".
+      The key-only wording is the outlier. (3) §6.1 narrows a name's target to a key ("a name used
+      to identify a public key"); §1.1 allows "some key or other object". Delegation consequence
+      (§7.5): of a grant to "(name (hash sha1 |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|) carl)" versus one to
+      "(hash sha1 |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|)", "both without granting the permission to
+      delegate, that key can delegate at will through <name,key> certificates in the former case
+      and not delegate at all in the latter case." Derived: a name Subject lets the name's owner
+      re-point the name to other keys, whatever the Delegation boolean says. The boolean limits
+      re-delegation, not re-naming.
+
+  - name: threshold-subject
+    locator: "§1.1 (THRESHOLD SUBJECT), §6.3.3, §6.4.1, §7.7"
+    encoding: 'S-expression shape from the one encoded example (§7.7): (k-of-n <K> <N> <subject-1> ... <subject-N>)'
+    normative_status: descriptive
+    fields:
+      - name: type
+        type: literal
+        value: k-of-n
+        required: true
+        source: "§7.7"
+        layout: >-
+          Known only from the example "(k-of-n #03# #07# K1 K2 K3 K4 K5 K6 K7)". The type string
+          k-of-n is not introduced anywhere else.
+      - name: k
+        type: integer
+        required: true
+        source: "§6.3.3, §7.7"
+        layout: >-
+          "A threshold subject is specified by two numbers, K and N [0<K<=N], and N subordinate
+          subjects." §7.7 writes K as #03#, the RFC 9804 hexadecimal octet-string holding the single
+          octet 0x03. Derived: K and N are binary unsigned integers inside an octet-string, not
+          ASCII digits (the digit 3 would be #33#). Width beyond one octet and byte order are not
+          stated.
+      - name: n
+        type: integer
+        required: true
+        source: "§6.3.3, §7.7"
+        layout: >-
+          N, written #07# (the octet 0x07). Derived: N duplicates the count of the subjects that
+          follow, and the source does not say what a verifier does if they disagree.
+      - name: subjects
+        type: list-of-subject
+        required: true
+        source: "§6.3.3, §6.4.1, §7.7"
+        layout: >-
+          Exactly N subordinate subjects, each in any subject form: "Some of a threshold subject's
+          subordinate subjects might be names." (§6.4.1) Mixed algorithms are allowed: "the keys in
+          a threshold subject do not need to have the same algorithm." (§7.7)
+    layout: >-
+      (k-of-n <K> <N> <subject>{N}) with 0 < K <= N. Meaning (§1.1): "Conceptually, the power being
+      transmitted to the Subject by the ACL entry or certificate is transmitted in (1/K) amount to
+      each listed subordinate Subject. K of those subordinate Subjects must agree (by delegating
+      their shares along to the same object or key) for that power to be passed along."
+    notes: >-
+      Worked case (§7.7): one ACL uses (k-of-n #03# #07# K1 K2 K3 K4 K5 K6 K7) in "any ACL entry
+      granting a normal authorization", and "(k-of-n #05# #07# K1 K2 K3 K4 K5 K6 K7)" as the
+      subject of its (tag (acl-edit)) entry, which "would allow the set of root keys to elect new
+      members to that set and retire old members." Purpose: "This mechanism introduces fault
+      tolerance and is especially useful in an ACL entry, providing fault tolerance for "root
+      keys"." (§1.1) Reduction is a procedure (§6.3.3), captured here as
+      threshold-intermediate-form. Derived, open: the source states neither whether the N
+      subordinate subjects must be distinct (with a duplicate, one keyholder could supply two of the
+      K shares) nor whether one threshold may nest inside another.
+
+# --- Authorization tags (§6.3.1) ----------------------------------------------
+
+  - name: authorization-tag
+    locator: "§6.1 element 4, §6.3.1, §3.2, §6.5.3, §6.5.7, §7.7"
+    encoding: 'S-expression shape: (tag <body>), shown by example; the body vocabulary is application-defined'
+    normative_status: descriptive
+    fields:
+      - name: type
+        type: literal
+        value: tag
+        required: true
+        source: "§6.3.1, §6.5.7"
+        layout: >-
+          Every AIntersect() example operates on (tag ...) forms, e.g. "(tag (ftp ftp.clark.net cme
+          (* set read write)))", and §6.5.7 calls the field a "tag field". Derived: §6.1 says only
+          "Authorization: an S-expression. [Rules for combination of Authorizations are given
+          below.]" and never names the wrapper. The three ftp examples that open §6.3.1 are written
+          without it.
+      - name: body
+        type: s-expression
+        required: true
+        source: "§6.3.1"
+        layout: >-
+          "An authorization is a list of strings or sub-lists, of meaning to and probably defined by
+          the application that will use this authorization for access control." The body is one of:
+          a byte string ("(tag read)", "(tag #26#)"); a list whose first element is its type (ftp,
+          ssl, dns, us-crypto, acl-edit); or a *-form (tag-star-all, tag-star-set,
+          tag-star-prefix, tag-star-range).
+      - name: list_semantics
+        type: constraint
+        required: true
+        source: "§6.3.1"
+        layout: >-
+          Lists are positional and prefix-closed. "Two authorizations intersect by matching,
+          element for element. If one list is longer than the other but match at all elements where
+          both lists have elements, then the longer list is the result of the intersection. This
+          means that additional elements of a list must restrict the permission granted." And: "a
+          normal list is taken to mean all lists that start with those elements."
+    layout: >-
+      (tag <body>). Derived body grammar (the source gives none): body = byte-string / ( type-string
+      *body ) / star-form. A longer list is a narrower grant: "(ftp (host ftp.clark.net))" "is more
+      general (allows more access) than" "(ftp (host ftp.clark.net) (dir /pub/cme))", and "The
+      intersection of the two would be the second."
+    notes: >-
+      Position, not keys: "Since the AIntersect rules imply position dependency, one could also
+      define the previous authorization string as: (ftp ftp.clark.net /pub/cme) to keep the form
+      compact." Generic intersection is the point: "AIntersect provides rules for automatic
+      intersection of these strings so that application developers can know the semantics of the
+      strings they use. Special semantics would require special reduction software." One tag per
+      certificate is preferred: "it is desirable that authorizations be limited to one per
+      certificate." (§3.2) How separate tags combine is not in the certificate: "The fact that these
+      three kinds of permission are treated as if ANDed is derived from the logic of the code that
+      interprets the permissions and is not expressed in the certificate." (§6.5.7) Translators
+      write implicit permissions as tags: "(tag (*))" for an implicit X.509v3 authorization
+      (§6.5.3), "(tag (ssl))" for SSL (§6.5.7). Derived: by the padding rule under tag-star-all,
+      (tag) and (tag (*)) denote the same set.
+
+  - name: tag-star-all
+    locator: "§6.3.1"
+    encoding: 'S-expression: (*)'
+    normative_status: descriptive
+    fields:
+      - name: type
+        type: literal
+        value: '*'
+        required: true
+        source: "§6.3.1"
+        layout: >-
+          The *-forms are special S-expressions "using "*" as the expression name". This one has no
+          further elements.
+    layout: >-
+      (*), which "stands for the set of all S-expressions and byte-strings. In other words, it will
+      match anything."
+    notes: >-
+      Intersection identity: "When intersected with anything, the result is that other thing." It
+      is also the implicit padding of the list rule: "[The AIntersect rule about lists of different
+      length treats a list as if it had enough (*) entries implicitly appended to it to match the
+      length of another list with which it was being intersected.]" Vector: "AIntersect( (tag (ftp
+      ftp.clark.net cme (* set read write))), (tag (*)) )" "evaluates to (tag (ftp ftp.clark.net cme
+      (* set read write)))". (tag (*)) is an implicit X.509v3 authorization (§6.5.3) and an SSL CA
+      certificate's tag (§6.5.7).
+
+  - name: tag-star-set
+    locator: "§6.3.1, §6.5.7"
+    encoding: 'S-expression: (* set <tag-expr>*)'
+    normative_status: descriptive
+    fields:
+      - name: type
+        type: literal
+        value: '*'
+        required: true
+        source: "§6.3.1"
+        layout: >-
+          The type string *.
+      - name: form
+        type: literal
+        value: set
+        required: true
+        source: "§6.3.1"
+        layout: >-
+          The word set, element 2.
+      - name: members
+        type: list-of-s-expression
+        required: false
+        source: "§6.3.1"
+        layout: >-
+          "(* set <tag-expr>*) stands for the set of elements listed in the *-form." The trailing *
+          on <tag-expr> is the source's repetition mark: zero or more. Members may be byte strings
+          or lists: "(* set read write (foo bla) delete)". Derived: (* set) with no members would
+          denote the empty set, and the source does not say whether it is legal.
+    layout: >-
+      (* set <tag-expr>*), the union of the member sets.
+    notes: >-
+      Vectors (§6.3.1): "AIntersect( (tag (* set read write (foo bla) delete)), (tag (* set write
+      read) ) )" "evaluates to (tag (* set read write))"; "AIntersect( (tag (* set read write (foo
+      bla) delete)), (tag read ) )" "evaluates to (tag read)". Derived: the vectors rely on two rules
+      the source never states. The result lists members in the FIRST operand's order (read write,
+      not write read), so a test must compare as sets. A one-member result collapses from (* set
+      read) to the bare read. In §6.5.7 a set is the union of independent permissions: an SSL root's
+      ACL tag "(tag (* set (ssl) (dns (*))))" "which by the rules of intersection is equivalent to:
+      (tag (* set (ssl) (dns)))". Why a set rather than one list: "separating them, via (* set),
+      allows for a future enhancement of SSL in which the (ssl) permission is derived from one set
+      of root keys (those of current CAs) while the (dns) permission is derived from another set of
+      root keys (those empowered to speak in DNSSEC)".
+
+  - name: tag-star-prefix
+    locator: "§6.3.1"
+    encoding: 'S-expression: (* prefix <byte-string>)'
+    normative_status: descriptive
+    fields:
+      - name: type
+        type: literal
+        value: '*'
+        required: true
+        source: "§6.3.1"
+        layout: >-
+          The type string *.
+      - name: form
+        type: literal
+        value: prefix
+        required: true
+        source: "§6.3.1"
+        layout: >-
+          The word prefix, element 2.
+      - name: prefix
+        type: byte-string
+        required: true
+        source: "§6.3.1"
+        layout: >-
+          "(* prefix <byte-string>) stands for the set of all byte strings that start with the one
+          given in the *-form."
+    layout: >-
+      (* prefix <byte-string>).
+    notes: >-
+      Vector: "AIntersect( (tag (* prefix http://www.clark.net/pub/)), (tag (* prefix
+      http://www.clark.net/pub/cme/html/)) )" "evaluates to (tag (* prefix
+      http://www.clark.net/pub/cme/html/))". When one prefix extends the other, the intersection is
+      the longer. Derived: two prefixes where neither extends the other intersect to nothing, a
+      failure the source does not show. Matching is on octets ("byte strings that start with"), so
+      no URL normalization applies.
+
+  - name: tag-star-range
+    locator: "§6.3.1"
+    encoding: 'S-expression: (* range <ordering> <lower-limit>? <upper-limit>?)'
+    normative_status: descriptive
+    fields:
+      - name: type
+        type: literal
+        value: '*'
+        required: true
+        source: "§6.3.1"
+        layout: >-
+          The type string *.
+      - name: form
+        type: literal
+        value: range
+        required: true
+        source: "§6.3.1"
+        layout: >-
+          The word range, element 2.
+      - name: ordering
+        type: byte-string
+        required: true
+        source: "§6.3.1"
+        layout: >-
+          One of five: "The ordering parameter (alpha, numeric, time, binary, date) specifies the
+          kind of strings allowed."
+      - name: lower_limit
+        type: s-expression
+        required: false
+        source: "§6.3.1"
+        layout: >-
+          "<lower-limit>?", optional. The one example writes it as a comparison word followed by a
+          value: "ge #30#". Derived: a limit is two elements, an operator and a value. Only ge (lower)
+          and le (upper) ever appear; the operator vocabulary is not defined in this document.
+      - name: upper_limit
+        type: s-expression
+        required: false
+        source: "§6.3.1"
+        layout: >-
+          "<upper-limit>?", optional; "le #39#" in the example.
+    layout: >-
+      (* range <ordering> [<lower-limit>] [<upper-limit>]), which "stands for the set of all byte
+      strings lexically (or numerically) between the two limits."
+    notes: >-
+      The only vector is negative: "AIntersect( (tag (* range numeric ge #30# le #39# )), (tag #26#)
+      )" "fails to intersect." The limits are the octets 0x30 and 0x39 (the ASCII digits 0 and 9);
+      the value is the octet 0x26 (the ASCII ampersand). Derived: the vector fails under either
+      reading of numeric, decimal text (an ampersand is no number) or binary integer (0x26 < 0x30),
+      so it does not settle which is meant. Open: whether the limits are inclusive (the names ge and
+      le suggest so, but it is not stated); what time compares that date does not; whether alpha is
+      octet order or something locale-aware; and what an absent limit means (Derived: unbounded on
+      that side). These orderings are tag semantics, unrelated to the validity dates of §6.1.
+
+# --- Validity conditions and online tests (§5) --------------------------------
+
+  - name: validity-conditions
+    locator: "§5, §6 stage 1, §6.1 element 5, §6.2 element 4, §6.3.2"
+    encoding: 'abstract; the date syntax is not defined in this document'
+    normative_status: spki-rule
+    fields:
+      - name: not_before
+        type: date-time
+        required: false
+        source: "§5, §6.1"
+        layout: >-
+          "a not-before date and a not-after date, where "date" means date and time. If the
+          not-before date is missing from the source credential then minus infinity is assumed."
+          (§6.1)
+      - name: not_after
+        type: date-time
+        required: false
+        source: "§5, §6.1"
+        layout: >-
+          "If the not-after date is missing then plus infinity is assumed." (§6.1)
+      - name: online_tests
+        type: list-of-online-test-specification
+        required: false
+        source: "§5"
+        layout: >-
+          "The SPKI group resolved, in discussion, that on-line tests of various kinds are also
+          validity conditions. That is, they further refine the valid date range of a certificate.
+          Three kinds of on-line tests are envisioned: CRL, re-validation and one-time."
+    layout: >-
+      "A certificate, or an ACL entry, has optional validity conditions. The traditional ones are
+      validity dates: not-before and not-after." (§5) Every part is optional. Derived: a credential
+      with none is valid from minus infinity to plus infinity (§6.1).
+    notes: >-
+      Intersection (§6.3.2): "Vmin = max( Xmin, Ymin )", "Vmax = min( Xmax, Ymax )", "and if Vmin >
+      Vmax, then the intersection failed." Derived: Vmin = Vmax succeeds, so intervals are closed at
+      both ends and a single instant is a valid interval, which is what the one-time revalidation
+      needs (§5.5). Dates must be comparable: "These rules assume that daytimes are expressed in a
+      monotonic form, as they are in SPKI." Online results fold in at translation time (§6 stage
+      1): "the validity dates of those on-line test results are intersected by VIntersect()
+      [defined in 6.3.2, below] with the validity dates of the certificate to yield the dates in the
+      certificate's tuple(s)." Who sets them: "the certificate issuer must specify the issuer of
+      validity confirmations" (§5). Not stated: date syntax, time zone, granularity, or any bound on
+      the verifier's clock error. §5.2 concedes that "clock inaccuracies in the verifier may produce
+      a result not desired by the issuer".
+
+  - name: online-test-specification
+    locator: "§5, §5.2 condition 1, §5.3, §5.5, §5.6, §6.3.2, §7.6"
+    encoding: 'abstract; the in-certificate syntax is in draft-ietf-spki-cert-structure, not here'
+    normative_status: spki-rule
+    fields:
+      - name: kind
+        type: byte-string
+        required: true
+        source: "§5, §5.6"
+        layout: >-
+          One of "CRL, re-validation and one-time" (§5), or a fourth kind that §5.6 adds without
+          naming: "SPKI defines a kind of online test statement to tell the user of the certificate
+          where a replacement short-lived certificate might be fetched." The results are timed-crl,
+          revalidation, one-time-revalidation, and a replacement short-lived-certificate.
+      - name: confirmation_issuer
+        type: principal-or-hash
+        required: true
+        source: "§5, §5.2, §5.3"
+        layout: >-
+          "However, in SPKI, the certificate issuer must specify the issuer of validity
+          confirmations." (§5) For CRLs, condition 1: "The certificate must list the key (or its
+          hash) that will sign the CRL". §5.3 applies "the same rules" to revalidations. It may be a
+          third party: "the issuer of those refinements need not be the issuer of the original
+          certificate."
+      - name: locations
+        type: list-of-location
+        required: false
+        source: "§5.2, §5.6"
+        layout: >-
+          "and may give one or more locations where that CRL might be fetched." (§5.2) For the
+          short-lived kind the location is the whole point: "where a replacement short-lived
+          certificate might be fetched" (§5.6). Derived: the location syntax is not defined, and for
+          the one-time kind the source does not say where the request goes.
+    layout: >-
+      kind + the key (or hash) that will sign the confirmations + optional fetch locations, carried
+      inside the validity conditions of a certificate or ACL entry.
+    notes: >-
+      Evaluation (§6.3.2): "In the most straight-forward implementation, each online test to which a
+      certificate is subject is evaluated. Each such test carries with it a validity interval, in
+      terms of dates." Deferral is permitted: "It is possible for an implementation of VIntersect()
+      to gather up online tests that are present in each certificate and include the union of all
+      those tests in the accumulating tuples. In this case, the evaluation of those online tests is
+      deferred until the end of the process." Derived: several tests in one certificate combine by
+      AND, since each one's interval is intersected in; the source does not say so directly.
+      Operator (§7.6): the test "will be supplied by some entity that is on-line", possibly a hired
+      service that "would not have the power to generate a new key for the user, only to revoke a
+      current one."
+
+  - name: timed-crl
+    aliases:
+      - crl
+    locator: "§5.2, §5.4"
+    encoding: 'abstract; the CRL format is not defined in this document'
+    normative_status: spki-rule
+    fields:
+      - name: revoked_certificates
+        type: list-of-certificate-identifier
+        required: true
+        source: "§5.1, §5.3"
+        layout: >-
+          Derived: a CRL lists what is revoked. "CRLs are negative statements" (§5.3), and the early
+          design "had a list of revoked certificate identifiers" (§5.1). §5.2 itself does not list
+          a timed CRL's contents, and how a certificate is identified is not stated. The list may
+          be empty.
+      - name: validity_dates
+        type: date-interval
+        required: true
+        source: "§5.2"
+        layout: >-
+          Condition 2: "The CRL must carry validity dates."
+      - name: signature
+        type: signature
+        required: true
+        source: "§5.2"
+        layout: >-
+          By the key the certificate names. Condition 1: "The certificate must list the key (or its
+          hash) that will sign the CRL". Derived: a CRL signed by any other key is not that
+          certificate's CRL.
+      - name: non_overlap
+        type: constraint
+        required: true
+        source: "§5.2"
+        layout: >-
+          Condition 3: "CRL validity date ranges must not intersect. That is, one may not issue a new
+          CRL to take effect before the expiration of the CRL currently deployed."
+    layout: >-
+      A signed, dated revocation list whose successive validity intervals never overlap. Scope:
+      "SPKI permits use of timed CRLs. That is, if a certificate can be referenced in a CRL, then the
+      CRL process is subject to three conditions."
+    notes: >-
+      Effect: "no certificate that might use a CRL can be processed without a valid CRL and no CRL
+      can be issued to show up as a surprise at the verifier. This yields a deterministic validity
+      computation, independent of clock skew, although clock inaccuracies in the verifier may
+      produce a result not desired by the issuer. The CRL in this case is a completion of the
+      certificate, rather than a message to the world announcing a change of mind." Derived: absence
+      fails closed. A certificate that names a CRL key is not valid while no CRL is currently valid.
+      Interval sizing (§5.4): "How long are you willing to let the world believe and act on a
+      statement you know to be false?" and "Both timed CRLs and timed revalidations have non-0
+      validity intervals." The three musts are lowercase, and there is no BCP 14 keyword in the
+      document. Contrast anti-matter-crl, which has neither dates nor non-overlap. A CRL may be a
+      full CRL plus deltas (delta-crl).
+
+  - name: delta-crl
+    locator: "§5.2"
+    encoding: 'abstract; not defined in this document'
+    normative_status: descriptive
+    fields:
+      - name: base
+        type: timed-crl
+        required: true
+        source: "§5.2"
+        layout: >-
+          "a CRL might be a full CRL followed by a sequence of delta-CRLs."
+      - name: deltas
+        type: unstated
+        required: true
+        source: "§5.2"
+        layout: >-
+          The ordered sequence of delta-CRLs, whose content is not described. Derived: how a delta
+          names its base, and how its own dates relate to the base's, are not stated.
+      - name: combined_rule
+        type: constraint
+        required: true
+        source: "§5.2"
+        layout: >-
+          "That sequence of instruments is then treated as a current CRL and the combined CRL must
+          follow the conditions listed above." Derived: validity dates and non-overlap apply to the
+          combination, not necessarily to each delta.
+    layout: >-
+      A full timed CRL plus an ordered sequence of delta-CRLs, treated together as one current CRL.
+    notes: >-
+      Motivation: "Since CRLs might get very large and since they tend to grow monotonically, one
+      might want to issue changes to CRLs rather than full ones."
+
+  - name: revalidation
+    aliases:
+      - timed-revalidation
+    locator: "§5.3, §5.4"
+    encoding: 'abstract; the revalidation format is not defined in this document'
+    normative_status: spki-rule
+    fields:
+      - name: listed_certificates
+        type: list-of-certificate-identifier
+        required: true
+        source: "§5.3"
+        layout: >-
+          "Typically a revalidation would list only one certificate (the one of interest), although
+          it might list a set of certificates (to save digital signature effort)."
+      - name: validity_dates
+        type: date-interval
+        required: true
+        source: "§5.3, §5.2"
+        layout: >-
+          §5.2 condition 2, applied through §5.3. Never zero-length: "Both timed CRLs and timed
+          revalidations have non-0 validity intervals." (§5.4)
+      - name: signature
+        type: signature
+        required: true
+        source: "§5.3, §5.2"
+        layout: >-
+          By the key the certificate names (§5.2 condition 1, applied through §5.3).
+      - name: non_overlap
+        type: constraint
+        required: true
+        source: "§5.3, §5.2"
+        layout: >-
+          §5.2 condition 3, applied through §5.3. Derived: when revalidations list different sets of
+          certificates, the source does not say whether non-overlap holds per certificate or per
+          instrument.
+    layout: >-
+      "CRLs are negative statements. The positive version of a CRL is what we call a revalidation."
+      The timed CRL's rules apply: "SPKI demands that this process be deterministic and therefore
+      that the revalidation follow the same rules listed above (in section 5.2)."
+    notes: >-
+      Derived: because it is positive, it fails closed by construction. A certificate subject to
+      revalidation is valid only inside the interval of a current revalidation that lists it.
+      Interval sizing as for CRLs (§5.4): "one must assume that the previous CRL or revalidation has
+      just been signed and transmitted to at least one consumer, locking up a time slot." The source
+      section is titled "Timed Revalidations"; one-time-revalidation is the zero-interval
+      counterpart.
+
+  - name: one-time-revalidation-request
+    locator: "§5.5"
+    encoding: 'abstract; the request format is not defined, and only its nonce is named'
+    normative_status: descriptive
+    fields:
+      - name: nonce
+        type: byte-string
+        required: true
+        source: "§5.5"
+        layout: >-
+          "One applies for this on-line, one-time revalidation by submitting a request containing a
+          nonce." Derived: its type, length and freshness rules are not stated. Its only stated
+          purpose is preventing replay.
+    layout: >-
+      request = nonce + whatever else the service needs, none of which is named. It goes on-line to
+      the confirmation issuer the certificate names (§5).
+    notes: >-
+      This entry and one-time-revalidation are the only request/response exchange RFC 2693
+      describes. Purpose: "For those who want to set the validity interval to zero, SPKI defines a
+      one-time revalidation." Not stated, and so not listed as fields: which certificate is being
+      revalidated, who is asking, and where the request is sent. Derived: the request must at least
+      identify the certificate, but how it does so is open.
+
+  - name: one-time-revalidation
+    locator: "§5.5"
+    encoding: 'abstract; a signed instrument whose format is not defined'
+    normative_status: descriptive
+    fields:
+      - name: nonce
+        type: byte-string
+        required: true
+        source: "§5.5"
+        layout: >-
+          The request's nonce, echoed: "That nonce gets returned in the signed revalidation
+          instrument, in order to prevent replay attacks."
+      - name: signature
+        type: signature
+        required: true
+        source: "§5.5, §5"
+        layout: >-
+          "the signed revalidation instrument". Derived: signed by the confirmation issuer the
+          certificate names (§5).
+      - name: validity_dates
+        type: none
+        required: false
+        source: "§5.5"
+        layout: >-
+          None; the exchange replaces them: "This protocol takes the place of a validity date range
+          and represents a validity interval of zero, starting and ending at the time the
+          authorization computation completes."
+    layout: >-
+      response = echoed nonce + signature, with a zero-length interval at the moment the
+      computation completes. Derived: a verdict (revalidated or not) is implied by the word
+      revalidation but not named, and the source does not say whether a refusal is also a signed
+      instrument.
+    notes: >-
+      Lifetime: "This form of revalidation has no lifetime beyond the current authorization
+      computation." Why zero needs a nonce: "Validity intervals of length zero are not possible.
+      Since transmission takes time, by the time a CRL was received by the verifier, it would be out
+      of date and unusable." The nonce binds the answer to this computation rather than to a clock.
+      Derived: a one-time revalidation can never be cached or reused.
+
+  - name: short-lived-certificate
+    locator: "§5.6, §7"
+    encoding: 'abstract; an ordinary certificate with a short validity interval, not a new structure'
+    normative_status: descriptive
+    fields:
+      - name: validity_conditions
+        type: validity-conditions
+        required: true
+        source: "§5.6"
+        layout: >-
+          A near not-after date. The option is "just making the original certificate short-lived,
+          especially if the online test result is issued by the same key that issued the
+          certificate."
+      - name: replacement_location
+        type: online-test-specification
+        required: false
+        source: "§5.6"
+        layout: >-
+          The unnamed fourth online-test kind: "If one wants to issue short-lived certificates, SPKI
+          defines a kind of online test statement to tell the user of the certificate where a
+          replacement short-lived certificate might be fetched."
+    layout: >-
+      A certificate of any kind, issued with a short life and optionally a pointer to where its
+      successor will be.
+    notes: >-
+      Cost (§5.6): "There are cases in which the short-lived certificate requires fewer signatures
+      and less network traffic than the various online test options. The use of a short-lived
+      certificate always requires fewer signature verifications than the use of certificate plus
+      online test result." SPKI's whole key-management model rests on it (§7): "Rather than define a
+      mechanism for declaring a key to be bad or replaced, SPKI defines a mechanism for giving
+      certificates limited lifetimes so that they can be replaced." "Therefore, all key lifetime
+      control becomes certificate lifetime control." RFC 2693 defines no key-revocation structure.
+
+  - name: anti-matter-crl
+    locator: "§5.1"
+    encoding: 'abstract; described in order to be excluded'
+    normative_status: ruled-out
+    fields:
+      - name: revoked_certificates
+        type: list-of-certificate-identifier
+        required: true
+        source: "§5.1"
+        layout: >-
+          "It had a list of revoked certificate identifiers."
+      - name: sequence_number
+        type: integer
+        required: true
+        source: "§5.1"
+        layout: >-
+          "It also had a sequence number, so that one could tell which of two CRLs was more recent.
+          A newer CRL would replace an older one."
+    layout: >-
+      A revocation list plus a sequence number, with nothing that bounds when it applies. "This mode
+      of operation is like wandering anti-matter." "If the CRL encounters a certificate it has
+      listed, it effectively annihilates that certificate."
+    notes: >-
+      Excluded: "SPKI has ruled out the use of wandering anti-matter CRLs for its certificates.
+      Every authorization computation is deterministic, under SPKI rules." Why: "this process is
+      non-deterministic. The result of the authorization computation is at least timing dependent.
+      Given an active adversary, it can also be a security hole. That is, an adversary can prevent
+      revocation of a given certificate by preventing the delivery of new CRLs." It is captured so a
+      translator can recognise and refuse it. Derived: it lacks exactly §5.2 conditions 2 and 3. With
+      no validity dates there is no non-overlap rule, and so nothing tells a verifier that a newer
+      CRL is missing. Typo in the source: "leaving a copies of itself".
+
+  - name: micali-hash-chain-validity
+    locator: "§5.7.1"
+    encoding: 'none given; the mechanism is in [ECR]'
+    normative_status: mentioned-only
+    fields_note: >-
+      No fields. The source names the mechanism and its effect, and nothing of its structure.
+    layout: >-
+      "Silvio Micali has patented a mechanism for using hash chains to revalidate or revoke a
+      certificate inexpensively. This mechanism changes the performance requirements of those models
+      and might therefore change the conclusion from a performance analysis [ECR]."
+    notes: >-
+      [ECR] is "Efficient Certificate Revocation", a manuscript from MIT LCS. Listed so that
+      cross-check does not read its absence as a dropped structure. Derived: it would sit beside
+      timed-crl and revalidation as another online-test result, but the source does not place it in
+      the SPKI structure.
+
+  - name: rivest-verifier-decided-validity
+    locator: "§5.7.2"
+    encoding: 'none; explicitly not in the SPKI structure'
+    normative_status: mentioned-only
+    fields_note: >-
+      No fields. "This line of thought deserves further consideration, but is not reflected in the
+      SPKI structure definition."
+    layout: >-
+      Reverses who sets validity: "it is the verifier and not the issuer who is taking a risk by
+      accepting a certificate. It should therefore be the verifier who decides what level of
+      assurance he needs before accepting a credential." The source paper is [R98], "Can We
+      Eliminate Revocation Lists?".
+    notes: >-
+      Derived: no structure in this file carries verifier-side validity policy, such as a maximum
+      acceptable age for a revalidation; every validity input here is set by an issuer. The source
+      leaves room for a mixed model: "It might even be that both the issuer and the verifier have
+      stakes in this decision, so that any replacement validity logic would have to include inputs
+      from both."
+
+# --- Certificates and ACLs (§1.1, §3, §4, §6.6) -------------------------------
+
+  - name: certificate
+    locator: "§1.1 (CERTIFICATE, ISSUER), §6, §8"
+    encoding: 'abstract; a signed instrument whose envelope, field order and signature format are in draft-ietf-spki-cert-structure, not here'
+    normative_status: descriptive
+    fields:
+      - name: issuer
+        type: principal-or-hash
+        required: true
+        source: "§1.1"
+        layout: >-
+          "It contains at least an Issuer and a Subject." "ISSUER: the signer of a certificate and
+          the source of empowerment that the certificate is communicating to the Subject."
+      - name: subject
+        type: subject
+        required: true
+        source: "§1.1"
+        layout: >-
+          The empowered party; see subject.
+      - name: validity_conditions
+        type: validity-conditions
+        required: false
+        source: "§1.1, §5"
+        layout: >-
+          "It can contain validity conditions, authorization and delegation information."
+      - name: authorization
+        type: authorization-tag
+        required: false
+        source: "§1.1"
+        layout: >-
+          Present in authorization and attribute certificates, absent in ID certificates.
+      - name: delegation
+        type: boolean
+        required: false
+        source: "§1.1, §4.1.4"
+        layout: >-
+          The permission to delegate further: "if delegation is TRUE, may also delegate that
+          permission or some subset of it to others" (§4.1.4).
+      - name: signature
+        type: signature
+        required: true
+        source: "§1.1"
+        layout: >-
+          "CERTIFICATE: a signed instrument that empowers the Subject." Derived: made with the
+          Issuer's private key. The signature format and the octets it covers are not defined here.
+    layout: >-
+      Three categories by what is bound (§1.1): "ID (mapping <name,key>), Attribute (mapping
+      <authorization,name>), and Authorization (mapping <authorization,key>)." The entries are
+      name-certificate, attribute-certificate and authorization-certificate.
+    notes: >-
+      Partial pass-through: "An SPKI authorization or attribute certificate can pass along all the
+      empowerment it has received from the Issuer or it can pass along only a portion of that
+      empowerment." (§1.1) As reduction inputs (§6) the three are "<name,key> (as a certificate)",
+      "<authorization,name> (as an attribute certificate or ACL entry)" and "<authorization,key>
+      (as an authorization certificate or ACL entry)". §8 counts "six classes" of directional
+      binding among key, name and authorization. Only name->key, authorization->name and
+      authorization->key get structures; key->name appears informally (key-to-name-mapping).
+      Derived: the signature is what separates a certificate from an ACL entry, which "has
+      potentially the same content as a certificate body, but has no Issuer (and is not signed)"
+      (§1.1).
+
+  - name: name-certificate
+    aliases:
+      - id-certificate
+      - spki-name-certificate
+    locator: "§1.1 (CERTIFICATE: ID), §2.8, §2.10, §6.2, §6.4.2, §6.5.6, §7.1, §7.2, §7.3"
+    encoding: 'abstract here; the concrete S-expression encoding is in draft-ietf-spki-cert-structure, not this document'
+    normative_status: descriptive
+    fields:
+      - name: issuer
+        type: principal-or-hash
+        required: true
+        source: "§6.2, §2.8"
+        layout: >-
+          The name-space owner. As 4-tuple Issuer: "a public key (or its hash). This identifies the
+          entity defining this name in its private name space." (§6.2)
+      - name: name
+        type: byte-string
+        required: true
+        source: "§6.2"
+        layout: >-
+          The local name being defined. The certificate "carries no authorization field but does
+          carry a name" (§6.2). As a 4-tuple element: "Name: a byte string".
+      - name: subject
+        type: subject
+        required: true
+        source: "§6.2"
+        layout: >-
+          What the name means: "a public key (or its hash), a name, or a threshold function of
+          subordinate subjects. This defines the name." No object hash (compare §6.1).
+      - name: validity_conditions
+        type: validity-conditions
+        required: false
+        source: "§5, §6.2"
+        layout: >-
+          As for every certificate. Missing dates become minus or plus infinity in the 4-tuple
+          (§6.2).
+      - name: authorization
+        type: none
+        required: false
+        source: "§6.2"
+        layout: >-
+          Absent: "A <name,key> certificate (such as X.509v1 or SDSI 1.0) carries no authorization
+          field".
+      - name: delegation
+        type: none
+        required: false
+        source: "§6.4.2"
+        layout: >-
+          Absent: "a 4-tuple contains no delegation or authorization fields".
+      - name: signature
+        type: signature
+        required: true
+        source: "§1.1"
+        layout: >-
+          Signed by the issuer, like every certificate (§1.1).
+    layout: >-
+      issuer + name + subject + validity, signed. Translation (§6.5.6): "An SPKI certificate maps
+      directly to one 4- or 5- tuple, depending respectively on whether it is a name certificate or
+      carries an authorization." A name certificate yields one name-4-tuple.
+    notes: >-
+      Name space (§2.8): within a certificate, "the public key of the issuer is the identifier of
+      the name space in which that name is defined." Several certificates for one (issuer, name)
+      define a group (group-name). Self-naming for key management (§7.3): "This name could easily be
+      issued by the named keyholder, for the purpose of key management only. In that case, there is
+      no concern about access control being subverted by some third-party naming authority." The
+      source considers and rejects two hypothetical variants: a certificate to "map from an
+      inescapable name to the person's current key" (§7.1), rejected because "there are no
+      inescapable names for keyholders"; and names issued by one global naming authority (§7.2),
+      because "Such power is not likely to be tolerated." Open question carried from name-4-tuple:
+      §6.2 types the name as one byte string, but §6.5.1 puts a multi-element (name CA1 CA2 ... CAk
+      <leaf-name>) in the same position.
+
+  - name: authorization-certificate
+    aliases:
+      - spki-authorization-certificate
+    locator: "§1.1 (CERTIFICATE: Authorization), §3.3, §4.1.4, §4.2, §6.1, §6.5.6, §8"
+    encoding: 'abstract here; the concrete S-expression encoding is in draft-ietf-spki-cert-structure, not this document'
+    normative_status: descriptive
+    fields:
+      - name: issuer
+        type: principal-or-hash
+        required: true
+        source: "§6.1, §1.1"
+        layout: >-
+          The signer and the source of the empowerment. Derived: a signed certificate cannot carry
+          the reserved word "Self"; only a tuple made from an ACL entry has that (§6.1).
+      - name: subject
+        type: subject
+        required: true
+        source: "§3.3, §6.1"
+        layout: >-
+          A key in the basic form: "A basic SPKI certificate defines a straight authorization
+          mapping: authorization -> key" (§3.3). Any 5-tuple subject is admissible (§6.1). With a
+          name subject the certificate is an attribute-certificate in §1.1's terms.
+      - name: delegation
+        type: boolean
+        required: false
+        source: "§4.1.4, §6.1"
+        layout: >-
+          "The subject of a certificate or ACL entry may exercise any permission granted and, if
+          delegation is TRUE, may also delegate that permission or some subset of it to others."
+          (§4.1.4) Derived: absent means FALSE, because the right to delegate exists only "if
+          delegation is TRUE", and the tuple always holds a definite boolean (§6.1).
+      - name: authorization
+        type: authorization-tag
+        required: true
+        source: "§6.1, §6.5.6, §3.2"
+        layout: >-
+          The granted permission. One per certificate is preferred: "it is desirable that
+          authorizations be limited to one per certificate." (§3.2) A certificate that "carries an
+          authorization" maps to a 5-tuple (§6.5.6).
+      - name: validity_conditions
+        type: validity-conditions
+        required: false
+        source: "§5"
+        layout: >-
+          Dates and online tests; see validity-conditions.
+      - name: signature
+        type: signature
+        required: true
+        source: "§1.1"
+        layout: >-
+          Signed by the issuer.
+    layout: >-
+      issuer + subject + delegation + authorization + validity, signed. Its body is the 5-tuple:
+      the 5-tuple's "contents are the same as the contents of an SPKI certificate body" (§6.1).
+    notes: >-
+      Delegation depth is boolean by decision: "Of these three, the group chose boolean control."
+      The integer alternative "was the original design and has appeal, but was defeated by the
+      inability to predict the proper depth of delegation." Derived: there is no depth counter, and
+      adding one departs from SPKI. Width is uncontrolled anyway: "there is no control on the width
+      of the delegation tree, so control on its depth is not a tight control on proliferation." No
+      separate exercise right (§4.2): "a delegator is free to create a new key pair, also controlled
+      by it, and delegate the rights to that key to exercise the delegated permission. Therefore,
+      there was no benefit from attempting to restrict the exercise of a permission by someone
+      permitted to delegate it." Naming is optional and off the access-control path (§3.3;
+      key-to-name-mapping). §8 prefers this form to an attribute certificate plus an ID certificate:
+      "In the former case, there is only one issuer to trust. In the latter case, there are two."
+
+  - name: attribute-certificate
+    locator: "§1.1 (CERTIFICATE: Attribute), §3.1, §6.5.4, §8"
+    encoding: 'abstract; the SPKI form is an authorization certificate with a name Subject; the X9.57 form is external (translation-x9-57)'
+    normative_status: descriptive
+    fields:
+      - name: issuer
+        type: principal-or-hash
+        required: true
+        source: "§1.1, §3.1"
+        layout: >-
+          An authority on the authorization, typically not the authority on names: "Presumably the
+          two certificates involved came from different issuers, one an authority on the
+          authorization and the other an authority on names." (§3.1)
+      - name: subject
+        type: subject
+        required: true
+        source: "§1.1, §3.1"
+        layout: >-
+          A name: "Attribute (mapping <authorization,name>)" (§1.1). In X9.57 the name is a
+          Distinguished Name (§3.1).
+      - name: authorization
+        type: authorization-tag
+        required: true
+        source: "§3.1"
+        layout: >-
+          The attribute. An Attribute Certificate "binds an attribute that could be an authorization
+          to a Distinguished Name." (§3.1)
+      - name: delegation
+        type: boolean
+        required: false
+        source: "§1.1"
+        layout: >-
+          SPKI form only: "An SPKI authorization or attribute certificate can pass along all the
+          empowerment it has received from the Issuer or it can pass along only a portion of that
+          empowerment." Derived: the source says nothing about delegation in X9.57 attribute
+          certificates.
+      - name: validity_conditions
+        type: validity-conditions
+        required: false
+        source: "§5"
+        layout: >-
+          As for every certificate.
+      - name: signature
+        type: signature
+        required: true
+        source: "§1.1"
+        layout: >-
+          Signed by the issuer.
+    layout: >-
+      authorization -> name, which reaches a key only with an ID certificate: "it must combine an
+      attribute certificate with an ID certificate, in order to get the full mapping: authorization
+      -> name -> key" (§3.1).
+    notes: >-
+      Two issuers to trust: "if either of these issuers were subverted, then an attacker could
+      obtain an authorization improperly. Therefore, both the issuers need to be trusted with the
+      authorization decision." (§3.1) §8 adds a cross-name-space hazard: "The process of choosing
+      the appropriate name from a foreign name space is more complex than string matching and might
+      even involve a human guess." Both concerns lapse "If the two certificates come from the same
+      issuer, and therefore with the same name space". Derived: in SPKI the attribute certificate
+      and the authorization certificate are one structure that differs only in the Subject's form.
+      Both map to one 5-tuple (§6.5.6), and §6 stage 2 then replaces the name using name 4-tuples.
+
+  - name: key-to-name-mapping
+    locator: "§3.3, §8"
+    encoding: 'unspecified; it may be a certificate or a database entry, and need not be on-line'
+    normative_status: descriptive
+    fields:
+      - name: key
+        type: principal
+        required: true
+        source: "§3.3"
+        layout: >-
+          The keyholder's key, already authorized.
+      - name: location_information
+        type: unstated
+        required: true
+        source: "§3.3"
+        layout: >-
+          "one can map from key to location information (name, address, phone, ...) to get:
+          authorization -> key -> name". The list is open-ended in the source.
+    layout: >-
+      key -> name, used "for logging purposes or even for punishment after wrong-doing" (§3.3).
+    notes: >-
+      Deliberately kept off the access-control path. The key -> name mapping "needs to be secure
+      enough to satisfy lawyers or private investigators, but a subversion of this mapping does not
+      permit the attacker to defeat the access control." "It is also possible that the mapping to
+      name need not be on-line or protected as certificates, since it would be used by human
+      investigators only in unusual circumstances." It is the key->name class among §8's six.
+
+  - name: acl
+    locator: "§1.1 (ACL), §3.4, §4.3, §7.7"
+    encoding: 'local, never communicated; no encoding is defined or needed (§3.4)'
+    normative_status: descriptive
+    fields:
+      - name: entries
+        type: list-of-acl-entry
+        required: true
+        source: "§1.1"
+        layout: >-
+          "ACL: an Access Control List: a list of entries that anchors a certificate chain."
+      - name: implicit_issuer
+        type: none
+        required: false
+        source: "§1.1"
+        layout: >-
+          Not represented. The ACL is the root of empowerment "since it theoretically has the owner
+          of the resource it controls as its implicit issuer". Derived: in tuples this owner is the
+          reserved word "Self" (§6.1).
+    layout: >-
+      A local, unsigned list. "Sometimes called a "list of root keys", the ACL is the source of
+      empowerment for certificates. That is, a certificate communicates power from its issuer to its
+      subject, but the ACL is the source of that power". Scope: "There is most likely one ACL for
+      each resource owner, if not for each controlled resource."
+    notes: >-
+      Self-protection (§7.7): "An ACL needs to be access-controlled itself." The pattern is an entry
+      with authorization "(tag (acl-edit))" whose subject is a stricter threshold, 5 of 7, than the
+      normal-grant entries' 3 of 7. Derived: no ACL edit operation (adding, removing or replacing an
+      entry) is defined; (acl-edit) is the tag an implementation would check before applying one.
+      Why one entry suffices with delegation (§4.3): "The firewall would have an ACL with one entry,
+      granting a key belonging to the Secretary of Defense the right to delegate all access through
+      the firewall."
+
+  - name: acl-entry
+    locator: "§1.1 (ACL), §3.4, §4.1.4, §4.3, §5, §6, §6.5.7, §7.7"
+    encoding: 'implementation-defined (§3.4); the sample form, a certificate body minus the issuer field, is documented elsewhere (draft-ietf-spki-cert-structure), not here'
+    normative_status: descriptive
+    fields:
+      - name: issuer
+        type: none
+        required: false
+        source: "§1.1, §3.4"
+        layout: >-
+          Absent: "An ACL entry has potentially the same content as a certificate body, but has no
+          Issuer (and is not signed)." (§1.1) Derived: as a 5-tuple its Issuer is the reserved word
+          "Self" (§6.1); see translation-acl-entry.
+      - name: subject
+        type: subject
+        required: true
+        source: "§3.4, §1.1, §7.7"
+        layout: >-
+          "The ACL entry can have a name as a subject, as in SDSI 1.0, or it can have a key as a
+          subject." (§3.4) Threshold subjects are "especially useful in an ACL entry" (§1.1); see
+          §7.7.
+      - name: delegation
+        type: boolean
+        required: false
+        source: "§4.1.4, §4.3"
+        layout: >-
+          "The subject of a certificate or ACL entry may exercise any permission granted and, if
+          delegation is TRUE, may also delegate that permission or some subset of it to others."
+          (§4.1.4) The §4.3 firewall entry grants "the right to delegate all access through the
+          firewall". Derived: absent means FALSE.
+      - name: authorization
+        type: authorization-tag
+        required: true
+        source: "§3.4, §6"
+        layout: >-
+          SPKI ACL entries carry an explicit tag even for a single-purpose application: "SPKI uses
+          explicit authorizations so that one can use common authorization computation code to deal
+          with multiple applications." (§3.4) §6 lists ACL entries only among the
+          <authorization,name> and <authorization,key> inputs. Examples: "(tag (* set (ssl) (dns
+          (*))))" for an SSL root key (§6.5.7) and "(tag (acl-edit))" (§7.7).
+      - name: validity_conditions
+        type: validity-conditions
+        required: false
+        source: "§5"
+        layout: >-
+          "A certificate, or an ACL entry, has optional validity conditions." (§5)
+      - name: signature
+        type: none
+        required: false
+        source: "§1.1, §3.4"
+        layout: >-
+          Absent: "(and is not signed)". The trait comes from SDSI 1.0, whose ACL "did not need to
+          be signed or issued by any key" (§3.4).
+    layout: >-
+      subject + delegation + authorization + validity, with no issuer and no signature. "a sample
+      implementation is documented, as a certificate body minus the issuer field." (§3.4)
+    notes: >-
+      Not standardized, on purpose: "In SPKI, an ACL entry is free to be implemented in any way the
+      developer chooses, since it is never communicated and therefore does not need to be
+      standardized." (§3.4) The source does not say where the sample is documented. Prior art it
+      generalizes: "the list of SSL root keys in an SSL capable browser or the file
+      .ssh/authorized_keys in a user's home UNIX directory", where "the individual entries do not
+      carry explicit authorizations". SDSI 1.0 origin: "It was held in local memory and was assumed
+      issued by the owner of the computer and therefore of the resource being controlled." Derived:
+      integrity rests on local storage, as for the 5-tuple, which is "assumed to be held in trusted
+      memory so that it doesn't need a digital signature for integrity" (§6.1).
+
+  - name: certificate-result-certificate
+    locator: "§6.6, §6.3.2, §6.4.1"
+    encoding: 'abstract; an ordinary certificate issued by the reducing entity, with no distinct format'
+    normative_status: descriptive
+    fields:
+      - name: issuer
+        type: principal-or-hash
+        required: true
+        source: "§6.6"
+        layout: >-
+          The reducer: "The answer to the second computation can be put into a new certificate
+          issued by the entity doing the computation."
+      - name: subject
+        type: subject
+        required: true
+        source: "§6.6, §6.4.1"
+        layout: >-
+          S, the subject of the question. It may stay a threshold: "One can reduce individual named
+          subjects in a threshold subject and leave the subject in threshold form, if one desires."
+          (§6.4.1)
+      - name: authorization
+        type: authorization-tag
+        required: true
+        source: "§6.6"
+        layout: >-
+          The answer to "What is Subject S allowed to do, under this ACL and with this set of
+          certificates?" Derived: the AIntersect of the tags along the reduced chain.
+      - name: delegation
+        type: boolean
+        required: unstated
+        source: "§6.6"
+        layout: >-
+          Not addressed by the source.
+      - name: validity_conditions
+        type: validity-conditions
+        required: unstated
+        source: "§6.3.2"
+        layout: >-
+          Derived from §6.3.2: either the intersected interval with the online tests evaluated, or
+          the union of the chain's online tests carried forward unevaluated: "This might be
+          appropriate if the tuple reduction is being performed not for answering an immediate
+          authorization question but rather for generation of a summary certificate (Certificate
+          Result Certificate) that one might hope would be useful for a long time."
+      - name: signature
+        type: signature
+        required: true
+        source: "§6.6"
+        layout: >-
+          It is "a new certificate", so the reducer signs it.
+    layout: >-
+      One certificate that stands for a reduced chain: "That one certificate corresponds to the
+      semantics of the underlying certificates and online test results. We call it a Certificate
+      Result Certificate."
+    notes: >-
+      Source defect: §6.4.1 cites "Certificate Result Certificates [see 6.7]", but there is no §6.7
+      (the table of contents ends §6 at 6.6) and the definition is in §6.6. Derived: the CRC's issuer
+      is the reducer, not the ACL owner, so a verifier can rely on a CRC only if its own ACL, or a
+      chain from it, empowers that reducer. The source does not discuss how the reducer is itself
+      authorized. Derived: evaluating a one-time revalidation during the reduction would leave the
+      CRC a zero-length validity interval, so a long-lived CRC must carry such tests forward
+      unevaluated (§6.3.2).
+
+# --- Intermediate forms (§6) ---------------------------------------------------
+
+  - name: '5-tuple'
+    aliases:
+      - authorization-5-tuple
+    locator: "§6.1, §6.3, §6.3.2"
+    encoding: 'abstract in-memory form, never serialized: "held in trusted memory"'
+    normative_status: example-plan
+    fields:
+      - name: issuer
+        type: principal-or-hash-or-self
+        required: true
+        source: "§6.1"
+        layout: >-
+          "Issuer: a public key (or its hash), or the reserved word "Self". This identifies the
+          entity speaking this intermediate result."
+      - name: subject
+        type: subject
+        required: true
+        source: "§6.1"
+        layout: >-
+          "Subject: a public key (or its hash), a name used to identify a public key, the hash of an
+          object or a threshold function of subordinate subjects. This identifies the entity being
+          spoken about in this intermediate result."
+      - name: delegation
+        type: boolean
+        required: true
+        source: "§6.1"
+        layout: >-
+          "Delegation: a boolean. If TRUE, then the Subject is permitted by the Issuer to further
+          propagate the authorization in this intermediate result."
+      - name: authorization
+        type: authorization-tag
+        required: true
+        source: "§6.1"
+        layout: >-
+          "Authorization: an S-expression. [Rules for combination of Authorizations are given
+          below.]" The rules are AIntersect (§6.3.1); see authorization-tag and the tag-star-*
+          entries.
+      - name: validity
+        type: date-interval
+        required: true
+        source: "§6.1"
+        layout: >-
+          "Validity dates: a not-before date and a not-after date, where "date" means date and time.
+          If the not-before date is missing from the source credential then minus infinity is
+          assumed. If the not-after date is missing then plus infinity is assumed."
+      - name: deferred_online_tests
+        type: list-of-online-test-specification
+        required: false
+        source: "§6.3.2"
+        layout: >-
+          Optional, and missing from §6.1's list of five: "It is possible for an implementation of
+          VIntersect() to gather up online tests that are present in each certificate and include
+          the union of all those tests in the accumulating tuples." Derived: an implementation that
+          takes this option carries a sixth component the definition does not name.
+    layout: >-
+      <I, S, D, A, V>. Rule (§6.3): "<I1,S1,D1,A1,V1> + <I2,S2,D2,A2,V2>" yields
+      "<I1,S2,D2,AIntersect(A1,A2),VIntersect(V1,V2)>" provided "the two intersections succeed,",
+      "S1 = I2" and "D1 = TRUE".
+    notes: >-
+      Nature: "The 5-tuple is an intermediate form, assumed to be held in trusted memory so that it
+      doesn't need a digital signature for integrity. It is produced from certificates or other
+      credentials via trusted software. Its contents are the same as the contents of an SPKI
+      certificate body, but it might be derived from another form of certificate or from an ACL
+      entry." Status: §6's plan "is an example that may be followed". Derived: "Self" is the Issuer
+      of a tuple made from an ACL entry, so a successful reduction ends in <Self, S, D, A, V>, a
+      form the source never writes. Derived: the result's Delegation is D2 alone, which equals D1
+      AND D2 because D1 = TRUE is required. Open: "S1 = I2" compares a Subject with an Issuer, and
+      whether a key equals its own hash there is not stated. Threshold subjects modify the rule: "If
+      S1 is a threshold subject, there is a slight modification to this rule, as described below in
+      section 6.3.3."
+
+  - name: name-4-tuple
+    aliases:
+      - 4-tuple
+      - name-tuple
+    locator: "§6.2, §6.4, §6.4.2, §6.5.1, §6.5.2"
+    encoding: 'abstract in-memory form; written [issuer, name, subject, validity] (§6.5) or [(name issuer name) -> subject] (§6.4)'
+    normative_status: example-plan
+    fields:
+      - name: issuer
+        type: principal-or-hash
+        required: true
+        source: "§6.2"
+        layout: >-
+          "Issuer: a public key (or its hash). This identifies the entity defining this name in its
+          private name space." Derived: unlike the 5-tuple's Issuer, never "Self".
+      - name: name
+        type: byte-string
+        required: true
+        source: "§6.2"
+        layout: >-
+          "Name: a byte string" (the source's line has no full stop). See the open question in the
+          notes.
+      - name: subject
+        type: subject
+        required: true
+        source: "§6.2"
+        layout: >-
+          "Subject: a public key (or its hash), a name, or a threshold function of subordinate
+          subjects. This defines the name." No object hash.
+      - name: validity
+        type: date-interval
+        required: true
+        source: "§6.2"
+        layout: >-
+          Word for word the 5-tuple's: "Validity dates: a not-before date and a not-after date,
+          where "date" means date and time." Missing dates become minus and plus infinity.
+    variants:
+      - name: class-1
+        layout: >-
+          Name defined as a key: "[(name K1 N) -> K2]". The only class an unordered pool may safely
+          apply: "a safe rule for name reduction is to apply only those 4-tuples that define a name
+          as a key."
+      - name: class-2
+        layout: >-
+          Name defined as another name: "[(name K1 N) -> (name K2 N1 N2 ... Nk)]". "With the second
+          form of name definition, one might have names that temporarily grow."
+    layout: >-
+      [Issuer, Name, Subject, Validity], or in arrow form [(name Issuer Name) -> Subject] with the
+      validity left out. "There will be name 4-tuples in two different classes, those that define
+      the name as a key and those that define the name as another name." (§6.4)
+    notes: >-
+      Why a separate form: "A <name,key> certificate (such as X.509v1 or SDSI 1.0) carries no
+      authorization field but does carry a name. Since it is qualitatively different from an
+      authorization certificate, a separate intermediate form is defined for it." Rewrite vectors
+      (§6.4): "(name K1 N N1 N2 N3) + [(name K1 N) -> K2]" gives "(name K2 N1 N2 N3)", and "(name K1
+      N Na Nb Nc) + [(name K1 N) -> (name K2 N1 N2 ... Nk)]" gives "(name K2 N1 N2 ... Nk Na Nb
+      Nc)". Derived: the class-1 result with no names left, (name K2), is never shown; presumably it
+      is K2 itself. Validity (§6.4.2): the 4-tuple's interval "is intersected with that of the tuple
+      holding the subject being reduced and the intersection is used in the resulting tuple. Since a
+      4-tuple contains no delegation or authorization fields, the delegation permission and
+      authorization of the tuple being acted upon does not change." An unordered pool should "bring
+      4-tuples that started out in class (2) into class (1), and eventually reduce all names to
+      keys. Any naming loops are avoided by this process." Open question, a source inconsistency:
+      §6.2 types Name as "a byte string", but §6.5.1 puts "(name <leaf-name>)" and "(name CA1 CA2 ...
+      CAk <leaf-name>)" in that position, which is several names rather than one byte string. §6.5.2
+      writes a bare "name". Derived: either the (name ...) wrapper in §6.5.1 is notation only, and
+      the CA-unique case defines a chain that no single §6.2 tuple can hold; or Name is really a
+      name sequence and §6.2 understates it.
+
+  - name: threshold-intermediate-form
+    locator: "§6.3.3, §6.4.1"
+    encoding: 'abstract in-memory list of tuples'
+    normative_status: example-plan
+    fields:
+      - name: subordinate_tuples
+        type: list-of-5-tuple-or-name-4-tuple
+        required: true
+        source: "§6.3.3"
+        layout: >-
+          N entries. "The intermediate form for a threshold subject is a copy of the tuple in which
+          the threshold subject appears, but with only one of the subordinate subjects." Derived:
+          entry i is the parent tuple with its Subject replaced by subordinate subject i. Issuer,
+          Delegation, Authorization and Validity are copied unchanged.
+      - name: null_marker
+        type: literal
+        value: 'null'
+        required: false
+        source: "§6.3.3"
+        layout: >-
+          A slot not selected: "The (N-K) unselected subordinate subjects are set to (null)." It is
+          written as the S-expression (null).
+      - name: completion
+        type: constraint
+        required: true
+        source: "§6.3.3"
+        layout: >-
+          "Those subordinate tuples are reduced individually until the list of subordinate tuples
+          has (N-K) (null) entries and K entries with the same subject. At that point, those K tuples
+          are validity-, authorization- and delegation- intersected to yield the single tuple that
+          will replace the list of tuples."
+    layout: >-
+      A list of N slots, each either a copy of the parent tuple with one subordinate subject, or
+      (null). It is complete when exactly K non-null slots remain and all K share one Subject; the K
+      then merge into one tuple.
+    notes: >-
+      "A threshold subject is reduced to a single subject by selecting K of the N subjects and
+      reducing each of those K to the same subject, through a sequence of certificates." Gaps an
+      implementer must close. (1) "delegation- intersected" is defined nowhere. Derived: the only
+      reading consistent with §6.3, which needs D1 = TRUE to chain and carries D2, is logical AND of
+      the K booleans. (2) The source does not say who selects the K. Derived: the prover, since "All
+      reduction operations are in the order provided by the prover." (§6.3.4) (3) Name-only variant
+      (§6.4.1): "One can reduce individual named subjects in a threshold subject and leave the
+      subject in threshold form, if one desires." In that case "There is no delegation- or
+      authorization-intersection involved", only validity intersection.
+
+  - name: certificate-sequence
+    locator: "§6.3.4, §6.4"
+    encoding: 'abstract; an ordered list of certificates, with no container, framing or transport defined'
+    normative_status: example-plan
+    fields:
+      - name: certificates
+        type: list-of-certificate
+        required: true
+        source: "§6.3.4, §6.4"
+        layout: >-
+          In proof order: "All reduction operations are in the order provided by the prover. That
+          simplifies the job of the verifier, but leaves the job of finding the correct list of
+          reductions to the prover." Name certificates are ordered as well: "name definition
+          4-tuples should be delivered in the order needed by the prover. In that case, the rule for
+          name reduction is to replace the name just defined by its definition." (§6.4)
+    layout: >-
+      Built by appending: "To do that, a single additional certificate is generated and appended to
+      the sequence already available, yielding a sequence that can be used by the delegatee to prove
+      access permission."
+    notes: >-
+      "Each keyholder who is granted some authority should receive a sequence of certificates
+      delegating that authority." "If the prover is providing certificates in order, then the
+      verifier need only do as it is told." (§6.4) Unordered discovery is solved but expected to be
+      rare: "The general algorithm for finding the right certificate paths from a large set of
+      unordered certificates has been solved[ELIEN], but might be used only rarely." Derived:
+      adjacent authorization certificates chain by Subject = next Issuer (the §6.3 S1 = I2 rule),
+      with Delegation TRUE on all but the last. Not stated: whether online-test results (CRLs,
+      revalidations) travel inside the sequence, and any container or transport. Wording: "in the
+      order needed by the prover" most plausibly means the order the verifier needs and the prover
+      provides (compare §6.3.4).
+
+  - name: authorization-question
+    locator: "§6.6"
+    encoding: 'abstract; a question put to the reduction, not a message'
+    normative_status: example-plan
+    fields:
+      - name: subject
+        type: subject
+        required: true
+        source: "§6.6"
+        layout: >-
+          S, in both forms.
+      - name: requested_authorization
+        type: authorization-tag
+        required: false
+        source: "§6.6"
+        layout: >-
+          A, in form 1 only: "Is this Subject, S, allowed to do A, under this ACL and with this set
+          of certificates?"
+      - name: acl
+        type: acl
+        required: true
+        source: "§6.6"
+        layout: >-
+          "under this ACL", in both forms.
+      - name: certificates
+        type: list-of-certificate
+        required: true
+        source: "§6.6"
+        layout: >-
+          "with this set of certificates", in both forms.
+    variants:
+      - name: form-1
+        layout: >-
+          "Is this Subject, S, allowed to do A, under this ACL and with this set of certificates?"
+          Derived: the answer is yes or no.
+      - name: form-2
+        layout: >-
+          "What is Subject S allowed to do, under this ACL and with this set of certificates?"
+          Derived: the answer is an authorization tag. Only this answer can become a
+          certificate-result-certificate.
+    layout: >-
+      "Typically, one will reduce a chain of certificates to answer an authorization question in
+      one of two forms".
+    notes: >-
+      Derived: form 1 is form 2 followed by a containment test, AIntersect(answer, A) = A. The
+      source does not define that test separately, nor say whether a partial grant (a successful but
+      narrower intersection) answers yes. §6.6 says "set of certificates", where §6.3.4 has the
+      prover supply an ordered sequence (certificate-sequence).
+
+# --- Certificate translations (§6.5) -------------------------------------------
+
+  - name: translation-x509v1
+    locator: "§6.5.1, §2.2, §2.3, §2.9, §4.3"
+    encoding: 'external input (an X.509v1 certificate and its chain) mapped to one abstract name-4-tuple'
+    normative_status: example-plan
+    input: 'An X.509v1 certificate ("The original X.509 certificate is a <name,key> certificate.") with its verified chain to a root key'
+    output: 'one name-4-tuple: "It translates directly to a name tuple."'
+    cardinality: 'one 4-tuple per certificate'
+    precondition: 'Chain verification by the hierarchy''s own rules: "after verifying the certificate chain by the rules appropriate to that particular chain."'
+    fields:
+      - name: issuer
+        type: principal-or-hash
+        required: true
+        maps_from: 'Kroot, the key of the hierarchy''s root, not the certificate''s immediate signer'
+        source: "§6.5.1"
+        layout: >-
+          "[Kroot, (name <leaf-name>), K1, validity]". Derived: the intermediate CA keys vanish. The
+          chain is consumed by verification, and only the root survives as Issuer.
+      - name: name
+        type: byte-string
+        required: true
+        maps_from: 'the leaf name, prefixed by the chain''s CA names when names are unique only per CA'
+        source: "§6.5.1, §2.9"
+        layout: >-
+          Root-unique hierarchy: "(name <leaf-name>)" "is used if the rules for that particular X.509
+          hierarchy is that all leaf names are unique, under that root." CA-unique: "If uniqueness of
+          names applies only to individual CAs in the X.509 hierarchy, then one must generate [Kroot,
+          (name CA1 CA2 ... CAk <leaf-name>), K1, validity]". Together with the Issuer this is the
+          §2.9 fully qualified X.509 name (x509-fully-qualified-name).
+      - name: subject
+        type: principal
+        required: true
+        maps_from: 'K1, the certified public key'
+        source: "§6.5.1"
+        layout: >-
+          K1 in both forms.
+      - name: validity
+        type: date-interval
+        required: true
+        maps_from: 'validity; the source does not say whose'
+        source: "§6.5.1"
+        layout: >-
+          Written just "validity". Derived: the source does not say whether this is the leaf
+          certificate's own interval or the intersection over the chain. The VIntersect logic of §6
+          stage 1 argues for the intersection.
+    layout: >-
+      An X.509v1 certificate with its verified chain becomes [Kroot, (name <leaf-name>), K1,
+      validity] or [Kroot, (name CA1 CA2 ... CAk <leaf-name>), K1, validity].
+    notes: >-
+      Derived: only the CA-unique form says "after verifying the certificate chain". Putting Kroot
+      in the Issuer position presupposes a verified chain in both forms, because Kroot did not sign
+      any non-root certificate. Grammar slip in the source: "the rules for that particular X.509
+      hierarchy is that". Lineage: X.509 bound "public keys to X.500 path names (Distinguished
+      Names)" (§2.2), and PEM re-read it to mean "the key speaks for the named person" (§2.3). Limit
+      (§4.3): a Fortezza card "holds X.509v1 certificates, so all that can be established is the name
+      of the keyholder." For the name element's type conflict, see name-4-tuple.
+
+  - name: translation-pgp
+    locator: "§6.5.2, §2.3"
+    encoding: 'external input (a PGP certificate) mapped to abstract name-4-tuples'
+    normative_status: example-plan
+    input: 'A PGP certificate ("A PGP certificate is a <name,key> certificate.") and its signatures'
+    output: 'name 4-tuples "of the form [Ki, name, K1, validity]"'
+    cardinality: '"There would be one tuple produced for each signature on the key, K1."'
+    precondition: '"It is verified by web-of-trust rules (as specified in the PGP documentation)." Tuples are produced only "Once verified".'
+    fields:
+      - name: issuer
+        type: principal
+        required: true
+        maps_from: 'Ki, one signer of the (UserID, key) pair'
+        source: "§6.5.2"
+        layout: >-
+          "where Ki is a key that signed that PGP (UserID,key) pair."
+      - name: name
+        type: byte-string
+        required: true
+        maps_from: 'the PGP UserID'
+        source: "§6.5.2"
+        layout: >-
+          Written bare, as "name". Derived: it is the UserID of the "(UserID,key) pair", placed in
+          each signer Ki's name space.
+      - name: subject
+        type: principal
+        required: true
+        maps_from: 'K1, the key being certified'
+        source: "§6.5.2"
+        layout: >-
+          "the key, K1".
+      - name: validity
+        type: date-interval
+        required: true
+        maps_from: 'validity; the source does not say from where'
+        source: "§6.5.2"
+        layout: >-
+          Written just "validity".
+    layout: >-
+      A PGP certificate with m signatures becomes m tuples [Ki, name, K1, validity], i = 1..m.
+    notes: >-
+      Derived: the web of trust decides whether any tuple is produced, but it is not represented in
+      the tuples. Derived: the translation reinterprets PGP, whose model "still intended to bind a
+      globally unique name to a key" (§2.3), as m local name definitions, one per signer. The
+      notation differs from §6.5.1: the name is bare, not wrapped in (name ...), which matches §6.2's
+      "Name: a byte string".
+
+  - name: translation-x509v3
+    locator: "§6.5.3, §3.2, §6 stage 1"
+    encoding: 'external input (an X.509v3 certificate and its chain) mapped to abstract tuples by root-specific code'
+    normative_status: example-plan
+    input: 'An X.509v3 certificate and its chain'
+    output: 'zero or one name-4-tuple and zero or more 5-tuples, as the root''s documentation dictates'
+    cardinality: '"generate the appropriate multiple tuples from the one certificate"'
+    precondition: 'Root-specific chain validation: "it is likely that X.509v3 chains will have to be validated independently, by chain validation code specific to each root key."'
+    fields:
+      - name: name_definition
+        type: name-4-tuple
+        required: false
+        maps_from: 'the certificate''s name binding'
+        source: "§6.5.3, §3.2"
+        layout: >-
+          "An X.509v3 certificate may be used to declare a name."
+      - name: explicit_authorizations
+        type: list-of-5-tuple
+        required: false
+        maps_from: 'extensions'
+        source: "§6.5.3, §3.2"
+        layout: >-
+          "It might also declare explicit authorizations, by way of extensions." §3.2: "These
+          extensions can be used to carry authorization information."
+      - name: implicit_authorization
+        type: '5-tuple'
+        required: false
+        maps_from: 'the certificate''s implied use'
+        source: "§6.5.3"
+        layout: >-
+          "It might also declare an implicit authorization of the form (tag (*))."
+      - name: governing_documentation
+        type: constraint
+        required: true
+        maps_from: 'per-root written documentation, not the certificate'
+        source: "§6.5.3, §6 stage 1"
+        layout: >-
+          "The actual set of tuples it yields depends on the documentation associated with that line
+          of certificates. That documentation could conceptually be considered associated with the
+          root key of the certificate chain."
+    layout: >-
+      An X.509v3 certificate becomes a root-specific set of tuples. "After that validation, that
+      root-specific code can then generate the appropriate multiple tuples from the one
+      certificate."
+    notes: >-
+      §3.2: extensions make one certificate map both authorization -> key and name -> key, and "In
+      this case, there is only one issuer, who must be an authority on both the authorization and
+      the name." Against a master certificate that aggregates everything: it "would require the
+      issuer to be an authority on all of those authorizations", would shorten the certificate's life
+      "since each attribute would have its own lifetime", and "amounts to the building of a dossier
+      and represents a potential privacy violation". Hence "it is desirable that authorizations be
+      limited to one per certificate." Root-specific validation: "some X.509v3 certificates (such as
+      those used for SET), have defined extra validity tests for certificate chains depending on
+      custom extensions." Derived: RFC 2693 gives no generic X.509v3 field mapping, and
+      translation-ssl is the only worked instance.
+
+  - name: translation-x9-57
+    locator: "§6.5.4, §3.1"
+    encoding: 'external input (an X9.57 attribute certificate) mapped to abstract 5-tuples'
+    normative_status: example-plan
+    input: 'An X9.57 attribute certificate, which "binds an attribute that could be an authorization to a Distinguished Name" (§3.1)'
+    output: '5-tuples "with names as Subject"'
+    cardinality: '"An X9.57 attribute certificate should yield one or more 5-tuples, with names as Subject."'
+    precondition: 'unstated'
+    fields:
+      - name: issuer
+        type: principal-or-hash
+        required: true
+        maps_from: 'Derived: the attribute certificate''s issuer'
+        source: "§6.5.4"
+        layout: >-
+          Derived: not stated. The issuer of the attribute certificate is the only candidate.
+      - name: subject
+        type: subject
+        required: true
+        maps_from: 'the Distinguished Name as a fully qualified name, or the key of an explicitly referenced ID certificate'
+        source: "§6.5.4"
+        layout: >-
+          "The code translating the attribute certificate will have to build a fully-qualified name
+          to represent the Distinguished Name in the Subject." The shortcut: "For any attribute
+          certificates that refer to an ID certificate explicitly, the Subject of the 5-tuple can be
+          the key in that ID certificate, bypassing the construction of name 4-tuples."
+      - name: delegation
+        type: boolean
+        required: unstated
+        maps_from: 'unstated'
+        source: "§6.5.4"
+        layout: >-
+          Not addressed.
+      - name: authorization
+        type: authorization-tag
+        required: true
+        maps_from: 'Derived: the attribute'
+        source: "§3.1"
+        layout: >-
+          Derived from §3.1: the attribute "could be an authorization". How it is rendered as a tag
+          is not stated.
+      - name: validity
+        type: date-interval
+        required: true
+        maps_from: 'unstated'
+        source: "§6.5.4"
+        layout: >-
+          Not addressed; missing dates become infinities (§6.1).
+    layout: >-
+      An X9.57 attribute certificate becomes one or more 5-tuples, each with the issuer, a fully
+      qualified DN (or a key) as Subject, an unstated Delegation, the attribute as tag, and a
+      validity.
+    notes: >-
+      Derived: "one or more" suggests one 5-tuple per attribute, but this is not stated. Derived: a
+      fully qualified name for a DN takes the §2.9 shape (name <root key> ... <leaf name>), which
+      needs the root key of the DN's hierarchy. An attribute certificate does not obviously carry
+      that, and the source does not say where it comes from.
+
+  - name: translation-sdsi-1-0
+    locator: "§6.5.5, §6.2, §3.4"
+    encoding: 'external input (a SDSI 1.0 certificate) mapped to one abstract name-4-tuple'
+    normative_status: example-plan
+    input: 'A SDSI 1.0 certificate, a <name,key> certificate per §6.2'
+    output: 'one name-4-tuple'
+    cardinality: '"A SDSI 1.0 certificate maps directly to one 4-tuple."'
+    precondition: 'signature verification (§6 stage 1)'
+    fields:
+      - name: issuer
+        type: principal-or-hash
+        required: true
+        maps_from: 'Derived: the SDSI certificate''s issuer'
+        source: "§6.5.5, §6.2"
+        layout: >-
+          Derived from "maps directly": field for field.
+      - name: name
+        type: byte-string
+        required: true
+        maps_from: 'Derived: the name the certificate defines'
+        source: "§6.5.5, §6.2"
+        layout: >-
+          Derived, as for the issuer.
+      - name: subject
+        type: subject
+        required: true
+        maps_from: 'Derived: the certificate''s subject'
+        source: "§6.5.5, §6.2"
+        layout: >-
+          Derived, as for the issuer.
+      - name: validity
+        type: date-interval
+        required: true
+        maps_from: 'Derived: the certificate''s validity'
+        source: "§6.5.5, §6.2"
+        layout: >-
+          Derived, as for the issuer.
+    layout: >-
+      A SDSI 1.0 certificate becomes [issuer, name, subject, validity].
+    notes: >-
+      The whole rule is one sentence, so every field mapping is Derived from "maps directly" and the
+      §6.2 definition. §6.2 names SDSI 1.0 beside X.509v1 as the <name,key> certificates the 4-tuple
+      exists for. SDSI 1.0 ACLs are not certificates ("SDSI 1.0 defined an ACL, granting
+      authorization to names", §3.4) and are handled by translation-acl-entry.
+
+  - name: translation-spki
+    locator: "§6.5.6, §6.1, §6 stage 1"
+    encoding: 'an SPKI certificate (draft-ietf-spki-cert-structure) mapped to one abstract tuple, field for field'
+    normative_status: example-plan
+    input: 'An SPKI name certificate, or an authorization or attribute certificate'
+    output: 'one name-4-tuple or one 5-tuple'
+    cardinality: '"An SPKI certificate maps directly to one 4- or 5- tuple, depending respectively on whether it is a name certificate or carries an authorization."'
+    precondition: 'Signature verification, then online tests: "The other work for SPKI or SDSI certificates might include processing of on-line test results"'
+    fields:
+      - name: issuer
+        type: principal-or-hash
+        required: true
+        maps_from: 'issuer'
+        source: "§6.5.6, §6.1"
+        layout: >-
+          Identity mapping. The 5-tuple's "contents are the same as the contents of an SPKI
+          certificate body" (§6.1).
+      - name: subject
+        type: subject
+        required: true
+        maps_from: 'subject'
+        source: "§6.5.6, §6.1"
+        layout: >-
+          Identity mapping.
+      - name: name
+        type: byte-string
+        required: false
+        maps_from: 'name (name certificates only)'
+        source: "§6.5.6, §6.2"
+        layout: >-
+          Name certificates only.
+      - name: delegation
+        type: boolean
+        required: false
+        maps_from: 'delegation (authorization and attribute certificates only)'
+        source: "§6.5.6, §6.1"
+        layout: >-
+          Authorization and attribute certificates only.
+      - name: authorization
+        type: authorization-tag
+        required: false
+        maps_from: 'authorization (its presence selects the 5-tuple)'
+        source: "§6.5.6"
+        layout: >-
+          Its presence is the selector: a certificate that "carries an authorization" yields a
+          5-tuple.
+      - name: validity
+        type: date-interval
+        required: true
+        maps_from: 'the certificate''s dates intersected with its online-test results'
+        source: "§6 stage 1"
+        layout: >-
+          "the validity dates of those on-line test results are intersected by VIntersect()
+          [defined in 6.3.2, below] with the validity dates of the certificate to yield the dates in
+          the certificate's tuple(s)."
+    layout: >-
+      A name certificate becomes [issuer, name, subject, validity]; an authorization certificate
+      becomes <issuer, subject, delegation, authorization, validity>.
+    notes: >-
+      A field-for-field mapping, since the 5-tuple was defined from the SPKI certificate body.
+      Derived: with deferred online tests (§6.3.2), the tests are carried into the tuple as
+      5-tuple.deferred_online_tests instead of being evaluated here.
+
+  - name: translation-ssl
+    locator: "§6.5.7"
+    encoding: 'external input (SSL server and CA certificates) mapped to 5-tuples; the tags are illustrative S-expressions'
+    normative_status: illustrative
+    input: 'An SSL certificate chain: root, CA and leaf server certificates'
+    output: '5-tuples whose tags carry the SSL permissions, each reduced against an ACL entry for a root key'
+    cardinality: 'Derived: one 5-tuple per certificate'
+    precondition: 'X.509v3 chain validation (translation-x509v3)'
+    fields:
+      - name: ssl_permission
+        type: authorization-tag
+        required: true
+        maps_from: 'implicit in every SSL certificate'
+        source: "§6.5.7"
+        layout: >-
+          "An SSL certificate carries a number of authorizations, some implicitly. The
+          authorization: (tag (ssl)) is implicit."
+      - name: dns_permission
+        type: authorization-tag
+        required: true
+        maps_from: 'the server certificate''s DNS name'
+        source: "§6.5.7"
+        layout: >-
+          "the server certificate carries a DNS name parameter to be matched against the DNS name of
+          the web page to which the connection is being made. That might be encoded as: (tag (dns
+          <domain-name>))"
+      - name: us_crypto_permission
+        type: authorization-tag
+        required: false
+        maps_from: 'the global cert permission'
+        source: "§6.5.7"
+        layout: >-
+          "the "global cert" permission -- the permission for a US-supplied browser to connect using
+          full strength symmetric cryptography even though the server is outside the USA. This might
+          be encoded as: (tag (us-crypto))"
+      - name: other_key_usage
+        type: authorization-tag
+        required: false
+        maps_from: 'other key usage attributes'
+        source: "§6.5.7"
+        layout: >-
+          "There are other key usage attributes that would also be encoded as tag fields, but a full
+          discussion of those fields is left to the examples document." The examples document is not
+          named and has no library record.
+      - name: delegation
+        type: boolean
+        required: unstated
+        maps_from: 'unstated'
+        source: "§6.5.7"
+        layout: >-
+          Not addressed. Derived: CA certificates must translate with Delegation TRUE for the chain
+          to reduce (§6.3 requires D1 = TRUE), and the leaf presumably FALSE.
+    variants:
+      - name: acl-entry-ssl-root
+        layout: >-
+          "An ACL entry for an SSL root key would have the tag: (tag (* set (ssl) (dns (*))))"
+          "which by the rules of intersection is equivalent to: (tag (* set (ssl) (dns)))".
+      - name: acl-entry-ssl-root-with-us-crypto
+        layout: >-
+          With the US Commerce Department's permission to grant us-crypto, the root key "would
+          have: (tag (* set (ssl) (dns) (us-crypto)))".
+      - name: ca-certificate
+        layout: >-
+          "A CA certificate, used for SSL, would then need only to communicate down its certificate
+          chain those permissions allocated in the ACL. Its tag might then translate to: (tag (*))".
+          In the abbreviated vocabulary: "(tag (ssl (*))) or just (tag (*))".
+      - name: leaf-server-certificate
+        layout: >-
+          "A leaf server certificate for the Datafellows server might, for example, have a tag field
+          of the form: (tag (* set (ssl) (dns www.datafellows.com)))" "showing that it was empowered
+          to do SSL and to operate from the given domain name, but not to use US crypto with a US
+          browser." In the abbreviated vocabulary: "(tag (ssl www.datafellows.com))".
+    layout: >-
+      An SSL chain becomes 5-tuples whose tags are drawn from (ssl), (dns <domain-name>) and
+      (us-crypto), unioned with (* set ...). "The three separate tests in the verifying code (e.g.,
+      the browser) would then involve separate 5-tuple reductions from separate root key ACL
+      entries."
+    notes: >-
+      The AND lives in the verifier, not the certificate: "The fact that these three kinds of
+      permission are treated as if ANDed is derived from the logic of the code that interprets the
+      permissions and is not expressed in the certificate. That decision is embodied in the
+      authorization code executed by the verifying application." Source defect: the source says the
+      set form "could have been abbreviated as" (tag (ssl www.datafellows.com)), but under the
+      §6.3.1 rules that is a different grant. Derived: it denotes lists beginning ssl,
+      www.datafellows.com and contains no (dns ...) list. AIntersect with (tag (dns
+      www.datafellows.com)) therefore fails, where the (* set ...) form succeeds. It is an
+      alternative application vocabulary in which element 2 of the ssl list carries the DNS name.
+      The two must not be used as interchangeable test vectors.
+
+  - name: translation-acl-entry
+    locator: "§6.5 (promised, not given), §1.1, §3.4, §4.1.4, §6.1"
+    encoding: 'a local acl-entry mapped to one abstract 5-tuple'
+    normative_status: derived
+    input: 'An acl-entry'
+    output: 'one 5-tuple'
+    cardinality: 'Derived: one 5-tuple per entry'
+    precondition: 'none; the entry is trusted because it is local, and it is unsigned'
+    fields:
+      - name: issuer
+        type: literal
+        value: Self
+        required: true
+        maps_from: 'nothing in the entry; the reserved word Self'
+        source: "§6.1, §1.1"
+        layout: >-
+          Derived: §6.1 reserves "Self" as an Issuer value, and §1.1 makes the ACL's issuer the
+          resource owner, "its implicit issuer".
+      - name: subject
+        type: subject
+        required: true
+        maps_from: 'subject'
+        source: "§3.4"
+        layout: >-
+          Derived: unchanged.
+      - name: delegation
+        type: boolean
+        required: true
+        maps_from: 'delegation, FALSE if absent'
+        source: "§4.1.4"
+        layout: >-
+          Derived: unchanged; absent means FALSE ("if delegation is TRUE", §4.1.4).
+      - name: authorization
+        type: authorization-tag
+        required: true
+        maps_from: 'authorization'
+        source: "§3.4"
+        layout: >-
+          Derived: unchanged.
+      - name: validity
+        type: date-interval
+        required: true
+        maps_from: 'validity conditions, infinite where absent'
+        source: "§5, §6.1"
+        layout: >-
+          Derived: dates unchanged and missing ones infinite (§6.1); online tests are folded in as for
+          a certificate (§6 stage 1).
+    layout: >-
+      An ACL entry becomes <Self, subject, delegation, authorization, validity>.
+    notes: >-
+      Source gap: §6.5 promises "Any certificate currently defined, as well as ACL entries and
+      possibly other instruments, can be translated to 5-tuples (or name tuples) and therefore take
+      part in an authorization computation. The specific rules for those are given below." No
+      subsection of §6.5 covers ACL entries, so every mapping in this entry is Derived.
+
+# --- Historical structures (§2.1, §2.2) ----------------------------------------
+
+  - name: kohnfelder-certificate
+    locator: "§2.1"
+    encoding: 'abstract; historical (1978)'
+    normative_status: historical
+    fields:
+      - name: name
+        type: byte-string
+        required: true
+        source: "§2.1"
+        layout: >-
+          "a digitally signed data record containing a name and a public key."
+      - name: public_key
+        type: principal
+        required: true
+        source: "§2.1"
+        layout: >-
+          As for the name.
+      - name: signature
+        type: signature
+        required: true
+        source: "§2.1"
+        layout: >-
+          "Because it was digitally signed, such a certificate could be held by non-trusted parties
+          and passed around from person to person, resolving the performance problems involved in a
+          central directory." Derived: signed by the Public File, which in Kohnfelder's words
+          "digitally signs all of its transmissions".
+    layout: >-
+      name + public key, signed. "He called this new construct a CERTIFICATE."
+    notes: >-
+      The first certificate, and the ancestor of name-certificate. It anchors the lineage the
+      document argues against: the certificate as a name binding rather than an authorization.
+
+  - name: x509-original-record
+    locator: "§2.2, §2.3"
+    encoding: 'external; historical'
+    normative_status: historical
+    fields:
+      - name: distinguished_name
+        type: byte-string
+        required: true
+        source: "§2.2"
+        layout: >-
+          "X.509 certificates were defined to bind public keys to X.500 path names (Distinguished
+          Names) with the intention of noting which keyholder had permission to modify which X.500
+          directory nodes."
+      - name: credential
+        type: principal
+        required: true
+        source: "§2.2"
+        layout: >-
+          A public key, originally a password: "In fact, the X.509 data record was originally
+          designed to hold a password instead of a public key as the record-access authentication
+          mechanism."
+    layout: >-
+      Distinguished Name + public key (originally a password), as a directory access-control record.
+    notes: >-
+      Its meaning shifted without its structure changing. It began as access control ("the keyholder
+      may modify this portion of the X.500 database"), and PEM re-read it as identity ("the key
+      speaks for the named person"): "What had been an access control instrument was now an identity
+      instrument" (§2.3). Its modern form is handled by translation-x509v1.
