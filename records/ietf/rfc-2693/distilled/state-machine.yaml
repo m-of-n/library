@@ -9,7 +9,9 @@ note: >-
   Every lifecycle RFC 2693 describes, as machines an implementation or a test
   harness can drive. RFC 2693 is the theory document of SPKI and contains no
   BCP 14 keywords; a lowercase "must" inside a quote below is not one. No
-  requirement ids are cited because this pass produces no requirements.yaml.
+  requirement ids are cited: this file was extracted from the source alone,
+  in parallel with distilled/requirements.yaml, and linking its transitions
+  to rfc-2693#R-NNNN entries is left to the cross-check pass.
   §6 calls its own processing plan "an example that may be followed"; M01,
   M02, M11, M12 and M13 model that plan, which is also the only statement in
   the source of how an authorization result is computed.
@@ -716,13 +718,13 @@ machines:
         meaning: "Held, with interval [not-before, not-after] not yet compared with t; a missing not-before is minus infinity, a missing not-after plus infinity."
         inferred: true
       - name: not-yet-valid
-        meaning: "t < not-before."
+        meaning: "t < not-before, and the interval is not empty."
         inferred: true
       - name: valid
         meaning: "not-before <= t <= not-after."
         inferred: true
       - name: expired
-        meaning: "t > not-after."
+        meaning: "t > not-after, and the interval is not empty."
         inferred: true
       - name: empty-interval
         meaning: "not-before > not-after: valid at no instant."
@@ -732,14 +734,14 @@ machines:
         from: dated
         to: not-yet-valid
         trigger: completion
-        guard: "t < not-before."
+        guard: "not-before <= not-after, and t < not-before."
         source:
           - locator: "§5"
             quote: "A certificate, or an ACL entry, has optional validity conditions."
           - locator: "§5"
             quote: "The traditional ones are validity dates: not-before and not-after."
         inferred: true
-        inferred_reason: "The source names the dates; partitioning time into these states is ours."
+        inferred_reason: "The source names the dates; partitioning time into these states is ours. The not-before <= not-after conjunct here and in M03-T03 keeps the four completion guards mutually exclusive, so an inverted interval reaches only empty-interval (M03-T04) and is never stranded in not-yet-valid, where M03-T05 could not fire."
       - id: M03-T02
         from: dated
         to: valid
@@ -758,7 +760,7 @@ machines:
         from: dated
         to: expired
         trigger: completion
-        guard: "t > not-after."
+        guard: "not-before <= not-after, and t > not-after."
         source:
           - locator: "§5"
             quote: "The traditional ones are validity dates: not-before and not-after."
@@ -1344,7 +1346,7 @@ machines:
         meaning: "The computation completed. The instrument's interval was the single instant of completion and it has no further lifetime."
         inferred: false
       - name: replay-rejected
-        meaning: "The returned nonce is not the one this computation sent."
+        meaning: "A correctly signed instrument arrived, but the returned nonce is not the one this computation sent."
         inferred: true
       - name: wrong-signer
         meaning: "The instrument is not signed by the issuer of validity confirmations the certificate specifies."
@@ -1378,18 +1380,18 @@ machines:
         from: awaiting-response
         to: replay-rejected
         trigger: one-time-revalidation
-        guard: "The returned nonce differs from the request's nonce."
+        guard: "Signed by the issuer of validity confirmations the certificate specifies, and the returned nonce differs from the request's nonce."
         action: "Emit online-test-fails."
         source:
           - locator: "§5.5"
             quote: "That nonce gets returned in the signed revalidation instrument, in order to prevent replay attacks."
         inferred: true
-        inferred_reason: "The nonce's stated purpose is replay prevention; rejecting a mismatch is the only reading that achieves it, but the step is not written."
+        inferred_reason: "The nonce's stated purpose is replay prevention; rejecting a mismatch is the only reading that achieves it, but the step is not written. The signer conjunct is ours: it makes this guard and M08-T04's mutually exclusive, so a replay is a genuine instrument answering another request and anything wrongly signed is wrong-signer, whatever nonce it carries."
       - id: M08-T04
         from: awaiting-response
         to: wrong-signer
         trigger: one-time-revalidation
-        guard: "Not signed by the specified issuer of validity confirmations."
+        guard: "Not signed by the specified issuer of validity confirmations, whatever nonce it returns."
         action: "Emit online-test-fails."
         source:
           - locator: "§5"
@@ -2056,7 +2058,7 @@ machines:
         meaning: "A tuple whose subject is a threshold subject, handed over by M12-T07."
         inferred: true
       - name: invalid-parameters
-        meaning: "K and N do not satisfy 0 < K <= N."
+        meaning: "K and N do not satisfy 0 < K <= N, or the subject does not list exactly N subordinate subjects."
         inferred: true
       - name: reducing
         meaning: "The N entries exist and are reduced one by one; unselected entries are set to (null)."
@@ -2081,7 +2083,7 @@ machines:
         from: threshold-tuple
         to: reducing
         trigger: completion
-        guard: "0 < K <= N."
+        guard: "0 < K <= N, and exactly N subordinate subjects are listed."
         action: "Make N entries, each a copy of the parent tuple carrying one subordinate subject."
         source:
           - locator: "§6.3.3"
@@ -2093,7 +2095,7 @@ machines:
         from: threshold-tuple
         to: invalid-parameters
         trigger: completion
-        guard: "K <= 0, or K > N."
+        guard: "K <= 0, or K > N, or the number of subordinate subjects listed is not N."
         source:
           - locator: "§6.3.3"
             quote: "A threshold subject is specified by two numbers, K and N [0<K<=N], and N subordinate subjects."

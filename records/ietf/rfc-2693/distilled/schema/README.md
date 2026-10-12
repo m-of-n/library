@@ -117,13 +117,14 @@ and says it leaves out technical detail.
 
 **Traceability is in the file, and it is checked.** Every entry carries:
 
-- `x-status`, one of `derived` (48 entries), `derived-from-example` (4),
-  `inferred` (5), `opaque` (5) and `project-convention` (1);
+- `x-status`, one of `derived` (48 productions, plus the `NOT-EXPRESSIBLE`
+  findings entry), `derived-from-example` (4), `inferred` (5), `opaque` (5)
+  and `project-convention` (1);
 - `x-quotes`: the source text the entry encodes, with section, line range and
   region id — 171 quotes in all, counting the bases of the findings;
-- `x-inferred`, on 26 entries that are not `inferred` overall but rest partly
-  on an inference or a project choice. It names each keyword affected, so no
-  inference is marked only in prose.
+- `x-inferred`, on 26 entries: the 5 `inferred` ones, and 21 that are not
+  `inferred` overall but rest partly on an inference or a project choice. It
+  names each keyword affected, so no inference is marked only in prose.
 
 Quotes are verbatim modulo line-wrapping: each run of whitespace in the source,
 including a line break and the next line's indent, is one space. So a word the
@@ -447,14 +448,22 @@ Noticed in passing, outside this artifact (for `normative.md` and pass 2):
   are *"not reflected in the SPKI structure definition"*. The six mapping
   classes of §8 are a classification, not a structure.
 - **No requirement ids.** RFC 2693 contains no BCP 14 keywords
-  (`bin/bcp14-count` reports 0), and `requirements.yaml` is not produced in
-  this pass. Everything here cites a section, a line range and verbatim text
-  instead.
+  (`bin/bcp14-count` reports 0). This artifact was extracted from the source
+  alone, in parallel with `requirements.yaml` (whose entries all carry verb
+  `none`), so everything here cites a section, a line range and verbatim text
+  instead. Mapping the SC and G items to `rfc-2693#R-NNNN` ids is the
+  cross-check pass's work.
 
 ## Open for the later passes
 
-- **Pass 2:** re-derive the checks independently, the 171 quotes and the 57
-  region digests in particular.
+- **Pass 2 (verify, 2026-10-12): done.** Checks 1–7 above were re-derived by
+  independent scripts from the cached source, and all hold: the 57 regions
+  and their digests, the metaschema, the `$ref` closure, the 171 quotes, the
+  44 `examples`. Every concrete S-expression in `examples/vectors.yaml`
+  validates against the entry it instantiates, and the two §6.5.1 forms fail
+  `four-tuple` (D-02). The single-quoted fragments in `$comment` and
+  `x-inferred` are all verbatim (18 by this pass's delimiting). Two counts in
+  this file were corrected: the `x-status` tally and the `x-inferred` one.
 - **Pass 3:** reconcile the names here with `messages.yaml`. The abstract
   records use §6.1's element names (`issuer`, `subject`, `delegation`,
   `authorization`, `validity`) and project labels for the rest (`kind`,

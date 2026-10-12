@@ -32,7 +32,10 @@ Anything this extraction computed sits under `derived:` with
 these conventions and the others: the `notation` field, `input_lines` for
 multi-line examples, margin stripping, quoting, and abstract time.
 
-RFC 2693 contains no BCP 14 keyword, so no vector links to a requirement id.
+RFC 2693 contains no BCP 14 keyword, and no vector links to a requirement id.
+This file was extracted from the source alone, in parallel with
+`requirements.yaml` (whose entries all carry verb `none`); linking vectors to
+its `rfc-2693#R-NNNN` entries is the cross-check pass's work.
 
 ## Coverage
 
@@ -90,27 +93,36 @@ RFC 2693 contains no BCP 14 keyword, so no vector links to a requirement id.
   - 2 name-tuple classes and 2 name reductions
   - 3 translation tuples
   - 2 quoted names
-- **The other inline S-expression** is `(tag (*))` in §6.5.3.
+- **The other inline S-expression** is `(tag (*))` in §6.5.3. The remaining
+  parenthesised forms in running prose name forms the displays already carry,
+  and are not values of their own: `(* set)` at lines 1757 and 1766, `(ssl)`,
+  `(dns)` and `(us-crypto)` at 1767–1770, and `(acl-edit)` at 2030.
 - **Displays that yield more than one vector.** Line 1764 prints two
   S-expressions, which become `SPKI-657-10` and `-11`. The ftp pair at 1373
   and 1379 also yields `SPKI-631-03`, for the intersection the source states
   between them.
 
-**Every display-indented line accounted for.** The body (§1–§8) has 128 lines
-indented past the prose margin:
+**Every display-indented line accounted for.** The body (§1–§8, lines
+145–2090) has 149 non-blank lines indented past the three-space prose margin,
+page furniture excluded:
 
-- **56** are carried as a vector input, operand or result.
-- **24** are carried inside a verbatim quote: the star-form descriptions, the
-  §5.2 conditions, the §6.1/§6.2 infinity defaults and §8 item 1.
-- **48** are not carried. All of them are definitions or argument, not
+- **57** are carried as a vector input, operand, result or condition.
+- **29** lie inside a verbatim quote: the star-form descriptions of §6.3.1
+  (14), the §5.2 conditions (4), §6.1 item 1 and the infinity defaults of its
+  item 5 (4), §6.2 item 2 and the infinity defaults of its item 4 (4), and §8
+  item 1 (3).
+- **63** are not carried. All of them are definitions or argument, not
   examples:
-  - the three entity kinds and three processing stages of §6 (27)
-  - the 5-tuple element list of §6.1 (8)
-  - the 4-tuple element list of §6.2 (3)
-  - the two question forms of §6.6 (2)
-  - the second argument of §8 (8)
+  - the three entity kinds and three processing stages of §6 (34)
+  - the rest of the 5-tuple element list of §6.1 (11)
+  - the rest of the 4-tuple element list of §6.2 (5)
+  - the two question forms of §6.6 (4)
+  - the second argument of §8 (9)
 
-  They belong to the normative, messages and schema artifacts.
+  They belong to the normative, messages and schema artifacts. Pass 1 counted
+  128 = 56 + 24 + 48. That total leaves out the 21 lines indented exactly four
+  spaces, which open numbered items, and its split did not reproduce; the
+  figures above are pass 2's, re-derived by script.
 
 ## Sections with no vectors, and why
 
@@ -299,8 +311,22 @@ final run.
 - **Counts reconciled.** `vector_count`, `source_vector_count`,
   `constructed_vector_count` and every per-section figure in
   `count_reconciliation` match the file. The 38 lines beginning "(" and the
-  128 display-indented lines are classified as above.
+  149 display-indented lines are classified as above.
 - **No unfinished-work marker** anywhere in `examples/`: the scaffold string `bin/validate` rejects under `profile: full` was scanned for and is absent.
+
+**Pass 2 (verify, 2026-10-12).** An independent set of scripts re-derived
+every check above from the cached source: the counts and per-section tallies,
+every verbatim and split input and fragment, all 135 quotes with their
+locators, the 89 cross-links, both YAML readers, and every stated and derived
+result, recomputed by a separate engine written from §6.3–§6.4. Every concrete
+S-expression input also validates against the entry of
+`schema/spki-theory.derived.schema.json` it instantiates. No printed example
+is missing. Fixed: the quote rule for line-end hyphens is now stated in the
+file header; seven vectors gained `source_text_locator`, because a
+`source_text` quote came from another section; `SPKI-631-13` no longer
+presents inclusive range bounds as a finding; `SPKI-54-01`'s exposure window
+and `SPKI-657-10`'s note were made exact; `SPKI-75-01` binds `Vn`; and the
+display-line census above was re-derived.
 
 **Not checked, because the document supports no such check.** There is no
 reference implementation. The engine is this extraction's own, so agreement

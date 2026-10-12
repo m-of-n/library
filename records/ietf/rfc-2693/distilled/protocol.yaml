@@ -698,11 +698,14 @@ flows:
       - no-valid-crl
       - certificate-listed-in-crl
       - validity-intersection-empty
+      - non-monotonic-time
       - authorization-intersection-empty
       - subject-issuer-mismatch
       - delegation-not-permitted
       - threshold-not-satisfied
+      - threshold-parameters-invalid
       - name-unresolved
+      - name-definition-mismatch
       - misordered-or-incomplete-sequence
   - name: delegation-by-certificate-issuance
     title: "Delegation: an issuer holding delegation TRUE passes all or part of its authority on in a certificate"
@@ -947,7 +950,7 @@ flows:
         message: timed-crl
         action: "Choose the validity interval by risk management. It is how long the world may act on a statement the issuer knows to be false; a revocation learned of now can take effect no earlier than the end of the interval already issued."
         basis: stated
-        locator: "§5.4"
+        locator: "§5.4, §5.5"
         quotes:
           - |-
             Both timed CRLs and timed revalidations have non-0 validity intervals. To set this validity interval, one must answer the question: "How long are you willing to let the world believe and act on a statement you know to be false?"
@@ -1052,7 +1055,7 @@ flows:
       - revocation-latency
   - name: timed-revalidation-check
     title: "Timed revalidation: the positive counterpart of a timed CRL, under the same three conditions"
-    locator: "§5.3, §5.2, §5.4, §6.3.2"
+    locator: "§5.3, §5.2, §5.4, §5.5, §6.3.2"
     kind: exchange
     status: permitted-with-conditions
     participants:
@@ -1100,7 +1103,7 @@ flows:
         message: revalidation
         action: "Choose the non-zero validity interval by risk management, as for timed CRLs."
         basis: stated
-        locator: "§5.4"
+        locator: "§5.4, §5.5"
         quotes:
           - |-
             Both timed CRLs and timed revalidations have non-0 validity intervals.
@@ -1141,6 +1144,7 @@ flows:
     error_path_ids:
       - no-valid-revalidation
       - certificate-not-in-revalidation
+      - zero-length-crl-interval
       - validity-intersection-empty
       - revocation-latency
   - name: one-time-revalidation
@@ -1606,7 +1610,7 @@ flows:
         invokes:
           - four-tuple-name-reduction
         basis: stated
-        locator: "§6"
+        locator: "§6, §8"
         quotes:
           - |-
             Uses of names are replaced with simple definitions (keys or hashes), based on the name definitions available from reducing name 4-tuples.
@@ -1623,7 +1627,7 @@ flows:
         invokes:
           - five-tuple-chain-reduction
         basis: stated
-        locator: "§6"
+        locator: "§6, §3.1"
         quotes:
           - |-
             Authorization 5-tuples are then reduced to a final authorization result.
@@ -1843,6 +1847,7 @@ flows:
       - unnoticed-key-theft
       - delegation-through-name-subject
       - name-unresolved
+      - naming-authority-forgery
   - name: key-revocation-service
     title: "Key revocation service: an on-line party revokes a lost working key; master-key loss means re-issuance"
     locator: "§7.6, §5, §5.4"
@@ -1929,12 +1934,12 @@ flows:
           - revalidation
         action: "Revoke the current key: stop revalidating its certificate, or list it in the next timed CRL. The service cannot generate a replacement key."
         basis: stated
-        locator: "§7.6"
+        locator: "§7.6, §5.4"
         quotes:
           - |-
             That authority would not have the power to generate a new key for the user, only to revoke a current one.
-        note: "That revocation takes the form of withholding revalidations or listing in a CRL is inferred from §5."
-        on_error: "Revocation takes effect only when the CRL or revalidation interval already issued expires; a one-time test reflects it at once."
+        note: "That revocation takes the form of withholding revalidations or listing in a CRL is inferred from §5. That a one-time test would reflect the revocation at once is inferred from §5.5, and is not part of the stated on_error."
+        on_error: "Revocation takes effect only when the CRL or revalidation interval already issued expires."
         on_error_basis: stated
         on_error_quotes:
           - |-
@@ -3504,6 +3509,7 @@ error_paths:
     detected_by: verifier
     flows:
       - timed-crl-check
+      - authorization-decision
     outcome: "Revoked; no tuple. Stated only for the ruled-out anti-matter CRL (annihilation); inferred for timed CRLs."
     basis: inferred
     locator: "§5.1, §5.2"
@@ -3618,6 +3624,7 @@ error_paths:
       - timed-crl-check
       - timed-revalidation-check
       - one-time-revalidation
+      - short-lived-certificate-renewal
     outcome: "The intersection failed; the reduction that needed it yields nothing."
     basis: stated
     locator: "§6.3.2"
@@ -3672,7 +3679,7 @@ error_paths:
       - |-
         Those subordinate tuples are reduced individually until the list of subordinate tuples has (N-K) (null) entries and K entries with the same subject.
   - id: threshold-parameters-invalid
-    trigger: "A threshold subject with K or N outside 0 < K <= N."
+    trigger: "A threshold subject with K or N outside 0 < K <= N, or with a number of subordinate subjects other than N."
     detected_by: verifier
     flows:
       - authorization-decision
@@ -3941,7 +3948,7 @@ source_defects_and_ambiguities:
         There will be name 4-tuples in two different classes, those that define the name as a key and those that define the name as another name.
   - id: key-versus-hash-equality
     kind: ambiguity
-    locator: "§6.3, §6.1"
+    locator: "§6.3, §6.1, §2.7"
     text: "S1 = I2 is required, and either side may be a public key or its hash. Whether a key equals a hash of that key is not defined. §2.7 treats both as identifiers of the same keyholder, which supports comparing them as one principal."
     quotes:
       - |-

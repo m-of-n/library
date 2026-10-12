@@ -18,7 +18,7 @@ we should refuse.
 **Three things to hold while reading.**
 
 1. **The source binds nothing in BCP 14 terms.** `requirements.yaml` records a
-   measured keyword count of zero. Its 250 entries are lowercase rules,
+   measured keyword count of zero. Its 251 entries are lowercase rules,
    definitions and working-group decisions. §6 calls its own processing plan
    *"an example that may be followed, but its primary purpose is to clarify the
    semantics"* (R-0106). Wherever we adopt something here, **we** make it

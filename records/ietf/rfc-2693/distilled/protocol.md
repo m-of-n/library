@@ -250,7 +250,7 @@ sequenceDiagram
   end
 ```
 
-### 5. `timed-revalidation-check` (§5.3, §5.2, §5.4, §6.3.2)
+### 5. `timed-revalidation-check` (§5.3, §5.2, §5.4, §5.5, §6.3.2)
 
 *Status: permitted with conditions.* A revalidation is the positive counterpart
 of a CRL. It usually lists one certificate and may list a set "to save digital
@@ -882,7 +882,7 @@ the outcome is stated in the source and *I* that it is inferred.
 | `subject-issuer-mismatch` | S1 ≠ I2 | rule does not apply | S | §6.3 |
 | `delegation-not-permitted` | D1 not TRUE | rule does not apply | S | §6.3 |
 | `threshold-not-satisfied` | fewer than K branches converge | no tuple | I | §6.3.3 |
-| `threshold-parameters-invalid` | K, N outside 0 < K ≤ N | malformed | I | §6.3.3 |
+| `threshold-parameters-invalid` | K, N outside 0 < K ≤ N, or not N subordinates | malformed | I | §6.3.3 |
 | `name-unresolved` | no defining 4-tuple | no later 5-tuple can chain | I | §6, §6.4 |
 | `name-definition-mismatch` | 4-tuple does not define the head name | does not apply | I | §6.4 |
 | `naming-loop` | cyclic name definitions | avoided by the class 1 only rule | S | §6.4 |
