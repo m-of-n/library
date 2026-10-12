@@ -67,12 +67,28 @@ written reason in `distillation.not_applicable` — never silently omitted.
 | **protocol** | `distilled/protocol.yaml` + `protocol.md` | roles, messages exchanged, sequences, error paths; a Mermaid sequence diagram | with reason (pure data formats) |
 | **state machine** | `distilled/state-machine.yaml` | states, transitions, triggers, guards, error states — for anything with lifecycle (registration, receipt, verification) | with reason |
 | **examples / test vectors** | `distilled/examples/` | every example in the source as a fixture file, plus expected results; this is what drives our tests | with reason |
-| **design notes** | `distilled/design-notes.md` | **how this document bears on our design**: what we adopt, adapt or reject, mapped to ARCH / DEC / D-n decisions; open questions | **no** |
+| **design notes** | `distilled/design-notes.md` | **how this document bears on our design**: what we adopt, adapt or reject, mapped to ARCH / DEC / MD-n decisions; open questions | **no** |
 
 **Design notes for COSE / CBOR / signing-envelope documents** must address
-D-3 explicitly (option 5: reduced CBOR, no IANA tags, COSE as export only):
+MD-3 explicitly (option 5: reduced CBOR, no IANA tags, COSE as export only):
 which headers and structures map onto our statement fields, what the export
 mapping is, and what we deliberately do not carry.
+
+**And they must record where the document cuts against MD-3.** MD-3 is a dated
+*narrowing* of DEC-002, taken 2026-09-28 — **not an acceptance of it.**
+`CONTRIBUTING` §5 in `m-of-n` is explicit that only an ADR accepts a decision,
+and **no DEC-002 ADR exists.** An extraction that maps cleanly onto option 5
+and reports nothing else has confirmed a choice rather than tested it, and the
+ADR it is meant to feed learns nothing from it. So where a source supports a
+different option, or exposes a cost option 5 pays and another does not, **say
+so in the same section and name the option.**
+
+`canonical-encoding` is the worked example. RFC 9804's extraction put **option
+1 on the right side of all four grounds that withdraw option 3**, and found it
+also wins namespace governance — the opposite of what MD-3 assumed when it was
+taken six days earlier. That finding exists only because the extraction was not
+required to agree with the narrowing it was mapped against. **An extraction
+that can only confirm is not evidence.**
 
 ## Completeness is checked, not asserted
 

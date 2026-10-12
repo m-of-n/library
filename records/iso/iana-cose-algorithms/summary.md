@@ -55,7 +55,7 @@ The post-quantum neighbourhood as of this snapshot:
 | This project | `adjacent` | Bears on R-M-12; the suite itself is deferred by NG3 |
 
 Bears on **R-M-12**. This is the governed namespace an exported COSE statement
-would draw its algorithm identifier from — relevant to D-3's "COSE as export
+would draw its algorithm identifier from — relevant to MD-3's "COSE as export
 only" option, because what we export has to be a value in this table.
 
 ## Implementations

@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: secure-systems-lab-dsse
 record: secure-systems-lab-dsse
 type: summary
-updated: "2026-10-03"
+updated: "2026-10-08"
 ---
 
 # Dead Simple Signing Envelope (DSSE)
@@ -16,7 +16,7 @@ updated: "2026-10-03"
 | **Published** | protocol.md v1.0.2, 2024-05-10 |
 | **Identifier** | git: https://github.com/secure-systems-lab/dsse |
 | **Source** | pinned at commit `1d3370f62565bca041e97c8310b873ac340edc2e` |
-| **Digest** | per-file; `background.md` and `protocol.md` read at that commit, 2026-10-03 |
+| **Digest** | archive sha256 `88fc65fd…3ac1`, re-verified 2026-10-08 |
 
 ## Overview
 
@@ -49,7 +49,8 @@ It was built for TUF and in-toto, which previously signed Canonical JSON.
 | Cryptography | adjacent | Deliberately algorithm-agnostic — `Sign()` is "an arbitrary digital signature format" agreed out of band. |
 | This project | core | Named in **DEC-005** (envelope for ArtifactStatement), **R-I-03** (export target), and **DEC-002 option 3** pairs it with JCS. Its `(t, n)` envelope bears on **R-M-06**. |
 
-Bears on **DEC-002**, **DEC-005**, **R-I-03**, **R-M-06** and **R-O-05**.
+Bears on **DEC-002**, **DEC-003**, **DEC-005**, **R-I-03**, **R-M-02**,
+**R-M-06**, **R-M-12** and **R-O-05**.
 
 ## The critique, in its own terms
 
@@ -87,11 +88,21 @@ than in tension with them.
   envelope after verification to pull out the payload."* R-O-05 as proposed does
   not say this, and it closes a real gap between "verify before decoding" and
   what the application finally acts on.
-- **`(t, n)` multi-signature is already in the envelope.** *"A `(t, n)`-ENVELOPE
-  is valid if the enclosed signatures pass the verification against at least `t`
-  of `n` unique trusted public keys."* The export target named in R-I-03
-  therefore already carries threshold semantics, which bears directly on R-M-06
-  and is a cheaper interchange story for threshold subjects than expected.
+- **An authenticated type indicator, defended by a worked attack.** `PAYLOAD_TYPE`
+  is inside the signed bytes (`protocol.md` §Parameters marks it
+  `Authenticated: Yes`), and `hypothetical_signature_attack.ipynb` is the
+  proof-of-concept that motivated it — a payload crafted to parse as one message
+  under CBOR and a different one under protobuf, with the type flipped after
+  signing. That notebook is the citation behind R-O-05's type-indicator clause.
+
+**Retracted (2026-10-08).** An earlier version of this summary claimed the
+`(t, n)` envelope already carried threshold semantics, and that R-I-03's export
+target therefore gave R-M-06 a cheaper interchange story than expected. It does
+not. The sentence continues *"where `t` is application-specific"* — `t` is a
+verifier-side parameter supplied out of band, not an envelope field — and
+`envelope.md` adds that multiple signatures are *"equivalent to separate
+envelopes with individual signatures"*. A DSSE envelope carries `n` and cannot
+carry `k`. See `distilled/design-notes.md` §1.
 
 ## Limits
 
@@ -99,19 +110,31 @@ than in tension with them.
   it is only a hint to narrow key selection. This is the opposite of our
   `KeyId`, which under R-M-02 *is* the principal's name. The collision of terms
   is a documentation hazard for any mapping table written under R-I-01.
-- **`PAYLOAD_TYPE` is a globally allocated string** — a media type or a URI.
-  Under R-M-12 (accepted as ARCH-0002 P1 via ADR-0001) that is exactly the
-  centrally allocated extension point the native model excludes, so DSSE's type
-  indicator is usable at the interchange boundary and not natively.
+- **`PAYLOAD_TYPE` is *recommended* to be a globally allocated string** — a media
+  type or a URI. Under R-M-12 (accepted as ARCH-0002 P1 via ADR-0001) that is
+  exactly the centrally allocated extension point the native model excludes. But
+  the recommendation is a **SHOULD**, and `envelope.md` §Other data structures
+  licenses the escape — *"code `payloadType` as a shorter string or enum"* —
+  which PAE authenticates just as well. So DSSE does not force a global
+  identifier; its default recommends one, and the cost of declining is ecosystem
+  divergence rather than non-conformance. This corrects a stronger claim made
+  here earlier; see `distilled/design-notes.md` §2.
+- **`envelope.md` requires consumers to `MUST ignore unrecognized fields`**,
+  which is the opposite default to ARCH-0002 **P5**'s reject-unknown — at the
+  envelope layer only, since unsupported *payload types* are rejected. A
+  conforming DSSE export boundary therefore cannot enforce P5 on the envelope
+  exterior. See `distilled/design-notes.md` §3.
 - **No canonical form at all**, which is the point — but it means DSSE cannot
   express R-M-11's description-mode `ArtifactId` or ARCH-0002 P4's domain hash,
   both of which require canonicalising a structure to derive its identity.
 - **Signature algorithm and key management are out of scope**, agreed out of
   band, so DSSE settles none of DEC-003.
-- **Read scope:** `background.md` and `protocol.md` in full at the pinned
-  commit. `envelope.md`, `hypothetical_signature_attack.ipynb` and the
-  implementation sub-trees have **not** been read; the notebook is the authors'
-  worked cross-encoding attack and is the first thing to read next.
+- **Read scope:** all specification text at the pinned commit —
+  `background.md` and `protocol.md` (2026-10-03), `envelope.md`,
+  `envelope.proto` and `hypothetical_signature_attack.ipynb` (2026-10-08). The
+  `implementation/` and `governance/` sub-trees are not specification text and
+  are not read. Reading the last three changed two conclusions recorded here;
+  both retractions are above and in `distilled/design-notes.md`.
 - This record is type `repo`, so FX-1 full extraction does not apply to it. If
   DSSE becomes a selected envelope under DEC-005 rather than an export target,
   that exemption should be revisited.

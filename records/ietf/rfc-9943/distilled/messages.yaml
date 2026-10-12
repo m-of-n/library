@@ -1,0 +1,1193 @@
+record: rfc-9943
+reviewed_by: "davidhsiaotw 2026-10-05 — 5 of 80 constrained_by ids resolve to requirements.yaml entries"
+# Every message, structure, header or envelope the document defines.
+#
+# Scope note: RFC 9943 is an architecture document. It defines exactly two
+# normative CDDL fragments (Figure 3, §6.1 and Figure 7, §7) and six EDN
+# examples (Figures 4, 5, 8, 9, 10, 11). Everything below is drawn from those
+# plus the prose of §3, §5.1, §6, §6.2, §6.3, §7, §9.5 and §10. Anything whose
+# authority lies in RFC 9942 (COSE Receipts) or RFC 9052/STD96 is marked as
+# such rather than restated as if this document defined it.
+#
+# constrained_by lists cite ids from distilled/requirements.yaml. Where no
+# requirement carries the constraint - because it lives only in the CDDL, which
+# the requirements extraction does not quote - a constrained_by_note string is
+# kept instead, deliberately and not as a placeholder.
+
+messages:
+
+  # ------------------------------------------------------------------
+  - name: Signed_Statement
+    locator: "§6, §6.1 (Figure 3)"
+    encoding: "COSE_Sign1 (RFC 9052 §4.2 / STD96), CBOR, tagged #6.18"
+    cddl: "Signed_Statement = #6.18(COSE_Sign1)"
+    constrained_by: [rfc-9943#R-0027, rfc-9943#R-0006]
+    definition_quote: >-
+      "Signed Statements produced by Issuers must be COSE_Sign1 messages, as
+      defined by [STD96]."
+    terminology_quote: >-
+      "Signed Statement: an identifiable and non-repudiable Statement about an
+      Artifact signed by an Issuer. In SCITT, Signed Statements are encoded as
+      Enveloped COSE Structures; the payload of the COSE structure contains the
+      issued Statement." (§3)
+    notes:
+      - "The COSE tag is mandatory in the CDDL: #6.18 wraps the four-element array."
+      - >-
+        §6.1: "The SCITT architecture specifies the minimal mandatory labels.
+        Implementation-specific Registration Policies may define additional
+        mandatory labels." The CDDL below is therefore a floor, not a ceiling.
+      - >-
+        This document does not itself define the COSE_Sign1 signing or
+        verification process; it delegates to RFC 9052 §4.4 (verification) via
+        §6.3 step 2 and §7.1.
+    fields:
+      - name: protected
+        label: "array position 0"
+        type: "bstr .cbor Protected_Header"
+        required: true
+        description: >-
+          Serialized (byte-string-wrapped) CBOR map of the protected header;
+          included in the Issuer's signature.
+        constrained_by: [rfc-9943#R-0037, rfc-9943#R-0041]
+      - name: unprotected
+        label: "array position 1"
+        type: Unprotected_Header
+        required: true
+        description: >-
+          Bare CBOR map (not byte-wrapped), not covered by the signature. May be
+          the empty map {} - Figure 4 shows exactly that for a Signed Statement
+          with no Receipts attached.
+        constrained_by: [rfc-9943#R-0048, rfc-9943#R-0047]
+      - name: payload
+        label: "array position 2"
+        type: "bstr / nil"
+        required: true
+        description: >-
+          The Statement itself, or nil for a detached payload. Schema-legal
+          either way; see the Detached_Payload_Signed_Statement entry below -
+          every EDN example in this RFC uses nil.
+        constrained_by: [rfc-9943#R-0003]
+      - name: signature
+        label: "array position 3"
+        type: bstr
+        required: true
+        description: >-
+          Issuer's signature over the COSE Sig_structure (the to-be-signed
+          bytes), per STD96.
+        constrained_by: [rfc-9943#R-0039, rfc-9943#R-0040, rfc-9943#R-0010]
+    layout: |
+      Verbatim CDDL, Figure 3 (§6.1), normative:
+
+        Signed_Statement = #6.18(COSE_Sign1)
+        Receipt          = #6.18(COSE_Sign1)
+
+        COSE_Sign1 = [
+          protected   : bstr .cbor Protected_Header,
+          unprotected : Unprotected_Header,
+          payload     : bstr / nil,
+          signature   : bstr
+        ]
+
+      Byte-level: CBOR tag 18 (0xd2) followed by a 4-element definite-length
+      array (0x84). Figure 8's embedded Receipt 1 begins h'd284...', which is
+      exactly tag(18) + array(4).
+
+  # ------------------------------------------------------------------
+  - name: Protected_Header
+    locator: "§6, §6.1 (Figure 3), Figure 5, Figure 10"
+    encoding: "CBOR map, serialized into a bstr in array position 0 of COSE_Sign1"
+    applies_to: "Signed Statement AND Receipt (the same rule serves both)"
+    constrained_by: [rfc-9943#R-0011, rfc-9943#R-0012, rfc-9943#R-0037]
+    notes:
+      - >-
+        Figure 5 decodes a real instance: a 4-entry map (leading byte 0xa4,
+        visible in the elided h'a4012603...6d706c65' of Figures 4 and 8) holding
+        labels 1, 3, 4 and 15.
+      - >-
+        Every field except label 15 is optional in the CDDL ("?"), but §5.1.1.1
+        and §6 add prose obligations that make at least one identity binding
+        mandatory in practice. See conformance_split below, and the fourth entry
+        under internal_inconsistencies_observed.
+      - >-
+        §5.1.1.1 MUST: "The Issuer identity MUST be bound to the Signed
+        Statement by including an identifier in the protected header. If the
+        protected header includes multiple identifiers, all those that are
+        registered by the TS MUST be checked."
+    fields:
+      - name: CWT_Claims
+        label: 15
+        type: CWT_Claims
+        required: true
+        source_registry: "COSE Header Parameters (RFC 9597 §2)"
+        description: >-
+          The CWT Claims container. The ONLY mandatory entry in the protected
+          header per Figure 3's CDDL (no "?" prefix). Embeds a CBOR Web Token
+          Claims Set (RFC 8392) inside the COSE protected header.
+        constrained_by: [rfc-9943#R-0037, rfc-9943#R-0038]
+      - name: alg
+        label: 1
+        type: int
+        required: false
+        description: >-
+          COSE signature algorithm identifier. Figure 5 and Figure 10 both show
+          1: -7 (ES256). The RFC names no mandatory-to-implement algorithm; §9.6
+          says SCITT "benefits from the format's cryptographic agility" and
+          leaves the choice to STD96.
+        constrained_by: []
+        constrained_by_note: >-
+          "§6.1 CDDL optional member: ? &(alg: 1) => int" - no requirement in
+          requirements.yaml carries this; it is a CDDL-only constraint.
+      - name: content_type
+        label: 3
+        type: "tstr / uint"
+        required: false
+        aliases: ["payload type", "3: payload type"]
+        description: >-
+          Media type of the Statement payload. §6 calls it "(3: payload type)".
+          Figure 5 shows 3: application/example+json. Informatively suggested
+          payload formats (§6): CoSWID, CycloneDX, in-toto, SPDX, SLSA, SWID.
+        constrained_by: [rfc-9943#R-0028, rfc-9943#R-0002]
+        additional_note: >-
+          §9.5: "The payload media type (content type) is included in the COSE
+          envelope header. [STD96] describes the security implications of
+          reliance on this header parameter."
+      - name: kid
+        label: 4
+        type: bstr
+        required: false
+        required_conditionally: true
+        description: >-
+          Key identifier. Mandatory exactly when neither x5t nor x5chain is in
+          the protected header. Figure 5 and Figure 10 both carry
+          4: h'50685f55...50523255'.
+        constrained_by: [rfc-9943#R-0036, rfc-9943#R-0030]
+        additional_note: >-
+          §6: "Key discovery protocols are out of scope of this document." No
+          resolution mechanism for a kid is defined anywhere in this RFC.
+      - name: x5t
+        label: 34
+        type: COSE_CertHash
+        required: false
+        source_registry: "RFC 9360 (COSE X.509 header parameters)"
+        description: >-
+          Thumbprint of the Issuer's certificate. COSE_CertHash is defined in
+          RFC 9360, not here.
+        constrained_by: [rfc-9943#R-0016, rfc-9943#R-0032]
+      - name: x5chain
+        label: 33
+        type: COSE_X509
+        required: false
+        source_registry: "RFC 9360 (COSE X.509 header parameters)"
+        description: >-
+          Certification path including the Issuer's certificate. COSE_X509 is
+          defined in RFC 9360, not here. Note the same label 33 may ALSO appear
+          in the unprotected header (see Unprotected_Header).
+        constrained_by: [rfc-9943#R-0016, rfc-9943#R-0015, rfc-9943#R-0032]
+      - name: "* label => any"
+        label: "any int / tstr not listed above"
+        type: any
+        required: false
+        description: >-
+          Extensibility socket. The protected header map is open: any additional
+          COSE header parameter may appear. This is how the Receipt's 395
+          (verifiable data structure) enters the map in Figure 10 without being
+          named in Figure 3's CDDL.
+        constrained_by: []
+        constrained_by_note: >-
+          "§6.1: Implementation-specific Registration Policies may define
+          additional mandatory labels." - prose that requirements.yaml does not
+          quote as a requirement; the socket itself is CDDL-only.
+    conformance_split:
+      locator: "§6"
+      note: "The document's only conformance-class statement. Two bullets, verbatim."
+      required_to_implement: >-
+        "When using X.509 certificates, support for either x5t or x5chain in the
+        protected header is REQUIRED to implement."
+      optional_to_implement: >-
+        "Support for kid in the protected header and x5chain in the unprotected
+        header is OPTIONAL to implement."
+      constrained_by: [rfc-9943#R-0032, rfc-9943#R-0033]
+    layout: |
+      Verbatim CDDL, Figure 3 (§6.1), normative:
+
+        Protected_Header = {
+          &(CWT_Claims: 15) => CWT_Claims
+          ? &(alg: 1) => int
+          ? &(content_type: 3) => tstr / uint
+          ? &(kid: 4) => bstr
+          ? &(x5t: 34) => COSE_CertHash
+          ? &(x5chain: 33) => COSE_X509
+          * label => any
+        }
+
+        label = int / tstr
+
+      Decoded instance, Figure 5 (§6.1), a Signed Statement's protected header:
+
+        {                                   / Protected        /
+          1: -7,                            / Algorithm        /
+          3: application/example+json,      / Content type     /
+          4: h'50685f55...50523255',        / Key identifier   /
+          15: {                             / CWT Claims       /
+            1: software.vendor.example,     / Issuer           /
+            2: vendor.product.example,      / Subject          /
+          }
+        }
+
+  # ------------------------------------------------------------------
+  - name: CWT_Claims
+    locator: "§3 (Issuer, Subject, Statement), §6, §6.1 (Figure 3)"
+    encoding: "CBOR map, value of protected-header label 15 (RFC 9597)"
+    constrained_by: [rfc-9943#R-0038, rfc-9943#R-0037, rfc-9943#R-0029]
+    discharges:
+      - requirement: rfc-9943#R-0029
+        note: >-
+          R-0029 ("Issuers and Relying Parties must be able to recognize the
+          Artifact to which the Statements pertain by looking at the Signed
+          Statement") names no field, and this pair is the only mechanism the
+          document gives for it: §6 "The iss and sub Claims, within the CWT
+          Claims protected header, are used to identify the Artifact the
+          Statement pertains to." The obligation is therefore discharged by
+          iss (1) and sub (2) below and by nothing else in the RFC.
+    description: >-
+      A CBOR Web Token Claims Set (RFC 8392) carried in the COSE protected
+      header per RFC 9597 §2. Mandatory in both Signed Statements and Receipts.
+      Both of its named claims are mandatory - this map has no optional members
+      other than the extensibility socket.
+    fields:
+      - name: iss
+        label: 1
+        type: tstr
+        required: true
+        source_registry: "CBOR Web Token (CWT) Claims [IANA.cwt]; semantics RFC 8392"
+        description: >-
+          The Issuer identifier. §3: "an identifier representing an
+          organization, device, user, or entity securing Statements about supply
+          chain Artifacts. An Issuer may be the owner or author of Artifacts or
+          an independent third party such as an Auditor, reviewer, or endorser."
+          Figure 5 shows 1: software.vendor.example (Issuer of a Signed
+          Statement); Figure 10 shows 1: transparency.vendor.example (the TS, as
+          Issuer of a Receipt).
+        constrained_by: [rfc-9943#R-0038, rfc-9943#R-0034, rfc-9943#R-0035]
+        value_constraints:
+          - requirement: rfc-9943#R-0034
+            quote: >-
+              "When x5t or x5chain is present in the protected header, the iss
+              Claim value MUST be a string that meets URI requirements defined
+              in [RFC8392]."
+          - requirement: rfc-9943#R-0035
+            quote: >-
+              "The iss Claim value's length MUST be between 1 and 8192
+              characters in length."
+            testable_range: "1 <= len(iss) <= 8192 characters"
+        additional_notes:
+          - >-
+            §5.1: "Typically, a TS has a single Issuer identity that is present
+            in the iss Claim of Receipts for that service."
+          - >-
+            §5.1: multi-tenancy is expressed through iss - "ts.example. may have
+            a distinct Issuer identity for each subdomain, such as
+            'tenant1.ts.example.' and 'tenant2.ts.example.'."
+      - name: sub
+        label: 2
+        type: tstr
+        required: true
+        source_registry: "CBOR Web Token (CWT) Claims [IANA.cwt]; semantics RFC 8392"
+        role: "CORRELATION KEY across Issuers and across Statements"
+        description: >-
+          The Subject identifier. §3: "an identifier, defined by the Issuer,
+          that represents the organization, device, user, entity, or Artifact
+          about which Statements (and Receipts) are made and by which a logical
+          collection of Statements can be grouped."
+        constrained_by: [rfc-9943#R-0038, rfc-9943#R-0049]
+        correlation_semantics:
+          - >-
+            §3 (Statement): "Additional Statements about an Artifact are
+            correlated by the Subject Claim as defined in the 'CBOR Web Token
+            (CWT) Claims' registry [IANA.cwt] and used as a protected header
+            parameter as defined in [RFC9597]."
+          - >-
+            §3 (Subject): "In these cases, distinct Issuers (iss) might agree to
+            use the sub CWT Claim, defined in [RFC8392], to create a coherent
+            sequence of Signed Statements about the same Artifact, and Relying
+            Parties can leverage sub to ensure completeness and Non-equivocation
+            across Statements by identifying all Transparent Statements
+            associated with a specific Subject."
+          - >-
+            §6: "The iss and sub Claims, within the CWT Claims protected header,
+            are used to identify the Artifact the Statement pertains to."
+        additional_note: >-
+          §9.2: "A registered Statement may be superseded by a subsequently
+          submitted Signed Statement from the same Issuer, with the same subject
+          in the CWT Claims protected header." Agreement on sub across Issuers
+          is by convention ("might agree"), not enforced by this document -
+          there is no registry, namespace or syntax rule for sub values at all,
+          and no length bound of the kind iss has.
+      - name: "* label => any"
+        label: "any int / tstr not listed above"
+        type: any
+        required: false
+        description: >-
+          Extensibility socket. Any further CWT claim (iat, exp, nbf, cnf, ...)
+          may appear. None is named or required by this RFC. §7.1 alludes to
+          "Claims related to the validity period" as something a verification
+          API "may indicate", but defines no such claim.
+        constrained_by: []
+        constrained_by_note: "CDDL-only socket; no requirement in requirements.yaml covers it."
+    layout: |
+      Verbatim CDDL, Figure 3 (§6.1), normative:
+
+        CWT_Claims = {
+          &(iss: 1) => tstr
+          &(sub: 2) => tstr
+          * label => any
+        }
+
+  # ------------------------------------------------------------------
+  - name: Unprotected_Header
+    locator: "§6, §6.1 (Figure 3), §6.3, §7 (Figure 7)"
+    encoding: "CBOR map, bare (not bstr-wrapped) in array position 1 of COSE_Sign1"
+    description: >-
+      Not covered by the Issuer's signature. §3 (Envelope): "In COSE, an
+      Envelope consists of a protected header (included in the Issuer's
+      signature) and an unprotected header (not included in the Issuer's
+      signature)."
+    two_definitions_note: >-
+      This RFC defines the rule name Unprotected_Header TWICE, in two separate
+      normative CDDL figures, with different bodies. Figure 3 (§6.1) makes both
+      members optional and leaves the map open. Figure 7 (§7) redefines the rule
+      with receipts (394) as its sole, mandatory and ONLY permitted member. See
+      figure_7_closure below - the divergence is larger than "394 becomes
+      mandatory".
+    figure_7_closure:
+      locator: "§7, Figure 7 (source lines 1143-1145)"
+      verified: "byte-for-byte against the source text"
+      finding: >-
+        Figure 7's Unprotected_Header is a CLOSED map. Relative to Figure 3 it
+        makes receipts (394) mandatory, AND drops "? &(x5chain: 33) =>
+        COSE_X509", AND drops "* label => any". Three members become one.
+      generalisation_corrected: >-
+        "Every header map in this RFC ends with * label => any" holds for
+        Figure 3's three maps (Protected_Header, CWT_Claims, Unprotected_Header)
+        and is FALSE for Figure 7's Unprotected_Header. A reader who carries the
+        Figure 3 habit into §7 will mis-parse the Transparent Statement profile.
+      contradictions:
+        - >-
+          Contradicts §6.1: "Implementation-specific Registration Policies may
+          define additional mandatory labels." With the socket gone, a
+          Transparent Statement's unprotected header admits no additional label
+          at all, so no Registration Policy could add one there.
+        - >-
+          Contradicts §5.1.1.1 (R-0017): "If x5t is included in the protected
+          header, an x5chain with a leaf certificate corresponding to the x5t
+          value MAY be included in the unprotected header." - and §6 (R-0031),
+          which permits the same. A Transparent Statement validated strictly
+          against Figure 7 could not carry that x5chain.
+      reading: >-
+        Read Figure 7 as a narrow profile illustrating what makes a Transparent
+        Statement transparent, not as a replacement schema. Taken literally it
+        is stricter than §5.1.1.1 and §6 allow.
+    fields:
+      - name: x5chain
+        label: 33
+        type: COSE_X509
+        required: false
+        source_registry: "RFC 9360"
+        description: >-
+          Optional unsigned certification path. Present in the Figure 3 form of
+          the rule ONLY; absent from Figure 7's closed map.
+        constrained_by: [rfc-9943#R-0031, rfc-9943#R-0017]
+      - name: receipts
+        label: 394
+        type: "[+ bstr .cbor Receipt]"
+        required: false
+        required_in_transparent_statement: true
+        source_registry: "COSE Header Parameters; semantics from RFC 9942"
+        description: >-
+          A CBOR array of one or more Receipts, each a byte string containing an
+          encoded Receipt (#6.18(COSE_Sign1)). Optional in a Signed Statement
+          (Figure 3, "?"); mandatory in a Transparent Statement (Figure 7, no
+          "?"). The "+" occurrence indicator forbids an empty array.
+        constrained_by: []
+        constrained_by_note: >-
+          CDDL-only. §7: "Receipts are based on signed proofs as described in
+          COSE Receipts [RFC9942], which also provides the COSE header parameter
+          semantics for label 394." No requirement in requirements.yaml quotes
+          the label's occurrence rules.
+        additional_notes:
+          - >-
+            §7: "The type of label 394 receipts in the unprotected header is a
+            CBOR array that can contain one or more Receipts (each entry encoded
+            as a .cbor-encoded Receipt)."
+          - >-
+            §6.3: "The same Signed Statement may be independently registered in
+            multiple TSs, producing multiple independent Receipts. The multiple
+            Receipts may be attached to the unprotected header of the Signed
+            Statement creating a Transparent Statement." Figure 8 shows two.
+          - >-
+            The label's semantics are owned by RFC 9942, not this document. This
+            RFC gives its type and occurrence only.
+      - name: "* label => any"
+        label: "any int / tstr not listed above"
+        type: any
+        required: false
+        present_in: "Figure 3 only - ABSENT from Figure 7"
+        description: >-
+          Extensibility socket. This is what admits the Receipt-side proofs map
+          (396) shown in Figure 9's unprotected header. Figure 7's closed map
+          has no such socket.
+        constrained_by: [rfc-9943#R-0047]
+    emptying_rule:
+      locator: "§6.3"
+      quote: >-
+        "However, the unprotected header of a Signed Statement MUST be set to an
+        empty map before the Signed Statement can be included in a Statement
+        Sequence."
+      consequence: >-
+        What the VDS commits to is the Signed Statement with a zero-entry
+        unprotected header (CBOR 0xa0). Receipts and unsigned certificate chains
+        are therefore never part of the logged bytes, and a Transparent
+        Statement is not what gets registered. Figure 4's "{}" is the canonical
+        registered form.
+      constrained_by: [rfc-9943#R-0048]
+    layout: |
+      Verbatim CDDL, Figure 3 (§6.1) - the Signed Statement / Receipt form,
+      three members, open:
+
+        Unprotected_Header = {
+          ? &(x5chain: 33) => COSE_X509
+          ? &(receipts: 394)  => [+ bstr .cbor Receipt]
+          * label => any
+        }
+
+      Verbatim CDDL, Figure 7 (§7) - the Transparent Statement form, one
+      member, CLOSED (no x5chain, no * label => any):
+
+        Unprotected_Header = {
+          &(receipts: 394)  => [+ bstr .cbor Receipt]
+        }
+
+  # ------------------------------------------------------------------
+  - name: Detached_Payload_Signed_Statement
+    locator: "§6.1 (Figure 4), §6.2 (Figure 6)"
+    encoding: "COSE_Sign1 with payload = nil"
+    status: "First-class case, not a degenerate one"
+    constrained_by: []
+    constrained_by_note: >-
+      Schema-legal via "payload : bstr / nil" in Figure 3's CDDL. No requirement
+      in requirements.yaml addresses detached payloads or the hash-of-payload
+      pattern; §6.2 is prose carrying no BCP 14 keyword.
+    description: >-
+      The CDDL admits payload : bstr / nil, and EVERY EDN example in this RFC
+      (Figures 4, 8, 9) uses nil. §6.1: "Figure 4 illustrates an instance of a
+      Signed Statement in Extended Diagnostic Notation (EDN), with a payload
+      that is detached. Detached payloads support large Statements and ensure
+      Signed Statements can integrate with existing storage systems."
+    hash_of_payload_pattern:
+      locator: "§6.2, Figure 6"
+      quote: >-
+        "Statement payloads might be too large or too sensitive to be sent to a
+        remote TS. In these cases, a Statement can be made over the hash of a
+        payload rather than the full payload bytes."
+      figure_6_flow: >-
+        Artifact -> (Hash | Statement) -> OR -> Payload; separately
+        Private Key + Identity Document (iss, x5t) -> Header;
+        Header + Payload -> To-Be-Signed-Bytes -> Sign -> COSE_Sign1.
+        The figure draws a Producer Network / Issuer Network split, i.e. the
+        hashing may happen in a different trust domain from the signing.
+      fields_affected:
+        - name: payload
+          type: "bstr (hash of the artifact) / nil (detached entirely)"
+          required: true
+          description: >-
+            Either the hash bytes stand in for the full payload, or the payload
+            is omitted (nil) and the bytes travel out of band. The document
+            specifies NO hash algorithm, NO hash-envelope structure, and NO
+            header parameter to declare which was done. There is no
+            payload-hash-alg label anywhere in this RFC.
+      undefined_here:
+        - "Which hash function to use, and how a verifier learns it."
+        - "How a detached payload is bound to the signature beyond STD96's Sig_structure."
+        - "Any COSE hash-envelope / payload-preimage-content-type parameter."
+    layout: |
+      Verbatim EDN, Figure 4 (§6.1):
+
+        18(                                 / COSE_Sign1       /
+            [
+              h'a4012603...6d706c65',       / Protected        /
+              {},                           / Unprotected      /
+              nil,                          / Detached payload /
+              h'79ada558...3a28bae4'        / Signature        /
+            ]
+        )
+
+      Byte reading of the elided protected bytes: 0xa4 = CBOR map(4);
+      0x01 0x26 = label 1 => -7 (ES256); 0x03 ... = label 3 (content type).
+      Consistent with Figure 5's decode.
+
+  # ------------------------------------------------------------------
+  - name: Receipt
+    locator: "§3, §5, §6, §6.1 (Figure 3), §7"
+    encoding: "COSE_Sign1 (RFC 9052 §4.2), CBOR, tagged #6.18"
+    cddl: "Receipt = #6.18(COSE_Sign1)"
+    defined_elsewhere: rfc-9942
+    constrained_by: [rfc-9943#R-0008, rfc-9943#R-0001, rfc-9943#R-0045]
+    structure_ownership_note: >-
+      THE RECEIPT'S OWN STRUCTURE IS NOT DEFINED IN THIS RFC. RFC 9943 defines
+      only the thin outer wrapper (it is a COSE_Sign1 that must carry the same
+      mandatory CWT Claims protected header as a Signed Statement). The contents
+      that make it a receipt - the verifiable data structure algorithm, the
+      proofs and their encodings - are normatively RFC 9942's. The document says
+      so outright; this is not an inference.
+    ownership_quotes:
+      - >-
+        §5: "In order to accommodate as many TS implementations as possible,
+        this document only specifies the format of Signed Statements (which must
+        be used by all Issuers) and a very thin wrapper format for Receipts,
+        which specifies the TS identity and the agility parameters for the
+        signed proofs. The remaining details of the Receipt's contents are
+        specified in [RFC9942]."
+      - >-
+        §3: "Receipt: a COSE Single Signer Data Object as defined in [RFC9942].
+        See [RFC9942] for implementations. Receipts are signed proofs of VDS
+        properties."
+      - >-
+        §6: "A Receipt is a Signed Statement (COSE_Sign1) with additional Claims
+        in its protected header related to verifying the inclusion proof in its
+        unprotected header. See [RFC9942]."
+    fields:
+      - name: protected
+        type: "bstr .cbor Protected_Header"
+        required: true
+        description: >-
+          Same rule as a Signed Statement's, so label 15 CWT Claims with iss and
+          sub is mandatory here too. iss carries the TS identity (Figure 10:
+          transparency.vendor.example). Additional Receipt-specific labels enter
+          through the "* label => any" socket - see example_derived_labels.
+        constrained_by: [rfc-9943#R-0037, rfc-9943#R-0038]
+      - name: unprotected
+        type: Unprotected_Header
+        required: true
+        description: >-
+          Carries the Verifiable Data structure Proofs (VDP). §7: "The
+          unprotected header contains VDP." Figure 9 shows label 396 here. That
+          label is not in this RFC's CDDL.
+        constrained_by: []
+        constrained_by_note: >-
+          No requirement constrains a Receipt's unprotected header in this RFC;
+          its contents are RFC 9942's.
+      - name: payload
+        type: "bstr / nil"
+        required: true
+        description: "nil in Figure 9 - the Receipt example is also detached-payload."
+        constrained_by: []
+        constrained_by_note: "CDDL-only: payload : bstr / nil."
+      - name: signature
+        type: bstr
+        required: true
+        description: "The TS's signature over the Receipt."
+        constrained_by: [rfc-9943#R-0008, rfc-9943#R-0052]
+    proof_type_obligation:
+      locator: "§3 (Receipt)"
+      quote: >-
+        "Receipt Profiles implemented by a TS MUST support inclusion proofs and
+        MAY support other Proof Types (see Section 3 of [RFC9942]), such as
+        consistency proofs."
+      constrained_by: [rfc-9943#R-0001]
+    freshness_note:
+      quote: >-
+        §4: "Requesting a Receipt can result in the production of a new Receipt
+        for the same Signed Statement. A Receipt's verification key, signing
+        algorithm, validity period, header parameters or other claims MAY change
+        each time a Receipt is produced."
+      consequence: >-
+        A Receipt is not a stable byte string for a given Signed Statement.
+      constrained_by: [rfc-9943#R-0005]
+    layout: |
+      Verbatim EDN, Figure 9 (§7) - one decoded Receipt from Figure 8:
+
+        18(                                 / COSE_Sign1                /
+            [
+              h'a4012604...6d706c65',       / Protected                 /
+              {                             / Unprotected               /
+                396: {                      / Proofs                    /
+                  -1: [                     / Inclusion proofs (1)      /
+                    h'83080783...32568964', / Inclusion proof 1         /
+                  ]
+                },
+              },
+              nil,                          / Detached payload          /
+              h'10f6b12a...4191f9d2'        / Signature                 /
+            ]
+        )
+
+      Verbatim EDN, Figure 10 (§7) - a Receipt's decoded protected header:
+
+        {                                   / Protected                 /
+          1: -7,                            / Algorithm                 /
+          4: h'50685f55...50523255',        / Key identifier            /
+          395: 1,                           / Verifiable Data Structure /
+          15: {                             / CWT Claims                /
+            1: transparency.vendor.example, / Issuer                    /
+            2: vendor.product.example,      / Subject                   /
+          }
+        }
+
+      Note the Receipt's protected header reuses the Signed Statement's sub
+      value (vendor.product.example) while changing iss to the TS - so sub
+      correlates a Statement with its Receipts as well as Statements across
+      Issuers. Note also this Receipt carries kid (4) and no x5t/x5chain, which
+      is exactly the case R-0036 makes kid mandatory for.
+
+  # ------------------------------------------------------------------
+  - name: Transparent_Statement
+    locator: "§3, §7 (Figure 7, Figure 8)"
+    encoding: "COSE_Sign1, CBOR, tagged #6.18"
+    cddl: "Transparent_Statement = #6.18(COSE_Sign1)"
+    constrained_by: [rfc-9943#R-0050, rfc-9943#R-0051]
+    description: >-
+      A Signed Statement with one or more Receipts placed in its unprotected
+      header. The signature, protected header and payload are byte-identical to
+      the Signed Statement's - only the unprotected header differs, which is why
+      "A Transparent Statement remains a valid Signed Statement and may be
+      registered again in a different TS" (§3).
+    definition_quotes:
+      - >-
+        §3: "Transparent Statement: a Signed Statement that is augmented with a
+        Receipt created via Registration in a TS. The Receipt is stored in the
+        unprotected header of COSE Envelope of the Signed Statement."
+      - >-
+        §7: "The Client (which is not necessarily the Issuer) that registers a
+        Signed Statement and receives a Receipt can produce a Transparent
+        Statement by adding the Receipt to the unprotected header of the Signed
+        Statement."
+      - >-
+        §7: "When a Signed Statement is registered by a TS a Receipt becomes
+        available. When a Receipt is included in a Signed Statement, a
+        Transparent Statement is produced."
+    fields:
+      - name: protected
+        type: "bstr .cbor Protected_Header"
+        required: true
+        description: "Unchanged from the underlying Signed Statement (it is signed)."
+        constrained_by: [rfc-9943#R-0037]
+      - name: unprotected
+        type: "Unprotected_Header (the Figure 7 CLOSED form)"
+        required: true
+        description: >-
+          Must contain label 394, and per Figure 7 as written may contain
+          nothing else. This is the single structural difference between a
+          Signed Statement and a Transparent Statement. See
+          Unprotected_Header.figure_7_closure.
+        constrained_by: []
+        constrained_by_note: >-
+          "§7 Figure 7 CDDL, closed map: { &(receipts: 394) => [+ bstr .cbor
+          Receipt] }" - CDDL-only; requirements.yaml quotes no §7 CDDL text.
+      - name: receipts
+        label: 394
+        type: "[+ bstr .cbor Receipt]"
+        required: true
+        description: >-
+          One or more Receipts. Mandatory here, optional in a Signed Statement.
+          Figure 8 shows two, from two independent TSs.
+        constrained_by: []
+        constrained_by_note: "CDDL-only (Figure 7); no requirement id covers it."
+      - name: payload
+        type: "bstr / nil"
+        required: true
+        description: "nil in Figure 8 - detached."
+        constrained_by: []
+        constrained_by_note: "CDDL-only: payload : bstr / nil."
+      - name: signature
+        type: bstr
+        required: true
+        description: >-
+          The Issuer's original signature, unchanged. The TS's signatures live
+          inside the Receipts.
+        constrained_by: [rfc-9943#R-0052]
+    validation:
+      locator: "§7.1"
+      constrained_by:
+        - rfc-9943#R-0052
+        - rfc-9943#R-0053
+        - rfc-9943#R-0054
+        - rfc-9943#R-0055
+        - rfc-9943#R-0056
+      api_note: >-
+        §7.1: "APIs exposing verification logic for Transparent Statements may
+        provide more details than a single boolean result." No API is defined
+        here - no endpoint, method, or response schema appears anywhere in
+        RFC 9943.
+    layout: |
+      Verbatim CDDL, Figure 7 (§7), normative:
+
+        Transparent_Statement = #6.18(COSE_Sign1)
+
+        Unprotected_Header = {
+          &(receipts: 394)  => [+ bstr .cbor Receipt]
+        }
+
+      Verbatim EDN, Figure 8 (§7) - two Receipts:
+
+        18(                                 / COSE_Sign1                /
+            [
+              h'a4012603...6d706c65',       / Protected                 /
+              {                             / Unprotected               /
+                394:   [                    / Receipts (2)              /
+                  h'd284586c...4191f9d2'    / Receipt 1                 /
+                  h'c624586c...8f4af97e'    / Receipt 2                 /
+                ]
+              },
+              nil,                          / Detached payload          /
+              h'79ada558...3a28bae4'        / Signature                 /
+            ]
+        )
+
+      Note the protected header bytes h'a4012603...6d706c65' and the signature
+      h'79ada558...3a28bae4' are identical to Figure 4's - confirming the
+      Transparent Statement is the same Signed Statement with a populated
+      unprotected header.
+
+  # ------------------------------------------------------------------
+  - name: Registration_Policy
+    locator: "§3, §5.1.1, §5.1.1.1, §5.1.1.2, §5.1.2, §6.3"
+    encoding: "NONE DEFINED"
+    constrained_by:
+      - rfc-9943#R-0009
+      - rfc-9943#R-0018
+      - rfc-9943#R-0019
+      - rfc-9943#R-0020
+      - rfc-9943#R-0021
+      - rfc-9943#R-0022
+      - rfc-9943#R-0043
+    structural_fact: >-
+      §5.1.1 gives Registration Policy no syntax, no encoding, and no
+      vocabulary. This is a delegation the document states outright, not a gap
+      inferred by this extraction.
+    delegation_quote: >-
+      "This specification leaves implementation, encoding, and documentation of
+      Registration Policies and trust anchors to the operator of the TS."
+      (§5.1.1)
+    what_is_said_structurally:
+      - requirement: rfc-9943#R-0009
+        note: >-
+          §3 defines it as "the precondition enforced by the TS before
+          registering a Signed Statement, based on information in the non-opaque
+          header and metadata contained in its COSE Envelope" - so its inputs
+          are header fields, not the payload.
+      - note: >-
+          §5.1.1: "Beyond the mandatory Registration checks, the scope of
+          additional checks, including no additional checks, is up to the
+          implementation."
+      - requirement: rfc-9943#R-0018
+        note: >-
+          The one structural constraint: a policy travels as the payload of a
+          Signed Statement on the VDS. Its content type would occupy
+          protected-header label 3, but no media type is registered for it
+          in §10.
+      - requirement: rfc-9943#R-0019
+        note: "The TS applies the most recently committed policy."
+      - requirement: rfc-9943#R-0022
+        note: >-
+          Bootstrapping option 2 names a policy as a Signed Statement payload;
+          the format of "a valid Registration Policy" is still unspecified.
+      - requirement: rfc-9943#R-0043
+        note: >-
+          Policies constrain protected-header labels, consistent with §6.1's
+          "Implementation-specific Registration Policies may define additional
+          mandatory labels."
+      - requirement: rfc-9943#R-0021
+        note: >-
+          Names three payload classes an Auditor must receive - the Signed
+          Statements, collateral authentication data, and the applicable policy
+          - with no encoding for any of them.
+    trust_anchors:
+      constrained_by: [rfc-9943#R-0013, rfc-9943#R-0014, rfc-9943#R-0015]
+      note: >-
+        Trust anchors share the policy's non-encoding. The only shape given is
+        by example (§5.1.1.1): "a trust anchor could be an X.509 root
+        certificate (directly or its thumbprint), a pointer to an OpenID Connect
+        identity provider, or any other trust anchor that can be referenced in a
+        COSE header parameter."
+    fields: []
+    layout: >-
+      No CDDL, no map, no labels, no media type. A Registration Policy is
+      carried as an opaque Signed Statement payload whose format is the
+      operator's choice.
+
+  # ------------------------------------------------------------------
+  - name: Statement
+    locator: "§3, §6"
+    encoding: "Any serialization; opaque to the TS"
+    constrained_by: [rfc-9943#R-0002, rfc-9943#R-0003, rfc-9943#R-0028, rfc-9943#R-0059]
+    description: >-
+      §3: "Statement: any serializable information about an Artifact. To help
+      interpret Statements, they must be tagged with a relevant media type (as
+      specified in [RFC6838])." The tag is protected-header label 3. "The
+      Statement is considered opaque to TS and MAY be encrypted."
+    fields:
+      - name: "(payload bytes)"
+        type: "opaque octets, typed by protected-header label 3"
+        required: true
+        description: >-
+          Informative candidate formats named in §6: CoSWID [RFC9393],
+          CycloneDX, in-toto, SPDX, SLSA, SWID. None is mandated.
+        constrained_by: [rfc-9943#R-0002, rfc-9943#R-0042, rfc-9943#R-0059]
+        content_review_note: >-
+          R-0059 (§8) is the only constraint this RFC places on what the bytes
+          may contain: "Issuers must carefully review the inclusion of private,
+          confidential, or Personally Identifiable Information (PII) in their
+          Statements against the TS's privacy posture." It names no field and
+          defines no marker, label or media-type convention for declaring that
+          a payload holds PII, so it is an obligation on the Issuer's process
+          and not on the structure.
+    layout: "No structure defined. The unit of opacity in the architecture."
+
+  # ------------------------------------------------------------------
+  - name: Statement_Sequence
+    locator: "§3, §5.1.3, §6.3"
+    encoding: "NONE DEFINED - determined by the chosen VDS (RFC 9942)"
+    constrained_by:
+      - rfc-9943#R-0023
+      - rfc-9943#R-0024
+      - rfc-9943#R-0025
+      - rfc-9943#R-0026
+      - rfc-9943#R-0048
+      - rfc-9943#R-0060
+    description: >-
+      §3: "Statement Sequence: a sequence of Signed Statements captured by a
+      VDS." And "Append-only Log: a Statement Sequence comprising the entire
+      registration history of the TS."
+    entry_form:
+      description: >-
+        The one thing this document fixes about a Statement Sequence entry is
+        its unprotected header: it is the empty map.
+      constrained_by: [rfc-9943#R-0048]
+    fields: []
+    layout: >-
+      No leaf encoding, no tree shape, no serialization. §5.1.3 gives only three
+      security properties the VDS MUST support (Append-only, Non-equivocation,
+      Replayability) and says "Specific VDSs, such as those described in
+      [RFC9162] and [RFC9942], and the review of their security requirements for
+      SCITT are out of scope for this document." §8 notes a TS may retain "only
+      cryptographic metadata (e.g., a hash) rather than the complete Signed
+      Statement."
+
+# ====================================================================
+# Labels that appear ONLY in §7's prose and EDN examples. This RFC's CDDL
+# (Figures 3 and 7) does not define any of them, and no requirement in
+# requirements.yaml quotes them. They are normatively RFC 9942's ("COSE
+# Receipts"). Recorded here because a Transparent Statement cannot be parsed to
+# the leaf without them - but they must NOT be cited as RFC 9943 requirements.
+example_derived_labels:
+  authority: rfc-9942
+  status: "EXAMPLE-DERIVED - not normatively defined in RFC 9943"
+  constrained_by: []
+  source_quote: >-
+    "§7: Per the 'COSE Verifiable Data Structure Algorithms' registry documented
+    in [RFC9942], the Verifiable Data Structure algorithm RFC9162_SHA256 is
+    value 1. Labels identify inclusion proofs (-1) and consistency proofs (-2)."
+  labels:
+    - label: 395
+      name: "verifiable data structure (VDS) algorithm"
+      appears_in: "Receipt protected header, Figure 10"
+      type: "int (a COSE Verifiable Data Structure Algorithms registry value)"
+      example_value: 1
+      note: >-
+        Figure 10 shows 395: 1. §7's prose: "The VDS (395) uses 1 from
+        RFC9162_SHA256." Registry and semantics belong to RFC 9942.
+    - label: 396
+      name: "proofs"
+      appears_in: "Receipt unprotected header, Figure 9"
+      type: "map { int => [+ bstr] } - proof-type label to array of proofs"
+      note: >-
+        §7: "The unprotected header contains VDP." Annotated / Proofs / in
+        Figure 9.
+    - label: -1
+      name: "inclusion proofs"
+      appears_in: "inside the 396 proofs map, Figure 9"
+      type: "[+ bstr] - array of encoded inclusion proofs"
+      note: "Figure 9 shows one: -1: [ h'83080783...32568964' ]."
+    - label: -2
+      name: "consistency proofs"
+      appears_in: "§7 prose only - no figure in this RFC shows one"
+      type: "[+ bstr] (by analogy with -1; never instantiated here)"
+      note: >-
+        Named in §7's sentence "Labels identify inclusion proofs (-1) and
+        consistency proofs (-2)" and echoed in §3's "MAY support other Proof
+        Types ... such as consistency proofs" (R-0001).
+  algorithm_values:
+    - name: RFC9162_SHA256
+      value: 1
+      registry: "COSE Verifiable Data Structure Algorithms (RFC 9942)"
+      note: "The only VDS algorithm value named anywhere in RFC 9943."
+  inclusion_proof_tuple:
+    locator: "§7, Figure 11"
+    status: "EXAMPLE-DERIVED; RFC 9943 explicitly disclaims ownership"
+    disclaimer_quote: >-
+      "§7: This inclusion proof indicates that the size of the VDS was 8 at the
+      time the Receipt was issued. The structure of this inclusion proof is
+      specific to the VDS used by RFC9162_SHA256."
+    shape: "[tree_size, leaf_index, [intermediate hashes]]"
+    elements:
+      - position: 0
+        name: tree_size
+        type: uint
+        example: 8
+        note: "the size of the VDS at the time the Receipt was issued"
+      - position: 1
+        name: leaf_index
+        type: uint
+        example: 7
+      - position: 2
+        name: "inclusion hashes"
+        type: "[* bstr]"
+        example_count: 3
+        note: "Figure 11 shows three intermediate hashes for a tree of size 8, index 7."
+    layout: |
+      Verbatim EDN, Figure 11 (§7):
+
+        [                                   / Inclusion proof 1         /
+          8,                                / Tree size                 /
+          7,                                / Leaf index                /
+          [                                 / Inclusion hashes (3)      /
+             h'c561d333...f9850597'         / Intermediate hash 1       /
+             h'75f177fd...2e73a8ab'         / Intermediate hash 2       /
+             h'0bdaaed3...32568964'         / Intermediate hash 3       /
+          ]
+        ]
+
+      Byte reading of Figure 9's inclusion proof h'83080783...32568964':
+      0x83 = array(3); 0x08 = 8 (tree size); 0x07 = 7 (leaf index);
+      0x83 = array(3) of intermediate hashes. Matches Figure 11's decode.
+
+# ====================================================================
+# §10 IANA registrations. Message-level identifiers, so recorded here.
+media_types:
+  - name: application/scitt-statement+cose
+    locator: "§10, §10.1 (Table 1)"
+    type_name: application
+    subtype_name: scitt-statement+cose
+    reference: "Section 6 of RFC 9943"
+    required_parameters: "N/A"
+    optional_parameters: "N/A"
+    encoding_considerations: "binary (CBOR data item)"
+    security_considerations: "Section 9.5 of RFC 9943"
+    interoperability_considerations: "none"
+    published_specification: "RFC 9943"
+    file_extension: ".scitt"
+    magic_number: "N/A"
+    fragment_identifier_considerations: "N/A"
+    deprecated_aliases: "N/A"
+    macintosh_file_type_code: "N/A"
+    intended_usage: COMMON
+    restrictions_on_usage: "none"
+    author_change_controller: IETF
+    contact: "iesg@ietf.org"
+    applications: >-
+      "Used to provide an identifiable and non-repudiable Statement about an
+      Artifact signed by an Issuer."
+    applies_to_message: Signed_Statement
+  - name: application/scitt-receipt+cose
+    locator: "§10, §10.2 (Table 2)"
+    type_name: application
+    subtype_name: scitt-receipt+cose
+    reference: "Section 7 of RFC 9943"
+    required_parameters: "N/A"
+    optional_parameters: "N/A"
+    encoding_considerations: "binary (CBOR data item)"
+    security_considerations: "Section 9.5 of RFC 9943"
+    interoperability_considerations: "none"
+    published_specification: "RFC 9943"
+    file_extension: ".receipt"
+    magic_number: "N/A"
+    fragment_identifier_considerations: "N/A"
+    deprecated_aliases: "N/A"
+    macintosh_file_type_code: "N/A"
+    intended_usage: COMMON
+    restrictions_on_usage: "none"
+    author_change_controller: IETF
+    contact: "iesg@ietf.org"
+    applications: >-
+      "Used to establish or verify transparency over Statements. Typically
+      emitted by a TS for the benefit of Relying Parties wanting to ensure
+      Non-equivocation over all or part of a Statement Sequence."
+    applies_to_message: Receipt
+media_type_semantics_note:
+  locator: "§9.5"
+  quote: >-
+    "The Statement (scitt-statement+cose) and Receipt (scitt-receipt+cose)
+    media types describe the expected content of COSE envelope headers. The
+    payload media type (content type) is included in the COSE envelope header.
+    [STD96] describes the security implications of reliance on this header
+    parameter. Both media types describe COSE_Sign1 messages, which include a
+    signature and therefore provide integrity protection."
+media_type_gap_note: >-
+  No media type is registered for a Transparent Statement. A Transparent
+  Statement travels as application/scitt-statement+cose, since it "remains a
+  valid Signed Statement" (§3).
+
+coap_content_formats:
+  locator: "§10.3 (Table 3)"
+  registry: >-
+    CoAP Content-Formats subregistry, within the Constrained RESTful
+    Environments (CoRE) Parameters registry group [IANA.core-parameters]
+  range: "256-9999"
+  entries:
+    - content_type: application/scitt-statement+cose
+      content_coding: "-"
+      id: 277
+      reference: "RFC 9943"
+    - content_type: application/scitt-receipt+cose
+      content_coding: "-"
+      id: 278
+      reference: "RFC 9943"
+
+# ====================================================================
+# Things the document names or relies on but does not define. Each is either
+# explicitly delegated or simply absent - none is an invented gap.
+referenced_but_not_defined:
+  - item: "Receipt internals (VDS algorithm, proofs, proof encodings)"
+    delegated_to: rfc-9942
+    evidence: >-
+      §5: "The remaining details of the Receipt's contents are specified in
+      [RFC9942]."
+  - item: "COSE_CertHash (label 34 value) and COSE_X509 (label 33 value)"
+    delegated_to: rfc-9360
+    evidence: >-
+      Figure 3 references both rule names without defining them; §5.1.1.1
+      (R-0016) and §6 (R-0031) cite [RFC9360].
+  - item: "COSE_Sign1 signing and verification, Sig_structure, to-be-signed bytes"
+    delegated_to: "STD96 (RFC 9052 §4.2 and §4.4)"
+    evidence: "R-0039 (§6.3), R-0052 (§7.1)."
+  - item: "CWT Claims Set semantics; the iss/sub URI requirements"
+    delegated_to: "RFC 8392, carried into COSE headers by RFC 9597"
+    evidence: "R-0034 defers the URI rule to [RFC8392]."
+  - item: "The label-15 CWT Claims header parameter mechanism itself"
+    delegated_to: "RFC 9597 §2"
+    evidence: "R-0037."
+  - item: "Registration Policy syntax, encoding, vocabulary, documentation format"
+    delegated_to: "the TS operator"
+    evidence: "§5.1.1, quoted in full in the Registration_Policy message entry."
+  - item: "Client authentication and authorization for registration"
+    status: "explicitly out of scope"
+    evidence: >-
+      §6.3 step 1: "Authentication and authorization are implementation specific
+      and out of scope of the SCITT architecture."
+  - item: "Key discovery for a bare kid"
+    status: "explicitly out of scope"
+    evidence: >-
+      §6: "Key discovery protocols are out of scope of this document." R-0036
+      makes kid mandatory in that case but nothing says how to resolve it.
+  - item: "The Transparency Service's own verification key, and how a Relying Party learns it"
+    status: "named, no field defined"
+    requirements: [rfc-9943#R-0004, rfc-9943#R-0053]
+    evidence: >-
+      §3: "The identity of a TS is captured by a public key that must be known
+      by Relying Parties in order to validate Receipts." (R-0004), and §7.1
+      "A Relying Party MUST trust the verification key or certificate and the
+      associated identity of at least one Issuer of a Receipt." (R-0053). The
+      key reaches a Relying Party only through the Receipt's own protected
+      header - kid (4), x5t (34) or x5chain (33), all CDDL-optional - and §6
+      puts discovery out of scope, so no field, registry or endpoint carries a
+      TS key in this RFC. These are the only two requirements that name a
+      structure for which no artifact can show a defining field, and the reason
+      is the document's, not the extraction's.
+  - item: "Registration timestamp"
+    status: "named, no field defined"
+    evidence: >-
+      §7: "The Registration time is recorded as the timestamp when the TS added
+      the Signed Statement to its VDS." No CWT claim, COSE label or encoding is
+      given for it anywhere in this RFC.
+  - item: "Receipt validity period claims"
+    status: "alluded to, no claim defined"
+    evidence: >-
+      §7.1: an API "may indicate ... if Claims related to the validity period
+      are valid." R-0005 (§4) lists validity period among the things that MAY
+      change per Receipt. No exp/nbf/iat claim is named or required.
+  - item: "Any wire protocol, endpoint, or API for registration and receipt retrieval"
+    status: "absent"
+    evidence: >-
+      §6.3 describes five abstract steps with no transport. §1: "How these
+      statements are managed or stored as well as how participating entities
+      discover and notify each other of changes is out of scope of this
+      document." §5.1.4 mentions Adjacent Services only informatively. The CoAP
+      content-format registrations in §10.3 are the only transport hint.
+  - item: "Hash algorithm and hash-envelope structure for §6.2's hash-of-payload pattern"
+    status: "absent"
+    evidence: >-
+      §6.2 and Figure 6 give the flow but no algorithm identifier and no
+      declaring header parameter.
+  - item: "Mandatory-to-implement signature algorithm"
+    status: "absent"
+    evidence: >-
+      §9.6 defers entirely to STD96's cryptographic agility. The examples use
+      alg -7 (ES256) illustratively only.
+  - item: "VDS leaf encoding / tree shape / registration ordering guarantee"
+    status: "explicitly out of scope"
+    evidence: >-
+      §5.1.3: "Specific VDSs ... are out of scope for this document." R-0060
+      (§9.1) bars Relying Parties from assuming issuance order.
+  - item: "Revocation strategy for compromised keys"
+    status: "explicitly out of scope"
+    evidence: >-
+      §9.4.2: "Revocation strategies for compromised keys are out of scope for
+      this document." R-0062 covers protection, single-purpose use and rotation
+      only.
+  - item: "Media type for a Transparent Statement"
+    status: "absent"
+    evidence: "§10 registers only scitt-statement+cose and scitt-receipt+cose."
+  - item: "Batching semantics for registration"
+    status: "named, not specified"
+    evidence: >-
+      §6.3: "The last two steps may be shared between a batch of Signed
+      Statements registered in the VDS." No batch message or encoding is given.
+
+# ====================================================================
+internal_inconsistencies_observed:
+  - id: INC-1
+    locator: "Figure 3 (§6.1) vs Figure 7 (§7), source lines 1143-1145"
+    issue: >-
+      The CDDL rule name Unprotected_Header is defined twice with different
+      bodies. CDDL has no scoping mechanism that would make both legal in a
+      single schema, so the two figures must be read as two profiles. The
+      divergence is larger than it first appears: Figure 7 does not merely make
+      394 mandatory, it also drops "? &(x5chain: 33) => COSE_X509" and drops
+      "* label => any", leaving a CLOSED one-member map. Taken literally that
+      forbids a Transparent Statement from carrying the unprotected x5chain that
+      R-0017 and R-0031 both permit, and leaves no socket through which a
+      Registration Policy could add a mandatory label there, contradicting
+      §6.1. See Unprotected_Header.figure_7_closure.
+    affects: [Unprotected_Header, Transparent_Statement]
+  - id: INC-2
+    locator: "§7, prose introducing Figure 10"
+    issue: >-
+      The prose says "Figure 10 illustrates the decoded protected header of the
+      Transparent Statement in Figure 8", but the figure's own caption reads
+      "Figure 10: CBOR-Extended Diagnostic Notation Example of a Receipt's
+      Protected Header", and its contents (iss = transparency.vendor.example,
+      label 395 VDS) are a Receipt's, not the Transparent Statement's. The
+      caption is correct and the prose sentence is not. Figure 8's protected
+      bytes h'a4012603...' also differ from the Receipt's h'a4012604...' in
+      Figure 9, which confirms they are two different headers.
+    affects: [Receipt, Transparent_Statement]
+  - id: INC-3
+    locator: "Figure 8 (§7)"
+    issue: >-
+      Receipt 1 begins h'd284...' = CBOR tag(18) + array(4), matching
+      Receipt = #6.18(COSE_Sign1). Receipt 2 begins h'c624...', and 0xc6 is
+      tag(6), not tag(18). Within elided illustrative bytes this reads as a typo
+      rather than a second admissible encoding; the CDDL admits only #6.18.
+    affects: [Transparent_Statement]
+  - id: INC-4
+    locator: "§6 and §5.1.1.1 vs Figure 3 (§6.1)"
+    issue: >-
+      The prose makes identity binding mandatory - R-0011 ("The Issuer identity
+      MUST be bound to the Signed Statement by including an identifier in the
+      protected header"), R-0016 (x5t or x5chain MUST be present for X.509) and
+      R-0036 (kid MUST be present when neither is) - while Figure 3's CDDL marks
+      kid, x5t and x5chain all optional with "?". A validator built from the
+      CDDL alone would accept a protected header carrying only CWT Claims and no
+      identity binding at all, which the prose forbids. The prose is the binding
+      constraint; the CDDL is strictly weaker.
+    affects: [Protected_Header, Signed_Statement]

@@ -41,7 +41,7 @@ bar you are claiming, and name the issue that owns the eventual extraction.
 
 ```
 MANIFEST.yaml     library id, federation peers, schema version
-records/<body>/<id>/  record.yaml · summary.md · distilled.md · quotes.md · artifacts/
+records/<body>/<id>/  record.yaml · summary.md · distilled/  (FX-1, when built against)
                   summary.html (GENERATED, untracked — bin/render-html)
 topics/<id>.yaml  the unit of parallel work
 exports/          GENERATED, untracked — CSL-JSON and BibTeX

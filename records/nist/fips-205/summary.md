@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: fips-205
 record: fips-205
 type: summary
-updated: "2026-10-03"
+updated: "2026-10-08"
 ---
 
 # Stateless Hash-Based Digital Signature Standard
@@ -83,6 +83,73 @@ Notably **absent**: Go's standard library and libsodium carry no SLH-DSA, and
 OpenSSL's support lags its ML-DSA support. **We use a vetted library. We do
 not implement these** — the hypertree construction is long, parameter-heavy,
 and unforgiving of an indexing error.
+
+## Test vectors — the PROC-0002 stage 8 hook
+
+NIST's **ACVP** server publishes validation vectors for SLH-DSA under three
+registered algorithm/mode/revision triples:
+
+| Registration | Revision |
+|---|---|
+| `SLH-DSA / keyGen / FIPS205` | `FIPS205` |
+| `SLH-DSA / sigGen / FIPS205` | `FIPS205` |
+| `SLH-DSA / sigVer / FIPS205` | `FIPS205` |
+
+The schema is defined by **`draft-livelsberger-acvp-slh-dsa-01`** (2 October
+2026) — a different sub-specification and a different editor from ML-DSA's.
+There is one revision only; unlike ML-DSA there is no `-tr1` seed-format
+revision. All three were enabled on ACVTS **production on 2024-08-13**, the day
+FIPS 205 was published, alongside ML-DSA's.
+
+This is the **publisher source** that PROC-0002 stage 8 requires: vectors come
+from the source or its publisher and are **never generated**. A self-generated
+vector proves only that the code agrees with itself. If a stage 8
+implementation of SLH-DSA ships without ACVP vectors, that is a **stage 10
+failure**.
+
+**Retrievable without a CMVP account — yes, for the published sets.** Each
+registration has a directory under `gen-val/json-files/` in the public
+`usnistgov/ACVP-Server` repository holding `registration.json`, `prompt.json`,
+`expectedResults.json` and `internalProjection.json`. Verified anonymous HTTPS
+retrieval on **2026-10-08**; no certificate, account or CMVP relationship is
+needed. A *live* ACVTS session is gated — `demo.acvts.nist.gov` and the
+production server require a NIST-issued TLS client certificate and a TOTP
+seed — so **freshly generated** per-session vectors need a NIST relationship
+and the published sample sets do not.
+
+**The signature size shows up here too, and it is a stage 8 logistics
+problem.** `SLH-DSA-sigGen-FIPS205/expectedResults.json` is ≈32 MB and its
+`internalProjection.json` ≈38 MB — a direct consequence of signatures up to
+49 856 bytes. These are **third-party bytes we must not commit** (`CLAUDE.md`);
+a stage 8 harness fetches them by URL and pins the digest, exactly as this
+record pins the FIPS 205 PDF.
+
+**What the vectors cover.** `sigVer` is the interesting one: the server takes a
+valid signature and mutates it, with at least two tests per disposition —
+unmodified (must verify), modified message, modified **R**, modified
+**SIGFORS**, modified **SIGHT**, signature too long, signature too short. So
+component-level rejection across the hypertree construction is tested, which is
+worth having given how unforgiving that construction is of an indexing error.
+`sigGen`/`sigVer` also register `signatureInterfaces`, `preHash`
+(`pure`/`preHash` — SLH-DSA versus HashSLH-DSA) and `contextLength`, whose
+domain runs 0–2040 **bits**: the 255-byte context ceiling, expressed in the
+registration.
+
+**What they do not cover.** `draft-livelsberger-acvp-slh-dsa-01` §6.2.2
+excludes FIPS 205 §3.1 *Additional Requirements*: an ACVP server "will not
+test that fresh seed values are used for fresh invocations of key generation,
+that approved deterministic random bit generators (DRBGs) are used with the
+correct security strengths, that sensitive data is destroyed, that key
+validation is performed, and that floating point arithmetic is not used."
+Every item in that list is one the fourth bullet under Limits identifies as
+load-bearing — the freshness of PK.seed/SK.seed/SK.prf, the 8*n*-bit RBG floor,
+and the destruction of verification intermediates. **The vectors test the
+arithmetic and none of the §3.1 obligations.** A green ACVP run is not evidence
+on any of them.
+
+- `usnistgov/ACVP` — protocol specification; algorithm sub-specifications at https://pages.nist.gov/ACVP/
+- `usnistgov/ACVP-Server` — the server, its releases and the published vector sets
+- https://pages.nist.gov/ACVP/draft-livelsberger-acvp-slh-dsa.html — the SLH-DSA schema
 
 ## Artifacts in this record
 

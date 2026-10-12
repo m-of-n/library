@@ -8,7 +8,7 @@ reviewed_by: ""
 
 **Scope and provenance conventions.** Section numbers with no document name
 (`§4.2.1`) are RFC 8949. Our own documents are cited by id (`ARCH-0002 P1`,
-`D-3`). Three markers distinguish voices:
+`MD-3`). Three markers distinguish voices:
 
 - unmarked prose reports **RFC 8949** or **our decisions**, as cited;
 - **[analysis]** marks reasoning of this extraction that neither the source nor
@@ -21,8 +21,8 @@ reviewed_by: ""
 `ARCH-0001-PROPOSAL-v0.2.0` §3.3; that proposal is unmerged and ARCH-0001 still
 carries DEC-002 under "Open decisions". `ADR-0001` (accepted) constrains
 DEC-002 and says option 2 "as originally written does not" remain on the table.
-`D-3` (2026-09-28) narrows DEC-002 to option 5. **No ADR for DEC-002 has been
-written.** Both the D-3 minute and `PLAN-0003` say "then ADR", and the
+`MD-3` (2026-09-28) narrows DEC-002 to option 5. **No ADR for DEC-002 has been
+written.** Both the MD-3 minute and `PLAN-0003` say "then ADR", and the
 2026-09-28 action list assigns Claude only ADR-0002 (P2, P3, P5, P6). Nothing
 below may be read as an accepted encoding decision.
 
@@ -124,7 +124,7 @@ integer keys without inventing the very mapping §5.6 warns against.
 §8 defines a human-readable notation and immediately disclaims it: "this truly
 is a diagnostic format; it is not meant to be parsed". In the same paragraph:
 "Implementers looking for a text-based format for representing CBOR data items
-in configuration files may also want to consider YAML [YAML]." D-3's YAML
+in configuration files may also want to consider YAML [YAML]." MD-3's YAML
 choice therefore has the RFC's own pointer behind it. §8.1's encoding
 indicators (`1.5_1` for binary16, `[_ 1, 2]` for indefinite length) exist
 because a human form cannot show serialization variants — which is exactly why
@@ -247,7 +247,7 @@ point. What is lost, and what carries it instead:
 | Expected-conversion hints (base64url / base64 / base16) | §3.4.5.2 | a property of the P3 type, not of the value | **aligns with us:** P3 already says a type carries its rendering. Worth recording as a case where the tag exclusion improves the design rather than costing us |
 | Encoded CBOR data item | §3.4.5.1 | a bare byte string, CBOR-ness asserted by schema | the sharp case — treated separately below |
 | URI, base64url, base64, MIME | §3.4.5.3 (tags 32, 33, 34, 36) | text strings, validated by our schema | same shift of validation from decoder to application as tag 0 |
-| Self-described CBOR, head `0xd9d9f7` | §3.4.6 | media type, file extension, or our own framing | concrete cost for the D-1 archives target: statements stored as files on a share have no magic number, and §3.4.6's whole purpose is "when CBOR data is stored in a file that does not have disambiguating metadata" |
+| Self-described CBOR, head `0xd9d9f7` | §3.4.6 | media type, file extension, or our own framing | concrete cost for the MD-1 archives target: statements stored as files on a share have no magic number, and §3.4.6's whole purpose is "when CBOR data is stored in a file that does not have disambiguating metadata" |
 
 **Carried as ordinary map entries instead of codepoints:** type identity
 `(defining key, label)`; predicate type; authorization tag identity (DEC-004);
@@ -313,7 +313,7 @@ CBOR. Without it, our `protected`-equivalent and our signed payload are opaque
 hex to every generic CBOR tool, and their CBOR-ness is a schema fact rather
 than a wire fact. That is what R-O-05 wants — the verifier must not decode
 before verifying — so the semantic loss is nil and the cost is debuggability.
-**[analysis]** This cost is an argument *for* D-3's YAML human form, not
+**[analysis]** This cost is an argument *for* MD-3's YAML human form, not
 against it: with §8 diagnostic notation unable to see inside an untagged bstr,
 a regenerated YAML rendering from verified bytes is the only readable view we
 will have.
@@ -387,7 +387,7 @@ duplicate labels are forbidden. **RFC 9052 §9 does not require map key
 sorting.** Option 5's native rule is therefore strictly stronger than COSE's,
 so a conformant COSE producer may emit unsorted header maps and an
 export→import cycle is not byte-stable unless we apply our own sort on export.
-D-3 retains option 2 as the comparison fixture, and option 2 is COSE_Sign1 +
+MD-3 retains option 2 as the comparison fixture, and option 2 is COSE_Sign1 +
 CWT claims; the comparison pair should isolate three axes, not one: tags 18/61
 present vs absent, registry header labels vs `(key, label)` map entries, and
 sorted vs unsorted maps.
@@ -409,11 +409,11 @@ not as RFC 8949 content, and not as decisions.
 **Status first.** `ARCH-0001-PROPOSAL-v0.2.0` §4 **withdrew** the authoring
 format: "Nothing in the analysis requires humans to author certificates or
 statements in a text format ... The YAML restriction list from revision 1 is
-retained only as an appendix note ... and carries no proposed status." D-3
+retained only as an appendix note ... and carries no proposed status." MD-3
 names YAML as the human form with a canonical one-way mapping. Those two
 statements are in tension, and the mapping's *direction* decides which: R-O-05
 (proposed) implies two different one-way maps — YAML→CBOR at authoring time on
-trusted input, and verified-CBOR→display at reading time — while D-3 as minuted
+trusted input, and verified-CBOR→display at reading time — while MD-3 as minuted
 names one. The ADR must say which, and whether §4's withdrawal of DEC-006 is
 thereby reversed. Not resolved here.
 
@@ -563,9 +563,9 @@ our own documents.
    D4 encoding-neutral schema, Oct 21.*
 7. **The YAML spelling of a byte string.** The injectivity question; blocks the
    Oct 28 package. *David, before Oct 28.*
-8. **Does D-3's "YAML is the human form" reinstate authoring?**
+8. **Does MD-3's "YAML is the human form" reinstate authoring?**
    `ARCH-0001-PROPOSAL-v0.2.0` §4 withdrew DEC-006's authoring format and
-   folded display into DEC-007; the D-3 minute names YAML as the human form.
+   folded display into DEC-007; the MD-3 minute names YAML as the human form.
    The minute and the proposal text disagree and the ADR must say which governs
    and in which direction the one-way mapping runs. *Paul.*
 9. **Integer profile range, and what a decoder does with an in-CBOR-range but

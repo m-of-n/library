@@ -8,7 +8,7 @@ reviewed_by: ""
 
 **Scope and provenance conventions.** Section and appendix numbers with no
 document name (`§3.2.3`, `Appendix D`) are RFC 8785. Other sources are named
-(`RFC 8949 §4.2.1`). Our own documents are cited by id (`ARCH-0002 P1`, `D-3`,
+(`RFC 8949 §4.2.1`). Our own documents are cited by id (`ARCH-0002 P1`, `MD-3`,
 `R-O-05`). Three markers distinguish voices:
 
 - unmarked prose reports **RFC 8785** or **our decisions**, as cited;
@@ -20,7 +20,7 @@ document name (`§3.2.3`, `Appendix D`) are RFC 8785. Other sources are named
 **Decision status, stated plainly.** DEC-002 in `ARCH-0001` §7 (v0.1.1) is
 **open** and lists four options. RFC 8785 is the canonicalization half of
 **option 3** — "JSON + RFC 8785 JCS as canonical; DSSE for signed form."
-`D-3` (2026-09-28, `PLAN-0003`) narrows DEC-002 to proposed option 5; **no ADR
+`MD-3` (2026-09-28, `PLAN-0003`) narrows DEC-002 to proposed option 5; **no ADR
 for DEC-002 has been written.** `R-O-05` and `R-O-03`'s scope are *proposed*
 text in `ARCH-0001-PROPOSAL-v0.2.0` §3.4 and §7 — R-O-03 itself is live in
 `ARCH-0001` §5.3, R-O-05 is not. `ARCH-0002` P1 is accepted (`ADR-0001`); P4 is
@@ -659,7 +659,7 @@ a worse *absolute* baseline — JSON text plus hex or base64 for every digest an
 key is roughly twice the bytes of CBOR for the same content — but no regression
 against its own baseline. **[analysis]** Neither cost should carry weight here:
 RFC 8949 §1.1 objective 2 is the CBOR working group's goal, not ours, nothing
-in `ARCH-0001` or `PLAN-0003` requires constrained-node operation, and D-1's two
+in `ARCH-0001` or `PLAN-0003` requires constrained-node operation, and MD-1's two
 targets are a software supply chain and an archive. The byte argument is the
 weakest available reason to prefer either option and should be dropped from the
 D5 comparison's conclusions, if not from its measurements.
@@ -805,14 +805,14 @@ extraction"), so the PAE framing and the exact `payloadType` semantics are
 reported here from `ARCH-0001-PROPOSAL-v0.2.0` §3.4 and from the topic answer,
 not from a primary source this record holds. Open question 8.
 
-### 9. D-3, addressed explicitly
+### 9. MD-3, addressed explicitly
 
 `docs/extraction.md` requires design notes for signing-envelope documents to
-address D-3 (option 5: reduced CBOR, no IANA tags, COSE export only). RFC 8785
-is the canonicalization half of option 3, D-3's rejected alternative, so the
+address MD-3 (option 5: reduced CBOR, no IANA tags, COSE export only). RFC 8785
+is the canonicalization half of option 3, MD-3's rejected alternative, so the
 address is a comparison rather than a mapping.
 
-| condition (topic `canonical-encoding`) | RFC 8785 / option 3 | D-3 / option 5 |
+| condition (topic `canonical-encoding`) | RFC 8785 / option 3 | MD-3 / option 5 |
 |---|---|---|
 | (1) injective over encoded values | **fails** at promoted numbers (Appendix D/E) and at untyped byte encodings; holds for maps | holds once the fourteen §4.2 rows are pinned; the spike reaches it by exclusion |
 | (2) decoder rejects non-canonical input | **not addressed**; JCS is a serializer-side filter, and §5 re-canonicalizes instead of rejecting | open, routed through P5; the topic answer recommends extending P5 by a clause |
@@ -836,7 +836,7 @@ NaN/Infinity prohibition removes another. That is a genuine simplification and
 it is the same simplification the spike buys by excluding floats — obtained
 from the substrate instead of from a profile.
 
-**Does anything here reopen D-3?** No. Nothing in RFC 8785 undermines option 5;
+**Does anything here reopen MD-3?** No. Nothing in RFC 8785 undermines option 5;
 two things in it *support* option 5 by showing what a well-specified
 alternative still cannot do.
 
