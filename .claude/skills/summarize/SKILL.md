@@ -6,8 +6,9 @@ description: Use when a library record has been read and needs its summary.md wr
 # Summarise a reference
 
 `summary.md` is the **primary** document for a record and the one a human
-reviews. Write it first. `schema/summary.template.md` is the shape;
-`distilled.md` is a different job — see the `distil` skill.
+reviews. Write it first. `schema/summary.template.md` is the shape.
+Extraction is a different job — it produces `distilled/`, and it is the
+`extract` skill (FX-1, `docs/extraction.md`). Summarising never owes it.
 
 Sections, all of them:
 
@@ -36,8 +37,17 @@ Rules:
   `informational`, `experimental`, `historic`. Leave it unset rather than
   assert standing you did not check. An RFC being an RFC does not make it a
   standard.
-- **Quotes go in `quotes.md` with a locator**, never paraphrased into
-  `summary.md` as if they were ours.
+- **Attribute by locator, not by transcription.** Cite the section —
+  §5.1.1.1 — and let the reader open the source. Never paraphrase a normative
+  sentence into `summary.md` as if it were ours: paraphrase is how a MUST
+  silently becomes a SHOULD. Verbatim normative text belongs in
+  `distilled/normative.md` under FX-1, with its locator, where the verbatim
+  check can reach it. There is no `quotes.md` — retired 2026-10-09,
+  `docs/construction.md` decision 6.
+- **Say what the record does NOT have, and why.** Close *Artifacts in this
+  record* with the absences and what would trigger them — see
+  `records/ietf/rfc-9943/summary.md`. An unstated absence reads as an
+  oversight; a stated one is a judgement a reviewer can check.
 - **Disagree in writing.** If the source is wrong or contradicts another
   record, say so and set `contradicts`. Agreement is cheap; a recorded
   disagreement is what makes the library worth keeping.

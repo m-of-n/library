@@ -76,7 +76,7 @@ Three observations, in descending order of importance to us:
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `quotes.md`, no `distilled/`. Nothing here is built on yet — the section locators above are the substitute, and a reader checking a claim should open the RFC at the cited §. If this record is ever used to *extract requirements* (its MUSTs are dense and mostly in §5.1.1.1, §6 and §6.3), that is a `distill` job and needs its own artifact.
+No `distilled/`. Nothing here is built on yet — the section locators above are the substitute, and a reader checking a claim should open the RFC at the cited §. If this record is ever used to *extract requirements* (its MUSTs are dense and mostly in §5.1.1.1, §6 and §6.3), that is a `distill` job and needs its own artifact.
 
 ## Limits
 

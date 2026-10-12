@@ -49,6 +49,12 @@ _Everything else in this directory and what it is for._
 | File | What it is |
 |---|---|
 | `record.yaml` | metadata |
+| `summary.md` | this document |
+
+_Then state the absences and why._ "No `distilled/`" is a judgement, not an
+omission: say what would trigger one. Verbatim normative text lives in
+`distilled/normative.md` under FX-1 — in a summary, cite the § and let the
+reader open the source.
 
 ## Limits
 

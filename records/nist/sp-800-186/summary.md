@@ -88,7 +88,7 @@ precisely the category where a hand-rolled implementation is a defect.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled.md`. FX-1 extraction is warranted only where we intend to conform
+No `distilled/`. FX-1 extraction is warranted only where we intend to conform
 or map, and the suite is deferred — the domain parameters are reference data we
 would cite, not requirements we would discharge.
 

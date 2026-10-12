@@ -4,8 +4,8 @@ id: requirements
 title: "What is a requirement"
 type: policy
 status: draft
-version: "0.1.0"
-updated: "2026-09-22"
+version: "0.2.0"
+updated: "2026-10-10"
 needs_review: true
 reviewed: false
 source: "sponsor question 2026-09-22: what is a requirement?"
@@ -13,7 +13,10 @@ source: "sponsor question 2026-09-22: what is a requirement?"
 
 # What is a requirement
 
-**Status: draft. Open for review.** Governs `records/<body>/<id>/requirements/`.
+**Status: draft. Open for review.** Governs
+`records/<body>/<id>/distilled/requirements.yaml` — the requirements artifact
+of the FX-1 set. `docs/extraction.md` is normative for the set as a whole and
+for when it is owed; this document defines what may go in this one file.
 
 ## 1. Definition
 
@@ -45,17 +48,19 @@ Four parts, all mandatory. Missing any one and it is not a requirement:
 
 ## 3. Shape
 
-`requirements/<set>.yaml`:
+`distilled/requirements.yaml` — **one file per record**, not one per set:
 
 ```yaml
 schema: "library-requirements/v1"
 record: rfc-9943
 source_version: "2026-06"
-extracted: 2026-09-22
-extracted_by: agent            # or a person
+source_digest: "0db36c…"       # the bytes we read
+source_keyword_count: 83       # bin/bcp14-count on the fetched source
+extracted_keyword_count: 83    # recomputed by bin/validate from the texts
+reconciliation: ""             # REQUIRED if the two differ: say exactly why
 reviewed_by: ""                # REQUIRED before this set is used
 requirements:
-  - id: rfc-9943-R-012
+  - id: rfc-9943#R-0012
     verb: MUST
     actor: transparency-service
     condition: "on registering a Signed Statement"
@@ -75,9 +80,15 @@ Rules:
   our own specification**, which is the whole reason this file exists.
 - **`testable: no` is a finding**, not a failure. A requirement nobody can test
   is worth recording precisely because it cannot be checked.
-- **Extraction comes from `distilled.md`, never from `summary.md`** — and
-  `distilled.md` comes from the source. Two hops from the source is where drift
-  starts.
+- **Extraction comes from the source, never from `summary.md`.** The verbatim
+  text lands in `distilled/normative.md` and the requirement is lifted from
+  there, so there is one hop and it is checkable. `summary.md` is our words
+  about the document; extracting from it is two hops, and two hops from the
+  source is where drift starts.
+- **Completeness is checked, not asserted.** `bin/validate` recomputes
+  `extracted_keyword_count` from the texts and fails if it disagrees with the
+  header, or if the two counts differ with no written `reconciliation`. See
+  `docs/extraction.md`.
 - **`reviewed_by` empty means unusable.** An unreviewed extraction may be read,
   but nothing may be built on it.
 
@@ -111,7 +122,7 @@ its id and is marked withdrawn — renumbering silently retargets every citation
 
 ## 4. Why ids are namespaced by record
 
-`rfc-9943-R-012` carries its provenance in its name. A bare `R-012` collides
+`rfc-9943#R-0012` carries its provenance in its name. A bare `R-0012` collides
 across sources, and the first thing anyone asks of an extracted requirement is
 "says who?"
 

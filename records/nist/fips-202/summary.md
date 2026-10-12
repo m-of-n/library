@@ -82,7 +82,7 @@ implementation and per version; nothing above is validated by appearing here.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled.md`. We conform to no clause here. See `docs/requirements.md` §5.1.
+No `distilled/`. We conform to no clause here. See `docs/requirements.md` §5.1.
 
 ## Limits
 

@@ -83,7 +83,7 @@ specifically, we do not manage nonces by hand either.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled.md`. Reference data we cite, not requirements we discharge.
+No `distilled/`. Reference data we cite, not requirements we discharge.
 
 ## Limits
 

@@ -174,7 +174,7 @@ vector run.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled.md`. If we ever adopted an HBS scheme, §8.1 would be the first
+No `distilled/`. If we ever adopted an HBS scheme, §8.1 would be the first
 requirement set worth extracting — it is unusually testable for a NIST SP.
 
 ## Limits

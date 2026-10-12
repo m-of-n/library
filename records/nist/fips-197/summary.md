@@ -74,7 +74,7 @@ constant-time discipline is a cache-timing oracle.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled.md`. We cite AES; we do not conform to it directly.
+No `distilled/`. We cite AES; we do not conform to it directly.
 
 ## Limits
 

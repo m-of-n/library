@@ -67,7 +67,7 @@ now deliberately awkward to reach — a deprecation signal in itself.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled.md`. Reference data we cite, not requirements we discharge.
+No `distilled/`. Reference data we cite, not requirements we discharge.
 
 ## Limits
 

@@ -83,7 +83,7 @@ FIPS 203 conformance should be checked against CMVP directly, not inferred.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled.md`, and none is warranted — we extract requirements only where
+No `distilled/`, and none is warranted — we extract requirements only where
 we intend to conform or map, and we intend neither.
 
 ## Limits

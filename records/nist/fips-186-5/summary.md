@@ -84,7 +84,7 @@ of FIPS 186-5 ships without ACVP vectors, that is a **stage 10 failure**.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled.md`. One is warranted only if we extract requirements from it —
+No `distilled/`. One is warranted only if we extract requirements from it —
 we currently do not, because we conform to no clause here. See
 `docs/requirements.md` §5.1.
 

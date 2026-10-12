@@ -13,6 +13,15 @@ source: "library#9; first applied to draft-ietf-vcon-vcon-core-04"
 
 # Distillation procedure
 
+> **Superseded for `rfc` / `draft` / `spec` / `ietf` records by
+> `docs/extraction.md` (FX-1), which is normative for the artifact set, for
+> what triggers it, and for how completeness is checked.** This document is the
+> v0.1 procedure, kept because its mechanics — convert, baseline the keyword
+> counts, extract by object, the three mechanical checks — are still how a
+> prose source is worked through, and because `docs/gaps.md` §3 rests on its
+> §8 test. Read it as method, not as scope. Its outputs land in `distilled/`,
+> never in a `distilled.md`.
+
 **Goal:** a compacted form an implementer can build from **without re-reading
 the source**, plus field definitions in a machine-usable shape.
 
@@ -45,7 +54,7 @@ has failed**, and you cannot tell without the baseline.
 
 ## 3. Extract by object, and state coverage per object
 
-One `requirements/fields.yaml` entry per field: `object`, `field`, `json_type`,
+One `distilled/fields.yaml` entry per field: `object`, `field`, `json_type`,
 `cardinality`, `required`, `verb`, `locator`, `text` (verbatim), `semantics`,
 `kind` (`stated`|`inferred`), `testable`.
 

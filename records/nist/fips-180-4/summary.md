@@ -83,7 +83,7 @@ appearing here.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled.md`. We extract no requirements from it — we conform to no clause
+No `distilled/`. We extract no requirements from it — we conform to no clause
 here, we call a library. See `docs/requirements.md` §5.1.
 
 ## Limits

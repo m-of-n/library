@@ -158,7 +158,7 @@ on any of them.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled.md`, for the same reason as `fips-204`: we hold and cite the
+No `distilled/`, for the same reason as `fips-204`: we hold and cite the
 post-quantum base, and extract only where we intend to conform.
 
 ## Limits

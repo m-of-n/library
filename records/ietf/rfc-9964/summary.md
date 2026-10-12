@@ -89,7 +89,7 @@ not claim they have been.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled.md`. **FX-1 extraction for this record is owned by #39** (Tier 2),
+No `distilled/`. **FX-1 extraction for this record is owned by #39** (Tier 2),
 not by the NIST lane — this issue owns ingest, summary and the relation graph
 only, and the `distillation` block is deliberately untouched.
 

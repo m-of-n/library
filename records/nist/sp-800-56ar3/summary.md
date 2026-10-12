@@ -72,7 +72,7 @@ mainstream libraries, which is itself the useful finding.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled.md`. Held to resolve a citation; we neither conform nor map.
+No `distilled/`. Held to resolve a citation; we neither conform nor map.
 
 ## Limits
 
