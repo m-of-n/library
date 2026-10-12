@@ -1,0 +1,88 @@
+schema: "library-state-machine/v1"
+record: enisa-sbd-playbook-2026
+machines:
+  - id: SM1
+    name: "Product support life-cycle state"
+    object: ProductRelease
+    locator: "§4.7 Checklist 'Define support commitments and life-cycle states'"
+    states:
+      - {id: active, kind: stated}
+      - {id: maintenance, kind: stated}
+      - {id: end_of_sale, kind: stated}
+      - {id: end_of_support, kind: stated}
+      - {id: end_of_life, kind: stated, terminal: true}
+    transitions:
+      - {from: active, to: maintenance, trigger: "manufacturer decision (published)", kind: inferred}
+      - {from: maintenance, to: end_of_sale, trigger: "manufacturer decision", kind: inferred}
+      - {from: end_of_sale, to: end_of_support, trigger: "support window ends", kind: inferred}
+      - {from: end_of_support, to: end_of_life, trigger: "decommissioning; guidance on what updates cease and what customers must do", kind: stated}
+    note: "States are stated; order and triggers are not, so transitions are inferred."
+  - id: SM2
+    name: "Product security posture"
+    object: SecurityState
+    locator: "§4.21 Transparent security posture"
+    states:
+      - {id: secure_baseline, kind: stated}
+      - {id: degraded, kind: stated, locator: "'degraded or unsupported security states'"}
+      - {id: unsupported, kind: stated}
+    transitions:
+      - {from: secure_baseline, to: degraded, trigger: "user disables a security feature / applies risk-increasing configuration", guard: "clear warning shown, impact explained in plain language", kind: stated}
+      - {from: degraded, to: secure_baseline, trigger: "one-click / simple action to restore the secure baseline", kind: stated}
+      - {from: secure_baseline, to: unsupported, trigger: "configuration documented as unsupported", kind: inferred}
+  - id: SM3
+    name: "Security onboarding"
+    object: ProductInstance
+    locator: "§4.19 Mandatory security onboarding; §4.16"
+    states:
+      - {id: factory, kind: inferred}
+      - {id: onboarding, kind: stated}
+      - {id: operational, kind: stated, locator: "'normal operation'"}
+    transitions:
+      - {from: factory, to: onboarding, trigger: "first use / first boot", kind: stated}
+      - {from: onboarding, to: operational, trigger: "mandatory security steps completed", guard: "cannot be skipped or deferred; credential change / key provisioning / account creation done", kind: stated}
+      - {from: operational, to: onboarding, trigger: "critical security settings removed, reset or left unconfigured", kind: stated}
+      - {from: operational, to: factory, trigger: "secure factory reset / ownership transfer removing prior credentials and secrets (§4.22)", kind: stated}
+    blocked_in_onboarding: ["normal operation", "privileged actions", "external connectivity"]
+  - id: SM4
+    name: "Vulnerability disposition"
+    object: Vulnerability
+    locator: "§4.13; §4.7 'fix, mitigate, accept with expiry date'"
+    states:
+      - {id: reported, kind: stated}
+      - {id: triaged, kind: stated}
+      - {id: fix_now, kind: stated}
+      - {id: mitigated, kind: stated}
+      - {id: accepted_time_bound, kind: stated}
+      - {id: deferred, kind: stated, locator: "'defer (with rationale)'"}
+      - {id: released, kind: stated, locator: "release version + rollout confirmation"}
+      - {id: closed, kind: inferred, terminal: true}
+    transitions:
+      - {from: reported, to: triaged, trigger: "severity + internet-exposed + known-exploited flags", kind: stated}
+      - {from: triaged, to: fix_now, trigger: "decision", kind: stated}
+      - {from: triaged, to: mitigated, trigger: "decision", kind: stated}
+      - {from: triaged, to: accepted_time_bound, trigger: "decision", guard: "owner + expiry/review date", kind: stated}
+      - {from: triaged, to: deferred, trigger: "decision", guard: "rationale recorded", kind: stated}
+      - {from: fix_now, to: released, trigger: "fix reviewed and tested; release notes; rollout verified", kind: stated}
+      - {from: accepted_time_bound, to: triaged, trigger: "expiry/review date reached", kind: inferred}
+      - {from: released, to: closed, trigger: "risk register updated", kind: stated}
+    release_guard: "internet-exposed components: mitigations or patches for critical- and high-severity issues in place before release (PB-4.13-RG-05)"
+  - id: SM5
+    name: "Update installation"
+    object: SecurityUpdate
+    locator: "§4.20"
+    states:
+      - {id: available, kind: stated}
+      - {id: notified, kind: stated}
+      - {id: deferred_by_user, kind: stated, locator: "'escalation where updates are repeatedly deferred'"}
+      - {id: verified, kind: stated, locator: "cryptographically verified before installation"}
+      - {id: installed, kind: stated}
+      - {id: failed_safe, kind: stated, locator: "'Failed updates do not leave the system insecure or unusable'"}
+      - {id: rolled_back, kind: stated}
+    transitions:
+      - {from: available, to: notified, trigger: "automatic check", kind: stated}
+      - {from: notified, to: deferred_by_user, trigger: "user/operator defers (approval / maintenance window)", kind: stated}
+      - {from: deferred_by_user, to: notified, trigger: "escalation on repeated deferral", kind: stated}
+      - {from: notified, to: verified, trigger: "authenticity + integrity check", kind: stated}
+      - {from: verified, to: installed, trigger: "installation (staged rollout / approval where required)", kind: stated}
+      - {from: verified, to: failed_safe, trigger: "installation fails", kind: stated}
+      - {from: failed_safe, to: rolled_back, trigger: "rollback", kind: stated}

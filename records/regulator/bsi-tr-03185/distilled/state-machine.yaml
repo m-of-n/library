@@ -1,0 +1,235 @@
+schema: "library-state-machine/v1"
+record: bsi-tr-03185
+source_version: "1.1.1"
+note: >
+  The TR names lifecycle states implicitly through its requirements; it draws no state diagram.
+  States and transitions below are assembled from the requirement texts cited on each element.
+  kind: stated where the requirement text names the state/outcome; inferred where we supplied the
+  state boundary. No timers: the TR leaves "timely"/"promptly" to market conditions (fn 5, 7).
+
+machines:
+  - id: SM1
+    name: "Information security-related issue (producer vulnerability management)"
+    locator: "§1.3.2.6 Table 31"
+    entity: SecurityIssue
+    initial: reported
+    states:
+      - {id: reported, desc: "report received at the reporting point (internal or external source)", requirement: "PROD.FIX.A.3", kind: stated}
+      - {id: under-investigation, desc: "checked for applicability, verifiability and triggering threats", requirement: "PROD.FIX.A.6", kind: stated}
+      - {id: rejected, desc: "not applicable to the product or not verifiable", requirement: "PROD.FIX.A.6", kind: inferred, terminal: true}
+      - {id: analysed, desc: "impact (3 environments), severity e.g. CVSS, all affected products/versions, root cause established", requirement: "PROD.FIX.A.7", kind: stated}
+      - {id: decided, desc: "disclosure decision taken and acceptable residual-risk level established", requirement: "PROD.FIX.A.8", kind: stated}
+      - {id: fix-in-progress, desc: "remedy = fix (patch/code change)", requirement: "PROD.FIX.A.8", kind: stated}
+      - {id: planned, desc: "remedy = creation of a plan to fix the issue", requirement: "PROD.FIX.A.8", kind: stated}
+      - {id: deferred, desc: "remedy = move to a future solution/version", requirement: "PROD.FIX.A.8", kind: stated}
+      - {id: accepted-risk, desc: "remedy = decision not to fix; residual risk appears acceptable", requirement: "PROD.FIX.A.8", kind: stated, terminal: true}
+      - {id: update-released, desc: "IT security update delivered within the documented time window, with integrity mechanism and documentation", requirement: "PROD.FIX.A.1; PROD.FIX.A.10; PROD.REL.1", kind: stated}
+      - {id: published, desc: "reportable issue and proposed solution available to users", requirement: "PROD.FIX.A.9", kind: stated}
+      - {id: resolved, desc: "issue resolved; recommendations to avoid future problems made", requirement: "PROD.FIX.A.8", kind: stated, terminal: true}
+    transitions:
+      - {from: reported, to: under-investigation, trigger: "report-processing procedure picks up report", requirement: "PROD.FIX.A.3; PROD.FIX.A.6", kind: stated}
+      - {from: under-investigation, to: rejected, trigger: investigation-negative, guard: "not applicable OR not verifiable", kind: inferred}
+      - {from: under-investigation, to: analysed, trigger: investigation-positive, requirement: "PROD.FIX.A.7", kind: inferred}
+      - {from: analysed, to: decided, trigger: management-decision, requirement: "PROD.FIX.A.8", kind: stated,
+         effects: ["notify other relevant procedures (this and other products)", "notify third-party provider if its embedded source code is affected"]}
+      - {from: decided, to: fix-in-progress, trigger: remedy-selected, guard: "remedy = fix", kind: stated}
+      - {from: decided, to: planned, trigger: remedy-selected, guard: "remedy = plan", kind: stated}
+      - {from: decided, to: deferred, trigger: remedy-selected, guard: "remedy = future solution/version", kind: stated}
+      - {from: decided, to: accepted-risk, trigger: remedy-selected, guard: "remedy = no fix AND residual risk acceptable", kind: stated}
+      - {from: planned, to: fix-in-progress, trigger: periodic-review, guard: "review at least every release or iteration cycle", requirement: "PROD.FIX.A.8", kind: stated}
+      - {from: deferred, to: fix-in-progress, trigger: periodic-review, requirement: "PROD.FIX.A.8", kind: inferred}
+      - {from: fix-in-progress, to: update-released, trigger: release, guard: "PROD.TEST.A.17 release conditions met; regression tests (PROD.TEST.D.1)", kind: inferred}
+      - {from: update-released, to: resolved, trigger: documentation-published, requirement: "PROD.FIX.A.10; PROD.FIX.A.11", kind: inferred}
+      - {from: decided, to: published, trigger: disclosure, guard: "disclosure decision = report (fn 6: released product, sufficiently high severity)", requirement: "PROD.FIX.A.9", kind: stated,
+         note: "publication is orthogonal to the remedy track; A.9 requires the chosen solution (correction, remedial plan, postponement, non-correction) to be available to users"}
+    error_states: [rejected]
+
+  - id: SM2
+    name: "Release of developed software"
+    locator: "§1.3.2.4 Table 28; PROD.PM.A.14; §1.3.2.5"
+    entity: Release
+    initial: in-test
+    states:
+      - {id: in-test, desc: "testing under defined framework conditions", requirement: "PROD.TEST.A.1; A.8", kind: stated}
+      - {id: evaluated, desc: "results evaluated and documented (target-actual comparison)", requirement: "PROD.TEST.A.16", kind: stated}
+      - {id: released, desc: "release by the responsible organisational unit, documented", requirement: "PROD.TEST.A.17", kind: stated}
+      - {id: rejected, desc: "release refused; documented rejection procedure applies", requirement: "PROD.TEST.A.3", kind: stated}
+      - {id: delivered, desc: "delivered with integrity mechanism and unique build version", requirement: "PROD.REL.1; PROD.REL.2", kind: stated, terminal: true}
+    transitions:
+      - {from: in-test, to: evaluated, trigger: tests-complete, kind: inferred}
+      - {from: evaluated, to: released, trigger: release-decision,
+         guard: "results match pre-defined expectations AND all security-related issues conclusively addressed AND completion of all security-related activities documented (PROD.PM.A.14)",
+         requirement: "PROD.TEST.A.17", kind: stated}
+      - {from: evaluated, to: rejected, trigger: release-decision, guard: "release criteria not met", requirement: "PROD.TEST.A.3", kind: stated}
+      - {from: rejected, to: in-test, trigger: rework, kind: inferred}
+      - {from: released, to: delivered, trigger: delivery, kind: inferred}
+    error_states: [rejected]
+
+  - id: SM3
+    name: "Tool patch (manufacturer as software user)"
+    locator: "§1.3.1.5 Table 12 USER.PATCH.A.15"
+    entity: ToolPatch
+    initial: released-by-vendor
+    states:
+      - {id: released-by-vendor, kind: stated, requirement: "USER.PATCH.A.15"}
+      - {id: evaluated, desc: "evaluated promptly and prioritised; checked for known vulnerabilities", requirement: "USER.PATCH.A.15", kind: stated}
+      - {id: applied, desc: "applied; success on all relevant systems checked", requirement: "USER.PATCH.A.15; A.13", kind: stated, terminal: true}
+      - {id: not-applied, desc: "not applied; decision and reasons documented", requirement: "USER.PATCH.A.15", kind: stated, terminal: true}
+      - {id: rolled-back, desc: "fallback solution used", requirement: "USER.PATCH.A.7", kind: inferred, terminal: true}
+    transitions:
+      - {from: released-by-vendor, to: evaluated, trigger: patch-available, kind: stated}
+      - {from: evaluated, to: applied, trigger: apply-decision, guard: "planned, approved, documented (A.5), tested (A.6), CISO involved if security-relevant (A.8)", kind: stated}
+      - {from: evaluated, to: not-applied, trigger: apply-decision, kind: stated}
+      - {from: applied, to: rolled-back, trigger: change-failed, kind: inferred}
+
+  - id: SM4
+    name: "Threat model"
+    locator: "§1.3.2.3.3 Table 20"
+    entity: ThreatModel
+    initial: drafted
+    states:
+      - {id: drafted, desc: "performed during the design phase", requirement: "PROD.DEV.C.1", kind: stated}
+      - {id: reviewed, desc: "reviewed by the development team for correctness and comprehensibility", requirement: "PROD.DEV.C.3", kind: stated}
+      - {id: findings-addressed, desc: "all results/findings evaluated and addressed", requirement: "PROD.DEV.C.5", kind: stated}
+      - {id: stale, desc: "product in use; review due (regular or occasion-related)", requirement: "PROD.DEV.C.4", kind: inferred}
+    transitions:
+      - {from: drafted, to: reviewed, trigger: team-review, kind: stated}
+      - {from: reviewed, to: findings-addressed, trigger: findings-closed, kind: stated}
+      - {from: findings-addressed, to: stale, trigger: "time elapsed OR occasion (e.g. new threat)", requirement: "PROD.DEV.C.4", kind: inferred}
+      - {from: stale, to: reviewed, trigger: periodic-or-occasion-review, guard: "must be state-of-the-art at all times", requirement: "PROD.DEV.C.4", kind: stated}
+
+  - id: SM5
+    name: "Product support lifecycle"
+    locator: "§1.3.2.7 Table 32; §2.3.6 Table 40"
+    entity: Product
+    initial: supported
+    states:
+      - {id: supported, kind: inferred}
+      - {id: discontinuation-announced, desc: "users notified of discontinuation and support-withdrawal date; migration paths", requirement: "PROD.DECOM.2; DE.01; DE.02", kind: stated}
+      - {id: support-withdrawn, kind: stated, requirement: "PROD.DECOM.2"}
+      - {id: decommissioned, desc: "uninstall and data-removal instructions in user documentation; tool access rights withdrawn", requirement: "PROD.DECOM.1; PROD.DECOM.3", kind: stated, terminal: true}
+    transitions:
+      - {from: supported, to: discontinuation-announced, trigger: discontinuation-decision, kind: inferred}
+      - {from: discontinuation-announced, to: support-withdrawn, trigger: "announced date reached", kind: stated}
+      - {from: support-withdrawn, to: decommissioned, trigger: cleanup, kind: inferred}
+
+# ---- added in the cross-check pass (2026-10-02) ----
+# Catalogue of every trigger that is not a `send <message>` of a message defined in messages.yaml /
+# protocol.yaml: named events, timers and internal decisions. Text = the trigger as written above;
+# locators = union of the transitions that use it. Empty triggers are listed under empty_triggers.
+events:
+  - id: announced-date-reached
+    trigger: "announced date reached"
+    machines: ["SM5"]
+    locators: []
+    kind: stated
+  - id: apply-decision
+    trigger: "apply-decision"
+    machines: ["SM3"]
+    locators: []
+    kind: stated
+  - id: change-failed
+    trigger: "change-failed"
+    machines: ["SM3"]
+    locators: []
+    kind: inferred
+  - id: cleanup
+    trigger: "cleanup"
+    machines: ["SM5"]
+    locators: []
+    kind: inferred
+  - id: delivery
+    trigger: "delivery"
+    machines: ["SM2"]
+    locators: []
+    kind: inferred
+  - id: disclosure
+    trigger: "disclosure"
+    machines: ["SM1"]
+    locators: []
+    kind: stated
+  - id: discontinuation-decision
+    trigger: "discontinuation-decision"
+    machines: ["SM5"]
+    locators: []
+    kind: inferred
+  - id: documentation-published
+    trigger: "documentation-published"
+    machines: ["SM1"]
+    locators: []
+    kind: inferred
+  - id: findings-closed
+    trigger: "findings-closed"
+    machines: ["SM4"]
+    locators: []
+    kind: stated
+  - id: investigation-negative
+    trigger: "investigation-negative"
+    machines: ["SM1"]
+    locators: []
+    kind: inferred
+  - id: investigation-positive
+    trigger: "investigation-positive"
+    machines: ["SM1"]
+    locators: []
+    kind: inferred
+  - id: management-decision
+    trigger: "management-decision"
+    machines: ["SM1"]
+    locators: []
+    kind: stated
+  - id: patch-available
+    trigger: "patch-available"
+    machines: ["SM3"]
+    locators: []
+    kind: stated
+  - id: periodic-or-occasion-review
+    trigger: "periodic-or-occasion-review"
+    machines: ["SM4"]
+    locators: []
+    kind: stated
+  - id: periodic-review
+    trigger: "periodic-review"
+    machines: ["SM1"]
+    locators: []
+    kind: stated
+  - id: release
+    trigger: "release"
+    machines: ["SM1"]
+    locators: []
+    kind: inferred
+  - id: release-decision
+    trigger: "release-decision"
+    machines: ["SM2"]
+    locators: []
+    kind: stated
+  - id: remedy-selected
+    trigger: "remedy-selected"
+    machines: ["SM1"]
+    locators: []
+    kind: stated
+  - id: report-processing-procedure-picks-up-report
+    trigger: "report-processing procedure picks up report"
+    machines: ["SM1"]
+    locators: []
+    kind: stated
+  - id: rework
+    trigger: "rework"
+    machines: ["SM2"]
+    locators: []
+    kind: inferred
+  - id: team-review
+    trigger: "team-review"
+    machines: ["SM4"]
+    locators: []
+    kind: stated
+  - id: tests-complete
+    trigger: "tests-complete"
+    machines: ["SM2"]
+    locators: []
+    kind: inferred
+  - id: time-elapsed-or-occasion-e-g-new-threat
+    trigger: "time elapsed OR occasion (e.g. new threat)"
+    machines: ["SM4"]
+    locators: []
+    kind: inferred

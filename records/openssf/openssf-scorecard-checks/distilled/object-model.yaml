@@ -1,0 +1,247 @@
+schema: "library-object-model/v1"
+record: openssf-scorecard-checks
+source_version: "v5.5.0"
+extracted: "2026-10-02"
+by: "claude (lane E)"
+reviewed_by: ""
+note: >
+  Object-model pass over the Scorecard check documentation (docs/checks.md, generated from
+  docs/checks/internal/checks.yaml), the README (§Scoring / §Aggregate Score, §Project Non-Goals),
+  the probe definitions (probes/*/def.yml), probes/entries.go (check -> probe wiring),
+  finding/finding.go (Finding, Outcome, Location) and checker/check_result.go (score bounds).
+  Locators name the file at tag v5.5.0. Code-level objects (Finding, Outcome) are stated by the
+  code, not by the prose documentation; that is said on each.
+objects:
+  - name: Check
+    definition: "A named heuristic that 'determines' one security behaviour of a repository and returns a 0-10 score (10 best) with a reason; 20 checks in v5.5.0."
+    attributes: ["name", "short", "risk", "tags", "repos (supported forges)", "description", "remediation", "score", "reason", "details"]
+    locator: "docs/checks/internal/checks.yaml checks.*; README §Aggregate Score"
+    kind: stated
+    tmodel_mapping: "new — a machine-evaluable Requirement/ConformanceCheck (R-042); closest ARCH-0001 analogue is none"
+    notes: "A Check is the unit that maps onto a tmodel conformance check; its scoring rubric is prose inside description."
+  - name: Probe
+    definition: "An atomic, boolean-question heuristic (def.yml: id, lifecycle, short, motivation, implementation, outcome, remediation, ecosystem) whose findings a Check aggregates into a score; can also be run directly with --probes."
+    attributes: ["id", "lifecycle (stable|experimental)", "short", "motivation", "implementation", "outcome rules", "remediation{onOutcome, effort, text, markdown}", "ecosystem{languages, clients}"]
+    locator: "probes/<id>/def.yml; probes/entries.go"
+    kind: stated
+    tmodel_mapping: "new — atomic Evidence predicate under a conformance check (R-042)"
+    notes: "README non-goals point consumers at individual probes rather than aggregate scores (e.g. the `archived` probe) and say the OpenSSF Security Baseline takes this approach."
+  - name: Finding
+    definition: "The result a probe emits: probe id, message, outcome, optional location, remediation and key/value values."
+    attributes: ["probe", "message", "outcome", "location{path, type, lineStart, lineEnd, snippet}", "remediation", "values"]
+    locator: "finding/finding.go type Finding"
+    kind: stated
+    tmodel_mapping: "Assertion (ARCH-0001 §4) with a PROV Activity = the probe run; or Finding in layer 3 when the outcome is negative"
+    notes: "Stated in code, not in docs/checks.md."
+  - name: Outcome
+    definition: "Enumerated answer of a probe: True, False, NotAvailable, Error, NotSupported, NotApplicable."
+    attributes: ["value"]
+    locator: "finding/finding.go Outcome constants"
+    kind: stated
+    tmodel_mapping: "enum on a conformance Assertion"
+    notes: "Each probe's def.yml states which outcome is the 'bad' one (remediation.onOutcome)."
+  - name: CheckScore
+    definition: "Integer 0..10 per check (MaxResultScore 10, MinResultScore 0) or InconclusiveResultScore -1 ('?') when no reliable information can be retrieved."
+    attributes: ["value", "reason"]
+    locator: "checker/check_result.go consts; README sample output ('?' for CI-Tests)"
+    kind: stated
+    tmodel_mapping: "new — graded conformance result (R-042); no ARCH-0001 analogue"
+  - name: AggregateScore
+    definition: "Weight-based average of the individual check scores weighted by risk (Critical 10, High 7.5, Medium 5, Low 2.5)."
+    attributes: ["value"]
+    locator: "README §Scoring › Aggregate Score"
+    kind: stated
+    tmodel_mapping: "a derived View metric (§10 presentation) — not domain truth"
+    notes: "README non-goals warn the aggregate 'tells you nothing about what individual behaviors a repository is or is not doing'."
+  - name: RiskLevel
+    definition: "Per-check risk class Critical/High/Medium/Low with a parenthetical consequence (e.g. 'High (vulnerable to intentional malicious code injection)')."
+    attributes: ["level", "consequence"]
+    locator: "checks.yaml risk; docs/checks.md 'Risk:' line per check"
+    kind: stated
+    tmodel_mapping: "a severity facet; NOT the DEC-003 risk metric (no likelihood/impact decomposition)"
+  - name: ScoringTier
+    definition: "Ordered tier of requirements inside a check's rubric where each tier must be fully satisfied to earn the next (Branch-Protection Tier 1..5 = 3/6/8/9/10 points)."
+    attributes: ["tier", "points", "requirements"]
+    locator: "checks.yaml Branch-Protection description ('This test has tiered scoring...')"
+    kind: stated
+    tmodel_mapping: "maturity-level-like ladder (state machine) — same shape as OSPS levels / SLSA levels"
+  - name: Repository
+    definition: "The evaluated source repository on a supported forge (GitHub, GitLab, Azure DevOps; local directory for some checks)."
+    attributes: ["url", "forge", "default branch", "archived", "created"]
+    locator: "checks.yaml repos per check; probes archived / createdRecently"
+    kind: stated
+    tmodel_mapping: "Component (source repo as a structural artifact) or new SourceRepository"
+  - name: Branch
+    definition: "Default and release branches whose protection settings / rulesets are evaluated."
+    attributes: ["name", "protection settings", "rulesets", "bypass actors"]
+    locator: "checks.yaml Branch-Protection"
+    kind: stated
+    tmodel_mapping: "none — part of a SourceRepository sub-model tmodel lacks"
+  - name: BranchProtectionRule
+    definition: "A forge setting (force-push, deletion, reviewers, code-owner review, status checks, stale-review dismissal, enforce-admins, last-push approval, up-to-date)."
+    attributes: ["setting", "value", "requires_admin_token"]
+    locator: "checks.yaml Branch-Protection; probes blocksForcePushOnBranches ... requiresPRsToChangeCode"
+    kind: stated
+    tmodel_mapping: "MitigationInstance kind=technical (R-040)"
+  - name: Changeset
+    definition: "A recent change (≈30 commits / merged PRs) examined for human approval; bot-only changes are inconclusive."
+    attributes: ["commit", "author", "merger", "reviews", "labels (Prow lgtm/approved)", "Gerrit Reviewed-on/Reviewed-by"]
+    locator: "checks.yaml Code-Review"
+    kind: stated
+    tmodel_mapping: "PROV Activity; Review (ARCH-0001 §4/§5) as the approval"
+  - name: Review
+    definition: "Human approval of a change; review by bots including AI/ML bots does not count."
+    attributes: ["reviewer", "approved"]
+    locator: "checks.yaml Code-Review ('Review by bots ... do not count as code review')"
+    kind: stated
+    tmodel_mapping: "Review (ARCH-0001 §4) — and directly relevant to the 'AI proposes, human accepts' rule"
+  - name: Contributor
+    definition: "Recent contributor, attributed to organizations/companies."
+    attributes: ["login", "organizations"]
+    locator: "checks.yaml Contributors; probe contributorsFromOrgOrCompany"
+    kind: stated
+    tmodel_mapping: "Party (ARCH-0001 §2b)"
+  - name: Organization
+    definition: "Organization or company a contributor is attributed to; the Contributors check counts distinct organizations among recent contributors."
+    attributes: ["name"]
+    locator: "checks.yaml Contributors; probe contributorsFromOrgOrCompany"
+    kind: stated
+    tmodel_mapping: "Party (ARCH-0001 §2b, organization)"
+  - name: Workflow
+    definition: "CI workflow definition (GitHub Actions) inspected for dangerous patterns, token permissions, pinned actions, tests, SAST, fuzzing and packaging."
+    attributes: ["file", "triggers", "jobs", "permissions", "steps"]
+    locator: "checks.yaml Dangerous-Workflow, Token-Permissions, Pinned-Dependencies, Packaging"
+    kind: stated
+    tmodel_mapping: "Process (DFD) realized_by a CI Component; build-platform object from SLSA"
+  - name: TokenPermission
+    definition: "GITHUB_TOKEN permission scope declared at top or job level."
+    attributes: ["scope", "level (top|job)", "access (read|write|none)"]
+    locator: "checks.yaml Token-Permissions; probes topLevelPermissions, jobLevelPermissions, hasNoGitHubWorkflowPermissionUnknown"
+    kind: stated
+    tmodel_mapping: "privilege property on a DFD Process (ARCH-0001 §1 layer 2 security properties)"
+  - name: Dependency
+    definition: "A declared dependency (package manifest, Dockerfile, workflow action, script download) checked for hash pinning and update tooling."
+    attributes: ["type", "name", "pinned (hash)", "ecosystem"]
+    locator: "checks.yaml Pinned-Dependencies, Dependency-Update-Tool"
+    kind: stated
+    tmodel_mapping: "Component with uses_component edge"
+  - name: Vulnerability
+    definition: "An open, unfixed vulnerability in the project or its dependencies from OSV."
+    attributes: ["osv id", "aliases"]
+    locator: "checks.yaml Vulnerabilities; probe hasOSVVulnerabilities"
+    kind: stated
+    tmodel_mapping: "Finding/Vulnerability (layer 3)"
+  - name: Release
+    definition: "A forge release (last 5 for signatures; ≈30 recent with artifacts) and its assets."
+    attributes: ["tag", "assets"]
+    locator: "checks.yaml Signed-Releases"
+    kind: stated
+    tmodel_mapping: "ProductInstance (versioned) — ARCH-0001 §1"
+  - name: ReleaseAsset
+    definition: "A file attached to a release; signatures (*.minisig, *.asc, *.sig, *.sign, *.sigstore, *.sigstore.json) and SLSA provenance (*.intoto.jsonl) are recognised by filename."
+    attributes: ["filename", "kind (artifact|signature|provenance|sbom)"]
+    locator: "checks.yaml Signed-Releases, SBOM"
+    kind: stated
+    tmodel_mapping: "Entity (PROV) attached to a ProductInstance"
+  - name: Signature
+    definition: "Detached signature on a release asset; the check does not verify it."
+    attributes: ["format", "file"]
+    locator: "checks.yaml Signed-Releases ('Note: The check does not verify the signatures.')"
+    kind: stated
+    tmodel_mapping: "Evidence (unverified)"
+  - name: Provenance
+    definition: "SLSA provenance file in release assets (*.intoto.jsonl) scoring 10; a separate uncategorized probe looks for verified provenance."
+    attributes: ["file"]
+    locator: "checks.yaml Signed-Releases; probes releasesHaveProvenance, releasesHaveVerifiedProvenance"
+    kind: stated
+    tmodel_mapping: "see slsa-1-2 Provenance; radar->tmodel contract (ADR-0001)"
+  - name: SBOM
+    definition: "Software bill of materials present in the repository or in release assets."
+    attributes: ["location (repo|release)", "format"]
+    locator: "checks.yaml SBOM; probes hasSBOM, hasReleaseSBOM"
+    kind: stated
+    tmodel_mapping: "documentation-kind deliverable (R-040); feeds composed_of"
+  - name: SecurityPolicy
+    definition: "A security policy file (e.g. SECURITY.md) that contains links, disclosure text and free text."
+    attributes: ["path", "contains_links", "contains_disclosure", "text_length"]
+    locator: "checks.yaml Security-Policy; probes securityPolicy*"
+    kind: stated
+    tmodel_mapping: "MitigationInstance kind=documentation (R-040)"
+  - name: Badge
+    definition: "OpenSSF Best Practices (formerly CII) badge level for the project."
+    attributes: ["level (passing|silver|gold|in progress)"]
+    locator: "checks.yaml CII-Best-Practices; probe hasOpenSSFBadge"
+    kind: stated
+    tmodel_mapping: "external Attestation about the project (third-party conformance)"
+  - name: Tool
+    definition: "A detected tool or service: dependency-update tool, SAST tool, fuzzer, CI test runner, packaging workflow."
+    attributes: ["name", "kind", "configured_in"]
+    locator: "checks.yaml Dependency-Update-Tool, SAST, Fuzzing, CI-Tests, Packaging"
+    kind: stated
+    tmodel_mapping: "MitigationInstance kind=process/technical with tool as evidence"
+  - name: Webhook
+    definition: "Repository webhook, checked for a configured secret."
+    attributes: ["url", "has_secret"]
+    locator: "checks.yaml Webhooks; probe webhooksUseSecrets"
+    kind: stated
+    tmodel_mapping: "DataFlow (external) with authenticated property"
+  - name: License
+    definition: "A license file and whether it is FSF/OSI approved."
+    attributes: ["file", "spdx id", "approved"]
+    locator: "checks.yaml License; probes hasLicenseFile, hasFSFOrOSIApprovedLicense"
+    kind: stated
+    tmodel_mapping: "none (not a security object in tmodel)"
+  - name: BinaryArtifact
+    definition: "A generated executable committed to the source repository; Gradle wrappers verified by checksum are excluded by the unverified-binary probe."
+    attributes: ["path", "type"]
+    locator: "checks.yaml Binary-Artifacts; probes hasUnverifiedBinaryArtifacts, hasBinaryArtifacts"
+    kind: stated
+    tmodel_mapping: "Finding (layer 3)"
+  - name: Remediation
+    definition: "Remediation guidance attached to a check (list of steps) and to a probe (onOutcome, effort Low/Medium/High, text, markdown)."
+    attributes: ["text", "effort", "onOutcome"]
+    locator: "checks.yaml remediation; probes def.yml remediation"
+    kind: stated
+    tmodel_mapping: "Mitigation (generic, layer 3) with effort"
+  - name: Ecosystem
+    definition: "Languages and forge clients a probe supports."
+    attributes: ["languages", "clients"]
+    locator: "probes def.yml ecosystem"
+    kind: stated
+    tmodel_mapping: "applicability scope"
+edges:
+  - {name: composed_of_probes, from: Check, to: Probe, cardinality: "1:N", definition: "a check's score is computed from the findings of its probes", locator: "probes/entries.go (e.g. BranchProtection = 11 probes)", kind: stated, tmodel_mapping: "Requirement --verified_by--> Evidence predicate"}
+  - {name: emits, from: Probe, to: Finding, cardinality: "1:N", definition: "a probe run emits findings", locator: "finding/finding.go Finding.Probe", kind: stated, tmodel_mapping: "PROV wasGeneratedBy"}
+  - {name: has_outcome, from: Finding, to: Outcome, cardinality: "N:1", definition: "each finding carries one outcome", locator: "finding/finding.go", kind: stated, tmodel_mapping: "Assertion value"}
+  - {name: located_at, from: Finding, to: Repository, cardinality: "N:0..1", definition: "a finding may carry a file location (path, lines, snippet)", locator: "finding/finding.go Location", kind: stated, tmodel_mapping: "external ref"}
+  - {name: evaluates, from: Check, to: Repository, cardinality: "N:1", definition: "a check is run against one repository on a supported forge", locator: "checks.yaml repos", kind: stated, tmodel_mapping: "ConformanceCheck --about--> Component"}
+  - {name: yields, from: Check, to: CheckScore, cardinality: "1:1", definition: "one 0-10 or inconclusive score per run", locator: "checker/check_result.go", kind: stated, tmodel_mapping: "conformance result"}
+  - {name: weighted_by, from: CheckScore, to: RiskLevel, cardinality: "N:1", definition: "the check's risk sets its weight in the aggregate", locator: "README §Aggregate Score", kind: stated, tmodel_mapping: "view computation"}
+  - {name: aggregates, from: AggregateScore, to: CheckScore, cardinality: "1:N", definition: "weighted average of check scores", locator: "README §Aggregate Score", kind: stated, tmodel_mapping: "View metric (§10)"}
+  - {name: has_tier, from: Check, to: ScoringTier, cardinality: "1:0..N", definition: "tiered rubric (Branch-Protection only)", locator: "checks.yaml Branch-Protection", kind: stated, tmodel_mapping: "level ladder"}
+  - {name: remediated_by, from: Check, to: Remediation, cardinality: "1:N", definition: "check-level remediation steps", locator: "checks.yaml remediation", kind: stated, tmodel_mapping: "ThreatInstance --mitigated_by--> Mitigation"}
+  - {name: remediated_by, from: Probe, to: Remediation, cardinality: "1:0..1", definition: "probe remediation applies on the bad outcome", locator: "probes def.yml remediation.onOutcome", kind: stated, tmodel_mapping: "as above"}
+  - {name: has_branch, from: Repository, to: Branch, cardinality: "1:N", definition: "default and release branches", locator: "checks.yaml Branch-Protection", kind: stated, tmodel_mapping: "none"}
+  - {name: protected_by, from: Branch, to: BranchProtectionRule, cardinality: "1:N", definition: "settings / rulesets on a branch", locator: "checks.yaml Branch-Protection", kind: stated, tmodel_mapping: "Component --mitigated_by--> MitigationInstance(technical)"}
+  - {name: approved_by, from: Changeset, to: Review, cardinality: "1:0..N", definition: "human approval of a change (bots do not count)", locator: "checks.yaml Code-Review", kind: stated, tmodel_mapping: "Review points_at Assertion"}
+  - {name: authored_by, from: Changeset, to: Contributor, cardinality: "N:1", definition: "committer / merger distinction used for implicit review", locator: "checks.yaml Code-Review ('if the merger is different from the committer')", kind: stated, tmodel_mapping: "PROV wasAssociatedWith Party"}
+  - {name: affiliated_with, from: Contributor, to: Organization, cardinality: "N:N", definition: "contributors attributed to organizations/companies", locator: "checks.yaml Contributors", kind: stated, tmodel_mapping: "Party member_of Organization"}
+  - {name: defines, from: Repository, to: Workflow, cardinality: "1:N", definition: "CI workflow files in the repository", locator: "checks.yaml Dangerous-Workflow/Token-Permissions", kind: stated, tmodel_mapping: "Component realizes Process"}
+  - {name: grants, from: Workflow, to: TokenPermission, cardinality: "1:N", definition: "top/job-level token permissions", locator: "checks.yaml Token-Permissions", kind: stated, tmodel_mapping: "privilege property"}
+  - {name: declares, from: Repository, to: Dependency, cardinality: "1:N", definition: "dependencies in manifests, Dockerfiles, workflows, scripts", locator: "checks.yaml Pinned-Dependencies", kind: stated, tmodel_mapping: "uses_component"}
+  - {name: affected_by, from: Repository, to: Vulnerability, cardinality: "N:N", definition: "open OSV vulnerabilities in project or dependencies", locator: "checks.yaml Vulnerabilities", kind: stated, tmodel_mapping: "Vulnerability affects Component (propagation, ARCH-0001 §5)"}
+  - {name: publishes, from: Repository, to: Release, cardinality: "1:N", definition: "forge releases", locator: "checks.yaml Signed-Releases", kind: stated, tmodel_mapping: "Product --has_version--> ProductInstance"}
+  - {name: has_asset, from: Release, to: ReleaseAsset, cardinality: "1:N", definition: "files attached to a release", locator: "checks.yaml Signed-Releases", kind: stated, tmodel_mapping: "none"}
+  - {name: signs, from: Signature, to: ReleaseAsset, cardinality: "N:1", definition: "detached signature next to the asset (presence only; not verified)", locator: "checks.yaml Signed-Releases", kind: stated, tmodel_mapping: "Evidence about Entity"}
+  - {name: attests, from: Provenance, to: Release, cardinality: "N:1", definition: "*.intoto.jsonl provenance in release assets", locator: "checks.yaml Signed-Releases", kind: stated, tmodel_mapping: "SLSA provenance (slsa-1-2) — ADR-0001 contract"}
+  - {name: describes, from: SBOM, to: Release, cardinality: "N:1", definition: "SBOM in repo or release assets", locator: "checks.yaml SBOM", kind: stated, tmodel_mapping: "documentation deliverable"}
+  - {name: documents, from: SecurityPolicy, to: Repository, cardinality: "0..1:1", definition: "security policy file present in repo/org", locator: "checks.yaml Security-Policy", kind: stated, tmodel_mapping: "MitigationInstance(documentation)"}
+  - {name: holds_badge, from: Repository, to: Badge, cardinality: "1:0..1", definition: "OpenSSF Best Practices badge level", locator: "checks.yaml CII-Best-Practices", kind: stated, tmodel_mapping: "third-party Attestation"}
+  - {name: uses_tool, from: Repository, to: Tool, cardinality: "1:N", definition: "detected SAST/fuzzing/dependency-update/CI tools", locator: "checks.yaml SAST, Fuzzing, Dependency-Update-Tool, CI-Tests", kind: stated, tmodel_mapping: "MitigationInstance evidence"}
+  - {name: maps_to_baseline, from: Probe, to: "OSPS Baseline AssessmentRequirement", cardinality: "N:N", definition: "README says the OpenSSF Security Baseline takes the per-probe approach; the mapping itself is not in the Scorecard docs", locator: "README §Project Non-Goals", kind: inferred, tmodel_mapping: "R-044 crosswalk edge (to openssf-osps-baseline)"}
+gaps:
+  - "tmodel has no SourceRepository / Branch / BranchProtectionRule / Workflow sub-model: the source-control side of a product is only a Component today."
+  - "No graded conformance result type: ARCH-0001 has Review verdicts but no 0-10 score, inconclusive value, or tiered rubric (R-042 needs a ConformanceResult with value, scale and inconclusive)."
+  - "No first-class Check/Probe (machine-evaluable Requirement) object distinct from a spec Requirement; R-042/R-044 should carry both a Requirement and the automated check(s) that evidence it."
+  - "Outcome enum (True/False/NotApplicable/NotSupported/NotAvailable/Error) is richer than a pass/fail Review; tmodel's Assertion needs not-applicable and not-evaluable states."
+  - "Release / ReleaseAsset / Signature presence vs verification are distinct in Scorecard (presence only); tmodel should not conflate 'signed' with 'verified'."

@@ -1,0 +1,36 @@
+schema: "library-state-machine/v1"
+record: cisa-ssdf-attestation-form-2024
+reviewed_by: ""
+note: "Lifecycle of one attestation (scope = company / product / versions). States named by us; each transition carries the locator that grounds it; kind: inferred where the form implies but does not state."
+machines:
+  - name: attestation
+    initial: required
+    states:
+      - {name: required, kind: stated, locator: "p.2-3 conditions 1-3", description: "software in scope (developed after 2022-09-14, major version change, or continuous delivery)"}
+      - {name: not-required, kind: stated, locator: "p.3 categories 1-4"}
+      - {name: draft, kind: inferred, locator: "p.3 'Filling Out the Form'"}
+      - {name: rejected-incomplete, kind: stated, locator: "p.3 INS-13"}
+      - {name: submitted-signed, kind: stated, locator: "p.4 INS-14/16"}
+      - {name: submitted-3pao, kind: stated, locator: "p.4 INS-17..21"}
+      - {name: poam-pending, kind: stated, locator: "p.4 INS-23/24", description: "producer cannot attest; POA&M given; agency seeks OMB extension/waiver"}
+      - {name: in-force, kind: stated, locator: "p.4 INS-16; p.5 fn 4", description: "agency holds an appropriately signed copy (or 3PAO form); binding for future versions"}
+      - {name: lapsed, kind: stated, locator: "p.5 fn 4; p.7 III-notify", description: "producer notified agencies its practices no longer conform"}
+      - {name: expired-form, kind: stated, locator: "p.8 Burden Statement", description: "OMB control number 1670-0052 no longer valid after 2027-03-31 unless renewed; no person is required to respond"}
+    transitions:
+      - {from: required, to: draft, trigger: "producer starts form", kind: inferred, locator: "p.3"}
+      - {from: required, to: not-required, trigger: "scope determination", guard: "exclusion category 1-4 applies", locator: "p.3"}
+      - {from: draft, to: rejected-incomplete, trigger: submit, guard: "any field incomplete", locator: "p.3"}
+      - {from: rejected-incomplete, to: draft, trigger: "producer completes fields", kind: inferred, locator: "p.3"}
+      - {from: draft, to: submitted-signed, trigger: "submit via RSAA or PDF email", guard: "all fields complete AND signed by CEO/designee with authority to bind AND all 12 Section III items attested", locator: "p.3-4, p.7"}
+      - {from: draft, to: submitted-3pao, trigger: "submit with 3PAO box + attachment", guard: "assessor FedRAMP-certified or agency-approved in writing; baseline covers all form elements", locator: "p.4, p.7"}
+      - {from: draft, to: poam-pending, trigger: "producer cannot attest to >=1 practice; submits POA&M", locator: "p.4"}
+      - {from: poam-pending, to: draft, trigger: "producer remediates; files 'Attestation Following Extension or Waiver'", locator: "p.5 Section I", kind: inferred}
+      - {from: submitted-signed, to: in-force, trigger: "agency receives appropriately signed copy", locator: "p.4 INS-16"}
+      - {from: submitted-3pao, to: in-force, trigger: "agency accepts assessment", locator: "p.4", kind: inferred}
+      - {from: in-force, to: in-force, trigger: "new version of a named product released", guard: "no lapse notification", locator: "p.5 fn 4"}
+      - {from: in-force, to: lapsed, trigger: lapse-notification, locator: "p.5 fn 4; p.7"}
+      - {from: lapsed, to: draft, trigger: "producer files 'Revised Attestation'", locator: "p.5 Section I", kind: inferred}
+      - {from: in-force, to: draft, trigger: "producer files 'Revised Attestation' (e.g. scope change)", locator: "p.5 Section I", kind: inferred}
+      - {from: "*", to: expired-form, trigger: "2027-03-31 passes without PRA renewal", locator: "p.8", kind: inferred}
+    error_states: [rejected-incomplete, lapsed]
+    context: "Regime: mandatory under M-22-18/M-23-16 until 2026-01-23; optional per omb-m-26-05#R-0006 after."

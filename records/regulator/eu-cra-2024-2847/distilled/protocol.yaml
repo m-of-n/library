@@ -1,0 +1,105 @@
+schema: "library-protocol/v1"
+record: eu-cra-2024-2847
+note: >
+  Reporting and vulnerability-handling protocol of the CRA, from Arts 13(6), 13(17), 14, 15, 16, 17 and Annex I
+  Part II. Message ids refer to messages.yaml. Dissemination-delay grounds are refined by Commission Delegated
+  Regulation (EU) 2026/881 (separate act, summarised here with its own locators, prefixed DR-2026/881).
+  Applies from 2026-09-11 for Art 14 (to all in-scope products, including those placed on the market before
+  2027-12-11 — Art 69(3)); Arts 15-17 apply from 2027-12-11 under Art 71(2) — see design-notes open question 1.
+
+roles:
+  - {id: manufacturer, locator: "Art. 3(13)", note: "also open-source software stewards for Art 14(1) and, for their own infrastructure, 14(3),(8) (Art 24(3))"}
+  - {id: reporter, locator: "Art. 13(8), Art. 15(1)-(2)", note: "any internal or external source; any natural or legal person for voluntary reports"}
+  - {id: component-maintainer, locator: "Art. 13(6)", note: "person or entity manufacturing or maintaining an integrated component, incl. FOSS"}
+  - {id: coordinator-csirt, locator: "Art. 3(51), Art. 14(7)", note: "CSIRT designated as coordinator of the main-establishment Member State (or per Art 14(7) third subparagraph order) — 'initially receiving the notification'"}
+  - {id: relevant-csirt, locator: "Art. 16(2); DR-2026/881 Art 2(2)", note: "CSIRTs designated as coordinators of Member States where the product has been made available"}
+  - {id: enisa, locator: "Art. 16(1)", note: "operates the single reporting platform (SRP); notifications simultaneously accessible to it"}
+  - {id: srp, locator: "Art. 16(1)", note: "single reporting platform with national and Union electronic notification end-points; live 2026-09-11 at portal.cra-srp.enisa.europa.eu"}
+  - {id: msa, locator: "Art. 3(33), Art. 16(3)", note: "market surveillance authorities"}
+  - {id: users, locator: "Art. 14(8)", note: "impacted users, and where appropriate all users"}
+  - {id: public, locator: "Art. 17(2), Annex I Part II(4)"}
+  - {id: euvd, locator: "Art. 17(5)", note: "European vulnerability database (NIS2 Art 12(2))"}
+  - {id: eu-cyclone, locator: "Art. 17(1)"}
+
+timers:
+  - {id: T24, value: "24h", origin: "manufacturer becomes aware (AEV or severe incident)", deadline_for: [aev-early-warning, incident-early-warning], locator: "Art. 14(2)(a), 14(4)(a)", qualifier: "without undue delay and in any event within"}
+  - {id: T72, value: "72h", origin: "manufacturer becomes aware", deadline_for: [aev-vulnerability-notification, incident-notification], locator: "Art. 14(2)(b), 14(4)(b)", qualifier: "without undue delay and in any event within; unless the relevant information has already been provided"}
+  - {id: T14d, value: "14d", origin: "a corrective or mitigating measure is available", deadline_for: [aev-final-report], locator: "Art. 14(2)(c)", qualifier: "no later than; unless already provided"}
+  - {id: T1m, value: "1 month", origin: "submission of the incident notification under Art 14(4)(b)", deadline_for: [incident-final-report], locator: "Art. 14(4)(c)", qualifier: "within; unless already provided"}
+  - {id: T72-mitigation, value: "72h", origin: "CSIRT delays dissemination on DR-2026/881 Art 3(a) ground", deadline_for: [dissemination], locator: "DR-2026/881 Art 3(a)", qualifier: "if no effective mitigation is available in this timeframe the CSIRT shall disseminate"}
+  - {id: T-sec-update-availability, value: "max(10y, remainder of support period)", origin: "security update issued", locator: "Art. 13(9)"}
+  - {id: T-support-min, value: "5y (or expected use time if shorter)", origin: "placing on the market", locator: "Art. 13(8) third subparagraph"}
+
+flows:
+  - id: F1-actively-exploited-vulnerability
+    title: "Mandatory reporting of an actively exploited vulnerability"
+    trigger: "manufacturer becomes aware of an actively exploited vulnerability (Art 3(42)) in its product — from own monitoring, a reporter, or a CSIRT forwarding a third-party report (Art 15(4))"
+    steps:
+      - {n: 1, from: manufacturer, to: "coordinator-csirt + enisa via srp", message: aev-early-warning, timer: T24, locator: "Art. 14(1), 14(2)(a), 14(7)"}
+      - {n: 2, from: coordinator-csirt, to: relevant-csirt, message: dissemination, via: srp, locator: "Art. 16(2) first subparagraph", note: "without delay, unless a withholding branch applies (E1-E3)"}
+      - {n: 3, from: "coordinator-csirt, relevant-csirt", to: msa, message: msa-forward, locator: "Art. 16(3)"}
+      - {n: 4, from: manufacturer, to: "coordinator-csirt + enisa via srp", message: aev-vulnerability-notification, timer: T72, locator: "Art. 14(2)(b)", note: "may carry sensitivity and Art 16(2) exceptional-circumstance indications"}
+      - {n: 5, from: manufacturer, to: users, message: user-information, locator: "Art. 14(8)", note: "no deadline stated; parallel to steps 1-4"}
+      - {n: 6, optional: true, from: coordinator-csirt, to: manufacturer, message: intermediate-report-request, locator: "Art. 14(6)"}
+      - {n: 7, optional: true, from: manufacturer, to: coordinator-csirt, message: intermediate-report, locator: "Art. 14(6)"}
+      - {n: 8, from: manufacturer, to: users, message: security-update, locator: "Annex I Part II (2),(7),(8)", note: "makes 'a corrective or mitigating measure' available; starts T14d"}
+      - {n: 9, from: manufacturer, to: "coordinator-csirt + enisa via srp", message: aev-final-report, timer: T14d, locator: "Art. 14(2)(c)"}
+      - {n: 10, from: manufacturer, to: public, message: security-advisory, locator: "Annex I Part II (4)", note: "may be delayed until users could patch (Annex I Part II(4) second limb)"}
+      - {n: 11, from: enisa, to: euvd, message: euvd-entry, locator: "Art. 17(5)", note: "after a corrective measure is available, in agreement with the manufacturer"}
+  - id: F2-severe-incident
+    title: "Mandatory reporting of a severe incident having an impact on the security of the product"
+    trigger: "manufacturer becomes aware of an incident (Art 3(44)) that is severe under Art 14(5)(a) or (b)"
+    steps:
+      - {n: 1, from: manufacturer, to: "coordinator-csirt + enisa via srp", message: incident-early-warning, timer: T24, locator: "Art. 14(3), 14(4)(a)"}
+      - {n: 2, from: coordinator-csirt, to: relevant-csirt, message: dissemination, via: srp, locator: "Art. 16(2)"}
+      - {n: 3, from: "coordinator-csirt, relevant-csirt", to: msa, message: msa-forward, locator: "Art. 16(3)"}
+      - {n: 4, from: manufacturer, to: "coordinator-csirt + enisa via srp", message: incident-notification, timer: T72, locator: "Art. 14(4)(b)"}
+      - {n: 5, from: manufacturer, to: users, message: user-information, locator: "Art. 14(8)"}
+      - {n: 6, optional: true, from: coordinator-csirt, to: manufacturer, message: intermediate-report-request, locator: "Art. 14(6)"}
+      - {n: 7, optional: true, from: manufacturer, to: coordinator-csirt, message: intermediate-report, locator: "Art. 14(6)"}
+      - {n: 8, from: manufacturer, to: "coordinator-csirt + enisa via srp", message: incident-final-report, timer: T1m, locator: "Art. 14(4)(c)"}
+      - {n: 9, optional: true, from: "coordinator-csirt (after consulting manufacturer) or manufacturer on requirement", to: public, message: public-information, locator: "Art. 17(2)"}
+      - {n: 10, optional: true, from: enisa, to: eu-cyclone, message: null, locator: "Art. 17(1)", note: "if relevant for coordinated management of large-scale incidents"}
+  - id: F3-voluntary
+    title: "Voluntary notification"
+    trigger: "any person or manufacturer chooses to notify a vulnerability, cyber threat, incident or near miss"
+    steps:
+      - {n: 1, from: reporter, to: "coordinator-csirt or enisa", message: voluntary-notification, locator: "Art. 15(1)-(2)"}
+      - {n: 2, from: "coordinator-csirt / enisa", to: relevant-csirt, message: dissemination, locator: "Art. 15(3) (processed per Art 16)", note: "may be deprioritised against mandatory notifications"}
+      - {n: 3, condition: "reporter is not the manufacturer and subject is an AEV or severe incident", from: coordinator-csirt, to: manufacturer, message: third-party-report-to-manufacturer, locator: "Art. 15(4)", note: "the manufacturer is now 'aware' — F1/F2 start"}
+  - id: F4-coordinated-vulnerability-disclosure
+    title: "Manufacturer-side vulnerability handling and CVD (Annex I Part II)"
+    trigger: "a vulnerability is reported to the contact address / single point of contact, or found internally or in a component"
+    steps:
+      - {n: 1, from: reporter, to: manufacturer, message: inbound-vulnerability-report, locator: "Annex I Part II (5),(6); Art. 13(17)"}
+      - {n: 2, from: manufacturer, to: manufacturer, message: null, locator: "Annex I Part II (1)", note: "identify and document vulnerability and affected components (SBOM)"}
+      - {n: 3, optional: true, from: manufacturer, to: component-maintainer, message: upstream-component-report, locator: "Art. 13(6)"}
+      - {n: 4, from: manufacturer, to: users, message: security-update, locator: "Annex I Part II (2),(7),(8)", note: "without delay; separately from functionality updates where technically feasible"}
+      - {n: 5, from: manufacturer, to: public, message: security-advisory, locator: "Annex I Part II (4)"}
+      - {n: 6, condition: "the vulnerability is or becomes actively exploited", goto: F1-actively-exploited-vulnerability, locator: "Art. 14(1)"}
+
+error_paths:
+  - id: E1-withhold-on-request
+    locator: "Art. 16(2) second subparagraph; DR-2026/881 Arts 3-5"
+    description: "Coordinator CSIRT delays dissemination on justified cybersecurity-related grounds for the strictly necessary period (on manufacturer request and in light of indicated sensitivity, or CVD). It shall immediately inform ENISA with a justification and an expected dissemination time (message withholding-decision). DR-2026/881 Art 3(a): if the manufacturer's announced mitigation is not available within 72h, the CSIRT shall disseminate; Art 3(b),(c): disseminate once an effective mitigation is available; Art 4: delay to a specific relevant CSIRT while it is compromised or inadequate; Art 5: delay via SRP while ENISA reports the SRP compromised."
+  - id: E2-particularly-exceptional
+    locator: "Art. 16(2) third subparagraph"
+    description: "Manufacturer indicates in the 72h notification one of 16(2)(a)-(c). Only the restricted ENISA view (message restricted-enisa-view) is made available until full dissemination; if ENISA sees systemic risk it shall recommend full dissemination (message enisa-dissemination-recommendation)."
+  - id: E3-cvd-delay
+    locator: "Art. 16(6); DR-2026/881 Art 3(d)"
+    description: "CSIRT made aware of the AEV as part of a CVD under NIS2 Art 12(1) may delay dissemination until consent for disclosure by the CVD parties; manufacturers may still notify voluntarily."
+  - id: E4-missed-deadline
+    locator: "Art. 64(2), Art. 64(10)(a) as corrected"
+    description: "Non-compliance with Art 14 is subject to fines up to EUR 15 000 000 or 2.5 % of worldwide turnover; micro and small enterprises are exempt from fines for missing the 24h early-warning deadline (Art 14(2)(a), 14(4)(a)) only. Art 64 itself applies from 2027-12-11 (Art 71(2) brings forward only Art 14 and Chapter IV), so no CRA fine attaches to Art 14 breaches before that date (verify-pass note)."
+  - id: E5-manufacturer-fails-to-inform-users
+    locator: "Art. 14(8) second sentence"
+    description: "If users are not informed in a timely manner, the notified CSIRTs may inform them when proportionate and necessary."
+  - id: E6-srp-compromised
+    locator: "Art. 16(4); DR-2026/881 Art 5"
+    description: "ENISA notifies the CSIRTs network and Commission without undue delay of an SRP security incident; dissemination via SRP may be delayed until restored."
+  - id: E7-non-conformity
+    locator: "Art. 13(21)"
+    description: "Manufacturer knows or has reason to believe product or processes do not conform to Annex I: immediate corrective measures, withdrawal or recall."
+  - id: E8-cessation
+    locator: "Art. 13(23)"
+    description: "Manufacturer ceasing operations must notify MSAs and, to the extent possible, users before cessation (message cessation-notice)."

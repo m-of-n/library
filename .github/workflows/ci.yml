@@ -75,9 +75,15 @@ jobs:
         with: {fetch-depth: 0}
       - name: every commit signed off
         run: |
+          # Merge commits are skipped: GitHub's merge button cannot sign off, and a
+          # merge adds no authored content of its own. A commit that predates the
+          # gate may be signed off retroactively by listing its full SHA in
+          # .github/dco-remediation; the commit adding that line carries the sign-off.
           fail=0
+          remediated=$(grep -oE '^[0-9a-f]{40}' .github/dco-remediation 2>/dev/null || true)
           while read -r sha; do
+            grep -qx "$sha" <<<"$remediated" && continue
             git log -1 --format=%B "$sha" | grep -qi '^Signed-off-by: .\+ <.\+@.\+>' \
               || { echo "::error::missing Signed-off-by: $(git log -1 --oneline "$sha")"; fail=1; }
-          done < <(git rev-list "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}")
+          done < <(git rev-list --no-merges "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}")
           exit $fail

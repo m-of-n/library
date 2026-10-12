@@ -1,0 +1,110 @@
+schema: "library-protocol/v1"
+record: bsi-tr-03185
+source_version: "1.1.1"
+note: >
+  BSI TR-03185 is a process guideline, not a wire protocol. It nevertheless prescribes
+  inter-party exchanges with required content: a security issue report reaching the
+  manufacturer's reporting point, its investigation and analysis, a disclosure decision, publication
+  to users, notification of third-party providers, and IT-security-update documentation; plus the
+  internal test -> release hand-off and the tool-user patch intake. Flows are assembled from the
+  requirement ids named on each step; ordering between steps is kind: inferred unless a
+  requirement states it (the TR says in §1.2.2 that its order "does not represent a mandatory
+  chronological sequence"). No message encodings, timers or numeric deadlines are defined —
+  "timely"/"promptly" are left to "market conditions" (footnotes 5 and 7).
+
+roles:
+  - {id: reporter, name: "Reporter (internal or external source)", locator: "§1.3.2.6 Table 31 PROD.FIX.A.3", kind: stated,
+     note: "'reports (from internal and external sources)'"}
+  - {id: reporting-point, name: "Manufacturer reporting point for information security-related issues", locator: "PROD.FIX.A.3", kind: stated}
+  - {id: manufacturer, name: "Manufacturer as software producer (product security / development)", locator: "§1.2.1; §1.3.2", kind: stated}
+  - {id: other-procedures, name: "Other (relevant) procedures / other products of the manufacturer", locator: "PROD.FIX.A.8", kind: stated}
+  - {id: third-party-provider, name: "Third-party provider whose embedded source code is affected", locator: "PROD.FIX.A.8; PROD.FIX.A.9", kind: stated}
+  - {id: user, name: "User of the product (admins and end users)", locator: "PROD.FIX.A.9-A.11; PROD.DOC.B.1", kind: stated}
+  - {id: tester, name: "Software tester (role separated from developer)", locator: "PROD.TEST.A.4, A.5", kind: stated}
+  - {id: business-owner, name: "Business owner", locator: "PROD.TEST.A.6; Glossary", kind: stated}
+  - {id: responsible-unit, name: "Responsible organisational unit (release authority)", locator: "PROD.TEST.A.17; USER.TESTREL.A.15-16", kind: stated}
+  - {id: ciso, name: "Chief Information Security Officer", locator: "USER.TESTREL.A.5; USER.PATCH.A.8; PROD.TEST.A.7", kind: stated}
+  - {id: tool-manufacturer, name: "Manufacturer / provider of a software tool used in development", locator: "USER.PM.B.2; USER.PATCH.A.15", kind: stated}
+  - {id: oss-project, name: "OSS project (upstream maintainers, or manufacturer/steward upstream or in a downstream fork)", locator: "§2.2.3", kind: stated}
+
+flows:
+  - id: F1
+    name: "Security issue intake, analysis, decision and disclosure (producer)"
+    locator: "§1.3.2.6 Table 31"
+    steps:
+      - {n: 1, from: reporter, to: reporting-point, message: security-issue-report, requirement: "PROD.FIX.A.3", kind: stated,
+         text_ref: "A reporting point for information security-related issues with the product MUST be created and communicated to the relevant persons."}
+      - {n: 2, from: reporting-point, to: manufacturer, message: security-issue-report, requirement: "PROD.FIX.A.3", kind: inferred,
+         note: "'A procedure MUST be implemented to ensure that reports ... are monitored/processed' — routing to the product team is implied"}
+      - {n: 3, from: manufacturer, to: manufacturer, message: investigation-record, requirement: "PROD.FIX.A.6", kind: stated,
+         note: "investigate in a timely manner: applicability, verifiability, triggering threats"}
+      - {n: 4, from: manufacturer, to: manufacturer, message: issue-analysis-record, requirement: "PROD.FIX.A.7", kind: stated,
+         note: "impact on three environments, severity (e.g. CVSS), all affected products/versions, root cause"}
+      - {n: 5, from: manufacturer, to: manufacturer, message: issue-resolution-decision, requirement: "PROD.FIX.A.8", kind: stated,
+         note: "disclose-or-not decision, acceptable residual risk, remedy choice"}
+      - {n: 6, from: manufacturer, to: other-procedures, message: internal-issue-notification, requirement: "PROD.FIX.A.8", kind: stated}
+      - {n: 7, from: manufacturer, to: third-party-provider, message: third-party-issue-notification, requirement: "PROD.FIX.A.8", kind: stated,
+         guard: "issue affects the provider's embedded source code"}
+      - {n: 8, from: manufacturer, to: third-party-provider, message: disclosure-coordination, requirement: "PROD.FIX.A.9", kind: stated,
+         guard: "issue is in a third-party component", normativity: SHOULD}
+      - {n: 9, from: manufacturer, to: user, message: security-issue-publication, requirement: "PROD.FIX.A.9", kind: stated,
+         guard: "issue 'must be reported' per the A.8 decision (footnote 6: released products, sufficiently high severity)"}
+      - {n: 10, from: manufacturer, to: user, message: it-security-update, requirement: "PROD.FIX.A.1; PROD.REL.1; PROD.REL.2", kind: stated,
+         guard: "remedy = fix (patch/code change)", note: "within the documented time window; integrity mechanism; unique version"}
+      - {n: 11, from: manufacturer, to: user, message: security-update-documentation, requirement: "PROD.FIX.A.10", kind: stated}
+      - {n: 12, from: manufacturer, to: user, message: dependent-component-update-documentation, requirement: "PROD.FIX.A.11", kind: stated,
+         guard: "update concerns a dependent component or operating system"}
+    error_paths:
+      - {id: E1, condition: "report not applicable / not verifiable (A.6)", outcome: "issue closed without fix; recorded", kind: inferred}
+      - {id: E2, condition: "remedy = no fix, residual risk acceptable (A.8)", outcome: "decision recorded; if reportable, published to users with the non-correction (A.9)", kind: stated}
+      - {id: E3, condition: "remedy = plan or move to future version (A.8)", outcome: "issue stays open and is re-examined in the periodic review each release or iteration cycle (A.8)", kind: stated}
+  - id: F2
+    name: "Proactive vulnerability discovery (producer)"
+    locator: "PROD.FIX.A.2, A.4, A.5"
+    steps:
+      - {n: 1, from: manufacturer, to: manufacturer, message: vulnerability-research-finding, requirement: "PROD.FIX.A.4", kind: stated,
+         note: "active research into own product and third-party libraries"}
+      - {n: 2, from: manufacturer, to: manufacturer, message: variant-analysis, requirement: "PROD.FIX.A.2", kind: stated,
+         note: "on a known vulnerability, test the product for similar/comparable ones"}
+      - {n: 3, from: manufacturer, to: reporting-point, message: security-issue-report, requirement: "PROD.FIX.A.3", kind: inferred,
+         note: "internal findings enter the same report processing (A.3 'internal and external sources')"}
+  - id: F3
+    name: "Test and release hand-off (producer)"
+    locator: "§1.3.2.4 Table 28; §1.3.2.5 Table 30; PROD.PM.A.14"
+    steps:
+      - {n: 1, from: business-owner, to: tester, message: test-briefing, requirement: "PROD.TEST.A.6", kind: stated, normativity: SHOULD}
+      - {n: 2, from: manufacturer, to: tester, message: test-specification, requirement: "PROD.TEST.A.1; A.2; A.3", kind: stated}
+      - {n: 3, from: tester, to: responsible-unit, message: test-results-evaluation, requirement: "PROD.TEST.A.16", kind: stated}
+      - {n: 4, from: manufacturer, to: responsible-unit, message: security-activities-completion-record, requirement: "PROD.PM.A.14", kind: stated}
+      - {n: 5, from: responsible-unit, to: manufacturer, message: release-record, requirement: "PROD.TEST.A.17", kind: stated,
+         guard: "tests successful (results match pre-defined expectations) AND all security-related issues conclusively addressed"}
+      - {n: 6, from: manufacturer, to: user, message: software-delivery, requirement: "PROD.REL.1; PROD.REL.2; PROD.DOC.B.6; PROD.DEV.L.1; PROD.DEV.L.2", kind: stated}
+    error_paths:
+      - {id: E4, condition: "release criteria not met", outcome: "the documented 'procedure if a release is rejected' (PROD.TEST.A.3) applies", kind: stated}
+  - id: F4
+    name: "Patch intake for development tools (manufacturer as software user)"
+    locator: "§1.3.1.5 Table 12"
+    steps:
+      - {n: 1, from: tool-manufacturer, to: manufacturer, message: tool-patch, requirement: "USER.PATCH.A.15; USER.PATCH.A.4", kind: stated,
+         note: "authenticity and integrity ensured through the process (A.4)"}
+      - {n: 2, from: manufacturer, to: manufacturer, message: patch-evaluation, requirement: "USER.PATCH.A.15", kind: stated}
+      - {n: 3, from: manufacturer, to: ciso, message: change-involvement, requirement: "USER.PATCH.A.8", kind: stated, guard: "change may affect information security"}
+      - {n: 4, from: manufacturer, to: manufacturer, message: change-record, requirement: "USER.PATCH.A.5; A.10; A.14", kind: stated}
+    error_paths:
+      - {id: E5, condition: "patch not applied", outcome: "decision and reasons MUST be documented (USER.PATCH.A.15)", kind: stated}
+      - {id: E6, condition: "tool no longer supported and secure operation cannot be confirmed", outcome: "tool MUST cease to be used (USER.PATCH.A.15)", kind: stated}
+  - id: F5
+    name: "End of support / discontinuation"
+    locator: "§1.3.2.7 Table 32; §2.3.6 Table 40"
+    steps:
+      - {n: 1, from: manufacturer, to: user, message: discontinuation-notice, requirement: "PROD.DECOM.2; DE.01", kind: stated, normativity: SHOULD}
+      - {n: 2, from: manufacturer, to: user, message: decommissioning-instructions, requirement: "PROD.DECOM.1", kind: stated}
+  - id: F6
+    name: "OSS vulnerability reporting and publication"
+    locator: "§2.3.5 Table 39; §2.3.3 QA.03"
+    steps:
+      - {n: 1, from: reporter, to: oss-project, message: security-issue-report, requirement: "VM.01; QA.03", kind: stated,
+         note: "via security contacts in project documentation; a private channel SHOULD exist"}
+      - {n: 2, from: oss-project, to: user, message: security-issue-publication, requirement: "VM.02", kind: stated,
+         note: "'within a reasonable period of time'"}
+      - {n: 3, from: oss-project, to: user, message: release-log, requirement: "BR.04", kind: stated}

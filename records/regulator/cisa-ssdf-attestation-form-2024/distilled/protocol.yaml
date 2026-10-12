@@ -1,0 +1,42 @@
+schema: "library-protocol/v1"
+record: cisa-ssdf-attestation-form-2024
+reviewed_by: ""
+note: "Submission and lifecycle exchanges stated by the form and its instructions. Steps drawn from the OMB memos are marked source: omb-m-*. Message names -> messages.yaml."
+roles:
+  - {name: software-producer, locator: "p.2-4"}
+  - {name: signatory, description: "CEO or designee (employee with authority to bind the corporation)", locator: "p.4"}
+  - {name: 3pao, description: "FedRAMP-certified 3PAO or 3PAO approved in writing by an agency official", locator: "p.4"}
+  - {name: agency, locator: "p.1-4"}
+  - {name: rsaa, description: "CISA online form at https://softwaresecurity.cisa.gov (Repository for Software Attestations and Artifacts)", locator: "p.3"}
+  - {name: omb, locator: "p.4 ('per OMB guidance')"}
+flows:
+  - name: submit-self-attestation-online
+    steps:
+      - {from: agency, to: software-producer, message: privacy-act-statement, locator: "p.1", note: "agency-unique"}
+      - {from: signatory, to: rsaa, message: attestation-form, locator: "p.3-4", note: "all fields complete; signed"}
+      - {from: rsaa, to: agency, message: attestation-form, locator: "p.3", kind: inferred, note: "the instructions do not describe how the repository makes the form available to agencies"}
+    error_paths:
+      - {condition: "any field incomplete", outcome: "form not accepted (INS-13)", locator: "p.3"}
+      - {condition: "information not provided", outcome: "agency may stop using the software (INS-02)", locator: "p.1"}
+  - name: submit-self-attestation-pdf
+    steps:
+      - {from: agency, to: software-producer, message: "agency email address", locator: "p.3 (INS-11b)"}
+      - {from: signatory, to: agency, message: attestation-form, encoding: pdf-email, locator: "p.3", guard: "producer unable to submit via the online form"}
+  - name: third-party-assessment
+    steps:
+      - {from: 3pao, to: software-producer, message: third-party-assessment, locator: "p.4"}
+      - {from: software-producer, to: agency, message: attestation-form, locator: "p.4, p.7", note: "3PAO box checked, assessment attached, no signature needed"}
+      - {from: agency, to: agency, message: "non-publication handling", locator: "p.4 (INS-22)"}
+  - name: cannot-attest
+    steps:
+      - {from: software-producer, to: agency, message: poam-package, locator: "p.4 (INS-23)"}
+      - {from: agency, to: omb, message: extension-or-waiver-request, locator: "p.4 (INS-24)"}
+      - {from: software-producer, to: rsaa, message: attestation-form, locator: "p.5 Section I 'Attestation Following Extension or Waiver'", note: "attestation_kind = following-extension-or-waiver"}
+  - name: revise-or-lapse
+    steps:
+      - {from: software-producer, to: agency, message: lapse-notification, locator: "p.5 fn 4; p.7 (III-notify)"}
+      - {from: signatory, to: rsaa, message: attestation-form, locator: "p.5 Section I 'Revised Attestation'", note: "attestation_kind = revised", kind: inferred}
+  - name: agency-specific-addendum
+    steps:
+      - {from: agency, to: software-producer, message: "agency-specific instructions", locator: "p.3 (INS-09)"}
+      - {from: software-producer, to: agency, message: agency-addendum, locator: "p.3 (INS-10)"}

@@ -48,6 +48,36 @@ The human-readable bibliography is published, not browsed in the repo tree:
   reviewer can download the bibliography, crosswalk and CSL-JSON for that
   branch without checking it out.
 
+## Per-record HTML lives beside its source
+
+`bin/render-html` writes `records/<body>/<id>/summary.html` next to the
+`record.yaml` and `summary.md` it is built from. It is the human-readable
+page for one record (identity, applicability, tags, links, summary prose).
+It sits beside the source because it is an extraction artifact of that
+record, not a site page. It is untracked (`.gitignore`) for the same reason
+as `index/`: it is a pure function of the record.
+
+Publishers do not re-template it. They import `bin/_record_html.py`, render,
+and copy the page into their site, keeping the `records/<body>/<id>/` layout
+so links between records still resolve. The page has two hooks for a
+publisher:
+
+- The top chrome is a **replaceable region** between `<!-- site-nav -->` and
+  `<!-- /site-nav -->`. Standalone library pages render a default banner (a link
+  to the repo README) inside it; a publisher replaces the **whole region**
+  (both markers inclusive) with its own nav — so no library-relative link leaks
+  and there is no double chrome. Replace the region, not just the opening comment.
+- `<a class="rec" data-id="…">` marks a link to another record, so a site
+  can turn a link to a record it does not publish into plain text.
+
+A publisher's bibliography index, topic pages, and tables belong to that
+publisher's manifest, not to this repo. For tmodel, see
+`docs/publishing/bibliography.yaml` there.
+
+`bin/_record_yaml.py` is the faithful YAML reader these pages use.
+`bin/_yaml.py` stays the validator's reader. It drops flow collections, so
+do not render from it.
+
 ## What CI still guarantees
 
 Generating them is now the *first* step of CI, so every downstream gate runs

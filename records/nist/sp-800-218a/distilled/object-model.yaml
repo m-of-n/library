@@ -1,0 +1,529 @@
+schema: "library-object-model/v1"
+record: sp-800-218a
+source_version: "July 2024 (final)"
+source_digest: "e088c8bc75716824dae7c36a987f408364638561d381ed001b5c12254a7b10d8"
+extracted: "2026-10-02"
+reviewed_by: ""
+question: "What objects (entity types) and relationship edges does SP 800-218A assume or define?"
+note: >
+  Object-model pass, separate from the requirements pass, re-reading the source for entity types and edges.
+  `kind: stated` = the source names the thing (glossary term, column definition, or task/R/C/N text names
+  it as a thing); `kind: inferred` = implied by the text but not named as an entity — flagged. Names reuse
+  the Lane A shared vocabulary (Organization, Practice, Task, InformativeReference, ProvenanceData, ...) so
+  the SSDF 1.1 / 1.2 / 218A / 204D / 800-53 graphs merge. tmodel_mapping targets ARCH-0001-PROPOSAL-v0.2.0
+  (§1 layers, §2b Party, §3b LifecyclePhase, §4 Assertion/Review/PROV, §5 MitigationInstance) and DL-0009
+  (SDL/SecurityProgram, Gate, Requirement, WorkProduct, Evidence, governed View; R-040..R-044).
+
+objects:
+  # ---------------------------------------------------------------- parties and roles
+  - name: Organization
+    definition: "An organization adopting the Profile; the actor of every practice and task."
+    attributes: [name, risk_tolerance, enterprise_risk_management_program]
+    locator: "Audience; §2"
+    kind: stated
+    tmodel_mapping: "Party (§2b) — intrinsic node; producer/acquirer are relational roles (edges)"
+    notes: ""
+  - name: AIModelProducer
+    definition: "Organizations that are developing their own generative AI and dual-use foundation models, as defined in EO 14110 (Audience)."
+    attributes: []
+    locator: "Audience"
+    kind: stated
+    tmodel_mapping: "Party + relational role edge `produces` → AIModel (§2b: roles are edges, not node types)"
+    notes: "Footnote 1: 'producer' and 'acquirer' chosen for consistency with SP 800-218."
+  - name: AISystemProducer
+    definition: "Organizations that are developing software that leverages a generative AI or dual-use foundation model (Audience)."
+    attributes: []
+    locator: "Audience"
+    kind: stated
+    tmodel_mapping: "Party + relational role edge `produces` → AISystem / `integrates` → AIModel (§2b)"
+    notes: ""
+  - name: AISystemAcquirer
+    definition: "Organizations that are acquiring a product or service that utilizes one or more AI systems (Audience)."
+    attributes: []
+    locator: "Audience"
+    kind: stated
+    tmodel_mapping: "Party + relational role edge `acquires` (§2b consumer role)"
+    notes: ""
+  - name: User
+    definition: "In RV.1.1 and RV.1.3, 'users' of AI models = AI system producers and acquirers who are using an AI model (RV.1.1.N1)."
+    attributes: []
+    locator: "Table 1, RV.1.1.N1, RV.1.3.R2"
+    kind: stated
+    tmodel_mapping: "Party role (consumer) — §2b"
+    notes: "Profile narrows 'user' away from end users; end-user reporting is not addressed."
+  - name: SharedResponsibilityAgreement
+    definition: "An agreement an AI system acquirer can establish with an AI system producer and/or AI model producer specifying which party is responsible for each practice and task and how each party will attest to its conformance (§2); also where roles involving producers and third parties can be documented (PO.2.1.N1)."
+    attributes: [parties, task_assignments, attestation_method]
+    locator: "§2; Table 1, PO.2.1.N1"
+    kind: stated
+    tmodel_mapping: "new — a Party↔Party edge set over Requirement (task) ids; candidate for DL-0009 R-041 program governance"
+    notes: "The only place 218A distributes SSDF tasks across multiple organizations; SSDF 1.1 assumes one producer."
+  - name: Role
+    definition: "SDLC-related roles and responsibilities; must include, but are not limited to, AI model development, AI model operations, and data science (PO.2.1.R1)."
+    attributes: [area (ai-model-development | ai-model-operations | data-science | other), responsibilities]
+    locator: "Table 1, PO.2.1, PO.2.1.R1"
+    kind: stated
+    tmodel_mapping: "Party role facet (§2b); document-owner/approver role in DL-0009"
+    notes: ""
+  - name: Personnel
+    definition: "People holding roles who receive role-based training (PO.2.2) and may act as human-in-the-loop."
+    attributes: [roles, training_records, proficiency]
+    locator: "Table 1, PO.2.2"
+    kind: stated
+    tmodel_mapping: "Party (person) — §2b"
+    notes: ""
+  - name: Leadership
+    definition: "Upper management or authorizing official whose commitment to secure development practices involving AI models is obtained (PO.2.3, PO.2.3.R1)."
+    attributes: [commitment_record]
+    locator: "Table 1, PO.2.3"
+    kind: stated
+    tmodel_mapping: "Party role (approver) — Review signer (§4)"
+    notes: ""
+
+  # ---------------------------------------------------------------- framework structure
+  - name: CommunityProfile
+    definition: "'a baseline of SSDF practices and tasks that have been enhanced to address a particular use case' (§1 Purpose); this one is for AI model development."
+    attributes: [use_case, base_framework_version ("SSDF 1.1"), version, date]
+    locator: "§1 Purpose; §3"
+    kind: stated
+    tmodel_mapping: "new — a tailored Requirement set (DL-0009 R-042); analogous to a governed baseline/overlay"
+    notes: "Profile 'should not be used without SP 800-218' — it is an overlay, not a standalone set."
+  - name: PracticeGroup
+    definition: "Top-level SSDF grouping: PO, PS ('Protect Software', as in the SSDF 1.1 Table 1 group row), PW, RV."
+    attributes: [id, title]
+    locator: "Table 1 group rows"
+    kind: stated
+    tmodel_mapping: "Requirement grouping (DL-0009); maps loosely onto LifecyclePhase (§3b)"
+    notes: "218A labels PS 'Protect Software (PS)', identical to the SSDF 1.1 Table 1 group row; only SSDF 1.1 §2 prose says 'Protect the Software (PS)' (verify pass 2026-10-02 withdrew an earlier 'renamed' claim)."
+  - name: Practice
+    definition: "'the name of the practice and a unique identifier, followed by a brief explanation of what the practice is and why it is beneficial' (§3)."
+    attributes: [id, title, explanation, profile_status]
+    locator: "§3 column definitions; Table 1"
+    kind: stated
+    tmodel_mapping: "Requirement (DL-0009 R-042) — outcome level"
+    notes: "20 practices; PW.3 new (reuses an identifier SSDF 1.1 retired)."
+  - name: Task
+    definition: "'one or more actions that may be needed to perform a practice. Each task includes a unique identifier and a brief explanation.' (§3)"
+    attributes: [id, text, priority, profile_status]
+    locator: "§3 column definitions; Table 1"
+    kind: stated
+    tmodel_mapping: "Requirement (DL-0009 R-042) — atomic, gate-checkable unit"
+    notes: "48 tasks."
+  - name: ProfileAddition
+    definition: "A Recommendation (R: 'something the organization should do'), Consideration (C: 'something the organization should consider doing') or Note (N: 'additional information') specific to AI model development, attached to a task; id = task id + R/C/N + number (§3)."
+    attributes: [id, kind (recommendation | consideration | note), text]
+    locator: "§3 column definitions; Table 1"
+    kind: stated
+    tmodel_mapping: "Requirement (R items), Requirement with lower force (C), annotation (N) — DL-0009 R-042; normativity attribute needed"
+    notes: "86 items: 59 R, 16 C, 11 N."
+  - name: Priority
+    definition: "Suggested relative importance of each task within the profile: High / Medium / Low, a starting point for organizations' own priorities (§3)."
+    attributes: [value (High | Medium | Low)]
+    locator: "§3 column definitions"
+    kind: stated
+    tmodel_mapping: "new attribute on Requirement-in-profile (not on the base Requirement)"
+    notes: "Priority belongs to the (Profile, Task) pair, not the Task — SSDF 1.1 has no priority."
+  - name: ProfileStatus
+    definition: "Tag on a practice/task relative to the base: unchanged (default), 'Modified from SSDF 1.1', 'Not part of SSDF 1.1' (§3)."
+    attributes: [value]
+    locator: "§3 column definitions"
+    kind: stated
+    tmodel_mapping: "edge semantics on the crosswalk (R-044): derives_from / modifies / adds"
+    notes: "Source inconsistency: PO.5.2 text changed but untagged (design-notes.md)."
+  - name: InformativeReference
+    definition: "'point (map) to parts of standards, guidance, and other content containing requirements, recommendations, considerations, or other supporting information on performing a particular task' (§3); sources: AI RMF 1.0, OWASP Top 10 for LLM Applications v1.1, NIST AI 100-2e2023."
+    attributes: [scheme (AI RMF | OWASP | Adv ML), ids, source_text]
+    locator: "§3 column definitions; Table 1; References [2] [3] [15]"
+    kind: stated
+    tmodel_mapping: "R-044 crosswalk `maps_to` edge target (external Requirement/catalog entry)"
+    notes: "OLIR is named as the submission channel for further mappings (Note to Readers)."
+  - name: SecurityRequirement
+    definition: "Security requirements for software development infrastructures and processes (PO.1.1) and for organization-developed software (PO.1.2); must include AI model development, AI model operations and data science (PO.1.2.R1); come from laws, regulations, contracts, standards."
+    attributes: [source (internal | external), scope]
+    locator: "Table 1, PO.1.1, PO.1.2, PO.1.2.R1"
+    kind: stated
+    tmodel_mapping: "Requirement (DL-0009 R-042) — product-level, distinct from the extracted-standard Requirement"
+    notes: ""
+  - name: Policy
+    definition: "Organizational policies supporting AI model development security requirements (PO.1.2.R1); data classification policy (PO.1.2.C1); code review/analysis and testing policies (PW.7.1.R1, PW.8.1.R1); vulnerability disclosure and remediation policy (RV.1.3)."
+    attributes: [kind, scope, review_frequency]
+    locator: "Table 1, PO.1.2.R1, PO.1.2.C1, PW.7.1.R1, PW.8.1.R1, RV.1.3"
+    kind: stated
+    tmodel_mapping: "WorkProduct (DL-0009) of kind policy; MitigationInstance kind=documentation (R-040)"
+    notes: ""
+
+  # ---------------------------------------------------------------- AI artifacts
+  - name: AIModel
+    definition: "'A component of an information system that implements AI technology and uses computational, statistical, or machine-learning techniques to produce outputs from a given set of inputs.' (Glossary)"
+    attributes: [architecture, training_technique, version, derivatives, trained_on_sensitive_data (PS.3.2.R2), closed_or_open (PS.1.3.R2 'closed models')]
+    locator: "Appendix A; Table 1 passim"
+    kind: stated
+    tmodel_mapping: "Component (§1) with an AI facet — new subtype needed"
+    notes: "The central asset. 218A treats it as code AND data (§1: blurred boundary)."
+  - name: GenerativeAIModel
+    definition: "'The class of AI models that emulate the structure and characteristics of input data in order to generate derived synthetic content.' (Glossary)"
+    attributes: []
+    locator: "Appendix A"
+    kind: stated
+    tmodel_mapping: "subtype of AIModel (new)"
+    notes: ""
+  - name: DualUseFoundationModel
+    definition: "AI model trained on broad data, generally self-supervised, at least tens of billions of parameters, broadly applicable, exhibiting or easily modified to exhibit high performance at tasks posing serious security risk (CBRN uplift, offensive cyber, evasion of human control) — EO 14110 definition (Glossary)."
+    attributes: [parameter_count]
+    locator: "Appendix A"
+    kind: stated
+    tmodel_mapping: "subtype of AIModel (new); definition is from revoked EO 14110 (see summary)"
+    notes: ""
+  - name: AISystem
+    definition: "'Any data system, software, hardware, application, tool, or utility that operates in whole or in part using AI.' (Glossary)"
+    attributes: []
+    locator: "Appendix A"
+    kind: stated
+    tmodel_mapping: "Product / ProductInstance (§1) that `composed_of` an AIModel Component"
+    notes: "Deployment and operation of AI systems are out of scope (§1 Scope)."
+  - name: ModelWeights
+    definition: "'A numerical parameter within an AI model that helps determine the model’s outputs in response to inputs.' (Glossary, 'model weight'); protected per PS.1.3, indirect access only (PS.1.1.R4)."
+    attributes: [hash, signature, confidentiality_required (closed models), storage_location]
+    locator: "Appendix A; Table 1, PS.1.1.R1, PS.1.1.R4, PS.1.1.C1, PS.1.3"
+    kind: stated
+    tmodel_mapping: "Component/Asset (§1) — high-value data asset; new artifact type"
+    notes: "Weights 'are defined only after the model is trained and fine-tuned' (§2) — not reproducible from source alone."
+  - name: ConfigurationParameters
+    definition: "Model configuration parameter data, protected with weights (PS.1.3) and kept separate from datasets (PS.1.3.R1)."
+    attributes: [hash, signature]
+    locator: "Table 1, PS.1.3, PS.1.3.R1, PW.4.4.R1"
+    kind: stated
+    tmodel_mapping: "Component/Asset (§1)"
+    notes: ""
+  - name: RewardModel
+    definition: "A reward model, stored separately from AI models and data (PS.1.1.R3); an acquired AI component to verify (PW.4.4.R1)."
+    attributes: []
+    locator: "Table 1, PS.1.1.R1, PS.1.1.R3, PW.4.4.R1"
+    kind: stated
+    tmodel_mapping: "Component (§1) — AI subtype"
+    notes: ""
+  - name: AdaptationLayer
+    definition: "Adaptation layers of an acquired AI model (PW.4.4.R1)."
+    attributes: []
+    locator: "Table 1, PW.4.4.R1"
+    kind: stated
+    tmodel_mapping: "Component (§1) — AI subtype"
+    notes: ""
+  - name: Dataset
+    definition: "Training, testing, fine-tuning, and aligning data (PW.3, PS.1.2), including sensitive/production data (PO.5.1.R2) and data from 'unknown, untrusted sources' (§1)."
+    attributes: [purpose (training | testing | fine-tuning | aligning), provenance_known (bool), classification, sensitivity, integrity_hash]
+    locator: "§1; Table 1, PW.3, PW.3.1, PW.3.2, PS.1.2, PO.5.1.R2"
+    kind: stated
+    tmodel_mapping: "DataStore/Asset with `classification` (§1, R-029); new purpose attribute"
+    notes: "PW.3.2 requires recording UNKNOWN provenance explicitly — a three-valued provenance state."
+  - name: AdversarialSample
+    definition: "Adversarial samples included in training and testing data to improve attack prevention (PW.3.3), tested under process/controls/guardrails (PW.3.3.R1)."
+    attributes: []
+    locator: "Table 1, PW.3.3, PW.3.3.R1"
+    kind: stated
+    tmodel_mapping: "new — test fixture/data element; links to AttackPattern (adversarial ML)"
+    notes: ""
+  - name: ModelInputOutput
+    definition: "Inputs (including prompts and user data) and outputs of an AI model, to be logged, analyzed, validated, sanitized or dropped, and encoded (PW.5.1.R2, PW.5.1.R3, RV.1.1.R1)."
+    attributes: [kind (input | output), validated, sanitized, logged]
+    locator: "Table 1, PW.5.1.R2, PW.5.1.R3, RV.1.1.R1, RV.2.1.N1"
+    kind: stated
+    tmodel_mapping: "DataFlow (§1 behavioral layer) into/out of the AIModel Process"
+    notes: "Prompt is a DataFlow, not just data — the injection surface."
+  - name: ModelDocumentation
+    definition: "AI model documentation — 'data, model, and system cards' (PO.1.2.N1); justification for model selection and documentation of the entire training process (PS.3.1.R2, PS.3.1.R3)."
+    attributes: [kind (data-card | model-card | system-card | selection-justification | training-process)]
+    locator: "Table 1, PO.1.2.N1, PS.3.1.R2, PS.3.1.R3"
+    kind: stated
+    tmodel_mapping: "WorkProduct (DL-0009); governed View candidate (R-043)"
+    notes: ""
+
+  # ---------------------------------------------------------------- environment and tooling
+  - name: DevelopmentEnvironment
+    definition: "Environments for software development, including 'development, AI model training, build, test, and distribution environments' (PO.5, modified); separated and protected (PO.5.1); continuously monitored (PO.5.3)."
+    attributes: [kind (development | ai-model-training | build | test | distribution), approved (bool), isolation]
+    locator: "Table 1, PO.5, PO.5.1, PO.5.3, PS.1.1.C2"
+    kind: stated
+    tmodel_mapping: "new — distinct from the deployment Environment (§3); production-phase location for LifecyclePhase (§3b)"
+    notes: "'organization-approved environments' is a named predicate (PO.5.1.R2, PS.1.1.C2)."
+  - name: DevelopmentEndpoint
+    definition: "Endpoints for software designers, developers, testers, builders, etc. (PO.5.2)."
+    attributes: [hardening_baseline]
+    locator: "Table 1, PO.5.2"
+    kind: stated
+    tmodel_mapping: "Component (§1) in the dev environment"
+    notes: ""
+  - name: TrainingPipeline
+    definition: "Training pipelines (PO.5.1.R3, PO.5.1.R4); pipelines stored as code (PS.1.1.R1); pipelines used to build the model are provenance (PS.3.2.R1)."
+    attributes: []
+    locator: "Table 1, PO.5.1.R3, PO.5.1.R4, PS.1.1.R1, PS.3.2.R1"
+    kind: stated
+    tmodel_mapping: "Process/Workflow (§1) realized_by Components; PROV Activity (§4) generating ModelWeights"
+    notes: "MLOps / CI/CD integration named in §2."
+  - name: ModelRegistry
+    definition: "Model registries within development environments, protected by least privilege and monitored for model modifications (PO.5.1.R3, PO.5.1.R4)."
+    attributes: []
+    locator: "Table 1, PO.5.1.R3, PO.5.1.R4"
+    kind: stated
+    tmodel_mapping: "DataStore (§1) realized_by a Component"
+    notes: ""
+  - name: Toolchain
+    definition: "Automated toolchains that secure AI model development and reduce human effort (PO.3.1.R1, PO.3.2.R1); toolchain security verified at a frequency commensurate with risk (PO.3.2.R2)."
+    attributes: [tools, verification_frequency]
+    locator: "Table 1, PO.3"
+    kind: stated
+    tmodel_mapping: "Component set; MitigationInstance kind=technical (R-040)"
+    notes: ""
+  - name: Tool
+    definition: "Tools, including infrastructure tools that support dataset creation and model training (pre-processing, transforms, collection) that are versioned and tracked (PS.3.1.R1); compiler, interpreter and build tools whose versions/features are captured in provenance (PW.6.2.C1)."
+    attributes: [version, features]
+    locator: "Table 1, PO.3.1, PS.3.1.R1, PW.6.1, PW.6.2.C1"
+    kind: stated
+    tmodel_mapping: "Component (§1)"
+    notes: ""
+  - name: Artifact
+    definition: "'An artifact is “a piece of evidence”'; artifacts 'provide records of secure software development practices'; AI example: 'attestations of the integrity and provenance of training datasets' (PO.3.3.N1)."
+    attributes: [generated_by_tool, about_task]
+    locator: "Table 1, PO.3.3, PO.3.3.N1"
+    kind: stated
+    tmodel_mapping: "Evidence (DL-0009 R-042); PROV Entity (§4)"
+    notes: "Defines Evidence as 'grounds for belief or disbelief; data on which to base proof or to establish truth or falsehood' citing SP 800-160v1r1 [17]."
+  - name: Attestation
+    definition: "How each party attests to conformance with a shared-responsibility agreement (§2); attestations of integrity and provenance of training datasets (PO.3.3.N1)."
+    attributes: [attester, subject, claim]
+    locator: "§2; Table 1, PO.3.3.N1"
+    kind: stated
+    tmodel_mapping: "Assertion (§4) + Review; supply-chain attestations are deferred to the radar contract (ADR-0001)"
+    notes: ""
+  - name: Secret
+    definition: "Plaintext secrets for which each environment is continuously monitored (PO.5.1.R6)."
+    attributes: []
+    locator: "Table 1, PO.5.1.R6"
+    kind: stated
+    tmodel_mapping: "Asset (§1) — credential class"
+    notes: ""
+
+  # ---------------------------------------------------------------- checks, controls, review
+  - name: SecurityCheckCriteria
+    definition: "Criteria for software security checks, tracked throughout the SDLC (PO.4.1); human-in-the-loop approval considered for checks 'beyond risk-based thresholds' (PO.4.1.C1)."
+    attributes: [threshold, requires_human_approval]
+    locator: "Table 1, PO.4.1, PO.4.1.C1, PO.4.2"
+    kind: stated
+    tmodel_mapping: "Gate exit criterion (DL-0009 R-041); conformance check (R-042)"
+    notes: ""
+  - name: Guardrail
+    definition: "'guardrails and other controls throughout the AI development life cycle, extending beyond the traditional SDLC' (PO.4.1.R1); guardrails on adversarial-sample use (PW.3.3.R1)."
+    attributes: []
+    locator: "Table 1, PO.4.1.R1, PW.3.3.R1"
+    kind: stated
+    tmodel_mapping: "MitigationInstance kind=technical (R-040)"
+    notes: "Undefined in the glossary."
+  - name: HumanInTheLoop
+    definition: "Human review/approval point: approval of checks beyond thresholds (PO.4.1.C1), data examination (PW.3.1.C1), ongoing scanning oversight (RV.1.2.R2), not letting the model make significant security decisions without one (PW.1.1.C2)."
+    attributes: [reviewer, decision]
+    locator: "Table 1, PO.4.1.C1, PW.1.1.C2, PW.3.1.C1, RV.1.2.R2"
+    kind: inferred
+    tmodel_mapping: "Review (§4) — the 'AI proposes → human accepts' rule"
+    notes: "Inferred as an entity: the source uses 'human-in-the-loop' as a role/step, never defines it."
+  - name: MonitoringAlert
+    definition: "Alert generated by continuous monitoring and analysis tools 'when detected activity involving an AI model passes a risk threshold or otherwise merits additional investigation' (PO.5.3.R2)."
+    attributes: [risk_threshold, subject]
+    locator: "Table 1, PO.5.3, PO.5.3.R2"
+    kind: stated
+    tmodel_mapping: "Finding (§1.3) candidate"
+    notes: ""
+  - name: RiskModel
+    definition: "Forms of risk modeling — threat modeling, attack modeling, attack surface mapping (PW.1.1) — incorporating AI model-specific vulnerability and threat types (PW.1.1.R1), updated for future model versions and derivatives (PW.1.1.C1)."
+    attributes: [ai_threat_types, model_version]
+    locator: "Table 1, PW.1.1, PW.1.1.R1, PW.1.1.C1, PW.1.1.C2"
+    kind: stated
+    tmodel_mapping: "the tmodel threat model itself (ThreatInstance/AttackPath, §1.3) — conformance target of R-042"
+    notes: "This task is the direct hook for tmodel: a threat model is the SSDF PW.1.1 work product."
+  - name: AIThreatType
+    definition: "AI model-specific vulnerability and threat types: 'poisoning of training data, malicious code or other unwanted content in inputs and outputs, denial-of-service conditions arising from adversarial prompts, supply chain attacks, unauthorized information disclosure, theft of AI model weights, and misconfiguration of data pipelines' (PW.1.1.R1, citing [3])."
+    attributes: [name, catalog_ref (OWASP LLMxx | NIST AI 100-2)]
+    locator: "Table 1, PW.1.1.R1"
+    kind: stated
+    tmodel_mapping: "AttackPattern / Weakness (§1.3); method facet MAESTRO (§2) for agentic AI"
+    notes: "Seven named types — a seed catalog."
+  - name: DesignReview
+    definition: "Review of the software design by 1) a qualified person not involved with the design AND 2) automated processes in the toolchain (PW.2.1, modified: SSDF 1.1 said 'and/or')."
+    attributes: [human_reviewer, automated_process, result]
+    locator: "Table 1, PW.2.1"
+    kind: stated
+    tmodel_mapping: "Review (§4) on the design/threat model; Gate evidence (R-041)"
+    notes: ""
+  - name: CodeReviewOrAnalysis
+    definition: "Code review and/or analysis including AI model code (PW.7.1.R1); scanning AI models for 'malware, vulnerabilities, backdoors, and other security issues' (PW.7.2.R1)."
+    attributes: [method, findings]
+    locator: "Table 1, PW.7.1, PW.7.2"
+    kind: stated
+    tmodel_mapping: "PROV Activity generating Findings"
+    notes: ""
+  - name: Test
+    definition: "Executable-code testing including for AI models: 'unit testing, integration testing, penetration testing, red teaming, use case testing, and adversarial testing' (PW.8.1.R1); retest on retraining or new data sources (PW.8.2.R2)."
+    attributes: [type, trigger]
+    locator: "Table 1, PW.8.1.R1, PW.8.2.R2; Appendix A 'artificial intelligence red-teaming'"
+    kind: stated
+    tmodel_mapping: "PROV Activity; verification evidence for MitigationInstance (§5)"
+    notes: "Retraining is a re-verification trigger — a lifecycle event."
+  - name: SecureBaseline
+    definition: "Secure default configuration baseline (PW.9.1) and documented default settings (PW.9.2)."
+    attributes: [settings]
+    locator: "Table 1, PW.9"
+    kind: stated
+    tmodel_mapping: "MitigationInstance kind=documentation/technical (R-040)"
+    notes: ""
+  - name: SerializationMechanism
+    definition: "Secure model serialization mechanisms that reduce or eliminate vectors for malicious content (PW.6.1.C1)."
+    attributes: [format]
+    locator: "Table 1, PW.6.1.C1"
+    kind: stated
+    tmodel_mapping: "Component property / MitigationInstance kind=technical"
+    notes: ""
+
+  # ---------------------------------------------------------------- release, provenance
+  - name: SoftwareRelease
+    definition: "A software release, archived with integrity verification information and provenance data (PS.3.1); here the release of an AI model and its components."
+    attributes: [version, archive_location]
+    locator: "Table 1, PS.3"
+    kind: stated
+    tmodel_mapping: "ProductInstance version (§1, §3b)"
+    notes: ""
+  - name: IntegrityVerificationInformation
+    definition: "'cryptographic hashes or digital signatures for an AI model and its components, artifacts, and documentation' (PS.2.1.R1); signatures for model changes (PS.2.1.R2)."
+    attributes: [algorithm, value, signer]
+    locator: "Table 1, PS.2.1"
+    kind: stated
+    tmodel_mapping: "identity-by-hash of ProductInstance (§3b); Assertion signature (§4)"
+    notes: ""
+  - name: ProvenanceData
+    definition: "Provenance = 'Metadata pertaining to the origination or source of specified data' (Glossary); for releases, in an SBOM or through SLSA (PS.3.2); tracked for model, components, derivatives, training libraries, frameworks and pipelines (PS.3.2.R1); for data, tracked 'when known' with unknowns documented (PW.3.2)."
+    attributes: [subject, source, known (bool), format (SBOM | SLSA | other)]
+    locator: "Appendix A; Table 1, PS.3.2, PS.3.2.R1, PS.3.2.C1, PW.3.2, PW.3.2.N1, PW.6.2.C1"
+    kind: stated
+    tmodel_mapping: "PROV-O Entity/Activity (§4) — but supply-chain/build provenance is deferred to the radar contract (ADR-0001)"
+    notes: "PS.3.2 is MODIFIED from SSDF 1.1 to name SLSA."
+  - name: SBOM
+    definition: "Software bill of materials, a vehicle for provenance data (PS.3.2)."
+    attributes: []
+    locator: "Table 1, PS.3.2"
+    kind: stated
+    tmodel_mapping: "external artifact → Component composition (`composed_of`, §1); radar contract"
+    notes: ""
+  - name: AssetInventory
+    definition: "Organization's asset inventories to which AI models and their components may need to be added (PS.3.1.N1)."
+    attributes: []
+    locator: "Table 1, PS.3.1.N1"
+    kind: stated
+    tmodel_mapping: "Asset (§3, R-039)"
+    notes: ""
+  - name: ThirdPartyComponent
+    definition: "Acquired commercial, open-source and third-party components (PW.4.1, PW.4.4), including existing AI models, datasets, reward models, adaptation layers, configuration parameters (PW.4.4.R1)."
+    attributes: [supplier, verified (bool)]
+    locator: "Table 1, PO.1.3, PW.4.1, PW.4.1.C1, PW.4.4"
+    kind: stated
+    tmodel_mapping: "Component `supplied_by` Party (§2b)"
+    notes: ""
+
+  # ---------------------------------------------------------------- vulnerabilities
+  - name: Vulnerability
+    definition: "Vulnerability in the software or in an AI model; AI model vulnerabilities are included in disclosure/remediation policies (RV.1.3.R1)."
+    attributes: [severity, root_cause, status]
+    locator: "Table 1, RV"
+    kind: stated
+    tmodel_mapping: "Finding/Vulnerability (§1.3)"
+    notes: ""
+  - name: VulnerabilityReport
+    definition: "Reports of potential security and performance issues from users through reporting mechanisms (RV.1.1.R2, RV.1.3.R2); information from vulnerability and incident databases (RV.1.1.R3)."
+    attributes: [reporter, credible (bool)]
+    locator: "Table 1, RV.1.1, RV.1.1.R2, RV.1.1.R3, RV.1.3.R2"
+    kind: stated
+    tmodel_mapping: "Finding `reported_by` Party (§2b)"
+    notes: "218A pairs 'security and performance issues' — performance is in scope for reporting."
+  - name: RiskResponse
+    definition: "Planned and implemented risk response for vulnerabilities (RV.2.2), considering time and expense of rebuilding models (RV.2.2.R1), including criteria for stopping use of a model and rolling back to a previous version (RV.2.2.R2)."
+    attributes: [kind (remediate | stop-use | roll-back | other), criteria]
+    locator: "Table 1, RV.2.2, RV.2.2.R1, RV.2.2.R2, RV.2.2.C1"
+    kind: stated
+    tmodel_mapping: "MitigationInstance (§5) with status; DEC-009 lifecycle"
+    notes: "Stop-use/rollback implies model usage states — not modelled by the source (see design-notes)."
+  - name: RootCause
+    definition: "Root cause of identified vulnerabilities (RV.3.1); reviewing training data after the fact can help identify some (RV.3.1.N1)."
+    attributes: []
+    locator: "Table 1, RV.3"
+    kind: stated
+    tmodel_mapping: "Weakness (CWE) on Finding (§1.3)"
+    notes: ""
+  - name: Audit
+    definition: "Periodic audits of AI models (RV.1.2.R3)."
+    attributes: [date, findings]
+    locator: "Table 1, RV.1.2.R3"
+    kind: stated
+    tmodel_mapping: "Review (§4); audit model deferred (#19)"
+    notes: ""
+
+edges:
+  - {name: augments, from: CommunityProfile, to: Practice, cardinality: "1:N", definition: "The Profile is a baseline of SSDF practices and tasks enhanced for a use case; used in conjunction with SP 800-218, not on its own.", locator: "§1 Purpose; Table 1 note", kind: stated, tmodel_mapping: "R-044 crosswalk edge (profile → base framework)"}
+  - {name: based_on, from: CommunityProfile, to: CommunityProfile, cardinality: "N:1", definition: "Profile is built on SSDF version 1.1 (the base framework, here treated as the base Requirement set).", locator: "Abstract; §1", kind: stated, tmodel_mapping: "relation supersedes/see_also between Requirement sets"}
+  - {name: part_of, from: Practice, to: PracticeGroup, cardinality: "N:1", definition: "Practices grouped into PO/PS/PW/RV.", locator: "Table 1", kind: stated, tmodel_mapping: "Requirement hierarchy"}
+  - {name: part_of, from: Task, to: Practice, cardinality: "N:1", definition: "A task is an action needed to perform a practice.", locator: "§3", kind: stated, tmodel_mapping: "Requirement hierarchy"}
+  - {name: annotates, from: ProfileAddition, to: Task, cardinality: "N:1", definition: "R/C/N items attach to a task; id = task id + R/C/N + number.", locator: "§3", kind: stated, tmodel_mapping: "Requirement refinement edge"}
+  - {name: has_priority, from: Task, to: Priority, cardinality: "N:1 (per profile)", definition: "Suggested relative importance of the task within the profile.", locator: "§3", kind: stated, tmodel_mapping: "attribute on the (Profile, Requirement) membership edge"}
+  - {name: has_status, from: Task, to: ProfileStatus, cardinality: "N:1", definition: "Unchanged / Modified from SSDF 1.1 / Not part of SSDF 1.1.", locator: "§3", kind: stated, tmodel_mapping: "crosswalk edge type: equivalent | modifies | adds (R-044)"}
+  - {name: modifies, from: Task, to: Task, cardinality: "1:1", definition: "A 'Modified from SSDF 1.1' task changes the SSDF 1.1 task with the same id (PO.1.3, PS.3.2, PW.2.1; practices PO.5, PS.1).", locator: "§3; Table 1", kind: stated, tmodel_mapping: "R-044 crosswalk (versioned Requirement)"}
+  - {name: maps_to, from: Task, to: InformativeReference, cardinality: "N:M", definition: "Informative References column — AI RMF subcategories, OWASP LLM Top 10 ids, Adv ML.", locator: "§3; Table 1", kind: stated, tmodel_mapping: "R-044 maps_to"}
+  - {name: performs, from: Organization, to: Task, cardinality: "N:M", definition: "Organizations implement practices and tasks, risk-based, adapting/omitting as needed.", locator: "§2; §3", kind: stated, tmodel_mapping: "conformance (R-042)"}
+  - {name: plays_role, from: Organization, to: AIModelProducer, cardinality: "N:M", definition: "An organization acts as AI model producer, AI system producer, or AI system acquirer (perspective drives task selection).", locator: "Audience; §2", kind: stated, tmodel_mapping: "Party relational role edge (§2b)"}
+  - {name: responsible_for, from: Organization, to: Task, cardinality: "N:M", definition: "Responsibility for implementing practices may be shared among organizations; the agreement specifies which party is responsible for each practice and task.", locator: "§2", kind: stated, tmodel_mapping: "new — Party→Requirement responsibility edge (R-041/R-042)"}
+  - {name: specifies, from: SharedResponsibilityAgreement, to: Task, cardinality: "N:M", definition: "Agreement specifies responsible party per practice/task and how conformance is attested.", locator: "§2", kind: stated, tmodel_mapping: "new"}
+  - {name: attests_conformance, from: Attestation, to: SharedResponsibilityAgreement, cardinality: "N:1", definition: "How each party will attest to its conformance with the agreement.", locator: "§2", kind: stated, tmodel_mapping: "Assertion (§4) about conformance (R-042)"}
+  - {name: produces, from: AIModelProducer, to: AIModel, cardinality: "N:M", definition: "Develops generative AI / dual-use foundation models.", locator: "Audience", kind: stated, tmodel_mapping: "Party `manufactured_by` inverse (§2b)"}
+  - {name: integrates, from: AISystemProducer, to: AIModel, cardinality: "N:M", definition: "Develops software that leverages a model; 'incorporating and integrating AI models into other software' is in scope.", locator: "Audience; §1 Scope", kind: stated, tmodel_mapping: "composed_of (§1)"}
+  - {name: composed_of, from: AISystem, to: AIModel, cardinality: "N:M", definition: "AI system operates in whole or part using AI; executes a model possibly hosted by another organization.", locator: "Appendix A; §2", kind: inferred, tmodel_mapping: "composed_of (§1)"}
+  - {name: acquires, from: AISystemAcquirer, to: AISystem, cardinality: "N:M", definition: "Acquires a product or service that utilizes AI systems.", locator: "Audience", kind: stated, tmodel_mapping: "Party consumer edge (§2b)"}
+  - {name: parameterized_by, from: AIModel, to: ModelWeights, cardinality: "1:N", definition: "Weights determine outputs; defined only after training/fine-tuning.", locator: "Appendix A; §2", kind: stated, tmodel_mapping: "composed_of / new"}
+  - {name: configured_by, from: AIModel, to: ConfigurationParameters, cardinality: "1:N", definition: "Model configuration parameters.", locator: "PS.1.3", kind: stated, tmodel_mapping: "new"}
+  - {name: trained_on, from: AIModel, to: Dataset, cardinality: "N:M", definition: "Training/testing/fine-tuning/aligning data consumed by the model; tracked when sensitive (PS.3.2.R2).", locator: "PW.3; PS.3.2.R2", kind: stated, tmodel_mapping: "PROV used (§4)"}
+  - {name: generated_by, from: ModelWeights, to: TrainingPipeline, cardinality: "N:1", definition: "Weights are produced by training in pipelines; pipelines are part of model provenance.", locator: "§2; PS.3.2.R1; PO.5.1.R4", kind: inferred, tmodel_mapping: "PROV wasGeneratedBy (§4)"}
+  - {name: derived_from, from: AIModel, to: AIModel, cardinality: "N:1", definition: "Derivatives and future versions of a model; provenance tracked for derivatives (PS.3.2.R1); risk modeling for versions/derivatives (PW.1.1.C1); rollback to a previous version (RV.2.2.R2).", locator: "PS.3.2.R1; PW.1.1.C1; RV.2.2.R2", kind: stated, tmodel_mapping: "PROV wasDerivedFrom; ProductInstance version axis (§3b)"}
+  - {name: stored_separately_from, from: RewardModel, to: AIModel, cardinality: "N:M", definition: "Store reward models separately from AI models and data; keep weights/parameters separate from datasets.", locator: "PS.1.1.R3; PS.1.3.R1", kind: stated, tmodel_mapping: "constraint — stored_in different DataStores (§0)"}
+  - {name: stored_in, from: AIModel, to: ModelRegistry, cardinality: "N:M", definition: "Models and modifications held in model registries.", locator: "PO.5.1.R3; PO.5.1.R4", kind: stated, tmodel_mapping: "stored_in (§0)"}
+  - {name: hosted_in, from: TrainingPipeline, to: DevelopmentEnvironment, cardinality: "N:1", definition: "Training pipelines and registries are components within the environments.", locator: "PO.5.1.R3", kind: stated, tmodel_mapping: "runs_on (§0)"}
+  - {name: separated_from, from: DevelopmentEnvironment, to: DevelopmentEnvironment, cardinality: "N:M", definition: "Separate and protect each environment; consider separating execution environments.", locator: "PO.5.1; PO.5.1.C1", kind: stated, tmodel_mapping: "TrustBoundary / in_trust_zone (§1)"}
+  - {name: monitors, from: Toolchain, to: DevelopmentEnvironment, cardinality: "N:M", definition: "Continuous security monitoring of environment components hosting AI models or related resources; alerts on risk threshold.", locator: "PO.5.3; PO.5.3.R1; PO.5.3.R2", kind: stated, tmodel_mapping: "MitigationInstance kind=technical (R-040)"}
+  - {name: raises, from: Toolchain, to: MonitoringAlert, cardinality: "1:N", definition: "Monitoring tools generate alerts when activity passes a risk threshold.", locator: "PO.5.3.R2", kind: stated, tmodel_mapping: "Finding"}
+  - {name: generates, from: Tool, to: Artifact, cardinality: "1:N", definition: "Tools configured to generate artifacts of their support of secure development practices.", locator: "PO.3.3", kind: stated, tmodel_mapping: "PROV wasGeneratedBy; Evidence (R-042)"}
+  - {name: evidences, from: Artifact, to: Task, cardinality: "N:M", definition: "Artifacts provide records of secure software development practices.", locator: "PO.3.3.N1", kind: stated, tmodel_mapping: "Evidence satisfies Requirement (R-042)"}
+  - {name: attests, from: Attestation, to: Dataset, cardinality: "N:1", definition: "Attestations of the integrity and provenance of training datasets.", locator: "PO.3.3.N1", kind: stated, tmodel_mapping: "Assertion (§4)"}
+  - {name: has_provenance, from: Dataset, to: ProvenanceData, cardinality: "1:0..1", definition: "Track provenance when known; document data lacking known provenance.", locator: "PW.3.2; PW.3.2.N1", kind: stated, tmodel_mapping: "PROV (§4) — absent edge must be explicit (unknown)"}
+  - {name: has_provenance, from: AIModel, to: ProvenanceData, cardinality: "1:N", definition: "Provenance of model, components, derivatives, training libraries, frameworks, pipelines.", locator: "PS.3.2; PS.3.2.R1", kind: stated, tmodel_mapping: "radar contract (ADR-0001)"}
+  - {name: carried_in, from: ProvenanceData, to: SBOM, cardinality: "N:1", definition: "e.g., in an SBOM, through SLSA.", locator: "PS.3.2", kind: stated, tmodel_mapping: "external"}
+  - {name: verifies, from: IntegrityVerificationInformation, to: AIModel, cardinality: "N:1", definition: "Hashes/signatures for a model and its components, artifacts, documentation; signatures for model changes.", locator: "PS.2.1.R1; PS.2.1.R2", kind: stated, tmodel_mapping: "identity-by-hash (§3b)"}
+  - {name: archived_in, from: ModelDocumentation, to: SoftwareRelease, cardinality: "N:1", definition: "Retained information includes model selection justification and training process documentation.", locator: "PS.3.1.R2; PS.3.1.R3", kind: stated, tmodel_mapping: "WorkProduct `for` ProductInstance"}
+  - {name: analyzed_before_use, from: Dataset, to: AIModel, cardinality: "N:M", definition: "Data analyzed for poisoning, bias, homogeneity, tampering before training/testing/fine-tuning/aligning; risks mitigated.", locator: "PW.3.1", kind: stated, tmodel_mapping: "Gate (R-041) on data intake — precondition"}
+  - {name: verified_before_use, from: ThirdPartyComponent, to: AIModel, cardinality: "N:M", definition: "Verify integrity, provenance, security of acquired AI components; scan and test before use.", locator: "PW.4.4.R1; PW.4.4.R2", kind: stated, tmodel_mapping: "Gate (R-041); supplied_by Party"}
+  - {name: considers_threat, from: RiskModel, to: AIThreatType, cardinality: "N:M", definition: "Incorporate AI model-specific vulnerability and threat types in risk modeling.", locator: "PW.1.1.R1", kind: stated, tmodel_mapping: "ThreatInstance realizes AttackPattern (§1.3)"}
+  - {name: reviews, from: DesignReview, to: RiskModel, cardinality: "N:1", definition: "Design reviewed by independent qualified person AND automated processes against requirements and identified risk information.", locator: "PW.2.1", kind: stated, tmodel_mapping: "Review → Assertion (§4)"}
+  - {name: approves, from: HumanInTheLoop, to: SecurityCheckCriteria, cardinality: "N:M", definition: "Human-in-the-loop review/approval for checks beyond risk-based thresholds.", locator: "PO.4.1.C1", kind: stated, tmodel_mapping: "Review status gate (§4) — accept/reject"}
+  - {name: scans, from: CodeReviewOrAnalysis, to: AIModel, cardinality: "N:M", definition: "Scan AI models for malware, vulnerabilities, backdoors.", locator: "PW.7.2.R1", kind: stated, tmodel_mapping: "PROV Activity → Finding"}
+  - {name: tests, from: Test, to: AIModel, cardinality: "N:M", definition: "Test AI models; retest when retrained or data sources added.", locator: "PW.8.2.R1; PW.8.2.R2", kind: stated, tmodel_mapping: "verification evidence (§5)"}
+  - {name: uses_sample, from: Test, to: AdversarialSample, cardinality: "N:M", definition: "Adversarial samples in training and testing data.", locator: "PW.3.3", kind: stated, tmodel_mapping: "new"}
+  - {name: flows_into, from: ModelInputOutput, to: AIModel, cardinality: "N:M", definition: "Inputs (prompts, user data) and outputs validated, logged, sanitized/dropped, encoded; monitored for issues.", locator: "PW.5.1.R2; PW.5.1.R3; RV.1.1.R1", kind: stated, tmodel_mapping: "DataFlow (§1)"}
+  - {name: reported_via, from: VulnerabilityReport, to: User, cardinality: "N:1", definition: "Users made aware of mechanisms for reporting security and performance issues.", locator: "RV.1.1.R2; RV.1.3.R2", kind: stated, tmodel_mapping: "reported_by (§2b)"}
+  - {name: affects, from: Vulnerability, to: AIModel, cardinality: "N:M", definition: "AI model vulnerabilities in disclosure/remediation policies.", locator: "RV.1.3.R1", kind: stated, tmodel_mapping: "affects (§2b)"}
+  - {name: responds_to, from: RiskResponse, to: Vulnerability, cardinality: "N:1", definition: "Plan and implement risk responses incl. stop-use and rollback criteria.", locator: "RV.2.2", kind: stated, tmodel_mapping: "MitigationInstance (§5), DEC-009"}
+  - {name: caused_by, from: Vulnerability, to: RootCause, cardinality: "N:1", definition: "Root cause analysis; training data review can help.", locator: "RV.3.1; RV.3.1.N1", kind: stated, tmodel_mapping: "Weakness (§1.3)"}
+  - {name: assigned_to, from: Role, to: Personnel, cardinality: "N:M", definition: "Roles incl. AI model development, operations, data science; role-based training.", locator: "PO.2.1; PO.2.2", kind: stated, tmodel_mapping: "Party role (§2b)"}
+  - {name: listed_in, from: AIModel, to: AssetInventory, cardinality: "N:M", definition: "AI models and their components may need to be added to asset inventories.", locator: "PS.3.1.N1", kind: stated, tmodel_mapping: "Asset (R-039)"}
+
+gaps:
+  - "AIModel as a first-class Component subtype with weights, configuration parameters, reward model and adaptation layers as separately protected sub-artifacts — tmodel has generic Component only."
+  - "Dataset purpose (training/testing/fine-tuning/aligning) and a three-valued provenance state (known / unknown-documented / not tracked) — tmodel classification covers sensitivity, not purpose or provenance-unknown."
+  - "DevelopmentEnvironment (incl. AI model training environment) as distinct from deployment Environment (§3) — tmodel has no build/dev-environment node, yet PO.5 makes it a protected asset."
+  - "Responsibility edge Party→Requirement (who is responsible for which task across producer/integrator/acquirer) and the SharedResponsibilityAgreement that carries it — needed for R-041/R-042 conformance across organizations."
+  - "Profile membership with per-profile attributes (Priority, ProfileStatus) on the (Profile, Requirement) edge — DL-0009 Requirement has no notion of a tailored overlay."
+  - "Normativity levels below 'recommendation' (consideration, informative note) on Requirement — needed to keep C items out of hard gate criteria."
+  - "Model usage state (in use / stopped / rolled back) implied by RV.2.2.R2 — no ProductInstance-level operational state machine in tmodel (§3b defers state machines)."
+  - "Re-verification triggers (retraining, new data sources: PW.8.2.R2; future versions/derivatives: PW.1.1.C1) — tmodel has no event that invalidates a prior Review/approval."
+  - "Identifier namespace collision: sp-800-218a#PW.3.x vs SSDF 1.1 retired PW.3.x — the crosswalk must key on (record, native id)."

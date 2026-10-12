@@ -1,0 +1,86 @@
+schema: "library-state-machine/v1"
+record: sp-800-204d
+extracted: "2026-10-02"
+reviewed_by: ""
+derived: true
+note: >
+  SP 800-204D names no states. Two lifecycles are nonetheless stated in enough detail to model:
+  (1) an artifact moving from build to deployment through attestation, storage, verification and
+  admission (§5.1.1, §5.2, §5.3), and (2) a deployed configuration under GitOps drift monitoring
+  (§5.2.1). The SSC attack itself is defined as a three-stage process (§2.4.2) and is recorded as
+  machine (3). State names are ours; every transition cites the locator and requirement ids whose text
+  establishes it. Transitions marked kind: inferred are implied by the order of the prose, not stated.
+
+# Event catalogue (added by the cross-check pass, 2026-10-02): every transition trigger is either a
+# message of protocol.yaml (flow.step) or a named event defined here with its source basis.
+events:
+  - {id: sign-attestation, protocol_message: "F1-build-attest-verify-admit step 5", locator: "§5.1.1"}
+  - {id: store-attestation, protocol_message: "F1-build-attest-verify-admit step 6", locator: "§5.1.1"}
+  - {id: evaluate-policy, protocol_message: "F1-build-attest-verify-admit step 9", locator: "§5.1.1"}
+  - {id: admission-request, protocol_message: "F1-build-attest-verify-admit step 10", locator: "§5.2"}
+  - {id: drift-notification, protocol_message: "F4-gitops-reconcile step 5", locator: "§5.2.1 GitOps-REQ-4"}
+  - {id: post-build-scan, protocol_message: "F1-build-attest-verify-admit step 7 (scan-then-push-image)", locator: "§5.2 DEPLOY-REQ-5 task 1", definition: "container image scanned for vulnerabilities as soon as it is built, before push"}
+  - {id: attest-vulnerability-findings, protocol_message: "F1-build-attest-verify-admit step 7 (scan-then-push-image; DEPLOY_REQ-4 evidence)", locator: "§5.2 DEPLOY_REQ-4", definition: "evidence that the image was scanned and attested for vulnerability findings is produced"}
+  - {id: periodic-pull-and-compare, protocol_message: "F4-gitops-reconcile steps 3-4 (pull-desired-state, compare-actual-vs-specified)", locator: "§5.2.1 GitOps-REQ-4"}
+  - {id: new-release-from-commit, protocol_message: "F4-gitops-reconcile steps 1-2 (commit-config-change, release)", locator: "§5.2.1 GitOps-REQ-3"}
+  - {id: manual-remediation-via-commit, protocol_message: "F4-gitops-reconcile step 1 (commit-config-change)", locator: "§5.2.1 GitOps-REQ-3/-4", kind: inferred}
+  - {id: automatic-resync, protocol_message: null, locator: "§5.2.1 GitOps-REQ-4", definition: "'Administrators can choose to automatically resync configurations to the defined state.' — named event; F4 error path at step 4"}
+  - {id: build-horizon-elapsed, protocol_message: null, locator: "§5.3 type 3", definition: "time event: code older than the organization's build-horizon period (\"should not be launched\")"}
+  - {id: rescan-finds-critical-defect, protocol_message: null, locator: "§3.2.1 bullet 5 (R-0026)", definition: "internal-repository rescan finds a newly discovered defect above the criticality threshold", kind: inferred}
+  - {id: downstream-consumption, protocol_message: null, locator: "§2.4.2", definition: "named event for 'The attack propagates throughout the chain.'"}
+  - {id: attacker-exploits-target, protocol_message: null, locator: "§2.4.2", definition: "named event for 'The attacker exploits the target to achieve their goals'"}
+
+machines:
+  - id: artifact-admission
+    entity: Artifact (build output / container image)
+    locator: "§5.1.1, §5.2, §5.3"
+    initial: built
+    states:
+      - {id: built, description: "output of a CI process step (§5.1.1 component 4)"}
+      - {id: scanned, description: "container image scanned for vulnerabilities as soon as built, before push (DEPLOY-REQ-5)"}
+      - {id: attested, description: "environment/process/materials/artifacts attestations created and signed (§5.1.1)"}
+      - {id: stored, description: "attestations in tamper-proof, access-controlled storage; artifact in its repository (§5.1.1, Table 1)"}
+      - {id: verified, description: "policy evaluated: required attestations, functionary keys, step order, no tampering (§5.1.1)"}
+      - {id: admitted, description: "cleared for deployment (§5.2)"}
+      - {id: blocked, description: "deployment disallowed by verification policy (§5.2)", terminal: true}
+      - {id: expired, description: "older than the build horizon; should not be launched (§5.3 type 3)", terminal: true}
+    transitions:
+      - {from: built, to: scanned, trigger: post-build-scan, constrained_by: ["sp-800-204d#R-0103"], kind: stated}
+      - {from: built, to: attested, trigger: sign-attestation, constrained_by: ["sp-800-204d#R-0055", "sp-800-204d#R-0065"], kind: stated}
+      - {from: scanned, to: attested, trigger: attest-vulnerability-findings, constrained_by: ["sp-800-204d#R-0100"], kind: stated}
+      - {from: attested, to: stored, trigger: store-attestation, constrained_by: ["sp-800-204d#R-0066"], kind: inferred}
+      - {from: stored, to: verified, trigger: evaluate-policy, guard: "required attestations found AND right functionary keys AND no tamper evidence", constrained_by: ["sp-800-204d#R-0068", "sp-800-204d#R-0070"], kind: stated}
+      - {from: stored, to: blocked, trigger: evaluate-policy, guard: "policy check fails", constrained_by: ["sp-800-204d#R-0101"], kind: inferred}
+      - {from: verified, to: admitted, trigger: admission-request, guard: "generated by the established secure build process AND vulnerability attestation present (recent) AND organization-defined policy allows", constrained_by: ["sp-800-204d#R-0099", "sp-800-204d#R-0100", "sp-800-204d#R-0101"], kind: stated}
+      - {from: verified, to: blocked, trigger: admission-request, guard: "any admission guard fails", constrained_by: ["sp-800-204d#R-0101"], kind: stated}
+      - {from: admitted, to: expired, trigger: build-horizon-elapsed, constrained_by: ["sp-800-204d#R-0113"], kind: stated}
+      - {from: admitted, to: blocked, trigger: rescan-finds-critical-defect, guard: "newly discovered defect above criticality threshold", constrained_by: ["sp-800-204d#R-0026"], kind: inferred}
+
+  - id: gitops-config
+    entity: Deployed configuration (cluster state vs Git)
+    locator: "§5.2.1"
+    initial: in-sync
+    states:
+      - {id: in-sync, description: "actual state equals the state specified in Git"}
+      - {id: drifted, description: "configuration deviates from its specified state"}
+      - {id: pending-manual-remediation, description: "notification sent; manual remediation to be performed"}
+    transitions:
+      - {from: in-sync, to: in-sync, trigger: new-release-from-commit, constrained_by: ["sp-800-204d#R-0108"], kind: stated}
+      - {from: in-sync, to: drifted, trigger: periodic-pull-and-compare, guard: "difference detected", constrained_by: ["sp-800-204d#R-0109"], kind: stated}
+      - {from: drifted, to: in-sync, trigger: automatic-resync, guard: "administrator chose auto-resync", constrained_by: ["sp-800-204d#R-0109"], kind: stated}
+      - {from: drifted, to: pending-manual-remediation, trigger: drift-notification, constrained_by: ["sp-800-204d#R-0109"], kind: stated}
+      - {from: pending-manual-remediation, to: in-sync, trigger: manual-remediation-via-commit, constrained_by: ["sp-800-204d#R-0108", "sp-800-204d#R-0109"], kind: inferred}
+    forbidden:
+      - {transition: "manual runtime change (e.g., kubectl)", constrained_by: ["sp-800-204d#R-0108"], note: "GitOps-REQ-3: changes should not be manually applied at runtime"}
+
+  - id: ssc-attack
+    entity: SSC attack (threat lifecycle)
+    locator: "§2.4.2"
+    initial: compromise
+    states:
+      - {id: compromise, description: "Artifact, step, or actor compromise: An attacker compromises an element of the SSC (see Fig. 1) to modify an artifact or the information of such."}
+      - {id: propagation, description: "Propagation: The attack propagates throughout the chain."}
+      - {id: exploitation, description: "Exploitation: The attacker exploits the target to achieve their goals (e.g., exfiltration of data, cryptojacking).", terminal: true}
+    transitions:
+      - {from: compromise, to: propagation, trigger: downstream-consumption, kind: stated}
+      - {from: propagation, to: exploitation, trigger: attacker-exploits-target, kind: stated}

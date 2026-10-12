@@ -1,0 +1,52 @@
+// Schema lifecycle: experimental | stable | deprecated
+@status("stable")
+
+package gemara
+
+// MappingReference represents a reference to an external document with full metadata.
+#MappingReference: {
+	// id allows this entry to be referenced by other elements
+	id: string
+
+	// title describes the purpose of this mapping reference at a glance
+	title: string
+
+	// version is the version identifier of the artifact being mapped to
+	version: string
+
+	// description is prose regarding the artifact's purpose or content
+	description?: string
+
+	// url is the path where the artifact may be retrieved; preferrably responds with Gemara-compatible YAML/JSON
+	url?: =~"^(https?|file)://[^\\s]+$"
+}
+
+// ArtifactMapping represents a mapping to an external artifact or artifact entry
+#ArtifactMapping: {
+	// reference-id identifies an element from a MappingReference in the artifact's metadata
+	"reference-id": string @go(ReferenceId)
+
+	// remarks is prose regarding the mapped artifact or the mapping relationship
+	remarks?: string
+}
+
+// MultiEntryMapping represents a mapping to an external reference with one or more entries.
+#MultiEntryMapping: {
+	// top-level reference to the MappingReference entry
+	#ArtifactMapping
+
+	// entries is a list of mapping entries
+	entries: [#ArtifactMapping, ...#ArtifactMapping] @go(Entries)
+}
+
+// EntryMapping represents how a specific entry maps to a MappingReference.
+#EntryMapping: {
+	// reference-id is the id for a MappingReference entry in the artifact's metadata
+	"reference-id": string @go(ReferenceId)
+
+	// entry-id is the identifier being mapped to in the referenced artifact
+	"entry-id": string @go(EntryId)
+
+	// remarks is prose describing the mapping relationship
+	remarks?: string
+}

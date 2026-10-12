@@ -1,0 +1,54 @@
+schema: "library-state-machine/v1"
+record: iso-iec-30111-2019
+also_covers: iso-iec-29147-2018     # the same lifecycle seen from the disclosure side; 29147 has no separate state machine file
+source_scope: "free previews of ISO/IEC 30111:2019 and ISO/IEC 29147:2018"
+reviewed_by: ""
+note: >
+  Lifecycle of ONE potential vulnerability (report) at a vendor. Sources of each element:
+  (a) Figure 1 — drawn identically in 30111 §5.1 and 29147 §5.3.1 — `kind: stated`;
+  (b) the phase names of 30111 §7.1.2-§7.1.7 and 29147 §5.6.2-§5.6.8, known from the Contents only —
+      `kind: inferred-from-heading` (bodies paywalled: entry/exit criteria, deadlines and guards unknown);
+  (c) our modelling glue — `kind: inferred`.
+  The phase list is the two standards' own: Preparation → Receipt → Verification → Remediation development →
+  Release → Post-release, plus (29147 only) Embargo period. Preparation is a precondition on the VENDOR, not a
+  state of a report, so it is modelled as a guard.
+
+entity: "potential vulnerability (report)"
+initial: [received-external, identified-internal]
+final: [closed-not-verified, closed]
+
+guards:
+  - id: G-prepared
+    condition: "vendor has (i) an internal vulnerability handling policy (30111 §6.3 shall), (ii) an organizational framework (§6.4), (iii) an external disclosure policy and the capability to receive and publish vulnerability information (29147 Fig 1; Clause 9)"
+    locator: "Fig 1 top boxes; 30111 §6.3; 29147 §5.2 (policy before receiving reports); 30111 §7.1.2 Preparation heading"
+    kind: stated
+
+states:
+  - {id: received-external, label: "Receive vulnerability report from external source", locator: "Fig 1 (29147 lane)", phase: "Receipt (30111 §7.1.3; 29147 §5.6.3)", kind: stated}
+  - {id: identified-internal, label: "Identify vulnerability from internal source", locator: "Fig 1 (30111 lane)", phase: "Receipt", kind: stated}
+  - {id: acknowledged, label: "Acknowledge receipt", locator: "Fig 1; 29147 §6.2.5 heading", phase: "Receipt", kind: stated}
+  - {id: in-verification, label: "Verify report", locator: "Fig 1; 30111 §7.1.4 / 29147 §5.6.4 headings", phase: "Verification", kind: stated}
+  - {id: closed-not-verified, label: "Inform reporter (not verified)", locator: "Fig 1 decision 'No' branch", phase: "Verification", terminal: true, kind: stated}
+  - {id: remediation-development, label: "Develop ... remediation", locator: "Fig 1 'Develop and deploy remediation'; 30111 §7.1.5 / 29147 §5.6.5 headings", phase: "Remediation development", kind: stated}
+  - {id: embargoed, label: "Embargo period", locator: "29147 §5.6.8 heading", phase: "between Remediation development and Release", kind: inferred-from-heading, note: "rules and length not visible; 30111 §6.3 c) 'safeguards to prevent premature disclosure of information about potential vulnerabilities before they are fixed' is the visible policy hook"}
+  - {id: released, label: "... and deploy remediation / Publish advisory", locator: "Fig 1 dashed arrow to 'Publish advisory'; 30111 §7.1.6 / 29147 §5.6.6 Release headings", phase: "Release", kind: stated}
+  - {id: post-release, label: "Engage in post-remediation activities", locator: "Fig 1; 30111 §7.1.7 / 29147 §5.6.7 Post-release headings", phase: "Post-release", kind: stated}
+  - {id: closed, label: "closed", locator: "—", kind: inferred, note: "Fig 1 ends at 'Engage in post-remediation activities' (a terminal shape); an explicit closed state is our modelling"}
+
+transitions:
+  - {id: T1, from: received-external, to: acknowledged, trigger: "vendor sends receipt-acknowledgement (29147 protocol.yaml)", guard: G-prepared, locator: "Fig 1", kind: stated}
+  - {id: T2, from: acknowledged, to: in-verification, trigger: "hand-off from disclosure (29147) to handling (30111)", locator: "Fig 1 solid arrow across lanes", kind: stated}
+  - {id: T3, from: identified-internal, to: in-verification, trigger: "internal finding enters handling", guard: G-prepared, locator: "Fig 1", kind: stated}
+  - {id: T4, from: in-verification, to: closed-not-verified, trigger: "verification outcome = not verified", effect: "inform reporter (external reports only)", locator: "Fig 1 'No' (dashed)", kind: stated}
+  - {id: T5, from: in-verification, to: remediation-development, trigger: "verification outcome = verified", locator: "Fig 1 'Yes'", kind: stated}
+  - {id: T6, from: remediation-development, to: embargoed, trigger: "remediation ready; coordinated release date pending", locator: "29147 §5.6.8 heading", kind: inferred-from-heading}
+  - {id: T7, from: remediation-development, to: released, trigger: "remediation deployed/published; advisory published", effect: "publish advisory (29147 Clause 7)", locator: "Fig 1 dashed arrow", kind: stated}
+  - {id: T8, from: embargoed, to: released, trigger: "embargo ends", locator: "29147 §5.6.8 heading", kind: inferred-from-heading}
+  - {id: T9, from: released, to: post-release, trigger: "advisory and remediation released", locator: "Fig 1", kind: stated}
+  - {id: T10, from: post-release, to: closed, trigger: "post-release activities complete", locator: "—", kind: inferred}
+
+loops_and_side_paths:
+  - {id: S1, on: [acknowledged, in-verification, remediation-development, embargoed], event: "status update exchanged with reporter", locator: "29147 §6.5 On-going communication heading; 30111 §6.5.3.3-I01 'A PSIRT is responsible for maintaining communication with reporters'", kind: inferred-from-heading}
+  - {id: S2, on: [received-external, in-verification, remediation-development], event: "public disclosure or exploitation observed", effect: "unknown — 29147 §5.10 and 30111 §6.5.3.2 (public monitoring) suggest acceleration to release", locator: "29147 §5.10 heading; 30111 §6.5.3.2", kind: inferred}
+
+error_states: [closed-not-verified]

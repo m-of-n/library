@@ -54,3 +54,7 @@ _Everything else in this directory and what it is for._
 
 _What this document does not settle. If there is nothing here, it has not been
 read critically._
+
+## Note — RDF/graph-native serialization (tmodel)
+
+SPDX 3.0.1 defines an **RDF/OWL model with a SHACL profile** ([RDF-model annex](https://spdx.github.io/spdx-spec/v3.0.1/annexes/rdf-model/)) — the most graph-native SBOM standard, a first-class fit if tmodel uses a triple store. (Consolidated here from the former `other/spdx-3-rdf`; bears on tmodel DEC-002.)

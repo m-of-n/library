@@ -1,0 +1,390 @@
+schema: "library-object-model/v1"
+record: slsa-1-2
+reviewed_by: ""
+pass: "object-model pass, separate from the requirements pass: the source re-read with one question — which entity types and relationship edges does SLSA v1.2 define or assume?"
+note: >
+  kind: stated = SLSA defines the term (terminology tables, Definitions, field tables, roles) or names
+  the relationship in the text; inferred = the entity/edge is needed to make the stated text work but
+  SLSA does not name it (flagged in notes). tmodel_mapping names the ARCH-0001 v0.2.0 (iteration 6)
+  class, the DL-0009 proposal (SDL/Gate/Requirement/conformance), "new" (tmodel has no counterpart),
+  or "none" (out of tmodel scope). Locators are page file names + section/anchor.
+objects:
+  # ---------------- parties and roles ----------------
+  - {name: Producer, definition: "A party who creates software and provides it to others. Producers are often also consumers.", attributes: [], locator: "terminology.md § Roles; build-requirements.md § Producer ('the organization that owns and releases the software')", kind: stated, tmodel_mapping: "Party (ARCH-0001 §2b) with relational role supplier/manufacturer (edge, not node attribute)", notes: "a role, not an identity: 'a person or organization may act as more than one role'"}
+  - {name: Consumer, definition: "A party who uses software provided by a producer. The consumer may verify provenance for software they consume or delegate that responsibility to a separate verifier.", attributes: [], locator: "terminology.md § Roles; verifying-artifacts.md § Consumer", kind: stated, tmodel_mapping: "Party with relational role consumer (§2b)"}
+  - {name: Verifier, definition: "A party who inspect an artifact's provenance to determine the artifact's authenticity.", attributes: [rootsOfTrust, expectations], locator: "terminology.md § Roles", kind: stated, tmodel_mapping: "Party + PROV Agent of a verification Activity; new role 'verifier'", notes: "realised as package ecosystem (upload), consumer client, or monitor (verifying-artifacts.md Architecture options)"}
+  - {name: InfrastructureProvider, definition: "A party who provides software or services to other roles.", attributes: [], locator: "terminology.md § Roles", kind: stated, tmodel_mapping: "Party (operator role)"}
+  - {name: Tenant, definition: "An untrusted user that builds an artifact on the platform. The tenant defines the build steps and external parameters.", attributes: [], locator: "terminology.md § Build model", kind: stated, tmodel_mapping: "Party / PROV Agent (untrusted) — ExternalEntity trust level (R-032)"}
+  - {name: PlatformAdmin, definition: "A privileged user with administrative access to the platform, potentially allowing them to tamper with builds or the control plane.", attributes: [], locator: "terminology.md § Build model (Admin)", kind: stated, tmodel_mapping: "Party with ThreatActor facet (insider) — §2b critic M1"}
+  - {name: Organization, definition: "A set of people who collectively create Source Revisions within a Source Repository ... defines the goals of a Source Repository and the methods used to produce new Source Revisions.", attributes: [], locator: "source-requirements.md § Definitions (SCS terms)", kind: stated, tmodel_mapping: "Party (organization) — owner of Asset/Product"}
+  - {name: Administrator, definition: "A human who can perform privileged operations on one or more projects.", attributes: [], locator: "source-requirements.md § Source Roles", kind: stated, tmodel_mapping: "Party role"}
+  - {name: TrustedPerson, definition: "A human who is authorized by the organization to propose and approve changes to the source.", attributes: [], locator: "source-requirements.md § Source Roles", kind: stated, tmodel_mapping: "Party role (approver) — DL-0009 approver of Review"}
+  - {name: TrustedRobot, definition: "Automation authorized by the organization to act in explicitly defined contexts. The robot's identity and codebase cannot be unilaterally influenced.", attributes: [], locator: "source-requirements.md § Source Roles", kind: stated, tmodel_mapping: "PROV SoftwareAgent; new"}
+  - {name: UntrustedPerson, definition: "A human who has limited access to the project.", attributes: [canRead, canPropose, canReview], locator: "source-requirements.md § Source Roles", kind: stated, tmodel_mapping: "Party role"}
+  - {name: AdversaryProfile, definition: "Project contributors / project maintainer / build platform (or SCS) administrators, each with an enumerated capability set.", attributes: [capabilities], locator: "assessing-build-platforms.md § Adversary profiles; assessing-source-systems.md § Adversary profiles", kind: stated, tmodel_mapping: "ThreatActor (ARCH-0001 §1.3) — capability set is new"}
+  # ---------------- build model ----------------
+  - {name: BuildPlatform, definition: "System that allows tenants to run builds. Technically, it is the transitive closure of software and services that must be trusted to faithfully execute the build. It includes software, hardware, people, and organizations.", attributes: ["builder.id", "builder.version", builderDependencies, securityModel, claimedLevel], locator: "terminology.md § Build model (Platform); build-requirements.md § Build Platform; build-provenance.md § Builder", kind: stated, tmodel_mapping: "Component (deployed system) + Party (operator); its trust base is a TrustBoundary", notes: "'Builder' is used only as the provenance field name; one platform with differing security modes MUST have distinct builder.id (R-0211)"}
+  - {name: ControlPlane, definition: "Build platform component that orchestrates each independent build execution and produces provenance. ... managed by an admin and trusted to be outside the tenant's control.", attributes: [signingKey], locator: "terminology.md § Build model; assessing-build-platforms.md § Control plane", kind: stated, tmodel_mapping: "Component (part of BuildPlatform) inside a TrustBoundary"}
+  - {name: BuildEnvironment, definition: "The independent execution context in which the build runs, initialized by the control plane.", attributes: [ephemeral, isolationTechnology], locator: "terminology.md § Build model; assessing-build-platforms.md § Build environment", kind: stated, tmodel_mapping: "Environment / Deployment (ARCH-0001 §3) — runtime exposure"}
+  - {name: BuildCache, definition: "An intermediate artifact storage managed by the platform that maps intermediate artifacts to their explicit inputs.", attributes: [key, writableBy], locator: "terminology.md § Build model; threats.md 'Poison the build cache'", kind: stated, tmodel_mapping: "DataStore (DFD) realized_by Component"}
+  - {name: Build, definition: "Process that converts input sources and dependencies into output artifacts, defined by the tenant and executed within a single build environment on a platform.", attributes: [invocationId, startedOn, finishedOn], locator: "terminology.md § Build model", kind: stated, tmodel_mapping: "PROV Activity (ARCH-0001 §4) — deferred to the radar→tmodel contract (ADR-0001) for build provenance"}
+  - {name: BuildSteps, definition: "The set of actions that comprise a build, defined by the tenant.", attributes: [], locator: "terminology.md § Build model (Steps)", kind: stated, tmodel_mapping: "Process (DFD)"}
+  - {name: ExternalParameters, definition: "The set of top-level, independent inputs to the build, specified by a tenant and used by the control plane to initialize the build.", attributes: [], locator: "terminology.md § Build model; build-provenance.md #externalParameters", kind: stated, tmodel_mapping: "DataFlow into the build Process crossing a TrustBoundary (untrusted input)"}
+  - {name: InternalParameters, definition: "The parameters that are under the control of the entity represented by `builder.id`.", attributes: [], locator: "build-provenance.md #internalParameters", kind: stated, tmodel_mapping: "attribute of the build Activity"}
+  - {name: Dependency, definition: "Artifact that is an input to a build process but that is not a source. In the model, it is always a package.", attributes: [uri, digest], locator: "terminology.md § Software supply chain; build-provenance.md #resolvedDependencies", kind: stated, tmodel_mapping: "Component with uses_component / composed_of edge (ARCH-0001 §1)"}
+  - {name: Artifact, definition: "An immutable blob of data; primarily refers to software, but SLSA can be used for any artifact.", attributes: [digest, mutableLocator], locator: "terminology.md § Software supply chain; attestation-model.md Components", kind: stated, tmodel_mapping: "Component / ProductInstance identity-by-hash (ARCH-0001 §3b)"}
+  - {name: Source, definition: "Artifact that was directly authored or reviewed by persons, without modification. It is the beginning of the supply chain", attributes: [], locator: "terminology.md § Software supply chain", kind: stated, tmodel_mapping: "Component (source) — new subtype", notes: "the Build model has 'no formal notion of source': the repo reference is an external parameter, the fetched content a dependency"}
+  - {name: Package, definition: "Artifact that is distributed. In the model, it is always the output of a build process, though that build process can be a no-op.", attributes: [], locator: "terminology.md § Software supply chain; § Distribution model", kind: stated, tmodel_mapping: "Product / ProductInstance"}
+  - {name: PackageName, definition: "The primary identifier for a mutable collection of artifacts that all represent different versions of the same software ... the primary unit being protected in SLSA.", attributes: [ecosystem, registry, maintainer, canonicalSourceLocation], locator: "terminology.md § Distribution model", kind: stated, tmodel_mapping: "Product (versioned family) — 'Product vs ProductInstance' split"}
+  - {name: PackageArtifact, definition: "A file or other immutable object that is intended for distribution.", attributes: [digest], locator: "terminology.md § Distribution model", kind: stated, tmodel_mapping: "ProductInstance"}
+  - {name: PackageEcosystem, definition: "A set of rules and conventions governing how packages are distributed, including how clients resolve a package name into one or more specific artifacts.", attributes: [formal], locator: "terminology.md § Distribution model; verifying-artifacts.md § Package ecosystem", kind: stated, tmodel_mapping: "new (governance context); Party for its packaging authority"}
+  - {name: DistributionPlatform, definition: "An entity responsible for mapping package names to immutable package artifacts. (Package registry is a specific type.)", attributes: [], locator: "terminology.md § Distribution model", kind: stated, tmodel_mapping: "Component (registry service)"}
+  - {name: PackageManagerClient, definition: "Client-side tooling to interact with a package ecosystem.", attributes: [], locator: "terminology.md § Distribution model", kind: stated, tmodel_mapping: "Component"}
+  - {name: Release, definition: "A single 'release' of a project, package, or library might include multiple artifacts.", attributes: [], locator: "distributing-provenance.md § Relationship between releases and attestations", kind: stated, tmodel_mapping: "ProductInstance group / version", notes: "SLSA binds attestations to artifacts, not releases (R-0044)"}
+  - {name: TransparencyLog, definition: "third-party log outside the source repository and package registry where a hash of the attestation and a pointer are published (e.g. Rekor)", attributes: [], locator: "distributing-provenance.md § Where attestations are published", kind: stated, tmodel_mapping: "none (see SCITT/transparency records)"}
+  # ---------------- attestation layer ----------------
+  - {name: Attestation, definition: "An authenticated statement (metadata) about a software artifact or collection of software artifacts.", attributes: [attester, predicateType], locator: "terminology.md; attestation-model.md § Overview", kind: stated, tmodel_mapping: "Assertion (ARCH-0001 §4) — but signed and externally produced; closest to a reified Assertion with a cryptographic provenance edge", notes: "SLSA's attestation is an authenticated claim; tmodel's Assertion is an epistemic claim under review — same shape (node + subject + predicate + who said it), different trust semantics"}
+  - {name: Envelope, definition: "Authenticates the message.", attributes: [message, signature], locator: "attestation-model.md Components", kind: stated, tmodel_mapping: "new (signature container) — DSSE"}
+  - {name: Signature, definition: "Denotes the attester who created the attestation.", attributes: [keyid], locator: "attestation-model.md Components", kind: stated, tmodel_mapping: "new"}
+  - {name: Statement, definition: "Binds the attestation to a particular set of artifacts.", attributes: [_type, subject, predicateType, predicate], locator: "attestation-model.md Components; in-toto Statement v1", kind: stated, tmodel_mapping: "Assertion (subject + predicate)"}
+  - {name: Subject, definition: "Identifies which artifacts the predicate applies to.", attributes: [name, digest], locator: "attestation-model.md Components; build-provenance.md (subject = output artifacts)", kind: stated, tmodel_mapping: "edge Assertion -> Component"}
+  - {name: Predicate, definition: "Metadata about the subject ... Arbitrary metadata in a predicate-specific schema.", attributes: [predicateType], locator: "attestation-model.md Components", kind: stated, tmodel_mapping: "Assertion body"}
+  - {name: Link, definition: "(repeated) Reference to a related artifact, such as build dependency. Effectively forms a hypergraph where the nodes are artifacts and the hyperedges are attestations.", attributes: [], locator: "attestation-model.md Components", kind: stated, tmodel_mapping: "edge (typed, ADR-0004 Edge-Rich-KG)"}
+  - {name: Bundle, definition: "A collection of Attestations, which are usually but not necessarily related.", attributes: [], locator: "attestation-model.md Components (JSON Lines)", kind: stated, tmodel_mapping: "none"}
+  - {name: ResourceDescriptor, definition: "in-toto ResourceDescriptor — uri, digest, name, downloadLocation, mediaType, content, annotations", attributes: [uri, digest, name, downloadLocation, mediaType, content, annotations], locator: "build-provenance.md § Schema (#ResourceDescriptor)", kind: stated, tmodel_mapping: "Component reference (purl/CPE + hash) — external_refs"}
+  - {name: Provenance, definition: "Attestation (metadata) describing how the outputs were produced, including identification of the platform and external parameters.", attributes: [buildDefinition, runDetails], locator: "terminology.md § Build model; build-provenance.md § Model", kind: stated, tmodel_mapping: "PROV-O Entity+Activity record; ARCH-0001 §4 defers 'Compile/SLSA build provenance' to the radar→tmodel contract (ADR-0001), out of MVP (F7)"}
+  - {name: BuildDefinition, definition: "The input to the build ... describes all of the inputs to the build.", attributes: [buildType, externalParameters, internalParameters, resolvedDependencies], locator: "build-provenance.md § BuildDefinition", kind: stated, tmodel_mapping: "attributes of the PROV Activity"}
+  - {name: BuildType, definition: "Identifies the template for how to perform the build and interpret the parameters and dependencies.", attributes: [uri, schema], locator: "build-provenance.md #buildType; § Index of build types", kind: stated, tmodel_mapping: "new (process template / method)"}
+  - {name: RunDetails, definition: "Details specific to this particular execution of the build.", attributes: [builder, metadata, byproducts], locator: "build-provenance.md § RunDetails", kind: stated, tmodel_mapping: "attributes of the PROV Activity"}
+  - {name: Byproduct, definition: "Additional artifacts generated during the build that are not considered the 'output' of the build but that might be needed during debugging or incident response.", attributes: [], locator: "build-provenance.md #runDetailsByproducts", kind: stated, tmodel_mapping: "Evidence (logs) — DL-0009 Evidence"}
+  - {name: VerificationSummaryAttestation, definition: "An attestation that some entity (`verifier`) verified one or more software artifacts ... by evaluating the artifact and a `bundle` of attestations against some `policy`.", attributes: [verifier, timeVerified, resourceUri, policy, inputAttestations, verificationResult, verifiedLevels, dependencyLevels, slsaVersion], locator: "verification_summary.md § Model", kind: stated, tmodel_mapping: "DL-0009 conformance check result (R-042) + Review (approval) — the closest external analogue of a 'conformance verdict'"}
+  - {name: SourceVSA, definition: "Source verification summary attestations ... issued by some authority that has sufficient evidence to make the determination of a given revision's source level.", attributes: ["subject.digest(revision id)", sourceRefs, resourceUri, verifiedLevels], locator: "source-requirements.md § Source verification summary attestation", kind: stated, tmodel_mapping: "as VerificationSummaryAttestation, subject = SourceRevision"}
+  - {name: SourceProvenance, definition: "Information about how a Source Revision came to exist, where it was hosted, when it was generated, what process was used, who the contributors were, and which parent revisions preceded it.", attributes: [format (SCS-defined)], locator: "source-requirements.md § Definitions; #source-provenance; § Source provenance attestations", kind: stated, tmodel_mapping: "PROV Activity/Entity for change management — custody provenance (deferred, §3b/§4)"}
+  - {name: Policy, definition: "Describes the policy that the `subject` was verified against.", attributes: [uri, digest], locator: "verification_summary.md #policy", kind: stated, tmodel_mapping: "DL-0009 Requirement set / Gate exit criterion"}
+  - {name: SlsaResult, definition: "The result of evaluating an artifact (or set of artifacts) against SLSA.", attributes: [value], locator: "verification_summary.md § SlsaResult", kind: stated, tmodel_mapping: "conformance status value (R-042)"}
+  - {name: VerifiedProperty, definition: "a common way to express those properties (and their requirements) without needing to fit them into existing levels or introduce new tracks", attributes: [name], locator: "verified-properties.md (SLSA_SOURCE_TWO_PARTY_REVIEWED, SLSA_BUILD_REPRODUCED)", kind: stated, tmodel_mapping: "Requirement satisfied outside a level (DL-0009 Requirement with no Gate)"}
+  - {name: OrgSourceProperty, definition: "organization-provided properties embedded in verifiedLevels, prefixed ORG_SOURCE_ (external) or ORG_SOURCE_INTERNAL_ (internal)", attributes: [name, audience], locator: "source-requirements.md § Additional properties", kind: stated, tmodel_mapping: "organization-defined Requirement / control (DL-0009)"}
+  # ---------------- verification model ----------------
+  - {name: Expectations, definition: "A set of constraints on the package's provenance metadata. The package producer sets expectations for a package, whether explicitly or implicitly.", attributes: [builderIdentity, canonicalSourceRepository, buildType, externalParameters, formationModel], locator: "terminology.md § Verification model; verifying-artifacts.md § Forming Expectations; verifying-source.md § Forming Expectations", kind: stated, tmodel_mapping: "new — a policy object keyed by Product (package name) / branch", notes: "'expectations are tied to a package name, whereas provenance is tied to an artifact'"}
+  - {name: RootOfTrust, definition: "the recognized builder identities and the maximum SLSA Build level each builder is trusted up to ... map from (builder public key identity, builder.id) to (SLSA Build level)", attributes: [publicKey, builderId, maxLevel], locator: "verifying-artifacts.md § Step 1; verifying-source.md § Step 1", kind: stated, tmodel_mapping: "new — trust anchor (R-032 entity/agent trust, partial)"}
+  - {name: Monitor, definition: "a service that verifies provenance for a set of packages and publishes the result of that verification.", attributes: [expectations], locator: "verifying-artifacts.md § Monitor", kind: stated, tmodel_mapping: "Component + verifier role"}
+  - {name: PlatformAssessment, definition: "Build platforms are assessed for their ability to meet SLSA requirements at the stated level; organizations can either self-attest to their answers or seek certification from a third-party auditor", attributes: [mode (self-attestation | third-party certification), cadence, evidence], locator: "terminology.md § Verification model; assessing-build-platforms.md § Builder evaluation; assessing-source-systems.md § Source control system evaluation", kind: stated, tmodel_mapping: "Review (ARCH-0001 §5) over a Component; DL-0009 conformance assessment"}
+  - {name: AssessmentPrompt, definition: "sample questions consumers can ask when assessing a build platform / SCS", attributes: [component, question, examples], locator: "assessing-build-platforms.md; assessing-source-systems.md", kind: stated, tmodel_mapping: "DL-0009 Requirement (verification method) — questionnaire item"}
+  # ---------------- levels, tracks, requirements, threats ----------------
+  - {name: Track, definition: "A SLSA track focuses on a particular aspect of a supply chain, such as the Build Track.", attributes: [name (Build | Source)], locator: "about.md § How SLSA works; tracks.md", kind: stated, tmodel_mapping: "DL-0009 SDL dimension — new"}
+  - {name: Level, definition: "Within each track, ascending levels indicate increasingly hardened security practices.", attributes: [track, number, mnemonic, summary, intendedFor, benefits], locator: "about.md; build-track-basics.md; source-requirements.md § Basics", kind: stated, tmodel_mapping: "maturity/conformance level — new (DL-0009 Gate is the nearest, but a Level is cumulative, not ordered-in-time)"}
+  - {name: Requirement, definition: "a level-scoped requirement row with an implementer (Producer, Build platform, Organization, Source Control System) and ✓ per level", attributes: [anchor, implementer, levels, degree], locator: "build-requirements.md (Implementer/Requirement/Degree table); source-requirements.md § Requirements tables", kind: stated, tmodel_mapping: "DL-0009 Requirement (R-042/R-044)"}
+  - {name: Threat, definition: "supply chain threats clustered by where in the pipeline they occur, labeled (A) through (I), plus dependency, availability and verification threats", attributes: [category, title, threat, mitigation, example, addressedAt], locator: "threats.md; threats-overview.md", kind: stated, tmodel_mapping: "AttackPattern (generic) — the A–I letter is a supply-chain stage tag (cf. LifecyclePhase / Kill-Chain phase, ARCH-0001 §2a/§3b)"}
+  - {name: Mitigation, definition: "the *Mitigation* text of each threat entry, often a SLSA level or 'expectations' / 'verification'", attributes: [], locator: "threats.md", kind: stated, tmodel_mapping: "Mitigation (generic) / MitigationInstance with kind technical|process (R-040)"}
+  - {name: ThreatCategory, definition: "(A) Producer, (B) Modifying the source, (C) Source code management, (D) External build parameters, (E) Build process, (F) Artifact publication, (G) Distribution channel, (H) Package selection, (I) Usage", attributes: [letter, class (source | build | usage)], locator: "threats.md § Overview", kind: stated, tmodel_mapping: "LifecyclePhase-like stage enum for supply-chain threats — new"}
+  # ---------------- source model ----------------
+  - {name: VersionControlSystem, definition: "a system of software and protocols for managing the version history of a set of files.", attributes: [], locator: "source-requirements.md § Definitions", kind: stated, tmodel_mapping: "Component"}
+  - {name: SourceControlSystem, definition: "a platform or combination of services (self-hosted or SaaS) that hosts a Source Repository and provides a trusted foundation for managing source revisions by enforcing policies for authentication, authorization, and change management", attributes: [identityManagement, components (change mgmt interface, control configuration, control plane, verifier, storage)], locator: "source-requirements.md § Definitions; assessing-source-systems.md § components", kind: stated, tmodel_mapping: "Component + Party(operator)"}
+  - {name: SourceRepository, definition: "A self-contained unit that holds the content and revision history for a set of files, along with related metadata like Branches and Tags.", attributes: [repositoryId (stable locator)], locator: "source-requirements.md § Definitions; #repository-ids", kind: stated, tmodel_mapping: "Component (source)"}
+  - {name: SourceRevision, definition: "A specific, logically immutable snapshot of the repository's tracked files. It is uniquely identified by a revision identifier", attributes: [revisionId, content, author, timestamp, parents], locator: "source-requirements.md § Definitions; #revision-ids", kind: stated, tmodel_mapping: "ProductInstance-like versioned identity (time/version axis owed by ARCH-0001 §3b)"}
+  - {name: NamedReference, definition: "A user-friendly name for a specific source revision, such as `main` or `v1.2.3`.", attributes: [name, protected], locator: "source-requirements.md § Definitions", kind: stated, tmodel_mapping: "new"}
+  - {name: Branch, definition: "A Named Reference that moves to track the Change History of a cohesive line of development within a Source Repository.", attributes: [], locator: "source-requirements.md § Definitions", kind: stated, tmodel_mapping: "new (subtype of NamedReference)"}
+  - {name: Tag, definition: "A Named Reference that is intended to be immutable.", attributes: [], locator: "source-requirements.md § Definitions #tag", kind: stated, tmodel_mapping: "new (subtype of NamedReference)"}
+  - {name: Change, definition: "A modification to the state of the Source Repository, such as creation of a new Source Revision ... or creation, deletion, or modification of a Named Reference.", attributes: [when, who, newRevisionId], locator: "source-requirements.md § Definitions; #history", kind: stated, tmodel_mapping: "PROV Activity"}
+  - {name: ProposedChange, definition: "A proposal to make a Change in a Source Repository.", attributes: [description, discussion], locator: "source-requirements.md § Definitions; source-example-controls.md Immutable Change Discussion", kind: stated, tmodel_mapping: "Assertion (proposal) awaiting Review — matches ARCH-0001 §4 'proposal and verdict separate'"}
+  - {name: ChangeHistory, definition: "A record of the history of Source Revisions that preceded a specific revision.", attributes: [], locator: "source-requirements.md § Definitions; #history", kind: stated, tmodel_mapping: "provenance chain (PROV wasDerivedFrom)"}
+  - {name: Approval, definition: "agreement to a change by a trusted person; approvals are for a specific context, such as a repo + branch", attributes: [approver, context, revision], locator: "source-requirements.md #two-party-review", kind: stated, tmodel_mapping: "Review (ARCH-0001 §4/§5) with verdict approve"}
+  - {name: TechnicalControl, definition: "the organization configured settings that are used to determine if a revision can be introduced into storage within any particular context and who has access to those revisions", attributes: [meaning (documented), enforcedOn], locator: "assessing-source-systems.md § Technical controls; source-requirements.md #technical-controls, #protected-refs", kind: stated, tmodel_mapping: "MitigationInstance kind=technical (R-040) — with continuity"}
+  - {name: ControlContinuity, definition: "'Control continuity' reflects an organization's ongoing commitment to a technical control.", attributes: [control, startRevision, lapsed], locator: "source-requirements.md #continuity", kind: stated, tmodel_mapping: "new — time-scoped validity of a MitigationInstance (needs valid_from/valid_to, ARCH-0001 §3b)"}
+  - {name: SafeExpungingProcess, definition: "process by which the organization may expunge (remove) content from a repository and its change history without leaving a public record, only to meet legal or privacy compliance requirements", attributes: [documentation, log], locator: "source-requirements.md #safe-expunging-process", kind: stated, tmodel_mapping: "process-kind Mitigation / governance procedure (R-040 kind=process)"}
+  - {name: ExampleControl, definition: "organization-defined controls over and above SLSA requirements (Expert Code Review, Review Every Single Revision, Automated testing, Every revision reachable from a branch was approved, Immutable Change Discussion, Merge trains)", attributes: [summary, intendedFor, benefits, requirements], locator: "source-example-controls.md", kind: stated, tmodel_mapping: "DL-0009 Requirement (organization profile)"}
+  - {name: SigningKey, definition: "secret material used for authenticating the provenance, for example the signing key used to generate a digital signature", attributes: [storage, accessibleTo, rotation], locator: "build-requirements.md #provenance-unforgeable; assessing-build-platforms.md Managing cryptographic secrets", kind: stated, tmodel_mapping: "Asset (high-value) — new as first-class"}
+  - {name: ArtifactRelease (inferred join), definition: "membership of an artifact in a release — needed to state 'the set of attestations for a given release MAY grow'", attributes: [], locator: "distributing-provenance.md", kind: inferred, tmodel_mapping: "edge ProductInstance -> Product version", notes: "inferred: SLSA names releases and artifacts but no join object"}
+
+edges:
+  - {name: chooses, from: Producer, to: BuildPlatform, cardinality: "N:M", definition: "producer MUST select a build platform capable of the desired level", locator: "build-requirements.md #choose-an-appropriate-build-platform (R-0003)", kind: stated, tmodel_mapping: "Party -uses-> Component (new edge type)"}
+  - {name: chooses, from: Organization, to: SourceControlSystem, cardinality: "N:M", definition: "organization MUST select an SCS capable of the desired Source level", locator: "source-requirements.md #choose-scs (R-0076)", kind: stated, tmodel_mapping: "Party -uses-> Component"}
+  - {name: invokes, from: Tenant, to: Build, cardinality: "1:N", definition: "A tenant invokes the build by specifying external parameters through an interface", locator: "terminology.md § Build model step 1", kind: stated, tmodel_mapping: "PROV wasStartedBy / wasAssociatedWith"}
+  - {name: runs_on, from: Build, to: BuildPlatform, cardinality: "N:1", definition: "We model a build as running on a multi-tenant build platform", locator: "terminology.md § Build model", kind: stated, tmodel_mapping: "runs_on (ARCH-0001 §0)"}
+  - {name: executes_in, from: Build, to: BuildEnvironment, cardinality: "1:1", definition: "executed within a single build environment on a platform", locator: "terminology.md § Build model (Build)", kind: stated, tmodel_mapping: "runs_on"}
+  - {name: part_of, from: ControlPlane, to: BuildPlatform, cardinality: "1:1", definition: "Build platform component that orchestrates each independent build execution", locator: "terminology.md § Build model", kind: stated, tmodel_mapping: composed_of}
+  - {name: isolated_from, from: BuildEnvironment, to: "BuildEnvironment | ControlPlane", cardinality: "N:N", definition: "Each build environment must be isolated from the control plane and from all other build environments", locator: "assessing-build-platforms.md § Build environment; build-requirements.md #isolated", kind: stated, tmodel_mapping: "TrustBoundary between Components (in_trust_zone)"}
+  - {name: parameterized_by, from: Build, to: ExternalParameters, cardinality: "1:1", definition: "top-level, independent inputs to the build", locator: "terminology.md; build-provenance.md § Model", kind: stated, tmodel_mapping: "DataFlow"}
+  - {name: consumes, from: Build, to: Dependency, cardinality: "N:M", definition: "Artifacts fetched during initialization or execution of the build process", locator: "terminology.md (Dependencies); build-provenance.md #resolvedDependencies", kind: stated, tmodel_mapping: "uses_component / PROV used"}
+  - {name: produces, from: Build, to: Artifact, cardinality: "1:N", definition: "produces one or more output artifacts", locator: "terminology.md § Build model step 3", kind: stated, tmodel_mapping: "PROV wasGeneratedBy (inverse)"}
+  - {name: uses_cache, from: Build, to: BuildCache, cardinality: "N:M", definition: "A build may share build caches with any subsequent build running on the platform", locator: "terminology.md (Build caches)", kind: stated, tmodel_mapping: "DataFlow to DataStore"}
+  - {name: generates, from: ControlPlane, to: Provenance, cardinality: "1:N", definition: "the control plane outputs provenance describing this whole process (L2+)", locator: "terminology.md step 4; build-requirements.md #provenance-authentic (R-0019)", kind: stated, tmodel_mapping: "PROV wasGeneratedBy"}
+  - {name: signs, from: SigningKey, to: Attestation, cardinality: "1:N", definition: "digital signature from a private key accessible only to the build platform component that generated the provenance attestation", locator: "build-requirements.md #provenance-authentic (R-0017)", kind: stated, tmodel_mapping: "new (cryptographic provenance of an Assertion)"}
+  - {name: describes (subject), from: Attestation, to: Artifact, cardinality: "N:M", definition: "Subject: Identifies which artifacts the predicate applies to.", locator: "attestation-model.md; build-provenance.md", kind: stated, tmodel_mapping: "Assertion -about-> Component"}
+  - {name: identifies_builder, from: Provenance, to: BuildPlatform, cardinality: "N:1", definition: "runDetails.builder.id: URI indicating the transitive closure of the trusted build platform ... the sole determiner of the SLSA Build level", locator: "build-provenance.md #builder.id", kind: stated, tmodel_mapping: "PROV wasAttributedTo"}
+  - {name: has_type, from: BuildDefinition, to: BuildType, cardinality: "N:1", definition: "buildType identifies the template", locator: "build-provenance.md #buildType", kind: stated, tmodel_mapping: "new"}
+  - {name: resolved_dependency, from: Provenance, to: ResourceDescriptor, cardinality: "1:N", definition: "resolvedDependencies — best effort", locator: "build-provenance.md #resolvedDependencies", kind: stated, tmodel_mapping: "uses_component (with completeness flag)"}
+  - {name: links, from: Predicate, to: Artifact, cardinality: "N:M", definition: "Link ... Effectively forms a hypergraph where the nodes are artifacts and the hyperedges are attestations.", locator: "attestation-model.md Components", kind: stated, tmodel_mapping: "typed edge (ADR-0004)"}
+  - {name: bound_to, from: Attestation, to: Artifact, cardinality: "N:1", definition: "Attestations SHOULD be bound to artifacts, not releases.", locator: "distributing-provenance.md (R-0044)", kind: stated, tmodel_mapping: "Assertion -about-> Component"}
+  - {name: published_in, from: Attestation, to: "PackageEcosystem | TransparencyLog | Release", cardinality: "N:M", definition: "Producers MUST publish attestations in at least one place", locator: "distributing-provenance.md (R-0050..R-0053)", kind: stated, tmodel_mapping: "external_refs"}
+  - {name: resolves_to, from: PackageName, to: PackageArtifact, cardinality: "1:N (over time)", definition: "a distribution platform ... resolve[s] a mutable package name into an immutable package artifact", locator: "terminology.md § Distribution model", kind: stated, tmodel_mapping: "Product -has_instance-> ProductInstance"}
+  - {name: distributed_by, from: PackageArtifact, to: DistributionPlatform, cardinality: "N:M", definition: "To publish a package artifact, the software producer asks the registry to update this mapping", locator: "terminology.md § Distribution model", kind: stated, tmodel_mapping: "supplied_by / distribution edge"}
+  - {name: governs, from: PackageEcosystem, to: PackageName, cardinality: "1:N", definition: "A package name is specific to an ecosystem + registry", locator: "terminology.md (Package name)", kind: stated, tmodel_mapping: "new"}
+  - {name: keyed_by, from: Expectations, to: "PackageName | NamedReference", cardinality: "N:1", definition: "expectations are tied to a package name, whereas provenance is tied to an artifact (build); expectations are tied to a repository branch or tag (source)", locator: "verifying-artifacts.md / verifying-source.md § Forming Expectations", kind: stated, tmodel_mapping: "new"}
+  - {name: sets, from: "Producer | PackageEcosystem | Consumer", to: Expectations, cardinality: "N:M", definition: "The package producer sets expectations ... consumers can form their own expectations or use the defaults", locator: "terminology.md § Verification model; verifying-artifacts.md § Consumer", kind: stated, tmodel_mapping: "Party -authored-> policy"}
+  - {name: trusts_up_to, from: Verifier, to: RootOfTrust, cardinality: "N:M", definition: "recognized builder identities and the maximum SLSA Build level each builder is trusted up to (the RootOfTrust entry names a BuildPlatform or SCS identity and a maximum Level; endpoint normalised by verify pass 2026-10-02)", locator: "verifying-artifacts.md § Step 1; verifying-source.md § Step 1", kind: stated, tmodel_mapping: "new — trust edge with a level attribute (R-032)"}
+  - {name: verifies_against, from: Verifier, to: Expectations, cardinality: "N:M", definition: "compare each package artifact's actual provenance to those expectations", locator: "tracks.md; verifying-artifacts.md § Step 2", kind: stated, tmodel_mapping: "conformance check (R-042)"}
+  - {name: issues, from: Verifier, to: VerificationSummaryAttestation, cardinality: "1:N", definition: "some entity (`verifier`) verified one or more software artifacts", locator: "verification_summary.md § Model", kind: stated, tmodel_mapping: "Review -produces-> verdict"}
+  - {name: evaluated_against, from: VerificationSummaryAttestation, to: Policy, cardinality: "N:1", definition: "Describes the policy that the `subject` was verified against.", locator: "verification_summary.md #policy", kind: stated, tmodel_mapping: "conformance -against-> Requirement set"}
+  - {name: input_attestation, from: VerificationSummaryAttestation, to: Attestation, cardinality: "N:M", definition: "The collection of attestations that were used to perform verification.", locator: "verification_summary.md #inputAttestations", kind: stated, tmodel_mapping: "PROV used (evidence)"}
+  - {name: asserts_level, from: VerificationSummaryAttestation, to: "Level | VerifiedProperty", cardinality: "1:N (one level per track)", definition: "verifiedLevels: the highest level of each track verified for the artifact (and not its dependencies)", locator: "verification_summary.md #verifiedLevels (R-0236)", kind: stated, tmodel_mapping: "conformance status"}
+  - {name: counts_dependency_levels, from: VerificationSummaryAttestation, to: Level, cardinality: "1:N (map level->count)", definition: "A count of the dependencies at each SLSA level.", locator: "verification_summary.md #dependencyLevels", kind: stated, tmodel_mapping: "aggregate over uses_component closure"}
+  - {name: implies, from: Level, to: Level, cardinality: "1:N (all lower levels in the same track)", definition: "each SLSA level implies all levels below it", locator: "verification_summary.md #verifiedLevels; § SlsaResult", kind: stated, tmodel_mapping: "new (ordered maturity)"}
+  - {name: belongs_to, from: Level, to: Track, cardinality: "N:1", definition: "Within each track, ascending levels", locator: "about.md § How SLSA works", kind: stated, tmodel_mapping: "new"}
+  - {name: required_at, from: Requirement, to: Level, cardinality: "N:M", definition: "✓ columns of the requirement tables", locator: "build-requirements.md; source-requirements.md", kind: stated, tmodel_mapping: "DL-0009 Requirement -due_at-> Gate (closest)"}
+  - {name: implemented_by, from: Requirement, to: "Producer | BuildPlatform | Organization | SourceControlSystem", cardinality: "N:1", definition: "Implementer column / table heading", locator: "build-requirements.md § Build levels table; source-requirements.md § Organization / § Source Control System", kind: stated, tmodel_mapping: "Requirement -actor-> Party role"}
+  - {name: mitigated_by, from: Threat, to: "Level | Requirement | Expectations | PlatformAssessment", cardinality: "N:M", definition: "each threat's Mitigation and its level tag (Build L1/L2/L3, Source L2+..L4, expectations, verification)", locator: "threats.md", kind: stated, tmodel_mapping: "AttackPattern -mitigated_by-> Mitigation (D3FEND slot)"}
+  - {name: in_category, from: Threat, to: ThreatCategory, cardinality: "N:1", definition: "We describe and cluster threats based on where in the software development pipeline those threats occur, labeled (A) through (I).", locator: "threats.md § Overview", kind: stated, tmodel_mapping: "applies_in_phase (ARCH-0001 §3b) — analogous stage tag"}
+  - {name: recurses_through, from: Threat, to: Dependency, cardinality: "N:M", definition: "dependencies are highly recursive, so each dependency has its own threats (A) through (I)", locator: "threats.md § Overview; § Dependency threats", kind: stated, tmodel_mapping: "vuln propagation along uses_component (R-027a)"}
+  - {name: assesses, from: PlatformAssessment, to: "BuildPlatform | SourceControlSystem", cardinality: "N:1", definition: "Build platforms are assessed for their ability to meet SLSA requirements at the stated level", locator: "terminology.md § Verification model", kind: stated, tmodel_mapping: "Review -of-> Component"}
+  - {name: considers, from: PlatformAssessment, to: AdversaryProfile, cardinality: "N:M", definition: "evaluate the build platform's ability to defend against the following types of adversaries", locator: "assessing-build-platforms.md § Adversary profiles", kind: stated, tmodel_mapping: "ThreatActor in scope of a review"}
+  - {name: hosts, from: SourceControlSystem, to: SourceRepository, cardinality: "1:N", definition: "hosts a Source Repository", locator: "source-requirements.md § Definitions", kind: stated, tmodel_mapping: "runs_on / stored_in"}
+  - {name: contains, from: SourceRepository, to: SourceRevision, cardinality: "1:N", definition: "holds the content and revision history", locator: "source-requirements.md § Definitions", kind: stated, tmodel_mapping: composed_of}
+  - {name: parent_of, from: SourceRevision, to: SourceRevision, cardinality: "N:M", definition: "parent revision(s) ... ancestry relationships", locator: "source-requirements.md § Definitions; #history", kind: stated, tmodel_mapping: "PROV wasDerivedFrom"}
+  - {name: points_to, from: NamedReference, to: SourceRevision, cardinality: "N:1 (at a time)", definition: "A user-friendly name for a specific source revision", locator: "source-requirements.md § Definitions", kind: stated, tmodel_mapping: "new (time-varying edge)"}
+  - {name: updates, from: Change, to: NamedReference, cardinality: "N:1", definition: "creation, deletion, or modification of a Named Reference", locator: "source-requirements.md § Definitions; #history", kind: stated, tmodel_mapping: "PROV Activity"}
+  - {name: approved_by, from: ProposedChange, to: TrustedPerson, cardinality: "N:M (≥2 at L4)", definition: "Changes in protected branches MUST be agreed to by two or more trusted persons", locator: "source-requirements.md #two-party-review (R-0113)", kind: stated, tmodel_mapping: "Review (approve) -on-> Assertion"}
+  - {name: enforced_on, from: TechnicalControl, to: NamedReference, cardinality: "N:M", definition: "enforce customized technical controls for Named References", locator: "source-requirements.md #protected-refs", kind: stated, tmodel_mapping: "MitigationInstance -applies_to-> Component"}
+  - {name: continuity_from, from: ControlContinuity, to: SourceRevision, cardinality: "N:1", definition: "continuity MUST be established and tracked from a specific start revision", locator: "source-requirements.md #continuity (R-0101)", kind: stated, tmodel_mapping: "valid_from (missing time axis)"}
+  - {name: about_revision, from: "SourceProvenance | SourceVSA", to: SourceRevision, cardinality: "N:1", definition: "associated with the revision identifier delivered to consumers", locator: "source-requirements.md #source-provenance; § Source VSA", kind: stated, tmodel_mapping: "Assertion -about-> Component"}
+  - {name: based_on, from: SourceVSA, to: SourceProvenance, cardinality: "1:N", definition: "at Level 2+ the SCS MUST use the SCS-issued source provenance when issuing the VSAs", locator: "source-requirements.md #source-summary (R-0098)", kind: stated, tmodel_mapping: "PROV wasDerivedFrom"}
+  - {name: attributed_to, from: Change, to: "TrustedPerson | TrustedRobot | UntrustedPerson", cardinality: "N:1", definition: "the SCS MUST record all changes to Named References, including when they occurred, who made them", locator: "source-requirements.md #history (R-0099); #identity-management", kind: stated, tmodel_mapping: "PROV wasAssociatedWith"}
+  - {name: owns, from: Organization, to: SourceRepository, cardinality: "1:N", definition: "The expected process for creating a new revision is determined solely by that repository's owner (the organization)", locator: "tracks.md § Source Track; source-requirements.md § Objective", kind: stated, tmodel_mapping: "owned_by (ARCH-0001 §2b)"}
+  - {name: groups, from: Release, to: Artifact, cardinality: "1:N", definition: "A single release ... might include multiple artifacts", locator: "distributing-provenance.md", kind: stated, tmodel_mapping: "ProductInstance group"}
+  - {name: same_party_as, from: "Producer | Consumer | Verifier | InfrastructureProvider", to: "Party (tmodel ARCH-0001 §2b identity; not a SLSA-defined object)", cardinality: "N:1", definition: "a person or organization may act as more than one role in a particular software supply chain", locator: "terminology.md § Roles", kind: inferred, tmodel_mapping: "ARCH-0001 §2b one identity, many facets (critic M1) — SLSA states the many-roles fact; the identity node is our inference"}
+  - {name: protects (inferred), from: "Level", to: "PackageName", cardinality: "N:M", definition: "the package name is the primary unit being protected in SLSA ... the primary identifier to which consumers attach expectations", locator: "terminology.md § Distribution model", kind: inferred, tmodel_mapping: "none", notes: "SLSA states the package name is the protected unit; level-to-name binding is our inference (levels attach to artifacts via provenance)"}
+  - name: "wraps"
+    from: "Envelope"
+    to: "Statement"
+    cardinality: "1:1"
+    definition: "Envelope: Authenticates the message. At a minimum, it MUST contain: Message: Content (statement) of the attestation."
+    locator: "attestation-model.md § Model and Terminology (R-0171)"
+    kind: stated
+    tmodel_mapping: "Assertion carrier (signature container around the Assertion body)"
+    notes: "added by verify pass 2026-10-02"
+  - name: "carries_signature"
+    from: "Envelope"
+    to: "Signature"
+    cardinality: "1:N"
+    definition: "Signature: Denotes the attester who created the attestation."
+    locator: "attestation-model.md § Model and Terminology (R-0171)"
+    kind: stated
+    tmodel_mapping: "new (signature on an Assertion)"
+    notes: "added by verify pass 2026-10-02"
+  - name: "has_subject"
+    from: "Statement"
+    to: "Subject"
+    cardinality: "1:N"
+    definition: "Statement ... MUST contain at least: Subject: Identifies which artifacts the predicate applies to."
+    locator: "attestation-model.md § Model and Terminology (R-0173)"
+    kind: stated
+    tmodel_mapping: "edge Assertion -> Component"
+    notes: "added by verify pass 2026-10-02"
+  - name: "has_predicate"
+    from: "Statement"
+    to: "Predicate"
+    cardinality: "1:1"
+    definition: "Predicate: Metadata about the subject. The predicate type SHOULD be explicit to avoid misinterpretation."
+    locator: "attestation-model.md § Model and Terminology (R-0173, R-0174)"
+    kind: stated
+    tmodel_mapping: "Assertion body"
+    notes: "added by verify pass 2026-10-02"
+  - name: "contains_link"
+    from: "Predicate"
+    to: "Link"
+    cardinality: "1:N"
+    definition: "Predicate ... MAY contain: Link: (repeated) Reference to a related artifact, such as build dependency."
+    locator: "attestation-model.md § Model and Terminology (R-0175)"
+    kind: stated
+    tmodel_mapping: "typed edge (ADR-0004)"
+    notes: "added by verify pass 2026-10-02"
+  - name: "bundles"
+    from: "Bundle"
+    to: "Attestation"
+    cardinality: "1:N"
+    definition: "Bundle: A collection of Attestations, which are usually but not necessarily related."
+    locator: "attestation-model.md § Model and Terminology"
+    kind: stated
+    tmodel_mapping: "none (collection)"
+    notes: "added by verify pass 2026-10-02"
+  - name: "has_build_definition"
+    from: "Provenance"
+    to: "BuildDefinition"
+    cardinality: "1:1"
+    definition: "buildDefinition: The input to the build."
+    locator: "build-provenance.md § Schema > Provenance (R-0186)"
+    kind: stated
+    tmodel_mapping: "attributes of the PROV Activity"
+    notes: "added by verify pass 2026-10-02"
+  - name: "has_run_details"
+    from: "Provenance"
+    to: "RunDetails"
+    cardinality: "1:1"
+    definition: "runDetails: Details specific to this particular execution of the build."
+    locator: "build-provenance.md § Schema > Provenance (R-0186)"
+    kind: stated
+    tmodel_mapping: "attributes of the PROV Activity"
+    notes: "added by verify pass 2026-10-02"
+  - name: "has_internal_parameters"
+    from: "BuildDefinition"
+    to: "InternalParameters"
+    cardinality: "1:1"
+    definition: "internalParameters: The parameters that are under the control of the entity represented by builder.id."
+    locator: "build-provenance.md #internalParameters"
+    kind: stated
+    tmodel_mapping: "attribute of the build Activity"
+    notes: "added by verify pass 2026-10-02"
+  - name: "has_byproduct"
+    from: "RunDetails"
+    to: "Byproduct"
+    cardinality: "1:N"
+    definition: "byproducts: Additional artifacts generated during the build that are not considered the 'output' of the build"
+    locator: "build-provenance.md #runDetailsByproducts"
+    kind: stated
+    tmodel_mapping: "Evidence (logs)"
+    notes: "added by verify pass 2026-10-02"
+  - name: "reports_level_as"
+    from: "VerificationSummaryAttestation"
+    to: "SlsaResult"
+    cardinality: "1:N"
+    definition: "verifiedLevels / dependencyLevels values are SlsaResult strings (SLSA_<TRACK>_LEVEL_<N>)"
+    locator: "verification_summary.md § SlsaResult; #verifiedLevels; #dependencyLevels"
+    kind: stated
+    tmodel_mapping: "conformance status value (R-042)"
+    notes: "added by verify pass 2026-10-02"
+  - name: "asserts_org_property"
+    from: "SourceVSA"
+    to: "OrgSourceProperty"
+    cardinality: "1:N"
+    definition: "The SCS MAY embed additional properties within verifiedLevels provided by the organization as long as they are prefixed by ORG_SOURCE_"
+    locator: "source-requirements.md § Additional properties (R-0130, R-0131)"
+    kind: stated
+    tmodel_mapping: "organization-defined Requirement satisfied (DL-0009)"
+    notes: "added by verify pass 2026-10-02"
+  - name: "is_a (Branch)"
+    from: "Branch"
+    to: "NamedReference"
+    cardinality: "N:1"
+    definition: "Branch: A Named Reference that moves to track the Change History of a cohesive line of development"
+    locator: "source-requirements.md § Definitions"
+    kind: stated
+    tmodel_mapping: "subtype"
+    notes: "added by verify pass 2026-10-02"
+  - name: "is_a (Tag)"
+    from: "Tag"
+    to: "NamedReference"
+    cardinality: "N:1"
+    definition: "Tag: A Named Reference that is intended to be immutable."
+    locator: "source-requirements.md § Definitions #tag"
+    kind: stated
+    tmodel_mapping: "subtype"
+    notes: "added by verify pass 2026-10-02"
+  - name: "records_changes"
+    from: "ChangeHistory"
+    to: "SourceRevision"
+    cardinality: "1:N"
+    definition: "Change History: A record of the history of Source Revisions that preceded a specific revision."
+    locator: "source-requirements.md § Definitions; #history"
+    kind: stated
+    tmodel_mapping: "provenance chain (PROV wasDerivedFrom)"
+    notes: "added by verify pass 2026-10-02"
+  - name: "approval_of"
+    from: "Approval"
+    to: "ProposedChange"
+    cardinality: "N:1"
+    definition: "Changes in protected branches MUST be agreed to by two or more trusted persons prior to submission."
+    locator: "source-requirements.md #two-party-review (R-0113)"
+    kind: stated
+    tmodel_mapping: "Review verdict on an Assertion (ARCH-0001 §5)"
+    notes: "added by verify pass 2026-10-02"
+  - name: "administers (SCS)"
+    from: "Administrator"
+    to: "SourceRepository"
+    cardinality: "N:M"
+    definition: "Administrator: A human who can perform privileged operations on one or more projects."
+    locator: "source-requirements.md § Source Roles"
+    kind: stated
+    tmodel_mapping: "Party role edge"
+    notes: "added by verify pass 2026-10-02"
+  - name: "administers (platform)"
+    from: "PlatformAdmin"
+    to: "ControlPlane"
+    cardinality: "N:M"
+    definition: "The control plane is managed by an admin and trusted to be outside the tenant's control."
+    locator: "terminology.md § Build model (Control plane, Admin)"
+    kind: stated
+    tmodel_mapping: "Party role edge"
+    notes: "added by verify pass 2026-10-02"
+  - name: "defines_steps"
+    from: "Tenant"
+    to: "BuildSteps"
+    cardinality: "1:N"
+    definition: "Steps: The set of actions that comprise a build, defined by the tenant."
+    locator: "terminology.md § Build model"
+    kind: stated
+    tmodel_mapping: "DFD Process authorship"
+    notes: "added by verify pass 2026-10-02"
+  - name: "comprises"
+    from: "Build"
+    to: "BuildSteps"
+    cardinality: "1:N"
+    definition: "Steps: The set of actions that comprise a build"
+    locator: "terminology.md § Build model"
+    kind: stated
+    tmodel_mapping: "composed_of"
+    notes: "added by verify pass 2026-10-02"
+  - name: "expunges_from"
+    from: "SafeExpungingProcess"
+    to: "SourceRepository"
+    cardinality: "N:1"
+    definition: "SCSs MAY allow the organization to expunge (remove) content from a repository and its change history"
+    locator: "source-requirements.md #safe-expunging-process (R-0083)"
+    kind: stated
+    tmodel_mapping: "process-kind Mitigation applied to a Component"
+    notes: "added by verify pass 2026-10-02"
+  - name: "verifies_and_publishes"
+    from: "Monitor"
+    to: "Provenance"
+    cardinality: "N:M"
+    definition: "A monitor is a service that verifies provenance for a set of packages and publishes the result of that verification."
+    locator: "verifying-artifacts.md § Monitor"
+    kind: stated
+    tmodel_mapping: "Component + verifier role"
+    notes: "added by verify pass 2026-10-02"
+  - name: "prompt_of"
+    from: "AssessmentPrompt"
+    to: "PlatformAssessment"
+    cardinality: "N:1"
+    definition: "assessment prompts the build platform / SCS maintainer answers for the assessment"
+    locator: "assessing-build-platforms.md; assessing-source-systems.md"
+    kind: stated
+    tmodel_mapping: "Requirement (verification method)"
+    notes: "added by verify pass 2026-10-02"
+  - name: "has_mitigation"
+    from: "Threat"
+    to: "Mitigation"
+    cardinality: "1:N"
+    definition: "each threat entry lists its Mitigation"
+    locator: "threats.md"
+    kind: stated
+    tmodel_mapping: "Mitigation"
+    notes: "added by verify pass 2026-10-02"
+  - name: "instance_of"
+    from: "ExampleControl"
+    to: "TechnicalControl"
+    cardinality: "N:1"
+    definition: "example controls an organization may enforce and claim as ORG_SOURCE_ properties"
+    locator: "source-example-controls.md"
+    kind: inferred
+    tmodel_mapping: "MitigationInstance kind=technical (R-040)"
+    notes: "added by verify pass 2026-10-02"
+
+gaps:
+  - "Signed attestation vs epistemic Assertion: tmodel's Assertion (ARCH-0001 §4) has provenance + review status but no cryptographic authenticity (Envelope/Signature/SigningKey) and no notion of a trusted signer-identity pair (R-0214, R-0229). Ingesting SLSA/in-toto evidence needs a signature-verification edge on the Assertion."
+  - "Level/Track (cumulative maturity with 'implies lower levels') has no tmodel class; DL-0009's Gate is time-ordered program management, not a cumulative assurance level. R-041/R-042 should model both: Gate (when) and Level (how strongly)."
+  - "Expectations / Policy / RootOfTrust: tmodel has no policy object keyed by Product (package name) or by branch against which evidence is compared — this is exactly DL-0009 R-042 conformance input and should be first-class."
+  - "Source model (SourceRevision, NamedReference/Branch/Tag, Change, ProposedChange, ControlContinuity) is absent; ARCH-0001 §3b already flags the missing valid_from/valid_to time axis — ControlContinuity needs it."
+  - "Verification outcome (VSA: verificationResult + verifiedLevels + dependencyLevels + policy + inputAttestations) is a ready-made shape for a conformance-check result node (R-042) that tmodel has not yet defined."
+  - "ThreatCategory A–I is a supply-chain stage taxonomy (source/build/usage) distinct from ARCH-0001's LifecyclePhase enum; mapping A–I onto applies_in_phase (implementation, production/distribution, deployment, operation) is a crosswalk tmodel needs (R-044)."
+  - "AdversaryProfile (contributor / maintainer / administrator capability sets) is richer than ThreatActor's current attributes."
+  - "PlatformAssessment modes (self-attestation vs third-party certification, recurring cadence, published vs private evidence) are not representable on Review today."

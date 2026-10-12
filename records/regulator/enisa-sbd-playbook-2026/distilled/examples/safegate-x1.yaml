@@ -1,0 +1,49 @@
+# §5.4.2 SafeGate-X1 illustrative example, transcribed verbatim from .cache/enisa-sbd-playbook-2026.txt (pp. 64-69)
+# and Figure 5 (an image; JSON transcribed by reading the rendered page at 300 dpi -> safegate-x1-figure5.json).
+# Figure 4 (trust-boundary diagram, Mermaid-rendered image) is too small to transcribe reliably and is not reproduced.
+example: "ENISA SbD&D Playbook §5.4.2 SafeGate-X1"
+disclaimer: "provided solely as conceptual models ... do not constitute formal legal or technical advice and should not be treated as a definitive proof of compliance"
+product:
+  - "a standalone Linux-based controller –it sits in a physical cabinet, not a cloud;"
+  - "the application – a C++ binary that listens for 'open/close' commands and logs telemetry;"
+  - "the user interface – a small local touch-screen and a restricted SSH port for maintenance."
+threat_model_scope:
+  purpose: "Drive engineering decisions for binary hardening, port configuration and user access control for SafeGate-X1."
+  in_scope: "SafeGate-X1 firmware, local API (HTTPS), maintenance SSH, local touchscreen."
+  out_of_scope: "corporate network infrastructure, physical lock mechanics."
+  assumptions: ["The local network is untrusted (hostile actors may have plugged into the switch).", "Physical access to the cabinet is restricted but possible (tampering must be detected)."]
+  security_objectives: ["Integrity: prevent unauthorised gate triggers.", "Availability: ensure the gate is operable during emergencies.", "Safety: ensure fail-safe logic is never overridden by software."]
+  crown_jewels: "Gate actuator control (GPIO), cryptographic signing keys, audit logs."
+trust_boundaries:
+  - {id: "Trust Boundary A (External/Network)", text: "Separates the untrusted factory LAN from the device's listening services (HTTPS/SSH)."}
+  - {id: "Trust Boundary B (User/System)", text: "Separates the non-privileged gate-service user from the restricted root system functions."}
+  - {id: "Privileged Path (The Update Channel)", text: "A high-integrity path from the Update Server to the internal flash storage."}
+  - {id: "Privileged Path (Admin Maintenance)", text: "A short-lived, certificate-signed path for the Maintenance Engineer to access the OS shell."}
+threats:
+  - {id: T1, scenario: "RCE via web API: attacker exploits a buffer overflow in the web server to gain shell access", boundary: "Trust Boundary A (HTTPS)", likelihood: Medium, impact: High, priority: Top}
+  - {id: T2, scenario: "Privilege escalation: attacker uses a compromised web service to gain root privilege and disable logs", boundary: "Trust Boundary B (system)", likelihood: High, impact: High, priority: Top}
+  - {id: T3, scenario: "Port scanning/discovery: attacker identifies legacy services (e.g. Telnet) left on by mistake", boundary: "Trust Boundary A (network)", likelihood: High, impact: Medium, priority: High}
+  - {id: T4, scenario: "Credential stuffing: attacker attempts to log in via SSH using common default passwords", boundary: "Trust Boundary A (SSH)", likelihood: High, impact: High, priority: High}
+  - {id: T5, scenario: "Binary tampering: attacker replaces the gate-logic binary with a version that keeps the gate open", boundary: "Local storage", likelihood: Low, impact: High, priority: Medium}
+controls:
+  - {threats: "T1/T3", control: "Attack surface minimisation: use a Distroless build and a strict firewall", default: "All ports blocked except 443/22; no shell tools (sh, curl) in production", verification: "Nmap scan gate: automated port audit must match the MRSM exposed_ports list"}
+  - {threats: "T2", control: "Least privilege: run app as non-root with Linux capabilities", default: "App runs as UID 1001; no SUDO rights for the app user", verification: "Systemd audit: automated check of CapabilityBoundingSet in service files"}
+  - {threats: "T4", control: "Strong identity: disable password auth; use signed SSH certificates", default: "PasswordAuthentication no in sshd_config", verification: "Config validation: script checks SSH config against hardened baseline before release"}
+  - {threats: "T5", control: "Vulnerability and patch management: signed updates and immutable file system", default: "Root file system is mounted read-only by default", verification: "Mount check: CI test verifies /usr/bin is not writable by any user"}
+third_party_verification:
+  - {principle: "Attack surface minimisation", threats: "T1, T3", evidence: "Distroless image; empty /bin/ and /usr/bin/ of non-essential tools", gate: "Nmap-Scan-Gate", spot_check: "Run ls /bin/sh on the device; it should return 'File not found'", expected: "File not found"}
+  - {principle: "Least privilege", threats: "T2", evidence: "systemd unit file showing User=1001 and restricted capabilities", gate: "Systemd-Unit-Audit", spot_check: "Run ps aux and verify the gate process is owned by gate-service, not root", expected: "owner gate-service"}
+  - {principle: "Strong identity", threats: "T4", evidence: "sshd_config with PasswordAuthentication no", gate: "SSH-Config-Validation", spot_check: "Attempt to SSH using a password; the connection must be immediately rejected", expected: "rejected"}
+  - {principle: "Vulnerability and patch management", threats: "T5", evidence: "Partition table showing/mounted as ro (read only)", gate: "Mount-Check-CI", spot_check: "Run touch /usr/bin/test; it should return 'Read-only file system'", expected: "Read-only file system"}
+gate_rules:
+  - "If a mismatch is found [active ports vs ports_allowed], the release fails and the firmware is rejected."
+  - "If the file is successfully created [touch /usr/bin/test_file], the release gate fails"
+validation:
+  fixture: safegate-x1-figure5.json
+  schema: ../schema/attestation-claim.derived.schema.json
+  expected: valid
+source_inconsistencies:
+  - "Verification for T1/T3 refers to 'the MRSM exposed_ports list' while the Figure 5 JSON and §5.4.2.3 use 'ports_allowed'; MRSM is never defined."
+  - "T5 'Binary tampering' is mapped to 'Vulnerability and patch management' (signed updates, read-only FS), not to a supply-chain or integrity principle."
+  - "Figure 5 evidence_hash is elided ('sha256:7f8d...a11b'), so the fixture cannot be verified byte-for-byte; only its structure can."
+  - "§5.4.2.3 implementation says 'close all ports except 443' while the controls table and JSON allow 443 and 22."

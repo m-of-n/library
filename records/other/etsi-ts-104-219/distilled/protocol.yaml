@@ -1,0 +1,67 @@
+schema: "library-protocol/v1"
+record: etsi-ts-104-219
+note: >
+  Process flows the TS defines across its task tables. Steps are stated by the cited actions; ordering is stated where the
+  TS gives it (5.6.0 three phases; RV.1.2 triage before remediation; PW.1.1 threats -> bugs -> fix) and inferred elsewhere
+  (marked). No wire protocol exists; 'messages' are work products (messages.yaml).
+roles:
+  - {id: reporter, name: "vulnerability reporter / security researcher / customer", locator: "RV.1.1 DG1/2/3 3"}
+  - {id: sre, name: "Security Response Engineer", locator: "Table 5.0-3"}
+  - {id: owner_team, name: "team that owns the vulnerable code (Software Engineer, Program Manager, Architect, Test Engineer)", locator: "RV.1.2 DG1/2/3 1"}
+  - {id: sdl_team, name: "SDL Team", locator: "Table 5.0-3"}
+  - {id: architect, name: "Architect", locator: "Table 5.0-3"}
+  - {id: program_manager, name: "Program Manager", locator: "Table 5.0-3"}
+  - {id: release_engineer, name: "Release Engineer or SRE", locator: "Table 5.0-3"}
+  - {id: procurement, name: "Procurement", locator: "Table 5.0-3"}
+  - {id: acquirer, name: "software acquirer / end user", locator: "§1; PS.2.1"}
+  - {id: vuln_db, name: "required Vulnerability Database / CVE (GCVE/EUVD)", locator: "RV.2.2 DG1/2/3 2; §5.6.0"}
+flows:
+  - id: F1
+    name: "Vulnerability disclosure and remediation"
+    locator: "§5.6.0; RV.1.1-RV.3.4"
+    steps:
+      - {n: 1, from: reporter, to: sre, message: VulnerabilityReport, via: "visible location / dedicated email; confidential channel if sensitive", constrained_by: ["SSDIF-RV.1.1-DG123-3", "SSDIF-RV.1.1-DG123-4", "SSDIF-RV.1.1-DG123-5", "SSDIF-RV.1.1-DG123-6"], kind: stated}
+      - {n: 2, from: sre, to: owner_team, message: TriageRequest, note: "team that owns the vulnerable code initially triages: validate, prioritize by severity, remediate", constrained_by: ["SSDIF-RV.1.2-DG123-1"], kind: stated}
+      - {n: 3, from: owner_team, to: sre, message: TriageResult, timer: "initial triage commonly within one week", constrained_by: ["SSDIF-RV.1.2-DG123-2"], kind: stated}
+      - {n: 4, from: owner_team, to: owner_team, message: BugAnalysisRecord, note: "review source code to understand the bug and plan an update or mitigation", constrained_by: ["SSDIF-RV.2.1-DG123-1"], kind: stated}
+      - {n: 5, from: owner_team, to: owner_team, message: Fix, note: "implement and test the vulnerability fix; assign criticality", constrained_by: ["SSDIF-RV.2.2-DG123-1", "SSDIF-RV.2.2-DG123-3"], kind: stated}
+      - {n: 6, from: sre, to: vuln_db, message: VulnerabilityIdentifier, note: "where possible include a common identifier (CVE / required Vulnerability Database)", constrained_by: ["SSDIF-RV.2.2-DG123-2"], kind: stated}
+      - {n: 7, from: release_engineer, to: acquirer, message: SecurityUpdate, note: "delivered via automated and trusted mechanism (informative); signed (PS.2.1)", constrained_by: ["SSDIF-PS.2.1-DG123-1"], kind: inferred}
+      - {n: 8, from: sre, to: acquirer, message: SecurityAdvisory, note: "advisory with description, how to find instances, how to address; ideally CSAF with severity/exploitability", constrained_by: ["R-0031"], kind: stated}
+      - {n: 9, from: owner_team, to: owner_team, message: VariantReview, note: "phase 2: review relevant components for similar vulnerabilities, plan, fix in update or service release", constrained_by: ["SSDIF-RV.3.3-DG123-1"], kind: stated}
+      - {n: 10, from: owner_team, to: sdl_team, message: RootCauseRecord, note: "consider nature of defect, recurring?, prioritize program aspect; document trends", constrained_by: ["SSDIF-RV.3.1-DG123-1", "SSDIF-RV.3.1-DG123-3", "SSDIF-RV.3.2-DG123-1"], kind: stated}
+      - {n: 11, from: sdl_team, to: sdl_team, message: ProcessChange, note: "phase 3: update tools, training, threat models, defaults on a regular schedule (DG3: focus training; select tools)", constrained_by: ["SSDIF-RV.3.1-DG123-2", "SSDIF-RV.3.4-DG3-1", "SSDIF-RV.3.4-DG3-2", "R-0033"], kind: stated}
+    error_paths:
+      - {at: 2, condition: "report not credible / not reproducible", outcome: "closed after investigation (RV.1.1 'investigate all credible reports')", kind: inferred}
+      - {at: 5, condition: "permanent fix not yet available", outcome: "temporary mitigation added to plan (RV.2.2 example 2, informative)", kind: stated}
+      - {at: 5, condition: "risk-based decision not to remediate", outcome: "risk acceptance or transference (RV.2.2 example 1, informative)", kind: stated}
+  - id: F2
+    name: "Design-time threat modelling to fix"
+    locator: "PW.1.1 DG3; PW.2.1; §5.0.4"
+    steps:
+      - {n: 1, from: architect, to: architect, message: DataFlowDiagram, note: "initial description / DFD with attack points; shall accurately depict the system", constrained_by: ["SSDIF-PW.1.1-DG3-7", "SSDIF-PW.1.1-DG3-8"], kind: stated}
+      - {n: 2, from: architect, to: architect, message: ThreatModel, note: "identify threats, scenarios, mitigations; rate severity", constrained_by: ["SSDIF-PW.1.1-DG3-3", "SSDIF-PW.1.1-DG3-4"], kind: stated}
+      - {n: 3, from: architect, to: program_manager, message: SecurityBug, note: "bugs for high (shall) and medium (should) threats in the workflow system", constrained_by: ["SSDIF-PW.1.1-DG3-5", "SSDIF-PW.1.1-DG3-6"], kind: stated}
+      - {n: 4, from: program_manager, to: architect, message: DesignReviewRecord, note: "review by qualified person not involved in design and/or automated toolchain; minutes; bugs for design issues", constrained_by: ["SSDIF-PW.2.1-DG123-1"], kind: stated}
+      - {n: 5, from: owner_team, to: program_manager, message: Fix, note: "bugs 'fixed' by developers making code changes; threat model retained in repository", constrained_by: ["R-0011"], kind: stated}
+  - id: F3
+    name: "Release gating by bug bar"
+    locator: "PO.4.1; PW.8.2 DG3 4"
+    steps:
+      - {n: 1, from: sdl_team, to: program_manager, message: BugBar, note: "severity levels incl. ease of discovery/exploitation, impact", constrained_by: ["SSDIF-PO.4.1-DG123-4"], kind: stated}
+      - {n: 2, from: program_manager, to: program_manager, message: ReleaseDecision, note: "use bug bar to decide whether impact/exploitability is high enough to delay release; minimum acceptability for shipping", constrained_by: ["SSDIF-PO.4.1-DG123-5", "SSDIF-PO.4.1-DG123-6"], kind: stated}
+      - {n: 3, from: owner_team, to: release_engineer, message: StaticAnalysisRun, note: "DG3: run static analysis before code release; shall-fix errors fixed", constrained_by: ["SSDIF-PW.8.2-DG3-4"], kind: stated}
+      - {n: 4, from: release_engineer, to: acquirer, message: SignedRelease, note: "sign all code delivered to customers; archive release files", constrained_by: ["SSDIF-PS.2.1-DG123-1", "SSDIF-PS.3.1-DG123-2"], kind: stated}
+    error_paths:
+      - {at: 2, condition: "open finding above ship threshold", outcome: "release delayed until a fix is made", kind: stated}
+      - {at: 3, condition: "shall-fix static analysis error present", outcome: "release blocked", kind: stated}
+  - id: F4
+    name: "Third-party component acceptance and monitoring"
+    locator: "PO.1.3; PW.4.1; PW.4.4; PS.3.2"
+    steps:
+      - {n: 1, from: procurement, to: procurement, message: SupplierContract, note: "security requirements in contracts and RFPs", constrained_by: ["SSDIF-PO.1.3-DG123-1"], kind: stated}
+      - {n: 2, from: program_manager, to: program_manager, message: TPCRiskAssessment, note: "known vulns, provider maturity, EOL -> risk score; look up vuln reports and compare with TPC update site", constrained_by: ["SSDIF-PW.4.1-DG123-1", "SSDIF-PW.4.1-DG123-2", "SSDIF-PW.4.1-DG123-3", "SSDIF-PW.4.1-DG123-4", "SSDIF-PW.4.1-DG123-5", "SSDIF-PW.4.1-DG123-6"], kind: stated}
+      - {n: 3, from: program_manager, to: release_engineer, message: ApprovedComponentList, note: "use TPC only if reported vulns mitigated; mitigate or accept per risk; approved list + where-used SBOM", constrained_by: ["SSDIF-PW.4.1-DG123-7", "SSDIF-PW.4.1-DG123-8", "SSDIF-PS.3.2-DG123-1", "SSDIF-PS.3.2-DG123-2"], kind: stated}
+      - {n: 4, from: program_manager, to: program_manager, message: TPCMonitoringResult, note: "continuous monitoring; revisit on each update of consuming software; DG2/3 tools for attack surface and known vulns; SCA verifies only approved components", constrained_by: ["SSDIF-PW.4.4-DG123-1", "SSDIF-PW.4.4-DG123-2", "SSDIF-PW.4.4-DG23-1", "SSDIF-PS.3.2-DG23-1"], kind: stated}
+    error_paths:
+      - {at: 3, condition: "reported vulnerabilities not mitigated by TPC updates", outcome: "TPC not used, or wrapped/privilege-reduced/reconfigured, or risk accepted", kind: stated}

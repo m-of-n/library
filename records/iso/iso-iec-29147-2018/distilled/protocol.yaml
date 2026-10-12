@@ -1,0 +1,87 @@
+schema: "library-protocol/v1"
+record: iso-iec-29147-2018
+source_scope: "free preview only (Clauses 1-5.3.2 + Figure 1 + Contents)"
+reviewed_by: ""
+note: >
+  The protocol between reporter, vendor, coordinator and user. Two kinds of provenance per element:
+  `kind: stated` = drawn in Figure 1 (§5.3.1, identical in ISO/IEC 30111:2019 §5.1) or defined in Clause 3;
+  `kind: inferred-from-heading` = only the clause HEADING is visible in the Contents (the clause body is
+  paywalled), so the step is known to exist but its rules, timing and contents are not. No timing
+  constraint (e.g. acknowledgement deadline, embargo length) is recorded because none is visible; the
+  full text of §5.6.8 (embargo period), §6.2.5 (acknowledgement) and §7.3 (advisory timing) may set some.
+
+roles:
+  - {id: reporter, definition: "individual or organization that notifies a vendor (3.4) or coordinator (3.6) of a potential vulnerability (3.1)", locator: "§3.5", aka: [finder, researcher], kind: stated}
+  - {id: vendor, definition: "individual or organization that is responsible for remediating vulnerabilities", locator: "§3.4", realised_by: "PSIRT (ISO/IEC 30111 §6.5)", kind: stated}
+  - {id: coordinator, definition: "individual or organization that performs coordination (3.3)", locator: "§3.6", kind: stated}
+  - {id: user, definition: "(definition in §5.5.2 not in preview); the party that receives advisories and deploys remediations", locator: "§5.5.2 heading; §1, §5.3.1 text", kind: inferred-from-heading}
+  - {id: other-vendor, definition: "a vendor of an affected or dependent product (§5.4.6 product interdependency; §8.2 vendors playing multiple roles)", locator: "§5.4.6, §8.2 headings", kind: inferred-from-heading}
+
+messages:   # see messages.yaml for the structure of each
+  - {id: vulnerability-report, from: reporter, to: [vendor, coordinator], locator: "§3.5; Fig 1 'Receive vulnerability report from external source'; §6.2, §9.3.2, Annex B headings", kind: stated}
+  - {id: receipt-acknowledgement, from: vendor, to: reporter, locator: "Fig 1 'Acknowledge receipt'; §6.2.5 heading", kind: stated}
+  - {id: not-verified-notice, from: vendor, to: reporter, locator: "Fig 1 'Vulnerability verified?' —No→ 'Inform reporter'", kind: stated}
+  - {id: status-update, from: [vendor, reporter], to: [reporter, vendor], locator: "§6.5 On-going communication heading; §5.7 heading", kind: inferred-from-heading}
+  - {id: coordination-request, from: [vendor, reporter], to: coordinator, locator: "§6.6 Coordinator involvement; Clause 8 headings", kind: inferred-from-heading}
+  - {id: inter-vendor-report, from: vendor, to: other-vendor, locator: "§8.2.2, §8.2.3 headings", kind: inferred-from-heading}
+  - {id: advisory, from: vendor, to: [user, reporter, coordinator], definition: "document or message that provides vulnerability (3.1) information intended to reduce risk", locator: "§3.8; Fig 1 'Publish advisory'; Clause 7 headings", kind: stated}
+  - {id: remediation, from: vendor, to: user, definition: "change made to a product or service to remove or mitigate a vulnerability (3.1)", locator: "§3.7; Fig 1 'Develop and deploy remediation'; §7.8 headings", kind: stated}
+  - {id: disclosure-policy, from: vendor, to: [reporter, user, coordinator], locator: "Fig 1 'Develop vulnerability disclosure policy'; Clause 9 headings", kind: stated}
+
+flows:
+  - id: F0-prepare
+    title: "Preparation (before any report)"
+    kind: stated
+    locator: "Fig 1 (29147 lane, top two boxes); §5.2; §5.6.2 heading"
+    steps:
+      - {n: 1, actor: vendor, action: "Develop vulnerability disclosure policy", produces: disclosure-policy, locator: "Fig 1; Clause 9"}
+      - {n: 2, actor: vendor, action: "Develop capability to receive and publish vulnerability information", locator: "Fig 1; §6.2.2 heading"}
+    constraints:
+      - {ref: "iso-iec-29147-2018#5.2-R01", text: "a vendor should ideally develop policy (Clause 9) before starting to receive reports (Clause 6)"}
+  - id: F1-external-report
+    title: "External report → verification → advisory"
+    kind: stated
+    locator: "Figure 1 (§5.3.1); same figure in ISO/IEC 30111:2019 §5.1"
+    steps:
+      - {n: 1, actor: reporter, action: "send vulnerability report", message: vulnerability-report, to: vendor}
+      - {n: 2, actor: vendor, action: "Acknowledge receipt", message: receipt-acknowledgement, to: reporter, note: "Figure 1 draws a solid arrow from 'Acknowledge receipt' (29147 lane) to 'Verify report' (30111 lane): the hand-off point between the two standards"}
+      - {n: 3, actor: vendor, action: "Verify report", standard: "ISO/IEC 30111 §7.1.4"}
+      - {n: 4, actor: vendor, decision: "Vulnerability verified?", branches: {"No": "step 5a", "Yes": "step 5b"}}
+      - {n: 5a, actor: vendor, action: "Inform reporter", message: not-verified-notice, to: reporter, terminal: true, note: "dashed arrow from the 30111 decision back into the 29147 lane"}
+      - {n: 5b, actor: vendor, action: "Develop and deploy remediation", produces: remediation, standard: "ISO/IEC 30111 §7.1.5-7.1.6"}
+      - {n: 6, actor: vendor, action: "Publish advisory", message: advisory, to: user, note: "dashed arrow from 'Develop and deploy remediation' (30111 lane) to 'Publish advisory' (29147 lane)"}
+      - {n: 7, actor: vendor, action: "Engage in post-remediation activities", terminal: true, standard: "ISO/IEC 30111 §7.1.7"}
+  - id: F2-internal-finding
+    title: "Internally identified vulnerability"
+    kind: stated
+    locator: "Figure 1 (30111 lane: 'Identify vulnerability from internal source' → 'Verify report')"
+    steps:
+      - {n: 1, actor: vendor, action: "Identify vulnerability from internal source"}
+      - {n: 2, actor: vendor, action: "Verify report", then: "F1 step 4 onward (no acknowledgement; on 'No' there is no external reporter to inform)"}
+  - id: F3-ongoing-communication
+    title: "On-going communication with the reporter during handling"
+    kind: inferred-from-heading
+    locator: "§6.3 Initial assessment, §6.4 Further investigation, §6.5 On-going communication, §6.7 Operational security"
+    steps:
+      - {n: 1, actor: vendor, action: "initial assessment of report"}
+      - {n: 2, actor: vendor, action: "further investigation (may request information from reporter — Annex B 'Information to request in a report')"}
+      - {n: 3, actor: [vendor, reporter], action: "exchange status updates", message: status-update, repeat: true}
+  - id: F4-coordinated
+    title: "Coordinator involvement and multi-vendor coordination"
+    kind: inferred-from-heading
+    locator: "§3.3, §3.6 (stated definitions); §6.6, Clause 8 (§8.1, §8.2.1-§8.2.3) headings"
+    steps:
+      - {n: 1, actor: [reporter, vendor], action: "involve a coordinator", message: coordination-request, to: coordinator}
+      - {n: 2, actor: coordinator, action: "identify and engage stakeholders, mediate, communicate, plan (definition of coordination §3.3)"}
+      - {n: 3, actor: vendor, action: "report vulnerability information to other affected vendors", message: inter-vendor-report, to: other-vendor}
+      - {n: 4, actor: [vendor, other-vendor], action: "synchronised advisory publication (implied by 'coordinated vulnerability disclosure'; timing rules in §5.6.8/§7.3 not visible)"}
+
+error_paths:
+  - {id: E1, trigger: "Vulnerability verified? = No", handling: "Inform reporter (terminal)", locator: "Figure 1", kind: stated}
+  - {id: E2, trigger: "insufficient information in report", handling: "request information (Annex B) — inferred from Annex B title", locator: "Annex B heading", kind: inferred-from-heading}
+  - {id: E3, trigger: "public disclosure / exploitation before remediation", handling: "not visible; §5.10 'Vulnerability exploitation' and §5.6.8 'Embargo period' headings indicate it is addressed", locator: "§5.6.8, §5.10 headings", kind: inferred-from-heading}
+
+related_formats:
+  - {name: "OASIS CSAF 2.0 / 2.1 (successor of CVRF, which 29147 §4 cites as [12][13])", role: "machine-readable advisory format", library_record: none}
+  - {name: "CVE", role: "advisory identifier (§7.4.2 'Identifiers' heading; §4 [9])", library_record: none}
+  - {name: "CVSS", role: "severity (§7.4.11 heading; §4 [10])", library_record: first-cvss}

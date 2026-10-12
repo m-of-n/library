@@ -1,0 +1,90 @@
+schema: "library-state-machine/v1"
+record: iec-62443-4-1-2018
+note: >
+  Three lifecycles. (1) is supported by requirement text (DM-1..DM-5, SM-11, SUM) read via SDLA-312.
+  (2) the ML1-ML4 maturity progression: IEC Clause 4.2 / Table 1 is paywalled, so state NAMES and
+  meanings come from two secondary, publisher-adjacent slide decks and are kind: inferred.
+  (3) ISASecure SDLA certification lifecycle is defined by ISASecure SDLA-300 v1.9 (ISCI, not IEC) and is
+  included because it is the de-facto conformance mechanism for 62443-4-1.
+
+machines:
+  - id: security-related-issue
+    entity: SecurityRelatedIssue
+    kind: stated
+    source: "IEC 62443-4-1:2018 Practice 6 (DM-1..DM-5) + SM-11 + SR-2.issues, text via SDLA-312 v6.3 pp.10, 20"
+    states:
+      - {id: reported, locator: "DM-1", definition: "received from an internal or external source and tracked"}
+      - {id: under-investigation, locator: "DM-2", definition: "investigated for applicability, verifiability and triggering threats"}
+      - {id: not-applicable, locator: "DM-2", definition: "investigation shows the issue does not apply / cannot be verified", kind: inferred, terminal: true}
+      - {id: valid, locator: "DM-3", definition: "a valid security-related issue awaiting analysis"}
+      - {id: assessed, locator: "DM-3", definition: "impact, severity (e.g. CVSS), affected products/versions, root cause and related issues identified"}
+      - {id: remediation-planned, locator: "DM-4 b)", definition: "a remediation plan to fix the problem exists"}
+      - {id: deferred, locator: "DM-4 c)", definition: "deferred for future resolution with reason(s) and risk(s) recorded; reapply DM-4 later"}
+      - {id: fixed, locator: "DM-4 a)", definition: "fixed by design/defense-in-depth change, added requirement/capability, compensating mechanism, or disabling/removing features"}
+      - {id: accepted-risk, locator: "DM-4 d)", definition: "not fixed because residual risk is below the supplier's established acceptable level"}
+      - {id: disclosed, locator: "DM-5", definition: "product users informed (description, CVSS-or-similar score, affected versions, resolution)"}
+      - {id: closed, locator: "DM-1 'tracking to closure'; SM-11", definition: "tracked to closure", terminal: true}
+    transitions:
+      - {from: reported, to: under-investigation, trigger: "intake (DM-1)", guard: "", locator: "DM-1, DM-2"}
+      - {from: under-investigation, to: valid, trigger: "investigation complete", guard: "applicable AND verifiable", locator: "DM-2 a) b)", kind: inferred}
+      - {from: under-investigation, to: not-applicable, trigger: "investigation complete", guard: "not applicable OR not verifiable", locator: "DM-2", kind: inferred}
+      - {from: valid, to: assessed, trigger: "impact assessment (DM-3)", guard: "", locator: "DM-3"}
+      - {from: assessed, to: fixed, trigger: "disposition", guard: "", locator: "DM-4 a)"}
+      - {from: assessed, to: remediation-planned, trigger: "disposition", guard: "", locator: "DM-4 b)"}
+      - {from: assessed, to: deferred, trigger: "disposition", guard: "reason(s) and associated risk(s) specified", locator: "DM-4 c)"}
+      - {from: assessed, to: accepted-risk, trigger: "disposition", guard: "residual risk < acceptable level", locator: "DM-4 d)"}
+      - {from: remediation-planned, to: fixed, trigger: "fix implemented", guard: "", locator: "DM-4", kind: inferred}
+      - {from: deferred, to: assessed, trigger: "periodic review of open issues (each release or iteration cycle)", guard: "", locator: "DM-4.periodic"}
+      - {from: fixed, to: disclosed, trigger: "issue is reportable", guard: "product is supported", locator: "DM-5"}
+      - {from: accepted-risk, to: disclosed, trigger: "issue is reportable", guard: "product is supported", locator: "DM-4 'determining whether to report them'; DM-5", kind: inferred}
+      - {from: fixed, to: closed, trigger: "not reportable", guard: "", locator: "DM-4", kind: inferred}
+      - {from: disclosed, to: closed, trigger: "tracked to closure", guard: "", locator: "DM-1", kind: inferred}
+    side_effects:
+      - {on: "any disposition", action: "inform other processes incl. other products/revisions; inform third parties if in included third-party source", locator: "DM-4.all-cases e) f)"}
+      - {on: "resolved", action: "evaluate recommendations to prevent similar errors", locator: "DM-4.prevent"}
+      - {on: "fixed in implementation", action: "fix released as a patch or deferred to next release", locator: "DM-4 NOTE"}
+    release_gate:
+      locator: "SM-11"
+      rule: "a product or patch is not released until its security-related issues have been addressed and tracked to closure"
+
+  - id: sdl-maturity-level
+    entity: "Practice (per practice, per development organization)"
+    kind: inferred
+    source: >
+      IEC 62443-4-1 §4.2 'Maturity model' and Table 1 'Maturity levels' exist (IEC preview ToC p.2) but were
+      NOT read. Labels: exida webinar for ISA (2023-11-01, ISA SBOM presentation, slide 7):
+      "ML 1: Initial – Organization has no SDL process or an adhoc SDL process. ML 2: Managed – SDL process is
+      defined and organization is prepared to follow it. ML 3: Defined - Organization is consistently following
+      their SDL process. ML 4/5: Improving - Organization is consistently following and improving their SDL
+      process." ISASecure/TUV Rheinland webinar (2021-04-28, slide 'Maturity Level (according to IEC 62443)'):
+      "ML-2 Process defined / Personnel have the expertise", "ML-3 Process practiced", "ML-4 Process improved";
+      certificate at ML 2 after Stage-1 (optional, valid 1 year), at ML 3 after Stage-2 (valid 3 years).
+      The IEC names are NOT confirmed; exida says 'Defined' for ML3 while TUV says 'practiced' - see design-notes Q2.
+    states:
+      - {id: ML1, label: "Initial", definition_secondary: "no SDL process or an ad hoc SDL process (exida)"}
+      - {id: ML2, label: "Managed", definition_secondary: "SDL process is defined and organization is prepared to follow it (exida); process defined, personnel have the expertise (TUV)"}
+      - {id: ML3, label: "Defined / practiced", definition_secondary: "organization consistently following its SDL process (exida); process practiced (TUV)"}
+      - {id: ML4, label: "Improving", definition_secondary: "consistently following and improving the SDL process (exida); process improved (TUV)"}
+    transitions:
+      - {from: ML1, to: ML2, trigger: "process documented + personnel expertise demonstrated", guard: "", kind: inferred}
+      - {from: ML2, to: ML3, trigger: "evidence of consistent execution on real projects (artifacts)", guard: "", kind: inferred}
+      - {from: ML3, to: ML4, trigger: "evidence of continuous improvement (SM-13, DM-6, Annex A metrics)", guard: "", kind: inferred}
+    notes: "Maturity is assessed per practice, not per organization overall (secondary sources; IEC text not read)."
+
+  - id: isasecure-sdla-certification
+    entity: "SDLACertification (of a named development organization + named, version-controlled SDL)"
+    kind: stated
+    source: "ISASecure SDLA-300 v1.9 (June 2020) §5, as amended by SDLA-102 v4.3 (July 2025) errata 5.5.1-5.5.3"
+    states:
+      - {id: applicant, locator: "ISASecure_SDL.R4"}
+      - {id: certified-12m, locator: "ISASecure_SDL.R8", definition: "initial cert where >=1 requirement passed only an SDLA readiness evaluation; valid to end of 12th month"}
+      - {id: certified-36m, locator: "ISASecure_SDL.R8", definition: "all SDLA-312 requirements passed an SDLA full evaluation; valid to end of 36th month"}
+      - {id: expired, locator: "ISASecure_SDL.R9 Table 1; R12", terminal: false}
+    transitions:
+      - {from: applicant, to: certified-36m, trigger: "all applicable SDLA-312 requirements pass (full evaluation)", locator: "R5, R8"}
+      - {from: applicant, to: certified-12m, trigger: "all pass, some only by readiness evaluation", locator: "R5, R8"}
+      - {from: certified-12m, to: certified-36m, trigger: "all readiness-passed requirements pass a full evaluation before expiry", locator: "R12; new expiry = 36 months after the 12-month grant"}
+      - {from: certified-12m, to: expired, trigger: "criterion not met at expiry", locator: "R12"}
+      - {from: certified-36m, to: certified-36m, trigger: "recertification audit: no nonconformities, or minor ones not open since last recertification, or majors corrected per Table 1", locator: "R9, R10"}
+      - {from: certified-36m, to: expired, trigger: "Table 1 conditions not met by expiry", locator: "R9 Table 1"}
+      - {from: expired, to: applicant, trigger: "restart initial certification", locator: "R9 NOTE 2; R12"}

@@ -1,0 +1,231 @@
+record: slsa-1-2
+reviewed_by: ""
+note: >
+  Every structure SLSA v1.2 defines or names. SLSA defines two in-toto predicates (Build Provenance
+  v1, VSA v1), a Source VSA usage profile of the VSA, the abstract attestation model, and several
+  conceptual structures (roots of trust, expectations) whose concrete syntax it leaves open. Encoding
+  for both predicates is JSON (lowerCamelCase; the proto is snake_case and converted by tooling —
+  build-provenance.md proto note). There is no byte-level layout: SLSA is a JSON data model carried in
+  an in-toto Statement, normally inside a DSSE envelope (attestation-model.md Recommended Suite).
+  constrained_by lists requirements.yaml ids. "defined_in" says whether SLSA defines the structure
+  (slsa) or only references another spec (in-toto, DSSE).
+messages:
+  - name: dsse-envelope
+    defined_in: "DSSE (secure-systems-lab) — named by SLSA, not defined by it"
+    locator: "attestation-model.md § Recommended Suite (Envelope: DSSE, ECDSA over NIST P-256 (or stronger) and SHA-256)"
+    encoding: JSON
+    fields:
+      - {name: payloadType, type: string, required: true, notes: "per DSSE; SLSA only requires that the message type be authenticated and unambiguous (R-0172)"}
+      - {name: payload, type: "bytes (base64)", required: true, notes: "the serialized in-toto Statement"}
+      - {name: signatures, type: "array of {keyid, sig}", required: true, notes: "per DSSE; denotes the attester (attestation-model.md Signature)"}
+    constrained_by: ["slsa-1-2#R-0170", "slsa-1-2#R-0171", "slsa-1-2#R-0172", "slsa-1-2#R-0017", "slsa-1-2#R-0018"]
+    notes: "Field names are DSSE's (see record secure-systems-lab-dsse), recorded so the protocol flows can name the signature check. SLSA permits 'alternate means of verifying the authenticity of the provenance' (build-track-basics footnote [^sign])."
+
+  - name: in-toto-statement-v1
+    defined_in: "in-toto Attestation Framework v1 — SLSA fixes _type and predicateType values"
+    locator: "build-provenance.md § Schema (Standard attestation fields); verification_summary.md § Schema"
+    encoding: JSON
+    fields:
+      - {name: _type, type: string, required: true, value: "https://in-toto.io/Statement/v1"}
+      - {name: subject, type: "array of ResourceDescriptor", required: true, notes: "output artifacts (provenance) or verified artifacts (VSA); name + digest. For provenance the subject MAY be tenant-generated at Build L2 (R-0022)"}
+      - {name: predicateType, type: "string (TypeURI)", required: true, values: ["https://slsa.dev/provenance/v1", "https://slsa.dev/verification_summary/v1"], notes: "URI includes only the major version; always use the literal string, not the URL bar (build-provenance.md Important note)"}
+      - {name: predicate, type: object, required: true}
+    constrained_by: ["slsa-1-2#R-0010", "slsa-1-2#R-0173", "slsa-1-2#R-0174", "slsa-1-2#R-0184", "slsa-1-2#R-0185", "slsa-1-2#R-0226"]
+
+  - name: provenance-v1
+    defined_in: slsa
+    locator: "build-provenance.md § Schema > Provenance"
+    predicateType: "https://slsa.dev/provenance/v1"
+    encoding: JSON
+    required_at: "SLSA Build L1: buildDefinition, runDetails"
+    fields:
+      - {name: buildDefinition, type: BuildDefinition, required: true, description: "The input to the build. The accuracy and completeness are implied by `runDetails.builder.id`."}
+      - {name: runDetails, type: RunDetails, required: true, description: "Details specific to this particular execution of the build."}
+    constrained_by: ["slsa-1-2#R-0010", "slsa-1-2#R-0011", "slsa-1-2#R-0012", "slsa-1-2#R-0013", "slsa-1-2#R-0014", "slsa-1-2#R-0015", "slsa-1-2#R-0019", "slsa-1-2#R-0020", "slsa-1-2#R-0028", "slsa-1-2#R-0031", "slsa-1-2#R-0032", "slsa-1-2#R-0177", "slsa-1-2#R-0184", "slsa-1-2#R-0185", "slsa-1-2#R-0186"]
+    parsing_rules: "Consumers MUST ignore unrecognized fields unless otherwise noted; Unset, null, and empty field values MUST be interpreted equivalently; minor versions are backwards compatible and monotonic and do not change predicateType."
+
+  - name: BuildDefinition
+    defined_in: slsa
+    locator: "build-provenance.md § Schema > BuildDefinition"
+    required_at: "SLSA Build L1: buildType, externalParameters"
+    fields:
+      - name: buildType
+        type: "string (TypeURI)"
+        required: true
+        description: "Identifies the template for how to perform the build and interpret the parameters and dependencies."
+        constrained_by: ["slsa-1-2#R-0187", "slsa-1-2#R-0188", "slsa-1-2#R-0201", "slsa-1-2#R-0202", "slsa-1-2#R-0223"]
+      - name: externalParameters
+        type: object
+        required: true
+        description: "The parameters that are under external control, such as those set by a user or tenant of the build platform."
+        trust: "untrusted — MUST be included in the provenance and MUST be verified downstream"
+        constrained_by: ["slsa-1-2#R-0027", "slsa-1-2#R-0034", "slsa-1-2#R-0043", "slsa-1-2#R-0059", "slsa-1-2#R-0060", "slsa-1-2#R-0065", "slsa-1-2#R-0180", "slsa-1-2#R-0187", "slsa-1-2#R-0189", "slsa-1-2#R-0190", "slsa-1-2#R-0191", "slsa-1-2#R-0192", "slsa-1-2#R-0193", "slsa-1-2#R-0197", "slsa-1-2#R-0198", "slsa-1-2#R-0199", "slsa-1-2#R-0203", "slsa-1-2#R-0204", "slsa-1-2#R-0206", "slsa-1-2#R-0224", "slsa-1-2#R-0225"]
+      - name: internalParameters
+        type: object
+        required: false
+        description: "The parameters that are under the control of the entity represented by `builder.id`."
+        trust: "trusted (platform-set); OPTIONAL; need not be verified downstream"
+        constrained_by: ["slsa-1-2#R-0181", "slsa-1-2#R-0182", "slsa-1-2#R-0194", "slsa-1-2#R-0197", "slsa-1-2#R-0198", "slsa-1-2#R-0199"]
+      - name: resolvedDependencies
+        type: "array of ResourceDescriptor"
+        required: false
+        description: "Unordered collection of artifacts needed at build time. Completeness is best effort, at least through SLSA Build L3."
+        tenant_generated_allowed_at: "Build L2 (R-0024)"
+        constrained_by: ["slsa-1-2#R-0024", "slsa-1-2#R-0183", "slsa-1-2#R-0195", "slsa-1-2#R-0200", "slsa-1-2#R-0204"]
+    constrained_by: ["slsa-1-2#R-0187", "slsa-1-2#R-0196", "slsa-1-2#R-0205"]
+
+  - name: RunDetails
+    defined_in: slsa
+    locator: "build-provenance.md § Schema > RunDetails"
+    required_at: "SLSA Build L1: builder"
+    fields:
+      - {name: builder, type: Builder, required: true, description: "Identifies the build platform that executed the invocation, which is trusted to have correctly performed the operation and populated this provenance.", constrained_by: ["slsa-1-2#R-0207"]}
+      - {name: metadata, type: BuildMetadata, required: false, description: "Metadata about this particular execution of the build."}
+      - {name: byproducts, type: "array of ResourceDescriptor", required: false, description: "Additional artifacts generated during the build that are not considered the \"output\" of the build but that might be needed during debugging or incident response.", constrained_by: ["slsa-1-2#R-0208", "slsa-1-2#R-0209"]}
+    constrained_by: ["slsa-1-2#R-0207"]
+
+  - name: Builder
+    defined_in: slsa
+    locator: "build-provenance.md § Schema > Builder"
+    required_at: "SLSA Build L1: id"
+    fields:
+      - name: id
+        type: "string (TypeURI)"
+        required: true
+        description: "URI indicating the transitive closure of the trusted build platform. This is intended to be the sole determiner of the SLSA Build level."
+        constrained_by: ["slsa-1-2#R-0058", "slsa-1-2#R-0074", "slsa-1-2#R-0179", "slsa-1-2#R-0210", "slsa-1-2#R-0211", "slsa-1-2#R-0212", "slsa-1-2#R-0213", "slsa-1-2#R-0214", "slsa-1-2#R-0215"]
+      - {name: builderDependencies, type: "array of ResourceDescriptor", required: false, description: "Dependencies used by the orchestrator that are not run within the workload and that do not affect the build, but might affect the provenance generation or security guarantees."}
+      - {name: version, type: "map (string→string)", required: false, description: "Map of names of components of the build platform to their version."}
+    constrained_by: ["slsa-1-2#R-0210", "slsa-1-2#R-0215"]
+
+  - name: BuildMetadata
+    defined_in: slsa
+    locator: "build-provenance.md § Schema > BuildMetadata"
+    required_at: "none (REQUIRED: (none))"
+    fields:
+      - {name: invocationId, type: string, required: false, description: "Identifies this particular build invocation ... by default it is treated as opaque and case-sensitive.", constrained_by: ["slsa-1-2#R-0217"]}
+      - {name: startedOn, type: "string (Timestamp)", required: false, description: "The timestamp of when the build started."}
+      - {name: finishedOn, type: "string (Timestamp)", required: false, description: "The timestamp of when the build completed."}
+    constrained_by: ["slsa-1-2#R-0216"]
+
+  - name: ResourceDescriptor
+    defined_in: "in-toto Attestation Framework v1 (pinned commit 7aefca35) — summarised by SLSA in the cue/proto"
+    locator: "build-provenance.md § Schema > Summary (#ResourceDescriptor)"
+    fields:
+      - {name: uri, type: string, required: false}
+      - {name: digest, type: "map (algorithm→hex string), e.g. sha256, sha512, gitCommit", required: false}
+      - {name: name, type: string, required: false}
+      - {name: downloadLocation, type: string, required: false}
+      - {name: mediaType, type: string, required: false}
+      - {name: content, type: "bytes (base64-encoded)", required: false}
+      - {name: annotations, type: "map (string→any JSON)", required: false}
+    constrained_by: ["slsa-1-2#R-0232", "slsa-1-2#R-0235"]
+    notes: "SLSA's FAQ notes the ResourceDescriptor type 'does not require version and license information or even a URI to the dependency's original location' (faq.md SBOM entry)."
+
+  - name: extension-field
+    defined_in: slsa
+    locator: "build-provenance.md § Schema > Extension fields; verification_summary.md § Parsing rules"
+    fields:
+      - {name: "<vendor>_<fieldname> (provenance)", type: any, required: false, notes: "non-extension field names never contain an underscore"}
+      - {name: "<URI> (VSA)", type: any, required: false, notes: "VSA producers MAY add extension fields using field names that are URIs"}
+    constrained_by: ["slsa-1-2#R-0218", "slsa-1-2#R-0219", "slsa-1-2#R-0220", "slsa-1-2#R-0221", "slsa-1-2#R-0222", "slsa-1-2#R-0227"]
+
+  - name: verification-summary-v1
+    defined_in: slsa
+    locator: "verification_summary.md § Schema / Fields"
+    predicateType: "https://slsa.dev/verification_summary/v1"
+    encoding: JSON
+    fields:
+      - {name: verifier, type: object, required: true, description: "Identifies the entity that performed the verification.", constrained_by: ["slsa-1-2#R-0228", "slsa-1-2#R-0229"]}
+      - {name: verifier.id, type: "string (TypeURI)", required: true, description: "URI indicating the verifier's identity."}
+      - {name: verifier.version, type: "map (string->string)", required: false, description: "Map of names of components of the verification platform to their version."}
+      - {name: timeVerified, type: "string (Timestamp)", required: false, description: "Timestamp indicating what time the verification occurred."}
+      - {name: resourceUri, type: "string (ResourceURI)", required: true, description: "URI that identifies the resource associated with the artifact being verified.", constrained_by: ["slsa-1-2#R-0230", "slsa-1-2#R-0231"]}
+      - {name: policy, type: "object (ResourceDescriptor)", required: true, description: "Describes the policy that the `subject` was verified against.", constrained_by: ["slsa-1-2#R-0232"]}
+      - {name: inputAttestations, type: "array (ResourceDescriptor)", required: false, description: "The collection of attestations that were used to perform verification.", constrained_by: ["slsa-1-2#R-0233", "slsa-1-2#R-0234", "slsa-1-2#R-0235"]}
+      - {name: verificationResult, type: string, required: true, values: [PASSED, FAILED], description: "Either “PASSED” or “FAILED” to indicate if the artifact passed or failed the policy verification."}
+      - {name: verifiedLevels, type: "array (SlsaResult)", required: true, description: "Indicates the highest level of each track verified for the artifact (and not its dependencies) and any verified properties verified for the artifact or \"FAILED\" if policy verification failed.", constrained_by: ["slsa-1-2#R-0163", "slsa-1-2#R-0164", "slsa-1-2#R-0165", "slsa-1-2#R-0166", "slsa-1-2#R-0236"]}
+      - {name: dependencyLevels, type: "object (SlsaResult → int)", required: false, description: "A count of the dependencies at each SLSA level.", semantics: "set-but-empty = no dependencies at all; unset/null = no claim about dependencies", constrained_by: ["slsa-1-2#R-0237", "slsa-1-2#R-0238"]}
+      - {name: slsaVersion, type: string, required: false, format: "<MAJOR>.<MINOR>", description: "Indicates the version of the SLSA specification that the verifier used ... If unset, the default is an unspecified minor version of `1.x`."}
+    constrained_by: ["slsa-1-2#R-0226", "slsa-1-2#R-0227", "slsa-1-2#R-0239"]
+
+  - name: SlsaResult
+    defined_in: slsa
+    locator: "verification_summary.md § SlsaResult (String)"
+    type: string
+    values:
+      - "SLSA_<TRACK_NAME>_LEVEL_<LEVEL_NUMBER> (e.g. SLSA_BUILD_LEVEL_0, SLSA_BUILD_LEVEL_3, SLSA_SOURCE_LEVEL_2, SLSA_SOURCE_LEVEL_4)"
+      - "SLSA_<TRACK NAME>_LEVEL_UNEVALUATED"
+      - "FAILED (policy evaluation failed)"
+      - "Verified Properties: SLSA_SOURCE_TWO_PARTY_REVIEWED, SLSA_BUILD_REPRODUCED (verified-properties.md)"
+      - "custom values not starting with SLSA_ (e.g. ORG_SOURCE_* in Source VSAs)"
+    semantics: "each SLSA level implies the levels below it in the same track"
+    constrained_by: ["slsa-1-2#R-0236", "slsa-1-2#R-0242", "slsa-1-2#R-0243"]
+
+  - name: source-vsa-profile
+    defined_in: slsa
+    locator: "source-requirements.md § Communicating source levels > Source verification summary attestation (items 1-6)"
+    profile_of: verification-summary-v1
+    issuer: "SCS (or an authority with sufficient evidence)"
+    fields:
+      - {name: subject.uri, required: false, notes: "SHOULD: a URI where a human can find details about the revision; not for policy decisions", constrained_by: ["slsa-1-2#R-0118"]}
+      - {name: subject.digest, required: true, notes: "MUST include the revision identifier (e.g. gitCommit); MAY include gitTree, dirHash; non-cryptographic SCSs define a canonical type that includes the repository (e.g. svn_revision_id)", constrained_by: ["slsa-1-2#R-0119", "slsa-1-2#R-0120"]}
+      - {name: subject.annotations.sourceRefs, required: false, notes: "SHOULD: references that pointed to the revision; MAY be non-exhaustive; git refs MUST be fully qualified", constrained_by: ["slsa-1-2#R-0121", "slsa-1-2#R-0122", "slsa-1-2#R-0123"]}
+      - {name: resourceUri, required: true, notes: "MUST be the repository URI, preferably SPDX Download Location (git+https://...)", constrained_by: ["slsa-1-2#R-0124"]}
+      - {name: verifiedLevels, required: true, notes: "MUST include exactly the highest SLSA_SOURCE_LEVEL_n met; MAY include additional properties; org properties prefixed ORG_SOURCE_ (external) or ORG_SOURCE_INTERNAL_ (internal)", constrained_by: ["slsa-1-2#R-0125", "slsa-1-2#R-0126", "slsa-1-2#R-0127", "slsa-1-2#R-0129", "slsa-1-2#R-0130", "slsa-1-2#R-0131", "slsa-1-2#R-0132"]}
+      - {name: dependencyLevels, required: false, notes: "MAY be empty; e.g. source level of git submodules", constrained_by: ["slsa-1-2#R-0128"]}
+    constrained_by: ["slsa-1-2#R-0096", "slsa-1-2#R-0097", "slsa-1-2#R-0098"]
+
+  - name: source-provenance-attestation
+    defined_in: "left to each SCS (SLSA 'leaves source provenance attestations undefined')"
+    locator: "source-requirements.md § Source provenance attestations; #source-provenance"
+    fields: []
+    examples_named_by_source: ["revision parents + actors (TBD attestation)", "code review attestation", "authentication attestation", "in-toto Vuln Scan", "in-toto Test Results", "in-toto SPDX", "in-toto SCAI"]
+    constrained_by: ["slsa-1-2#R-0107", "slsa-1-2#R-0108", "slsa-1-2#R-0109", "slsa-1-2#R-0112", "slsa-1-2#R-0133", "slsa-1-2#R-0134"]
+
+  - name: merge-train-attestation
+    defined_in: "named, format undefined"
+    locator: "source-example-controls.md § Merge trains > Requirements"
+    fields: []
+    semantics: "the revision ID generated by a merged train is identical (\"MERGESAME\") to the state of the protected branch after applying each approved changeset in sequence"
+    constrained_by: ["slsa-1-2#R-0160", "slsa-1-2#R-0161"]
+
+  - name: roots-of-trust-entry
+    defined_in: "conceptual, 'made-up syntax' (examples/verbatim/*-roots-of-trust.jsonc)"
+    locator: "verifying-artifacts.md § Step 1; verifying-source.md § Step 1"
+    fields:
+      - {name: "publicKey | sigstore{root, subjectAlternativeNamePattern}", required: true, notes: "signer identity"}
+      - {name: "builderId | scsId", required: true, notes: "builder.id (provenance) or VSA verifier.id (source)"}
+      - {name: "slsaBuildLevel | slsaSourceLevel", type: int, required: true, notes: "maximum level the signer-identity pair is trusted up to; lookup defaults to Build L1 when not found"}
+    constrained_by: ["slsa-1-2#R-0058", "slsa-1-2#R-0062", "slsa-1-2#R-0135", "slsa-1-2#R-0214", "slsa-1-2#R-0229", "slsa-1-2#R-0241"]
+
+  - name: expectations
+    defined_in: "conceptual (terminology.md Verification model; verifying-*.md § Forming Expectations)"
+    locator: "verifying-artifacts.md § Step 2 table; verifying-source.md § Step 2 table"
+    keyed_by: "package name (build) / repository branch or tag (source)"
+    fields_build: ["builder identity", "canonical source repository", "buildType", "externalParameters"]
+    fields_source: ["verifier.id", "subject.digest", "verificationResult", "predicate.resourceUri", "subject.annotations.sourceRefs", "verifiedLevels"]
+    formation_models: ["trust on first use", "defined by producer", "defined in source (build track only)"]
+    constrained_by: ["slsa-1-2#R-0063", "slsa-1-2#R-0064", "slsa-1-2#R-0066", "slsa-1-2#R-0070", "slsa-1-2#R-0136", "slsa-1-2#R-0137", "slsa-1-2#R-0138", "slsa-1-2#R-0139"]
+
+  - name: attestation-model-abstract
+    defined_in: slsa
+    locator: "attestation-model.md § Model and Terminology"
+    layers: ["Artifact", "Attestation{Envelope{Message, Signature}, Statement{Subject, Predicate}, Predicate{Link*}}", "Bundle (JSON Lines)", "Storage/Lookup (TBD)"]
+    constrained_by: ["slsa-1-2#R-0167", "slsa-1-2#R-0168", "slsa-1-2#R-0169", "slsa-1-2#R-0170", "slsa-1-2#R-0171", "slsa-1-2#R-0172", "slsa-1-2#R-0173", "slsa-1-2#R-0174", "slsa-1-2#R-0175", "slsa-1-2#R-0176"]
+
+  - name: provenance-v0.2-migration
+    defined_in: slsa
+    locator: "build-provenance.md § Migrating from 0.2"
+    mapping:
+      buildDefinition.buildType: "updated version of old.buildType"
+      buildDefinition.externalParameters: "old.invocation.parameters + {entryPoint: old.invocation.configSource.entryPoint, source: old.invocation.configSource.uri}"
+      buildDefinition.internalParameters: old.invocation.environment
+      buildDefinition.resolvedDependencies: "old.materials + [{uri: old.invocation.configSource.uri, digest: old.invocation.configSource.digest}]"
+      runDetails.builder.id: old.builder.id
+      runDetails.metadata.invocationId: old.metadata.buildInvocationId
+      runDetails.metadata.startedOn: old.metadata.buildStartedOn
+      runDetails.metadata.finishedOn: old.metadata.buildFinishedOn
+    removed: ["entryPoint", "buildConfig", "metadata.completeness", "metadata.reproducible"]
+    constrained_by: ["slsa-1-2#R-0223", "slsa-1-2#R-0224", "slsa-1-2#R-0225"]
+    notes: "Cross-check 2026-10-02: R-0223 (the migration comment) requires the buildType to describe how to interpret `inputArtifacts`, a name that is not a field of v0.2 or v1 provenance and is not defined anywhere in SLSA v1.2 (v0.2 uses `materials`, v1 uses `resolvedDependencies`). Source defect, recorded rather than repaired."

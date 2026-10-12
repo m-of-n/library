@@ -1,0 +1,169 @@
+schema: "library-state-machine/v1"
+record: fda-premarket-cybersecurity-guidance
+source_version: "2026-02-03 final guidance"
+note: >
+  The guidance defines no state machine as such. Its decision rules for known vulnerabilities and for the
+  device support window are lifecycle rules, and they are modelled here. Every state and transition carries
+  the locator and requirement id of the text it comes from. kind: stated = the text names the condition and
+  the outcome; kind: inferred = we supply the ordering or the state name, flagged. Fixtures:
+  examples/vulnerability-disposition.yaml. The postmarket handling of vulnerabilities (controlled /
+  uncontrolled risk, 21 CFR 806 reporting, CVD timelines) belongs to FDA's separate Postmarket Cybersecurity
+  Guidance (2016). It is not modelled here beyond the 524B(b)(2)(A)/(B) patch cadence that this guidance
+  restates.
+machines:
+  - id: vulnerability-disposition
+    subject: "a known vulnerability (or a software anomaly with security impact) in a device or its software components"
+    locator: "§V.A, §V.A.2, §V.A.4(b), §V.A.5, §V.C, §VII.C.1; App. 5 (Controlled Risk, Uncontrolled risk, Unresolved anomaly)"
+    states:
+      - {id: identified, initial: true, kind: inferred, locator: "§V.A.4(b)", note: "known vulnerabilities associated with the device and software components are identified (V.A.4.b-*); discovery method recorded"}
+      - {id: security-anomaly, kind: stated, locator: "§V.A.5", note: "anomaly discovered in development or testing that may have security implications (V.A.5-02, V.A.5-03)"}
+      - {id: assessed, kind: inferred, locator: "§V.A.2, §V.A.4(b)", note: "safety and security risk assessment of each known vulnerability, device and system impacts"}
+      - {id: designed-out, kind: stated, locator: "§V.A.2", requirement: "V.A.2-06", note: "CISA KEV entries 'should be designed out of the device'"}
+      - {id: mitigated-by-design, terminal: true, kind: stated, locator: "§V.A", note: "'A device should be designed to eliminate or mitigate known vulnerabilities.'"}
+      - {id: compensating-controls-considered, kind: stated, locator: "§V.A", requirement: "V.A-07", note: "marketed device, comprehensive design mitigation not possible"}
+      - {id: reasonably-foreseeable-risk, kind: stated, locator: "§V.A", requirement: "V.A-08", note: "partially mitigated or unmitigated; assessed for additional control measures or risk transfer"}
+      - {id: risk-transferred, kind: stated, locator: "§V.A; App. 5 fn 31", requirement: "V.A-09", note: "to user/operator or patient; guard: all relevant risk information known, assessed and communicated"}
+      - {id: remediation-deferred, kind: stated, locator: "§V.C", requirement: "V.C-36, V.C-37", note: "current risk acceptable; fix in a future release; plans with timelines are in the submission"}
+      - {id: unresolved-anomaly, terminal: true, kind: stated, locator: "§V.A.5; App. 5", requirement: "V.A.5-04", note: "defect left uncorrected on a risk-based rationale; criteria and rationale submitted"}
+      - {id: controlled-risk, kind: stated, locator: "App. 5 'Controlled Risk'", note: "sufficiently low (acceptable) residual risk of patient harm"}
+      - {id: uncontrolled-risk, kind: stated, locator: "App. 5 'Uncontrolled risk'", note: "unacceptable residual risk of patient harm due to inadequate compensating controls and risk mitigations"}
+      - {id: regular-cycle-patch, kind: stated, locator: "§VII.C.1; FD&C 524B(b)(2)(A)", requirement: "VII.C.1-09", note: "cyber device, known unacceptable vulnerability: updates and patches on a reasonably justified regular cycle"}
+      - {id: out-of-cycle-patch, kind: stated, locator: "§VII.C.1; FD&C 524B(b)(2)(B)", requirement: "VII.C.1-11", note: "cyber device, critical vulnerability that could cause uncontrolled risks: as soon as possible out of cycle"}
+      - {id: remediated, terminal: true, kind: inferred, locator: "§V.A.6", note: "patched or updated; feeds the V.A.6 metrics (percentage patched, time to patch, time to field deployment)"}
+    transitions:
+      - {from: identified, to: assessed, trigger: "risk assessment performed", kind: inferred, locator: "§V.A.4(b)"}
+      - {from: security-anomaly, to: assessed, trigger: "security impact assessment of anomaly (incl. CWE categories)", kind: stated, locator: "§V.A.5", requirement: "V.A.5-02, V.A.5-03"}
+      - {from: assessed, to: designed-out, guard: "in_cisa_kev and premarket", kind: stated, locator: "§V.A.2", requirement: "V.A.2-06"}
+      - {from: designed-out, to: mitigated-by-design, trigger: "design change", kind: inferred, locator: "§V.A"}
+      - {from: assessed, to: mitigated-by-design, guard: "comprehensive design mitigation possible", kind: stated, locator: "§V.A"}
+      - {from: assessed, to: compensating-controls-considered, guard: "marketed and not comprehensive_design_mitigation_possible", kind: stated, locator: "§V.A", requirement: "V.A-07"}
+      - {from: assessed, to: reasonably-foreseeable-risk, guard: "mitigation in {partial, none}", kind: stated, locator: "§V.A", requirement: "V.A-08"}
+      - {from: compensating-controls-considered, to: reasonably-foreseeable-risk, guard: "residual risk remains", kind: inferred, locator: "§V.A"}
+      - {from: reasonably-foreseeable-risk, to: risk-transferred, guard: "all relevant risk information known, assessed, and appropriately communicated to users (incl. supply-chain risks and end-of-support handling)", kind: stated, locator: "§V.A", requirement: "V.A-09"}
+      - {from: reasonably-foreseeable-risk, to: controlled-risk, guard: "residual risk acceptable", kind: inferred, locator: "App. 5"}
+      - {from: reasonably-foreseeable-risk, to: uncontrolled-risk, guard: "residual risk unacceptable", kind: inferred, locator: "App. 5"}
+      - {from: controlled-risk, to: remediation-deferred, guard: "current risk acceptable and remediation planned for a future release", kind: stated, locator: "§V.C", requirement: "V.C-36"}
+      - {from: assessed, to: unresolved-anomaly, guard: "source is anomaly and sponsor deems not correcting appropriate on risk-based rationale", kind: stated, locator: "§V.A.5; App. 5"}
+      - {from: controlled-risk, to: regular-cycle-patch, guard: "cyber_device and known_unacceptable", kind: stated, locator: "§VII.C.1", requirement: "VII.C.1-09"}
+      - {from: uncontrolled-risk, to: out-of-cycle-patch, guard: "cyber_device and critical", kind: stated, locator: "§VII.C.1", requirement: "VII.C.1-11"}
+      - {from: remediation-deferred, to: remediated, trigger: "future release deployed", kind: inferred, locator: "§V.C"}
+      - {from: regular-cycle-patch, to: remediated, trigger: "update or patch made available", kind: inferred, locator: "§VII.C.1"}
+      - {from: out-of-cycle-patch, to: remediated, trigger: "update or patch made available", kind: inferred, locator: "§VII.C.1"}
+    error_states:
+      - {id: kev-shipped, kind: inferred, locator: "§V.A.2", note: "a KEV-listed vulnerability present at submission without design-out; contradicts V.A.2-06 and invites an NSE finding (§VII.E example)"}
+      - {id: transfer-without-disclosure, kind: inferred, locator: "§V.A", note: "risk transferred without the V.A-09 guard satisfied"}
+  - id: device-support-lifecycle
+    subject: "a device (and its software components) across the total product lifecycle (TPLC)"
+    locator: "§IV.A.1, §V.A.6, §VI.A, App. 5 (Lifecycle, End of support, Decommission, Disposal)"
+    states:
+      - {id: design-development, initial: true, kind: stated, locator: "§IV.A.1", note: "SPDF 'encompasses all aspects of a product's lifecycle, including design, development, release, support, and decommission'"}
+      - {id: investigational, kind: stated, locator: "App. 3", note: "IDE subset of documentation"}
+      - {id: premarket-review, kind: inferred, locator: "§IV.D, §VII.A"}
+      - {id: marketed-supported, kind: stated, locator: "§V.A.6", note: "supported device lifecycle; periodic testing (V.C-39), SBOM kept current, management plan executed"}
+      - {id: fielded-not-marketed, kind: stated, locator: "§V.A.6", note: "devices no longer marketed but still in use; different risk profiles per software configuration"}
+      - {id: end-of-support, kind: stated, locator: "§VI.A; App. 5 'End of support'", requirement: "VI.A-26"}
+      - {id: in-service-after-eos, kind: stated, locator: "§VI.A", requirement: "VI.A-27", note: "pre-established, pre-communicated risk-transfer process; risk expected to increase"}
+      - {id: decommissioned, terminal: true, kind: stated, locator: "§VI.A; App. 5 'Decommission'", requirement: "VI.A-28"}
+    transitions:
+      - {from: design-development, to: investigational, trigger: "IDE application (21 CFR 812.25)", kind: stated, locator: "App. 3"}
+      - {from: design-development, to: premarket-review, trigger: "premarket submission (510(k), De Novo, PMA, PDP, HDE)", kind: stated, locator: "§VII.A"}
+      - {from: investigational, to: premarket-review, trigger: "marketing submission", kind: inferred, locator: "App. 3"}
+      - {from: premarket-review, to: marketed-supported, trigger: "marketing authorization", guard: "reasonable assurance of safety and effectiveness incl. cybersecurity (§VII.E)", kind: inferred, locator: "§VII.E"}
+      - {from: premarket-review, to: design-development, trigger: "NSE / additional information request", kind: stated, locator: "§VII.E", note: "NSE example: missing encryption against a recently identified threat"}
+      - {from: marketed-supported, to: premarket-review, trigger: "modification requiring a premarket submission", kind: stated, locator: "§VII.D"}
+      - {from: marketed-supported, to: fielded-not-marketed, trigger: "marketing ends", kind: stated, locator: "§V.A.6"}
+      - {from: marketed-supported, to: end-of-support, trigger: "manufacturer ceases support", kind: stated, locator: "App. 5"}
+      - {from: fielded-not-marketed, to: end-of-support, trigger: "manufacturer ceases support", kind: inferred, locator: "App. 5"}
+      - {from: end-of-support, to: in-service-after-eos, guard: "device remains in service and risk-transfer process communicated", kind: stated, locator: "§VI.A", requirement: "VI.A-27"}
+      - {from: end-of-support, to: decommissioned, trigger: "sanitization per labeling", kind: stated, locator: "§VI.A", requirement: "VI.A-28"}
+      - {from: in-service-after-eos, to: decommissioned, trigger: "sanitization per labeling", kind: stated, locator: "§VI.A", requirement: "VI.A-28"}
+
+# ---- added in the cross-check pass (2026-10-02) ----
+# Catalogue of every trigger that is not a `send <message>` of a message defined in messages.yaml /
+# protocol.yaml: named events, timers and internal decisions. Text = the trigger as written above;
+# locators = union of the transitions that use it. Empty triggers are listed under empty_triggers.
+events:
+  - id: ide-application-21-cfr-812-25
+    trigger: "IDE application (21 CFR 812.25)"
+    machines: ["device-support-lifecycle"]
+    locators: ["App. 3"]
+    kind: stated
+  - id: nse-additional-information-request
+    trigger: "NSE / additional information request"
+    machines: ["device-support-lifecycle"]
+    locators: ["§VII.E"]
+    kind: stated
+  - id: design-change
+    trigger: "design change"
+    machines: ["vulnerability-disposition"]
+    locators: ["§V.A"]
+    kind: inferred
+  - id: future-release-deployed
+    trigger: "future release deployed"
+    machines: ["vulnerability-disposition"]
+    locators: ["§V.C"]
+    kind: inferred
+  - id: manufacturer-ceases-support
+    trigger: "manufacturer ceases support"
+    machines: ["device-support-lifecycle"]
+    locators: ["App. 5"]
+    kind: stated
+  - id: marketing-authorization
+    trigger: "marketing authorization"
+    machines: ["device-support-lifecycle"]
+    locators: ["§VII.E"]
+    kind: inferred
+  - id: marketing-ends
+    trigger: "marketing ends"
+    machines: ["device-support-lifecycle"]
+    locators: ["§V.A.6"]
+    kind: stated
+  - id: marketing-submission
+    trigger: "marketing submission"
+    machines: ["device-support-lifecycle"]
+    locators: ["App. 3"]
+    kind: inferred
+  - id: modification-requiring-a-premarket-submission
+    trigger: "modification requiring a premarket submission"
+    machines: ["device-support-lifecycle"]
+    locators: ["§VII.D"]
+    kind: stated
+  - id: premarket-submission-510-k-de-novo-pma-pdp-hde
+    trigger: "premarket submission (510(k), De Novo, PMA, PDP, HDE)"
+    machines: ["device-support-lifecycle"]
+    locators: ["§VII.A"]
+    kind: stated
+  - id: risk-assessment-performed
+    trigger: "risk assessment performed"
+    machines: ["vulnerability-disposition"]
+    locators: ["§V.A.4(b)"]
+    kind: inferred
+  - id: sanitization-per-labeling
+    trigger: "sanitization per labeling"
+    machines: ["device-support-lifecycle"]
+    locators: ["§VI.A"]
+    kind: stated
+  - id: security-impact-assessment-of-anomaly-incl-cwe-categories
+    trigger: "security impact assessment of anomaly (incl. CWE categories)"
+    machines: ["vulnerability-disposition"]
+    locators: ["§V.A.5"]
+    kind: stated
+  - id: update-or-patch-made-available
+    trigger: "update or patch made available"
+    machines: ["vulnerability-disposition"]
+    locators: ["§VII.C.1"]
+    kind: inferred
+empty_triggers:   # transitions with no trigger in pass 1 (guard-only / automatic); recorded, not invented
+  - {machine: "vulnerability-disposition", from: "assessed", to: "designed-out"}
+  - {machine: "vulnerability-disposition", from: "assessed", to: "mitigated-by-design"}
+  - {machine: "vulnerability-disposition", from: "assessed", to: "compensating-controls-considered"}
+  - {machine: "vulnerability-disposition", from: "assessed", to: "reasonably-foreseeable-risk"}
+  - {machine: "vulnerability-disposition", from: "compensating-controls-considered", to: "reasonably-foreseeable-risk"}
+  - {machine: "vulnerability-disposition", from: "reasonably-foreseeable-risk", to: "risk-transferred"}
+  - {machine: "vulnerability-disposition", from: "reasonably-foreseeable-risk", to: "controlled-risk"}
+  - {machine: "vulnerability-disposition", from: "reasonably-foreseeable-risk", to: "uncontrolled-risk"}
+  - {machine: "vulnerability-disposition", from: "controlled-risk", to: "remediation-deferred"}
+  - {machine: "vulnerability-disposition", from: "assessed", to: "unresolved-anomaly"}
+  - {machine: "vulnerability-disposition", from: "controlled-risk", to: "regular-cycle-patch"}
+  - {machine: "vulnerability-disposition", from: "uncontrolled-risk", to: "out-of-cycle-patch"}
+  - {machine: "device-support-lifecycle", from: "end-of-support", to: "in-service-after-eos"}
