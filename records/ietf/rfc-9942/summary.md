@@ -78,8 +78,23 @@ Two observations:
 |---|---|
 | `record.yaml` | metadata |
 | `summary.md` | this document |
+| `distilled/` | the FX-1 artifact set — `distilled/README.md` indexes it with per-artifact coverage |
 
-No `distilled/`. The normative density here is real — §4.3, §4.4.1, §5.2.1 and §5.3.1 carry MUSTs a verifier implementation must satisfy — so this is a plausible future `distill` target if we ever build a receipt verifier. Nothing is built on it yet.
+Extracted 2026-09-30 to `distillation.profile: full`: `normative.md`,
+`requirements.yaml` (27 entries, all 16 BCP 14 keywords reconciled exactly —
+8 of them `REQUIRED` used as field designators in the §5.2.1 and §5.3.1 tables
+rather than as sentence-level obligations), `schema/` (all 7 CDDL blocks
+byte-identical to their source ranges, plus a derived compilable rendering),
+`messages.yaml` (13 structures, 37 field entries), `state-machine.yaml` (3
+derived machines, with the verification-order inversion made mechanically
+visible five independent ways) and `design-notes.md`. **`protocol` and
+`examples` are declared not applicable**: the word "protocol" occurs zero
+times and no sentence has one actor acting on another, and all 21 `h'…'`
+literals are elided, so no fixture is reproducible. Both files hold the search
+evidence rather than a bare declaration.
+
+**`reviewed_by` is empty on every artifact**, so this extraction may be read
+but nothing may be built on it — `docs/requirements.md`.
 
 ## Limits
 

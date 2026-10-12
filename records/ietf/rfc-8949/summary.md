@@ -83,11 +83,23 @@ Three points a build-on-it decision turns on:
 |---|---|
 | `record.yaml` | metadata, typed relations, and the 2026-09-22 implementations survey |
 | `summary.md` | this document |
+| `distilled/` | the FX-1 artifact set — `distilled/README.md` indexes it with per-artifact coverage |
 
-No `distilled/` artifacts yet. If DEC-002 selects CBOR, this record is the
-first candidate for `distilled/normative.md` — §3 (major types), §4.2
-(determinism) and Appendix F (non-well-formedness) are the sections a
-conforming implementation is mined from.
+Extracted 2026-09-30 to `distillation.profile: full`: `normative.md` (165
+verbatim statements and 36 verbatim blocks, §1.2–§10 plus Appendices A, B, C
+and F), `requirements.yaml` (all 34 BCP 14 statements as
+`rfc-8949#R-0001`…`R-0034`, counts reconciled at 34), `messages.yaml` (44
+structures, 89 fields, 125 `constrained_by` links), `schema/` (Appendix C
+pseudocode and the Table 7 jump table byte-identical, plus a derived CDDL and
+ABNF — the RFC defines neither itself), `examples/vectors.yaml` (232 vectors,
+131 well-formed and 101 not, each carrying the source's own error kind) and
+`design-notes.md`. **`protocol` and `state-machine` are declared not
+applicable**: RFC 8949 defines a data format, not an exchange, and its one
+stateful process is the decode of a single item.
+
+**`reviewed_by` is empty on every artifact.** An unreviewed extraction may be
+read, but nothing may be built on it — `docs/requirements.md`. That, and not
+the absence of a `distilled/`, is this record's gate.
 
 ## Limits
 
