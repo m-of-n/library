@@ -9,11 +9,11 @@ reviewed_by: ""
 # RFC 5280 — examples and test vectors
 
 This directory holds the **4 Appendix C examples as byte fixtures** and
-`vectors.yaml`, which has **83 vectors** in all:
+`vectors.yaml`, which has **85 vectors** in all:
 
-- **42 in-source.** The source prints their input. That covers the four
+- **44 in-source.** The source prints their input. That covers the four
   fixtures, the minimal certification path that Appendix C says C.1, C.2 and
-  C.4 form, and 37 examples printed in prose or figures.
+  C.4 form, and 39 examples printed in prose or figures.
 - **41 constructed.** Each one tests a rule the source states but gives no
   literal for, mostly in §6.1 path validation.
 
@@ -129,7 +129,7 @@ policy, not from the fixture.
 | Appendix C (the minimal path C.1 → C.2 with C.4) | 1 | 1 | `PKIX-C-01`; `PKIX-C-02` |
 | §4.1.2.5 Validity (99991231235959Z) | 1 | 0 | `PKIX-4125-01` |
 | §4.1.2.6 Subject (emailAddress case) | 1 | 0 | `PKIX-4126-01` |
-| §4.2.1.6 Subject Alternative Name (scheme case) | 1 | 0 | `PKIX-4216-01` |
+| §4.2.1.6 Subject Alternative Name (scheme case; dNSName " "; mail address in DNS form) | 3 | 0 | `PKIX-4216-01` … `-03` |
 | §4.2.1.10 Name Constraints | 13 | 1 | `PKIX-42110-01` … `-13`; `-14` |
 | §4.2.1.11 Policy Constraints ("a value of one") | 1 | 0 | `PKIX-42111-01` |
 | §4.2.1.13 CRL Distribution Points (LDAP URIs) | 2 | 0 | `PKIX-42113-01`, `-02` |
@@ -145,10 +145,12 @@ policy, not from the fixture.
 | §6.1.5 Wrap-Up Procedure | 0 | 3 | `PKIX-615-01` … `-03` |
 | §6.3.3 CRL Processing (on the C.4 fixture) | 0 | 3 | `PKIX-633-01` … `-03` |
 | Appendix B (DER DEFAULT omission; NC URI holds a DNS name) | 2 | 0 | `PKIX-B-01`, `-02` |
-| **total** | **42** | **41** | **83** |
+| **total** | **44** | **41** | **85** |
 
 The LDAP URI block (`42113`, `4221`, `4222`, `527`) sits after the
-§4.2.1.14 vector in the file. Every other vector is in source order.
+§4.2.1.14 vector in the file. `PKIX-4216-02` and `-03`, added in pass 2,
+follow `PKIX-4216-01` although their source lines (2014–2027) come before
+it. Every other vector is in source order.
 
 ### The constructed path vectors, by rule
 
@@ -173,7 +175,7 @@ The LDAP URI block (`42113`, `4221`, `4222`, `527`) sits after the
 | §6.1.5(g) intersection with the user-initial-policy-set | `PKIX-615-02`, `-03` | fails; succeeds with NULL tree |
 | duplicate certificate in the path; self-issued determination under §7.1 | `PKIX-61-01`, `-02` | rejected; self-issued |
 | issuer-name chaining; bad signature; expiry (on C.2) | `PKIX-613-14`, `-15`, `PKIX-C-02` | fail at 6.1.3(a)(4), (a)(1), (a)(2) |
-| CRL use: critical CRL extension; no cRLSign; no reasonCode; removeFromCRL delta | `PKIX-52-01`, `PKIX-633-01` … `-03` | CRL unused; CRL unused; unspecified; UNREVOKED |
+| CRL use: critical CRL extension; no cRLSign; no reasonCode; removeFromCRL delta | `PKIX-52-01`, `PKIX-633-01` … `-03` | CRL unused; CRL unused (**ambiguous**: the CRL issuer is the trust anchor); unspecified; UNREVOKED |
 
 Every constructed vector cites its R-ids from `requirements.yaml`, and
 N-ids from `normative.md` where the rule is lowercase prose. Each vector
@@ -181,7 +183,7 @@ also carries a `trace` of the state variables that decide its outcome.
 
 ## Count reconciliation
 
-**42 in-source.**
+**44 in-source.**
 
 - **4 fixtures**: every example Appendix C prints. The Appendix C intro
   says "four examples: three certificates and a CRL".
@@ -189,10 +191,12 @@ also carries a `trace` of the state variables that decide its outcome.
   "The first two certificates and the CRL comprise a minimal certification
   path." The source states no outcome for this path, so the outcome (fails:
   C.2 is revoked) is under `derived`.
-- **37 prose and figure examples**, each a value the source prints with a
+- **39 prose and figure examples**, each a value the source prints with a
   stated meaning or result:
   - 1 date (§4.1.2.5)
   - 2 case-equivalence pairs (§4.1.2.6, §4.2.1.6)
+  - 2 prohibited name values (§4.2.1.6): the dNSName " " and the DNS form
+    of a mail address
   - 13 name-constraint cases (§4.2.1.10): 4 URI, 4 mail, 3 DNS, 1 IP
     encoding, and 1 "no name of the type"
   - 2 "a value of one" statements (§4.2.1.11, §4.2.1.14)
@@ -224,6 +228,10 @@ also carries a `trace` of the state variables that decide its outcome.
   value, are not examples: "e.g., DAP or LDAP", "e.g., "http" or "ftp"" in
   the scheme requirement, "e.g., "Susan Housley"" in the attribute list,
   "e.g., "Jr."".
+- Appendix B (lines 7437–7444) names the at sign and the underscore as
+  characters PrintableString does not support. They are the character set
+  of a rule (R-0610), like the 20-octet and 2^28 limits beside them, not an
+  example value, so no vector was made.
 
 ## Sections with no vector, and why
 
@@ -287,6 +295,26 @@ also carries a `trace` of the state variables that decide its outcome.
    mention the subjectKeyIdentifier extension that each dump contains.
    C.2's does not mention its critical keyUsage. Nothing contradicts the
    dumps.
+7. **keyUsage of a trust anchor that signs a CRL.** §6.3.3(f) checks
+   keyUsage in "the CRL issuer's certificate". When the CRL issuer is the
+   trust anchor, §6.1.1(d) uses only the name and key of its self-signed
+   certificate, and R-0381 keeps that certificate out of the path. The
+   source does not say whether its keyUsage is checked. Recorded on
+   `PKIX-633-01`, which is marked `ambiguous: true`.
 
-Items 1–5 are new relative to the shared defect list. Issue 6 is noted for
-completeness only.
+Items 1–5 and 7 are new relative to the shared defect list. Issue 6 is
+noted for completeness only.
+
+## Pass 2 (verify)
+
+- Fixtures rebuilt independently from the four `dump.txt` files by a new DER encoder (66, 70, 83, 45 nodes; every offset and length equal): all four byte-identical to the `.hex` files. No fix.
+- `dump.txt` files re-extracted from source lines 7646–7795, 7819–7978, 8023–8218, 8239–8329 with page furniture removed: byte-identical. No fix.
+- Signatures re-verified with OpenSSL 3.0.13: C.1 self-signed, C.2 and C.4 under the C.1 key: "Verified OK". C.3: no key or certificate for cn=Example DSA CA anywhere in Appendix C or the rest of the source; C.3 does not verify under its own key. No fix.
+- Every sha256 in `vectors.yaml` (`.hex`, DER, dump) matches the files. No fix.
+- `PKIX-42110-02`: lines 2260-2261 → 2259-2261 (the quoted sentence begins on 2259).
+- `PKIX-4221-01`, `-02`: lines 2783-… → 2782-… (the quoted sentence begins on 2782).
+- `PKIX-615-02`: `rule_text_note` said lines 4919-4920; the hyphenation is at 4922-4923.
+- `vectors.yaml` header said one quote rejoins a hyphenated word; there are two (`PKIX-614-09`, `PKIX-615-02`).
+- `PKIX-633-03`: the §5.2.4 quote in `note` stopped mid-sentence and dropped the second condition of the MAY; completed, lines 3558-3561 → 3558-3562.
+- `PKIX-633-01`: marked `ambiguous: true` with `ambiguous_reason` (source issue 7); `ambiguous` added to the header conventions.
+- Added `PKIX-4216-02` (dNSName " ", lines 2014–2024) and `PKIX-4216-03` (mail address in DNS form, lines 2024–2027): printed example values with a stated result that pass 1 missed. Counts 83/42 → 85/44 in `vectors.yaml` and here.

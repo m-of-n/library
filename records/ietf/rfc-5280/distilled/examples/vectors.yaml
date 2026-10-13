@@ -9,10 +9,10 @@ extracted: "2026-10-13"
 pass: 1
 reviewed_by: ""
 fixture_count: 4
-vector_count: 83
-source_vector_count: 42
+vector_count: 85
+source_vector_count: 44
 constructed_vector_count: 41
-count_reconciliation: "83 = 42 vectors whose input the source prints + 41 constructed vectors. The 42: 4 Appendix C fixtures (C.1, C.2, C.3, C.4), 1 vector for the minimal certification path the Appendix C intro says C.1, C.2 and C.4 form (PKIX-C-01), and 37 examples printed in running prose or figures: 4.1.2.5: 1, 4.1.2.6: 1, 4.2.1.6: 1, 4.2.1.10: 13, 4.2.1.11: 1, 4.2.1.13: 2, 4.2.1.14: 1, 4.2.2.1: 2, 4.2.2.2: 2, 5.2.7: 2, 6.1.2: 1 (Figure 3), 6.1.3: 4 (Figures 4 to 7), 6.1.4: 4, Appendix B: 2. The 41 constructed: Appendix C: 1 (the C.1/C.2 path at the extraction date), 4.2.1.10: 1, 6.1: 2, 6.1.3: 11, 6.1.4: 19, 6.1.5: 3, 5.2: 1, 6.3.3: 3. Each tests a rule the source states and prints no literal for. Sections with no vector, and why, are listed in README.md."
+count_reconciliation: "85 = 44 vectors whose input the source prints + 41 constructed vectors. The 44: 4 Appendix C fixtures (C.1, C.2, C.3, C.4), 1 vector for the minimal certification path the Appendix C intro says C.1, C.2 and C.4 form (PKIX-C-01), and 39 examples printed in running prose or figures: 4.1.2.5: 1, 4.1.2.6: 1, 4.2.1.6: 3, 4.2.1.10: 13, 4.2.1.11: 1, 4.2.1.13: 2, 4.2.1.14: 1, 4.2.2.1: 2, 4.2.2.2: 2, 5.2.7: 2, 6.1.2: 1 (Figure 3), 6.1.3: 4 (Figures 4 to 7), 6.1.4: 4, Appendix B: 2. The 41 constructed: Appendix C: 1 (the C.1/C.2 path at the extraction date), 4.2.1.10: 1, 6.1: 2, 6.1.3: 11, 6.1.4: 19, 6.1.5: 3, 5.2: 1, 6.3.3: 3. Each tests a rule the source states and prints no literal for. Sections with no vector, and why, are listed in README.md."
 
 # ====================================================================
 # Conventions used in this file
@@ -46,8 +46,9 @@ count_reconciliation: "83 = 42 vectors whose input the source prints + 41 constr
 #            verbatim after whitespace normalisation: a line break plus the
 #            next line's margin reads as one space, two spaces after a full
 #            stop inside a line are kept, page header and footer are not
-#            text. One quote rejoins a word hyphenated across a line end
-#            ("non-" + "self-issued" -> non-self-issued); it is marked.
+#            text. Two quotes rejoin a word hyphenated across a line end
+#            ("non-" + "self-issued" -> non-self-issued; "user-initial-" +
+#            "policy-set" -> user-initial-policy-set); each is marked.
 #            Values under `annotation` are read off the printed dump.
 # expected_basis
 #            stated      -- the source states this result for this input.
@@ -55,6 +56,9 @@ count_reconciliation: "83 = 42 vectors whose input the source prints + 41 constr
 #                           quotes it and the result is under `derived`.
 # expected_result
 #            present at top level ONLY where the source states the result.
+# ambiguous  true where the source supports more than one result for the
+#            input; `ambiguous_reason` says why, and `derived` gives the
+#            reading taken without making it the only one.
 # derived    everything this extraction computed or checked, with
 #            in_source: false. Tool results name the tool (OpenSSL 3.0.13,
 #            run locally; nothing fetched).
@@ -621,6 +625,57 @@ vectors:
     rule:
       - 'rfc-5280#N-131'
 
+  # PKIX-4216-02 and -03 were added in pass 2 (verify). Their source lines
+  # (2014-2027) come before PKIX-4216-01 (2040-2041); ids are never
+  # renumbered, so they follow it here.
+
+  - id: PKIX-4216-02
+    source:
+      locator: '§4.2.1.6'
+      lines: '2014-2024'
+    kind: name-encoding
+    in_source: true
+    fidelity: split
+    input:
+      field: 'subjectAltName dNSName'
+      value: ' '
+      value_note: 'a single space (U+0020), the string the source prints between quotes'
+    expected:
+      text: 'In addition, while the string " " is a legal domain name, subjectAltName extensions with a dNSName of " " MUST NOT be used.'
+    expected_basis: stated
+    expected_result: 'not conforming: a subjectAltName extension with a dNSName of " " MUST NOT be used'
+    rule:
+      - 'rfc-5280#R-0137'
+      - 'rfc-5280#N-129'
+    derived:
+      in_source: false
+      der_general_name: '82 01 20 (GeneralName [2] dNSName, IMPLICIT IA5String, one space)'
+      note: 'the quoted sentence crosses the page break after line 2014 ("In" ends line 2014; the rest is at 2023-2024)'
+
+  - id: PKIX-4216-03
+    source:
+      locator: '§4.2.1.6'
+      lines: '2024-2027'
+    kind: name-encoding
+    in_source: true
+    fidelity: split
+    input:
+      identity: 'the Internet mail address subscriber@example.com'
+      dns_form: 'subscriber.example.com'
+      rfc822_form: 'subscriber@example.com'
+    expected:
+      text: 'Finally, the use of the DNS representation for Internet mail addresses (subscriber.example.com instead of subscriber@example.com) MUST NOT be used; such identities are to be encoded as rfc822Name.'
+    expected_basis: stated
+    expected_result: 'the mail address is encoded as rfc822Name subscriber@example.com; dNSName subscriber.example.com MUST NOT be used for it'
+    rule:
+      - 'rfc-5280#R-0138'
+      - 'rfc-5280#N-129'
+    derived:
+      in_source: false
+      der_conforming: '81 16 73756273637269626572406578616d706c652e636f6d (GeneralName [1] rfc822Name, 22 octets)'
+      der_prohibited: '82 16 73756273637269626572 2e 6578616d706c652e636f6d (GeneralName [2] dNSName subscriber.example.com)'
+      note: 'an encoder-side check: given the mail address, emit rfc822Name. A relying party cannot tell the prohibited form from a real host name by its bytes (R-0138 is testable: partial).'
+
   # ===================================================================
   # Section 4.2.1.10 -- name constraints: the printed examples
   # ===================================================================
@@ -651,7 +706,7 @@ vectors:
   - id: PKIX-42110-02
     source:
       locator: '§4.2.1.10'
-      lines: '2260-2261'
+      lines: '2259-2261'
     kind: name-constraint-match
     in_source: true
     fidelity: split
@@ -1057,7 +1112,7 @@ vectors:
   - id: PKIX-4221-01
     source:
       locator: '§4.2.2.1'
-      lines: '2783-2788'
+      lines: '2782-2788'
     kind: uri-example
     in_source: true
     fidelity: split
@@ -1086,7 +1141,7 @@ vectors:
   - id: PKIX-4221-02
     source:
       locator: '§4.2.2.1'
-      lines: '2783-2791'
+      lines: '2782-2791'
     kind: uri-example
     in_source: true
     fidelity: split
@@ -2314,7 +2369,7 @@ vectors:
       - 'rfc-5280#R-0482'
       - 'rfc-5280#R-0487'
       - 'rfc-5280#R-0488'
-    rule_text_note: 'lines 4919-4920 hyphenate "user-initial-" at the line end; rejoined as user-initial-policy-set'
+    rule_text_note: 'lines 4922-4923 hyphenate "user-initial-" at the line end; rejoined as user-initial-policy-set'
     expected_basis: rule-quoted
     rule_text: 'If the valid_policy of any node in the valid_policy_node_set is not in the user-initial-policy-set and is not anyPolicy, delete this node and all its children.'
     derived:
@@ -2390,9 +2445,12 @@ vectors:
       - 'rfc-5280#R-0527'
       - 'rfc-5280#R-0100'
     expected_basis: rule-quoted
+    ambiguous: true
+    ambiguous_reason: 'The CRL issuer here is the trust anchor itself. §6.3.3(f) checks keyUsage in "the CRL issuer''s certificate", but §6.1.1(d) (lines 4226-4236) takes from a self-signed trust anchor certificate only its subject name and subjectPublicKeyInfo, and R-0381 keeps that certificate out of the path. The source does not say whether the keyUsage of a trust anchor''s self-signed certificate is checked when the anchor signs a CRL. If it is, C.4 cannot be used; if the anchor is only name and key, step (f) has no certificate to check and C.4 is used.'
     derived:
       in_source: false
-      outcome: 'C.4 cannot be used: its issuer''s key is not certified for CRL signing'
+      outcome: 'C.4 cannot be used: its issuer''s key is not certified for CRL signing (the reading that checks the trust anchor certificate''s keyUsage; see ambiguous_reason)'
+      unambiguous_variant: 'make the CRL issuer an intermediate: TA -> CA1 (keyUsage keyCertSign only) and a CRL signed by CA1 for a certificate CA1 issued; then step (f) checks the keyUsage of CA1, a certificate in the CRL issuer''s path, and the CRL cannot be used'
 
   - id: PKIX-633-02
     source:
@@ -2417,7 +2475,7 @@ vectors:
   - id: PKIX-633-03
     source:
       locator: '§6.3.3(j), (k)'
-      lines: '5255-5286, 3558-3561'
+      lines: '5255-5286, 3558-3562'
     kind: crl-use
     in_source: false
     fidelity: constructed
@@ -2441,4 +2499,4 @@ vectors:
         - '(j): cert_status is not UNREVOKED, so the complete CRL is not searched'
         - '(k): cert_status = UNREVOKED'
       outcome: 'UNREVOKED: the delta entry takes precedence over the complete CRL entry'
-      note: 'the listing is one §5.2.4 permits: "A CRL issuer MAY optionally list a certificate on a delta CRL with reason code removeFromCRL if the notAfter time specified in the certificate precedes the thisUpdate time specified in the delta CRL" (lines 3558-3561). The vector tests only the §6.3.3 status computation; validating C.2 at that time fails anyway at §6.1.3(a)(2).'
+      note: 'the listing is one §5.2.4 permits: "A CRL issuer MAY optionally list a certificate on a delta CRL with reason code removeFromCRL if the notAfter time specified in the certificate precedes the thisUpdate time specified in the delta CRL and the certificate was listed on the referenced base CRL or in any CRL issued after the base but before this delta CRL" (lines 3558-3562). Both conditions hold here: C.2 expired before the delta thisUpdate, and C.4 lists it. The vector tests only the §6.3.3 status computation; validating C.2 at that time fails anyway at §6.1.3(a)(2).'

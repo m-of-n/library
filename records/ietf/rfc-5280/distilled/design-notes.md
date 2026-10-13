@@ -310,15 +310,17 @@ names a CA may certify, not what a key may say.
 
 **Monotone narrowing.** Each CA certificate can only narrow:
 
-> (1) If permittedSubtrees is present in the certificate, set the
+> If permittedSubtrees is present in the certificate, set the
 > permitted_subtrees state variable to the intersection of its previous value
-> and the value indicated in the extension field. [...]
->
-> (2) If excludedSubtrees is present in the certificate, set the
-> excluded_subtrees state variable to the union of its previous value and the
-> value indicated in the extension field. [...]
+> and the value indicated in the extension field.
 
-(§6.1.4(g), R-0451 and R-0452; elisions ours.)
+(§6.1.4(g)(1), R-0451.)
+
+> If excludedSubtrees is present in the certificate, set the
+> excluded_subtrees state variable to the union of its previous value and the
+> value indicated in the extension field.
+
+(§6.1.4(g)(2), R-0452.) Each is the first sentence of its step.
 
 - **Exclusion wins.** *"Any name matching a restriction in the
   excludedSubtrees field is invalid regardless of information appearing in the
@@ -685,7 +687,9 @@ counterpart in our model:
 2. **Delayed activation.** requireExplicitPolicy, inhibitPolicyMapping and
    inhibitAnyPolicy are `SkipCerts` counts: *"the number of additional
    certificates that may appear in the path before"* the constraint applies
-   (N-166, N-167, N-190). A constraint that starts k hops later is the
+   (N-166, N-167), and for inhibitAnyPolicy *"the number of additional
+   non-self-issued certificates that may appear in the path before"* (N-190).
+   A constraint that starts k hops later is the
    integer-depth design of §2 again, applied to policy.
 3. **Optional enforcement.** A path succeeds with an empty policy set unless
    something demanded a policy. The success condition is *"If either (1) the
@@ -737,14 +741,17 @@ everything below its subject. Take a CA certificate for Bob that carries:
 - policyConstraints {requireExplicitPolicy 0, inhibitPolicyMapping 0};
 - inhibitAnyPolicy 0.
 
-Then every later certificate in the path must assert P, because:
+Then every later certificate in the path must assert P, except that a
+self-issued intermediate may assert `anyPolicy` instead (§6.1.3(d)(2)), because:
 
 - explicit_policy becomes 0 at §6.1.4(i)(1) (R-0458);
 - mapping stops at §6.1.4(i)(2) (R-0459);
 - `anyPolicy` stops matching at §6.1.4(j) (R-0460);
 - §6.1.3(f) then fails any certificate without P (R-0431).
 
-Every subject name must also be at host `foo.com`.
+Every rfc822Name in a later certificate must also be at host `foo.com`, and so
+must an `emailAddress` in a subject DN when there is no subjectAltName
+(R-0177). Other name forms stay open (§3).
 
 This construction is derived, not a source example, and it has not been run
 against an implementation. It expresses "Bob may certify `*@foo.com`, only under
@@ -776,7 +783,7 @@ structure.
 | DEFAULT components are omitted (N-507) | no DEFAULT; whether a field is present is a profile rule | X.509's booleans that are explicit only when TRUE do not carry over (§2 item 5). |
 | SET OF ordered by encoding: *"the DER encoding of the SET OF values requires ordering of the encodings of the values"* (N-506) | a canonical order for set-valued fields (2693 notes adapt 1; rfc-9804 notes condition 5) | **Same rule in substance**: sort by encoded bytes. DER applies it only to SET OF. RFC 5280 uses SEQUENCE OF for most lists (`Extensions`, `GeneralNames`, `certificatePolicies`), and there the issuer's order is significant. |
 | named bit lists with trailing zeros omitted (R-0611); minimal INTEGERs under the sign-bit rule (N-495) | the deterministic CBOR encoder rules | DER is a deterministic encoding made of encoder-side rules, and ARCH-0001 §3.1 records X.509 as *"Dominant for TLS"*. Such rules can work at scale, which D-3 needs to hold for CBOR. It is not a reason to adopt DER. |
-| time: UTCTime through 2049, GeneralizedTime from 2050; Zulu; whole seconds (R-0045) | `Validity { not_before?, not_after? }` (ARCH-0001 §4.1); the time representation is DEC-002's | **Exact on import.** The validity period runs *"from notBefore through notAfter, inclusive"* (N-051): a closed interval in whole seconds. In the 2693 notes' half-open form that is `[notBefore, notAfter + 1 s)` (derived). |
+| time: UTCTime through 2049, GeneralizedTime from 2050; Zulu; whole seconds (R-0045) | `Validity { not_before?, not_after?, online_check? }` (ARCH-0001 §4.1); the time representation is DEC-002's | **Exact on import.** The validity period runs *"from notBefore through notAfter, inclusive"* (N-051): a closed interval in whole seconds. In the 2693 notes' half-open form that is `[notBefore, notAfter + 1 s)` (derived). |
 | DirectoryString: a CHOICE of five string types, compared by StringPrep and caseIgnoreMatch (R-0540, R-0542) | UTF-8 byte strings with bytewise equality (2693 notes adapt 1) | **Lossy.** Import must transcode to UTF-8 and fix one spelling. Byte equality does not preserve X.509 equality (open question 7). |
 | serial numbers of up to 20 octets (R-0018, R-0019) | no field | Larger than a 64-bit CBOR integer. Imported serials travel as bytes, and only as provenance (derived). |
 
@@ -1007,13 +1014,13 @@ Each item gives one line of evidence. The analysis is in the section cited.
      it"*.
      **Correction.** EKU has no role in path validation: *"In general, this
      extension will appear only in end entity certificates."* (N-172), and §6
-     never processes it. The policy machinery alone expresses "certify only
-     `foo.com` names, and only under policy P" (§6).
+     never processes it. nameConstraints and the policy machinery, with no
+     EKU, express "certify only `foo.com` names, and only under policy P" (§6).
      **Holds.** The discriminator survives, since the scope is over the
      certificates Bob issues and the meaning of P is held out of band. But
      "cannot express" is too strong.
-   - *"In X.509 the delegation is three flags on the same certificate ... cA,
-     keyCertSign, pathLenConstraint"*.
+   - *"In X.509 the delegation is three flags on the same certificate that
+     carries the name binding — cA, keyCertSign, pathLenConstraint"*.
      **Correction.** pathLenConstraint is an integer, not a flag, and
      nameConstraints, policyConstraints and inhibitAnyPolicy are delegation
      controls on the same certificate too.
@@ -1029,16 +1036,19 @@ Each item gives one line of evidence. The analysis is in the section cited.
      **Confirmed, and sharper than stated:**
      - 5280 *permits* overlap (N-252, N-283);
      - the pointer is only a RECOMMENDS for support (R-0204);
-     - the certificate must name a *different* CRL issuer (R-0206);
+     - the one requirement to name a CRL issuer is conditional: a
+       distribution point must carry cRLIssuer only when the CRL issuer is not
+       the certificate issuer (R-0206);
      - 5280 meets RFC 2692's other condition, explicit dates (R-0280).
    - **Verified without correction:**
      - the mail-constraint quotation (R-0176), with the precision that
        `*@foo.com` is the host form `foo.com`, and that `.foo.com` excludes the
        host;
      - *"X.509 intersects permitted subtrees and unions excluded ones"* (R-0451,
-       R-0452), per name form, and with self-issued certificates exempt;
-     - both trust-anchor quotations (N-323, N-404). The second begins
-       *"The selection"* in the source.
+       R-0452), per name form, with self-issued intermediates exempt from the
+       checks of §6.1.3(b) and (c) (R-0422, R-0423);
+     - both trust-anchor quotations (N-323, N-404). Both begin *"The
+       selection"* in the source; the answer lower-cases them.
 2. **Which reading of R-M-10?** Either the strict reading (a boolean only, with
    an imported pathLenConstraint dropped), or *"(or equivalent)"* read as
    admitting a bound beneath the boolean (§2). The 2693 notes' open question 9
@@ -1160,10 +1170,14 @@ Each item gives one line of evidence. The analysis is in the section cited.
         certificate precedes the thisUpdate time specified in the delta CRL"*
         (R-0314).
 
-      If the first CRL after expiry is that delta, the entry is removed without
-      ever having appeared on a CRL issued after the validity period. That
-      holds unless "regularly scheduled CRL" means complete CRLs only, and the
-      source does not say so.
+      R-0314 further requires only that the certificate was listed on the
+      base CRL or on a CRL issued after it, which may all predate expiry. If
+      the first CRL after expiry is that delta, the certificate appears after
+      its validity period only as a removeFromCRL listing, and that listing
+      removes it. The two rules agree only if a removeFromCRL listing on a
+      delta counts as the entry appearing on a regularly scheduled CRL. The
+      source does not say so, and it does not define "regularly scheduled
+      CRL".
 12. **The rfc-2693 notes' glosses, checked against ARCH-0001.** Four differ from
     the text:
     - R-M-03 says *"issuing principal"*, not "issuing key";

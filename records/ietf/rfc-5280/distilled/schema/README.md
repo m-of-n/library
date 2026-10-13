@@ -184,13 +184,32 @@ whitespace-only line and no trailing whitespace, so nothing else needs
 normalising.
 
 **One consequence, stated so that nobody mistakes it for a transcription
-error.** The rule cannot tell padding from a real separating blank line. A
-blank line that separated two definitions at a page break is therefore removed
-along with the padding. This happens at 26 joins: 15 in A.1, 8 in A.2, 3
-inline. At each join the last line before the break directly abuts the first
-line after it. For example, A.1 line 6157 `security(5) mechanisms(5) pkix(7) }`
-is followed directly by 6167 `-- PKIX arcs`. ASN.1 treats blank lines as
-whitespace, and no join falls inside a comment, so no definition changes.
+error.** There are 26 page joins in the extracted ranges: 15 in A.1, 8 in
+A.2, 3 inline. At each one the last line before the break directly abuts the
+first line after it. For example, A.1 line 6157 `security(5) mechanisms(5)
+pkix(7) }` is followed directly by 6167 `-- PKIX arcs`.
+
+The paginated text does not record whether a blank line stood at a join. The
+source pages run 55 lines with at most 48 lines of text, and a page that ends
+early is padded with blank lines, so a separating blank line before a break
+cannot be told apart from padding. Read by content:
+
+- at **24** joins the break falls between two definitions, or between a
+  definition and a comment block. Away from page breaks the modules put a
+  blank line between such neighbours; only runs of one-line assignments
+  (the `id-at-*`, `id-ad-*`, A.2 `id-kp-*` and `ub-*` lists) are packed
+  without one, and no join falls in such a run. A separating blank line very
+  probably stood at each of these joins and is not reproduced;
+- at **2** joins the break falls inside one construct, so no blank line was
+  lost: 893/903 (I-01) splits the TBSCertificate SEQUENCE between
+  `issuerUniqueID` and `subjectUniqueID`, and 6942/6951 (A.1) splits one
+  comment paragraph mid-sentence.
+
+Restoring the 24 would insert bytes the source does not contain. So the rule
+inserts nothing, and the files are verbatim to the source's printed lines.
+ASN.1 treats blank lines as whitespace. Every comment here ends at its line
+end or at a closing `--`, so no join splits a comment line and no definition
+changes.
 
 The joins, as last-line-before/first-line-after:
 
@@ -370,9 +389,10 @@ Pass 3 should note that the AuthorityKeyIdentifier rule binds even though
 
 **F-09 — No prose states the tagging environment of the inline ASN.1.** The
 keywords EXPLICIT and IMPLICIT, in capitals, occur outside the modules only as
-tag keywords inside the inline ASN.1 (885, 892, 903, 905, 2106, 3105). The tag default comes only from the module headers. Ten inline
+tag keywords inside the inline ASN.1 (885, 892, 903, 905, 2106, 3105). The tag default comes only from the module headers. Nine inline
 definitions use context tags with no keyword, and each is defined in A.2,
-under `IMPLICIT TAGS`:
+under `IMPLICIT TAGS`. The last row, OtherName, is shown for contrast: its one
+tag carries a keyword:
 
 | inline definition | tags with no keyword | lives in |
 |---|---|---|
@@ -416,9 +436,9 @@ value reference resolves inside the module or through A.2's IMPORTS (see
 **F-11 — Comments differ.** These are comments, so they carry no ASN.1
 meaning. The ones that carry content:
 
-- The inline id-kp purposes in I-17 (2485–2511) carry comments that begin
-  “Key usage bits that may be consistent:”. A.2's id-kp lines (7256–7261)
-  carry none.
+- Each inline id-kp purpose in I-17 (2485–2511) carries two comments: what
+  the purpose is for, and a list that begins “Key usage bits that may be
+  consistent:”. A.2's id-kp lines (7256–7261) carry none.
 - `-- value 7 is not used` in CRLReason appears only inline (3883).
 - The TBSCertList trailer comments differ. Inline (3109–3112) says “are all
   defined in the ASN.1 in Section 4.1” and “AlgorithmIdentifier is defined in
@@ -629,3 +649,12 @@ twice (F-06), and the MUSTs inside ASN.1 comments (F-07, F-11).
 - F-12, the comment-only `DirectoryName`;
 - F-13, the brace after a terminated comment;
 - `[X.509]` cited only informatively.
+
+## Pass 2 (verify)
+
+- Both modules and all 32 inline regions re-extracted with a separate script (page breaks found from the form feed, not from a footer pattern): byte-identical to the files; every sha256, line range and byte count in the two tables matches; 15, 8 and 3 page joins found, the same 26 listed. No fix to any `.asn1` or `inline.verbatim.txt` byte.
+- Completeness: every source line before Appendix A that contains `::=` (115, one of them the `-- reasonCode` comment) lies in a region, and no region boundary drops an adjacent ASN.1 or comment line.
+- Cross-comparison re-run with an independent parser: 114 / 172 / 85 assignments, 260 names, 101 agree, 5 differ, 3 inline-only, 151 appendix-only (141 A.1, 10 A.2), 5 repeated; the 5 undefined inline names confirmed. F-01 to F-08, F-10, F-12, F-13 confirmed against the source with no change.
+- Page-join paragraph: said a real separating blank line was removed at each of the 26 joins and that no join falls inside a comment. Corrected: 24 joins very probably lost one, 2 (893/903, 6942/6951) did not, and 6942/6951 does fall inside a comment paragraph.
+- F-09: "Ten inline definitions use context tags with no keyword" → nine; the OtherName row is a contrast row.
+- F-11: the id-kp comments do not all begin "Key usage bits…"; reworded.
