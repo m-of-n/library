@@ -51,8 +51,15 @@ note: >-
   Flags and fields. inferred: true marks a state, step or transition the
   source does not literally state; inferred_reason says what was supplied.
   Machine, state, step-kind and event names are ours. A trigger is one of the
-  four messages (Certificate, CertificateList, PathValidationInputs,
-  CRLValidationInputs) or a named event; all are listed under events_used.
+  four messages defined in messages.yaml and used by protocol.yaml: the
+  encoded structures Certificate and CertificateList, and the algorithm-io
+  entries PathValidationInputs and CRLValidationInputs. Otherwise it is a
+  named event defined here with a locator. All are listed under events_used,
+  and an event that corresponds to a protocol.yaml flow step or algorithm
+  exit says so in its note. Input names are the messages.yaml and
+  protocol.yaml field names, which follow the source (user-initial-policy-set,
+  use-deltas); trust_anchor_information is their name for the 6.1.1(d) input.
+  M01 returns PathValidationOutputs and M03 returns CRLValidationOutputs.
   completion is the UML completion event: the activity of the source state has
   finished and the guards pick the branch. error_states are states in which
   the machine yields no usable result. unspecified entries record situations
@@ -77,15 +84,15 @@ events_used:
     locator: '§6.1.1'
     quote: 'This algorithm assumes that the following nine inputs are provided to the path processing logic:'
     inferred: true
-    inferred_reason: 'The name is ours. The source defines the nine inputs (a) to (i) but no structure that carries them; they are listed as M01 inputs.'
-    note: 'Fields: prospective_path (n certificates), current_time, user_initial_policy_set, trust_anchor (trusted issuer name, public key algorithm, public key, optional parameters), initial_policy_mapping_inhibit, initial_explicit_policy, initial_any_policy_inhibit, initial_permitted_subtrees, initial_excluded_subtrees.'
+    inferred_reason: 'The name is ours (shared with messages.yaml and protocol.yaml). The source defines the nine inputs (a) to (i) but no structure that carries them; they are listed as M01 inputs.'
+    note: 'messages.yaml PathValidationInputs (normative_status algorithm-io); protocol.yaml messages_used and the inputs of algorithm basic-path-validation. Fields, by those names: prospective_path (n certificates), current_time, user-initial-policy-set, trust_anchor_information (trusted issuer name, public key algorithm, public key, optional parameters; message TrustAnchorInfo-as-inputs), initial-policy-mapping-inhibit, initial-explicit-policy, initial-any-policy-inhibit, initial-permitted-subtrees, initial-excluded-subtrees.'
   - name: 'CRLValidationInputs'
     kind: 'message'
     locator: '§6.3.1'
     quote: 'To support revocation processing, the algorithm requires two inputs:'
     inferred: true
-    inferred_reason: 'The name is ours. The source defines the two inputs (certificate, use-deltas); the local CRL cache, the current time and the target path''s trust anchor are used by 6.3.3 but not listed as inputs.'
-    note: 'Fields: certificate (serial number, issuer, basicConstraints, cRLDistributionPoints, freshestCRL), use_deltas.'
+    inferred_reason: 'The name is ours (shared with messages.yaml and protocol.yaml). The source defines the two inputs (certificate, use-deltas); the local CRL cache, the current time and the target path''s trust anchor are used by 6.3.3 but not listed as inputs.'
+    note: 'messages.yaml CRLValidationInputs (normative_status algorithm-io); protocol.yaml messages_used and the inputs of algorithm crl-validation. Fields, by those names: certificate (serial number, issuer, basicConstraints, cRLDistributionPoints, freshestCRL), use-deltas. protocol.yaml lists the unlisted inputs as implicit_inputs.'
   - name: 'completion'
     kind: 'event'
     locator: 'none'
@@ -115,6 +122,7 @@ events_used:
     quote: 'If any of steps (a), (b), (c), or (f) fails, the procedure terminates, returning a failure indication and an appropriate reason.'
     inferred: true
     inferred_reason: 'Raised by M01 when a check step fails; it carries the step id as the reason. 6.1.4 states the same for (a), (k), (l), (n) and (o); 6.1.5 states no failing check (OQ-09).'
+    note: 'protocol.yaml: the failure_exits of algorithm basic-path-validation, and the failure branch of output PathValidationOutputs.'
   - name: 'policy_processing_requested'
     kind: 'event'
     locator: '§6.1.3(d), §6.1.3(e)'
@@ -139,6 +147,7 @@ events_used:
     quote: 'For each distribution point (DP) in the certificate''s CRL distribution points extension, for each corresponding CRL in the local CRL cache, while ((reasons_mask is not all-reasons) and (cert_status is UNREVOKED)) perform the following:'
     inferred: true
     inferred_reason: '6.3.3 says verify at (a)(1)(ii), (b), (c), (e), (f), (g) and (h) but never what a failed verification does. Raised by M03 when one fails; M03 abandons that CRL (OQ-15).'
+    note: 'protocol.yaml records the same steps of algorithm crl-validation with on_fail unspecified.'
   - name: 'clock_reaches_notBefore'
     kind: 'event'
     locator: '§4.1.2.5'
@@ -157,17 +166,19 @@ events_used:
     quote: 'Further, if the next update time of a CRL has passed, the algorithm assumes a mechanism to fetch a current CRL and place it in the local CRL cache.'
     inferred: true
     inferred_reason: 'The source names the condition, not the event.'
+    note: 'protocol.yaml: flow crl-retrieval, steps 6 and 7, which refill the local CRL cache.'
   - name: 'status_maintenance_terminated'
     kind: 'event'
     locator: '§4.1.2.5'
     quote: 'When the issuer will not be able to maintain status information until the notAfter date (including when the notAfter date is 99991231235959Z), the issuer MUST ensure that no valid certification path exists for the certificate after maintenance of status information is terminated.'
     inferred: true
     inferred_reason: 'The source names the situation; the event of ending maintenance before notAfter is ours.'
+    note: 'protocol.yaml: flow trust-anchor-provisioning, step 4.'
   - name: 'revocation_reported'
     kind: 'event'
     locator: '§3.3'
     quote: 'An entry is added to the CRL as part of the next update following notification of revocation.'
-    note: 'Also the revocation request function of §3.5(f), whose protocol other PKIX specifications define.'
+    note: 'Also the revocation request function of §3.5(f), whose protocol other PKIX specifications define. protocol.yaml: flow crl-issuance, step 1 (message RevocationRequest, in_source no).'
   - name: 'hold_released'
     kind: 'event'
     locator: '§5.2.4'
@@ -186,6 +197,7 @@ events_used:
     kind: 'event'
     locator: '§3.5(e)'
     quote: 'All key pairs need to be updated regularly, i.e., replaced with a new key pair, and new certificates issued.'
+    note: 'protocol.yaml: flow ca-key-rollover-self-issued, step 1.'
   - name: 'old_ca_key_retired'
     kind: 'event'
     locator: '§8'
@@ -196,6 +208,7 @@ events_used:
     kind: 'event'
     locator: '§8'
     quote: 'If such a compromise is detected, all certificates issued to the compromised CA MUST be revoked, preventing services between its users and users of other CAs.'
+    note: 'protocol.yaml: flow ca-compromise-response, steps 1 and 3.'
   - name: 'ca_key_lost'
     kind: 'event'
     locator: '§8'
@@ -243,7 +256,7 @@ machines:
           - 'rfc-5280#R-0387'
           - 'rfc-5280#R-0374'
         note: 'See OQ-04 on validation at a past time.'
-      - name: 'user_initial_policy_set'
+      - name: 'user-initial-policy-set'
         locator: '§6.1.1(c)'
         type: 'set of policy OIDs, or the special value any-policy'
         source:
@@ -251,7 +264,7 @@ machines:
             quote: 'The user-initial-policy-set contains the special value any-policy if the user is not concerned about certificate policy.'
         constrained_by:
           - 'rfc-5280#R-0388'
-      - name: 'trust_anchor'
+      - name: 'trust_anchor_information'
         locator: '§6.1.1(d)'
         type: 'trusted issuer name, trusted public key algorithm, trusted public key, optional trusted public key parameters; may be given as a self-signed Certificate'
         source:
@@ -261,7 +274,7 @@ machines:
           - 'rfc-5280#R-0389'
           - 'rfc-5280#R-0390'
           - 'rfc-5280#R-0375'
-      - name: 'initial_policy_mapping_inhibit'
+      - name: 'initial-policy-mapping-inhibit'
         locator: '§6.1.1(e)'
         type: 'boolean'
         source:
@@ -269,7 +282,7 @@ machines:
             quote: 'initial-policy-mapping-inhibit, which indicates if policy mapping is allowed in the certification path.'
         constrained_by:
           - 'rfc-5280#R-0391'
-      - name: 'initial_explicit_policy'
+      - name: 'initial-explicit-policy'
         locator: '§6.1.1(f)'
         type: 'boolean'
         source:
@@ -277,7 +290,7 @@ machines:
             quote: 'initial-explicit-policy, which indicates if the path must be valid for at least one of the certificate policies in the user-initial-policy-set.'
         constrained_by:
           - 'rfc-5280#R-0392'
-      - name: 'initial_any_policy_inhibit'
+      - name: 'initial-any-policy-inhibit'
         locator: '§6.1.1(g)'
         type: 'boolean'
         source:
@@ -285,7 +298,7 @@ machines:
             quote: 'initial-any-policy-inhibit, which indicates whether the anyPolicy OID should be processed if it is included in a certificate.'
         constrained_by:
           - 'rfc-5280#R-0393'
-      - name: 'initial_permitted_subtrees'
+      - name: 'initial-permitted-subtrees'
         locator: '§6.1.1(h)'
         type: 'per name type, a set of subtrees (possibly one that includes all names of the type, possibly empty)'
         source:
@@ -294,7 +307,7 @@ machines:
         constrained_by:
           - 'rfc-5280#R-0394'
           - 'rfc-5280#R-0395'
-      - name: 'initial_excluded_subtrees'
+      - name: 'initial-excluded-subtrees'
         locator: '§6.1.1(i)'
         type: 'per name type, a set of subtrees (possibly empty)'
         source:
@@ -330,7 +343,7 @@ machines:
         locator: '§6.1.2(b)'
         type: 'per name type, a set of root names defining subtrees'
         initial: 'initial-permitted-subtrees'
-        initialised_from: 'PathValidationInputs.initial_permitted_subtrees (6.1.1(h))'
+        initialised_from: 'PathValidationInputs.initial-permitted-subtrees (6.1.1(h))'
         updated_by:
           - '6.1.4(g)'
         invariant: 'Changes only by intersection, so the permitted name space never grows (inferred from 6.1.4(g)(1)).'
@@ -344,7 +357,7 @@ machines:
         locator: '§6.1.2(c)'
         type: 'per name type, a set of root names defining subtrees'
         initial: 'initial-excluded-subtrees'
-        initialised_from: 'PathValidationInputs.initial_excluded_subtrees (6.1.1(i))'
+        initialised_from: 'PathValidationInputs.initial-excluded-subtrees (6.1.1(i))'
         updated_by:
           - '6.1.4(g)'
         invariant: 'Changes only by union, so the excluded name space never shrinks (inferred from 6.1.4(g)(2)).'
@@ -357,7 +370,7 @@ machines:
         locator: '§6.1.2(d)'
         type: 'integer >= 0: the number of non-self-issued certificates to be processed before a non-NULL valid_policy_tree is required'
         initial: '0 if initial-explicit-policy is set, otherwise n+1'
-        initialised_from: 'PathValidationInputs.initial_explicit_policy (6.1.1(f)) and n'
+        initialised_from: 'PathValidationInputs.initial-explicit-policy (6.1.1(f)) and n'
         updated_by:
           - '6.1.4(h)'
           - '6.1.4(i)'
@@ -375,7 +388,7 @@ machines:
         locator: '§6.1.2(e)'
         type: 'integer >= 0: the number of non-self-issued certificates to be processed before anyPolicy is ignored (other than in an intermediate self-issued certificate)'
         initial: '0 if initial-any-policy-inhibit is set, otherwise n+1'
-        initialised_from: 'PathValidationInputs.initial_any_policy_inhibit (6.1.1(g)) and n'
+        initialised_from: 'PathValidationInputs.initial-any-policy-inhibit (6.1.1(g)) and n'
         updated_by:
           - '6.1.4(h)'
           - '6.1.4(j)'
@@ -391,7 +404,7 @@ machines:
         locator: '§6.1.2(f)'
         type: 'integer >= 0: the number of non-self-issued certificates to be processed before policy mapping is inhibited'
         initial: '0 if initial-policy-mapping-inhibit is set, otherwise n+1'
-        initialised_from: 'PathValidationInputs.initial_policy_mapping_inhibit (6.1.1(e)) and n'
+        initialised_from: 'PathValidationInputs.initial-policy-mapping-inhibit (6.1.1(e)) and n'
         updated_by:
           - '6.1.4(h)'
           - '6.1.4(i)'
@@ -407,7 +420,7 @@ machines:
         locator: '§6.1.2(g)'
         type: 'algorithm identifier'
         initial: 'the trusted public key algorithm'
-        initialised_from: 'PathValidationInputs.trust_anchor (6.1.1(d)(2))'
+        initialised_from: 'PathValidationInputs.trust_anchor_information (6.1.1(d)(2))'
         updated_by:
           - '6.1.4(f)'
           - '6.1.5(e)'
@@ -420,7 +433,7 @@ machines:
         locator: '§6.1.2(h)'
         type: 'public key'
         initial: 'the trusted public key'
-        initialised_from: 'PathValidationInputs.trust_anchor (6.1.1(d)(3))'
+        initialised_from: 'PathValidationInputs.trust_anchor_information (6.1.1(d)(3))'
         updated_by:
           - '6.1.4(d)'
           - '6.1.5(c)'
@@ -433,7 +446,7 @@ machines:
         locator: '§6.1.2(i)'
         type: 'algorithm parameters, or null'
         initial: 'the trusted public key parameters (an optional input; null when absent, inferred, OQ-10)'
-        initialised_from: 'PathValidationInputs.trust_anchor (6.1.1(d)(4))'
+        initialised_from: 'PathValidationInputs.trust_anchor_information (6.1.1(d)(4))'
         updated_by:
           - '6.1.4(e)'
           - '6.1.5(d)'
@@ -446,7 +459,7 @@ machines:
         locator: '§6.1.2(j)'
         type: 'distinguished name'
         initial: 'the trusted issuer name'
-        initialised_from: 'PathValidationInputs.trust_anchor (6.1.1(d)(1))'
+        initialised_from: 'PathValidationInputs.trust_anchor_information (6.1.1(d)(1))'
         updated_by:
           - '6.1.4(c)'
         source:
@@ -545,7 +558,7 @@ machines:
           - id: '6.1.3(a)(3)'
             kind: 'check'
             applies_when: 'always'
-            check: 'cert is not revoked at t. Passes when the revocation source reports cert not revoked (M03 returns UNREVOKED); fails when it reports a revocation (M03 returns any CRLReason value, certificateHold included).'
+            check: 'cert is not revoked at t, as determined from a CRL (M03), from status information, or by out-of-band means.'
             invokes:
               - 'M03 with CRLValidationInputs for cert, or another status source the source permits (status information, out-of-band means)'
             on_failure: 'M01-T05'
@@ -556,7 +569,7 @@ machines:
             constrained_by:
               - 'rfc-5280#R-0417'
               - 'rfc-5280#R-0420'
-            note: 'M03 may also return UNDETERMINED; the source does not say whether this check then passes or fails (unspecified, OQ-03).'
+            note: 'Section 6 does not say how the returned status maps to this check. M01-T05 infers that UNREVOKED passes and that any CRLReason value fails, certificateHold included. M03 may also return UNDETERMINED; the source does not say whether this check then passes or fails (unspecified, OQ-03).'
           - id: '6.1.3(a)(4)'
             kind: 'check'
             applies_when: 'always'
@@ -792,7 +805,6 @@ machines:
               - 'rfc-5280#R-0451'
               - 'rfc-5280#R-0452'
               - 'rfc-5280#R-0162'
-              - 'rfc-5280#R-0163'
               - 'rfc-5280#R-0165'
               - 'rfc-5280#R-0166'
               - 'rfc-5280#R-0170'
@@ -856,7 +868,6 @@ machines:
               - 'rfc-5280#R-0190'
               - 'rfc-5280#R-0191'
               - 'rfc-5280#R-0192'
-              - 'rfc-5280#R-0193'
             note: 'No self-issued condition: a self-issued certificate''s policy constraints apply.'
           - id: '6.1.4(j)'
             kind: 'action'
@@ -871,7 +882,6 @@ machines:
             inferred: false
             constrained_by:
               - 'rfc-5280#R-0460'
-              - 'rfc-5280#R-0224'
           - id: '6.1.4(k)'
             kind: 'check'
             applies_when: 'always'
@@ -882,12 +892,15 @@ machines:
                 quote: 'If certificate i is a version 3 certificate, verify that the basicConstraints extension is present and that cA is set to TRUE.'
               - locator: '§6.1.4(k)'
                 quote: '(If certificate i is a version 1 or version 2 certificate, then the application MUST either verify that certificate i is a CA certificate through out-of-band means or reject the certificate.'
+              - locator: '§6.1.4(k)'
+                quote: 'Conforming implementations may choose to reject all version 1 and version 2 intermediate certificates.)'
               - locator: '§4.2.1.9'
                 quote: 'If the basic constraints extension is not present in a version 3 certificate, or the extension is present but the cA boolean is not asserted, then the certified public key MUST NOT be used to verify certificate signatures.'
             inferred: false
             constrained_by:
               - 'rfc-5280#R-0461'
               - 'rfc-5280#R-0462'
+              - 'rfc-5280#R-0700'
               - 'rfc-5280#R-0155'
               - 'rfc-5280#R-0157'
               - 'rfc-5280#R-0158'
@@ -1096,6 +1109,8 @@ machines:
             quote: 'Steps (1) and (4) are performed exactly once.'
         inferred: false
         constrained_by:
+          - 'rfc-5280#R-0367'
+          - 'rfc-5280#R-0368'
           - 'rfc-5280#R-0385'
           - 'rfc-5280#R-0386'
           - 'rfc-5280#R-0387'
@@ -1176,13 +1191,19 @@ machines:
         source:
           - locator: '§6.1.3'
             quote: 'If any of steps (a), (b), (c), or (f) fails, the procedure terminates, returning a failure indication and an appropriate reason.'
+          - locator: '§6.3.3'
+            quote: 'The algorithm checks one or more CRLs until either the certificate status is determined to be revoked or sufficient CRLs have been checked to cover all reason codes.'
+          - locator: '§5.2.4'
+            quote: 'The status of a certificate is considered to have changed if it is revoked (for any revocation reason, including certificateHold), if it is released from hold, or if its revocation reason changes.'
           - locator: '§5.3.1'
             quote: 'All other reason codes may appear in any CRL and indicate that the specified certificate should be considered revoked.'
-        inferred: false
+        inferred: true
+        inferred_reason: 'That 6.1.3(a)(3) fails is stated; which revocation results make it fail is not. Section 6 never maps the cert_status M03 returns to the check: the 6.3.3 lead-in only pairs a status other than UNREVOKED with determined to be revoked, and section 6 says nothing about hold. That certificateHold counts as revoked rests on section 5: the 5.2.4 sentence quoted above, and the lowercase should of 5.3.1. protocol.yaml records the same gap at its 6.1.3(a)(3) step.'
         constrained_by:
           - 'rfc-5280#R-0432'
           - 'rfc-5280#R-0417'
           - 'rfc-5280#R-0420'
+          - 'rfc-5280#R-0501'
       - id: 'M01-T06'
         from: 'processing-certificate'
         to: 'failed'
@@ -1250,6 +1271,7 @@ machines:
         inferred: false
         constrained_by:
           - 'rfc-5280#R-0433'
+          - 'rfc-5280#R-0434'
           - 'rfc-5280#R-0385'
       - id: 'M01-T11'
         from: 'processing-certificate'
@@ -1264,6 +1286,7 @@ machines:
         inferred: false
         constrained_by:
           - 'rfc-5280#R-0433'
+          - 'rfc-5280#R-0469'
           - 'rfc-5280#R-0385'
       - id: 'M01-T12'
         from: 'preparing-next-certificate'
@@ -1308,6 +1331,7 @@ machines:
         constrained_by:
           - 'rfc-5280#R-0467'
           - 'rfc-5280#R-0462'
+          - 'rfc-5280#R-0700'
       - id: 'M01-T15'
         from: 'preparing-next-certificate'
         to: 'failed'
@@ -1650,6 +1674,7 @@ machines:
         constrained_by:
           - 'rfc-5280#R-0398'
           - 'rfc-5280#R-0424'
+          - 'rfc-5280#R-0430'
       - id: 'M02-T04'
         from: 'extending'
         to: 'non-null'
@@ -1674,6 +1699,7 @@ machines:
         inferred_reason: 'The source never says that an emptied tree is NULL; it says the tree is NULL when no valid policy exists (OQ-08).'
         constrained_by:
           - 'rfc-5280#R-0398'
+          - 'rfc-5280#R-0429'
       - id: 'M02-T06'
         from: 'non-null'
         to: 'mapping'
@@ -1815,7 +1841,7 @@ machines:
             quote: 'The algorithm requires the certificate serial number and issuer name to determine whether a certificate is on a particular CRL.'
         constrained_by:
           - 'rfc-5280#R-0496'
-      - name: 'use_deltas'
+      - name: 'use-deltas'
         locator: '§6.3.1(b)'
         type: 'boolean'
         source:
@@ -1919,7 +1945,7 @@ machines:
         meaning: 'Evaluating the loop condition and choosing the next (DP, CRL) pair, or ending the phase.'
         inferred: true
       - name: 'processing-crl'
-        meaning: 'Steps (a) to (l) for one complete CRL (and its delta CRL when use_deltas is set).'
+        meaning: 'Steps (a) to (l) for one complete CRL (and its delta CRL when use-deltas is set).'
         inferred: false
         steps:
           - id: '6.3.3(pre)'
@@ -1944,7 +1970,7 @@ machines:
           - id: '6.3.3(a)'
             kind: 'action'
             applies_when: 'always'
-            action: 'Update the local CRL cache (M07). (1) If t is after the cached complete CRL''s nextUpdate, do one of: (i) if use_deltas and freshestCRL is in cert or in the CRL, obtain a delta CRL whose nextUpdate is after t and that can update the cached CRL (M08); or (ii) obtain a current complete CRL, check that t is before its nextUpdate, continue with it, and if use_deltas and freshestCRL is in cert or the CRL, obtain the current delta CRL for it. (2) If t is before nextUpdate, use_deltas is set and freshestCRL is in cert or the CRL, obtain the current delta CRL for the cached complete CRL.'
+            action: 'Update the local CRL cache (M07). (1) If t is after the cached complete CRL''s nextUpdate, do one of: (i) if use-deltas and freshestCRL is in cert or in the CRL, obtain a delta CRL whose nextUpdate is after t and that can update the cached CRL (M08); or (ii) obtain a current complete CRL, check that t is before its nextUpdate, continue with it, and if use-deltas and freshestCRL is in cert or the CRL, obtain the current delta CRL for it. (2) If t is before nextUpdate, use-deltas is set and freshestCRL is in cert or the CRL, obtain the current delta CRL for the cached complete CRL.'
             invokes:
               - 'M07 (cached CRL)'
               - 'M08 (delta CRL combination)'
@@ -2001,8 +2027,8 @@ machines:
               - 'rfc-5280#R-0331'
           - id: '6.3.3(c)'
             kind: 'check'
-            applies_when: 'use_deltas'
-            skipped_when: 'use_deltas not set'
+            applies_when: 'use-deltas'
+            skipped_when: 'use-deltas not set'
             check: '(1) delta CRL issuer matches complete CRL issuer; (2) the delta CRL has an IDP matching the complete CRL''s, or both omit it; (3) the delta CRL authority key identifier matches the complete CRL''s.'
             on_failure: 'M03-T10'
             source:
@@ -2020,7 +2046,7 @@ machines:
               - 'rfc-5280#R-0518'
               - 'rfc-5280#R-0308'
               - 'rfc-5280#R-0309'
-            note: 'Conditioned on use_deltas only; with use_deltas set and no delta CRL obtained in (a), the step has nothing to verify (OQ-14).'
+            note: 'Conditioned on use-deltas only; with use-deltas set and no delta CRL obtained in (a), the step has nothing to verify (OQ-14).'
           - id: '6.3.3(d)'
             kind: 'action'
             applies_when: 'always'
@@ -2091,8 +2117,8 @@ machines:
               - 'rfc-5280#R-0528'
           - id: '6.3.3(h)'
             kind: 'check'
-            applies_when: 'use_deltas'
-            skipped_when: 'use_deltas not set'
+            applies_when: 'use-deltas'
+            skipped_when: 'use-deltas not set'
             check: 'The delta CRL''s signature verifies with the public key validated in (f).'
             on_failure: 'M03-T14'
             source:
@@ -2104,8 +2130,8 @@ machines:
               - 'rfc-5280#R-0309'
           - id: '6.3.3(i)'
             kind: 'action'
-            applies_when: 'use_deltas'
-            skipped_when: 'use_deltas not set'
+            applies_when: 'use-deltas'
+            skipped_when: 'use-deltas not set'
             action: 'Search the delta CRL for an entry matching the issuer and serial number of cert (issuer attribution per M09). If found: cert_status := its reasonCode value when the reason code entry extension is present, else unspecified.'
             updates:
               - 'cert_status'
@@ -2379,7 +2405,7 @@ machines:
         open_question: 'OQ-13'
       - from: 'processing-crl'
         trigger: 'completion'
-        situation: '(a)(1) when both (i) and (ii) are possible; (c), (h), (i) with use_deltas set but no delta CRL obtained.'
+        situation: '(a)(1) when both (i) and (ii) are possible; (c), (h), (i) with use-deltas set but no delta CRL obtained.'
         open_question: 'OQ-14'
       - from: 'processing-crl'
         trigger: 'crl_check_failed'
@@ -2546,7 +2572,7 @@ machines:
         state: 'listed-revoked'
       - value: 'certificateHold (6)'
         state: 'listed-on-hold'
-        note: 'Considered revoked by relying parties (§5.3.1); M03 returns certificateHold and M01 fails 6.1.3(a)(3).'
+        note: 'Considered revoked by relying parties (§5.3.1); M03 returns certificateHold and M01 fails 6.1.3(a)(3) (M01-T05, inferred: section 6 does not state it).'
       - value: '7'
         state: 'none'
         note: 'Not used (§5.3.1 ASN.1 comment).'
@@ -2614,7 +2640,7 @@ machines:
           - locator: '§5.1.2.6'
             quote: 'Otherwise, revoked certificates are listed by their serial numbers.'
           - locator: '§5.2.4'
-            quote: 'In this case, the revocation notice MUST be included in all subsequent delta CRLs until the revocation notice is included on at least one explicitly issued complete CRL for this scope.'
+            quote: 'If a certificate revocation notice first appears on a delta CRL, then it is possible for the certificate validity period to expire before the next complete CRL for the same scope is issued.'
         inferred: false
         constrained_by:
           - 'rfc-5280#R-0286'
@@ -2732,7 +2758,8 @@ machines:
             quote: 'An entry MUST NOT be removed from the CRL until it appears on one regularly scheduled CRL issued beyond the revoked certificate''s validity period.'
           - locator: '§5.2.4'
             quote: 'A CRL issuer MAY optionally list a certificate on a delta CRL with reason code removeFromCRL if the notAfter time specified in the certificate precedes the thisUpdate time specified in the delta CRL and the certificate was listed on the referenced base CRL or in any CRL issued after the base but before this delta CRL.'
-        inferred: false
+        inferred: true
+        inferred_reason: 'The guard joins the 3.3 and 5.2.4 conditions; the source states each separately and does not say how they combine. Applying the 3.3 condition before the 5.2.4 removeFromCRL listing is our reading (OQ-25).'
         constrained_by:
           - 'rfc-5280#R-0003'
           - 'rfc-5280#R-0314'
@@ -2978,7 +3005,7 @@ machines:
         from: 'stale'
         to: 'current'
         trigger: 'CertificateList'
-        guard: 'use_deltas, freshestCRL in the certificate or the CRL, and a delta CRL whose nextUpdate is after t that M08 can combine with the cached CRL (6.3.3(a)(1)(i)).'
+        guard: 'use-deltas, freshestCRL in the certificate or the CRL, and a delta CRL whose nextUpdate is after t that M08 can combine with the cached CRL (6.3.3(a)(1)(i)).'
         action: 'The cached CRL becomes the locally constructed CRL of M08, with the delta''s CRL number, thisUpdate and nextUpdate.'
         source:
           - locator: '§6.3.3(a)(1)(i)'
@@ -2992,7 +3019,7 @@ machines:
         from: 'current'
         to: 'current'
         trigger: 'CertificateList'
-        guard: 'use_deltas, freshestCRL in the certificate or the CRL, and the current delta CRL for the cached CRL (6.3.3(a)(2)).'
+        guard: 'use-deltas, freshestCRL in the certificate or the CRL, and the current delta CRL for the cached CRL (6.3.3(a)(2)).'
         action: 'Combine through M08.'
         source:
           - locator: '§6.3.3(a)(2)'
@@ -3381,7 +3408,7 @@ not_modelled:
         quote: 'Implementations that use self-signed certificates to specify trust anchor information are free to process or ignore such information.'
   - item: 'Trust anchor selection and distribution'
     locator: '§6, §6.2, §8'
-    reason: 'A local, out-of-band decision; only its effect (a trust_anchor input to M01) is modelled.'
+    reason: 'A local, out-of-band decision; only its effect (a trust_anchor_information input to M01) is modelled.'
     source:
       - locator: '§8'
         quote: 'The authenticated distribution of trusted CA public keys (usually in the form of a "self-signed" certificate) is a security critical out-of-band process that is beyond the scope of this specification.'
@@ -3405,7 +3432,7 @@ not_modelled:
         quote: 'Conforming CRLs issuers MUST set the onlyContainsAttributeCerts boolean to FALSE.'
   - item: 'Name comparison and internationalised name processing'
     locator: '§7'
-    reason: 'Stateless functions used inside guards (DN match for self-issued, name chaining and subtree membership; IDN, IRI and mailbox conversion). Their rules are requirements R-0538 to R-0580, not machines.'
+    reason: 'Stateless functions used inside guards (DN match for self-issued, name chaining and subtree membership; IDN, IRI and mailbox conversion). Their rules are requirements R-0538 to R-0580 and R-0701 (a 7.2 rule added in pass 2), not machines.'
     source:
       - locator: '§7.1'
         quote: 'Two distinguished names DN1 and DN2 match if they have the same number of RDNs, for each RDN in DN1 there is a matching RDN in DN2, and the matching RDNs appear in the same order in both DNs.'
@@ -3649,10 +3676,12 @@ open_questions:
       - 'M03 step 6.3.3(d)'
   - id: 'OQ-25'
     locator: '§3.3'
-    question: '''Regularly scheduled CRL'' is not defined, so whether an unscheduled CRL issued after notAfter lets an expired entry be dropped is open.'
+    question: '''Regularly scheduled CRL'' is not defined, so whether an unscheduled CRL issued after notAfter lets an expired entry be dropped is open. The same gap meets 5.2.4: removeFromCRL is permitted on any delta CRL whose thisUpdate is after notAfter, if the certificate was on the base or a later CRL, all of which may predate expiry. If that delta is the first CRL after expiry, the entry never appears on a CRL issued beyond the validity period, as 3.3 requires. The two agree only if the removeFromCRL listing counts as that appearance; the source does not say. M05-T10 permits the removeFromCRL listing only once the 3.3 condition holds, which is our reading. design-notes.md, open question 11, records the conflict.'
     source:
       - locator: '§3.3'
         quote: 'An entry MUST NOT be removed from the CRL until it appears on one regularly scheduled CRL issued beyond the revoked certificate''s validity period.'
+      - locator: '§5.2.4'
+        quote: 'A CRL issuer MAY optionally list a certificate on a delta CRL with reason code removeFromCRL if the notAfter time specified in the certificate precedes the thisUpdate time specified in the delta CRL and the certificate was listed on the referenced base CRL or in any CRL issued after the base but before this delta CRL.'
     affects:
       - 'M05-T09'
       - 'M05-T10'
@@ -3666,3 +3695,16 @@ pass2_notes:
     onlySomeReasons; the defect is the term 'reason code', not the value. A quote for the
     onlySomeReasons sentence was added. The M01 processing-certificate guard coverage now
     states its one gap (UNDETERMINED at 6.1.3(a)(3), OQ-03) instead of claiming completeness.
+pass3_notes:
+  - >-
+    FX-1 pass 3 (cross-checker XB, 2026-10-13). Every trigger and every events_used entry
+    was matched mechanically against messages.yaml and protocol.yaml: the four message
+    triggers are messages.yaml entries, and the 21 events are defined here with locators.
+    Input names now follow messages.yaml and protocol.yaml. State variable names, initial
+    values and updated_by lists of M01 and M03 were read against 6.1.2, 6.1.4, 6.1.5, 6.3.2
+    and 6.3.3, and agree. Each constrained_by citation's locator was compared with its
+    element's locators, and the 100 that differ were read. Three issuer-only criticality
+    rules were removed from relying-party update steps. R-0700, R-0367, R-0368, R-0434 and
+    R-0469 were wired in. M01-T05 is now inferred: section 6 does not say which revocation
+    results fail 6.1.3(a)(3), certificateHold included. OQ-25 now carries the R-0003 and
+    R-0314 tension. All 351 quotes were re-located in the source.

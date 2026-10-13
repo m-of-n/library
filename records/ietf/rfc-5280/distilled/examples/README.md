@@ -9,12 +9,12 @@ reviewed_by: ""
 # RFC 5280 — examples and test vectors
 
 This directory holds the **4 Appendix C examples as byte fixtures** and
-`vectors.yaml`, which has **85 vectors** in all:
+`vectors.yaml`, which has **86 vectors** in all:
 
 - **44 in-source.** The source prints their input. That covers the four
   fixtures, the minimal certification path that Appendix C says C.1, C.2 and
   C.4 form, and 39 examples printed in prose or figures.
-- **41 constructed.** Each one tests a rule the source states but gives no
+- **42 constructed.** Each one tests a rule the source states but gives no
   literal for, mostly in §6.1 path validation.
 
 Pass 1 (extract), working from the source only (`.cache/rfc-5280.txt`, the
@@ -141,16 +141,17 @@ policy, not from the fixture.
 | §6.1 Basic Path Validation (duplicates, self-issued) | 0 | 2 | `PKIX-61-01`, `-02` |
 | §6.1.2 Initialization (Figure 3) | 1 | 0 | `PKIX-612-01` |
 | §6.1.3 Basic Certificate Processing (Figures 4–7; checks) | 4 | 11 | `PKIX-613-01` … `-04`; `-05` … `-15` |
-| §6.1.4 Preparation for Certificate i+1 ((g) examples; checks) | 4 | 19 | `PKIX-614-01` … `-04`; `-05` … `-23` |
+| §6.1.4 Preparation for Certificate i+1 ((g) examples; checks) | 4 | 20 | `PKIX-614-01` … `-04`; `-05` … `-24` |
 | §6.1.5 Wrap-Up Procedure | 0 | 3 | `PKIX-615-01` … `-03` |
 | §6.3.3 CRL Processing (on the C.4 fixture) | 0 | 3 | `PKIX-633-01` … `-03` |
 | Appendix B (DER DEFAULT omission; NC URI holds a DNS name) | 2 | 0 | `PKIX-B-01`, `-02` |
-| **total** | **44** | **41** | **85** |
+| **total** | **44** | **42** | **86** |
 
 The LDAP URI block (`42113`, `4221`, `4222`, `527`) sits after the
 §4.2.1.14 vector in the file. `PKIX-4216-02` and `-03`, added in pass 2,
 follow `PKIX-4216-01` although their source lines (2014–2027) come before
-it. Every other vector is in source order.
+it. `PKIX-614-24`, added in pass 3, comes last among the §6.1.4 vectors.
+Every other vector is in source order.
 
 ### The constructed path vectors, by rule
 
@@ -167,6 +168,7 @@ it. Every other vector is in source order.
 | pathLenConstraint 0 directly above the target (EE or CA) | `PKIX-614-10`, `-13` | succeeds |
 | self-issued intermediate exempt from the pathLen count | `PKIX-614-11` | succeeds |
 | cA false used as an issuer (absent; FALSE; v1 with no out-of-band check) | `PKIX-614-14`, `-15`, `-16` | fails at 6.1.4(k) |
+| v1 intermediate verified as a CA out of band (R-0700 lets an implementation reject it anyway) | `PKIX-614-24` | succeeds, or rejected at 6.1.4(k): both conform (**ambiguous**) |
 | keyCertSign absent (keyUsage present) / keyUsage absent | `PKIX-614-17`, `-18` | fails at 6.1.4(n); succeeds |
 | unrecognised critical extension (intermediate; target) / non-critical | `PKIX-614-19`, `PKIX-615-01` / `PKIX-614-20` | fails; fails; succeeds |
 | anyPolicy in policyMappings | `PKIX-614-21` | fails at 6.1.4(a) |
@@ -211,11 +213,11 @@ also carries a `trace` of the state variables that decide its outcome.
   and certificates in `PKIX-42111-01` and `PKIX-42114-01`, marked
   `path_basis`.
 
-**41 constructed**, by section:
+**42 constructed**, by section:
 
 | Appendix C | 4.2.1.10 | 5.2 | 6.1 | 6.1.3 | 6.1.4 | 6.1.5 | 6.3.3 |
 |---|---|---|---|---|---|---|---|
-| 1 | 1 | 1 | 2 | 11 | 19 | 3 | 3 |
+| 1 | 1 | 1 | 2 | 11 | 20 | 3 | 3 |
 
 **Examples in the source not made into vectors:**
 
@@ -264,7 +266,9 @@ also carries a `trace` of the state variables that decide its outcome.
 - **§7.1–§7.5** (internationalised names) print no IDN, IRI or
   internationalised-address example. The only literal is the four
   characters "xn--", a prefix, not an example value. The comparison rules
-  are used by `PKIX-61-02` and `PKIX-613-09`. Without a printed IDN, any
+  are used by `PKIX-61-02` and `PKIX-613-09`, and the §7.2 dNSName
+  constraint rules (R-0558, R-0701) by `PKIX-42110-09`, `-10` and the
+  dNSName path vectors. Without a printed IDN, any
   vector here would be wholly constructed and would rest on RFC 3490
   behaviour outside this source, so none was made.
 - **§8 Security Considerations, §9 IANA, §10–§11** contain no examples.
@@ -318,3 +322,112 @@ noted for completeness only.
 - `PKIX-633-03`: the §5.2.4 quote in `note` stopped mid-sentence and dropped the second condition of the MAY; completed, lines 3558-3561 → 3558-3562.
 - `PKIX-633-01`: marked `ambiguous: true` with `ambiguous_reason` (source issue 7); `ambiguous` added to the header conventions.
 - Added `PKIX-4216-02` (dNSName " ", lines 2014–2024) and `PKIX-4216-03` (mail address in DNS form, lines 2024–2027): printed example values with a stated result that pass 1 missed. Counts 83/42 → 85/44 in `vectors.yaml` and here.
+
+## Pass 3 (cross-check)
+
+**The fixtures against the schema.** No ASN.1 library is installed, so this
+pass wrote a DER walker (in scratch, not committed). It parses
+`schema/PKIX1Explicit88.asn1` and `PKIX1Implicit88.asn1` themselves (172
+and 85 assignments, the counts in `schema/README.md`) and decodes each
+fixture against `Certificate` or `CertificateList` from those parsed
+definitions. It checks component order, OPTIONAL and DEFAULT presence,
+universal and context tags, IMPLICIT and EXPLICIT tagging (the module
+default, and X.680's rule for a tag on a CHOICE or ANY, schema F-09), SIZE
+bounds and the `PolicyQualifierId` value set. Each `extnValue` is decoded
+against the syntax its `extnID` names in the modules (`id-ce-basicConstraints`
+→ `BasicConstraints` and so on), each `AttributeTypeAndValue` value against
+the syntax its type names (`id-at-commonName` → `X520CommonName`,
+`id-domainComponent` → `DomainComponent`), and every OID is resolved from
+the modules' own value assignments. The DER rules are checked at every
+node: minimal length octets, no indefinite length, minimal INTEGERs,
+BOOLEAN `00` or `ff`, no component encoded with its DEFAULT value
+(`version` v1, `critical` FALSE, `cA` FALSE), SET OF in ascending order,
+zero unused bits in a BIT STRING, and no trailing zero in a named bit list
+(R-0611).
+
+- **All four fixtures decode with no schema or DER violation.** The walk
+  covers 264 TLVs (66, 70, 83, 45), the same nodes the rebuild checked,
+  because it decodes all 20 encapsulations: every `extnValue` (C.4's
+  reasonCode entry extension included), every subjectPublicKey, and C.3's
+  DSA signature value.
+- **Tagging is as the schema says.** `version [0]`, `extensions [3]` and
+  `crlExtensions [0]` are explicit (`a0`, `a3`, `a0`, each wrapping one
+  TLV). AKI `keyIdentifier [0]` is implicit (`80`), and so are GeneralName
+  `rfc822Name [1]` and `uniformResourceIdentifier [6]` (`81`, `86`). No
+  fixture carries a directoryName, an EDIPartyName or a
+  DistributionPointName, so no fixture exercises the CHOICE rule of F-09.
+- **Time.** Every validity date, thisUpdate, nextUpdate and revocationDate
+  falls in 2004 or 2005 and is a UTCTime of the form YYMMDDHHMMSSZ (R-0033,
+  R-0038, R-0039, R-0274, R-0281, R-0287).
+- **Profile.** Every `conformance_checked` claim in the four fixture
+  vectors was re-derived from the decode, together with R-0074 (no
+  extension repeated), R-0601 (the AKI issuer and serial pairing) and R-0068
+  (no unique identifiers). The issuer bytes of C.2 and C.4 are identical to
+  the subject bytes of C.1. All of these hold.
+- **Outside the schema.** RFC 5280 defines none of the algorithm OIDs
+  (rsaEncryption, sha1WithRSAEncryption, id-dsa, id-dsa-with-sha1), their
+  parameters, the RSA and DSA public keys, or Dss-Sig-Value. They come from
+  RFC 3279. Nor does it define C.3's policy OID 2.16.840.1.101.3.2.1.48.9.
+  These were checked for DER form only: NULL parameters for RSA, Dss-Parms
+  as three INTEGERs, parameters absent for dsa-with-sha1, and minimal
+  positive INTEGERs.
+- **OpenSSL agrees.** `openssl asn1parse`, with `-strparse` at each of the
+  20 encapsulations, reports the same offset, header length and length for
+  all 264 TLVs.
+- **The walker was tested on violations.** 22 mutated copies of the
+  fixtures were made in scratch; the fixture bytes were not touched. Each
+  copy breaks one rule: a DEFAULT value encoded (three ways), a non-minimal
+  length, a non-minimal INTEGER, a BOOLEAN that is not `ff`, an unsorted SET
+  OF, a trailing zero in a named bit list, an unused bit set, GeneralizedTime
+  before 2050, UTCTime without seconds, two components swapped, an implicit
+  `[0]` where explicit is required, an explicit `[0]` where implicit is
+  required, a PrintableString holding `_`, an empty subjectAltName, an AKI
+  serial with no issuer, a unique identifier, an unknown extension OID, and
+  a CRL without nextUpdate, without version or without AKI. The walker
+  flags all 22.
+
+**Fixed in `vectors.yaml`:**
+
+- Two hex strings in the fixture annotations were miscopied from the dumps.
+  `PKIX-C2-01` `rsa_modulus_hex` had a stray `4` (`…82120144ae91…`; dump
+  line "12 01 4A E9"), and `PKIX-C3-01` `dsa_g_hex` had lost one `fc`
+  (`…3cf6fccc46…`; dump line "3C F6 FC FC CC 46"). The `.hex` fixtures and
+  the dumps were right. All 17 hex blocks in the annotations now occur in
+  the DER.
+- R-0701 (§7.2: a name formed by adding labels to the left of the
+  constraint falls within the subtree) was cited by no artifact. It now
+  sits on the vectors whose outcome is a dNSName subtree decision:
+  `PKIX-42110-09`, `-10`, `PKIX-613-05`, `-06`, `-07`, `PKIX-614-05`, `-06`
+  and `-08`. It needs no vector of its own, because these exercise it.
+- R-0700 (§6.1.4(k): conforming implementations may reject all version 1
+  and version 2 intermediates) had no vector. `PKIX-614-24` is the
+  constructed one: a v1 intermediate verified as a CA out of band. It is
+  marked `ambiguous: true`, because the procedure succeeds and the
+  permission allows a rejection. `PKIX-614-16`'s note now points to it.
+  Counts 85/41 → 86/42.
+
+**The vectors against the other artifacts.** These checks were mechanical
+unless stated otherwise.
+
+- All 160 distinct R-ids in `vectors.yaml` exist in `requirements.yaml`.
+  Each vector's `rule` list was read against what the vector tests; apart
+  from R-0700 and R-0701, nothing was missing or misplaced (by reading).
+- Every camelCase field or type name in the vectors exists in the two
+  modules, the inline ASN.1 or `messages.yaml`. The exceptions are names
+  read off the dumps, which are dumpasn1's (commonName, cRLReason,
+  rsaEncryption, dsaWithSha1), and caseIgnoreMatch (§7.1). The annotations
+  use the inline §4.1 and §5.1 component name `signatureValue`, as
+  `messages.yaml` does, not A.1's `signature` (schema F-01). Every
+  snake_case state variable in a trace occurs in the source and in
+  `state-machine.yaml` or `protocol.yaml`.
+- All 120 primary quotes (`expected.text`, `description`, `intro`,
+  `rule_text`) are verbatim under the header's normalisation, and each lies
+  inside its vector's own line ranges. The 15 source quotes embedded in
+  notes are verbatim too. The other 5 double-quoted strings in `derived`
+  notes are OpenSSL output or an illustrative string, not quotes of the
+  source.
+
+**Not checked.** No ASN.1 compiler is available. The walker parses the 1988
+subset these modules use, and that is not a compiler's check of them. The
+RFC 3279 structures were checked for form only. C.3's signature still
+cannot be verified, because the source does not print its issuer's key.

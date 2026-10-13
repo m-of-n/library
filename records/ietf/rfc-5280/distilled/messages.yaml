@@ -33,6 +33,10 @@ applicability: >-
   certificates (onlyContainsAttributeCerts is the only mention), and any extension not in §4.2
   or §5.2/§5.3 except the two Appendix A.2 definitions with no profile text
   (privateKeyUsagePeriod, holdInstructionCode), which are included and marked appendix-only.
+  The five entries marked algorithm-io (PathValidationInputs, TrustAnchorInfo-as-inputs,
+  PathValidationOutputs, CRLValidationInputs, CRLValidationOutputs) are not encoded
+  structures: they are the §6.1.1, §6.1.6, §6.3.1 and §6.3.3 inputs and outputs, which
+  protocol.yaml and state-machine.yaml pass between steps.
 
 # ---------------------------------------------------------------------------
 note: >-
@@ -74,14 +78,27 @@ note: >-
   the hex dumps of Appendix C, which are cited where they evidence a tag or an encoding.
   (9) normative_status: profiled (the body of §4/§5 profiles it); appendix-only (defined in
   Appendix A with no profile text in the body); retrieval (a §4.2.1.13/§4.2.2/§5.2.7 retrieval
-  format); referenced (named and delegated to another specification). (10) 444 of the 623
-  requirements are wired to at least one field, entry or encoding rule. The 179 wired nowhere
-  here are processing requirements that bind no field of any structure: §1 R-0001 (result
-  equivalence of path validation); the whole of §6, R-0367 to R-0537 (171 entries), which
-  belongs to distilled/protocol.yaml and state-machine.yaml; and the §8 operational
-  requirements R-0581, R-0582, R-0583, R-0584, R-0588, R-0589 and R-0593. (11) Message-level
+  format); referenced (named and delegated to another specification); algorithm-io (the
+  inputs and outputs of the §6.1 and §6.3 algorithms, which the source lists in prose with no
+  structure or encoding; added in pass 3 so that every message protocol.yaml and
+  state-machine.yaml name is defined here). (10) 467 of the 625 requirements are wired to at
+  least one field, entry or encoding rule. The 158 wired nowhere here are processing
+  requirements that bind no field of any structure: §1 R-0001 (result equivalence of path
+  validation); 150 of the §6 entries (R-0367 to R-0537 and R-0700, less the 22 that bind an
+  algorithm-io field: R-0374, R-0380, R-0386 to R-0397, R-0432, R-0467, R-0489, R-0496,
+  R-0497, R-0499, R-0536 and R-0537), which belong to distilled/protocol.yaml and
+  state-machine.yaml; and the §8 operational requirements R-0581, R-0582, R-0583, R-0584,
+  R-0588, R-0589 and R-0593. (11) Message-level
   constrained_by, criticality_by and presence statements bind the structure as a whole;
-  field-level constrained_by binds the field.
+  field-level constrained_by binds the field. (12) A field name is the ASN.1 component
+  identifier, except where the field carries name_kind: synthetic. Those fields belong to a
+  type with no named component, a bare type (SubjectKeyIdentifier ::= KeyIdentifier,
+  BaseCRLNumber ::= CRLNumber, CRLReason, Version, the time types) or a SEQUENCE OF
+  (GeneralNames, CRLDistributionPoints, AuthorityInfoAccessSyntax, ExtKeyUsageSyntax,
+  SubjectDirectoryAttributes); the name labels the value or the element type and is not an
+  ASN.1 identifier. The synthetic distributionPoint of cRLDistributionPoints, freshestCRL and
+  crl-freshestCRL is an element of type DistributionPoint, not the DistributionPoint
+  component distributionPoint.
 
 # ---------------------------------------------------------------------------
 # Encoding rules that apply across structures. Each is cited by the entries it binds.
@@ -510,6 +527,7 @@ messages:
     encoding: DER (inside TBSCertificate) or DER (inside TBSCertList, §5.1)
     fields:
       - name: value
+        name_kind: synthetic
         asn1_type: INTEGER
         tag: none (universal INTEGER, 02)
         required: true
@@ -529,6 +547,7 @@ messages:
     encoding: DER
     fields:
       - name: value
+        name_kind: synthetic
         asn1_type: INTEGER
         tag: none (universal INTEGER, 02)
         required: true
@@ -657,6 +676,7 @@ messages:
     encoding: DER
     fields:
       - name: value
+        name_kind: synthetic
         asn1_type: UTCTime
         tag: none (universal 23, identifier 17)
         required: true
@@ -683,6 +703,7 @@ messages:
     encoding: DER
     fields:
       - name: value
+        name_kind: synthetic
         asn1_type: GeneralizedTime
         tag: none (universal 24, identifier 18)
         required: true
@@ -743,6 +764,7 @@ messages:
     encoding: DER
     fields:
       - name: value
+        name_kind: synthetic
         asn1_type: BIT STRING
         tag: "IMPLICIT [1] or [2] where used (TBSCertificate)"
         required: false
@@ -1089,7 +1111,14 @@ messages:
       notation, and order does not reach the wire. Appendix A.1 writes the per-attribute string
       types in expanded form with the ub-* upper bounds (see naming-attribute-types); "-- Note - upper
       bounds on string types, such as TeletexString, are -- measured in characters." (A.1
-      comment, lines 6938-6939).
+      comment, lines 6938-6939). The same comment sizes a receiver's storage, in lowercase:
+      "Excepting PrintableString or IA5String, a -- significantly greater number of octets will
+      be required to hold -- such a value. As a minimum, 16 octets, or twice the specified --
+      upper bound, whichever is the larger, should be allowed for -- TeletexString. For
+      UTF8String or UniversalString at least four -- times the upper bound should be allowed."
+      (A.1 comment, lines 6939-6952, page break removed; normative.md N-600).
+    constrained_by_locators:
+      - "Appendix A.1 lines 6938-6952 (ASN.1 comment, lowercase should; normative.md N-600)"
 
   - name: naming-attribute-types
     aliases:
@@ -1396,6 +1425,7 @@ messages:
     encoding: DER, inside extnValue
     fields:
       - name: keyIdentifier
+        name_kind: synthetic
         asn1_type: OCTET STRING
         tag: none (universal OCTET STRING, 04)
         required: true
@@ -1840,6 +1870,7 @@ messages:
     encoding: DER, inside extnValue
     fields:
       - name: generalNames
+        name_kind: synthetic
         asn1_type: GeneralNames (SEQUENCE SIZE (1..MAX) OF GeneralName)
         tag: none (universal SEQUENCE, 30)
         required: true
@@ -1881,6 +1912,7 @@ messages:
     encoding: DER, inside extnValue
     fields:
       - name: generalNames
+        name_kind: synthetic
         asn1_type: GeneralNames
         tag: none (universal SEQUENCE, 30)
         required: true
@@ -1911,6 +1943,7 @@ messages:
     encoding: DER, inside extnValue
     fields:
       - name: attribute
+        name_kind: synthetic
         asn1_type: Attribute
         tag: none (universal SEQUENCE, 30)
         required: true
@@ -1981,6 +2014,10 @@ messages:
       30 L { [01 01 FF] | [02 L n] }. Appendix C.1 prints the critical CA form: "421 1: BOOLEAN
       TRUE" (criticality) then "426 3: SEQUENCE {" "428 1: BOOLEAN TRUE" (lines 7763-7766), that
       is 30 03 01 01 FF.
+    constrained_by:
+      - rfc-5280#R-0157
+      - rfc-5280#R-0075
+      - rfc-5280#R-0079
 
   - name: nameConstraints
     asn1_type: NameConstraints (SEQUENCE)
@@ -2160,6 +2197,7 @@ messages:
     encoding: DER, inside extnValue
     fields:
       - name: keyPurposeId
+        name_kind: synthetic
         asn1_type: KeyPurposeId (OBJECT IDENTIFIER)
         tag: none (universal OBJECT IDENTIFIER, 06)
         required: true
@@ -2255,6 +2293,7 @@ messages:
     encoding: DER, inside extnValue; ReasonFlags is a named bit list (ENC-05)
     fields:
       - name: distributionPoint
+        name_kind: synthetic
         asn1_type: DistributionPoint
         tag: none (universal SEQUENCE, 30)
         required: true
@@ -2473,6 +2512,7 @@ messages:
     encoding: DER, inside extnValue
     fields:
       - name: skipCerts
+        name_kind: synthetic
         asn1_type: INTEGER (0..MAX)
         tag: none (universal INTEGER, 02)
         required: true
@@ -2500,6 +2540,7 @@ messages:
     encoding: DER, inside extnValue
     fields:
       - name: distributionPoint
+        name_kind: synthetic
         asn1_type: DistributionPoint
         tag: none (universal SEQUENCE, 30)
         required: true
@@ -2958,10 +2999,14 @@ messages:
           satisfies the name constraint. For example, www.host.example.com would satisfy the
           constraint but host1.example.com would not." (lines 2286-2290). "When evaluating name
           constraints, conforming implementations MUST perform a case-insensitive exact match on a
-          label-by-label basis." (§7.2, lines 5416-5418).
+          label-by-label basis." (§7.2, lines 5416-5418). §7.2 restates the subtree rule: "As noted
+          in Section 4.2.1.10, any DNS name that may be constructed by adding labels to the
+          left-hand side of the domain name given as the constraint is considered to fall within
+          the indicated subtree." (lines 5417-5420).
         constrained_by:
           - rfc-5280#R-0168
           - rfc-5280#R-0558
+          - rfc-5280#R-0701
       - name: directoryName
         asn1_type: Name
         tag: "[4], EXPLICIT (identifier A4). Derived (X.680)."
@@ -3059,6 +3104,7 @@ messages:
     encoding: DER, inside extnValue
     fields:
       - name: accessDescription
+        name_kind: synthetic
         asn1_type: AccessDescription
         tag: none (universal SEQUENCE, 30)
         required: true
@@ -3173,6 +3219,7 @@ messages:
     encoding: DER, inside extnValue
     fields:
       - name: accessDescription
+        name_kind: synthetic
         asn1_type: AccessDescription
         tag: none (universal SEQUENCE, 30)
         required: true
@@ -3283,7 +3330,8 @@ messages:
           - rfc-5280#R-0309
     layout: >-
       30 L { TBSCertList | AlgorithmIdentifier | 03 L 00 <signature> }. Appendix C.4 prints a
-      352-byte instance: "0 352: SEQUENCE {", tbsCertList "4 202: SEQUENCE {", signatureAlgorithm
+      356-octet instance whose outer SEQUENCE has 352 content octets (30 82 01 60): "0 352:
+      SEQUENCE {", tbsCertList "4 202: SEQUENCE {", signatureAlgorithm
       at offset 209 and "224 129: BIT STRING" (lines 8239-8325).
     notes: >-
       Source defect: Appendix A.1 names the third component signature ("signature BIT STRING",
@@ -3493,8 +3541,12 @@ messages:
     fields:
       - name: keyIdentifier
         asn1_type: KeyIdentifier (OCTET STRING)
-        tag: "IMPLICIT [0] (identifier 80)"
-        required: true
+        tag: "IMPLICIT [0] (identifier 80, primitive)"
+        required: conditional
+        required_when: >-
+          ASN.1 OPTIONAL; always present in a CRL under this profile: "Conforming CRL issuers MUST
+          use the key identifier method, and MUST include this extension in all CRLs issued."
+          (lines 3348-3349; R-0290, R-0291).
         constraints: >-
           Key identifier method mandated (R-0290). "The identification can be based on either the
           key identifier (the subject key identifier in the CRL signer's certificate) or the issuer
@@ -3505,15 +3557,17 @@ messages:
           - rfc-5280#R-0291
       - name: authorityCertIssuer
         asn1_type: GeneralNames
-        tag: "IMPLICIT [1] (identifier A1)"
-        required: false
+        tag: "IMPLICIT [1] (identifier A1, constructed; replaces the GeneralNames SEQUENCE tag)"
+        required: conditional
+        required_when: Both-or-neither with authorityCertSerialNumber (R-0601), as in authorityKeyIdentifier.
         constraints: Both-or-neither with authorityCertSerialNumber (R-0601).
         constrained_by:
           - rfc-5280#R-0601
       - name: authorityCertSerialNumber
-        asn1_type: CertificateSerialNumber
-        tag: "IMPLICIT [2] (identifier 82)"
-        required: false
+        asn1_type: CertificateSerialNumber (INTEGER)
+        tag: "IMPLICIT [2] (identifier 82, primitive)"
+        required: conditional
+        required_when: Both-or-neither with authorityCertIssuer (R-0601), as in authorityKeyIdentifier.
         constraints: Both-or-neither with authorityCertIssuer (R-0601).
         constrained_by:
           - rfc-5280#R-0601
@@ -3539,6 +3593,7 @@ messages:
     encoding: DER, inside extnValue
     fields:
       - name: generalNames
+        name_kind: synthetic
         asn1_type: GeneralNames
         tag: none (universal SEQUENCE, 30)
         required: true
@@ -3568,6 +3623,7 @@ messages:
     encoding: DER, inside extnValue
     fields:
       - name: value
+        name_kind: synthetic
         asn1_type: INTEGER (0..MAX)
         tag: none (universal INTEGER, 02)
         required: true
@@ -3608,6 +3664,7 @@ messages:
     encoding: DER, inside extnValue
     fields:
       - name: baseCRLNumber
+        name_kind: synthetic
         asn1_type: CRLNumber (INTEGER (0..MAX))
         tag: none (universal INTEGER, 02)
         required: true
@@ -3785,6 +3842,7 @@ messages:
     encoding: DER, inside extnValue
     fields:
       - name: distributionPoint
+        name_kind: synthetic
         asn1_type: DistributionPoint
         tag: none (universal SEQUENCE, 30)
         required: true
@@ -3816,6 +3874,7 @@ messages:
     encoding: DER, inside extnValue
     fields:
       - name: accessDescription
+        name_kind: synthetic
         asn1_type: AccessDescription
         tag: none (universal SEQUENCE, 30)
         required: true
@@ -3881,6 +3940,7 @@ messages:
     encoding: DER, inside extnValue
     fields:
       - name: value
+        name_kind: synthetic
         asn1_type: ENUMERATED
         tag: none (universal ENUMERATED, 0A)
         required: true
@@ -3964,6 +4024,7 @@ messages:
     encoding: DER, inside extnValue
     fields:
       - name: value
+        name_kind: synthetic
         asn1_type: GeneralizedTime
         tag: none (universal GeneralizedTime, 18)
         required: true
@@ -4001,6 +4062,7 @@ messages:
     encoding: DER, inside extnValue
     fields:
       - name: generalNames
+        name_kind: synthetic
         asn1_type: GeneralNames
         tag: none (universal SEQUENCE, 30)
         required: true
@@ -4030,6 +4092,7 @@ messages:
     encoding: DER, inside extnValue
     fields:
       - name: value
+        name_kind: synthetic
         asn1_type: OBJECT IDENTIFIER
         tag: none (universal OBJECT IDENTIFIER, 06)
         required: true
@@ -4362,6 +4425,291 @@ messages:
       - rfc-5280#R-0591
       - rfc-5280#R-0592
 
+  # ======================= §6 algorithm inputs and outputs =======================
+  # Added in pass 3 so that every message named in protocol.yaml and state-machine.yaml is
+  # defined here. These are not encoded structures: the source lists the inputs and outputs of
+  # its two §6 algorithms in prose and gives them no ASN.1, no encoding and no name. The entry
+  # names are the ones protocol.yaml and state-machine.yaml use; the field names are
+  # protocol.yaml's input names. The processing of each value is in protocol.yaml algorithms.
+
+  - name: PathValidationInputs
+    source: "§6.1.1, lines 4186-4283"
+    normative_status: algorithm-io
+    asn1_type: none (local inputs to the §6.1 algorithm; the source defines no structure)
+    encoding: >-
+      None. Derived: the inputs are handed to "the path processing logic" (§6.1.1, line 4189)
+      by the relying party; no format, encoding or transfer is defined.
+    fields:
+      - name: prospective_path
+        asn1_type: "Derived: SEQUENCE OF Certificate, certificates 1 to n"
+        required: true
+        constraints: >-
+          "(a) a prospective certification path of length n." (§6.1.1, line 4191). The path
+          conditions (a) to (d) of §6.1 and "A certificate MUST NOT appear more than once in a
+          prospective certification path." (§6.1) bind its content; see protocol.yaml
+          basic-path-validation path_conditions.
+        constrained_by:
+          - rfc-5280#R-0386
+          - rfc-5280#R-0380
+      - name: current_time
+        asn1_type: "Derived: a date and time"
+        required: true
+        constraints: >-
+          "(b) the current date/time." (§6.1.1, line 4193). "A conforming implementation MAY also
+          support validation with respect to some point in the past." (§6.1).
+        constrained_by:
+          - rfc-5280#R-0387
+          - rfc-5280#R-0374
+      - name: user-initial-policy-set
+        asn1_type: "Derived: SET OF CertPolicyId, or the special value any-policy"
+        required: true
+        constraints: >-
+          "user-initial-policy-set: A set of certificate policy identifiers naming the policies
+          that are acceptable to the certificate user. The user-initial-policy-set contains the
+          special value any-policy if the user is not concerned about certificate policy."
+          (§6.1.1(c), lines 4207-4211).
+        constrained_by:
+          - rfc-5280#R-0388
+      - name: trust_anchor_information
+        asn1_type: TrustAnchorInfo-as-inputs
+        required: true
+        constraints: See TrustAnchorInfo-as-inputs (§6.1.1(d)).
+        constrained_by:
+          - rfc-5280#R-0389
+          - rfc-5280#R-0390
+      - name: initial-policy-mapping-inhibit
+        asn1_type: "Derived: BOOLEAN (the source says only that it is set or not set, §6.1.2(f))"
+        required: true
+        constraints: >-
+          "initial-policy-mapping-inhibit, which indicates if policy mapping is allowed in the
+          certification path." (§6.1.1(e), lines 4238-4239).
+        constrained_by:
+          - rfc-5280#R-0391
+      - name: initial-explicit-policy
+        asn1_type: "Derived: BOOLEAN, as initial-policy-mapping-inhibit"
+        required: true
+        constraints: >-
+          "initial-explicit-policy, which indicates if the path must be valid for at least one of
+          the certificate policies in the user-initial-policy-set." (§6.1.1(f), lines 4241-4243).
+        constrained_by:
+          - rfc-5280#R-0392
+      - name: initial-any-policy-inhibit
+        asn1_type: "Derived: BOOLEAN, as initial-policy-mapping-inhibit"
+        required: true
+        constraints: >-
+          "initial-any-policy-inhibit, which indicates whether the anyPolicy OID should be
+          processed if it is included in a certificate." (§6.1.1(g), lines 4245-4247).
+        constrained_by:
+          - rfc-5280#R-0393
+      - name: initial-permitted-subtrees
+        asn1_type: "Derived: one set of GeneralSubtree-like name spaces per name type; a set may be empty"
+        required: true
+        constraints: >-
+          "initial-permitted-subtrees, which indicates for each name type (e.g., X.500
+          distinguished names, email addresses, or IP addresses) a set of subtrees within which
+          all subject names in every certificate in the certification path MUST fall."
+          (§6.1.1(h), lines 4249-4252). "If the set for a name type is empty, then the
+          certification path will be considered invalid if any certificate in the certification
+          path includes a name of that name type." (lines 4265-4268).
+        constrained_by:
+          - rfc-5280#R-0394
+          - rfc-5280#R-0395
+      - name: initial-excluded-subtrees
+        asn1_type: "Derived: one set of name spaces per name type; a set may be empty"
+        required: true
+        constraints: >-
+          "initial-excluded-subtrees, which indicates for each name type (e.g., X.500
+          distinguished names, email addresses, or IP addresses) a set of subtrees within which
+          no subject name in any certificate in the certification path may fall." (§6.1.1(i),
+          lines 4270-4273). "If the set for a name type is empty, then no names of that name
+          type are excluded." (lines 4277-4278).
+        constrained_by:
+          - rfc-5280#R-0396
+    layout: None. These are local values, not an encoded object.
+    notes: >-
+      "This algorithm assumes that the following nine inputs are provided to the path processing
+      logic:" (§6.1.1, lines 4188-4189). Not every input has to be settable: "Conforming
+      implementations are not required to support the setting of all of these inputs." (lines
+      4280-4281). The entry name is ours; protocol.yaml and state-machine.yaml use it, and both
+      use these field names, which are protocol.yaml's input names.
+    constrained_by:
+      - rfc-5280#R-0397
+
+  - name: TrustAnchorInfo-as-inputs
+    aliases:
+      - trust anchor information (§6.1.1(d))
+    source: "§6.1.1(d), lines 4213-4236"
+    normative_status: algorithm-io
+    asn1_type: none (input (d) of the §6.1 algorithm; the source defines no structure)
+    encoding: >-
+      None of its own. It "may be provided to the path processing procedure in the form of a
+      self-signed certificate" (lines 4226-4228), and is then a DER Certificate (see Certificate).
+      Otherwise "it was delivered to the path processing procedure by some trustworthy
+      out-of-band procedure" (lines 4232-4234), in no defined format.
+    fields:
+      - name: trusted_issuer_name
+        asn1_type: Name
+        required: true
+        constraints: >-
+          "(1) the trusted issuer name," (line 4217). From a certificate: "the name in the subject
+          field is used as the trusted issuer name" (lines 4228-4230).
+        constrained_by:
+          - rfc-5280#R-0389
+          - rfc-5280#R-0390
+      - name: trusted_public_key_algorithm
+        asn1_type: "Derived: AlgorithmIdentifier.algorithm"
+        required: true
+        constraints: >-
+          "(2) the trusted public key algorithm," (line 4219). From a certificate: "the contents
+          of the subjectPublicKeyInfo field is used as the source of the trusted public key
+          algorithm and the trusted public key." (lines 4230-4232).
+        constrained_by:
+          - rfc-5280#R-0389
+          - rfc-5280#R-0390
+      - name: trusted_public_key
+        asn1_type: "Derived: SubjectPublicKeyInfo.subjectPublicKey"
+        required: true
+        constraints: >-
+          "(3) the trusted public key, and" (line 4221). From a certificate, as
+          trusted_public_key_algorithm.
+        constrained_by:
+          - rfc-5280#R-0389
+          - rfc-5280#R-0390
+      - name: trusted_public_key_parameters
+        asn1_type: "Derived: AlgorithmIdentifier.parameters"
+        required: conditional
+        required_when: >-
+          "(4) optionally, the trusted public key parameters associated with the public key."
+          (lines 4223-4224). "If the trusted public key algorithm requires parameters, then the
+          parameters are provided along with the trusted public key." (lines 4234-4236).
+        constrained_by:
+          - rfc-5280#R-0389
+          - rfc-5280#R-0390
+    layout: None, or a Certificate when given as a self-signed certificate.
+    notes: >-
+      The entry name is protocol.yaml's. "TrustAnchorInfo" is not a name the source uses; it says
+      "trust anchor information" (line 4213). §6.2 adds that a self-signed trust anchor's
+      extensions may be used for, or ignored in, setting the other inputs; see protocol.yaml
+      certificate-validation-and-use step 3.
+
+  - name: PathValidationOutputs
+    source: "§6.1.6, lines 4964-4969; §6.1.3, lines 4661-4662; §6.1.4, lines 4852-4853"
+    normative_status: algorithm-io
+    asn1_type: none (local outputs of the §6.1 algorithm; the source defines no structure)
+    encoding: None.
+    fields:
+      - name: result
+        asn1_type: "Derived: success or failure indication"
+        required: true
+        constraints: >-
+          Success: "If path processing succeeds, the procedure terminates, returning a success
+          indication together with final value of the valid_policy_tree, the working_public_key,
+          the working_public_key_algorithm, and the working_public_key_parameters." (§6.1.6, lines
+          4966-4969). Failure: "If any of steps (a), (b), (c), or (f) fails, the procedure
+          terminates, returning a failure indication and an appropriate reason." (§6.1.3, lines
+          4661-4662) and "If check (a), (k), (l), (n), or (o) fails, the procedure terminates,
+          returning a failure indication and an appropriate reason." (§6.1.4, lines 4852-4853).
+        constrained_by:
+          - rfc-5280#R-0489
+          - rfc-5280#R-0432
+          - rfc-5280#R-0467
+      - name: valid_policy_tree
+        asn1_type: "Derived: the valid_policy_tree state variable of §6.1.2(a), or NULL"
+        required: conditional
+        required_when: On success (§6.1.6, lines 4966-4969).
+        constrained_by:
+          - rfc-5280#R-0489
+      - name: working_public_key
+        asn1_type: "Derived: SubjectPublicKeyInfo.subjectPublicKey of the target certificate"
+        required: conditional
+        required_when: On success (§6.1.6).
+        constrained_by:
+          - rfc-5280#R-0489
+      - name: working_public_key_algorithm
+        asn1_type: "Derived: AlgorithmIdentifier.algorithm"
+        required: conditional
+        required_when: On success (§6.1.6).
+        constrained_by:
+          - rfc-5280#R-0489
+      - name: working_public_key_parameters
+        asn1_type: "Derived: AlgorithmIdentifier.parameters, or null"
+        required: conditional
+        required_when: On success (§6.1.6).
+        constrained_by:
+          - rfc-5280#R-0489
+      - name: reason
+        asn1_type: "Derived: unspecified; the source does not enumerate reasons"
+        required: conditional
+        required_when: On failure ("an appropriate reason", §6.1.3 line 4662, §6.1.4 line 4853).
+        constrained_by:
+          - rfc-5280#R-0432
+          - rfc-5280#R-0467
+    layout: None.
+    notes: >-
+      The wrap-up states only the success condition (§6.1.5); the failure that follows from it
+      is implied, not stated (protocol.yaml defect wrap-up-failure-exit-implicit). The entry name
+      is ours.
+
+  - name: CRLValidationInputs
+    source: "§6.3.1, lines 5051-5064"
+    normative_status: algorithm-io
+    asn1_type: none (local inputs to the §6.3 algorithm; the source defines no structure)
+    encoding: None.
+    fields:
+      - name: certificate
+        asn1_type: Certificate
+        required: true
+        constraints: >-
+          "certificate: The algorithm requires the certificate serial number and issuer name to
+          determine whether a certificate is on a particular CRL. The basicConstraints extension
+          is used to determine whether the supplied certificate is associated with a CA or an end
+          entity. If present, the algorithm uses the cRLDistributionPoints and freshestCRL
+          extensions to determine revocation status." (§6.3.1(a), lines 5055-5061).
+        constrained_by:
+          - rfc-5280#R-0496
+      - name: use-deltas
+        asn1_type: BOOLEAN (the source calls it "This boolean input", line 5063)
+        required: true
+        constraints: >-
+          "use-deltas: This boolean input determines whether delta CRLs are applied to CRLs."
+          (§6.3.1(b), lines 5063-5064).
+        constrained_by:
+          - rfc-5280#R-0497
+    layout: None.
+    notes: >-
+      "To support revocation processing, the algorithm requires two inputs:" (line 5053). The
+      steps also use values that are not listed as inputs: the current time, the local CRL
+      cache, the trust anchor of the target path (6.3.3(f)) and the certificate's
+      issuerAltName (the fallback); see protocol.yaml crl-validation implicit_inputs. The entry
+      name is ours.
+
+  - name: CRLValidationOutputs
+    source: "§6.3.3, lines 5291-5303"
+    normative_status: algorithm-io
+    asn1_type: none (local output of the §6.3 algorithm; the source defines no structure)
+    encoding: None.
+    fields:
+      - name: cert_status
+        asn1_type: >-
+          Derived: one value of the cert_status state variable of §6.3.2(b): "unspecified,
+          keyCompromise, cACompromise, affiliationChanged, superseded, cessationOfOperation,
+          certificateHold, removeFromCRL, privilegeWithdrawn, aACompromise, the special value
+          UNREVOKED, or the special value UNDETERMINED" (lines 5083-5087)
+        required: true
+        constraints: >-
+          "If ((reasons_mask is all-reasons) OR (cert_status is not UNREVOKED)), then the
+          revocation status has been determined, so return cert_status." (lines 5291-5293).
+          "After processing such CRLs, if the revocation status has still not been determined,
+          then return the cert_status UNDETERMINED." (lines 5302-5303).
+        constrained_by:
+          - rfc-5280#R-0536
+          - rfc-5280#R-0537
+          - rfc-5280#R-0499
+    layout: None.
+    notes: >-
+      cert_status is the only value returned. reasons_mask ends the loop but is not returned
+      (protocol.yaml defect reasons-mask-not-returned). The entry name is ours.
+
 # ---------------------------------------------------------------------------
 # Object identifier arcs and the extension OID register, as the source assigns them.
 oid_arcs:
@@ -4545,3 +4893,19 @@ pass2_notes:
   - >-
     SD-M07 reworded: the CRL attribute names do appear, but only in the two example LDAP URIs.
     SD-M01 to SD-M06, SD-M08 and SD-M09 were checked against the source and stand.
+pass3_notes:
+  - >-
+    FX-1 pass 3 (cross-checker XA, 2026-10-13). Every ASN.1 identifier named in a
+    requirement's object or field (and every dotted object.field pair) was matched
+    mechanically against the entry, field and type names here and the identifiers of
+    schema/; all resolve (revokedCertificates.revocationDate through the crl-entry alias).
+    All 787 constrained_by and criticality_by citations were compared, section against
+    section, with the entry's source and the field's own locators; the 100 that cite another
+    section were read and each binds the field it is cited on (cross-field conditions, the §1
+    algorithm-document rule, Appendix B encoding limits, the §8 URI cautions).
+  - >-
+    Added the five algorithm-io entries so that every message protocol.yaml and
+    state-machine.yaml pass is defined here; wired R-0701 on name-constraint-base-forms
+    dNSName; wired R-0157 (with R-0075 and R-0079) on basicConstraints, which the presence
+    text cited but constrained_by did not; quoted the whole Appendix A.1 upper-bounds comment
+    (N-600) on DirectoryString; corrected the wiring count in note (10).

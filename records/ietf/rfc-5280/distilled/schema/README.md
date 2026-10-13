@@ -658,3 +658,40 @@ twice (F-06), and the MUSTs inside ASN.1 comments (F-07, F-11).
 - Page-join paragraph: said a real separating blank line was removed at each of the 26 joins and that no join falls inside a comment. Corrected: 24 joins very probably lost one, 2 (893/903, 6942/6951) did not, and 6942/6951 does fall inside a comment paragraph.
 - F-09: "Ten inline definitions use context tags with no keyword" → nine; the OtherName row is a contrast row.
 - F-11: the id-kp comments do not all begin "Key usage bits…"; reworded.
+
+## Pass 3 (cross-check)
+
+- **The modules parsed and used.** A parser for the 1988 subset these
+  modules use was written for this pass (in scratch, not committed). It
+  parses every assignment in both files: 172 in A.1 (82 types, 90 values)
+  and 85 in A.2 (47 types, 38 values). Every type assignment yields a
+  complete definition, and nothing is left over. It reads a comment as
+  running to the next `--` or to the end of the line, so it keeps the brace
+  after A.1 line 6516 (F-13); with the other rule, A.1 does not parse.
+  Reference closure was recomputed from the parsed definitions, and zero
+  references are undefined in either module. A.2 uses all twelve of its
+  imports. The inline file parses as 114 assignments in 32 regions. Run
+  again independently, the cross-comparison gives the same table: 260
+  names, 101 agree, 5 differ (Certificate, CertificateList, GeneralName,
+  TBSCertificate, TBSCertList), 3 inline-only, 151 appendix-only and 5
+  repeated inline. Every count and digest in the two tables above matches
+  the files.
+- **The Appendix C fixtures validate against these modules.** The four
+  fixtures were decoded against `Certificate` and `CertificateList` as
+  parsed from the two files, every `extnValue` against its extension's
+  syntax included. There was no schema or DER violation. The method and the
+  results are in `examples/README.md`, *Pass 3*. That decode is the check
+  *Why there is no derived JSON Schema* asks for, so no derived schema was
+  added. `cryptography` was not needed.
+- **What the fixtures show about the findings.** F-09: the implicit tags
+  in the fixtures (`[0]` keyIdentifier, `[1]` rfc822Name, `[6]`
+  uniformResourceIdentifier) and the explicit ones (`[0]` version, `[3]`
+  extensions, `[0]` crlExtensions) are as the module defaults make them. No
+  fixture carries a tagged CHOICE (directoryName, EDIPartyName,
+  DistributionPointName), so the inferred CHOICE rule is still not
+  exercised by any example. F-07: every AKI in the fixtures has only a
+  keyIdentifier, which satisfies the A.2-only pairing rule (R-0601). F-01:
+  `messages.yaml` and the vector annotations both use the inline name
+  `signatureValue`, and `messages.yaml` notes the A.1 form.
+- **Still not compiled.** No ASN.1 compiler is available. The parser checks
+  structure and is no substitute for compiling the modules.

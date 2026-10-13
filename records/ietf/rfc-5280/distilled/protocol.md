@@ -27,7 +27,7 @@ Path discovery is outside the source's scope: “The procedure performed to obta
 |---|---|
 | `framing` | 4 statements of what kind of document this is, quoted |
 | `roles` | 11 roles with the source's names for them, locators and quotes |
-| `messages_used`, `message_notes` | the 39 message and object names the steps pass, for reconciliation with `messages.yaml`; names beyond the shared list are flagged |
+| `messages_used`, `message_notes` | the 43 message names the steps pass, each with its resolution: 40 are `messages.yaml` entries, `OCSPRequest` is external (RFC 2560), `RegistrationRequest` and `RevocationRequest` are not in the source |
 | `flows` | 13 flows, 105 steps: `from`, `to`, `message`, `action`, `basis`, `locator`, `quotes`, `constrained_by`, `on_error`, `on_error_basis`, and where needed `invokes`, `message_alternatives`, `status`, `note` |
 | `algorithms` | 9 algorithms, 128 steps; the two main ones have `inputs`, `state_variables`, `stages` and `outputs`, and each step a `kind`, `condition`, `on_fail` |
 | `error_paths` | 40 error paths: trigger, detecting role, where, outcome, basis, quotes |
@@ -91,24 +91,24 @@ sequenceDiagram
 | 8 | ca → ca | `TBSCertificate` | Set subject: a DN unique per subject entity under this issuer, or an empty sequence with a critical subjectAltName; CA and CRL-issuer subjects non-empty and encoded as the subject encodes its own issuer field; email addresses in rfc822Name. | §4.1.2.6 | unspecified |
 | 9 | ca → ca | `TBSCertificate` | Set subjectPublicKeyInfo: the subject's key and its algorithm identifier, encoded as the algorithm documents specify. | §4.1.2.7, §1 | unspecified |
 | 10 | ca → ca | `TBSCertificate` | Omit issuerUniqueID and subjectUniqueID. | §4.1.2.8 | unspecified |
-| 11 | ca → ca | `Extension:*` | Apply the general extension rules: one instance per extension; support the mandatory extensions; criticality per extension as the following steps give. | §4.2 | unspecified |
-| 12 | ca → ca | `Extension:authorityKeyIdentifier` | Include keyIdentifier in every certificate (optional in a self-signed one), derived from the signing key or by a unique method, reusing an established identifier; non-critical. | §4.2.1.1 | unspecified |
-| 13 | ca → ca | `Extension:subjectKeyIdentifier` | Include in every CA certificate, equal to the keyIdentifier this subject will put in AKI of the certificates it issues; SHOULD in end entity certificates; non-critical. | §4.2.1.2 | unspecified |
-| 14 | ca → ca | `Extension:keyUsage` | Include in certificates whose keys verify signatures on certificates or CRLs; SHOULD be critical; keyCertSign only with cA; at least one bit set. | §4.2.1.3 | unspecified |
-| 15 | ca → ca | `Extension:certificatePolicies` | Assert policy OIDs, each at most once, anyPolicy when not limiting; qualifiers limited and encoded as profiled. | §4.2.1.4 | unspecified |
-| 16 | ca → ca | `Extension:policyMappings` | Map issuerDomainPolicy to subjectDomainPolicy, never to or from anyPolicy; SHOULD be critical. | §4.2.1.5 | unspecified |
-| 17 | ca → ca | `Extension:subjectAltName` | Bind Internet-style identities in subjectAltName with the name-form encoding rules; critical when subject is empty; no empty sequence and no empty GeneralName. | §4.2.1.6 | unspecified |
-| 18 | ca → ca | `Extension:issuerAltName` | Encode as subjectAltName; SHOULD be non-critical. Not used in path validation. | §4.2.1.7 | unspecified |
-| 19 | ca → ca | `Extension:subjectDirectoryAttributes` | Mark non-critical. | §4.2.1.8 | unspecified |
-| 20 | ca → ca | `Extension:basicConstraints` | Include, critical, in every CA certificate whose key verifies certificate signatures; pathLenConstraint only with cA and keyCertSign, never negative. | §4.2.1.9 | unspecified |
-| 21 | ca → ca | `Extension:nameConstraints` | Only in CA certificates; critical; never an empty sequence; minimum zero and maximum absent; URI and email forms as host or domain; iPAddress as address plus mask; directoryName encoded exactly as the subject or subjectAltName it is to match, preferably as permittedSubtrees. | §4.2.1.10, §8, Appendix B | unspecified |
-| 22 | ca → ca | `Extension:policyConstraints` | Critical; at least one of requireExplicitPolicy and inhibitPolicyMapping. | §4.2.1.11 | unspecified |
-| 23 | ca → ca | `Extension:extKeyUsage` | Key purposes at the issuer's choice of criticality; not critical when anyExtendedKeyUsage is present. | §4.2.1.12 | unspecified |
-| 24 | ca → ca | `Extension:cRLDistributionPoints` | SHOULD be non-critical; each DistributionPoint has distributionPoint or cRLIssuer; cRLIssuer present exactly when another entity issues the CRL, encoded as that CRL's issuer field; URI pointer rules for HTTP, FTP and LDAP; at least one DistributionPoint covering all reasons. | §4.2.1.13 | unspecified |
-| 25 | ca → ca | `Extension:inhibitAnyPolicy` | Mark critical. | §4.2.1.14 | unspecified |
-| 26 | ca → ca | `Extension:freshestCRL` | Mark non-critical; same syntax and conventions as cRLDistributionPoints. | §4.2.1.15 | unspecified |
-| 27 | ca → ca | `Extension:authorityInfoAccess` | Mark non-critical; caIssuers locations as LDAP, HTTP or FTP URIs pointing to a DER certificate or a certs-only CMS message; ocsp locations per RFC 2560; avoid https and ldaps, or make the server certificate validatable without the pointed-to data. | §4.2.2.1, §8 | unspecified |
-| 28 | ca → ca | `Extension:subjectInfoAccess` | Mark non-critical; caRepository and timeStamping location rules as for AIA. | §4.2.2.2, §8 | unspecified |
+| 11 | ca → ca | `Extension` | Apply the general extension rules: one instance per extension; support the mandatory extensions; criticality per extension as the following steps give. | §4.2 | unspecified |
+| 12 | ca → ca | `authorityKeyIdentifier` | Include keyIdentifier in every certificate (optional in a self-signed one), derived from the signing key or by a unique method, reusing an established identifier; non-critical. | §4.2.1.1 | unspecified |
+| 13 | ca → ca | `subjectKeyIdentifier` | Include in every CA certificate, equal to the keyIdentifier this subject will put in AKI of the certificates it issues; SHOULD in end entity certificates; non-critical. | §4.2.1.2 | unspecified |
+| 14 | ca → ca | `keyUsage` | Include in certificates whose keys verify signatures on certificates or CRLs; SHOULD be critical; keyCertSign only with cA; at least one bit set. | §4.2.1.3 | unspecified |
+| 15 | ca → ca | `certificatePolicies` | Assert policy OIDs, each at most once, anyPolicy when not limiting; qualifiers limited and encoded as profiled. | §4.2.1.4 | unspecified |
+| 16 | ca → ca | `policyMappings` | Map issuerDomainPolicy to subjectDomainPolicy, never to or from anyPolicy; SHOULD be critical. | §4.2.1.5 | unspecified |
+| 17 | ca → ca | `subjectAltName` | Bind Internet-style identities in subjectAltName with the name-form encoding rules; critical when subject is empty; no empty sequence and no empty GeneralName. | §4.2.1.6 | unspecified |
+| 18 | ca → ca | `issuerAltName` | Encode as subjectAltName; SHOULD be non-critical. Not used in path validation. | §4.2.1.7 | unspecified |
+| 19 | ca → ca | `subjectDirectoryAttributes` | Mark non-critical. | §4.2.1.8 | unspecified |
+| 20 | ca → ca | `basicConstraints` | Include, critical, in every CA certificate whose key verifies certificate signatures; pathLenConstraint only with cA and keyCertSign, never negative. | §4.2.1.9 | unspecified |
+| 21 | ca → ca | `nameConstraints` | Only in CA certificates; critical; never an empty sequence; minimum zero and maximum absent; URI and email forms as host or domain; iPAddress as address plus mask; directoryName encoded exactly as the subject or subjectAltName it is to match, preferably as permittedSubtrees. | §4.2.1.10, §8, Appendix B | unspecified |
+| 22 | ca → ca | `policyConstraints` | Critical; at least one of requireExplicitPolicy and inhibitPolicyMapping. | §4.2.1.11 | unspecified |
+| 23 | ca → ca | `extKeyUsage` | Key purposes at the issuer's choice of criticality; not critical when anyExtendedKeyUsage is present. | §4.2.1.12 | unspecified |
+| 24 | ca → ca | `cRLDistributionPoints` | SHOULD be non-critical; each DistributionPoint has distributionPoint or cRLIssuer; cRLIssuer present exactly when another entity issues the CRL, encoded as that CRL's issuer field; URI pointer rules for HTTP, FTP and LDAP; at least one DistributionPoint covering all reasons. | §4.2.1.13 | unspecified |
+| 25 | ca → ca | `inhibitAnyPolicy` | Mark critical. | §4.2.1.14 | unspecified |
+| 26 | ca → ca | `freshestCRL` | Mark non-critical; same syntax and conventions as cRLDistributionPoints. | §4.2.1.15 | unspecified |
+| 27 | ca → ca | `authorityInfoAccess` | Mark non-critical; caIssuers locations as LDAP, HTTP or FTP URIs pointing to a DER certificate or a certs-only CMS message; ocsp locations per RFC 2560; avoid https and ldaps, or make the server certificate validatable without the pointed-to data. | §4.2.2.1, §8 | unspecified |
+| 28 | ca → ca | `subjectInfoAccess` | Mark non-critical; caRepository and timeStamping location rules as for AIA. | §4.2.2.2, §8 | unspecified |
 | 29 | ca → ca | `TBSCertificate` | Respect the encoding limits that bind issuers: no @ or _ in PrintableString, trailing zero bits omitted from named bit lists, OIDs within the stated limits. | Appendix B | unspecified |
 | 30 | ca → ca | `Certificate` | DER-encode tbsCertificate, sign it, and place the algorithm identifier and signature value in the Certificate. | §4.1, §4.1.1.2, §4.1.1.3 | unspecified |
 | 31 | ca → end-entity | `Certificate` | Return the certificate to the user's client system. | §3.5(c) | unspecified |
@@ -128,7 +128,7 @@ sequenceDiagram
   participant repository as repository
   requester->>ca: 1. RevocationRequest
   ca-->>crl_issuer: 2. delegation (no message defined)
-  Note over crl_issuer: 3-14. TBSCertList, Extension:authorityKeyIdentifier and 7 more (see table)
+  Note over crl_issuer: 3-14. TBSCertList, crl-authorityKeyIdentifier and 7 more (see table)
   crl_issuer->>repository: 15. CertificateList
 ```
 
@@ -139,13 +139,13 @@ sequenceDiagram
 | 3 | crl-issuer → crl-issuer | `TBSCertList` | Add an entry at the next update after notification; keep it until it has appeared on one scheduled CRL issued after the certificate expires; omit the list when nothing is revoked. | §3.3, §5.1.2.6 | unspecified |
 | 4 | crl-issuer → crl-issuer | `TBSCertList` | Set version v2; signature identical to CertificateList.signatureAlgorithm; issuer a non-empty DN encoded as in certificates. | §5, §5.1, §5.1.2.1, §5.1.2.2, §5.1.2.3, §8 | unspecified |
 | 5 | crl-issuer → crl-issuer | `TBSCertList` | Set thisUpdate and nextUpdate (always present, not earlier than any previous nextUpdate), UTCTime through 2049 and GeneralizedTime from 2050. | §5.1.2.4, §5.1.2.5, §3.3 | unspecified |
-| 6 | crl-issuer → crl-issuer | `Extension:authorityKeyIdentifier` | Include AKI by the key identifier method in every CRL. | §5.2, §5.2.1 | unspecified |
-| 7 | crl-issuer → crl-issuer | `Extension:issuerAltName` | Carry alternative issuer identities in issuerAltName; SHOULD be non-critical. | §5.2.2 | unspecified |
-| 8 | crl-issuer → crl-issuer | `Extension:cRLNumber` | Include a non-critical, monotonically increasing CRL number per scope, at most 20 octets, different whenever thisUpdate differs. | §5.2.3, Appendix B | unspecified |
-| 9 | crl-issuer → crl-issuer | `Extension:issuingDistributionPoint` | When the CRL is scoped, state the scope in a critical IDP: distribution point names matching the certificates' CDPs with identical encoding, onlySomeReasons for reason-partitioned CRLs, the only-contains booleans, onlyContainsAttributeCerts FALSE, never an empty sequence. | §5.2.5 | unspecified |
-| 10 | crl-issuer → crl-issuer | `Extension:freshestCRL` | When delta CRLs exist for this complete CRL, point to them: non-critical, distribution point field only, same scope. | §5.2.6 | unspecified |
-| 11 | crl-issuer → crl-issuer | `Extension:authorityInfoAccess` | Optionally point to certificates that verify the CRL signature: non-critical, id-ad-caIssuers only, URI rules as for the certificate extension. | §5.2.7 | unspecified |
-| 12 | crl-issuer → crl-issuer | `Extension:reasonCode` | Give each entry a reason code when known, never the value unspecified, and removeFromCRL only in delta CRLs; add invalidityDate when known. | §5.3, §5.3.1, §5.3.2 | unspecified |
+| 6 | crl-issuer → crl-issuer | `crl-authorityKeyIdentifier` | Include AKI by the key identifier method in every CRL. | §5.2, §5.2.1 | unspecified |
+| 7 | crl-issuer → crl-issuer | `crl-issuerAltName` | Carry alternative issuer identities in issuerAltName; SHOULD be non-critical. | §5.2.2 | unspecified |
+| 8 | crl-issuer → crl-issuer | `cRLNumber` | Include a non-critical, monotonically increasing CRL number per scope, at most 20 octets, different whenever thisUpdate differs. | §5.2.3, Appendix B | unspecified |
+| 9 | crl-issuer → crl-issuer | `issuingDistributionPoint` | When the CRL is scoped, state the scope in a critical IDP: distribution point names matching the certificates' CDPs with identical encoding, onlySomeReasons for reason-partitioned CRLs, the only-contains booleans, onlyContainsAttributeCerts FALSE, never an empty sequence. | §5.2.5 | unspecified |
+| 10 | crl-issuer → crl-issuer | `crl-freshestCRL` | When delta CRLs exist for this complete CRL, point to them: non-critical, distribution point field only, same scope. | §5.2.6 | unspecified |
+| 11 | crl-issuer → crl-issuer | `crl-authorityInfoAccess` | Optionally point to certificates that verify the CRL signature: non-critical, id-ad-caIssuers only, URI rules as for the certificate extension. | §5.2.7 | unspecified |
+| 12 | crl-issuer → crl-issuer | `reasonCode` | Give each entry a reason code when known, never the value unspecified, and removeFromCRL only in delta CRLs; add invalidityDate when known. | §5.3, §5.3.1, §5.3.2 | unspecified |
 | 13 | crl-issuer → crl-issuer | `CertificateList` | Take care with critical extensions that relying parties may not process; keep OIDs within limits. | §8, §5.2, Appendix B | unspecified |
 | 14 | crl-issuer → crl-issuer | `CertificateList` | DER-encode tbsCertList and sign it, with the certificate-signing key or a separate CRL-signing key. | §5.1, §5.1.1.2, §5.1.1.3 | unspecified |
 | 15 | crl-issuer → repository | `CertificateList` | Publish the CRL. | §3, Figure 1, §3.3 | unspecified |
@@ -162,7 +162,7 @@ sequenceDiagram
   participant repository as repository
   participant relying_party as relying-party
   crl_issuer->>repository: 1. CertificateList
-  Note over crl_issuer: 2-5. Extension:freshestCRL, Extension:deltaCRLIndicator and 2 more (see table)
+  Note over crl_issuer: 2-5. crl-freshestCRL, deltaCRLIndicator and 2 more (see table)
   crl_issuer->>repository: 6. CertificateList
   repository->>relying_party: 7. CertificateList
 ```
@@ -170,8 +170,8 @@ sequenceDiagram
 | n | from → to | message | step | locator | on error |
 |---|---|---|---|---|---|
 | 1 | crl-issuer → repository | `CertificateList` | Publish the base CRL as a complete CRL; complete and delta CRLs of a scope share one numbering sequence. | §5.2.4, §5.2.3 | unspecified |
-| 2 | crl-issuer → crl-issuer | `Extension:freshestCRL` | Tell relying parties where deltas are: freshestCRL in the complete CRL (and, by the CA, in certificates). | §5.2.6, §4.2.1.15 | unspecified |
-| 3 | crl-issuer → crl-issuer | `Extension:deltaCRLIndicator` | Mark the delta with a critical delta CRL indicator carrying the BaseCRLNumber; same scope, same reasons and certificates, same IDP and same signing key as the base. | §5, §5.2.4 | unspecified |
+| 2 | crl-issuer → crl-issuer | `crl-freshestCRL` | Tell relying parties where deltas are: freshestCRL in the complete CRL (and, by the CA, in certificates). | §5.2.6, §4.2.1.15 | unspecified |
+| 3 | crl-issuer → crl-issuer | `deltaCRLIndicator` | Mark the delta with a critical delta CRL indicator carrying the BaseCRLNumber; same scope, same reasons and certificates, same IDP and same signing key as the base. | §5, §5.2.4 | unspecified |
 | 4 | crl-issuer → crl-issuer | `TBSCertList` | List every certificate in scope whose status changed since the base: revoked (a); released from hold as removeFromCRL (b); revoked for an out-of-scope reason after an in-scope listing, without reason code (c); not listed otherwise (d). | §5.2.4 | unspecified |
 | 5 | crl-issuer → crl-issuer | `CertificateList` | Leave freshestCRL out of the delta CRL; removeFromCRL appears only in deltas. | §5.2.6, §5.3.1 | unspecified |
 | 6 | crl-issuer → repository | `CertificateList` | Publish the delta, possibly several before the indicated nextUpdate. | §5.2.4 | unspecified |
@@ -189,17 +189,17 @@ sequenceDiagram
   participant crl_issuer as crl-issuer
   participant repository as repository
   participant relying_party as relying-party
-  Note over ca: 1. Extension:cRLDistributionPoints
-  Note over crl_issuer: 2-3. Extension:issuingDistributionPoint, Extension:certificateIssuer
+  Note over ca: 1. cRLDistributionPoints
+  Note over crl_issuer: 2-3. issuingDistributionPoint, certificateIssuer
   crl_issuer->>repository: 4. CertificateList
   repository->>relying_party: 5. CertificateList
 ```
 
 | n | from → to | message | step | locator | on error |
 |---|---|---|---|---|---|
-| 1 | ca → ca | `Extension:cRLDistributionPoints` | Name the CRL issuer in cRLIssuer of the DistributionPoint, encoded exactly as that CRL's issuer field. | §4.2.1.13 | unspecified |
-| 2 | crl-issuer → crl-issuer | `Extension:issuingDistributionPoint` | Set indirectCRL TRUE when any certificate in scope was issued by another authority; a CA issuing an indirect CRL MAY include its own certificates. | §5, §5.2.5 | unspecified |
-| 3 | crl-issuer → crl-issuer | `Extension:certificateIssuer` | Attribute entries with the critical certificate issuer entry extension holding the certificate's issuer DN, identically encoded; absent on an entry means the same issuer as the preceding entry, and the CRL issuer for the first. | §5.3.3 | unspecified |
+| 1 | ca → ca | `cRLDistributionPoints` | Name the CRL issuer in cRLIssuer of the DistributionPoint, encoded exactly as that CRL's issuer field. | §4.2.1.13 | unspecified |
+| 2 | crl-issuer → crl-issuer | `issuingDistributionPoint` | Set indirectCRL TRUE when any certificate in scope was issued by another authority; a CA issuing an indirect CRL MAY include its own certificates. | §5, §5.2.5 | unspecified |
+| 3 | crl-issuer → crl-issuer | `certificateIssuer` | Attribute entries with the critical certificate issuer entry extension holding the certificate's issuer DN, identically encoded; absent on an entry means the same issuer as the preceding entry, and the CRL issuer for the first. | §5.3.3 | unspecified |
 | 4 | crl-issuer → repository | `CertificateList` | Publish. | §3, Figure 1 | unspecified |
 | 5 | repository → relying-party | `CertificateList` | The relying party checks the CRL issuer against cRLIssuer and the indirectCRL flag, and matches entries by certificate issuer and serial number. | §6.3.3(b)(1), §6.3.3(i) | unspecified |
 
@@ -213,7 +213,7 @@ sequenceDiagram
 sequenceDiagram
   participant relying_party as relying-party
   participant repository as repository
-  Note over relying_party: 1-2. Extension:cRLDistributionPoints, GeneralName
+  Note over relying_party: 1-2. cRLDistributionPoints, GeneralName
   relying_party->>repository: 3. GeneralName
   relying_party->>repository: 4. GeneralName
   repository->>relying_party: 5. CertificateList
@@ -223,7 +223,7 @@ sequenceDiagram
 
 | n | from → to | message | step | locator | on error |
 |---|---|---|---|---|---|
-| 1 | relying-party → relying-party | `Extension:cRLDistributionPoints` | Read the DistributionPoints of the certificate; several names in one DistributionPointName are alternative ways to the same CRL. | §4.2.1.13, §6.3.3 | stated |
+| 1 | relying-party → relying-party | `cRLDistributionPoints` | Read the DistributionPoints of the certificate; several names in one DistributionPointName are alternative ways to the same CRL. | §4.2.1.13, §6.3.3 | stated |
 | 2 | relying-party → relying-party | `GeneralName` | Resolve nameRelativeToCRLIssuer by appending it to the CRL issuer DN (cRLIssuer if present, else the certificate issuer). | §4.2.1.13 | unspecified |
 | 3 | relying-party → repository | `GeneralName` | directoryName: fetch the certificateRevocationList or authorityRevocationList attribute of that entry from the locally configured directory server, by a locally chosen protocol. | §4.2.1.13 | unspecified |
 | 4 | relying-party → repository | `GeneralName` | URI: treat it as a pointer to the current CRL; HTTP and FTP return one DER CRL (application/pkix-crl); LDAP URIs name the entry and the attribute, and an omitted host relies on a priori knowledge. | §4.2.1.13 | unspecified |
@@ -242,7 +242,7 @@ sequenceDiagram
   participant relying_party as relying-party
   participant repository as repository
   participant ocsp_responder as ocsp-responder
-  Note over relying_party: 1. Extension:authorityInfoAccess
+  Note over relying_party: 1. authorityInfoAccess
   relying_party->>repository: 2. GeneralName
   relying_party->>repository: 3. GeneralName
   repository->>relying_party: 4. Certificate
@@ -252,7 +252,7 @@ sequenceDiagram
 
 | n | from → to | message | step | locator | on error |
 |---|---|---|---|---|---|
-| 1 | relying-party → relying-party | `Extension:authorityInfoAccess` | Read the AccessDescriptions; caIssuers entries list certificates issued to the issuing CA. | §4.2.2.1 | unspecified |
+| 1 | relying-party → relying-party | `authorityInfoAccess` | Read the AccessDescriptions; caIssuers entries list certificates issued to the issuing CA. | §4.2.2.1 | unspecified |
 | 2 | relying-party → repository | `GeneralName` | directoryName: read crossCertificatePair and/or cACertificate from the locally configured directory server. | §4.2.2.1 | unspecified |
 | 3 | relying-party → repository | `GeneralName` | LDAP URI (dn, attributes, optional host) or HTTP/FTP URI pointing to one DER certificate or a certs-only CMS message. | §4.2.2.1 | unspecified |
 | 4 | repository → relying-party | `Certificate` | Receive a DER certificate (always accepted) or a certs-only CMS message (SHOULD be accepted); use media type or file suffix as a hint only. | §4.2.2.1, §8 | inferred |
@@ -270,7 +270,7 @@ sequenceDiagram
   participant relying_party as relying-party
   participant repository as repository
   participant timestamping_service as timestamping-service
-  Note over relying_party: 1. Extension:subjectInfoAccess
+  Note over relying_party: 1. subjectInfoAccess
   relying_party->>repository: 2. GeneralName
   repository->>relying_party: 3. Certificate
   relying_party-->>timestamping_service: 4. GeneralName (referenced-not-defined)
@@ -278,7 +278,7 @@ sequenceDiagram
 
 | n | from → to | message | step | locator | on error |
 |---|---|---|---|---|---|
-| 1 | relying-party → relying-party | `Extension:subjectInfoAccess` | Read the AccessDescriptions. | §4.2.2.2 | unspecified |
+| 1 | relying-party → relying-party | `subjectInfoAccess` | Read the AccessDescriptions. | §4.2.2.2 | unspecified |
 | 2 | relying-party → repository | `GeneralName` | id-ad-caRepository: directoryName (crossCertificatePair, cACertificate), LDAP URI, or HTTP/FTP URI to a DER certificate or certs-only CMS message. | §4.2.2.2 | unspecified |
 | 3 | repository → relying-party | `Certificate` | Receive as for AIA. | §4.2.2.2 | unspecified |
 | 4 | relying-party → timestamping-service | `GeneralName` | id-ad-timeStamping: the subject offers RFC 3161 timestamping at a URI (HTTP, FTP), an rfc822Name (mail) or a dNSName or iPAddress (TCP/IP). | §4.2.2.2 | unspecified |
@@ -293,7 +293,7 @@ sequenceDiagram
 sequenceDiagram
   participant relying_party as relying-party
   participant repository as repository
-  Note over relying_party: 1. Extension:authorityInfoAccess
+  Note over relying_party: 1. crl-authorityInfoAccess
   relying_party->>repository: 2. GeneralName
   repository->>relying_party: 3. Certificate
   Note over relying_party: 4. Certificate
@@ -301,7 +301,7 @@ sequenceDiagram
 
 | n | from → to | message | step | locator | on error |
 |---|---|---|---|---|---|
-| 1 | relying-party → relying-party | `Extension:authorityInfoAccess` | Read the CRL's AIA. | §5.2.7 | unspecified |
+| 1 | relying-party → relying-party | `crl-authorityInfoAccess` | Read the CRL's AIA. | §5.2.7 | unspecified |
 | 2 | relying-party → repository | `GeneralName` | directoryName: look in crossCertificatePair, cACertificate and userCertificate; LDAP and HTTP/FTP URIs as for the certificate extension. | §5.2.7 | unspecified |
 | 3 | repository → relying-party | `Certificate` | Receive a DER certificate or certs-only CMS message. | §5.2.7 | unspecified |
 | 4 | relying-party → relying-party | `Certificate` | Build and validate the CRL signer's path to the same trust anchor (crl-validation step (f)). | §5.1.1.3, §6.3.3(f), §8 | inferred |
@@ -368,7 +368,7 @@ sequenceDiagram
   participant trust_anchor as trust-anchor
   Note over relying_party: 1. Certificate
   trust_anchor->>relying_party: 2. TrustAnchorInfo-as-inputs
-  Note over relying_party: 3-4. Name, Extension:authorityKeyIdentifier
+  Note over relying_party: 3-4. Name, authorityKeyIdentifier
   repository->>relying_party: 5. Certificate
   Note over relying_party: 6-8. Certificate, Name
 ```
@@ -378,7 +378,7 @@ sequenceDiagram
 | 1 | relying-party → relying-party | `Certificate` | Discovery is out of scope. | §6.1 | stated |
 | 2 | trust-anchor → relying-party | `TrustAnchorInfo-as-inputs` | Paths start at a CA in the user's own domain or at the top of a hierarchy. | §3.2 | unspecified |
 | 3 | relying-party → relying-party | `Name` | Chain by name: match each certificate's issuer DN to the subject DN of a CA certificate, by the §7.1 rules. | §4.1.2.4 | unspecified |
-| 4 | relying-party → relying-party | `Extension:authorityKeyIdentifier` | Use key identifiers to pick the issuer certificate when an issuer has several keys; validation itself need not check them. | §4.2.1.1, §4.2.1.2 | unspecified |
+| 4 | relying-party → relying-party | `authorityKeyIdentifier` | Use key identifiers to pick the issuer certificate when an issuer has several keys; validation itself need not check them. | §4.2.1.1, §4.2.1.2 | unspecified |
 | 5 | repository → relying-party | `Certificate` | Fetch candidate issuer certificates from AIA caIssuers, and a CA's issued certificates from SIA caRepository. | §4.2.2.1, §4.2.2.2 | unspecified |
 | 6 | relying-party → relying-party | `Certificate` | Never put one certificate in a prospective path twice; a self-signed trust anchor certificate is not part of the path. | §6.1 | inferred |
 | 7 | relying-party → relying-party | `Certificate` | When CRLs are checked, build a second path for the CRL signer, to the same trust anchor. | §5.1.1.3, §6.3.3(f), §8 | unspecified |
@@ -397,14 +397,14 @@ sequenceDiagram
   participant relying_party as relying-party
   ca-->>repository: 1. Certificate (referenced-not-defined)
   repository->>relying_party: 2. Certificate
-  Note over relying_party: 3. Extension:nameConstraints
+  Note over relying_party: 3. nameConstraints
 ```
 
 | n | from → to | message | step | locator | on error |
 |---|---|---|---|---|---|
 | 1 | ca → repository | `Certificate` | Issue the two self-issued certificates linking the old and the new key. | §8, §3.2 | unspecified |
 | 2 | repository → relying-party | `Certificate` | The relying party processes the self-issued certificate within a path. | §8, §6.1 | unspecified |
-| 3 | relying-party → relying-party | `Extension:nameConstraints` | Skip name constraint checks on self-issued intermediates. | §4.2.1.10, §6.1.3(b), §6.1.3(c) | unspecified |
+| 3 | relying-party → relying-party | `nameConstraints` | Skip name constraint checks on self-issued intermediates. | §4.2.1.10, §6.1.3(b), §6.1.3(c) | unspecified |
 
 ### 13. `ca-compromise-response` (§8)
 
@@ -722,30 +722,55 @@ Recorded, not repaired. Each entry in `protocol.yaml` carries its quotes.
 
 ## Message names used
 
-For pass 3 to reconcile against `messages.yaml`. Names outside the shared list, and names with no structure in the source, are explained in `message_notes`.
+Reconciled with `messages.yaml` in the cross-check pass. Every `message` and `message_alternatives` value is a `messages.yaml` entry name, except the three marked external or no below. Pass 1 wrote extensions as `Extension:<name>` with one name for the certificate and the CRL use; they are now the `messages.yaml` entries, with the `crl-` entries for the CRL uses of `authorityKeyIdentifier`, `issuerAltName`, `freshestCRL` and `authorityInfoAccess`. The §6 inputs and outputs are `messages.yaml` entries of normative_status `algorithm-io`.
 
-`Certificate`, `TBSCertificate`, `CertificateList`, `TBSCertList`, `GeneralName`, `Name`, `TrustAnchorInfo-as-inputs`, `PathValidationInputs`, `PathValidationOutputs`, `CRLValidationInputs`, `CRLValidationOutputs`, `Extension:*`, `Extension:authorityKeyIdentifier`, `Extension:subjectKeyIdentifier`, `Extension:keyUsage`, `Extension:certificatePolicies`, `Extension:policyMappings`, `Extension:subjectAltName`, `Extension:issuerAltName`, `Extension:subjectDirectoryAttributes`, `Extension:basicConstraints`, `Extension:nameConstraints`, `Extension:policyConstraints`, `Extension:extKeyUsage`, `Extension:cRLDistributionPoints`, `Extension:inhibitAnyPolicy`, `Extension:freshestCRL`, `Extension:authorityInfoAccess`, `Extension:subjectInfoAccess`, `Extension:cRLNumber`, `Extension:deltaCRLIndicator`, `Extension:issuingDistributionPoint`, `Extension:reasonCode`, `Extension:invalidityDate`, `Extension:certificateIssuer`, `CertsOnlyCMS`, `OCSPRequest`, `RegistrationRequest`, `RevocationRequest`
+`Certificate`, `TBSCertificate`, `CertificateList`, `TBSCertList`, `Name`, `GeneralName`, `Extension`, `authorityKeyIdentifier`, `subjectKeyIdentifier`, `keyUsage`, `certificatePolicies`, `policyMappings`, `subjectAltName`, `issuerAltName`, `subjectDirectoryAttributes`, `basicConstraints`, `nameConstraints`, `policyConstraints`, `extKeyUsage`, `cRLDistributionPoints`, `inhibitAnyPolicy`, `freshestCRL`, `authorityInfoAccess`, `subjectInfoAccess`, `crl-authorityKeyIdentifier`, `crl-issuerAltName`, `cRLNumber`, `deltaCRLIndicator`, `issuingDistributionPoint`, `crl-freshestCRL`, `crl-authorityInfoAccess`, `reasonCode`, `invalidityDate`, `certificateIssuer`, `retrieval-certs-only-cms`, `TrustAnchorInfo-as-inputs`, `PathValidationInputs`, `PathValidationOutputs`, `CRLValidationInputs`, `CRLValidationOutputs`, `OCSPRequest`, `RegistrationRequest`, `RevocationRequest`
 
 | name | in source | note |
 |---|---|---|
-| `TBSCertList` | yes | Not in the brief's list of names; added as the CRL counterpart of TBSCertificate (§5.1). |
-| `Name` | yes | Not in the brief's list; the X.501 Name of the subject and issuer fields (§4.1.2.4), needed because 6.1.3(a)(4), the self-issued test and §7.1 compare Names, not GeneralNames. |
-| `CRLValidationOutputs` | yes | Not in the brief's list; the cert_status that 6.3.3 returns. reasons_mask is not part of it. |
-| `Extension:*` | yes | Any extension: used for the general extension rules of §4.2 and the 'any other critical extension' steps 6.1.4(o) and 6.1.5(f). |
-| `Extension:reasonCode` | yes | The source's identifier is id-ce-cRLReasons with value type CRLReason; it calls the extension 'reasonCode' (§5.3.1). |
-| `Extension:authorityInfoAccess` | yes | Used both as the certificate extension (§4.2.2.1) and the CRL extension (§5.2.7), which share syntax. |
-| `Extension:authorityKeyIdentifier` | yes | Used both as a certificate extension (§4.2.1.1) and a CRL extension (§5.2.1). |
-| `Extension:issuerAltName` | yes | Used both as a certificate extension (§4.2.1.7) and a CRL extension (§5.2.2). |
-| `Extension:freshestCRL` | yes | Used both as a certificate extension (§4.2.1.15) and a CRL extension (§5.2.6). |
-| `CertificateList` | yes | Complete CRLs, delta CRLs (with deltaCRLIndicator) and indirect CRLs (IDP indirectCRL TRUE) are all CertificateList; the flows say which. |
-| `CertsOnlyCMS` | external | A certs-only CMS message per RFC 2797, one of the two things an HTTP or FTP caIssuers/caRepository URI may return (§4.2.2.1). Not defined here. |
-| `OCSPRequest` | external | RFC 2560. The source gives only the responder location (§4.2.2.1). |
-| `RegistrationRequest` | no | not-in-source. §3.5(a) names the registration function only; the formats are 'defined in other PKIX specifications' (§3.4, §3.5). |
-| `RevocationRequest` | no | not-in-source. §3.5(f) names the function only. |
-| `TrustAnchorInfo-as-inputs` | yes | The four items of 6.1.1(d); may be conveyed as a self-signed Certificate. |
-| `PathValidationInputs` | yes | The nine inputs of 6.1.1(a) to (i); (d) is TrustAnchorInfo-as-inputs. |
-| `PathValidationOutputs` | yes | 6.1.6 on success; a failure indication and 'an appropriate reason' otherwise (6.1.3, 6.1.4). |
-| `CRLValidationInputs` | yes | The two inputs of 6.3.1; see crl-validation implicit_inputs for what else the steps use. |
+| `Certificate` | yes | messages.yaml Certificate (§4.1). |
+| `TBSCertificate` | yes | messages.yaml TBSCertificate (§4.1). |
+| `CertificateList` | yes | messages.yaml CertificateList (§5.1). Complete CRLs, delta CRLs (with deltaCRLIndicator) and indirect CRLs (IDP indirectCRL TRUE) are all CertificateList; the flows say which. |
+| `TBSCertList` | yes | messages.yaml TBSCertList (§5.1), the CRL counterpart of TBSCertificate. |
+| `Name` | yes | messages.yaml Name: the X.501 Name of the subject and issuer fields (§4.1.2.4), needed because 6.1.3(a)(4), the self-issued test and §7.1 compare Names, not GeneralNames. |
+| `GeneralName` | yes | messages.yaml GeneralName (§4.2.1.6). Retrieval steps that follow a URI or directoryName pass the GeneralName; the target formats are the messages.yaml retrieval- entries. |
+| `Extension` | yes | messages.yaml Extension (§4.1, §4.2): any extension, for the general extension rules of §4.2 and the 'any other critical extension' steps 6.1.4(o) and 6.1.5(f). Pass 1 wrote Extension:*. |
+| `authorityKeyIdentifier` | yes | messages.yaml authorityKeyIdentifier, the certificate extension (§4.2.1.1). Pass 1 wrote Extension:authorityKeyIdentifier. Its CRL use is crl-authorityKeyIdentifier; pass 3 split the two by the step's context. |
+| `subjectKeyIdentifier` | yes | messages.yaml subjectKeyIdentifier, the certificate extension (§4.2.1.2). Pass 1 wrote Extension:subjectKeyIdentifier. |
+| `keyUsage` | yes | messages.yaml keyUsage, the certificate extension (§4.2.1.3). Pass 1 wrote Extension:keyUsage. |
+| `certificatePolicies` | yes | messages.yaml certificatePolicies, the certificate extension (§4.2.1.4). Pass 1 wrote Extension:certificatePolicies. |
+| `policyMappings` | yes | messages.yaml policyMappings, the certificate extension (§4.2.1.5). Pass 1 wrote Extension:policyMappings. |
+| `subjectAltName` | yes | messages.yaml subjectAltName, the certificate extension (§4.2.1.6). Pass 1 wrote Extension:subjectAltName. |
+| `issuerAltName` | yes | messages.yaml issuerAltName, the certificate extension (§4.2.1.7). Pass 1 wrote Extension:issuerAltName. Its CRL use is crl-issuerAltName; pass 3 split the two by the step's context. |
+| `subjectDirectoryAttributes` | yes | messages.yaml subjectDirectoryAttributes, the certificate extension (§4.2.1.8). Pass 1 wrote Extension:subjectDirectoryAttributes. |
+| `basicConstraints` | yes | messages.yaml basicConstraints, the certificate extension (§4.2.1.9). Pass 1 wrote Extension:basicConstraints. |
+| `nameConstraints` | yes | messages.yaml nameConstraints, the certificate extension (§4.2.1.10). Pass 1 wrote Extension:nameConstraints. |
+| `policyConstraints` | yes | messages.yaml policyConstraints, the certificate extension (§4.2.1.11). Pass 1 wrote Extension:policyConstraints. |
+| `extKeyUsage` | yes | messages.yaml extKeyUsage, the certificate extension (§4.2.1.12). Pass 1 wrote Extension:extKeyUsage. |
+| `cRLDistributionPoints` | yes | messages.yaml cRLDistributionPoints, the certificate extension (§4.2.1.13). Pass 1 wrote Extension:cRLDistributionPoints. |
+| `inhibitAnyPolicy` | yes | messages.yaml inhibitAnyPolicy, the certificate extension (§4.2.1.14). Pass 1 wrote Extension:inhibitAnyPolicy. |
+| `freshestCRL` | yes | messages.yaml freshestCRL, the certificate extension (§4.2.1.15). Pass 1 wrote Extension:freshestCRL. Its CRL use is crl-freshestCRL; pass 3 split the two by the step's context. |
+| `authorityInfoAccess` | yes | messages.yaml authorityInfoAccess, the certificate extension (§4.2.2.1). Pass 1 wrote Extension:authorityInfoAccess. Its CRL use is crl-authorityInfoAccess; pass 3 split the two by the step's context. |
+| `subjectInfoAccess` | yes | messages.yaml subjectInfoAccess, the certificate extension (§4.2.2.2). Pass 1 wrote Extension:subjectInfoAccess. |
+| `crl-authorityKeyIdentifier` | yes | messages.yaml crl-authorityKeyIdentifier, the CRL extension (§5.2.1). Pass 1 wrote Extension:authorityKeyIdentifier. |
+| `crl-issuerAltName` | yes | messages.yaml crl-issuerAltName, the CRL extension (§5.2.2). Pass 1 wrote Extension:issuerAltName. |
+| `cRLNumber` | yes | messages.yaml cRLNumber, the CRL extension (§5.2.3). Pass 1 wrote Extension:cRLNumber. |
+| `deltaCRLIndicator` | yes | messages.yaml deltaCRLIndicator, the CRL extension (§5.2.4). Pass 1 wrote Extension:deltaCRLIndicator. |
+| `issuingDistributionPoint` | yes | messages.yaml issuingDistributionPoint, the CRL extension (§5.2.5). Pass 1 wrote Extension:issuingDistributionPoint. |
+| `crl-freshestCRL` | yes | messages.yaml crl-freshestCRL, the CRL extension (§5.2.6). Pass 1 wrote Extension:freshestCRL. |
+| `crl-authorityInfoAccess` | yes | messages.yaml crl-authorityInfoAccess, the CRL extension (§5.2.7). Pass 1 wrote Extension:authorityInfoAccess. |
+| `invalidityDate` | yes | messages.yaml invalidityDate, the CRL entry extension (§5.3.2). Pass 1 wrote Extension:invalidityDate. |
+| `certificateIssuer` | yes | messages.yaml certificateIssuer, the CRL entry extension (§5.3.3). Pass 1 wrote Extension:certificateIssuer. |
+| `reasonCode` | yes | messages.yaml reasonCode, the CRL entry extension (§5.3.1). Pass 1 wrote Extension:reasonCode. The source's identifier is id-ce-cRLReasons with value type CRLReason; it calls the extension 'reasonCode' (§5.3.1), and so does messages.yaml. |
+| `retrieval-certs-only-cms` | partly | messages.yaml retrieval-certs-only-cms: the certs-only CMS message one of an HTTP or FTP caIssuers or caRepository URI may return (§4.2.2.1, §4.2.2.2, §5.2.7). The media type and file suffix rules are this document's; the CMS structure is RFC 2797's. Pass 1 wrote CertsOnlyCMS. |
+| `TrustAnchorInfo-as-inputs` | yes | messages.yaml TrustAnchorInfo-as-inputs (algorithm-io): the four items of 6.1.1(d); may be conveyed as a self-signed Certificate. The name is ours. |
+| `PathValidationInputs` | yes | messages.yaml PathValidationInputs (algorithm-io): the nine inputs of 6.1.1(a) to (i); (d) is TrustAnchorInfo-as-inputs. The name is ours. |
+| `PathValidationOutputs` | yes | messages.yaml PathValidationOutputs (algorithm-io): 6.1.6 on success; a failure indication and 'an appropriate reason' otherwise (6.1.3, 6.1.4). The name is ours. |
+| `CRLValidationInputs` | yes | messages.yaml CRLValidationInputs (algorithm-io): the two inputs of 6.3.1; see crl-validation implicit_inputs for what else the steps use. The name is ours. |
+| `CRLValidationOutputs` | yes | messages.yaml CRLValidationOutputs (algorithm-io): the cert_status that 6.3.3 returns; reasons_mask is not part of it. The name is ours. |
+| `OCSPRequest` | external | Not in messages.yaml: the OCSP request is RFC 2560's. The source gives only the responder location, id-ad-ocsp (§4.2.2.1). |
+| `RegistrationRequest` | no | not-in-source, not in messages.yaml. §3.5(a) names the registration function only; the formats are 'defined in other PKIX specifications' (§3.4, §3.5). |
+| `RevocationRequest` | no | not-in-source, not in messages.yaml. §3.5(f) names the function only. |
 
 ## Outside the source
 

@@ -22,7 +22,7 @@ authority while SPKI scopes *speaking* authority.
 **Four things to hold while reading.**
 
 1. **The source binds heavily, but not us.** `requirements.yaml` counts 532 BCP
-   14 keywords in the source and holds 623 entries. Their conformance targets
+   14 keywords in the source and holds 625 entries. Their conformance targets
    are CAs, CRL issuers and certificate-using systems, and R-M-01 says we are
    not one. A 5280 MUST cited here is a precedent with deployment behind it, not
    an obligation we inherit.
@@ -47,7 +47,7 @@ authority while SPKI scopes *speaking* authority.
    requirement."*). D-n are in the minute, not in DECISIONS-0001. Priorities
    are ARCH-0001's: R-M-01, R-M-03, R-M-04, R-I-01 and R-I-02 are **M**ust, and
    R-M-09, R-M-10, R-I-05 and R-O-02 are **S**hould.
-3. **Ids.**
+3. **Ids and section numbers.**
    - `rfc-5280#R-NNNN` is written R-NNNN, and N-NNN is an entry of
      `normative.md`.
    - A quotation with neither is descriptive text, and carries its section
@@ -55,13 +55,26 @@ authority while SPKI scopes *speaking* authority.
    - RFC 2693 ids are always written in full (`rfc-2693#R-NNNN`), because the
      two R-NNNN series collide.
    - "The 2693 notes" means `records/ietf/rfc-2693/distilled/design-notes.md`.
+   - A bare § is always a section of RFC 5280: §6.1.4(g) is step (g) of its
+     §6.1.4. A section of any other document carries that document's name:
+     ARCH-0001 §4.3, RFC 2693 §4.1, proposal §11.
+   - The numbered sections of this file are *notes*. "Note 3" is section 3
+     below, and "note 2, item 4" is item 4 of note 2. The items of notes 9, 10
+     and 11 are also called adopt n, adapt n and reject n, and the items of
+     note 13 are open question n. The 2693 notes' items always carry their
+     name.
+   - Ids from this record's other artifacts carry their file: state-machine
+     OQ-05 and M01-T05 are in `state-machine.yaml`, protocol.yaml defect
+     `crl-verify-no-outcome` is in its `source_defects_and_ambiguities`, and
+     vector PKIX-614-24 is in `examples/vectors.yaml`.
 
    RFC 5280 is read as published (May 2008). Where a later update is known to
    change a point, it is named as a held record and marked *outside the
    source*. None was read.
 4. **Nothing here decides R-M-10, DEC-002, DEC-004 or WP5.** Adopt, adapt and
-   reject are this file's reading of the evidence. A DEC is accepted only in an
-   ADR (ARCH-0001 §9, R-D-02).
+   reject are this file's reading of the evidence: note 9 adopts 10 items, note
+   10 adapts 7 and note 11 rejects 15. Note 13 holds 14 open questions. A DEC is
+   accepted only in an ADR (ARCH-0001 §9, R-D-02).
 
 ---
 
@@ -88,9 +101,9 @@ an *encoding*. ARCH-0001 as a whole excludes more:
 
 | Layer | ARCH-0001 text | RFC 5280 counterpart |
 |---|---|---|
-| encoding | R-M-01; front matter `native_format_excludes`; §3.2 *"not a reason to native-encode PKIX"* | §4.1 `Certificate` and §5.1 `CertificateList`, each signed over its DER encoding (N-029, N-241) |
-| information model | §1 *"X.509 / PKIX is an **interchange target**, not the information model."* | DN-named issuer and subject (R-0023, §4.1.2.6); the CA-asserted binding (N-030) |
-| reducer | §6 *"**Forbidden native mapping:** X.509 certificate path validation as the native reducer."*; the matrix note *"Do not treat CA bit as AuthzCert"* | §6.1 path validation; §4.2.1.9 `cA` |
+| encoding | R-M-01; front matter `native_format_excludes`; ARCH-0001 §3.2 *"not a reason to native-encode PKIX"* | §4.1 `Certificate` and §5.1 `CertificateList`, each signed over its DER encoding (N-029, N-241) |
+| information model | ARCH-0001 §1 *"X.509 / PKIX is an **interchange target**, not the information model."* | DN-named issuer and subject (R-0023, §4.1.2.6); the CA-asserted binding (N-030) |
+| reducer | ARCH-0001 §6 *"**Forbidden native mapping:** X.509 certificate path validation as the native reducer."*; the matrix note *"Do not treat CA bit as AuthzCert"* | §6.1 path validation; §4.2.1.9 `cA` |
 | trust and threshold | R-I-02 *"Import SHALL NOT require the foreign object to become a native trust anchor."*; R-M-06 *"Threshold principals SHALL be representable without encoding them as a CA hierarchy."* | §6.1.1(d) trust anchor input; the §3.2 hierarchies |
 
 Import is not excluded:
@@ -102,15 +115,15 @@ Import is not excluded:
   (name or attribute), marked `provenance: x509`."*
 - WP5 is *"Mapping spec: X.509 → annotated NameCert (import only)"*.
 
-§1's *"interchange target"* is therefore import-only in v0.1, because the
-matrix's export column for X.509 is "—", meaning *"out of scope this version"*.
-The v0.2.0 proposal (§11, not accepted) adds that WP5 is one the *"execution plan
-places out of scope for the semester"*.
+ARCH-0001 §1's *"interchange target"* is therefore import-only in v0.1, because
+the matrix's export column for X.509 is "—", meaning *"out of scope this
+version"*. The v0.2.0 proposal (proposal §11, not accepted) adds that WP5 is one
+the *"execution plan places out of scope for the semester"*.
 
 **Why.** ARCH-0001 states no rationale for R-M-01. The nearest statements are:
 
 - G1, *"Key-centric principals; names are not globally unique identifiers."*;
-- the §3.1 row for X.509, with its cells *"DN + key"*, *"Intended global
+- the ARCH-0001 §3.1 row for X.509, with its cells *"DN + key"*, *"Intended global
   (X.500); local in practice"* and *"Hierarchical CA, optional bridge / mesh"*;
 - ARCH-0002 P1, *"the same move R-M-01 already makes for X.509"*;
 - the proposal's gloss, which is not accepted: R-M-12 *"is the natural
@@ -187,7 +200,9 @@ power to certify, and bound it.
     certificate, verify that the basicConstraints extension is present and that
     cA is set to TRUE."* (§6.1.4(k), R-0461).
   - A v1 or v2 intermediate needs *"out-of-band means"*, or rejection
-    (R-0462).
+    (R-0462), and *"Conforming implementations may choose to reject all
+    version 1 and version 2 intermediate certificates."* (R-0700; open
+    question 14).
 - **`keyCertSign`**, bit 5 of keyUsage. It is tied to `cA` in both directions
   (R-0099, R-0154). It is checked only when keyUsage is present: *"If a key usage
   extension is present, verify that the keyCertSign bit is set."* (§6.1.4(n),
@@ -260,8 +275,8 @@ five findings.
    and X.509 is the argument for it.
 
 **Where `cA` sits in our model.** `cA` decides whether *"the certified public key
-may be used to verify certificate signatures"*, so it delegates the power to
-certify name-to-key bindings. In ARCH-0001 that power is naming (R-M-03,
+may be used to verify certificate signatures"* (N-144), so it delegates the
+power to certify name-to-key bindings. In ARCH-0001 that power is naming (R-M-03,
 `NameCert`), not authorization (`AuthzCert`). That is why the matrix says *"Do
 not treat CA bit as AuthzCert"*, and why an imported pathLenConstraint has
 nothing to map onto under R-M-10 as written (derived).
@@ -302,7 +317,7 @@ in subsequent certificates in a certification path MUST be located."* (R-0162).
 alternative names."* (N-149). Issuer alternative names fall outside it: *"(That
 is, issuer alternative names are not used in name chaining and name constraints
 are not enforced.)"* (§4.2.1.7, N-138). Nothing in §4.2.1.10 or §6.1.4(g)
-reaches keyUsage, extendedKeyUsage or certificate policies.
+reaches keyUsage, extKeyUsage or certificate policies.
 
 **Name constraints apply to subject names, never to authorizations.** That
 confirms the `delegation-models` answer's discriminator. X.509 scopes which
@@ -351,9 +366,9 @@ electronic mail addresses)."* (N-474). Each form has its own matching rule:
 
 | form | rule | source |
 |---|---|---|
-| dNSName | *"Any DNS name that can be constructed by simply adding zero or more labels to the left-hand side of the name satisfies the name constraint."*, so the constraint's own name is inside it | N-156; matched label by label, case-insensitively (R-0558) |
+| dNSName | *"Any DNS name that can be constructed by simply adding zero or more labels to the left-hand side of the name satisfies the name constraint."*, so the constraint's own name is inside it | N-156, restated in §7.2 (R-0701); matched label by label, case-insensitively (R-0558) |
 | URI | *"For URIs, the constraint applies to the host part of the name."*, and *"the constraint ".example.com" is not satisfied by "example.com""*, so a leading period excludes the host itself | N-154 |
-| rfc822Name | *"MAY specify a particular mailbox, all addresses at a particular host, or all mailboxes in a domain"*; and *"".example.com" indicates all the Internet mail addresses in the domain "example.com", but not Internet mail addresses on the host "example.com""* | R-0176, N-155; applied to `emailAddress` in the DN when there is no subjectAltName (R-0177) |
+| rfc822Name | *"MAY specify a particular mailbox, all addresses at a particular host, or all mailboxes in a domain"*; and *"".example.com" indicates all the Internet mail addresses in the domain "example.com", but not Internet mail addresses on the host "example.com""* | R-0176, N-155; applied to `emailAddress` in the DN when there is no subjectAltName (R-0177), a check §6.1.3 does not make (open question 11) |
 | iPAddress | *"eight (8) octets, encoded in the style of RFC 4632 (CIDR) to represent an address range"*, or 32 octets for IPv6 | R-0185, R-0186 |
 | directoryName | DN1 is within DN2 *"if DN1 contains at least as many RDNs as DN2, and DN1 and DN2 are a match when trailing RDNs in DN1 are ignored"* | R-0550 |
 | otherName, ediPartyName, registeredID | *"The syntax and semantics for name constraints for otherName, ediPartyName, and registeredID are not defined by this specification"* | N-162 |
@@ -374,8 +389,11 @@ certificate. Both answers are safe, but they are not the same answer (derived).
 certificates (unless the certificate is the final certificate in the path).
 (This could prevent CAs that use name constraints from employing self-issued
 certificates to implement key rollover.)"* (N-150). Steps §6.1.3(b)–(c) skip
-such certificates (R-0422, R-0423). This is the same exemption as §2 item 4, for
-the same reason, resting on the same thing: name equality.
+such certificates (R-0422, R-0423). The exemption is from being checked, not
+from constraining: §6.1.4(g) applies the name constraints that a self-issued
+intermediate carries, with no self-issued condition (R-0450; open question 11).
+This is the same exemption as note 2, item 4, for the same reason, resting on
+the same thing: name equality.
 
 **The criticality rule.** *"Conforming CAs MUST mark this extension as critical"*
 (R-0163). The source gives no reason. The inferred one is that a verifier which
@@ -611,7 +629,9 @@ The overlap is permitted, not just left unaddressed:
 So the status a verifier computes depends on which current CRL it happened to
 fetch. That is the *"at least timing dependent"* outcome RFC 2693 ruled out
 (rfc-2693#R-0073). 5280 bounds the damage to one `nextUpdate` period, because
-§6.3.3 demands a CRL whose next update is still ahead (R-0506).
+§6.3.3 demands a CRL whose next update is still ahead (R-0506). It does not say
+what a failed check of that kind does, or which branch applies at the
+`nextUpdate` instant itself (open question 11).
 
 The same rules answer the 2693 notes' open question 7 in the way they suggest.
 The issuer sets the maximum staleness (`nextUpdate`). The verifier may demand
@@ -689,8 +709,10 @@ counterpart in our model:
    certificates that may appear in the path before"* the constraint applies
    (N-166, N-167), and for inhibitAnyPolicy *"the number of additional
    non-self-issued certificates that may appear in the path before"* (N-190).
-   A constraint that starts k hops later is the
-   integer-depth design of §2 again, applied to policy.
+   The algorithm decrements all three only *"If certificate i is not
+   self-issued"* (§6.1.4(h), R-0453), so §4.2.1.11's definition and §6
+   disagree (open question 11). A constraint that starts k hops later is the
+   integer-depth design of note 2 again, applied to policy.
 3. **Optional enforcement.** A path succeeds with an empty policy set unless
    something demanded a policy. The success condition is *"If either (1) the
    value of explicit_policy variable is greater than zero or (2) the
@@ -747,11 +769,16 @@ self-issued intermediate may assert `anyPolicy` instead (§6.1.3(d)(2)), because
 - explicit_policy becomes 0 at §6.1.4(i)(1) (R-0458);
 - mapping stops at §6.1.4(i)(2) (R-0459);
 - `anyPolicy` stops matching at §6.1.4(j) (R-0460);
-- §6.1.3(f) then fails any certificate without P (R-0431).
+- §6.1.3(f) then fails any certificate without P (R-0431). For a certificate
+  that asserts other policies, this rests on reading a tree pruned to nothing
+  as NULL (open question 11).
 
-Every rfc822Name in a later certificate must also be at host `foo.com`, and so
-must an `emailAddress` in a subject DN when there is no subjectAltName
-(R-0177). Other name forms stay open (§3).
+Every rfc822Name in a later certificate must also be at host `foo.com`, except
+in a self-issued intermediate, whose names are not checked (§6.1.3(b)–(c)).
+§4.2.1.10 requires the same of an `emailAddress` in a subject DN when there is
+no subjectAltName (R-0177), but §6.1.3 does not check it, so path validation
+as written does not enforce that half (open question 11). Other name forms stay
+open (note 3).
 
 This construction is derived, not a source example, and it has not been run
 against an implementation. It expresses "Bob may certify `*@foo.com`, only under
@@ -777,10 +804,10 @@ structure.
 | `Certificate` and `CertificateList`: SEQUENCE {tbs, signatureAlgorithm, signatureValue}, signed over the DER-encoded tbs (N-029, N-241) | a signed statement: canonical bytes plus a signature (R-O-05, proposed) | **Shape only.** An X.509 signature covers DER bytes and cannot be re-attached to a translated statement. Translation produces a *new* statement, signed by the importer, with the certificate kept as evidence by digest. |
 | the `signature` field inside tbs MUST equal the outer `signatureAlgorithm` (R-0008) | an algorithm authenticated inside the signed bytes | Same intent, different identifier space: an OID (R-M-12). |
 | `version [0] EXPLICIT Version DEFAULT v1` | *"an authenticated type indicator"* (R-O-05, proposed) | **No counterpart.** X.509 has a version, not a type indicator. A certificate and a CRL are told apart only by their structure (inferred). |
-| DER: *"ASN.1 DER encoding is a tag, length, value encoding system for each element."* (§4.1) | CBOR major types, *"no IANA tags"* | DER's tags are fixed by the ASN.1 grammar, not allocated from an IANA registry. D-3's no-tags rule is not what excludes DER. |
+| DER: *"ASN.1 DER encoding is a tag, length, value encoding system for each element."* (§4.1, N-022) | CBOR major types, *"no IANA tags"* | DER's tags are fixed by the ASN.1 grammar, not allocated from an IANA registry. D-3's no-tags rule is not what excludes DER. |
 | OIDs everywhere: `extnID`, `AlgorithmIdentifier`, `AttributeType`, `CertPolicyId`, `KeyPurposeId`, the `otherName` type-id (§9, N-483) | `(defining key, label)`, per P1 | **Excluded natively** (R-M-12). On import an OID is data, a foreign label, never a native type identifier. ADR-0001: *"Registry identifiers **may** appear at interchange boundaries, and such mappings are documented as lossy per R-I-01."* |
-| `critical BOOLEAN DEFAULT FALSE` (§4.1, N-068) | P5: must-understand by default | **Inverted.** The flag has no native counterpart. |
-| DEFAULT components are omitted (N-507) | no DEFAULT; whether a field is present is a profile rule | X.509's booleans that are explicit only when TRUE do not carry over (§2 item 5). |
+| `critical BOOLEAN DEFAULT FALSE` (§4.1, N-022; §4.2, N-068) | P5: must-understand by default | **Inverted.** The flag has no native counterpart. |
+| DEFAULT components are omitted (N-507) | no DEFAULT; whether a field is present is a profile rule | X.509's booleans that are explicit only when TRUE do not carry over (note 2, item 5). |
 | SET OF ordered by encoding: *"the DER encoding of the SET OF values requires ordering of the encodings of the values"* (N-506) | a canonical order for set-valued fields (2693 notes adapt 1; rfc-9804 notes condition 5) | **Same rule in substance**: sort by encoded bytes. DER applies it only to SET OF. RFC 5280 uses SEQUENCE OF for most lists (`Extensions`, `GeneralNames`, `certificatePolicies`), and there the issuer's order is significant. |
 | named bit lists with trailing zeros omitted (R-0611); minimal INTEGERs under the sign-bit rule (N-495) | the deterministic CBOR encoder rules | DER is a deterministic encoding made of encoder-side rules, and ARCH-0001 §3.1 records X.509 as *"Dominant for TLS"*. Such rules can work at scale, which D-3 needs to hold for CBOR. It is not a reason to adopt DER. |
 | time: UTCTime through 2049, GeneralizedTime from 2050; Zulu; whole seconds (R-0045) | `Validity { not_before?, not_after?, online_check? }` (ARCH-0001 §4.1); the time representation is DEC-002's | **Exact on import.** The validity period runs *"from notBefore through notAfter, inclusive"* (N-051): a closed interval in whole seconds. In the 2693 notes' half-open form that is `[notBefore, notAfter + 1 s)` (derived). |
@@ -822,14 +849,14 @@ cached in unsecured storage in certificate-using systems."* (§3.1, N-009).
 | §8 consideration | bearing on our design |
 |---|---|
 | *"compromise of a CA's private signing key may have a catastrophic effect"*; and if it is detected, *"all certificates issued to the compromised CA MUST be revoked"* (N-464, R-0581) | One key is one point of failure. R-M-06's threshold principals and the 2693 notes' adopt 10 (a `k-of-n` root) address it. 5280 has no threshold form. |
-| key loss: *"The CA would not be able to produce CRLs or perform normal key rollover."* (N-465) | Escrowed revocation (§5). Rollover must not depend on the old key alone (open question 4). |
+| key loss: *"The CA would not be able to produce CRLs or perform normal key rollover."* (N-465) | Escrowed revocation (note 5). Rollover must not depend on the old key alone (open question 4). |
 | *"If revocation information is untimely or unavailable, the assurance associated with the binding is clearly reduced."*; verifiers that cannot handle the delta-CRL critical extensions *"will not be able to obtain the most recent revocation information"* (N-466) | Optional revocation features give different verifiers different assurance. Revocation statements, if we have them, need one mandatory form (R-M-05). |
 | trust anchor distribution is *"a security critical out-of-band process that is beyond the scope of this specification"* (N-467); and *"By substituting public keys for which an attacker has the private key, an attacker could trick the user into accepting false certificates."* (N-469) | The `AclEntry` store is in our trusted base and in our scope. It is specified, canonical and hashable (2693 notes adapt 6). |
 | *"Selection of too many trusted CAs makes the trusted CA information difficult to maintain. On the other hand, selection of only one trusted CA could limit users to a closed community of users."* (N-468) | The same trade-off governs the size of an ACL. Recorded, not resolved. |
 | *"CAs SHOULD decline to issue certificates to CAs or end entities that generate weak signatures."* (R-0584) | Algorithm policy belongs to verifiers and issuers. NG3 leaves the algorithm suite unfrozen. |
 | *"Inconsistent application of name comparison rules can result in acceptance of invalid X.509 certification paths or rejection of valid ones."* (N-471); a CA MUST encode its DN *"identically"* wherever the DN chains (R-0585) | Bytewise equality, with normalisation done at authoring (2693 notes adapt 1). 5280 reaches the same rule from the failure side, yet still keeps string preparation at the verifier (§7.1). |
-| excluded subtrees fail open on an encoding mismatch (N-473, R-0587) | Keep DEC-004's algebra positive-only (§3). |
-| constraining one name form gives *"no protection against use of other name forms"* (N-474) | A grant must not be open along any dimension it does not mention (§3). |
+| excluded subtrees fail open on an encoding mismatch (N-473, R-0587) | Keep DEC-004's algebra positive-only (note 3). |
+| constraining one name form gives *"no protection against use of other name forms"* (N-474) | A grant must not be open along any dimension it does not mention (note 3). |
 | issuer names collide, so a CRL's path and the certificate's path must *"terminate at the same trust anchor"* (N-475, R-0589) | X.509's own fix is to read a name relative to a key, the anchor's. That is R-M-03 applied once, at the root, and it supports the matrix's `x509:` namespace *"of the *importer*, not of the CA"*. |
 | mail local-parts are case-sensitive, but `emailAddress` matching is not (N-476) | An imported mail name keeps its local-part bytes. Folding their case would conflate two principals. |
 | https in CRLDP or AIA: *"The relying party is forced to perform an additional path validation"*, *"unresolvable dependencies"*, *"unbounded recursion"* (N-478, R-0592) | ARCH-0001 §4.3 lists *"current time and optional online validity checks"* among the inputs of the decision procedure, and R-M-05 takes *"an ordered cert set and ACL"* as given. 5280 shows what happens when obtaining such inputs becomes part of validation. Status evidence is gathered first and passed in as input. |
@@ -841,17 +868,17 @@ cached in unsecured storage in certificate-using systems."* (§3.1, N-009).
 
 ## 9. What we adopt
 
-Each item gives one line of evidence. The analysis is in the section cited.
+Each item gives one line of evidence. The analysis is in the note cited.
 
 1. **The root is local input, trusted because of how it was delivered, not
-   because it was signed** (R-0390, R-0381, N-404; §4). This agrees with
+   because it was signed** (R-0390, R-0381, N-404; note 4). This agrees with
    `AclEntry` and the 2693 notes' adopt 2.
 2. **Constraint state that can only narrow.** The evidence is *"may be
    decreased, but may not be increased"* (R-0407 to R-0409), intersection and
-   union (R-0451, R-0452), and the falling depth counter (R-0463, R-0464; §§2,
-   3). This agrees with the 2693 notes' adopt 3.
+   union (R-0451, R-0452), and the falling depth counter (R-0463, R-0464;
+   notes 2 and 3). This agrees with the 2693 notes' adopt 3.
 3. **Containment as the decision rule for a scoped grant.** A name must be
-   *"within one of the permitted_subtrees"* (R-0422, R-0423; §3). This supports
+   *"within one of the permitted_subtrees"* (R-0422, R-0423; note 3). This supports
    the 2693 notes' rule `AIntersect(A, R) = R`.
 4. **Specify the result, not the procedure, and keep path finding outside the
    verifier.**
@@ -863,22 +890,23 @@ Each item gives one line of evidence. The analysis is in the section cited.
      outside the scope of this specification."* (N-330)
 
    This agrees with the 2693 notes' adopt 4.
-5. **Delegation as a fail-closed boolean.** Absence means the key *cannot
-   certify* (R-0155, R-0461). Version 3 added the field to cut the dependence
+5. **Delegation as a fail-closed boolean.** In a version 3 certificate,
+   absence means the key *cannot certify* (R-0155, R-0461); versions 1 and 2
+   are open question 14. Version 3 added the field to cut the dependence
    on out-of-band knowledge: *"reducing the reliance on out-of-band information
-   demanded in PEM"* (N-013; §2). This agrees with R-M-10 and the 2693 notes'
+   demanded in PEM"* (N-013; note 2). This agrees with R-M-10 and the 2693 notes'
    adopt 7, the integer apart.
 6. **Positive constraints rather than exclusions**, on 5280's own failure
-   analysis (N-473, R-0587; §3).
+   analysis (N-473, R-0587; note 3).
 7. **Byte-identical authoring of anything that will be compared** (R-0183,
-   R-0585, R-0222; §§3, 8).
+   R-0585, R-0222; notes 3 and 8).
 8. **Reading names relative to the anchor's key, as the cure for collisions**
-   (R-0589, R-0526; §8). This is evidence for R-M-03 and for the matrix's
+   (R-0589, R-0526; note 8). This is evidence for R-M-03 and for the matrix's
    importer namespace.
 9. **Sequence numbers for any status series**, so that deciding which entry
-   supersedes which is a comparison of integers (N-266, R-0297, R-0300; §5).
+   supersedes which is a comparison of integers (N-266, R-0297, R-0300; note 5).
 10. **The issuer bounds staleness, and the verifier may demand fresher evidence**
-    (R-0506, N-016; §5). This is the option in the 2693 notes' open question 7,
+    (R-0506, N-016; note 5). This is the option in the 2693 notes' open question 7,
     as deployed.
 
 ## 10. What we adapt, and how
@@ -892,40 +920,40 @@ Each item gives one line of evidence. The analysis is in the section cited.
    need is the 2693 notes' adopt 6 (rfc-2693#R-0072) in every case: the
    statement fixes its revoker, by key.
 2. **An explicit `delegate` field, present on every AuthzCert.** This is
-   X.509's boolean without DER's DEFAULT (N-507; §2 item 5).
+   X.509's boolean without DER's DEFAULT (N-507; note 2, item 5).
 3. **Name constraints' chain intersection, generalised.**
    - Keep monotone intersection, checked by containment.
    - Drop exclusions, and drop dimensions that are open by default.
    - Let each profile declare its own forms and matching rules under R-M-08,
      where 5280 fixes five per-form rules in the specification itself and
-     leaves three forms undefined (§3).
+     leaves three forms undefined (note 3).
 4. **The trust anchor as a specified object**: an `AclEntry` whose tag is
-   always processed, never *"free to process or ignore"* (N-406; §4).
+   always processed, never *"free to process or ignore"* (N-406; note 4).
 5. **The CRL entry as a single revocation statement.** Keep the content
    (subject, date, reason, invalidity date). Have it signed by a key that the
-   revoked statement names, so that it can be escrowed. Drop the list (§5).
+   revoked statement names, so that it can be escrowed. Drop the list (note 5).
 6. **The import mapping table** for WP5, R-I-01 and R-I-05, as the source makes
    the fields available. This is derived, and WP5 decides.
 
    | X.509 | native | R-I-01 class |
    |---|---|---|
    | `subjectPublicKeyInfo` | `Key`. `KeyId` is computed by our rule, never taken from the SKI (N-084) | preserved; KeyId inferred |
-   | subject DN, `subjectAltName` | `NameCert` labels under the importer's `x509:` namespace | preserved as labels; the equality semantics are lost (§7) |
+   | subject DN, `subjectAltName` | `NameCert` labels under the importer's `x509:` namespace | preserved as labels; the equality semantics are lost (note 7) |
    | issuer DN, serial number, the X.509 path | `provenance: x509`, with the certificate's digest | preserved, as provenance only |
-   | `notBefore`, `notAfter` | `Validity`, half-open (§7) | preserved |
+   | `notBefore`, `notAfter` | `Validity`, half-open (note 7) | preserved |
    | `cA`, `keyCertSign`, pathLenConstraint, nameConstraints, the policy constraints | enforced by X.509 validation inside the translator, then dropped | dropped (*"Do not treat CA bit as AuthzCert"*) |
-   | `valid_policy_tree`, `extendedKeyUsage` | candidate attributes (R-I-05) | inferred or dropped (open question 8) |
+   | `valid_policy_tree`, `extKeyUsage` | candidate attributes (R-I-05) | inferred or dropped (open question 8) |
    | CRLDP, AIA (`id-ad-ocsp`) | the translator's status check at import time | dropped from the output |
 
 7. **The criticality rule becomes P5.** Constraint fields are must-understand
-   because every field is (§3).
+   because every field is (note 3).
 
 ## 11. What we reject, and why
 
-1. **X.509 as the native encoding.** Rejected by R-M-01 (§1).
+1. **X.509 as the native encoding.** Rejected by R-M-01 (note 1).
 2. **Path validation as the reducer.** Rejected by ARCH-0001 §6. It proves a
-   name-to-key binding (N-320, R-0489), which is procedure 1 of §4.3, not
-   procedure 2.
+   name-to-key binding (N-320, R-0489), which is procedure 1 of ARCH-0001
+   §4.3, not procedure 2.
 3. **Chaining, revocation scope and anchors by name** (R-0421, N-230, R-0389).
    These conflict with R-M-02 and R-O-01.
 4. **Exclusions in the authorization algebra.** They fail open when matching
@@ -939,7 +967,7 @@ Each item gives one line of evidence. The analysis is in the section cited.
 8. **The policy machinery**: certificatePolicies, policyMappings, the policy
    tree, inhibitAnyPolicy, requireExplicitPolicy and inhibitPolicyMapping. Its
    intersection core duplicates DEC-004. The rest conflicts with R-M-12,
-   R-M-05, DEC-008 and P3 (§6).
+   R-M-05, DEC-008 and P3 (note 6).
 9. **Reversible revocation**: `certificateHold` and `removeFromCRL` (N-279,
    R-0534, N-311). A status that can return to unrevoked is not monotone.
 10. **Complete-list revocation as the native mechanism.** Its negative assertion
@@ -965,32 +993,32 @@ Each item gives one line of evidence. The analysis is in the section cited.
 
 | Ours (ARCH-0001 text, priority) | What RFC 5280 contributes | Status |
 |---|---|---|
-| **R-M-01** · M · *"Native encoding SHALL NOT be X.509 / PKIX."* | The thing excluded. RFC 5280 is the base profile of the named family. Six concrete conflicts (§1). | **Holds.** Its words exclude an encoding. ARCH-0001 §1, §6 and R-M-06 extend the exclusion to the model and the reducer. |
+| **R-M-01** · M · *"Native encoding SHALL NOT be X.509 / PKIX."* | The thing excluded. RFC 5280 is the base profile of the named family. Six concrete conflicts (note 1). | **Holds.** Its words exclude an encoding. R-M-06 and ARCH-0001 §§1 and 6 extend the exclusion to the model and the reducer. |
 | **R-M-02** · M · *"A principal MAY be identified solely by key or key digest."* | The issuer is a DN (R-0023). The SKI is not a key digest (N-084). | Contrast. X.509 needs a name where we need only a key. |
 | **R-M-03** · M · *"Names SHALL be interpreted only relative to an issuing principal."* | Global DNs collide (N-475). The fix ties CRL and certificate paths to the same root key (R-0589). | **Evidence for**, and for the matrix's `x509:` namespace *"of the *importer*"*. |
-| **R-M-04** · M · *"Name bindings and authorization bindings SHALL be distinct object kinds."* | Name constraints scope names only (R-0162, N-149). One certificate carries the name binding and every delegation control. §2 foresees moving authorization out (line 353). | **Strongest support** in the record. X.509 fails R-M-04 under both readings (§3). |
-| **R-M-05** · M · *"Authorization composition SHALL be deterministic given an ordered cert set and ACL."* | Results are required to be equivalent (R-0001, R-0367). Against that: optional features (N-234, N-326, R-0397), *"free to process or ignore"* (N-406), overlapping CRLs (N-252, R-0318), and UNDETERMINED with no rule attached (R-0537). | **Evidence for the precondition.** The algorithm is deterministic; its inputs are not. |
+| **R-M-04** · M · *"Name bindings and authorization bindings SHALL be distinct object kinds."* | Name constraints scope names only (R-0162, N-149). One certificate carries the name binding and every delegation control. §2 foresees moving authorization out (line 353). | **Strongest support** in the record. X.509 fails R-M-04 under both readings (note 3). |
+| **R-M-05** · M · *"Authorization composition SHALL be deterministic given an ordered cert set and ACL."* | Results are required to be equivalent (R-0001, R-0367). Against that: optional features (N-234, N-326, R-0397), *"free to process or ignore"* (N-406), overlapping CRLs (N-252, R-0318), UNDETERMINED with no rule attached (R-0537), and CRL checks with no stated outcome when they fail (§6.3.3). | **Evidence for the precondition.** The algorithm is deterministic where it states an outcome. Its inputs are not fixed, and some outcomes are not stated (open questions 5 and 11). |
 | **R-M-06** · M · threshold principals *"without encoding them as a CA hierarchy"* | No threshold form. The compromise of one CA key is catastrophic (N-464). | Contrast. Nothing to import. |
-| **R-M-08** · M · *"Tag intersection semantics SHALL be defined for every tag profile the implementation claims."* | Name constraints are one fixed profile with per-form semantics. *"MUST either process the constraint or reject the certificate"* (R-0169) means: claim it, or reject. | **Adapted** (§10 item 3). |
-| **R-M-09** · S · validity intersection | Each certificate must be valid at the time in question (R-0379), and its interval is closed (N-051). | On import, maps exactly onto half-open intervals (§7). |
-| **R-M-10** · S · *"Delegation SHALL be an explicit boolean (or equivalent) on `AuthzCert`."* | `cA` is the boolean, with the optional integer pathLenConstraint beneath it. DER makes FALSE implicit (N-507). The depth count exempts name-equal certificates (R-0384). | **Evidence on both sides** (§2). Two readings remain open. Explicit presence is supported under either. |
+| **R-M-08** · M · *"Tag intersection semantics SHALL be defined for every tag profile the implementation claims."* | Name constraints are one fixed profile with per-form semantics. *"MUST either process the constraint or reject the certificate"* (R-0169) means: claim it, or reject. | **Adapted** (note 10, item 3). |
+| **R-M-09** · S · validity intersection | Each certificate must be valid at the time in question (R-0379), and its interval is closed (N-051). | On import, maps exactly onto half-open intervals (note 7). |
+| **R-M-10** · S · *"Delegation SHALL be an explicit boolean (or equivalent) on `AuthzCert`."* | `cA` is the boolean, with the optional integer pathLenConstraint beneath it. DER makes FALSE implicit (N-507). The depth count exempts name-equal certificates (R-0384). | **Evidence on both sides** (note 2). Two readings remain open. Explicit presence is supported under either. |
 | **R-M-12 / ADR-0001 / ARCH-0002 P1** · M · key-relative extension points | Every identifier is an OID in an IANA-delegated arc (N-483, R-0194). | **Excluded natively.** OIDs are data at the boundary, lossy per R-I-01. |
-| **R-I-01** · M · a mapping table: what is preserved, dropped or inferred | The field inventory (§10 item 6). | Input to WP5. |
-| **R-I-02** · M · *"Import SHALL NOT require the foreign object to become a native trust anchor."* | The anchor may be any local input (§6.2), so an X.509 root can stay configuration of the translator (§4). | **Compatible.** |
+| **R-I-01** · M · a mapping table: what is preserved, dropped or inferred | The field inventory (note 10, item 6). | Input to WP5. |
+| **R-I-02** · M · *"Import SHALL NOT require the foreign object to become a native trust anchor."* | The anchor may be any local input (§6.2), so an X.509 root can stay configuration of the translator (note 4). | **Compatible.** |
 | **R-I-05** · S · *"Import X.509 only as a foreign identity assertion about a key (name or attribute), marked `provenance: x509`."* | §6 proves exactly an identity assertion about a key (N-320). The policy tree and EKU are candidate attributes. | **Compatible.** The attribute question is open (open question 8). |
 | **R-O-01** · M · an issuer key specifiable as `KeyId` | The AKI keyIdentifier is a MUST for conforming CAs (R-0082), but validation does not check it (N-081). | On import, the issuer key comes from path validation, not from the AKI. |
-| **R-O-02** · S · *"Short-lived validity preferred over revocation-heavy design; revocation still representable."* | Validity is defined through revocation (N-049), and there is no short-lived provision (`rfc-9608` came later, outside the source). CRL entries map onto revocation statements; the lists do not (§5). | **Contrast, with a partial adapt.** Escrow is the native fit. |
+| **R-O-02** · S · *"Short-lived validity preferred over revocation-heavy design; revocation still representable."* | Validity is defined through revocation (N-049), and there is no short-lived provision (`rfc-9608` came later, outside the source). CRL entries map onto revocation statements; the lists do not (note 5). | **Contrast, with a partial adapt.** Escrow is the native fit. |
 | **R-O-03** · S · canonicalization cited, not invented | DER is cited ([X.690]), and is not native. | Not affected natively. |
-| **R-O-05** (proposed) · *"The signed payload SHALL be the canonical encoding verbatim, carried with an authenticated type indicator."* | X.509 signs the DER tbs bytes and authenticates its algorithm (R-0008), but has no type indicator. | A partial precedent (§7). |
+| **R-O-05** (proposed) · *"The signed payload SHALL be the canonical encoding verbatim, carried with an authenticated type indicator."* | X.509 signs the DER tbs bytes and authenticates its algorithm (R-0008), but has no type indicator. | A partial precedent (note 7). |
 | **R-O-06** (proposed) · separate results for the three procedures | §6 folds policy acceptance into path validity (R-0431, R-0488). | Contrast. |
-| **ARCH-0001 §4.2 `AclEntry`; ARCH-0002's note on *"trust roots you chose yourself"*** | §6, §6.1.1(d) and §6.2 (R-0390, R-0381, N-404). | **Agrees.** Ours is specified (§4). |
+| **ARCH-0001 §4.2 `AclEntry`; ARCH-0002's note on *"trust roots you chose yourself"*** | §6, §6.1.1(d) and §6.2 (R-0390, R-0381, N-404). | **Agrees.** Ours is specified (note 4). |
 | **ARCH-0001 §4.3** procedures | Path validation is procedure 1, name resolution. | A classification for WP5. |
-| **ARCH-0001 §6** matrix and forbidden mapping | §1 and §2 give the source's reasons. | **Holds.** |
-| **ARCH-0002 P2**: delegation scoped by *"(Domain, Topic)"* | X.509 scopes by names and by policy OIDs. A policy OID is the nearest thing to a topic, and its meaning is held out of band (§6). | Contrast. |
+| **ARCH-0001 §6** matrix and forbidden mapping | Notes 1 and 2 give the source's reasons. | **Holds.** |
+| **ARCH-0002 P2**: delegation scoped by *"(Domain, Topic)"* | X.509 scopes by names and by policy OIDs. A policy OID is the nearest thing to a topic, and its meaning is held out of band (note 6). | Contrast. |
 | **ARCH-0002 P5**: validity checked, the unknown rejected | `critical DEFAULT FALSE`, and *"ought to be ignored"* (R-0072, R-0619). | **Inverted.** |
-| **DEC-002 / D-3** | DER against reduced CBOR (§7). | **A non-mapping, stated.** |
+| **DEC-002 / D-3** | DER against reduced CBOR (note 7). | **A non-mapping, stated.** |
 | **DEC-003** · *"Must specify: canonical key bytes before hashing."* | SKI method (1) hashes *"the value of the BIT STRING subjectPublicKey (excluding the tag, length, and number of unused bits)"* (§4.2.1.2, N-083), and leaves out the `AlgorithmIdentifier`. | A precedent for hashing the key bytes. Leaving out the algorithm conflates one key used under different algorithms, while ARCH-0001's `Key` includes an *"algorithm identifier"* (derived). |
-| **DEC-004** · the tag language | Name constraints implement option 1's core for names, and option 1 cannot be expressed in them (§3). | Evidence only. |
+| **DEC-004** · the tag language | Name constraints implement option 1's core for names, and option 1 cannot be expressed in them (note 3). | Evidence only. |
 | **DEC-008** (open) · its proposed fixed core | Optional core steps (N-326) and network recursion (R-0592). | Evidence for the proposed answer: a fixed, closed core. |
 
 ---
@@ -1006,7 +1034,7 @@ Each item gives one line of evidence. The analysis is in the section cited.
      **Correction.** False for purposes: *"In a CA certificate, these policy
      information terms limit the set of policies for certification paths that
      include this certificate."* (N-106). With requireExplicitPolicy 0, an issuer
-     forces that limit on every later certificate (R-0458, R-0431; §6).
+     forces that limit on every later certificate (R-0458, R-0431; note 6).
      **Holds for key usage.** An issuer cannot force keyUsage or EKU into its
      subject's certificates.
    - *"Neither X.509 nor OpenPGP can express "Bob may speak for *@foo.com ABOUT
@@ -1015,7 +1043,8 @@ Each item gives one line of evidence. The analysis is in the section cited.
      **Correction.** EKU has no role in path validation: *"In general, this
      extension will appear only in end entity certificates."* (N-172), and §6
      never processes it. nameConstraints and the policy machinery, with no
-     EKU, express "certify only `foo.com` names, and only under policy P" (§6).
+     EKU, express "certify only `foo.com` names, and only under policy P"
+     (note 6).
      **Holds.** The discriminator survives, since the scope is over the
      certificates Bob issues and the meaning of P is held out of band. But
      "cannot express" is too strong.
@@ -1030,7 +1059,7 @@ Each item gives one line of evidence. The analysis is in the section cited.
      MECHANISM AND SPKI DECLINED IT"*.
      **Qualification.** X.509 has the boolean as well. Its integer is
      optional, subordinate, and defaults to the boolean's semantics (N-145,
-     R-0161). The evidence is "a boolean plus an optional bound" (§2).
+     R-0161). The evidence is "a boolean plus an optional bound" (note 2).
    - *"RFC 5280 supplies neither the non-overlap rule nor a requirement that a
      certificate point at its own CRL"*.
      **Confirmed, and sharper than stated:**
@@ -1051,7 +1080,7 @@ Each item gives one line of evidence. The analysis is in the section cited.
        selection"* in the source; the answer lower-cases them.
 2. **Which reading of R-M-10?** Either the strict reading (a boolean only, with
    an imported pathLenConstraint dropped), or *"(or equivalent)"* read as
-   admitting a bound beneath the boolean (§2). The 2693 notes' open question 9
+   admitting a bound beneath the boolean (note 2). The 2693 notes' open question 9
    should be weighed in the same place.
 
    One more document may bear on the integer side. `rfc-3820`, *"Internet
@@ -1066,17 +1095,27 @@ Each item gives one line of evidence. The analysis is in the section cited.
    2693's *"temporary signing key"* objection then applies in full.
 4. **What is key rollover in our model, and does it use up depth or escape
    constraints?** X.509's answer is a pair of self-issued certificates, old key
-   over new and new key over old (N-480). They are exempt from depth and name
-   constraints because the DN matches. A native answer would be two statements
-   between keys. Whether those are exempt is a design choice the source cannot
-   make for us. If they are not exempt, rollover under a bound like
-   pathLenConstraint uses up depth.
-5. **What does UNDETERMINED mean?** §6.3.3 can return UNDETERMINED (R-0537).
-   §6.1.3(a)(3) requires that *"At the current time, the certificate is not
-   revoked."* (R-0420). Nothing maps UNDETERMINED to accept or to reject, which
-   is a new finding (see item 11). R-O-06 (proposed) suggests reporting it as a
-   distinct result. A native verifier needs a stated rule. Failing closed is the
-   rule consistent with ARCH-0002 P5, *"Validity is checked, never assumed"*.
+   over new and new key over old (N-480). Because the DN matches, they are not
+   counted against depth (R-0463, R-0384), and their names are not checked
+   against name constraints (R-0422, R-0423). Constraints they carry still
+   apply, since §6.1.4(g) has no self-issued condition (open question 11). A
+   native answer would be two statements between keys. Whether those are
+   exempt is a design choice the source cannot make for us. If they are not
+   exempt, rollover under a bound like pathLenConstraint uses up depth.
+5. **What does UNDETERMINED mean, and what does any revocation result mean?**
+   §6.3.3 can return UNDETERMINED (R-0537). §6.1.3(a)(3) requires that *"At the
+   current time, the certificate is not revoked."* (R-0420). Nothing maps
+   UNDETERMINED to accept or to reject (open question 11). §6 maps no other
+   result either. §6.3.3 returns a reason code, and pairs a status other than
+   UNREVOKED with "revoked" only implicitly. §6 names certificateHold only in
+   the value lists of reasons_mask and cert_status (§6.3.2(a)–(b), R-0498,
+   R-0499). That a hold counts as revoked comes from §5: *"revoked (for any
+   revocation reason, including certificateHold)"* (N-279), and the lowercase
+   *"should be considered revoked"* (N-311). The state machine infers that
+   reading (M01-T05, inferred). R-O-06 (proposed) suggests reporting
+   UNDETERMINED as a distinct result. A native verifier needs a stated rule for
+   every result. Failing closed is the rule consistent with ARCH-0002 P5,
+   *"Validity is checked, never assumed"*.
 6. **How is an `ArtifactStatement` checked after its signer's validity period
    ends?** X.509 drops revocations after expiry (R-0003), and cannot validate
    outside the validity period (N-328). The candidates are evidence fixed at
@@ -1119,36 +1158,53 @@ Each item gives one line of evidence. The analysis is in the section cited.
       certificate's pointer to its revocation source is therefore not even a
       BCP 14 recommendation in form.
     - **Rules carried in ASN.1 comments and lowercase text.**
-      - At most one `onlyContains*` boolean may be TRUE; this comes from an
-        ASN.1 comment (N-294; R-0334, inferred).
+      - Sixteen MUSTs sit in ASN.1 comments: R-0004 to R-0006 and R-0261 to
+        R-0263 in §4.1 and §5.1, the same six again in Appendix A.1 (R-0594
+        to R-0599), and R-0600 to R-0603. Several restate prose, but not all.
+        The crlExtensions version rule is a MUST only in its comment (R-0263),
+        while the prose says *"This field may only appear if the version is
+        2"* (§5.1.2.7, N-257). That authorityCertIssuer and
+        authorityCertSerialNumber are present or absent together (R-0601) is
+        stated only in the Appendix A.2 module, not in §4.2.1.1.
+      - At most one `onlyContains*` boolean may be TRUE; this comes from a
+        lowercase ASN.1 comment, in §5.2.5 and again in Appendix A.2 (N-294,
+        N-601; R-0334, inferred).
       - *"The removeFromCRL (8) reasonCode value may only appear in delta
         CRLs"* is lowercase (N-311; R-0359, inferred).
       - The comparison rules that define name equality are partly lowercase:
-        *"the mapping shall include case folding"* (line 5353), *"shall perform
-        a case-insensitive exact match"* (line 5462), *"shall perform a
-        case-sensitive exact match"* (line 5533), and *"Binary comparison should
-        be used"* (line 1320).
+        *"the mapping shall include case folding"* (§7.1, R-0543), *"shall
+        perform a case-insensitive exact match"* (§7.3, R-0563), *"shall
+        perform a case-sensitive exact match"* (§7.4, R-0577), and *"Binary
+        comparison should be used"* (§4.1.2.6, N-060).
       - The unknown-element rule that P5 inverts is *"ought to be ignored"*
-        (line 7557).
-      - In a nameConstraints URI field the value *"must hold a DNS name"* (line
-        7546).
+        (Appendix B, R-0619).
+      - A uniformResourceIdentifier value *"must contain a valid URI"*, except
+        in a nameConstraints extension, where *"it must hold a DNS name"*
+        (Appendix B, R-0617, R-0618).
 
       The lesson for our schemas: a constraint lives in the schema as a
       checkable rule (P5's "valid" level), never in a comment.
     - ***"Upper Bounds MUST be regarded as mandatory"*** (R-0600) has no actor.
       On import, who rejects an over-long value? Under P5, the importer does.
+      The bounds count characters, not octets, and a lowercase comment tells
+      receivers how many octets to allow (N-600).
     - **§7.2's SHALL and SHALL NOT for display conversion** sit under a
-      lowercase *"should"* (line 5422). Display conversion is advisory, and
+      lowercase *"should"* (§7.2, N-444). Display conversion is advisory, and
       identity is the ACE bytes. That is R-O-05's split between the signed form
       and the display form (proposed).
     - **Not carried.** The rest of the shared list does not bear on design: the
       duplicated ASN.1 definitions, the repeated key-identifier paragraphs, the
-      typos, and `keyEncipherment`'s *"shall be set"*, which is at line 1669, not
-      1688.
+      typos, `keyEncipherment`'s *"shall be set"* (§4.2.1.3, N-095), the
+      *"strongly recommends"* that limits policy qualifiers (§4.2.1.4, N-108),
+      and §5.2.5's use of "reason code" for ReasonFlags bit numbers
+      (state-machine OQ-17).
 
-    Then, new in this pass:
-    - **UNDETERMINED has no consequence** (open question 5). §6.1.3(a)(3) and
-      §6.3.3 never meet. This is a gap, not a contradiction.
+    Then, found while writing these notes:
+    - **No revocation result has a stated consequence** (open question 5).
+      §6.1.3(a)(3) and §6.3.3 never meet. UNDETERMINED has no rule. That a
+      returned reason code fails (a)(3) is implicit in §6.3.3, and that
+      certificateHold counts as revoked rests on §5 alone (state-machine
+      OQ-03; M01-T05, inferred). This is a gap, not a contradiction.
     - **Name-constraint intersection is defined only by DNS examples.**
       §6.1.4(g) gives *"the intersection of example.com and foo.example.com is
       foo.example.com"* and *"the intersection of example.com and example.net is
@@ -1171,13 +1227,65 @@ Each item gives one line of evidence. The analysis is in the section cited.
         (R-0314).
 
       R-0314 further requires only that the certificate was listed on the
-      base CRL or on a CRL issued after it, which may all predate expiry. If
-      the first CRL after expiry is that delta, the certificate appears after
-      its validity period only as a removeFromCRL listing, and that listing
-      removes it. The two rules agree only if a removeFromCRL listing on a
-      delta counts as the entry appearing on a regularly scheduled CRL. The
-      source does not say so, and it does not define "regularly scheduled
-      CRL".
+      referenced base CRL or on a CRL issued after it but before the delta,
+      which may all predate expiry. If the first CRL after expiry is that
+      delta, the certificate appears after its validity period only as a
+      removeFromCRL listing, and that listing removes it. The two rules agree
+      only if a removeFromCRL listing on a delta counts as the entry appearing
+      on a regularly scheduled CRL. The source does not say so, and it does not
+      define "regularly scheduled CRL". State-machine OQ-25 records the same
+      tension, and its M05-T10 applies §3.3 first, which is a reading.
+
+    Then, from the cross-check (pass 3). Each is also an open question in
+    `state-machine.yaml`, with its quotes:
+    - **The profile's emailAddress rule is not in the algorithm**
+      (state-machine OQ-05; protocol.yaml `emailaddress-fallback-missing`).
+      Without a subjectAltName, §4.2.1.10 says *"the rfc822Name constraint MUST
+      be applied to the attribute of type emailAddress in the subject
+      distinguished name"* (R-0177). §6.1.3(b) and (c) check the subject name
+      only against the subtrees for X.500 distinguished names, and the
+      subjectAltName names against their own forms (R-0422, R-0423). A verifier
+      that follows §6 alone skips the check, so the construction in note 6
+      does not reach such a DN. A rule stated in the profile and absent from
+      the procedure is a determinism hazard (R-M-05).
+    - **Two definitions of the policy counters** (state-machine OQ-06;
+      protocol.yaml `policy-constraints-count-wording`). §4.2.1.11 counts
+      *"additional certificates"* for inhibitPolicyMapping and
+      requireExplicitPolicy (N-166, N-167). §4.2.1.14 counts *"additional
+      non-self-issued certificates"* for inhibitAnyPolicy (N-190). §6.1.4(h)
+      decrements all three only for a certificate that is not self-issued
+      (R-0453). The algorithm governs (R-0367), but what a depth counts has to
+      be stated once (note 6, item 2; open question 3).
+    - **Constraints carried by a self-issued intermediate still apply**
+      (state-machine OQ-12). §6.1 says self-issued certificates *"are not
+      counted when evaluating path length or name constraints"* (R-0384), and
+      §6.1.3(b)–(c) skip them, but §6.1.4(g) applies the name constraints
+      such a certificate carries, with no self-issued condition (R-0450). The
+      exemption covers being checked, not constraining (note 3; open question
+      4).
+    - **A failed CRL check has no stated outcome** (state-machine OQ-15;
+      protocol.yaml `crl-verify-no-outcome`). Steps (a)(1)(ii), (b), (c), (e),
+      (f), (g) and (h) of §6.3.3 say verify or validate, and none says whether
+      a failure skips that CRL or fails the revocation check (R-0506, R-0508,
+      R-0515, R-0524, R-0525, R-0528, R-0529). A native verifier has to state
+      that a failed check fails closed (P5; note 5; open question 5).
+    - **An emptied policy tree is not said to be NULL** (state-machine OQ-08;
+      protocol.yaml `empty-tree-vs-null`). Pruning at §6.1.3(d)(3),
+      §6.1.4(b)(2)(ii) and step 4 of §6.1.5(g)(iii) can delete every node,
+      the root included (R-0429, R-0444, R-0487), and no pruning step sets the
+      tree to NULL. §6.1.2(a) says only *"If valid policies do not exist at
+      this stage in the certification path validation, the tree is set to
+      NULL."* (R-0398). The success tests at §6.1.3(f) and §6.1.5 test for
+      NULL (R-0431, R-0488), and the construction in note 6 relies on reading
+      an emptied tree as NULL.
+    - **The `nextUpdate` instant is covered by neither branch** (state-machine
+      OQ-13). §6.3.3(a)(1) applies *"If the current time is after the value of
+      the CRL next update field"* (R-0504), and (a)(2) *"If the current time
+      is before the value of the next update field"* (R-0507). A CRL that
+      omits nextUpdate meets neither, and *"The behavior of clients processing
+      CRLs that omit nextUpdate is not specified by this profile."* (§5.1.2.5,
+      N-253). A native freshness rule has to say whether the bound itself is
+      stale (adopt 10).
 12. **The rfc-2693 notes' glosses, checked against ARCH-0001.** Four differ from
     the text:
     - R-M-03 says *"issuing principal"*, not "issuing key";
@@ -1196,3 +1304,17 @@ Each item gives one line of evidence. The analysis is in the section cited.
     different requirement, or R-M-01 carries a framing its text does not state.
     That is worth one line in ARCH-0002's next revision. It is not settled
     here.
+14. **Version 1 and 2 intermediates: what does our translator do, and what
+    does our harness expect?** §6.1.4(k) checks `cA` only in a version 3
+    certificate (R-0461). A version 1 or 2 intermediate must be verified as *"a
+    CA certificate through out-of-band means"* or rejected (R-0462), and
+    *"Conforming implementations may choose to reject all version 1 and
+    version 2 intermediate certificates."* (R-0700). Two things follow.
+    - The X.509 validation inside the WP5 translator must choose. Accepting
+      such a certificate needs an out-of-band means, which the source does not
+      define (protocol.yaml `v1-v2-out-of-band-undefined`), and is the reliance
+      that version 3 set out to reduce (N-013). Rejecting all of them is the
+      reading closer to adopt 5. It is not decided here.
+    - Our harness must not fix one result for vector PKIX-614-24, which is
+      marked `ambiguous: true`. A version 1 intermediate verified out of band
+      passes §6.1.4(k), or is rejected under R-0700, and both results conform.
