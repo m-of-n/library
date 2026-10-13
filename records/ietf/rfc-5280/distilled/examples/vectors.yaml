@@ -1,0 +1,2444 @@
+schema: "library-examples/v1"
+record: rfc-5280
+kind: examples
+title: "RFC 5280 (PKIX Certificate and CRL Profile) — example fixtures and test vectors"
+source_version: "RFC 5280"
+source_digest: "a2f2628c0a83b873fc4786abd921f9b2c02395954b655d190bf16b831633345d"
+source_file: ".cache/rfc-5280.txt (8459 lines)"
+extracted: "2026-10-13"
+pass: 1
+reviewed_by: ""
+fixture_count: 4
+vector_count: 83
+source_vector_count: 42
+constructed_vector_count: 41
+count_reconciliation: "83 = 42 vectors whose input the source prints + 41 constructed vectors. The 42: 4 Appendix C fixtures (C.1, C.2, C.3, C.4), 1 vector for the minimal certification path the Appendix C intro says C.1, C.2 and C.4 form (PKIX-C-01), and 37 examples printed in running prose or figures: 4.1.2.5: 1, 4.1.2.6: 1, 4.2.1.6: 1, 4.2.1.10: 13, 4.2.1.11: 1, 4.2.1.13: 2, 4.2.1.14: 1, 4.2.2.1: 2, 4.2.2.2: 2, 5.2.7: 2, 6.1.2: 1 (Figure 3), 6.1.3: 4 (Figures 4 to 7), 6.1.4: 4, Appendix B: 2. The 41 constructed: Appendix C: 1 (the C.1/C.2 path at the extraction date), 4.2.1.10: 1, 6.1: 2, 6.1.3: 11, 6.1.4: 19, 6.1.5: 3, 5.2: 1, 6.3.3: 3. Each tests a rule the source states and prints no literal for. Sections with no vector, and why, are listed in README.md."
+
+# ====================================================================
+# Conventions used in this file
+# ====================================================================
+#
+# ids        PKIX-<section>-NN, never reused. Appendix C.1 is C1, Section
+#            4.2.1.10 is 42110, Section 6.1.4 is 614, Appendix B is B.
+#            A section's source vectors come first, constructed ones after.
+# source     locator: the section of RFC 5280 the vector is taken from, and
+#            lines: the source line range (".cache/rfc-5280.txt") that holds
+#            the example or, for a constructed vector, the governing rule.
+# in_source  true: the source prints the input (bytes, value, figure).
+#            false: the input was built for this file.
+# fidelity   reconstructed -- Appendix C. The source prints a dumpasn1
+#                             annotation (offset, length, type, value), not a
+#                             raw byte column. The fixture bytes were rebuilt
+#                             by DER-encoding every annotated node and checking
+#                             the computed offset and length of each node
+#                             against the printed ones (README, "How the
+#                             fixtures were rebuilt").
+#            split         -- taken out of running prose; every character of
+#                             the quoted input is the source's.
+#            figure        -- read off a figure (Figures 3 to 7).
+#            constructed   -- built for this file from a rule the source
+#                             states but gives no literal for.
+# input      fixtures: fixture (path, relative to this directory), sha256 (of
+#            the .hex file as committed), der_sha256 and der_length (of the
+#            bytes it encodes), dump and dump_sha256 (the verbatim annotated
+#            dump). Prose vectors: the printed value(s).
+# expected   what the source states for this input. Quoted strings are
+#            verbatim after whitespace normalisation: a line break plus the
+#            next line's margin reads as one space, two spaces after a full
+#            stop inside a line are kept, page header and footer are not
+#            text. One quote rejoins a word hyphenated across a line end
+#            ("non-" + "self-issued" -> non-self-issued); it is marked.
+#            Values under `annotation` are read off the printed dump.
+# expected_basis
+#            stated      -- the source states this result for this input.
+#            rule-quoted -- the source gives only the rule; `rule_text`
+#                           quotes it and the result is under `derived`.
+# expected_result
+#            present at top level ONLY where the source states the result.
+# derived    everything this extraction computed or checked, with
+#            in_source: false. Tool results name the tool (OpenSSL 3.0.13,
+#            run locally; nothing fetched).
+# rule       the rfc-5280#R-NNNN entries (requirements.yaml) and N-NNN
+#            entries (normative.md) that govern the expected or derived
+#            result. A constructed vector without one cites the locator.
+# source_issue
+#            a defect, inconsistency or gap in the SOURCE, recorded and not
+#            repaired; README lists them.
+#
+# CONSTRUCTED PATH SCENARIOS (§6.1). They are descriptions, not minted
+# certificates. Read every scenario with these defaults, which are
+# assumptions of this file, not statements of the source:
+#   - the trust anchor TA is given as trust anchor information (name
+#     cn=TA,dc=example,dc=com, a public key, its algorithm and parameters)
+#     per §6.1.1(d); it is not a certificate in the path;
+#   - `path` lists certificate 1 to n; certificate 1 is issued by TA and
+#     certificate n is the target; the subject of each is the issuer of the
+#     next (§6.1(a)) unless the vector says otherwise;
+#   - every certificate is version 3, its signature verifies with the
+#     working public key, it is within its validity period at the
+#     validation time and it is not revoked, unless the vector says
+#     otherwise;
+#   - a certificate marked `ca: true` carries basicConstraints (critical,
+#     cA TRUE, no pathLenConstraint) and keyUsage (critical, keyCertSign
+#     and cRLSign) unless its `extensions` say otherwise; an end entity
+#     carries neither;
+#   - extensions not listed are absent; no certificate carries
+#     certificatePolicies unless listed, so valid_policy_tree becomes NULL
+#     at certificate 1 and the policy steps play no part;
+#   - the §6.1.1 inputs take these values unless `inputs` says otherwise:
+#     user-initial-policy-set any-policy; initial-policy-mapping-inhibit,
+#     initial-explicit-policy and initial-any-policy-inhibit not set (so
+#     explicit_policy, policy_mapping and inhibit_anyPolicy start at n+1);
+#     initial-permitted-subtrees every name of every type;
+#     initial-excluded-subtrees empty.
+# `trace` gives the state-variable changes that decide the outcome; steps
+# that change nothing relevant are left out. `fails_at` names the step
+# whose check fails and certificate i.
+
+fixtures:
+  - id: C.1
+    fixture: 'C.1-rsa-self-signed-ca.hex'
+    sha256: '35b29f4dace3eb90ba48a6d63616cb05130752182a7521dfe31c1631672afa34'
+    der_sha256: '8cbea8df6e0321e8547bb59b8c0523fa36fc30ce40ed2a0e76c5ec19aad56136'
+    der_length: 578
+    dump: 'C.1-rsa-self-signed-ca.dump.txt'
+    dump_sha256: '05c12fc460949d6c08039963f38ae9e67b6b76050ba302a994b50872e9a23111'
+    source_lines: '7646-7795'
+    nodes_checked: 66
+  - id: C.2
+    fixture: 'C.2-rsa-end-entity.hex'
+    sha256: 'd4eeb00e36f4bc2fb2196b7eab98a1c06778b6ba7758804c7efdf9f99d22c8e2'
+    der_sha256: 'db6380d23276ffac1287835039590ed11ada908f884d4e65477ae8f9f73dfb5a'
+    der_length: 629
+    dump: 'C.2-rsa-end-entity.dump.txt'
+    dump_sha256: 'cd9fab87504fdffdef23d1084659e2fa0fdf2d7fcfd67167f251daa816c573d4'
+    source_lines: '7819-7978'
+    nodes_checked: 70
+  - id: C.3
+    fixture: 'C.3-dsa-end-entity.hex'
+    sha256: 'bb697cc3bf6144a29ef35f7de2025df886110a39112bfe916bd78fd726ec7cfc'
+    der_sha256: '7599eb0a868fdace7b7a38f7276f0cb8191689936e49ddf76d9358ec06909bf6'
+    der_length: 914
+    dump: 'C.3-dsa-end-entity.dump.txt'
+    dump_sha256: 'fe7bc74d6fa401dca6d41af827b38726e939b2b26ca7e1838e5d2c84bb5a54af'
+    source_lines: '8023-8218'
+    nodes_checked: 83
+  - id: C.4
+    fixture: 'C.4-crl.hex'
+    sha256: 'a96831dd4ac1aa07c0bf639e0dadef90c8b93b4e3d924d068ceac63b7616cfde'
+    der_sha256: '32aa78668ef5e6bf86537b75f9d9bfc223778903e8b9beb8bb12cd73161fd4f2'
+    der_length: 356
+    dump: 'C.4-crl.dump.txt'
+    dump_sha256: '77957ba98d98500b4d4562e6559299fb9f85077106ef59be4a65e18e20548e6e'
+    source_lines: '8239-8329'
+    nodes_checked: 45
+
+vectors:
+
+  # ===================================================================
+  # Appendix C -- the four printed examples
+  # ===================================================================
+  #
+  # §1 (lines 244-245): "Appendix C contains examples of conforming
+  # certificates and a conforming CRL."
+
+  - id: PKIX-C1-01
+    source:
+      locator: 'Appendix C.1'
+      lines: '7627-7795'
+    kind: certificate
+    in_source: true
+    fidelity: reconstructed
+    input:
+      fixture: 'C.1-rsa-self-signed-ca.hex'
+      sha256: '35b29f4dace3eb90ba48a6d63616cb05130752182a7521dfe31c1631672afa34'
+      der_sha256: '8cbea8df6e0321e8547bb59b8c0523fa36fc30ce40ed2a0e76c5ec19aad56136'
+      der_length: 578
+      dump: 'C.1-rsa-self-signed-ca.dump.txt'
+      dump_sha256: '05c12fc460949d6c08039963f38ae9e67b6b76050ba302a994b50872e9a23111'
+    expected:
+      description_locator: 'Appendix C.1, lines 7629-7644'
+      description:
+        - 'This appendix contains an annotated hex dump of a 578 byte version 3 certificate.'
+        - '(a)  the serial number is 17;'
+        - '(b)  the certificate is signed with RSA and the SHA-1 hash algorithm;'
+        - '(c)  the issuer''s distinguished name is cn=Example CA,dc=example,dc=com;'
+        - '(d)  the subject''s distinguished name is cn=Example CA,dc=example,dc=com;'
+        - '(e)  the certificate was issued on April 30, 2004 and expired on April 30, 2005;'
+        - '(f)  the certificate contains a 1024-bit RSA public key;'
+        - '(g)  the certificate contains a subject key identifier extension generated using method (1) of Section 4.2.1.2; and'
+        - '(h)  the certificate is a CA certificate (as indicated through the basic constraints extension).'
+      intro_locator: 'Appendix C, lines 7588-7591'
+      intro: 'Appendix C.1 contains an annotated hex dump of a "self-signed" certificate issued by a CA whose distinguished name is cn=Example CA,dc=example,dc=com.  The certificate contains an RSA public key, and is signed by the corresponding RSA private key.'
+      annotation:
+        outer_sequence: '0 574 (4-byte header, 578 bytes in all)'
+        tbsCertificate: '4 423'
+        version: 'INTEGER 2 (v3)'
+        serialNumber: '17'
+        signature: 'sha1withRSAEncryption (1 2 840 113549 1 1 5), NULL parameters'
+        issuer_rdns_in_encoded_order:
+          - 'domainComponent (0 9 2342 19200300 100 1 25) IA5String com'
+          - 'domainComponent (0 9 2342 19200300 100 1 25) IA5String example'
+          - 'commonName (2 5 4 3) PrintableString Example CA'
+        notBefore: 'UTCTime 30/04/2004 14:25:34 GMT'
+        notAfter: 'UTCTime 30/04/2005 14:25:34 GMT'
+        subject_rdns_in_encoded_order:
+          - 'domainComponent (0 9 2342 19200300 100 1 25) IA5String com'
+          - 'domainComponent (0 9 2342 19200300 100 1 25) IA5String example'
+          - 'commonName (2 5 4 3) PrintableString Example CA'
+        subjectPublicKeyInfo_algorithm: 'rsaEncryption (1 2 840 113549 1 1 1), NULL parameters'
+        rsa_modulus_hex: '00c2d7976d2870aa5bcf232e807039eedb6fd52dd56a4f7a342df9227247701def80e9ca308c00c49a6e5b45b46ea5e66c940dfa91e940fc259dc7b76819568f11706ad7f1c9114f3a7e3f998d6e76a5745f5ea45553e5c7683653c71d3b12a685febd6ea1cadf3550ac08d7b9b47e5cfee2a32cd12384aa98c09b66189a6847e9'
+        rsa_public_exponent: '65537'
+        extensions:
+          - 'subjectKeyIdentifier (2 5 29 14), non-critical: 0868af8533c8394a7af882938e706a4a20842c32'
+          - 'keyUsage (2 5 29 15), critical (BOOLEAN TRUE): BIT STRING 1 unused bits ''0000011''B'
+          - 'basicConstraints (2 5 29 19), critical (BOOLEAN TRUE): SEQUENCE { BOOLEAN TRUE }'
+        signatureAlgorithm: 'sha1withRSAEncryption (1 2 840 113549 1 1 5), NULL parameters'
+        signatureValue_hex: '6cf80274a661e26404a6540c6c7213ad3c47fbf66513a9859033ea76a326d9fcd10e155f28b7ef93bf3cf3e23e7cb952fc166e29aae1f47a6fd57fefb395caf36688834ea1354584cbbc9bb8c8adc55e46d90b0e8d80e1332bdcbe2b927e4a43a96aef8a6361b36e4738bee80da3675df3fa91813c92bbc55f2525eb7ce7d8a1'
+    expected_basis: stated
+    expected_result:
+      - 'a well-formed DER Certificate of 578 bytes whose fields are the annotation above'
+      - 'conforming (§1, line 245: "Appendix C contains examples of conforming certificates and a conforming CRL.")'
+      - 'the signature verifies under the certificate''s own RSA public key ("signed by the corresponding RSA private key")'
+    rule:
+      - 'rfc-5280#N-514'
+      - 'rfc-5280#N-512'
+    derived:
+      in_source: false
+      rebuild: 'all 66 annotated nodes: computed offset and length equal the printed ones'
+      asn1parse: 'openssl asn1parse -inform DER decodes 59 nodes (it does not descend into encapsulated OCTET/BIT STRINGs; the other 7 dump nodes are inside them); every asn1parse offset and length equals a printed one'
+      outer_length_check: 'outer SEQUENCE length 574 + 4 header octets = 578 = file length = the 578 bytes the description states'
+      printed_bytes_match: 'the modulus, the subject key identifier and the signature value printed in hex are byte-identical in the DER at the printed offsets'
+      openssl_x509_text: 'Version 3, Serial 17, sha1WithRSAEncryption, Issuer and Subject DC = com, DC = example, CN = Example CA, Not Before Apr 30 14:25:34 2004 GMT, Not After Apr 30 14:25:34 2005 GMT, RSA 1024 bit, exponent 65537, SKI 08:68:AF:85:33:C8:39:4A:7A:F8:82:93:8E:70:6A:4A:20:84:2C:32, Key Usage critical Certificate Sign, CRL Sign, Basic Constraints critical CA:TRUE'
+      key_usage_bits: 'keyCertSign (5) and cRLSign (6); encoded 03 02 01 06'
+      signature: 'verifies: openssl dgst -sha1 -verify <C.1 public key> over the 427-octet tbsCertificate gives "Verified OK"'
+      signature_proves_bytes: 'because the signature verifies, the rebuilt tbsCertificate is byte-exact; the remaining bytes (signatureAlgorithm, signatureValue) are printed in full'
+      ski_method_1: 'SHA-1 of the subjectPublicKey BIT STRING value (excluding tag, length and unused-bits octet) = 0868af8533c8394a7af882938e706a4a20842c32 = the printed SKI, confirming statement (g)'
+      self_issued: 'issuer and subject DN identical: self-issued (§6.1, R-0383) and self-signed'
+      conformance_checked:
+        - 'R-0010 version 3 because extensions are present: yes'
+        - 'R-0015, R-0019 serial positive, at most 20 octets: 17, 1 octet'
+        - 'R-0008, R-0021 signature and signatureAlgorithm identical: yes, byte for byte'
+        - 'R-0023 issuer non-empty: yes'
+        - 'R-0024 DirectoryString as PrintableString or UTF8String: commonName is PrintableString'
+        - 'R-0033, R-0038, R-0039 UTCTime, Zulu, with seconds: yes'
+        - 'R-0083 authorityKeyIdentifier omitted from a self-signed certificate: permitted (MAY)'
+        - 'R-0089, R-0096 subjectKeyIdentifier in a CA certificate, non-critical: yes'
+        - 'R-0097, R-0098, R-0103 keyUsage present, critical, at least one bit set: yes'
+        - 'R-0099 keyCertSign asserted so cA asserted: yes'
+        - 'R-0157, R-0158 basicConstraints present and critical in a CA certificate: yes'
+        - 'R-0047, R-0048 CA and CRL issuer subject non-empty: yes'
+      outcome: 'well-formed; conforming on every check above; signature verifies'
+
+  - id: PKIX-C2-01
+    source:
+      locator: 'Appendix C.2'
+      lines: '7797-7978'
+    kind: certificate
+    in_source: true
+    fidelity: reconstructed
+    input:
+      fixture: 'C.2-rsa-end-entity.hex'
+      sha256: 'd4eeb00e36f4bc2fb2196b7eab98a1c06778b6ba7758804c7efdf9f99d22c8e2'
+      der_sha256: 'db6380d23276ffac1287835039590ed11ada908f884d4e65477ae8f9f73dfb5a'
+      der_length: 629
+      dump: 'C.2-rsa-end-entity.dump.txt'
+      dump_sha256: 'cd9fab87504fdffdef23d1084659e2fa0fdf2d7fcfd67167f251daa816c573d4'
+    expected:
+      description_locator: 'Appendix C.2, lines 7799-7817'
+      description:
+        - 'This appendix contains an annotated hex dump of a 629-byte version 3 certificate.'
+        - '(a)  the serial number is 18;'
+        - '(b)  the certificate is signed with RSA and the SHA-1 hash algorithm;'
+        - '(c)  the issuer''s distinguished name is cn=Example CA,dc=example,dc=com;'
+        - '(d)  the subject''s distinguished name is cn=End Entity,dc=example,dc=com;'
+        - '(e)  the certificate was valid from September 15, 2004 through March 15, 2005;'
+        - '(f)  the certificate contains a 1024-bit RSA public key;'
+        - '(g)  the certificate is an end entity certificate, as the basic constraints extension is not present;'
+        - '(h)  the certificate contains an authority key identifier extension matching the subject key identifier of the certificate in appendix C.1; and'
+        - '(i)  the certificate includes one alternative name -- an electronic mail address (rfc822Name) of "end.entity@example.com".'
+      intro_locator: 'Appendix C, lines 7593-7596'
+      intro: 'Appendix C.2 contains an annotated hex dump of an end entity certificate.  The end entity certificate contains an RSA public key, and is signed by the private key corresponding to the "self-signed" certificate in Appendix C.1.'
+      annotation:
+        outer_sequence: '0 625 (4-byte header, 629 bytes in all)'
+        tbsCertificate: '4 474'
+        version: 'INTEGER 2 (v3)'
+        serialNumber: '18'
+        signature: 'sha1withRSAEncryption (1 2 840 113549 1 1 5), NULL parameters'
+        issuer_rdns_in_encoded_order:
+          - 'domainComponent (0 9 2342 19200300 100 1 25) IA5String com'
+          - 'domainComponent (0 9 2342 19200300 100 1 25) IA5String example'
+          - 'commonName (2 5 4 3) PrintableString Example CA'
+        notBefore: 'UTCTime 15/09/2004 11:48:21 GMT'
+        notAfter: 'UTCTime 15/03/2005 11:48:21 GMT'
+        subject_rdns_in_encoded_order:
+          - 'domainComponent (0 9 2342 19200300 100 1 25) IA5String com'
+          - 'domainComponent (0 9 2342 19200300 100 1 25) IA5String example'
+          - 'commonName (2 5 4 3) PrintableString End Entity'
+        subjectPublicKeyInfo_algorithm: 'rsaEncryption (1 2 840 113549 1 1 1), NULL parameters'
+        rsa_modulus_hex: '00e16ae4033097023cf410f3b51e4d7f147bf6f5d078e9a48af0a375ecedb656967f8899859af23e687787eb9ed19fc0b417dcab8923a41d7e16234c4fa84df531b87caae31a4909f44b26db27673082120144ae91ab6c10c538b6cfc2f7a43ec33367e32b27bd5aacf0114c612ec13f22d147a8b215814134c46a39af21695ff23'
+        rsa_public_exponent: '65537'
+        extensions:
+          - 'subjectAltName (2 5 29 17), non-critical: SEQUENCE { [1] end.entity@example.com }'
+          - 'subjectKeyIdentifier (2 5 29 14), non-critical: 177b9230ff44d666e19010226c164fc08e41dd6d'
+          - 'authorityKeyIdentifier (2 5 29 35), non-critical: SEQUENCE { [0] 0868af8533c8394a7af882938e706a4a20842c32 }'
+          - 'keyUsage (2 5 29 15), critical (BOOLEAN TRUE): BIT STRING 6 unused bits ''11''B'
+        signatureAlgorithm: 'sha1withRSAEncryption (1 2 840 113549 1 1 5), NULL parameters'
+        signatureValue_hex: '002028345b683201bb0a360ead71c5951ae104cfaeadc76214a41b3631c0e20c3dd91ec000dc10a0ba856f41cb627ab74c6381265ed280455e33e770453b393b264a9c3bf22636690879bbfb9643774b618ba1ab9164e0f337613c1aa3a4c98ab2bf73d44de458e462eabc207492860ece846076e973bbc785d39145ea625dcd'
+    expected_basis: stated
+    expected_result:
+      - 'a well-formed DER Certificate of 629 bytes whose fields are the annotation above'
+      - 'conforming (§1, line 245)'
+      - 'the signature verifies under the C.1 public key ("signed by the private key corresponding to the "self-signed" certificate in Appendix C.1")'
+      - 'authorityKeyIdentifier.keyIdentifier equals the C.1 subjectKeyIdentifier (statement (h))'
+    rule:
+      - 'rfc-5280#N-515'
+      - 'rfc-5280#N-512'
+    derived:
+      in_source: false
+      rebuild: 'all 70 annotated nodes: computed offset and length equal the printed ones'
+      asn1parse: 'openssl asn1parse decodes 61 nodes; every offset and length equals a printed one (the other 9 dump nodes are inside encapsulations)'
+      outer_length_check: '625 + 4 = 629 = file length = the 629 bytes stated'
+      printed_bytes_match: 'modulus, SKI, AKI keyIdentifier and signature value byte-identical at the printed offsets'
+      openssl_x509_text: 'Version 3, Serial 18, Issuer DC = com, DC = example, CN = Example CA, Subject DC = com, DC = example, CN = End Entity, Not Before Sep 15 11:48:21 2004 GMT, Not After Mar 15 11:48:21 2005 GMT, RSA 1024 bit, SAN email:end.entity@example.com, SKI 17:7B:92:30:..., AKI 08:68:AF:85:..., Key Usage critical Digital Signature, Non Repudiation'
+      key_usage_bits: 'digitalSignature (0) and nonRepudiation (1); encoded 03 02 06 c0'
+      aki_matches_c1_ski: 'yes: 0868af8533c8394a7af882938e706a4a20842c32 in both'
+      signature: 'verifies under the C.1 public key: openssl dgst -sha1 -verify over the 478-octet tbsCertificate gives "Verified OK"; openssl verify -no_check_time -CAfile C.1 gives OK'
+      ski_method_1: 'SHA-1 of the subjectPublicKey BIT STRING value = 177b9230ff44d666e19010226c164fc08e41dd6d = the printed SKI (method (1); the source does not say which method C.2 uses)'
+      conformance_checked:
+        - 'R-0010 version 3: yes'
+        - 'R-0015, R-0019 serial 18, 1 octet'
+        - 'R-0008, R-0021 algorithm identifiers identical: yes'
+        - 'R-0023, R-0024 issuer non-empty, PrintableString commonName: yes'
+        - 'R-0033, R-0038, R-0039 UTCTime with seconds, Zulu: yes'
+        - 'R-0082, R-0088 AKI keyIdentifier present, non-critical: yes'
+        - 'R-0090 C.1 SKI equals the AKI of a certificate C.1''s subject issued: yes'
+        - 'R-0092, R-0096 SKI in an end entity certificate, non-critical: yes'
+        - 'R-0064, R-0131 mail address carried as rfc822Name in subjectAltName: yes'
+        - 'R-0130 subjectAltName non-critical with non-empty subject: yes'
+        - 'R-0148, R-0149 subjectAltName has one entry, not empty: yes'
+        - 'R-0098, R-0103 keyUsage critical, a bit set: yes'
+        - 'R-0154 cA not asserted (no basicConstraints) so keyCertSign not asserted: yes'
+      outcome: 'well-formed; conforming on every check above; signature verifies under C.1'
+
+  - id: PKIX-C3-01
+    source:
+      locator: 'Appendix C.3'
+      lines: '7980-8218'
+    kind: certificate
+    in_source: true
+    fidelity: reconstructed
+    input:
+      fixture: 'C.3-dsa-end-entity.hex'
+      sha256: 'bb697cc3bf6144a29ef35f7de2025df886110a39112bfe916bd78fd726ec7cfc'
+      der_sha256: '7599eb0a868fdace7b7a38f7276f0cb8191689936e49ddf76d9358ec06909bf6'
+      der_length: 914
+      dump: 'C.3-dsa-end-entity.dump.txt'
+      dump_sha256: 'fe7bc74d6fa401dca6d41af827b38726e939b2b26ca7e1838e5d2c84bb5a54af'
+    expected:
+      description_locator: 'Appendix C.3, lines 7982-8021'
+      description:
+        - 'This appendix contains an annotated hex dump of a 914-byte version 3 certificate.'
+        - '(a)  the serial number is 256;'
+        - '(b)  the certificate is signed with DSA and the SHA-1 hash algorithm;'
+        - '(c)  the issuer''s distinguished name is cn=Example DSA CA,dc=example,dc=com;'
+        - '(d)  the subject''s distinguished name is cn=DSA End Entity,dc=example,dc=com;'
+        - '(e)  the certificate was issued on May 2, 2004 and expired on May 2, 2005;'
+        - '(f)  the certificate contains a 1024-bit DSA public key with parameters;'
+        - '(g)  the certificate is an end entity certificate (not a CA certificate);'
+        - '(h)  the certificate includes a subject alternative name of "<http://www.example.com/users/DSAendentity.html>" and an issuer alternative name of "<http://www.example.com>" -- both are URLs;'
+        - '(i)  the certificate includes an authority key identifier extension and a certificate policies extension specifying the policy OID 2.16.840.1.101.3.2.1.48.9; and'
+        - '(j)  the certificate includes a critical key usage extension specifying that the public key is intended for verification of digital signatures.'
+      intro_locator: 'Appendix C, lines 7598-7601'
+      intro: 'Appendix C.3 contains an annotated hex dump of an end entity certificate that contains a DSA public key with parameters, and is signed with DSA and SHA-1.  This certificate is not part of the minimal certification path.'
+      annotation:
+        outer_sequence: '0 910 (4-byte header, 914 bytes in all)'
+        tbsCertificate: '4 846'
+        version: 'INTEGER 2 (v3)'
+        serialNumber: '256'
+        signature: 'dsaWithSha1 (1 2 840 10040 4 3), parameters absent'
+        issuer_rdns_in_encoded_order:
+          - 'domainComponent (0 9 2342 19200300 100 1 25) IA5String com'
+          - 'domainComponent (0 9 2342 19200300 100 1 25) IA5String example'
+          - 'commonName (2 5 4 3) PrintableString Example DSA CA'
+        notBefore: 'UTCTime 02/05/2004 16:47:38 GMT'
+        notAfter: 'UTCTime 02/05/2005 16:47:38 GMT'
+        subject_rdns_in_encoded_order:
+          - 'domainComponent (0 9 2342 19200300 100 1 25) IA5String com'
+          - 'domainComponent (0 9 2342 19200300 100 1 25) IA5String example'
+          - 'commonName (2 5 4 3) PrintableString DSA End Entity'
+        subjectPublicKeyInfo_algorithm: 'dsa (1 2 840 10040 4 1), parameters SEQUENCE { p, q, g }'
+        dsa_p_hex: '00b68b0f942b9acea525c6f2edfcfb9532ac011233b9e01cad909bbc48549ef394773c2c713555e6fe4f22cbd5d83e8993334dfcbd4f41643ea29870ec31b450deebf198280ac93e44b3fd22979683d018a3e3bd355bffeea321726a7b96dab93f1e5a90af24d620f00d21a7d402b91afcac21fb9e949e4b42459e6ab24863fe43'
+        dsa_q_hex: '00b20db0b101df0c6624fc1392ba55f77d577481e5'
+        dsa_g_hex: '009abf46b1f53f443dc9a565fb91c08e47f10ac30147c2444236a99281de57c5e0688658007b1ff99b77a1c510a580917851513cf6fccc46c6817892843df4933d0c387e1a5b994eab1464f60c21224e28089c92b9669f40e895f6d5312aef39a262c7b26d9e58c43aa81181846daff8b419b4c211aed0223baa207fee1e5718'
+        dsa_y_hex: '30b675f77c2031ae38bb7e0d2baba09c4bdf20d524133ccd98e55f6cb7c1ba4abaa9958053f00d72dc3337f4010bf5041f9d2e1f62d8843a9b25095a2dc8468e2bd4f50d3bc72dc66cb998c1253a444e8eca9561357cce15315c23131ea205d17a241ccbd3720990ff9b9d28c0a10aec469f0db8d0dcd018a62b5ef98fb595be'
+        extensions:
+          - 'subjectAltName (2 5 29 17), non-critical: SEQUENCE { [6] http://www.example.com/users/DSAendentity.html }'
+          - 'issuerAltName (2 5 29 18), non-critical: SEQUENCE { [6] http://www.example.com }'
+          - 'subjectKeyIdentifier (2 5 29 14), non-critical: dd25669643ab78114344fe9516f9d9b6b702668d'
+          - 'authorityKeyIdentifier (2 5 29 35), non-critical: SEQUENCE { [0] 86caa5228162efad0a89bcad72412c2949f48656 }'
+          - 'certificatePolicies (2 5 29 32), non-critical: SEQUENCE { SEQUENCE { OBJECT IDENTIFIER 2 16 840 1 101 3 2 1 48 9 } }'
+          - 'keyUsage (2 5 29 15), critical (BOOLEAN TRUE): BIT STRING 7 unused bits ''1''B (bit 0)'
+        signatureAlgorithm: 'dsaWithSha1 (1 2 840 10040 4 3), parameters absent'
+        signature_r_hex: '65570734dddccacc5ef402f456422c5ee1b33b80'
+        signature_s_hex: '60f43117caf4cfffeef408a7d9b261beb1c3dabf'
+    expected_basis: stated
+    expected_result:
+      - 'a well-formed DER Certificate of 914 bytes whose fields are the annotation above'
+      - 'conforming (§1, line 245)'
+      - 'signed with DSA and SHA-1 by the CA cn=Example DSA CA,dc=example,dc=com; the source prints neither that CA''s certificate nor its public key'
+    rule:
+      - 'rfc-5280#N-516'
+      - 'rfc-5280#N-512'
+    source_issue: 'The issuer''s key is not in the source (C.3 "is not part of the minimal certification path"; its AKI 86caa522... matches no SKI printed in Appendix C), so the signature on C.3 cannot be verified from the source. Recorded as a gap; nothing was substituted.'
+    derived:
+      in_source: false
+      rebuild: 'all 83 annotated nodes: computed offset and length equal the printed ones'
+      asn1parse: 'openssl asn1parse decodes 68 nodes; every offset and length equals a printed one (the other 15 dump nodes are inside encapsulations)'
+      outer_length_check: '910 + 4 = 914 = file length = the 914 bytes stated'
+      printed_bytes_match: 'p, q, g, y, SKI, AKI keyIdentifier, r and s byte-identical at the printed offsets'
+      openssl_x509_text: 'Version 3, Serial 256 (0x100), dsaWithSHA1, Issuer DC = com, DC = example, CN = Example DSA CA, Subject DC = com, DC = example, CN = DSA End Entity, Not Before May 2 16:47:38 2004 GMT, Not After May 2 16:47:38 2005 GMT, DSA 1024 bit with P, Q, G, SAN URI:http://www.example.com/users/DSAendentity.html, IAN URI:http://www.example.com, Certificate Policies 2.16.840.1.101.3.2.1.48.9, Key Usage critical Digital Signature'
+      key_usage_bits: 'digitalSignature (0) only; encoded 03 02 07 80'
+      dsa_key_check: 'openssl pkey -pubcheck: "Key is valid"; p is 1024 bits, q 160 bits, q divides p-1, g^q mod p = 1, y^q mod p = 1'
+      signature: 'NOT verified: the issuer public key is not in the source. Not a failure of the fixture.'
+      signature_proves_bytes: 'no; the tbsCertificate bytes rest on the offset/length reconstruction, plus one independent confirmation: the SHA-1 of the rebuilt subjectPublicKey equals the printed SKI (ski_method_1), so the 131 subjectPublicKey octets after the unused-bits octet are right. Two encodings the dump does not show directly were taken as DER requires: BOOLEAN TRUE as 0xFF, and a zero unused-bits octet in the subjectPublicKey BIT STRING.'
+      ski_method_1: 'SHA-1 of the subjectPublicKey BIT STRING value = dd25669643ab78114344fe9516f9d9b6b702668d = the printed SKI (method (1); the description does not mention the SKI)'
+      conformance_checked:
+        - 'R-0010 version 3: yes'
+        - 'R-0015, R-0019 serial 256, 2 octets'
+        - 'R-0008, R-0021 algorithm identifiers identical: yes'
+        - 'R-0023, R-0024 issuer non-empty, PrintableString commonName: yes'
+        - 'R-0033, R-0038, R-0039 UTCTime with seconds, Zulu: yes'
+        - 'R-0082, R-0088 AKI keyIdentifier present, non-critical: yes'
+        - 'R-0092, R-0096 SKI in an end entity certificate, non-critical: yes'
+        - 'R-0139, R-0140, R-0142, R-0143 URI in uniformResourceIdentifier, absolute, scheme http, FQDN host: yes'
+        - 'R-0130 subjectAltName non-critical with non-empty subject: yes'
+        - 'R-0151, R-0152 issuerAltName encoded as 4.2.1.6, non-critical: yes'
+        - 'R-0105, R-0108 policy OID once, policy information is only an OID: yes'
+        - 'R-0098, R-0103 keyUsage critical, a bit set: yes'
+      outcome: 'well-formed; conforming on every check above; signature not verifiable from the source'
+
+  - id: PKIX-C4-01
+    source:
+      locator: 'Appendix C.4'
+      lines: '8220-8329'
+    kind: crl
+    in_source: true
+    fidelity: reconstructed
+    input:
+      fixture: 'C.4-crl.hex'
+      sha256: 'a96831dd4ac1aa07c0bf639e0dadef90c8b93b4e3d924d068ceac63b7616cfde'
+      der_sha256: '32aa78668ef5e6bf86537b75f9d9bfc223778903e8b9beb8bb12cd73161fd4f2'
+      der_length: 356
+      dump: 'C.4-crl.dump.txt'
+      dump_sha256: '77957ba98d98500b4d4562e6559299fb9f85077106ef59be4a65e18e20548e6e'
+    expected:
+      description_locator: 'Appendix C.4, lines 8222-8228'
+      description:
+        - 'This appendix contains an annotated hex dump of a version 2 CRL with two extensions (cRLNumber and authorityKeyIdentifier).'
+        - 'The CRL was issued by cn=Example CA,dc=example,dc=com on February 5, 2005; the next scheduled issuance was February 6, 2005.'
+        - 'The CRL includes one revoked certificate: serial number 18, which was revoked on November 19, 2004 due to keyCompromise.'
+        - 'The CRL itself is number 12, and it was signed with RSA and SHA-1.'
+      intro_locator: 'Appendix C, lines 7603-7606'
+      intro: 'Appendix C.4 contains an annotated hex dump of a CRL.  The CRL is issued by the CA whose distinguished name is cn=Example CA,dc=example,dc=com and the list of revoked certificates includes the end entity certificate presented in Appendix C.2.'
+      annotation:
+        outer_sequence: '0 352 (4-byte header, 356 bytes in all)'
+        tbsCertList: '4 202'
+        version: 'INTEGER 1 (v2)'
+        signature: 'sha1withRSAEncryption (1 2 840 113549 1 1 5), NULL parameters'
+        issuer_rdns_in_encoded_order:
+          - 'domainComponent (0 9 2342 19200300 100 1 25) IA5String com'
+          - 'domainComponent (0 9 2342 19200300 100 1 25) IA5String example'
+          - 'commonName (2 5 4 3) PrintableString Example CA'
+        thisUpdate: 'UTCTime 05/02/2005 12:00:00 GMT'
+        nextUpdate: 'UTCTime 06/02/2005 12:00:00 GMT'
+        revokedCertificates:
+          - 'userCertificate 18, revocationDate UTCTime 19/11/2004 15:57:03 GMT, crlEntryExtensions: cRLReason (2 5 29 21), non-critical, ENUMERATED 1'
+        crlExtensions:
+          - 'authorityKeyIdentifier (2 5 29 35), non-critical: SEQUENCE { [0] 0868af8533c8394a7af882938e706a4a20842c32 }'
+          - 'cRLNumber (2 5 29 20), non-critical: INTEGER 12'
+        signatureAlgorithm: 'sha1withRSAEncryption (1 2 840 113549 1 1 5), NULL parameters'
+        signatureValue_hex: '22dc187df708cecc75d0d06a9bad10f47623b4816eb56dbe0efb15146cc8176d1fee9017a26f60e4bdaa8c55de8e846f92f89f101227af4ad42f85e236447daaa34c253815ff00fd3e7eee3d2612ebd8e72b62e22bc34680ef7882d115c6d09c726acbce7aed67998b6e70817d434274c1a6afc15517a2334cd606982ba4fc2e'
+    expected_basis: stated
+    expected_result:
+      - 'a well-formed DER CertificateList (version 2) of 356 bytes whose fields are the annotation above'
+      - 'conforming (§1, line 245: "a conforming CRL")'
+      - 'lists serial 18 (the C.2 certificate) revoked 2004-11-19T15:57:03Z with reasonCode keyCompromise (ENUMERATED 1)'
+      - 'CRL number 12; authorityKeyIdentifier equals the C.1 SKI'
+    rule:
+      - 'rfc-5280#N-517'
+      - 'rfc-5280#N-512'
+    derived:
+      in_source: false
+      rebuild: 'all 45 annotated nodes: computed offset and length equal the printed ones'
+      asn1parse: 'openssl asn1parse decodes 41 nodes; every offset and length equals a printed one'
+      outer_length_check: '352 + 4 = 356 = file length (the source states no byte count for the CRL)'
+      printed_bytes_match: 'AKI keyIdentifier and signature value byte-identical at the printed offsets'
+      openssl_crl_text: 'Version 2, sha1WithRSAEncryption, Issuer DC = com, DC = example, CN = Example CA, Last Update Feb 5 12:00:00 2005 GMT, Next Update Feb 6 12:00:00 2005 GMT, AKI 08:68:AF:85:..., CRL Number 12, revoked Serial Number 12 (hex, = 18 decimal), Revocation Date Nov 19 15:57:03 2004 GMT, CRL Reason Code Key Compromise'
+      signature: 'verifies under the C.1 public key: openssl dgst -sha1 -verify over the 205-octet tbsCertList gives "Verified OK"; openssl crl -CAfile C.1 gives "verify OK"'
+      signature_basis: 'the source says the CRL is issued by cn=Example CA and, with C.1 and C.2, forms a minimal certification path; it does not say in words that the C.1 key signed it'
+      reason_code: 'ENUMERATED 1 is keyCompromise in the §5.3.1 CRLReason list'
+      lists_c2: 'yes: entry serial 18 and CRL issuer equal the C.2 serial and issuer (no certificateIssuer entry extension, so the entry belongs to the CRL issuer, §5.3.3)'
+      conformance_checked:
+        - 'R-0269, R-0270 version present and v2 (INTEGER 1): yes'
+        - 'R-0259, R-0289 v2, nextUpdate, CRL number and authority key identifier present: yes'
+        - 'R-0265, R-0271 algorithm identifiers identical: yes, byte for byte'
+        - 'R-0272, R-0273 issuer non-empty, encoded as in certificates: yes'
+        - 'R-0274, R-0277 thisUpdate UTCTime: yes'
+        - 'R-0280, R-0281, R-0284 nextUpdate present, UTCTime: yes'
+        - 'R-0287 revocationDate as in 5.1.2.4: UTCTime'
+        - 'R-0290, R-0291 AKI by key identifier method: yes'
+        - 'R-0295, R-0296, R-0303 CRL number present, non-critical, 1 octet: yes'
+        - 'R-0357, R-0358 reason code present and not unspecified (0): yes'
+      outcome: 'well-formed; conforming on every check above; signature verifies under C.1'
+
+  - id: PKIX-C-01
+    source:
+      locator: 'Appendix C'
+      lines: '7584-7606'
+    kind: path-validation
+    in_source: true
+    fidelity: reconstructed
+    input:
+      trust_anchor: 'C.1 (C.1-rsa-self-signed-ca.hex), used as trust anchor information per §6.1.1(d)'
+      path:
+        - 'C.2 (C.2-rsa-end-entity.hex)'
+      crl: 'C.4 (C.4-crl.hex)'
+      validation_time: '2005-02-05T18:00:00Z (inside both C.2 validity and the C.4 thisUpdate..nextUpdate window)'
+      validation_time_basis: 'chosen for this vector; the source names no validation time'
+    expected:
+      text: 'The first two certificates and the CRL comprise a minimal certification path.'
+    expected_basis: rule-quoted
+    rule:
+      - 'rfc-5280#R-0381'
+      - 'rfc-5280#R-0390'
+      - 'rfc-5280#R-0418'
+      - 'rfc-5280#R-0419'
+      - 'rfc-5280#R-0420'
+      - 'rfc-5280#R-0432'
+      - 'rfc-5280#R-0527'
+      - 'rfc-5280#R-0528'
+      - 'rfc-5280#R-0531'
+      - 'rfc-5280#R-0533'
+      - 'rfc-5280#R-0537'
+    derived:
+      in_source: false
+      trace:
+        - 'n = 1: the self-signed trust anchor C.1 is not part of the path (R-0381); working_public_key and working_issuer_name come from C.1'
+        - '6.1.3(a)(1) C.2 signature verifies under the C.1 key: yes (openssl)'
+        - '6.1.3(a)(2) 2005-02-05T18:00:00Z is within 2004-09-15T11:48:21Z..2005-03-15T11:48:21Z: yes'
+        - '6.1.3(a)(3) revocation, §6.3.3: C.2 has no cRLDistributionPoints, so C.4 is processed under R-0537 (a DP with reasons and cRLIssuer omitted); C.4 has no issuingDistributionPoint, so interim_reasons_mask = all-reasons; C.4 issuer equals the C.2 issuer; C.1 keyUsage has cRLSign (R-0527); C.4 signature verifies under the C.1 key (R-0528); entry serial 18 is found with reasonCode keyCompromise, so cert_status = keyCompromise (R-0531, R-0533)'
+        - '6.1.3(a)(3) fails: the certificate is revoked'
+      outcome: fails
+      fails_at: '§6.1.3(a)(3), certificate i=1 (C.2), revoked (keyCompromise)'
+      without_revocation_check: 'every other step of 6.1.3 to 6.1.5 succeeds (no name constraints, no policies; explicit_policy starts at 2 and ends at 1, so the NULL valid_policy_tree does not fail the path)'
+      openssl: 'openssl verify -attime 1107626400 -auth_level 0 -crl_check -CAfile C.1 -CRLfile C.4 C.2: "error 23 at 0 depth lookup: certificate revoked"; the same without -crl_check: "OK"'
+
+  - id: PKIX-C-02
+    source:
+      locator: 'Appendix C; §6.1.3(a)(2)'
+      lines: '4452'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    input:
+      trust_anchor: 'C.1 (C.1-rsa-self-signed-ca.hex), as trust anchor information'
+      path:
+        - 'C.2 (C.2-rsa-end-entity.hex)'
+      validation_time: '2026-10-13T00:00:00Z (the extraction date)'
+    rule_text: '(2)  The certificate validity period includes the current time.'
+    rule:
+      - 'rfc-5280#R-0419'
+      - 'rfc-5280#R-0432'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      outcome: fails
+      fails_at: '§6.1.3(a)(2), certificate i=1 (C.2): notAfter 2005-03-15T11:48:21Z has passed'
+      note: 'The trust anchor is trust anchor information (§6.1.1(d): name, key, algorithm, parameters); §6.1 takes no validity period for it, so the expiry of the C.1 certificate is not itself a §6.1 failure. OpenSSL differs: openssl verify -CAfile C.1 C.2 at the current time reports "error 10 at 1 depth lookup: certificate has expired" for C.1 before C.2. Checking the anchor''s own validity is an augmentation §6.1 permits (R-0382: "an application MAY augment this algorithm to further limit the set of valid paths") but does not require, so a harness that follows §6.1 must not count it as the reason.'
+
+  # ===================================================================
+  # Section 4.1.2.5 / 4.1.2.6 / 4.2.1.6 -- printed values in prose
+  # ===================================================================
+
+  - id: PKIX-4125-01
+    source:
+      locator: '§4.1.2.5'
+      lines: '1223-1225'
+    kind: validity-encoding
+    in_source: true
+    fidelity: split
+    input: '99991231235959Z'
+    expected:
+      text: 'To indicate that a certificate has no well-defined expiration date, the notAfter SHOULD be assigned the GeneralizedTime value of 99991231235959Z.'
+    expected_basis: stated
+    expected_result: 'notAfter GeneralizedTime 99991231235959Z means no well-defined expiration date'
+    rule:
+      - 'rfc-5280#R-0036'
+      - 'rfc-5280#R-0037'
+      - 'rfc-5280#N-052'
+    derived:
+      in_source: false
+      der: '18 0f 39 39 39 39 31 32 33 31 32 33 35 39 35 39 5a (GeneralizedTime, 15 octets)'
+      note: 'the year 9999 is after 2049, so R-0034 also requires GeneralizedTime'
+
+  - id: PKIX-4126-01
+    source:
+      locator: '§4.1.2.6'
+      lines: '1366-1368'
+    kind: name-comparison
+    in_source: true
+    fidelity: split
+    input:
+      a: 'subscriber@example.com'
+      b: 'SUBSCRIBER@EXAMPLE.COM'
+      attribute: 'emailAddress (legacy, in the subject DN)'
+    expected:
+      text: 'emailAddress attribute values are not case-sensitive (e.g., "subscriber@example.com" is the same as "SUBSCRIBER@EXAMPLE.COM").'
+    expected_basis: stated
+    expected_result: 'equal'
+    rule:
+      - 'rfc-5280#N-062'
+    derived:
+      in_source: false
+      note: 'this is the legacy emailAddress DN attribute. For rfc822Name, §7.5 (R-0580) makes only the host-part case-insensitive and requires an exact local-part match; under that rule the two strings would not match. The source states both rules; they apply to different fields.'
+
+  - id: PKIX-4216-01
+    source:
+      locator: '§4.2.1.6'
+      lines: '2040-2041'
+    kind: name-comparison
+    in_source: true
+    fidelity: split
+    input:
+      a: 'http'
+      b: 'HTTP'
+      component: 'URI scheme name'
+    expected:
+      text: 'As specified in [RFC3986], the scheme name is not case-sensitive (e.g., "http" is equivalent to "HTTP").'
+    expected_basis: stated
+    expected_result: 'equivalent'
+    rule:
+      - 'rfc-5280#N-131'
+
+  # ===================================================================
+  # Section 4.2.1.10 -- name constraints: the printed examples
+  # ===================================================================
+  #
+  # Where the source states a result for a class of names and prints no
+  # member ("any mail address at the host"), the vector picks one; the
+  # picked value is marked candidate_basis: chosen.
+
+  - id: PKIX-42110-01
+    source:
+      locator: '§4.2.1.10'
+      lines: '2255-2261'
+    kind: name-constraint-match
+    in_source: true
+    fidelity: split
+    input:
+      name_form: 'uniformResourceIdentifier (constraint on the host part)'
+      constraint: '.example.com'
+      candidate_host: 'host.example.com'
+    expected:
+      text: 'That is, the constraint ".example.com" is satisfied by both host.example.com and my.host.example.com.'
+    expected_basis: stated
+    expected_result: 'satisfied'
+    rule:
+      - 'rfc-5280#R-0174'
+      - 'rfc-5280#N-154'
+
+  - id: PKIX-42110-02
+    source:
+      locator: '§4.2.1.10'
+      lines: '2260-2261'
+    kind: name-constraint-match
+    in_source: true
+    fidelity: split
+    input:
+      name_form: 'uniformResourceIdentifier (constraint on the host part)'
+      constraint: '.example.com'
+      candidate_host: 'my.host.example.com'
+    expected:
+      text: 'That is, the constraint ".example.com" is satisfied by both host.example.com and my.host.example.com.'
+    expected_basis: stated
+    expected_result: 'satisfied'
+    rule:
+      - 'rfc-5280#R-0174'
+      - 'rfc-5280#N-154'
+
+  - id: PKIX-42110-03
+    source:
+      locator: '§4.2.1.10'
+      lines: '2261-2262'
+    kind: name-constraint-match
+    in_source: true
+    fidelity: split
+    input:
+      name_form: 'uniformResourceIdentifier (constraint on the host part)'
+      constraint: '.example.com'
+      candidate_host: 'example.com'
+    expected:
+      text: 'However, the constraint ".example.com" is not satisfied by "example.com".'
+    expected_basis: stated
+    expected_result: 'not satisfied'
+    rule:
+      - 'rfc-5280#N-154'
+
+  - id: PKIX-42110-04
+    source:
+      locator: '§4.2.1.10'
+      lines: '2257-2263'
+    kind: name-constraint-match
+    in_source: true
+    fidelity: split
+    input:
+      name_form: 'uniformResourceIdentifier (constraint on the host part)'
+      constraint: 'host.example.com'
+      candidate_host: 'host.example.com'
+      candidate_basis: chosen
+    expected:
+      text: 'When the constraint does not begin with a period, it specifies a host.'
+    expected_basis: rule-quoted
+    rule:
+      - 'rfc-5280#R-0173'
+      - 'rfc-5280#N-154'
+    derived:
+      in_source: false
+      outcome: 'satisfied by the host host.example.com; not satisfied by www.host.example.com (a host constraint names one host, unlike the dNSName rule of PKIX-42110-10)'
+
+  - id: PKIX-42110-05
+    source:
+      locator: '§4.2.1.10'
+      lines: '2274-2277'
+    kind: name-constraint-match
+    in_source: true
+    fidelity: split
+    input:
+      name_form: 'rfc822Name'
+      constraint: 'root@example.com'
+      candidate: 'root@example.com'
+    expected:
+      text: 'For example, "root@example.com" indicates the root mailbox on the host "example.com".'
+    expected_basis: stated
+    expected_result: 'satisfied (the constraint is that one mailbox)'
+    rule:
+      - 'rfc-5280#R-0176'
+      - 'rfc-5280#N-155'
+
+  - id: PKIX-42110-06
+    source:
+      locator: '§4.2.1.10'
+      lines: '2277-2280'
+    kind: name-constraint-match
+    in_source: true
+    fidelity: split
+    input:
+      name_form: 'rfc822Name'
+      constraint: 'example.com'
+      candidate: 'anyone@example.com'
+      candidate_basis: chosen
+    expected:
+      text: 'For example, the constraint "example.com" is satisfied by any mail address at the host "example.com".'
+    expected_basis: stated
+    expected_result: 'satisfied'
+    rule:
+      - 'rfc-5280#R-0176'
+      - 'rfc-5280#N-155'
+
+  - id: PKIX-42110-07
+    source:
+      locator: '§4.2.1.10'
+      lines: '2280-2284'
+    kind: name-constraint-match
+    in_source: true
+    fidelity: split
+    input:
+      name_form: 'rfc822Name'
+      constraint: '.example.com'
+      candidate: 'anyone@host.example.com'
+      candidate_basis: chosen
+    expected:
+      text: 'For example, ".example.com" indicates all the Internet mail addresses in the domain "example.com", but not Internet mail addresses on the host "example.com".'
+    expected_basis: stated
+    expected_result: 'satisfied (an address in the domain)'
+    rule:
+      - 'rfc-5280#R-0176'
+      - 'rfc-5280#N-155'
+
+  - id: PKIX-42110-08
+    source:
+      locator: '§4.2.1.10'
+      lines: '2280-2284'
+    kind: name-constraint-match
+    in_source: true
+    fidelity: split
+    input:
+      name_form: 'rfc822Name'
+      constraint: '.example.com'
+      candidate: 'anyone@example.com'
+      candidate_basis: chosen
+    expected:
+      text: 'For example, ".example.com" indicates all the Internet mail addresses in the domain "example.com", but not Internet mail addresses on the host "example.com".'
+    expected_basis: stated
+    expected_result: 'not satisfied (an address on the host)'
+    rule:
+      - 'rfc-5280#R-0176'
+      - 'rfc-5280#N-155'
+
+  - id: PKIX-42110-09
+    source:
+      locator: '§4.2.1.10'
+      lines: '2286-2290'
+    kind: name-constraint-match
+    in_source: true
+    fidelity: split
+    input:
+      name_form: 'dNSName'
+      constraint: 'host.example.com'
+      candidate: 'www.host.example.com'
+    expected:
+      text: 'For example, www.host.example.com would satisfy the constraint but host1.example.com would not.'
+    expected_basis: stated
+    expected_result: 'satisfied'
+    rule:
+      - 'rfc-5280#R-0558'
+      - 'rfc-5280#N-156'
+
+  - id: PKIX-42110-10
+    source:
+      locator: '§4.2.1.10'
+      lines: '2286-2290'
+    kind: name-constraint-match
+    in_source: true
+    fidelity: split
+    input:
+      name_form: 'dNSName'
+      constraint: 'host.example.com'
+      candidate: 'host1.example.com'
+    expected:
+      text: 'For example, www.host.example.com would satisfy the constraint but host1.example.com would not.'
+    expected_basis: stated
+    expected_result: 'not satisfied'
+    rule:
+      - 'rfc-5280#R-0558'
+      - 'rfc-5280#N-156'
+    derived:
+      in_source: false
+      note: 'label-by-label matching (R-0558): host1 is not the label host, so a suffix test on the string ("ends with host.example.com") would wrongly accept a name such as myhost.example.com'
+
+  - id: PKIX-42110-11
+    source:
+      locator: '§4.2.1.10'
+      lines: '2286-2288'
+    kind: name-constraint-match
+    in_source: true
+    fidelity: split
+    input:
+      name_form: 'dNSName'
+      constraint: 'host.example.com'
+      candidate: 'host.example.com'
+      candidate_basis: chosen
+    expected:
+      text: 'Any DNS name that can be constructed by simply adding zero or more labels to the left-hand side of the name satisfies the name constraint.'
+    expected_basis: rule-quoted
+    rule:
+      - 'rfc-5280#N-156'
+    derived:
+      in_source: false
+      outcome: 'satisfied (zero labels added)'
+
+  - id: PKIX-42110-12
+    source:
+      locator: '§4.2.1.10'
+      lines: '2329-2333'
+    kind: name-constraint-encoding
+    in_source: true
+    fidelity: split
+    input:
+      name_form: 'iPAddress (in nameConstraints)'
+      range: '192.0.2.0/24 (mask 255.255.255.0)'
+    expected:
+      text: 'For example, a name constraint for "class C" subnet 192.0.2.0 is represented as the octets C0 00 02 00 FF FF FF 00, representing the CIDR notation 192.0.2.0/24 (mask 255.255.255.0).'
+      octets_hex: 'c0000200ffffff00'
+    expected_basis: stated
+    expected_result: 'iPAddress constraint value = c0 00 02 00 ff ff ff 00 (8 octets: address then mask)'
+    rule:
+      - 'rfc-5280#R-0185'
+      - 'rfc-5280#N-160'
+    derived:
+      in_source: false
+      der_general_name: '87 08 c0 00 02 00 ff ff ff 00 (GeneralName [7] iPAddress, IMPLICIT OCTET STRING)'
+      match_examples: '192.0.2.1 and 192.0.2.255 are within the range; 192.0.3.1 is not (address AND mask equals the constraint address)'
+
+  - id: PKIX-42110-13
+    source:
+      locator: '§4.2.1.10'
+      lines: '2208-2212'
+    kind: name-constraint-match
+    in_source: true
+    fidelity: split
+    input:
+      constraint: 'any name constraint on a name form, e.g. dNSName permitted subtree example.com'
+      certificate_names: 'no name of that form in the subject field or subjectAltName'
+    expected:
+      text: 'Restrictions apply only when the specified name form is present.  If no name of the type is in the certificate, the certificate is acceptable.'
+    expected_basis: stated
+    expected_result: 'acceptable'
+    rule:
+      - 'rfc-5280#N-149'
+    notes: 'the constraint value example.com is chosen for illustration; the rule is stated for every name form'
+
+  - id: PKIX-42110-14
+    source:
+      locator: '§4.2.1.10'
+      lines: '2263-2270'
+    kind: name-constraint-match
+    in_source: false
+    fidelity: constructed
+    input:
+      name_form: 'uniformResourceIdentifier'
+      constraint: '.example.com (permitted)'
+      candidates:
+        - 'http://192.0.2.1/index.html (authority with an IP address host)'
+        - 'urn:example:a (no authority component)'
+    rule_text: 'If a constraint is applied to the uniformResourceIdentifier name form and a subsequent certificate includes a subjectAltName extension with a uniformResourceIdentifier that does not include an authority component with a host name specified as a fully qualified domain name (e.g., if the URI either does not include an authority component or includes an authority component in which the host name is specified as an IP address), then the application MUST reject the certificate.'
+    expected_basis: rule-quoted
+    rule:
+      - 'rfc-5280#R-0175'
+    derived:
+      in_source: false
+      outcome: 'reject the certificate, for each candidate'
+
+  # ===================================================================
+  # Section 4.2.1.11 / 4.2.1.14 -- the "value of one" examples
+  # ===================================================================
+
+  - id: PKIX-42111-01
+    source:
+      locator: '§4.2.1.11'
+      lines: '2374-2379'
+    kind: path-validation
+    in_source: true
+    fidelity: split
+    input:
+      extension: 'policyConstraints with inhibitPolicyMapping 1, in CA1'
+      path:
+        - 'CA1: issued by TA; policyConstraints inhibitPolicyMapping 1; certificatePolicies P1'
+        - 'CA2: issued by CA1; certificatePolicies P1; policyMappings P1 -> P2'
+        - 'CA3: issued by CA2; certificatePolicies P2; policyMappings P2 -> P3'
+        - 'EE: issued by CA3; certificatePolicies P3'
+      path_basis: 'the four certificates and the policy OIDs are chosen for this vector; the source states only what the value of one means'
+    expected:
+      text: 'For example, a value of one indicates that policy mapping may be processed in certificates issued by the subject of this certificate, but not in additional certificates in the path.'
+    expected_basis: stated
+    expected_result: 'the mapping in CA2 (issued by the subject of CA1) is processed; the mapping in CA3 is not'
+    rule:
+      - 'rfc-5280#N-166'
+      - 'rfc-5280#R-0409'
+      - 'rfc-5280#R-0437'
+      - 'rfc-5280#R-0443'
+      - 'rfc-5280#R-0455'
+      - 'rfc-5280#R-0459'
+    source_issue: 'The general sentence before the example counts "the number of additional certificates that may appear in the path"; §6.1.2(f) and §6.1.4(h)(2) count and decrement only non-self-issued certificates. A self-issued certificate between CA1 and CA2 counts under the first reading and not under §6.1. The example sentence ("certificates issued by the subject of this certificate") agrees with §6.1.'
+    derived:
+      in_source: false
+      trace:
+        - 'n = 4; policy_mapping = 5'
+        - 'i=1 CA1 6.1.4(h)(2): 5 -> 4; 6.1.4(i)(2): inhibitPolicyMapping 1 < 4, so policy_mapping = 1'
+        - 'i=2 CA2 6.1.3(d)(1)(i): child P1 at depth 2; 6.1.4(b)(1): policy_mapping 1 > 0, so the depth-2 P1 node''s expected_policy_set becomes {P2}; (h)(2): 1 -> 0'
+        - 'i=3 CA3 6.1.3(d)(1)(i): P2 is in that expected_policy_set, child P2 at depth 3'
+        - 'i=3 CA3 6.1.4(b)(2): policy_mapping = 0, so the depth-3 node with valid_policy P2 is deleted and the tree is pruned (R-0443, R-0444); the tree becomes NULL'
+        - 'i=4 EE: valid_policy_tree NULL; explicit_policy (initial 5, now 2) > 0, so 6.1.3(f) passes'
+      outcome: 'succeeds with a NULL valid_policy_tree; the P2 -> P3 mapping is not honoured. With initial-explicit-policy set, the path fails at 6.1.3(f) for EE.'
+
+  - id: PKIX-42114-01
+    source:
+      locator: '§4.2.1.14'
+      lines: '2652-2661'
+    kind: path-validation
+    in_source: true
+    fidelity: split
+    input:
+      extension: 'inhibitAnyPolicy 1, in CA1'
+      path:
+        - 'CA1: issued by TA; inhibitAnyPolicy 1; certificatePolicies P1'
+        - 'CA2: issued by CA1; certificatePolicies anyPolicy'
+        - 'CA3: issued by CA2; certificatePolicies anyPolicy'
+        - 'EE: issued by CA3; certificatePolicies P1'
+      path_basis: 'chosen for this vector; the source states only what the value of one means'
+    expected:
+      text: 'For example, a value of one indicates that anyPolicy may be processed in certificates issued by the subject of this certificate, but not in additional certificates in the path.'
+    expected_basis: stated
+    expected_result: 'anyPolicy in CA2 is processed; anyPolicy in CA3 is not'
+    rule:
+      - 'rfc-5280#N-190'
+      - 'rfc-5280#R-0408'
+      - 'rfc-5280#R-0428'
+      - 'rfc-5280#R-0456'
+      - 'rfc-5280#R-0460'
+    derived:
+      in_source: false
+      trace:
+        - 'n = 4; inhibit_anyPolicy = 5'
+        - 'i=1 CA1 6.1.3(d)(1)(ii): node P1 under the anyPolicy root; 6.1.4(h)(3): 5 -> 4; 6.1.4(j): 1 < 4, so inhibit_anyPolicy = 1'
+        - 'i=2 CA2 6.1.3(d)(2): inhibit_anyPolicy 1 > 0, so a child P1 is made under the depth-1 P1 node; (h)(3): 1 -> 0'
+        - 'i=3 CA3 6.1.3(d)(2): inhibit_anyPolicy 0 and CA3 is not self-issued, so anyPolicy is not processed; no depth-3 node is made; (d)(3) prunes the tree to NULL'
+        - 'i=4 EE: tree NULL; explicit_policy (now 2) > 0, so 6.1.3(f) passes'
+      outcome: 'succeeds with a NULL valid_policy_tree; with initial-explicit-policy set it fails at 6.1.3(f) for CA3'
+
+  # ===================================================================
+  # Sections 4.2.1.13, 4.2.2.1, 4.2.2.2, 5.2.7 -- the printed LDAP URIs
+  # ===================================================================
+  #
+  # Each section prints one LDAP URI with a <host> and one without. The
+  # with-host URIs of 4.2.2.1, 4.2.2.2 and 5.2.7 are the same string, as
+  # are their without-host URIs; each is a separate source position.
+
+  - id: PKIX-42113-01
+    source:
+      locator: '§4.2.1.13'
+      lines: '2561-2567'
+    kind: uri-example
+    in_source: true
+    fidelity: split
+    input:
+      uri: 'ldap://ldap.example.com/cn=example%20CA,dc=example,dc=com?certificateRevocationList;binary'
+      as_printed_lines:
+        - '(e.g., <ldap://ldap.example.com/cn=example%20CA,dc=example,dc=com?'
+        - 'certificateRevocationList;binary>).  Omitting the <host> (e.g.,'
+      printed_at_lines: '2566-2567'
+    expected:
+      text: 'When the LDAP URI scheme [RFC4516] is used, the URI MUST include a <dn> field containing the distinguished name of the entry holding the CRL, MUST include a single <attrdesc> that contains an appropriate attribute description for the attribute that holds the CRL [RFC4523], and SHOULD include a <host>'
+    expected_basis: stated
+    expected_result: 'conforms to the stated form: <dn> and the attribute field present, and the <host> the SHOULD asks for'
+    rule:
+      - 'rfc-5280#R-0212'
+      - 'rfc-5280#R-0213'
+      - 'rfc-5280#R-0214'
+      - 'rfc-5280#N-184'
+    derived:
+      in_source: false
+      unwrap: 'the source breaks the URI at a line end inside <...>; the break and the next line''s margin are layout, not part of the URI'
+      host: 'ldap.example.com'
+      dn: 'cn=example CA,dc=example,dc=com (after percent-decoding %20)'
+      attributes: 'certificateRevocationList;binary (a single <attrdesc>)'
+
+  - id: PKIX-42113-02
+    source:
+      locator: '§4.2.1.13'
+      lines: '2561-2570'
+    kind: uri-example
+    in_source: true
+    fidelity: split
+    input:
+      uri: 'ldap:///cn=CA,dc=example,dc=com?authorityRevocationList;binary'
+      as_printed_lines:
+        - 'certificateRevocationList;binary>).  Omitting the <host> (e.g.,'
+        - '<ldap:///cn=CA,dc=example,dc=com?authorityRevocationList;binary>) has'
+      printed_at_lines: '2567-2568'
+    expected:
+      text: 'When the LDAP URI scheme [RFC4516] is used, the URI MUST include a <dn> field containing the distinguished name of the entry holding the CRL, MUST include a single <attrdesc> that contains an appropriate attribute description for the attribute that holds the CRL [RFC4523], and SHOULD include a <host>'
+      no_host_effect: 'has the effect of relying on whatever a priori knowledge the client might have to contact an appropriate server.'
+    expected_basis: stated
+    expected_result: 'permitted form without <host>: the client relies on a priori knowledge to reach a server'
+    rule:
+      - 'rfc-5280#R-0212'
+      - 'rfc-5280#R-0213'
+      - 'rfc-5280#R-0214'
+      - 'rfc-5280#N-184'
+    derived:
+      in_source: false
+      unwrap: 'the source breaks the URI at a line end inside <...>; the break and the next line''s margin are layout, not part of the URI'
+      host: '(none)'
+      dn: 'cn=CA,dc=example,dc=com'
+      attributes: 'authorityRevocationList;binary (a single <attrdesc>)'
+
+  - id: PKIX-4221-01
+    source:
+      locator: '§4.2.2.1'
+      lines: '2783-2788'
+    kind: uri-example
+    in_source: true
+    fidelity: split
+    input:
+      uri: 'ldap://ldap.example.com/cn=CA,dc=example,dc=com?cACertificate;binary,crossCertificatePair;binary'
+      as_printed_lines:
+        - 'and SHOULD include a <host> (e.g., <ldap://ldap.example.com/cn=CA,'
+        - 'dc=example,dc=com?cACertificate;binary,crossCertificatePair;binary>).'
+      printed_at_lines: '2787-2788'
+    expected:
+      text: 'The LDAP URI [RFC4516] MUST include a <dn> field containing the distinguished name of the entry holding the certificates, MUST include an <attributes> field that lists appropriate attribute descriptions for the attributes that hold the DER encoded certificates or cross-certificate pairs [RFC4523], and SHOULD include a <host>'
+    expected_basis: stated
+    expected_result: 'conforms to the stated form: <dn> and the attribute field present, and the <host> the SHOULD asks for'
+    rule:
+      - 'rfc-5280#R-0228'
+      - 'rfc-5280#R-0229'
+      - 'rfc-5280#R-0230'
+      - 'rfc-5280#N-206'
+    derived:
+      in_source: false
+      unwrap: 'the source breaks the URI at a line end inside <...>; the break and the next line''s margin are layout, not part of the URI'
+      host: 'ldap.example.com'
+      dn: 'cn=CA,dc=example,dc=com'
+      attributes: 'cACertificate;binary,crossCertificatePair;binary'
+
+  - id: PKIX-4221-02
+    source:
+      locator: '§4.2.2.1'
+      lines: '2783-2791'
+    kind: uri-example
+    in_source: true
+    fidelity: split
+    input:
+      uri: 'ldap:///cn=exampleCA,dc=example,dc=com?cACertificate;binary'
+      as_printed_lines:
+        - 'Omitting the <host> (e.g., <ldap:///cn=exampleCA,dc=example,dc=com?'
+        - 'cACertificate;binary>) has the effect of relying on whatever a priori'
+      printed_at_lines: '2789-2790'
+    expected:
+      text: 'The LDAP URI [RFC4516] MUST include a <dn> field containing the distinguished name of the entry holding the certificates, MUST include an <attributes> field that lists appropriate attribute descriptions for the attributes that hold the DER encoded certificates or cross-certificate pairs [RFC4523], and SHOULD include a <host>'
+      no_host_effect: 'has the effect of relying on whatever a priori knowledge the client might have to contact an appropriate server.'
+    expected_basis: stated
+    expected_result: 'permitted form without <host>: the client relies on a priori knowledge to reach a server'
+    rule:
+      - 'rfc-5280#R-0228'
+      - 'rfc-5280#R-0229'
+      - 'rfc-5280#R-0230'
+      - 'rfc-5280#N-206'
+    derived:
+      in_source: false
+      unwrap: 'the source breaks the URI at a line end inside <...>; the break and the next line''s margin are layout, not part of the URI'
+      host: '(none)'
+      dn: 'cn=exampleCA,dc=example,dc=com'
+      attributes: 'cACertificate;binary'
+
+  - id: PKIX-4222-01
+    source:
+      locator: '§4.2.2.2'
+      lines: '2902-2908'
+    kind: uri-example
+    in_source: true
+    fidelity: split
+    input:
+      uri: 'ldap://ldap.example.com/cn=CA,dc=example,dc=com?cACertificate;binary,crossCertificatePair;binary'
+      as_printed_lines:
+        - 'and SHOULD include a <host> (e.g., <ldap://ldap.example.com/cn=CA,'
+        - 'dc=example,dc=com?cACertificate;binary,crossCertificatePair;binary>).'
+      printed_at_lines: '2907-2908'
+    expected:
+      text: 'The LDAP URI [RFC4516] MUST include a <dn> field containing the distinguished name of the entry holding the certificates, MUST include an <attributes> field that lists appropriate attribute descriptions for the attributes that hold the DER encoded certificates or cross-certificate pairs [RFC4523], and SHOULD include a <host>'
+    expected_basis: stated
+    expected_result: 'conforms to the stated form: <dn> and the attribute field present, and the <host> the SHOULD asks for'
+    rule:
+      - 'rfc-5280#R-0242'
+      - 'rfc-5280#R-0243'
+      - 'rfc-5280#R-0244'
+      - 'rfc-5280#N-220'
+    derived:
+      in_source: false
+      unwrap: 'the source breaks the URI at a line end inside <...>; the break and the next line''s margin are layout, not part of the URI'
+      host: 'ldap.example.com'
+      dn: 'cn=CA,dc=example,dc=com'
+      attributes: 'cACertificate;binary,crossCertificatePair;binary'
+
+  - id: PKIX-4222-02
+    source:
+      locator: '§4.2.2.2'
+      lines: '2902-2921'
+    kind: uri-example
+    in_source: true
+    fidelity: split
+    input:
+      uri: 'ldap:///cn=exampleCA,dc=example,dc=com?cACertificate;binary'
+      as_printed_lines:
+        - 'Omitting the <host> (e.g., <ldap:///cn=exampleCA,dc=example,dc=com?'
+        - 'cACertificate;binary>) has the effect of relying on whatever a priori'
+      printed_at_lines: '2919-2920'
+    expected:
+      text: 'The LDAP URI [RFC4516] MUST include a <dn> field containing the distinguished name of the entry holding the certificates, MUST include an <attributes> field that lists appropriate attribute descriptions for the attributes that hold the DER encoded certificates or cross-certificate pairs [RFC4523], and SHOULD include a <host>'
+      no_host_effect: 'has the effect of relying on whatever a priori knowledge the client might have to contact an appropriate server.'
+    expected_basis: stated
+    expected_result: 'permitted form without <host>: the client relies on a priori knowledge to reach a server'
+    rule:
+      - 'rfc-5280#R-0242'
+      - 'rfc-5280#R-0243'
+      - 'rfc-5280#R-0244'
+      - 'rfc-5280#N-220'
+    derived:
+      in_source: false
+      unwrap: 'the source breaks the URI at a line end inside <...>; the break and the next line''s margin are layout, not part of the URI'
+      host: '(none)'
+      dn: 'cn=exampleCA,dc=example,dc=com'
+      attributes: 'cACertificate;binary'
+
+  - id: PKIX-527-01
+    source:
+      locator: '§5.2.7'
+      lines: '3796-3802'
+    kind: uri-example
+    in_source: true
+    fidelity: split
+    input:
+      uri: 'ldap://ldap.example.com/cn=CA,dc=example,dc=com?cACertificate;binary,crossCertificatePair;binary'
+      as_printed_lines:
+        - 'and SHOULD include a <host> (e.g., <ldap://ldap.example.com/cn=CA,'
+        - 'dc=example,dc=com?cACertificate;binary,crossCertificatePair;binary>).'
+      printed_at_lines: '3801-3802'
+    expected:
+      text: 'The LDAP URI [RFC4516] MUST include a <dn> field containing the distinguished name of the entry holding the certificates, MUST include an <attributes> field that lists appropriate attribute descriptions for the attributes that hold the DER encoded certificates or cross-certificate pairs [RFC4523], and SHOULD include a <host>'
+    expected_basis: stated
+    expected_result: 'conforms to the stated form: <dn> and the attribute field present, and the <host> the SHOULD asks for'
+    rule:
+      - 'rfc-5280#R-0353'
+      - 'rfc-5280#R-0354'
+      - 'rfc-5280#R-0355'
+      - 'rfc-5280#N-306'
+    derived:
+      in_source: false
+      unwrap: 'the source breaks the URI at a line end inside <...>; the break and the next line''s margin are layout, not part of the URI'
+      host: 'ldap.example.com'
+      dn: 'cn=CA,dc=example,dc=com'
+      attributes: 'cACertificate;binary,crossCertificatePair;binary'
+
+  - id: PKIX-527-02
+    source:
+      locator: '§5.2.7'
+      lines: '3796-3805'
+    kind: uri-example
+    in_source: true
+    fidelity: split
+    input:
+      uri: 'ldap:///cn=exampleCA,dc=example,dc=com?cACertificate;binary'
+      as_printed_lines:
+        - 'Omitting the <host> (e.g., <ldap:///cn=exampleCA,dc=example,dc=com?'
+        - 'cACertificate;binary>) has the effect of relying on whatever a priori'
+      printed_at_lines: '3803-3804'
+    expected:
+      text: 'The LDAP URI [RFC4516] MUST include a <dn> field containing the distinguished name of the entry holding the certificates, MUST include an <attributes> field that lists appropriate attribute descriptions for the attributes that hold the DER encoded certificates or cross-certificate pairs [RFC4523], and SHOULD include a <host>'
+      no_host_effect: 'has the effect of relying on whatever a priori knowledge the client might have to contact an appropriate server.'
+    expected_basis: stated
+    expected_result: 'permitted form without <host>: the client relies on a priori knowledge to reach a server'
+    rule:
+      - 'rfc-5280#R-0353'
+      - 'rfc-5280#R-0354'
+      - 'rfc-5280#R-0355'
+      - 'rfc-5280#N-306'
+    derived:
+      in_source: false
+      unwrap: 'the source breaks the URI at a line end inside <...>; the break and the next line''s margin are layout, not part of the URI'
+      host: '(none)'
+      dn: 'cn=exampleCA,dc=example,dc=com'
+      attributes: 'cACertificate;binary'
+
+  # ===================================================================
+  # Section 6.1.2 / 6.1.3 -- the valid_policy_tree figures
+  # ===================================================================
+
+  - id: PKIX-612-01
+    source:
+      locator: '§6.1.2(a), Figure 3'
+      lines: '4324-4342'
+    kind: policy-tree
+    in_source: true
+    fidelity: figure
+    input: 'initialisation (no certificate processed)'
+    expected:
+      text: 'The initial value of the valid_policy_tree is a single node with valid_policy anyPolicy, an empty qualifier_set, and an expected_policy_set with the single value anyPolicy.  This node is considered to be at depth zero.'
+      tree:
+        - 'depth 0: valid_policy anyPolicy; qualifier_set {}; expected_policy_set {anyPolicy}'
+    expected_basis: stated
+    expected_result: 'one node at depth 0: anyPolicy, {}, {anyPolicy}'
+    rule:
+      - 'rfc-5280#R-0403'
+      - 'rfc-5280#N-350'
+
+  - id: PKIX-613-01
+    source:
+      locator: '§6.1.3(d)(1)(i), Figure 4'
+      lines: '4504-4532'
+    kind: policy-tree
+    in_source: true
+    fidelity: figure
+    input:
+      tree_before:
+        - 'depth i-1: valid_policy Red; qualifier_set {}; expected_policy_set {Gold, White}'
+      certificate_policies: 'Gold, Silver (no qualifiers)'
+    expected:
+      text: 'For example, consider a valid_policy_tree with a node of depth i-1 where the expected_policy_set is {Gold, White}.  Assume the certificate policies Gold and Silver appear in the certificate policies extension of certificate i.  The Gold policy is matched, but the Silver policy is not.  This rule will generate a child node of depth i for the Gold policy.  The result is shown as Figure 4.'
+      tree_after:
+        - 'depth i-1: Red; {}; {Gold, White}'
+        - 'depth i (child of Red): Gold; {}; {Gold}'
+    expected_basis: stated
+    expected_result: 'one child of Red at depth i: Gold, {}, {Gold}; no node for Silver from step (i)'
+    rule:
+      - 'rfc-5280#R-0426'
+      - 'rfc-5280#N-367'
+
+  - id: PKIX-613-02
+    source:
+      locator: '§6.1.3(d)(1)(ii), Figure 5'
+      lines: '4550-4580'
+    kind: policy-tree
+    in_source: true
+    fidelity: figure
+    input:
+      tree_before:
+        - 'depth i-1: valid_policy anyPolicy; qualifier_set {}; expected_policy_set {anyPolicy}'
+      certificate_policies: 'Gold (no qualifier), Silver (qualifier Q-Silver)'
+    expected:
+      text: 'For example, consider a valid_policy_tree with a node of depth i-1 where the valid_policy is anyPolicy. Assume the certificate policies Gold and Silver appear in the certificate policies extension of certificate i.  The Gold policy does not have a qualifier, but the Silver policy has the qualifier Q-Silver.  If Gold and Silver were not matched in (i) above, this rule will generate two child nodes of depth i, one for each policy.  The result is shown as Figure 5.'
+      tree_after:
+        - 'depth i-1: anyPolicy; {}; {anyPolicy}'
+        - 'depth i (child of anyPolicy): Gold; {}; {Gold}'
+        - 'depth i (child of anyPolicy): Silver; {Q-Silver}; {Silver}'
+    expected_basis: stated
+    expected_result: 'two children of the anyPolicy node: Gold, {}, {Gold} and Silver, {Q-Silver}, {Silver}'
+    rule:
+      - 'rfc-5280#R-0427'
+      - 'rfc-5280#N-368'
+
+  - id: PKIX-613-03
+    source:
+      locator: '§6.1.3(d)(2), Figure 6'
+      lines: '4604-4632'
+    kind: policy-tree
+    in_source: true
+    fidelity: figure
+    input:
+      tree_before:
+        - 'depth i-1: valid_policy Red; qualifier_set {}; expected_policy_set {Gold, Silver}'
+      certificate_policies: 'anyPolicy only, no policy qualifiers'
+      state: 'inhibit_anyPolicy > 0, or i < n and certificate i self-issued (the condition of step (2))'
+    expected:
+      text: 'For example, consider a valid_policy_tree with a node of depth i-1 where the expected_policy_set is {Gold, Silver}. Assume anyPolicy appears in the certificate policies extension of certificate i with no policy qualifiers, but Gold and Silver do not appear.  This rule will generate two child nodes of depth i, one for each policy.  The result is shown below as Figure 6.'
+      tree_after:
+        - 'depth i-1: Red; {}; {Gold, Silver}'
+        - 'depth i (child of Red): Gold; {}; {Gold}'
+        - 'depth i (child of Red): Silver; {}; {Silver}'
+    expected_basis: stated
+    expected_result: 'two children of Red: Gold, {}, {Gold} and Silver, {}, {Silver}'
+    rule:
+      - 'rfc-5280#R-0428'
+      - 'rfc-5280#N-369'
+    notes: 'the qualifier_set of each child is AP-Q, the qualifiers of anyPolicy, here empty. The state condition is not stated in the example; it is the condition of step (2).'
+
+  - id: PKIX-613-04
+    source:
+      locator: '§6.1.3(d)(3), Figure 7'
+      lines: '4634-4690'
+    kind: policy-tree
+    in_source: true
+    fidelity: figure
+    input:
+      tree_before:
+        - 'depth i-3: R'
+        - 'depth i-2: A (child of R), B (child of R), Y (child of R)'
+        - 'depth i-1: A1 (child of A), X1 (child of A, marked X), B1 (child of B), X2 (child of Y, marked X)'
+        - 'depth i: A1a (child of A1), B1a, B1b, B1c (children of B1)'
+      labels_basis: 'R, A, B, A1, B1, A1a, B1a, B1b, B1c are labels given here; the figure prints only X and Y'
+    expected:
+      text: 'For example, consider the valid_policy_tree shown in Figure 7 below.  The two nodes at depth i-1 that are marked with an ''X'' have no children, and they are deleted. Applying this rule to the resulting tree will cause the node at depth i-2 that is marked with a ''Y'' to be deleted. In the resulting tree, there are no nodes of depth i-1 or less without children, and this step is complete.'
+      deleted:
+        - 'X1, X2 (first application)'
+        - 'Y (second application)'
+    expected_basis: stated
+    expected_result: 'tree after pruning: R -> A -> A1 -> A1a; R -> B -> B1 -> {B1a, B1b, B1c}'
+    rule:
+      - 'rfc-5280#R-0429'
+      - 'rfc-5280#N-370'
+      - 'rfc-5280#N-375'
+
+  # ===================================================================
+  # Section 6.1.4(g) -- the intersection and union examples
+  # ===================================================================
+
+  - id: PKIX-614-01
+    source:
+      locator: '§6.1.4(g)(1)'
+      lines: '4779-4781'
+    kind: subtree-set-operation
+    in_source: true
+    fidelity: split
+    input:
+      operation: 'permitted_subtrees intersection'
+      a: 'example.com'
+      b: 'foo.example.com'
+    expected:
+      text: 'For example, the intersection of example.com and foo.example.com is foo.example.com.'
+    expected_basis: stated
+    expected_result: 'foo.example.com'
+    rule:
+      - 'rfc-5280#R-0451'
+      - 'rfc-5280#N-383'
+    notes: 'the source does not name the name type; the names read as dNSName subtrees under the §4.2.1.10 DNS rule'
+
+  - id: PKIX-614-02
+    source:
+      locator: '§6.1.4(g)(1)'
+      lines: '4781-4782'
+    kind: subtree-set-operation
+    in_source: true
+    fidelity: split
+    input:
+      operation: 'permitted_subtrees intersection'
+      a: 'example.com'
+      b: 'example.net'
+    expected:
+      text: 'And the intersection of example.com and example.net is the empty set.'
+    expected_basis: stated
+    expected_result: 'the empty set'
+    rule:
+      - 'rfc-5280#R-0451'
+      - 'rfc-5280#N-383'
+
+  - id: PKIX-614-03
+    source:
+      locator: '§6.1.4(g)(2)'
+      lines: '4789-4791'
+    kind: subtree-set-operation
+    in_source: true
+    fidelity: split
+    input:
+      operation: 'excluded_subtrees union'
+      a: 'example.com'
+      b: 'foo.example.com'
+    expected:
+      text: 'For example, the union of the name spaces example.com and foo.example.com is example.com.'
+    expected_basis: stated
+    expected_result: 'example.com'
+    rule:
+      - 'rfc-5280#R-0452'
+      - 'rfc-5280#N-383'
+
+  - id: PKIX-614-04
+    source:
+      locator: '§6.1.4(g)(2)'
+      lines: '4791-4792'
+    kind: subtree-set-operation
+    in_source: true
+    fidelity: split
+    input:
+      operation: 'excluded_subtrees union'
+      a: 'example.com'
+      b: 'example.net'
+    expected:
+      text: 'And the union of example.com and example.net is both name spaces.'
+    expected_basis: stated
+    expected_result: 'both name spaces: {example.com, example.net}'
+    rule:
+      - 'rfc-5280#R-0452'
+      - 'rfc-5280#N-383'
+
+  # ===================================================================
+  # Appendix B -- printed encoding examples
+  # ===================================================================
+
+  - id: PKIX-B-01
+    source:
+      locator: 'Appendix B'
+      lines: '7515-7519'
+    kind: der-encoding
+    in_source: true
+    fidelity: split
+    input: 'BasicConstraints with cA FALSE (no pathLenConstraint)'
+    expected:
+      text: 'For example, a BasicConstraints extension whose cA value is FALSE would omit the cA boolean from the encoded certificate.'
+    expected_basis: stated
+    expected_result: 'the cA BOOLEAN is absent from the encoding'
+    rule:
+      - 'rfc-5280#N-507'
+    derived:
+      in_source: false
+      der: 'extnValue OCTET STRING contents 30 00 (an empty SEQUENCE); encoding 30 03 01 01 00 instead is BER, not DER'
+
+  - id: PKIX-B-02
+    source:
+      locator: 'Appendix B'
+      lines: '7545-7547'
+    kind: der-encoding
+    in_source: true
+    fidelity: split
+    input:
+      field: 'uniformResourceIdentifier in nameConstraints'
+      values:
+        - 'host.example.com'
+        - '.example.com'
+    expected:
+      text: 'For example, when the uniformResourceIdentifier field appears in a nameConstraints extension, it must hold a DNS name (e.g., "host.example.com" or ".example.com") rather than a URI.'
+    expected_basis: stated
+    expected_result: 'both are well-formed nameConstraints URI values; a full URI such as http://host.example.com/ is not'
+    rule:
+      - 'rfc-5280#N-509'
+    notes: 'the URI counter-example is chosen here; the source says only "rather than a URI"'
+
+  # ===================================================================
+  # Constructed: §6.1 general rules
+  # ===================================================================
+
+  - id: PKIX-61-01
+    source:
+      locator: '§6.1'
+      lines: '4071-4072'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA, subject cn=CA1,dc=example,dc=com; ca: true'
+        - 'SI: issuer and subject cn=CA1,dc=example,dc=com (self-issued, issued to change certificate policies); it certifies the CA1 key and is signed with it; ca: true'
+        - 'SI again (the same certificate a second time)'
+        - 'EE: issuer cn=CA1,dc=example,dc=com, subject cn=EE,dc=example,dc=com'
+    rule_text: 'A certificate MUST NOT appear more than once in a prospective certification path.'
+    rule:
+      - 'rfc-5280#R-0380'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      outcome: fails
+      fails_at: 'not a prospective certification path (§6.1); rejected before 6.1.3'
+      note: 'every 6.1.3 and 6.1.4 check would pass: SI carries and is signed with the CA1 key, so the second copy verifies under the working_public_key the first copy set, and as a self-issued certificate it is counted neither for path length nor for name constraints. The rejection comes from R-0380 alone.'
+
+  - id: PKIX-61-02
+    source:
+      locator: '§6.1'
+      lines: '4100-4107'
+    kind: self-issued-determination
+    in_source: false
+    fidelity: constructed
+    input:
+      issuer: 'cn=CA1,dc=example,dc=com (commonName PrintableString)'
+      subject: 'CN=ca1,DC=Example,DC=com (commonName UTF8String, different case)'
+    rule_text: 'A certificate is self-issued if the same DN appears in the subject and issuer fields (the two DNs are the same if they match according to the rules specified in Section 7.1).'
+    rule:
+      - 'rfc-5280#R-0383'
+      - 'rfc-5280#R-0540'
+      - 'rfc-5280#R-0541'
+      - 'rfc-5280#R-0546'
+      - 'rfc-5280#R-0563'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      outcome: 'self-issued: the commonName values match under caseIgnoreMatch after RFC 4518 preparation (case folding), whatever the PrintableString/UTF8String choice, and the domainComponent values match case-insensitively (§7.3)'
+
+  # ===================================================================
+  # Constructed: §6.1.3 basic certificate processing
+  # ===================================================================
+
+  - id: PKIX-613-05
+    source:
+      locator: '§6.1.3(b)'
+      lines: '4461-4467'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; ca: true; nameConstraints critical, permittedSubtrees dNSName example.com'
+        - 'EE: issuer CA1; subjectAltName dNSName www.example.com'
+    rule:
+      - 'rfc-5280#R-0422'
+      - 'rfc-5280#R-0451'
+      - 'rfc-5280#N-156'
+    expected_basis: rule-quoted
+    rule_text: 'Otherwise, verify that the subject name is within one of the permitted_subtrees for X.500 distinguished names, and verify that each of the alternative names in the subjectAltName extension (critical or non-critical) is within one of the permitted_subtrees for that name type.'
+    derived:
+      in_source: false
+      trace:
+        - 'i=1 CA1 6.1.4(g)(1): permitted_subtrees for dNSName = {example.com}'
+        - 'i=2 EE 6.1.3(b): www.example.com is example.com with one label added on the left: within'
+      outcome: succeeds
+
+  - id: PKIX-613-06
+    source:
+      locator: '§6.1.3(b)'
+      lines: '4461-4467'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; ca: true; nameConstraints critical, permittedSubtrees dNSName example.com'
+        - 'EE: issuer CA1; subjectAltName dNSName www.example.net'
+    rule:
+      - 'rfc-5280#R-0422'
+      - 'rfc-5280#R-0432'
+    expected_basis: rule-quoted
+    rule_text: 'verify that each of the alternative names in the subjectAltName extension (critical or non-critical) is within one of the permitted_subtrees for that name type.'
+    derived:
+      in_source: false
+      outcome: fails
+      fails_at: '§6.1.3(b), certificate i=2 (EE): www.example.net is outside example.com'
+
+  - id: PKIX-613-07
+    source:
+      locator: '§6.1.3(c); §4.2.1.10'
+      lines: '4469-4474, 2219-2222'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; ca: true; nameConstraints critical, permittedSubtrees dNSName example.com, excludedSubtrees dNSName bad.example.com'
+        - 'EE: issuer CA1; subjectAltName dNSName www.bad.example.com'
+    rule_text: 'Any name matching a restriction in the excludedSubtrees field is invalid regardless of information appearing in the permittedSubtrees.'
+    rule:
+      - 'rfc-5280#R-0423'
+      - 'rfc-5280#R-0432'
+      - 'rfc-5280#N-151'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      trace:
+        - 'i=2 EE 6.1.3(b): www.bad.example.com is within example.com: passes'
+        - 'i=2 EE 6.1.3(c): www.bad.example.com is within bad.example.com: fails'
+      outcome: fails
+      fails_at: '§6.1.3(c), certificate i=2 (EE): exclusion beats permission'
+
+  - id: PKIX-613-08
+    source:
+      locator: '§6.1.3(b); §4.2.1.10'
+      lines: '4461-4467, 2210-2212'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; ca: true; nameConstraints critical, permittedSubtrees dNSName example.com'
+        - 'EE: issuer CA1; subjectAltName rfc822Name ee@example.org only (no dNSName)'
+    rule_text: 'If no name of the type is in the certificate, the certificate is acceptable.'
+    rule:
+      - 'rfc-5280#R-0422'
+      - 'rfc-5280#N-149'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      outcome: succeeds
+      note: 'the permitted_subtrees for rfc822Name are still the initial every-name value, so ee@example.org passes; the DNS constraint has nothing to apply to'
+
+  - id: PKIX-613-09
+    source:
+      locator: '§6.1.3(b); §7.1'
+      lines: '4461-4467, 5374-5384'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; ca: true; nameConstraints critical, permittedSubtrees directoryName dc=example,dc=com'
+        - 'EE: issuer CA1; subject cn=EE,dc=example,dc=net'
+    rule:
+      - 'rfc-5280#R-0422'
+      - 'rfc-5280#R-0167'
+      - 'rfc-5280#R-0178'
+      - 'rfc-5280#R-0550'
+    expected_basis: rule-quoted
+    rule_text: 'A distinguished name DN1 is within the subtree defined by the distinguished name DN2 if DN1 contains at least as many RDNs as DN2, and DN1 and DN2 are a match when trailing RDNs in DN1 are ignored.'
+    derived:
+      in_source: false
+      outcome: fails
+      fails_at: '§6.1.3(b), certificate i=2 (EE): the first two RDNs (dc=net, dc=example in encoded order) do not match dc=com, dc=example'
+      note: 'the DNs are written in RFC 4514 order (most specific first); "trailing RDNs" in §7.1 are the last in encoded order, i.e. the leftmost here'
+
+  - id: PKIX-613-10
+    source:
+      locator: '§6.1.3(b), (c); §4.2.1.10'
+      lines: '4461-4474, 2214-2215'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; subject cn=CA1,dc=other,dc=com; ca: true; nameConstraints critical, permittedSubtrees directoryName dc=example,dc=com'
+        - 'SI: issuer and subject cn=CA1,dc=other,dc=com (self-issued key rollover); ca: true'
+        - 'EE: issuer cn=CA1,dc=other,dc=com; subject cn=EE,dc=example,dc=com'
+    rule_text: 'Name constraints are not applied to self-issued certificates (unless the certificate is the final certificate in the path).'
+    rule:
+      - 'rfc-5280#R-0422'
+      - 'rfc-5280#R-0423'
+      - 'rfc-5280#R-0384'
+      - 'rfc-5280#N-150'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      trace:
+        - 'i=1 CA1 6.1.4(g): permitted directoryName = {dc=example,dc=com}'
+        - 'i=2 SI is self-issued and not final: 6.1.3(b) and (c) skipped, although its subject is outside the permitted subtree'
+        - 'i=3 EE 6.1.3(b): cn=EE,dc=example,dc=com is within dc=example,dc=com'
+      outcome: succeeds
+
+  - id: PKIX-613-11
+    source:
+      locator: '§6.1.3(b); §4.2.1.10'
+      lines: '4461-4467, 2214-2215'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; subject cn=CA1,dc=other,dc=com; ca: true; nameConstraints critical, permittedSubtrees directoryName dc=example,dc=com'
+        - 'SI: issuer and subject cn=CA1,dc=other,dc=com (self-issued); the target'
+    rule_text: 'If certificate i is self-issued and it is not the final certificate in the path, skip this step for certificate i.'
+    rule:
+      - 'rfc-5280#R-0422'
+      - 'rfc-5280#N-150'
+    expected_basis: rule-quoted
+    source_issue: '§6.1 (lines 4105-4107) says self-issued certificates "are not counted when evaluating path length or name constraints" with no exception; §4.2.1.10 and §6.1.3(b), (c) make the final certificate an exception. This vector follows the step text.'
+    derived:
+      in_source: false
+      outcome: fails
+      fails_at: '§6.1.3(b), certificate i=2 (SI): self-issued but final, so the check runs; cn=CA1,dc=other,dc=com is outside dc=example,dc=com'
+
+  - id: PKIX-613-12
+    source:
+      locator: '§6.1.3(e), (f); §6.1.2(d)'
+      lines: '4655-4659, 4358-4373'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      inputs:
+        initial-explicit-policy: 'set'
+      path:
+        - 'CA1: issuer TA; ca: true; certificatePolicies anyPolicy'
+        - 'EE: issuer CA1; no certificatePolicies'
+    rule:
+      - 'rfc-5280#R-0407'
+      - 'rfc-5280#R-0430'
+      - 'rfc-5280#R-0431'
+      - 'rfc-5280#R-0432'
+    expected_basis: rule-quoted
+    rule_text: 'Verify that either explicit_policy is greater than 0 or the valid_policy_tree is not equal to NULL;'
+    derived:
+      in_source: false
+      trace:
+        - 'n = 2; explicit_policy = 0 (initial-explicit-policy set); inhibit_anyPolicy = 3'
+        - 'i=1 CA1 6.1.3(d)(2): anyPolicy processed, child anyPolicy at depth 1; (f): tree not NULL, passes; 6.1.4(h)(1): explicit_policy is 0, unchanged'
+        - 'i=2 EE 6.1.3(e): no certificatePolicies, tree = NULL; (f): explicit_policy 0 and tree NULL'
+      outcome: fails
+      fails_at: '§6.1.3(f), certificate i=2 (EE)'
+
+  - id: PKIX-613-13
+    source:
+      locator: '§6.1.3(e), (f); §6.1.5'
+      lines: '4655-4659, 4960-4962'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; ca: true; certificatePolicies anyPolicy'
+        - 'EE: issuer CA1; no certificatePolicies'
+    rule:
+      - 'rfc-5280#R-0407'
+      - 'rfc-5280#R-0431'
+      - 'rfc-5280#R-0470'
+      - 'rfc-5280#R-0488'
+    expected_basis: rule-quoted
+    rule_text: 'If either (1) the value of explicit_policy variable is greater than zero or (2) the valid_policy_tree is not NULL, then path processing has succeeded.'
+    derived:
+      in_source: false
+      trace:
+        - 'n = 2; explicit_policy = 3'
+        - 'i=1 CA1 6.1.4(h)(1): 3 -> 2'
+        - 'i=2 EE 6.1.3(e): tree NULL; (f): explicit_policy 2 > 0, passes'
+        - '6.1.5(a): 2 -> 1; 1 > 0'
+      outcome: 'succeeds, with valid_policy_tree NULL'
+
+  - id: PKIX-613-14
+    source:
+      locator: '§6.1.3(a)(4)'
+      lines: '4459'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA, subject cn=CA1,dc=example,dc=com; ca: true'
+        - 'EE: issuer cn=CA2,dc=example,dc=com (not CA1), signed with the CA1 key'
+    rule_text: '(4)  The certificate issuer name is the working_issuer_name.'
+    rule:
+      - 'rfc-5280#R-0421'
+      - 'rfc-5280#R-0432'
+      - 'rfc-5280#R-0445'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      outcome: fails
+      fails_at: '§6.1.3(a)(4), certificate i=2 (EE): working_issuer_name is cn=CA1,dc=example,dc=com (6.1.4(c))'
+
+  - id: PKIX-613-15
+    source:
+      locator: '§6.1.3(a)(1)'
+      lines: '4448-4450'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      trust_anchor: 'C.1 (C.1-rsa-self-signed-ca.hex), as trust anchor information'
+      path:
+        - 'C.2 with one bit of its signatureValue flipped (any bit of octets 501-628 of C.2-rsa-end-entity.hex decoded)'
+      validation_time: '2005-01-01T00:00:00Z'
+    rule_text: '(1)  The signature on the certificate can be verified using working_public_key_algorithm, the working_public_key, and the working_public_key_parameters.'
+    rule:
+      - 'rfc-5280#R-0418'
+      - 'rfc-5280#R-0432'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      outcome: fails
+      fails_at: '§6.1.3(a)(1), certificate i=1'
+      note: 'a negative control on the PKIX-C2-01 fixture: the unmodified C.2 verifies'
+
+  # ===================================================================
+  # Constructed: §6.1.4 preparation for certificate i+1
+  # ===================================================================
+
+  - id: PKIX-614-05
+    source:
+      locator: '§6.1.4(g)(1)'
+      lines: '4774-4782'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; ca: true; nameConstraints critical, permittedSubtrees dNSName example.com'
+        - 'CA2: issuer CA1; ca: true; nameConstraints critical, permittedSubtrees dNSName foo.example.com'
+        - 'EE: issuer CA2; subjectAltName dNSName www.foo.example.com'
+    rule:
+      - 'rfc-5280#R-0451'
+      - 'rfc-5280#R-0422'
+    expected_basis: rule-quoted
+    rule_text: 'If permittedSubtrees is present in the certificate, set the permitted_subtrees state variable to the intersection of its previous value and the value indicated in the extension field.'
+    derived:
+      in_source: false
+      trace:
+        - 'i=1 CA1 6.1.4(g)(1): permitted dNSName = {example.com}'
+        - 'i=2 CA2 6.1.3(b): CA2 has no dNSName, acceptable; 6.1.4(g)(1): {example.com} intersect {foo.example.com} = {foo.example.com} (PKIX-614-01)'
+        - 'i=3 EE 6.1.3(b): www.foo.example.com within foo.example.com'
+      outcome: succeeds
+
+  - id: PKIX-614-06
+    source:
+      locator: '§6.1.4(g)(1)'
+      lines: '4774-4782'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; ca: true; nameConstraints critical, permittedSubtrees dNSName example.com'
+        - 'CA2: issuer CA1; ca: true; nameConstraints critical, permittedSubtrees dNSName foo.example.com'
+        - 'EE: issuer CA2; subjectAltName dNSName bar.example.com'
+    rule:
+      - 'rfc-5280#R-0451'
+      - 'rfc-5280#R-0422'
+      - 'rfc-5280#R-0432'
+    expected_basis: rule-quoted
+    rule_text: 'If permittedSubtrees is present in the certificate, set the permitted_subtrees state variable to the intersection of its previous value and the value indicated in the extension field.'
+    derived:
+      in_source: false
+      outcome: fails
+      fails_at: '§6.1.3(b), certificate i=3 (EE): bar.example.com is inside CA1''s example.com but outside the intersection foo.example.com'
+
+  - id: PKIX-614-07
+    source:
+      locator: '§6.1.4(g)(1)'
+      lines: '4774-4782'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; ca: true; nameConstraints critical, permittedSubtrees dNSName example.com'
+        - 'CA2: issuer CA1; ca: true; nameConstraints critical, permittedSubtrees dNSName example.net'
+        - 'EE: issuer CA2; subjectAltName dNSName www.example.net'
+    rule:
+      - 'rfc-5280#R-0451'
+      - 'rfc-5280#R-0422'
+      - 'rfc-5280#R-0432'
+    expected_basis: rule-quoted
+    rule_text: 'And the intersection of example.com and example.net is the empty set.'
+    derived:
+      in_source: false
+      trace:
+        - 'i=2 CA2 6.1.4(g)(1): {example.com} intersect {example.net} = empty set (PKIX-614-02)'
+        - 'i=3 EE 6.1.3(b): no dNSName is within the empty set'
+      outcome: fails
+      fails_at: '§6.1.3(b), certificate i=3 (EE), although CA2 itself permits example.net'
+      note: 'an EE with no dNSName at all would pass the DNS check (PKIX-42110-13): an empty permitted set excludes every name of the type, it does not exclude certificates without one'
+
+  - id: PKIX-614-08
+    source:
+      locator: '§6.1.4(g)(2)'
+      lines: '4784-4792'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; ca: true; nameConstraints critical, excludedSubtrees dNSName foo.example.com'
+        - 'CA2: issuer CA1; ca: true; nameConstraints critical, excludedSubtrees dNSName bar.example.com'
+        - 'EE: issuer CA2; subjectAltName dNSName www.foo.example.com'
+    rule:
+      - 'rfc-5280#R-0452'
+      - 'rfc-5280#R-0423'
+      - 'rfc-5280#R-0432'
+    expected_basis: rule-quoted
+    rule_text: 'If excludedSubtrees is present in the certificate, set the excluded_subtrees state variable to the union of its previous value and the value indicated in the extension field.'
+    derived:
+      in_source: false
+      trace:
+        - 'i=2 CA2 6.1.4(g)(2): excluded dNSName = {foo.example.com, bar.example.com}'
+        - 'i=3 EE 6.1.3(c): www.foo.example.com within foo.example.com'
+      outcome: fails
+      fails_at: '§6.1.3(c), certificate i=3 (EE): CA2''s exclusions add to CA1''s, they do not replace them'
+
+  - id: PKIX-614-09
+    source:
+      locator: '§6.1.4(l), (m)'
+      lines: '4836-4842, 2168-2170'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; ca: true; basicConstraints critical cA TRUE pathLenConstraint 0'
+        - 'CA2: issuer CA1; ca: true'
+        - 'EE: issuer CA2'
+    rule_text: 'A pathLenConstraint of zero indicates that no non-self-issued intermediate CA certificates may follow in a valid certification path.'
+    rule_text_note: 'line 2168 hyphenates "non-" at the line end; rejoined as non-self-issued'
+    rule:
+      - 'rfc-5280#R-0414'
+      - 'rfc-5280#R-0463'
+      - 'rfc-5280#R-0464'
+      - 'rfc-5280#R-0467'
+      - 'rfc-5280#N-145'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      trace:
+        - 'n = 3; max_path_length = 3'
+        - 'i=1 CA1 6.1.4(l): 3 > 0, 3 -> 2; (m): 0 < 2, max_path_length = 0'
+        - 'i=2 CA2 6.1.4(l): 0 > 0 is false'
+      outcome: fails
+      fails_at: '§6.1.4(l), certificate i=2 (CA2)'
+
+  - id: PKIX-614-10
+    source:
+      locator: '§6.1.4(l), (m)'
+      lines: '4836-4842, 2164-2166'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; ca: true; basicConstraints critical cA TRUE pathLenConstraint 0'
+        - 'EE: issuer CA1'
+    rule_text: '(Note: The last certificate in the certification path is not an intermediate certificate, and is not included in this limit.'
+    rule:
+      - 'rfc-5280#R-0463'
+      - 'rfc-5280#R-0464'
+      - 'rfc-5280#N-145'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      trace:
+        - 'n = 2; max_path_length = 2'
+        - 'i=1 CA1 6.1.4(l): 2 -> 1; (m): max_path_length = 0'
+        - 'i=2 EE: wrap-up; 6.1.4 is not run for the final certificate'
+      outcome: succeeds
+
+  - id: PKIX-614-11
+    source:
+      locator: '§6.1.4(l); §6.1'
+      lines: '4836-4838, 4105-4107'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; subject cn=CA1,dc=example,dc=com; ca: true; basicConstraints critical cA TRUE pathLenConstraint 0'
+        - 'SI: issuer and subject cn=CA1,dc=example,dc=com (self-issued key rollover); ca: true; no pathLenConstraint'
+        - 'EE: issuer cn=CA1,dc=example,dc=com'
+    rule_text: 'These self-issued certificates are not counted when evaluating path length or name constraints.'
+    rule:
+      - 'rfc-5280#R-0384'
+      - 'rfc-5280#R-0414'
+      - 'rfc-5280#R-0463'
+      - 'rfc-5280#R-0464'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      trace:
+        - 'n = 3; max_path_length = 3'
+        - 'i=1 CA1 6.1.4(l): 3 -> 2; (m): max_path_length = 0'
+        - 'i=2 SI 6.1.4(l): self-issued, so neither checked nor decremented; (m): no pathLenConstraint'
+        - 'i=3 EE: wrap-up'
+      outcome: succeeds
+      note: 'the same path with SI replaced by a non-self-issued CA fails at 6.1.4(l) for it (PKIX-614-09)'
+
+  - id: PKIX-614-12
+    source:
+      locator: '§6.1.4(l), (m)'
+      lines: '4836-4842, 2162-2164'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; ca: true; basicConstraints critical cA TRUE pathLenConstraint 1'
+        - 'CA2: issuer CA1; ca: true'
+        - 'CA3: issuer CA2; ca: true'
+        - 'EE: issuer CA3'
+    rule:
+      - 'rfc-5280#R-0463'
+      - 'rfc-5280#R-0464'
+      - 'rfc-5280#R-0467'
+    expected_basis: rule-quoted
+    rule_text: 'In this case, it gives the maximum number of non-self-issued intermediate certificates that may follow this certificate in a valid certification path.'
+    derived:
+      in_source: false
+      trace:
+        - 'n = 4; max_path_length = 4'
+        - 'i=1 CA1: 4 -> 3; (m): 1 < 3, so 1'
+        - 'i=2 CA2: 1 > 0, 1 -> 0'
+        - 'i=3 CA3: 0 > 0 is false'
+      outcome: fails
+      fails_at: '§6.1.4(l), certificate i=3 (CA3): two intermediates follow CA1, the limit is one'
+
+  - id: PKIX-614-13
+    source:
+      locator: '§4.2.1.9; §6.1.4(l)'
+      lines: '2166-2168, 4836-4838'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; ca: true; basicConstraints critical cA TRUE pathLenConstraint 0'
+        - 'CA2: issuer CA1; ca: true (the target is a CA certificate)'
+    rule_text: 'Usually, the last certificate is an end entity certificate, but it can be a CA certificate.)'
+    rule:
+      - 'rfc-5280#R-0463'
+      - 'rfc-5280#N-145'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      outcome: succeeds
+      note: 'CA2 is certificate n; 6.1.4 does not run for it, so pathLenConstraint 0 in CA1 does not reject it'
+
+  - id: PKIX-614-14
+    source:
+      locator: '§6.1.4(k)'
+      lines: '4827-4829'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; version 3; no basicConstraints; keyUsage absent'
+        - 'EE: issuer CA1'
+    rule_text: 'If certificate i is a version 3 certificate, verify that the basicConstraints extension is present and that cA is set to TRUE.'
+    rule:
+      - 'rfc-5280#R-0461'
+      - 'rfc-5280#R-0467'
+      - 'rfc-5280#R-0155'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      outcome: fails
+      fails_at: '§6.1.4(k), certificate i=1 (CA1): basicConstraints absent'
+
+  - id: PKIX-614-15
+    source:
+      locator: '§6.1.4(k); Appendix B'
+      lines: '4827-4829, 7515-7519'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; version 3; basicConstraints critical, cA FALSE (extnValue 30 00, PKIX-B-01); keyUsage critical digitalSignature'
+        - 'EE: issuer CA1'
+    rule_text: 'If certificate i is a version 3 certificate, verify that the basicConstraints extension is present and that cA is set to TRUE.'
+    rule:
+      - 'rfc-5280#R-0461'
+      - 'rfc-5280#R-0467'
+      - 'rfc-5280#R-0155'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      outcome: fails
+      fails_at: '§6.1.4(k), certificate i=1 (CA1): cA is FALSE (absent from the encoding, i.e. the DEFAULT)'
+
+  - id: PKIX-614-16
+    source:
+      locator: '§6.1.4(k)'
+      lines: '4829-4832'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; version 1 (no extensions)'
+        - 'EE: issuer CA1'
+      inputs:
+        out_of_band_ca_information: 'none'
+    rule_text: '(If certificate i is a version 1 or version 2 certificate, then the application MUST either verify that certificate i is a CA certificate through out-of-band means or reject the certificate.'
+    rule:
+      - 'rfc-5280#R-0462'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      outcome: fails
+      fails_at: '§6.1.4(k), certificate i=1 (CA1): version 1 and not verified as a CA out of band'
+      note: 'with out-of-band confirmation that CA1 is a CA, the same path passes (k)'
+
+  - id: PKIX-614-17
+    source:
+      locator: '§6.1.4(n)'
+      lines: '4844-4845'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; basicConstraints critical cA TRUE; keyUsage critical digitalSignature, cRLSign (keyCertSign not set)'
+        - 'EE: issuer CA1'
+    rule_text: '(n)  If a key usage extension is present, verify that the keyCertSign bit is set.'
+    rule:
+      - 'rfc-5280#R-0465'
+      - 'rfc-5280#R-0467'
+      - 'rfc-5280#R-0100'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      outcome: fails
+      fails_at: '§6.1.4(n), certificate i=1 (CA1)'
+
+  - id: PKIX-614-18
+    source:
+      locator: '§6.1.4(n); §6.1'
+      lines: '4844-4845, 4012-4021'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; basicConstraints critical cA TRUE; keyUsage absent'
+        - 'EE: issuer CA1'
+    rule_text: '(n)  If a key usage extension is present, verify that the keyCertSign bit is set.'
+    rule:
+      - 'rfc-5280#R-0465'
+      - 'rfc-5280#R-0097'
+      - 'rfc-5280#R-0373'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      outcome: succeeds
+      note: 'CA1 breaks R-0097 (conforming CAs MUST include keyUsage in a certificate whose key verifies certificate signatures), but §6.1 checks keyCertSign only when keyUsage is present, and R-0373 recommends against adding profile-conformance checks to path validation'
+
+  - id: PKIX-614-19
+    source:
+      locator: '§6.1.4(o)'
+      lines: '4847-4850'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; ca: true; plus an extension with an OID the implementation does not recognise, marked critical'
+        - 'EE: issuer CA1'
+    rule_text: '(o)  Recognize and process any other critical extension present in the certificate.'
+    rule:
+      - 'rfc-5280#R-0466'
+      - 'rfc-5280#R-0467'
+      - 'rfc-5280#R-0372'
+      - 'rfc-5280#R-0071'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      outcome: fails
+      fails_at: '§6.1.4(o), certificate i=1 (CA1)'
+
+  - id: PKIX-614-20
+    source:
+      locator: '§6.1.4(o); §4.2'
+      lines: '4847-4850, 1428-1429'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; ca: true; plus an extension with an OID the implementation does not recognise, non-critical'
+        - 'EE: issuer CA1'
+    rule_text: 'A non-critical extension MAY be ignored if it is not recognized,'
+    rule:
+      - 'rfc-5280#R-0072'
+      - 'rfc-5280#R-0466'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      outcome: succeeds
+
+  - id: PKIX-614-21
+    source:
+      locator: '§6.1.4(a)'
+      lines: '4697-4699'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; ca: true; certificatePolicies P1; policyMappings issuerDomainPolicy anyPolicy -> subjectDomainPolicy P1'
+        - 'EE: issuer CA1; certificatePolicies P1'
+    rule_text: '(a)  If a policy mappings extension is present, verify that the special value anyPolicy does not appear as an issuerDomainPolicy or a subjectDomainPolicy.'
+    rule:
+      - 'rfc-5280#R-0435'
+      - 'rfc-5280#R-0467'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      outcome: fails
+      fails_at: '§6.1.4(a), certificate i=1 (CA1)'
+
+  - id: PKIX-614-22
+    source:
+      locator: '§6.1.4(i)(1); §6.1.2(d)'
+      lines: '4804-4810, 4358-4373'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; ca: true; certificatePolicies P1; policyConstraints critical requireExplicitPolicy 0'
+        - 'CA2: issuer CA1; ca: true; no certificatePolicies'
+        - 'EE: issuer CA2; certificatePolicies P1'
+    rule_text: '(1)  If requireExplicitPolicy is present and is less than explicit_policy, set explicit_policy to the value of requireExplicitPolicy.'
+    rule:
+      - 'rfc-5280#R-0407'
+      - 'rfc-5280#R-0458'
+      - 'rfc-5280#R-0430'
+      - 'rfc-5280#R-0431'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      trace:
+        - 'n = 3; explicit_policy = 4'
+        - 'i=1 CA1 6.1.4(h)(1): 4 -> 3; (i)(1): 0 < 3, so explicit_policy = 0'
+        - 'i=2 CA2 6.1.3(e): no certificatePolicies, tree = NULL; (f): explicit_policy 0 and tree NULL'
+      outcome: fails
+      fails_at: '§6.1.3(f), certificate i=2 (CA2): an explicit policy is required from CA2 on, and CA2 has none'
+      note: 'a later certificate cannot lift the requirement (R-0407: "Once set, this variable may be decreased, but may not be increased.")'
+
+  - id: PKIX-614-23
+    source:
+      locator: '§6.1.4(b)(1)'
+      lines: '4711-4715, 4917-4925'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      inputs:
+        user-initial-policy-set: '{P2}'
+        initial-explicit-policy: 'set'
+      path:
+        - 'CA1: issuer TA; ca: true; certificatePolicies P1; policyMappings P1 -> P2'
+        - 'EE: issuer CA1; certificatePolicies P2'
+    rule:
+      - 'rfc-5280#R-0437'
+      - 'rfc-5280#R-0426'
+      - 'rfc-5280#R-0480'
+      - 'rfc-5280#R-0488'
+    expected_basis: rule-quoted
+    rule_text: 'If the policy_mapping variable is greater than 0, for each node in the valid_policy_tree of depth i where ID-P is the valid_policy, set expected_policy_set to the set of subjectDomainPolicy values that are specified as equivalent to ID-P by the policy mappings extension.'
+    derived:
+      in_source: false
+      trace:
+        - 'n = 2; explicit_policy = 0; policy_mapping = 3'
+        - 'i=1 CA1 6.1.3(d)(1)(ii): node P1 at depth 1 under anyPolicy; 6.1.4(b)(1): policy_mapping 3 > 0, node P1 expected_policy_set = {P2}'
+        - 'i=2 EE 6.1.3(d)(1)(i): P2 is in the expected_policy_set of node P1, child P2 at depth 2'
+        - '6.1.5(g)(iii): valid_policy_node_set = {P1 at depth 1}; P1 is not in {P2} and not anyPolicy, so P1 and its child are deleted; the tree becomes NULL'
+        - 'explicit_policy 0 and tree NULL'
+      outcome: fails
+      fails_at: '§6.1.5, success condition not met (tree NULL, explicit_policy 0)'
+      companion: 'the same path with user-initial-policy-set {P1} succeeds: P1 is in the set, the node is kept, and the returned tree is anyPolicy -> P1 -> P2'
+      note: '§6.1.5(g)(iii) compares the user-initial-policy-set with the valid_policy of the nodes directly below anyPolicy, i.e. the policy as the first asserting certificate names it (here P1, before mapping). §6.1.1(c) defines the set as the policies acceptable to the certificate user, so the user names policies in the trust anchor''s domain, and the subject-domain P2 is not acceptable on its own. Derived from the step text; the source states no example of it.'
+
+  # ===================================================================
+  # Constructed: §6.1.5 wrap-up
+  # ===================================================================
+
+  - id: PKIX-615-01
+    source:
+      locator: '§6.1.5(f); §6.1'
+      lines: '4897-4900, 4007-4009'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      path:
+        - 'CA1: issuer TA; ca: true'
+        - 'EE: issuer CA1; plus an extension the implementation does not recognise, marked critical'
+    rule_text: 'Note that clients MUST reject the certificate if it contains an unsupported critical extension.'
+    rule:
+      - 'rfc-5280#R-0476'
+      - 'rfc-5280#R-0372'
+      - 'rfc-5280#R-0071'
+    expected_basis: rule-quoted
+    source_issue: '§6.1.5 states no failure exit: its only outcome sentence is the success condition (lines 4959-4961). The rejection of the target for an unrecognised critical extension comes from §6.1 (R-0372) and §4.2 (R-0071), not from a 6.1.5 step.'
+    derived:
+      in_source: false
+      outcome: fails
+      fails_at: '§6.1.5(f), certificate n (EE), by R-0372'
+
+  - id: PKIX-615-02
+    source:
+      locator: '§6.1.5(g)'
+      lines: '4917-4925'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      inputs:
+        user-initial-policy-set: '{P1}'
+        initial-explicit-policy: 'set'
+      path:
+        - 'CA1: issuer TA; ca: true; certificatePolicies P2'
+        - 'EE: issuer CA1; certificatePolicies P2'
+    rule:
+      - 'rfc-5280#R-0480'
+      - 'rfc-5280#R-0481'
+      - 'rfc-5280#R-0482'
+      - 'rfc-5280#R-0487'
+      - 'rfc-5280#R-0488'
+    rule_text_note: 'lines 4919-4920 hyphenate "user-initial-" at the line end; rejoined as user-initial-policy-set'
+    expected_basis: rule-quoted
+    rule_text: 'If the valid_policy of any node in the valid_policy_node_set is not in the user-initial-policy-set and is not anyPolicy, delete this node and all its children.'
+    derived:
+      in_source: false
+      trace:
+        - 'n = 2; explicit_policy = 0'
+        - 'i=1 6.1.3(d)(1)(ii): P2 under anyPolicy; i=2 (d)(1)(i): P2 under P2; tree depth 2'
+        - '6.1.5(g)(iii)2: P2 (parent anyPolicy) is not in {P1}: deleted with its child; 4: root pruned; tree NULL'
+      outcome: fails
+
+  - id: PKIX-615-03
+    source:
+      locator: '§6.1.5(g); §6.1.2(d)'
+      lines: '4902-4962'
+    kind: path-validation
+    in_source: false
+    fidelity: constructed
+    scenario:
+      inputs:
+        user-initial-policy-set: '{P1}'
+      path:
+        - 'CA1: issuer TA; ca: true; certificatePolicies P2'
+        - 'EE: issuer CA1; certificatePolicies P2'
+    rule:
+      - 'rfc-5280#R-0482'
+      - 'rfc-5280#R-0488'
+      - 'rfc-5280#R-0489'
+    expected_basis: rule-quoted
+    rule_text: 'If either (1) the value of explicit_policy variable is greater than zero or (2) the valid_policy_tree is not NULL, then path processing has succeeded.'
+    derived:
+      in_source: false
+      trace:
+        - 'n = 2; explicit_policy = 3; i=1 6.1.4(h)(1): 3 -> 2; 6.1.5(a): 2 -> 1'
+        - '6.1.5(g) leaves the tree NULL as in PKIX-615-02'
+      outcome: 'succeeds with valid_policy_tree NULL: no policy in the user-initial-policy-set is valid, and the caller must read the returned tree (§6.1.6) to know that'
+
+  # ===================================================================
+  # Constructed: §5.2 and §6.3.3 -- CRL use, on the C.4 fixture
+  # ===================================================================
+
+  - id: PKIX-52-01
+    source:
+      locator: '§5.2'
+      lines: '3324-3326'
+    kind: crl-use
+    in_source: false
+    fidelity: constructed
+    scenario:
+      crl: 'C.4 with one more crlExtension: an OID the application cannot process, marked critical (and re-signed)'
+      certificate: 'C.2'
+    rule_text: 'If a CRL contains a critical extension that the application cannot process, then the application MUST NOT use that CRL to determine the status of certificates.'
+    rule:
+      - 'rfc-5280#R-0288'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      outcome: 'the CRL is not used; the status of C.2 stays undetermined by this CRL (not "unrevoked")'
+
+  - id: PKIX-633-01
+    source:
+      locator: '§6.3.3(f)'
+      lines: '5242-5247'
+    kind: crl-use
+    in_source: false
+    fidelity: constructed
+    scenario:
+      trust_anchor: 'C.1 key'
+      crl_issuer_certificate: 'C.1 with keyUsage keyCertSign only (cRLSign not set), re-signed'
+      crl: 'C.4'
+      certificate: 'C.2'
+    rule_text: 'If a key usage extension is present in the CRL issuer''s certificate, verify that the cRLSign bit is set.'
+    rule:
+      - 'rfc-5280#R-0527'
+      - 'rfc-5280#R-0100'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      outcome: 'C.4 cannot be used: its issuer''s key is not certified for CRL signing'
+
+  - id: PKIX-633-02
+    source:
+      locator: '§6.3.3(i), (j)'
+      lines: '5255-5283'
+    kind: crl-use
+    in_source: false
+    fidelity: constructed
+    scenario:
+      crl: 'C.4 with the cRLReason entry extension removed from the serial 18 entry (re-signed)'
+      certificate: 'C.2'
+    rule_text: '(2)  If the reason code CRL entry extension is not present, set the cert_status variable to the value unspecified.'
+    rule:
+      - 'rfc-5280#R-0532'
+      - 'rfc-5280#R-0533'
+      - 'rfc-5280#R-0536'
+    expected_basis: rule-quoted
+    derived:
+      in_source: false
+      outcome: 'cert_status = unspecified; the certificate is revoked'
+
+  - id: PKIX-633-03
+    source:
+      locator: '§6.3.3(j), (k)'
+      lines: '5255-5286, 3558-3561'
+    kind: crl-use
+    in_source: false
+    fidelity: constructed
+    scenario:
+      complete_crl: 'C.4 (serial 18, keyCompromise)'
+      delta_crl: 'a delta CRL for C.4, thisUpdate 2005-03-16T12:00:00Z (after the C.2 notAfter 2005-03-15T11:48:21Z), listing serial 18 with reasonCode removeFromCRL'
+      inputs:
+        use-deltas: 'set'
+      certificate: 'C.2'
+    rule:
+      - 'rfc-5280#R-0530'
+      - 'rfc-5280#R-0531'
+      - 'rfc-5280#R-0533'
+      - 'rfc-5280#R-0534'
+    expected_basis: rule-quoted
+    rule_text: '(k)  If (cert_status is removeFromCRL), then set cert_status to UNREVOKED.'
+    derived:
+      in_source: false
+      trace:
+        - '(i): serial 18 found on the delta CRL with reasonCode removeFromCRL; cert_status = removeFromCRL'
+        - '(j): cert_status is not UNREVOKED, so the complete CRL is not searched'
+        - '(k): cert_status = UNREVOKED'
+      outcome: 'UNREVOKED: the delta entry takes precedence over the complete CRL entry'
+      note: 'the listing is one §5.2.4 permits: "A CRL issuer MAY optionally list a certificate on a delta CRL with reason code removeFromCRL if the notAfter time specified in the certificate precedes the thisUpdate time specified in the delta CRL" (lines 3558-3561). The vector tests only the §6.3.3 status computation; validating C.2 at that time fails anyway at §6.1.3(a)(2).'
