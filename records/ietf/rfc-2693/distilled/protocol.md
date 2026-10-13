@@ -48,8 +48,8 @@ key, the final comparison and the reply, none of which exist in the source.
 | key | what it holds |
 |---|---|
 | `roles` | 18 roles, each with locators and verbatim quotes; `kind` is party, local-component, threat or design-option |
-| `messages_referenced`, `message_notes` | the 31 message names used, for reconciliation with `messages.yaml`; names with no source counterpart are flagged |
-| `flows` | 14 flows, 83 steps; each step has `from`, `to`, `message`, `action`, `basis`, `locator`, `quotes`, `on_error`, `on_error_basis`, and optionally `invokes`, `message_alternatives`, `on_error_quotes`, `note` |
+| `messages_referenced`, `message_notes` | the 38 message names used, each a `messages.yaml` identifier; names with no source counterpart are flagged |
+| `flows` | 14 flows, 85 steps; each step has `from`, `to`, `message`, `action`, `basis`, `locator`, `quotes`, `on_error`, `on_error_basis`, and optionally `invokes`, `message_alternatives`, `on_error_quotes`, `note` |
 | `algorithms` | 11 local algorithms, 55 steps, with `inputs`, `outputs`, `failure_conditions` and, where the source has them, `source_examples` |
 | `design_options` | 9 options the source discusses and does not adopt; none defines a protocol |
 | `error_paths` | 40 error paths, each with trigger, detecting role, outcome, basis and quote |
@@ -58,14 +58,14 @@ key, the final comparison and the reply, none of which exist in the source.
 
 - **Basis.** `basis: stated` means the step is literally at its locator.
   `inferred` means it is the reading needed to make the stated text
-  executable. 22 of the 83 flow steps and 11 of the 55 algorithm steps are
+  executable. 23 of the 85 flow steps and 11 of the 55 algorithm steps are
   inferred.
 - **Errors.** `on_error_basis` adds `unspecified` for checks whose consequence
-  the source never gives. 36 of the 83 flow steps are unspecified, which is the
+  the source never gives. 38 of the 85 flow steps are unspecified, which is the
   source's gap, not the extraction's.
 - **Quotes.** Every `quotes` item is one contiguous span of
   `.cache/rfc-2693.txt`, with each run of whitespace collapsed to a single
-  space, never crossing a page break, never spliced. All 383 were checked
+  space, never crossing a page break, never spliced. All 385 were checked
   mechanically against the source.
 
 ## Roles
@@ -120,19 +120,18 @@ sequenceDiagram
   K->>V: access-request signed with the subject key (inferred, not defined in the source)
   P->>V: certificate-sequence in reduction order (6.3.4)
   Note over P,V: the prover finds and orders the reductions, the verifier does not search
-  V->>V: read each online-test-condition and the issuer it names
+  V->>V: read each online-test-specification and the issuer it names
   C-->>V: timed-crl, revalidation or one-time-revalidation
   alt no valid CRL or revalidation
     V--xV: certificate cannot be processed (5.2)
   end
-  V->>T: stage 1, verify signatures and translate
-  T-->>V: five-tuples and four-tuples, dates VIntersected with on-line results
+  T-->>V: stage 1, signatures verified and certificates translated into 5-tuples and name-4-tuples, dates VIntersected with on-line results
   alt signature or chain check fails
     T--xV: no tuple (inferred)
   end
-  V->>V: ACL entry as the five-tuple ⟨Self, S0, D0, A0, V0⟩
-  V->>V: stage 2, replace names by keys using four-tuples
-  V->>V: stage 3, fold the prover's five-tuples into the ACL tuple
+  V->>V: acl-entry as the 5-tuple ⟨Self, S0, D0, A0, V0⟩
+  V->>V: stage 2, replace names by keys using name-4-tuples
+  V->>V: stage 3, fold the prover's 5-tuples into the ACL tuple
   alt S1 ≠ I2, D1 not TRUE, empty AIntersect or VIntersect, or threshold unmet
     V--xV: no final tuple, no authorization (inferred)
   else final tuple ⟨Self, S, D, A, V⟩
@@ -167,11 +166,11 @@ sequenceDiagram
   I->>K: authorization-certificate ⟨I, K, D, A', V'⟩ with A' all or part of what I holds
   I->>K: certificate-sequence, the upstream chain plus the new certificate
   loop each level of the organization
-    K->>K: becomes the issuer for the next level
+    I->>K: authorization-certificate to the next delegatee, each delegatee in turn acting as issuer
   end
   Note over K: at the leaf D is FALSE, the permission may be used but not passed on
   K->>V: certificate-sequence, now as prover
-  V->>V: each link needs D1 = TRUE on the tuple before it (6.3)
+  Note over V: authorization-decision, each link needs D1 = TRUE on the tuple before it (6.3)
   alt some issuer held D = FALSE
     V--xV: reduction fails at that link
   else an issuer granted more than it held
@@ -200,12 +199,12 @@ sequenceDiagram
     P->>P: general path discovery, cited as ELIEN and not given here
   end
   P->>V: certificate-sequence in reduction order
-  V->>V: apply each reduction in the order given
+  Note over V: applies each reduction in the order given
   alt order wrong or a certificate missing
     V--xV: a reduction does not apply, the chain fails (inferred)
   end
   opt the verifier works from an unordered pool
-    V->>V: apply only four-tuples that define a name as a key (6.4)
+    V->>V: apply only name-4-tuples that define a name as a key (6.4)
   end
 ```
 
@@ -237,10 +236,9 @@ sequenceDiagram
   C->>C: pick the validity interval by risk management (5.4), never zero (5.5)
   C->>L: timed-crl with validity dates (condition 2), never overlapping the current one (condition 3)
   opt delta-CRLs
-    C->>L: delta-crl sequence, the combination obeys the same conditions
+    C->>L: delta-crl, one per change; the full CRL with its deltas is the current-crl, which obeys the same conditions
   end
-  V->>L: fetch the current CRL (inferred)
-  L-->>V: timed-crl
+  L-->>V: timed-crl and any delta-crl, fetched by the verifier from a listed location (inferred)
   alt no valid CRL, whether missing, expired or wrongly signed
     V--xV: certificate cannot be processed (5.2)
   else certificate listed
@@ -293,15 +291,14 @@ sequenceDiagram
   participant R as requester (applicant unnamed, verifier inferred)
   participant C as validity-confirmation-issuer (one-time)
   participant V as verifier
-  R->>R: choose a fresh nonce (inferred)
+  Note over R: who applies, and who chooses the nonce, is not said (inferred)
   R->>C: one-time-revalidation-request containing the nonce
   C-->>R: signed one-time-revalidation returning the nonce
   R->>V: hand over the instrument (nothing to do when R is V)
   alt wrong signer or nonce differs
     V--xV: treat as replay, do not use (inferred)
   else nonce matches
-    V->>V: zero-length validity at the moment this computation completes
-    V->>V: VIntersect with the certificate's dates
+    V->>V: zero-length validity at the moment this computation completes, VIntersected with the certificate's dates
     Note over V: discarded after this computation
   end
 ```
@@ -324,12 +321,12 @@ sequenceDiagram
   participant L as fetch-location
   participant R as requester (user of the certificate)
   participant V as verifier
-  I->>R: short-lived authorization-certificate
-  I->>R: short-lived-renewal-statement naming where the replacement can be fetched
-  I->>L: replacement certificate, normally signed by the same key (inferred)
+  I->>R: short-lived-certificate
+  I->>R: online-test-specification of the short-lived kind, naming where the replacement can be fetched
+  I->>L: replacement short-lived-certificate, normally signed by the same key (inferred)
   loop before each expiry (timing inferred)
     R->>L: fetch the replacement
-    L-->>R: replacement short-lived authorization-certificate
+    L-->>R: replacement short-lived-certificate
   end
   R->>V: certificate-sequence with the current certificate (inferred)
   alt no replacement fetched in time
@@ -355,7 +352,7 @@ sequenceDiagram
   participant X as adversary
   participant V as verifier
   I->>I: list the revoked certificate in the next CRL, with a sequence number
-  I-->>V: crl, released at once if urgent, by some dissemination process unrelated to need
+  I-->>V: anti-matter-crl, released at once if urgent, by some dissemination process unrelated to need
   V->>V: the CRL annihilates the listed certificate and any older CRL
   X-xV: blocks the new CRL by network tampering
   Note over V: the revoked certificate keeps working, the result is timing dependent
@@ -417,13 +414,12 @@ sequenceDiagram
   AA->>K: attribute-certificate, authorization to a Distinguished Name
   NA->>K: name-certificate, name to key
   K->>V: certificate-sequence with both (inferred)
-  V->>T: translate the attribute certificate
-  T-->>V: five-tuple with a fully qualified name as Subject, or the referenced ID key (6.5.4)
-  V->>V: resolve the name with the ID certificate's four-tuple
+  T-->>V: 5-tuple translated from the attribute-certificate, with a fully qualified name as Subject, or the referenced ID key (6.5.4)
+  V->>V: resolve the name with the ID certificate's name-4-tuple
   alt the two issuers use different name spaces
     V--xV: matching needs a guess, open to mistakes and attack (8)
   end
-  V->>V: reduce the five-tuple chain
+  V->>V: reduce the 5-tuple chain
   Note over AA,NA: either issuer subverted means the attacker gets the authorization (3.1, 8)
   Note over AA,NA: one issuer for both cancels both weaknesses (8)
 ```
@@ -447,14 +443,14 @@ sequenceDiagram
   participant I as issuer
   participant V as verifier
   G->>K: name-certificate, george defines (name fred)
-  F->>K: name-certificate, fred defines (name sam)
-  G->>G: george can now say (name fred sam) by chaining
   opt group
     G->>K: one name-certificate per member under the same name (2.10)
   end
+  F->>K: name-certificate, fred defines (name sam)
+  G->>G: george can now say (name fred sam) by chaining
   I->>K: authorization-certificate to a name, local names qualified by the issuer's key (2.8)
   Note over I,K: outside a certificate the name must carry its key
-  V->>V: resolve the name by four-tuple reduction
+  V->>V: resolve the name by name-4-tuple reduction
   alt no definition
     V--xV: name unresolved (inferred)
   end
@@ -488,8 +484,7 @@ sequenceDiagram
     R->>W: new name-certificate to a new working key
     Note over R,W: the old key is not declared bad, its certificate just lapses
   end
-  V->>V: resolve (name Kroot jim) to the current key, intersect validity
-  V->>V: reduce the authorization
+  V->>V: resolve (name Kroot jim) to the current key, intersect validity, then reduce the authorization
   alt old name certificate expired and no new one presented
     V--xV: name does not resolve (inferred)
   end
@@ -595,7 +590,7 @@ flowchart TD
   d4 -->|yes| s5["qualify local names with the issuer's key (2.8)"]
   d3 -->|no| s5
   s5 --> s6["map by format: ACL entry to ⟨Self, ...⟩, SPKI authorization to one 5-tuple, SPKI or SDSI 1.0 name to one 4-tuple, X.509v1 to a name tuple, PGP to one 4-tuple per signer, X9.57 to 5-tuples with a name subject, X.509v3 and SSL per root documentation"]
-  s6 --> g1(["five-tuples and four-tuples"])
+  s6 --> g1(["5-tuples and name-4-tuples"])
 ```
 
 ### A2. `name-qualification` (§2.8, §2.9, §6.5.4)
@@ -1006,19 +1001,23 @@ Twenty-one entries; each has its quotes in `source_defects_and_ambiguities`.
 
 ## Message names used
 
-These are descriptive names chosen for this file, listed in
-`messages_referenced` for reconciliation with `messages.yaml` in the
-cross-check pass. Those marked † have no counterpart in the source and are
-modelling conveniences for inferred steps.
+These are `messages.yaml` identifiers, listed in `messages_referenced` and
+reconciled with `messages.yaml` in the cross-check pass. Those marked † have
+no counterpart in the source; `messages.yaml` carries them as placeholders
+(`normative_status: not-in-source`) for inferred steps.
 
-`access-request` †, `access-decision` †, `acl-edit-request` †,
+`access-request` †, `access-decision` †, `certificate-sequence`,
+`certificate`, `authorization-certificate`, `name-certificate`,
+`attribute-certificate`, `acl-entry`, `acl-edit-request` †, `5-tuple`,
+`name-4-tuple`, `threshold-subject`, `threshold-intermediate-form`,
+`authorization-tag`, `validity-conditions`, `sdsi-basic-name`,
+`sdsi-compound-name`, `sdsi-fully-qualified-name`, `x509-fully-qualified-name`,
+`principal`, `hash`, `online-test-specification`, `anti-matter-crl` (the
+ruled-out §5.1 CRL; the bare `crl` is a `messages.yaml` alias of `timed-crl`),
+`timed-crl`, `current-crl` (a full CRL with its deltas, §5.2), `delta-crl`,
+`revalidation`, `one-time-revalidation-request`, `one-time-revalidation`,
+`short-lived-certificate`, `certificate-result-certificate`,
 `authorization-question` (the §6.6 question forms; sending one is inferred),
-`key-loss-report` (out of band, §7.6), `certificate-sequence`,
-`authorization-certificate`, `name-certificate`, `attribute-certificate`,
-`acl-entry`, `five-tuple`, `four-tuple`, `threshold-subject`,
-`authorization-tag`, `validity-interval`, `sdsi-name`, `fully-qualified-name`,
-`online-test-condition`, `crl` (the ruled-out anti-matter CRL), `timed-crl`,
-`delta-crl`, `revalidation`, `one-time-revalidation-request`,
-`one-time-revalidation`, `short-lived-renewal-statement`,
-`certificate-result-certificate`, `x509v1-certificate`, `x509v3-certificate`,
-`pgp-certificate`, `sdsi-1-0-certificate`, `ssl-certificate`.
+`key-loss-report` (out of band, §7.6), `translation-x509v1`,
+`translation-x509v3`, `translation-pgp`, `translation-sdsi-1-0`,
+`translation-ssl`.

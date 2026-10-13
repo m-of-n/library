@@ -193,7 +193,7 @@ contradicts the source. Each fills something the source left open.
    - **A result for every pair of forms.** The examples cover `(*)` with
      anything, set with set, set with atom, and prefix with prefix. Nothing
      covers range with range, range with prefix, prefix with set, or set with
-     range (examples README, gap §6.3.1). Every pair needs a defined result, and
+     range (protocol.md, gap §6.3.1). Every pair needs a defined result, and
      the result must be representable as one of the forms. See open question 2:
      closure forces half-open bounds.
    - **The range operators and orderings.** The template is
@@ -259,7 +259,7 @@ contradicts the source. Each fills something the source left open.
    - **The threshold tuple's own delegation bit.** For the K branches to
      converge *"by delegating their shares"* (R-0019), the tuple holding the
      threshold subject must carry D = TRUE, which the source never says
-     (examples README, ambiguity §1.1/§6.3/§6.3.3). Rule: make it explicit.
+     (protocol.md, ambiguity §1.1/§6.3/§6.3.3). Rule: make it explicit.
      §7.7's example never states its D bit.
    - **More than K valid branches.** The source selects K and sets the rest to
      `(null)` (R-0167), with no rule for which K. Since the AIntersect of K
@@ -268,7 +268,7 @@ contradicts the source. Each fills something the source left open.
      exactly those, and extra branches are ignored rather than intersected.
    - **Where `(null)` sits** (schema D-07) and **proof order for a tree**: the
      prover-ordered sequence of R-0171 is linear, and a threshold proof has K
-     branches (examples README, gap §6.3.4 vs §6.3.3). Rule: a proof is a tree
+     branches (protocol.md, gap §6.3.4 vs §6.3.3). Rule: a proof is a tree
      whose threshold nodes list their K branches in member-index order.
    - **Distinct members.** Nothing stops one key from appearing twice among the
      N and satisfying two shares. Rule: the K selected members must be distinct
@@ -277,7 +277,7 @@ contradicts the source. Each fills something the source left open.
 
 4. **`S1 = I2` needs one identity form.** Issuer and subject may each be
    *"a public key (or its hash)"* (R-0121, R-0123). The source never says
-   whether a key equals its own hash in the provisos (examples README, ambiguity
+   whether a key equals its own hash in the provisos (protocol.md, ambiguity
    §6.3). With several hash algorithms, one key also has several hashes. Rule:
    every principal is brought to one canonical identifier before comparison, the
    `KeyId` of ARCH-0001 §4.1, and equality is octet equality of KeyIds. This
@@ -285,8 +285,8 @@ contradicts the source. Each fills something the source left open.
    canonical key encoding, and the rfc-9804 notes record that the `rcbor`
    `keyid()` defect is open under every DEC-002 option.
 
-5. **Name 4-tuples, narrowed.** RFC 2693 writes the 4-tuple three ways (examples
-   README, inconsistency §6.2/§6.4/§6.5). §6.2 says *"Name: a byte string"*
+5. **Name 4-tuples, narrowed.** RFC 2693 writes the 4-tuple three ways (protocol.md,
+   inconsistency §6.2/§6.4/§6.5). §6.2 says *"Name: a byte string"*
    (R-0131). The X.509v1 translation then places a compound name in that slot
    (R-0195, schema D-02), and §6.4's two classes leave out the threshold subject
    that §6.2 allows (schema D-03). Rule: a name certificate defines **one**
@@ -319,7 +319,7 @@ contradicts the source. Each fills something the source left open.
    to do"* (R-0214 to R-0216). It is useful for caching and for constrained
    verifiers. But the CRC's issuer is the entity that did the computation, not
    the ACL's owner, and the source gives no rule for how a later verifier comes
-   to trust it, or what its validity is (examples README, gap §6.6). Rule: a CRC
+   to trust it, or what its validity is (protocol.md, gap §6.6). Rule: a CRC
    is accepted only if the computing entity's key is itself empowered by the
    verifier's ACL for that tag. A CRC's validity is the VIntersect of everything
    it summarises, including deferred online tests (R-0163).
@@ -374,7 +374,7 @@ contradicts the source. Each fills something the source left open.
    `(tag (* set (ssl) (dns www.datafellows.com)))` *"could have been
    abbreviated as"* `(tag (ssl www.datafellows.com))`. Under §6.3.1 these
    denote different sets, and the abbreviated form no longer reduces against a
-   separate `(dns)` root (examples README, ambiguity §6.5.7). Reject any
+   separate `(dns)` root (protocol.md, ambiguity §6.5.7). Reject any
    authoring convenience that is not an identity under AIntersect. Tags are
    compared as sets, so a rewrite that changes the set changes the grant.
 
@@ -396,8 +396,10 @@ contradicts the source. Each fills something the source left open.
    us.** §5.5 says it, then defines a one-time revalidation that *"represents a
    validity interval of zero"* (R-0095, R-0101, schema D-09). We take the second
    sentence. A nonce-bound, single-use confirmation (R-0099, R-0100) is a
-   distinct kind of validity condition, not an interval of width zero, and it is
-   modelled that way in `state-machine.yaml`.
+   distinct kind of validity condition, not a timed interval of width zero.
+   `state-machine.yaml` M08 models the nonce binding and single use, and passes
+   §5.5's zero interval into VIntersect only as the completion instant
+   [tc, tc] (M08-T02, M08-T06).
 
 ## 4. Mapping to our decisions
 
@@ -460,7 +462,8 @@ authorization list maps to an array. Neither needs a tag.
 4. **Which K, and whose order, in a threshold proof?** §2 item 3 proposes that
    the prover names the K and branches go in member-index order. Check this
    against `protocol.yaml`'s threshold flow and `state-machine.yaml` before
-   adopting.
+   adopting. `state-machine.yaml` OQ-13 (f) asks the related question of who
+   sets unselected entries to (null).
 
 5. **Does a key equal its own digest in `S1 = I2`?** §2 item 4 proposes
    canonicalising to KeyId first. If DEC-003 allows several digest algorithms,
@@ -504,10 +507,51 @@ authorization list maps to an array. Neither needs a tag.
     mean. This decides the D-3 marker question above.
 
 12. **Source defects bearing on us.** Recorded elsewhere and not repaired:
-    schema/README.md lists D-01 to D-13, and examples/README.md and
-    protocol.md hold the rest. The ones that change a rule above are schema
+    schema/README.md lists D-01 to D-13, state-machine.yaml lists the
+    lifecycle gaps as open questions OQ-01 to OQ-26, and examples/README.md
+    and protocol.md hold the rest. The ones that change a rule above are schema
     D-02, D-03, D-07, D-08, D-09 and D-10, together with `SPKI-52-04`,
-    `SPKI-631-08` and `SPKI-657-12`. One more matters for implementers: §6.4
+    `SPKI-631-08` and `SPKI-657-12`. Schema D-11, the undefined `(tag …)`
+    wrapper, is open question 15. protocol.md's gap §6.3.2 vs §6.1 also
+    changes a rule: a deferred VIntersect carries online tests that the
+    five-element 5-tuple has no slot for, and our R-M-05 tuple must choose one
+    (the schema and `messages.yaml` carry them in the tuple's validity, as an
+    optional `online_tests` list). One more matters for implementers: §6.4
     says name 4-tuples *"should be delivered in the order needed by the
     prover"* (R-0176), which reads as a slip for "by the verifier", since §6.3.4
     has the prover *supplying* the order. Do not build on the literal reading.
+
+13. **What does an absent delegation field mean?** A certificate *"can
+    contain validity conditions, authorization and delegation information"*
+    (R-0006), so delegation is optional in a certificate or an ACL entry, but
+    every 5-tuple carries *"Delegation: a boolean"* (R-0124), and the source
+    never says what an absent field becomes (schema gap G-01). `messages.yaml`
+    reads absence as FALSE, from R-0062's *"if delegation is TRUE"*. R-M-10's
+    *"explicit boolean"* points the other way: require the field on every
+    certificate and ACL entry, so that no default is ever applied. Decide in
+    R-M-10's ADR.
+
+14. **Can a name denote anything but a key?** The Abstract says the structures
+    *"bind either names or explicit authorizations to keys or other
+    objects"*, and the glossary has *"a name (with the understanding that the
+    name is mapped by certificate to some key or other object)"* (R-0014).
+    §6.1 narrows a name Subject to *"a name used to identify a public key"*
+    (R-0123), and §6.2 gives a name 4-tuple's Subject no object-hash
+    alternative (R-0132), so no 4-tuple can bind a name to an object, and name
+    reduction (R-0177, R-0183) ends only at keys. `messages.yaml` (`subject`
+    notes, item 3) noticed the contradiction; no defect list recorded it.
+    R-M-03 names principals, so following §6.1 costs us nothing, but a profile
+    that wants names for objects, such as content digests, needs a 4-tuple
+    Subject form the source does not give. Decide with R-M-03.
+
+15. **Is a 5-tuple Authorization the `(tag …)` form or its body?** §6.1 says
+    only *"Authorization: an S-expression."* (R-0125), and §6.3.1 introduces
+    authorizations as bare lists (R-0141, R-0147). Every `AIntersect` example,
+    and every authorization §6.5.3, §6.5.7 and §7.7 name, is wrapped in
+    `(tag …)`, a form the source never defines (schema D-11, G-11). The schema
+    and `messages.yaml` take the wrapped form, so the bare §6.3.1 forms are tag
+    bodies (`SPKI-631-01`, `-02`, `-04`). It matters because `AIntersect` of a
+    wrapped and a bare authorization fails at the first element (`tag` against
+    `ftp`): a profile that admitted both would deny mixed chains without saying
+    why. Proposed: one form, the wrapped one, with the body as the unit of the
+    algebra. Settle it with DEC-004.

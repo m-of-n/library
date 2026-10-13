@@ -32,10 +32,10 @@ Anything this extraction computed sits under `derived:` with
 these conventions and the others: the `notation` field, `input_lines` for
 multi-line examples, margin stripping, quoting, and abstract time.
 
-RFC 2693 contains no BCP 14 keyword, and no vector links to a requirement id.
-This file was extracted from the source alone, in parallel with
-`requirements.yaml` (whose entries all carry verb `none`); linking vectors to
-its `rfc-2693#R-NNNN` entries is the cross-check pass's work.
+RFC 2693 contains no BCP 14 keyword; every `requirements.yaml` entry carries
+verb `none`. Each vector's `constrains` lists the `rfc-2693#R-NNNN` entries
+whose statements determine its expected or derived result. The cross-check
+pass (pass 3) added the links; pass 1 extracted the file from the source alone.
 
 ## Coverage
 
@@ -159,13 +159,17 @@ page furniture excluded:
 These are recorded and not repaired. Each defect carries `source_issue` on its
 vector.
 
-1. **§6.5.1 contradicts §6.2 (`SPKI-651-02`, definition-example-mismatch).**
-   §6.2 defines the Name element of a name 4-tuple as "a byte string". The
-   second X.509v1 form puts a chain of k + 1 names in that slot,
-   `(name CA1 CA2 ... CAk <leaf-name>)`. Every §6.4 4-tuple defines a single
-   name `N` relative to its issuer. In §6.4 notation this tuple is
+1. **§6.5.1 contradicts §6.2 (`SPKI-651-01`, `SPKI-651-02`,
+   definition-example-mismatch).** §6.2 defines the Name element of a name
+   4-tuple as "a byte string". Both X.509v1 forms put an S-expression in that
+   slot. The first, `(name <leaf-name>)`, fits only if it is read as notation
+   for its one name, as §6.5.2 writes a bare `name`. The second puts a chain of
+   k + 1 names there, `(name CA1 CA2 ... CAk <leaf-name>)`, and cannot be read
+   that way. Every §6.4 4-tuple defines a single name `N` relative to its
+   issuer. In §6.4 notation this tuple is
    `[(name Kroot CA1 … CAk <leaf-name>) -> K1]`, whose left side fits neither
-   class.
+   class. Read literally, both forms fail the schema's `four-tuple` (schema
+   D-02).
 2. **§5.2 condition 3 is ambiguous at a shared endpoint (`SPKI-52-04`,
    boundary-ambiguity).** "CRL validity date ranges must not intersect", and
    VIntersect's intervals are closed (it fails only "if Vmin > Vmax"). So the
@@ -209,8 +213,6 @@ list `(dns)`, and `(dns (*))` does not.
 
 - Name 4-tuples have two notations. §6.4 writes `[(name K1 N) -> K2]`, with
   validity elided. §6.5 writes `[issuer, name, subject, validity]`.
-- The Name slot is spelled `(name <leaf-name>)` in §6.5.1 but `name` in
-  §6.5.2.
 - `<leaf name>` and `<CA(1)>` in §2.9 become `<leaf-name>` and `CA1` in §6.5.1.
 
 ## The vectors that earn their place
@@ -250,6 +252,47 @@ These ten, for a test harness built on this record.
     `(dns www.datafellows.com)` and denies `(us-crypto)`, exactly as the
     source states.
 
+## Schema entry per vector
+
+Inputs holding metavariables or placeholders are instantiated first: a key
+symbol becomes a key, either a `public-key` list or a `hash`, with identical
+results; a name symbol (`N`, `Na`, `...`) a `name-string`; an authorization
+symbol a `tag`, or its binding where that is an S-expression; a validity
+symbol its `[a, b]` binding as `{"not-before": a, "not-after": b}`, otherwise
+`{}`; `[(name K N) -> S]` becomes `[K, N, S, {}]`; a `<placeholder>` a value
+of the entry the schema README's *Template closure* names; prose scenarios
+become the schema's records.
+
+| entry | vectors | result |
+|---|---|---|
+| `s-expression` | SPKI-11-01, -02 | rejected, as §1.1 requires |
+| `basic-sdsi-name` | `sexp` of SPKI-261-01, SPKI-262-01 | valid |
+| `compound-sdsi-name` | `sexp` of SPKI-262-02 | valid |
+| `fully-qualified-sdsi-name` | SPKI-28-01, SPKI-73-01, `sexp` of SPKI-73-03, SPKI-75-01; operand 1 and result of SPKI-64-03, -04 | valid |
+| `fully-qualified-x509-name` | SPKI-29-01, -02 | valid |
+| `hash` | SPKI-75-02 | valid |
+| `name-string` | SPKI-73-02, inside its prose quotes | valid; not an `sdsi-name`, which is its `outcome: fails` |
+| `tag` | SPKI-653-01, SPKI-657-01 … -11, SPKI-77-01; operands and results of SPKI-631-09 … -13 | valid |
+| `tag-list` | SPKI-631-01, -02, -04; operands and result of SPKI-631-03 | valid; not `authorization` (D-11) |
+| `star-all` | SPKI-631-05 | valid |
+| `star-set`, `star-prefix` | SPKI-631-06, SPKI-631-07 | valid |
+| `star-range` | SPKI-631-08 | example form valid; template read literally rejected (`source_issue`) |
+| `tuple-validity` | bindings and results of SPKI-632-02 … -05 | valid |
+| `null-subject` | SPKI-633-01 | valid; not a `subject` |
+| `threshold-subject` | SPKI-77-02, -03 | valid; K and N in code (SC-01, SC-02) |
+| `five-tuple` | the `<…>` tuples of SPKI-210-01, -412-01, -42-01, -43-01, -63-02 … -06, -633-02 … -04, -634-01, -641-01, -642-01, -657-12, -77-04, and derived tuples of these and of SPKI-75-01, -02 | valid |
+| `four-tuple-defining-key` | SPKI-64-01; 4-tuples of SPKI-210-01, -641-01, -642-01, -652-01; derived 4-tuples of SPKI-262-02, -75-01 | valid |
+| `four-tuple-defining-name` | SPKI-64-02, both 4-tuples of SPKI-64-05 | valid |
+| `four-tuple` | operand 2 of SPKI-64-03, -04; SPKI-651-01, -02 | SPKI-651-01, -02 rejected read literally (`source_issue`, D-02) |
+| `subordinate-five-tuple`, `threshold-subordinate-tuples` | derived intermediate form of SPKI-633-02, both `(null)` readings | valid |
+| `authorization-certificate-body` | certificate C of SPKI-52-01, -02, -05, -06, SPKI-53-01, SPKI-55-02 | valid |
+| `timed-crl` | CRLs of SPKI-52-01 … -05, -54-01, -55-01 | valid; SPKI-55-01 fails SC-08 in code |
+| `timed-crl` | CRL of SPKI-52-06; anti-matter CRL of SPKI-51-01 | rejected |
+| `current-crl` | full CRL of SPKI-52-01; anti-matter CRL of SPKI-51-01 | valid; SPKI-51-01 rejected |
+| `timed-revalidation` | R of SPKI-53-01 | valid |
+| `one-time-revalidation-request`, `one-time-revalidation` | SPKI-55-02, -03 | valid; SPKI-55-03 fails SC-11 in code |
+| none: notation | SPKI-31-01 … -33-04, SPKI-8-01, -02; rule displays SPKI-63-01, SPKI-632-01 | checked by hand |
+
 ## What was checked, and how
 
 Mechanically, by scripts kept outside the repository. Every result below is the
@@ -287,7 +330,7 @@ final run.
   - **Inputs that must lex.** These lex under the RFC 9804 token, hex and
     base-64 rules, and obey the §1.1 restrictions (no empty list; every list
     starts with a string):
-    - 24 `sexp` inputs
+    - 22 `sexp` inputs, every `sexp` vector but the two §1.1 counter-examples (23 strings: `SPKI-631-03` has two lines)
     - 10 `AIntersect` operands
     - 2 schematic `k-of-n` subjects
     - 4 embedded `sexp` fields
@@ -320,13 +363,29 @@ every verbatim and split input and fragment, all 135 quotes with their
 locators, the 89 cross-links, both YAML readers, and every stated and derived
 result, recomputed by a separate engine written from §6.3–§6.4. Every concrete
 S-expression input also validates against the entry of
-`schema/spki-theory.derived.schema.json` it instantiates. No printed example
+`schema/spki-theory.derived.schema.json` it instantiates, as listed under
+*Schema entry per vector*. No printed example
 is missing. Fixed: the quote rule for line-end hyphens is now stated in the
 file header; seven vectors gained `source_text_locator`, because a
 `source_text` quote came from another section; `SPKI-631-13` no longer
 presents inclusive range bounds as a finding; `SPKI-54-01`'s exposure window
 and `SPKI-657-10`'s note were made exact; `SPKI-75-01` binds `Vn`; and the
 display-line census above was re-derived.
+
+**Pass 3 (cross-check, 2026-10-12).** Every vector was checked against the
+schema entry listed under *Schema entry per vector*, with `jsonschema` 4.10.3
+(Draft 2020-12): 255 checks over 83 vectors, 224 that must pass and 31 that
+must fail, run once with keys as `public-key` lists and once as `hash` forms,
+with identical results. The other 11 vectors are notation, not values, and
+were checked by hand. Every stated and derived result was recomputed by an
+engine written from the `aintersect`, `vintersect`, `five-tuple-reduction`,
+`four-tuple-name-reduction`, `unordered-pool-name-reduction` and
+`threshold-subject-reduction` steps of `protocol.yaml`: 115 checks over 74
+vectors, all agreeing, and the 35 S-expressions inside `derived` blocks
+validate. Fixed: `SPKI-63-02`, `-03`, `-04` and `-06` bound bare tag bodies as
+5-tuple authorizations, which `five-tuple` rejects, and now wrap them in
+`(tag …)`; `SPKI-651-01` carries `source_issue`; every vector carries
+`constrains` (204 links to 126 distinct requirements).
 
 **Not checked, because the document supports no such check.** There is no
 reference implementation. The engine is this extraction's own, so agreement

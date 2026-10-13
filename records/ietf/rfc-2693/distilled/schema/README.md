@@ -233,7 +233,7 @@ Constraints a validator must check in code (16 stated, 3 inferred):
 | SC-06 | `relative-sdsi-name` | inside a certificate, a relative name resolves in the issuer's name space | stated, §2.8 |
 | SC-07 | `tuple-validity` | an omitted not-before is −∞ and an omitted not-after is +∞ | stated, §6.1, §6.2 |
 | SC-08 | `timed-crl`, `timed-revalidation` | not-before < not-after | stated as "non-0" in §5.4; the strict order is inferred |
-| SC-09 | `timed-crl`, `timed-revalidation` | the intervals of successive instruments do not intersect | stated, §5.2 condition 3, §5.3 |
+| SC-09 | `timed-crl`, `timed-revalidation` | the intervals of successive instruments do not intersect; whether intervals sharing only an endpoint intersect is undetermined (`SPKI-52-04`) | stated, §5.2 condition 3, §5.3 |
 | SC-10 | the three instruments | each is signed by the issuer the certificate's online test names | stated, §5.2 condition 1 |
 | SC-11 | `one-time-revalidation` | its nonce equals the request's | stated, §5.5 |
 | SC-12 | `one-time-revalidation` | it is valid only in the computation that requested it | stated, §5.5 |
@@ -447,12 +447,13 @@ Noticed in passing, outside this artifact (for `normative.md` and pass 2):
 - **Nothing for §5.7 or §8.** Micali's hash chains and Rivest's reversal (§5.7)
   are *"not reflected in the SPKI structure definition"*. The six mapping
   classes of §8 are a classification, not a structure.
-- **No requirement ids.** RFC 2693 contains no BCP 14 keywords
+- **No requirement ids on the productions.** RFC 2693 contains no BCP 14 keywords
   (`bin/bcp14-count` reports 0). This artifact was extracted from the source
   alone, in parallel with `requirements.yaml` (whose entries all carry verb
   `none`), so everything here cites a section, a line range and verbatim text
-  instead. Mapping the SC and G items to `rfc-2693#R-NNNN` ids is the
-  cross-check pass's work.
+  instead. Each SC and G item now names its requirements in `x-requirements`
+  (pass 3); SC-03 and G-16 name none, because their only basis, the §7.7
+  k-of-n example and the Abstract, is excluded from `requirements.yaml`.
 
 ## Open for the later passes
 
@@ -464,13 +465,14 @@ Noticed in passing, outside this artifact (for `normative.md` and pass 2):
   `four-tuple` (D-02). The single-quoted fragments in `$comment` and
   `x-inferred` are all verbatim (18 by this pass's delimiting). Two counts in
   this file were corrected: the `x-status` tally and the `x-inferred` one.
-- **Pass 3:** reconcile the names here with `messages.yaml`. The abstract
-  records use §6.1's element names (`issuer`, `subject`, `delegation`,
-  `authorization`, `validity`) and project labels for the rest (`kind`,
-  `locations`, `online-tests`, `certificates`, `nonce`). A mismatch is a
-  finding, not a typo to fix silently.
-- **Examples:** every fixture should validate against the entry this file
-  names for it. The two §6.5.1 4-tuples must *fail* `four-tuple` read
+- **Pass 3 (cross-check, 2026-10-12): names reconciled.** messages.yaml
+  renamed its fields to this file's member names (`validity`, `certificates`,
+  `issuer`), and its note (12) gives the full crosswalk, including the word
+  *principal*, which this file uses for a key or its hash and messages.yaml
+  for the key alone.
+- **Examples:** every fixture should validate against the entry
+  `examples/README.md` names for it (*Schema entry per vector*). The two
+  §6.5.1 4-tuples must *fail* `four-tuple` read
   literally (D-02); that failure is the source defect showing, not a fixture
   error.
 - **Design notes:** D-02, D-03, D-07 and D-08, and gaps G-01, G-07 and G-11,

@@ -8,10 +8,14 @@ extracted_by: "claude, FX-1 pass 1 (extract), state-machine agent, effort max, f
 note: >-
   Every lifecycle RFC 2693 describes, as machines an implementation or a test
   harness can drive. RFC 2693 is the theory document of SPKI and contains no
-  BCP 14 keywords; a lowercase "must" inside a quote below is not one. No
-  requirement ids are cited: this file was extracted from the source alone,
-  in parallel with distilled/requirements.yaml, and linking its transitions
-  to rfc-2693#R-NNNN entries is left to the cross-check pass.
+  BCP 14 keywords; a lowercase "must" inside a quote below is not one. Each
+  transition's constrained_by lists the rfc-2693#R-NNNN entries at the same
+  locator whose text contains one of its source quotes, is contained in one,
+  or (for the split entries R-0157 and R-0237) holds its opening part; it was
+  wired in the cross-check pass. A transition whose constrained_by is empty
+  quotes only text requirements.yaml excludes: the §5.1 anti-matter
+  background (M04-T06, M10-T01 to M10-T05) and the §7.6 revocation-service
+  account (M14-T02, M14-T05, M14-T07, M14-T08).
   §6 calls its own processing plan "an example that may be followed"; M01,
   M02, M11, M12 and M13 model that plan, which is also the only statement in
   the source of how an authorization result is computed.
@@ -97,6 +101,7 @@ triggers:
     transmitted: true
     locator: "§5.2"
     quote: "That is, a CRL might be a full CRL followed by a sequence of delta-CRLs."
+    note: "One delta-CRL (messages.yaml delta-crl). The full CRL with its deltas is messages.yaml current-crl, which M05 assembles and which is not a trigger."
   - name: anti-matter-crl
     kind: message
     transmitted: true
@@ -131,20 +136,24 @@ triggers:
     transmitted: true
     locator: "§6.6"
     quote: "The answer to the second computation can be put into a new certificate issued by the entity doing the computation."
+  - name: authorization-question
+    kind: message
+    transmitted: false
+    locator: "§6.6"
+    quote: "Typically, one will reduce a chain of certificates to answer an authorization question in one of two forms:"
+    note: "Put to the verifier's own computation; sent to a CRC service only in protocol.yaml certificate-result-certificate-issuance step 1 (inferred there). Carries what the M01 guards test (messages.yaml authorization-question): form-1 or form-2, subject S, requested_authorization A (form 1), acl, certificates."
   # ---- events ----
   - name: completion
     kind: event
     locator: "none"
     inferred: true
     inferred_reason: "Modelling device, not source text: the activity of the source state has finished and the guards choose the branch."
-  - name: authorization-question-posed
-    kind: event
-    locator: "§6.6"
-    quote: "Typically, one will reduce a chain of certificates to answer an authorization question in one of two forms:"
   - name: authorization-computation-completes
     kind: event
     locator: "§5.5"
     quote: "This protocol takes the place of a validity date range and represents a validity interval of zero, starting and ending at the time the authorization computation completes."
+    inferred: true
+    inferred_reason: "The source names the instant (§5.5), not an event or who raises it. The verifier raises it once M01 is in result-tuple or no-result; M01-T11 to M01-T14, M01-T17 and M01-T18 take it, and M08-T06 fixes tc at the same instant (OQ-07)."
   - name: sequence-exhausted
     kind: event
     locator: "§6.3.4"
@@ -198,13 +207,13 @@ triggers:
     locator: "§6"
     quote: "The other work for SPKI or SDSI certificates might include processing of on-line test results (CRL, re-validation or one-time validation)."
     inferred: true
-    inferred_reason: "Internal signal from M04, M07 or M08 to M02 (or to M01 for deferred tests)."
+    inferred_reason: "Internal signal from M04, M07 or M08 to M02 (or to M01 for deferred tests). M14-T08 also takes it, for a one-time revalidation the revocation service stops confirming after a loss report."
   - name: online-test-unavailable
     kind: event
     locator: "§5.2"
     quote: "Under these rules, no certificate that might use a CRL can be processed without a valid CRL and no CRL can be issued to show up as a surprise at the verifier."
     inferred: true
-    inferred_reason: "The source names the condition (no valid CRL), not the event of failing to obtain one, nor the equivalent for revalidations and one-time tests."
+    inferred_reason: "The source names the condition (no valid CRL), not the event of failing to obtain one, nor the equivalent for revalidations and one-time tests. M09-T03 takes it for a short-lived replacement that cannot be fetched."
   - name: threshold-reduced
     kind: event
     locator: "§6.3.3"
@@ -291,7 +300,7 @@ machines:
         meaning: "Form 2 answer computed: the authorization and validity of the result tuple are what S is allowed to do."
         inferred: true
       - name: answer-returned
-        meaning: "The form 2 answer has been given to the asker without a CRC; after a failed reduction it is that nothing is allowed."
+        meaning: "The form 2 answer has been given to the asker without a CRC; after a failed reduction, or a result that is not the ACL's own or not about S, it is that nothing is allowed."
         inferred: true
       - name: crc-issued
         meaning: "The form 2 answer has been issued as a Certificate Result Certificate by the entity that computed it."
@@ -303,7 +312,7 @@ machines:
       - id: M01-T01
         from: idle
         to: stage-1-tupling
-        trigger: authorization-question-posed
+        trigger: authorization-question
         guard: "The question is form 1 (is S allowed to do A) or form 2 (what is S allowed to do); the prover's certificate-sequence and the verifier's ACL are at hand."
         action: "Start M02 for every credential and every ACL entry used."
         consumes:
@@ -320,6 +329,9 @@ machines:
           - locator: "§6"
             quote: "These entities are processed in three stages."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0108"
+          - "rfc-2693#R-0214"
       - id: M01-T02
         from: stage-1-tupling
         to: stage-2-name-reduction
@@ -329,6 +341,8 @@ machines:
           - locator: "§6"
             quote: "Uses of names are replaced with simple definitions (keys or hashes), based on the name definitions available from reducing name 4-tuples."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0116"
       - id: M01-T03
         from: stage-1-tupling
         to: no-result
@@ -341,6 +355,9 @@ machines:
             quote: "All reduction operations are in the order provided by the prover."
         inferred: true
         inferred_reason: "The source says how credentials are verified, not what a failed verification does to the computation. Because reductions follow the prover's order, a missing tuple breaks the chain."
+        constrained_by:
+          - "rfc-2693#R-0109"
+          - "rfc-2693#R-0171"
       - id: M01-T04
         from: stage-2-name-reduction
         to: stage-3-tuple-reduction
@@ -350,6 +367,8 @@ machines:
           - locator: "§6"
             quote: "Authorization 5-tuples are then reduced to a final authorization result."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0117"
       - id: M01-T05
         from: stage-2-name-reduction
         to: no-result
@@ -360,6 +379,8 @@ machines:
             quote: "Uses of names are replaced with simple definitions (keys or hashes), based on the name definitions available from reducing name 4-tuples."
         inferred: true
         inferred_reason: "The failure path of stage 2 is not described."
+        constrained_by:
+          - "rfc-2693#R-0116"
       - id: M01-T06
         from: stage-3-tuple-reduction
         to: result-tuple
@@ -369,6 +390,8 @@ machines:
           - locator: "§6"
             quote: "Authorization 5-tuples are then reduced to a final authorization result."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0117"
       - id: M01-T07
         from: stage-3-tuple-reduction
         to: deferred-online-tests
@@ -380,6 +403,8 @@ machines:
           - locator: "§6.3.2"
             quote: "In this case, the evaluation of those online tests is deferred until the end of the process."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0163"
       - id: M01-T08
         from: stage-3-tuple-reduction
         to: no-result
@@ -390,6 +415,11 @@ machines:
             quote: "The two 5-tuples: <I1,S1,D1,A1,V1> + <I2,S2,D2,A2,V2> yield <I1,S2,D2,AIntersect(A1,A2),VIntersect(V1,V2)> provided the two intersections succeed, S1 = I2 and D1 = TRUE"
         inferred: true
         inferred_reason: "The source gives the provisos of a reduction step, not what their failure does to the computation."
+        constrained_by:
+          - "rfc-2693#R-0136"
+          - "rfc-2693#R-0137"
+          - "rfc-2693#R-0138"
+          - "rfc-2693#R-0139"
       - id: M01-T09
         from: deferred-online-tests
         to: result-tuple
@@ -401,6 +431,8 @@ machines:
             quote: "That validity interval is intersected with any present in the certificate, to yield a new, current validity interval."
         inferred: true
         inferred_reason: "The source defers the evaluation to the end; that a deferred test then narrows V exactly as an immediate one would is our reading."
+        constrained_by:
+          - "rfc-2693#R-0162"
       - id: M01-T10
         from: deferred-online-tests
         to: no-result
@@ -411,6 +443,8 @@ machines:
             quote: "In this case, the evaluation of those online tests is deferred until the end of the process."
         inferred: true
         inferred_reason: "The outcome of a failed deferred test is not described."
+        constrained_by:
+          - "rfc-2693#R-0163"
       - id: M01-T11
         from: result-tuple
         to: granted
@@ -423,6 +457,10 @@ machines:
             quote: "Is this Subject, S, allowed to do A, under this ACL and with this set of certificates?"
         inferred: true
         inferred_reason: "The source poses the question but states no test on the result tuple; this decision test is our reading. That delegation does not gate exercise is stated (§4.1.4)."
+        constrained_by:
+          - "rfc-2693#R-0061"
+          - "rfc-2693#R-0062"
+          - "rfc-2693#R-0214"
       - id: M01-T12
         from: result-tuple
         to: denied
@@ -433,6 +471,8 @@ machines:
             quote: "Is this Subject, S, allowed to do A, under this ACL and with this set of certificates?"
         inferred: true
         inferred_reason: "Complement of M01-T11."
+        constrained_by:
+          - "rfc-2693#R-0214"
       - id: M01-T13
         from: no-result
         to: denied
@@ -443,6 +483,8 @@ machines:
             quote: "the ACL is the source of empowerment for certificates."
         inferred: true
         inferred_reason: "With no reducible chain back to the ACL the permission is unproven. The source never says so in terms."
+        constrained_by:
+          - "rfc-2693#R-0002"
       - id: M01-T14
         from: result-tuple
         to: answered
@@ -454,18 +496,22 @@ machines:
             quote: "What is Subject S allowed to do, under this ACL and with this set of certificates?"
         inferred: true
         inferred_reason: "That the answer is the A and V of the result tuple is our reading of the question."
+        constrained_by:
+          - "rfc-2693#R-0214"
       - id: M01-T15
         from: answered
         to: crc-issued
         trigger: certificate-result-certificate
-        guard: "The computing entity chooses to issue one; it is optional."
-        action: "Issue a certificate, signed by the computing entity, carrying the answer."
+        guard: "The computing entity chooses to issue one (it is optional), signed by itself and carrying the answer."
         source:
           - locator: "§6.6"
             quote: "The answer to the second computation can be put into a new certificate issued by the entity doing the computation."
           - locator: "§6.6"
             quote: "That one certificate corresponds to the semantics of the underlying certificates and online test results."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0215"
+          - "rfc-2693#R-0216"
       - id: M01-T16
         from: answered
         to: answer-returned
@@ -476,6 +522,8 @@ machines:
             quote: "The answer to the second computation can be put into a new certificate issued by the entity doing the computation."
         inferred: true
         inferred_reason: "The CRC is optional; a final state for the plain answer is ours."
+        constrained_by:
+          - "rfc-2693#R-0215"
       - id: M01-T17
         from: no-result
         to: answer-returned
@@ -487,6 +535,21 @@ machines:
             quote: "What is Subject S allowed to do, under this ACL and with this set of certificates?"
         inferred: true
         inferred_reason: "An empty answer for a failed reduction is our reading; the source does not discuss it."
+        constrained_by:
+          - "rfc-2693#R-0214"
+      - id: M01-T18
+        from: result-tuple
+        to: answer-returned
+        trigger: authorization-computation-completes
+        guard: "Form 2, and the result's issuer is not the ACL's own or its subject is not S."
+        action: "Answer := nothing is allowed."
+        source:
+          - locator: "§6.6"
+            quote: "What is Subject S allowed to do, under this ACL and with this set of certificates?"
+        inferred: true
+        inferred_reason: "Complement of M01-T14. A result not anchored at this ACL, or about another subject, answers nothing about S; as M01-T17, nothing is allowed."
+        constrained_by:
+          - "rfc-2693#R-0214"
     error_states:
       - no-result
     terminal_states:
@@ -551,6 +614,8 @@ machines:
           - locator: "§6"
             quote: "There are three kinds of entity that might be input to the computation that yields an authorization result:"
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0107"
       - id: M02-T02
         from: awaiting-credential
         to: received
@@ -560,6 +625,8 @@ machines:
           - locator: "§6"
             quote: "There are three kinds of entity that might be input to the computation that yields an authorization result:"
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0107"
       - id: M02-T03
         from: awaiting-credential
         to: received
@@ -569,6 +636,8 @@ machines:
           - locator: "§6"
             quote: "There are three kinds of entity that might be input to the computation that yields an authorization result:"
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0107"
       - id: M02-T04
         from: awaiting-credential
         to: verified
@@ -579,6 +648,8 @@ machines:
             quote: "An ACL entry has potentially the same content as a certificate body, but has no Issuer (and is not signed)."
         inferred: true
         inferred_reason: "Skipping signature verification follows from the entry being unsigned; the source does not say it."
+        constrained_by:
+          - "rfc-2693#R-0003"
       - id: M02-T05
         from: received
         to: verified
@@ -590,6 +661,9 @@ machines:
           - locator: "§6"
             quote: "The other work for PGP certificates may include a web-of-trust computation."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0109"
+          - "rfc-2693#R-0112"
       - id: M02-T06
         from: received
         to: rejected-verification
@@ -600,11 +674,13 @@ machines:
             quote: "Individual certificates are verified by checking their signatures and possibly performing other work."
         inferred: true
         inferred_reason: "The failure branch of verification is not described."
+        constrained_by:
+          - "rfc-2693#R-0109"
       - id: M02-T07
         from: verified
         to: online-tests-pending
         trigger: completion
-        guard: "The credential names one or more online tests and they are evaluated immediately."
+        guard: "The credential names one or more CRL, revalidation or one-time tests (the three kinds of §5) and they are evaluated immediately. A §5.6 replacement statement is not evaluated here: it tells the user where to fetch a replacement (M09; schema/README.md D-05)."
         action: "Start one M04, M07 or M08 instance per test."
         source:
           - locator: "§6"
@@ -612,12 +688,15 @@ machines:
           - locator: "§6.3.2"
             quote: "In the most straight-forward implementation, each online test to which a certificate is subject is evaluated."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0111"
+          - "rfc-2693#R-0160"
       - id: M02-T08
         from: verified
         to: tupled
         trigger: completion
-        guard: "The credential names no online tests, or its tests are deferred."
-        action: "Map to tuples by the §6.5 rule for its format. V := the credential's dates, a missing not-before as minus infinity and a missing not-after as plus infinity. Deferred tests are copied into the tuple and evaluated in M01 deferred-online-tests."
+        guard: "The credential names no CRL, revalidation or one-time test (a §5.6 replacement statement alone does not count), or its tests are deferred."
+        action: "Map to tuples by the §6.5 rule for its format. V := the credential's dates, a missing not-before as minus infinity and a missing not-after as plus infinity. Deferred tests are copied into the tuple's validity as its online_tests list (messages.yaml 5-tuple.validity and name-4-tuple.validity, type tuple-validity; schema tuple-validity online-tests) and evaluated in M01 deferred-online-tests."
         source:
           - locator: "§6.1"
             quote: "If the not-before date is missing from the source credential then minus infinity is assumed."
@@ -626,16 +705,22 @@ machines:
           - locator: "§6.3.2"
             quote: "It is possible for an implementation of VIntersect() to gather up online tests that are present in each certificate and include the union of all those tests in the accumulating tuples."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0127"
+          - "rfc-2693#R-0128"
+          - "rfc-2693#R-0163"
       - id: M02-T09
         from: online-tests-pending
         to: validity-intersected
         trigger: online-test-passes
-        guard: "Every online test the credential names has passed: M04 cleared, M07 revalidated, M08 confirmed."
+        guard: "Every CRL, revalidation or one-time test the credential names has passed: M04 cleared, M07 revalidated, M08 confirmed."
         action: "V := VIntersect(the credential's dates, the validity interval of each test)."
         source:
           - locator: "§6"
             quote: "If on-line tests are involved in the certificate processing, then the validity dates of those on-line test results are intersected by VIntersect() [defined in 6.3.2, below] with the validity dates of the certificate to yield the dates in the certificate's tuple(s)."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0115"
       - id: M02-T10
         from: online-tests-pending
         to: rejected-online-test
@@ -646,6 +731,9 @@ machines:
             quote: "Under these rules, no certificate that might use a CRL can be processed without a valid CRL and no CRL can be issued to show up as a surprise at the verifier."
         inferred: true
         inferred_reason: "Only the no-valid-CRL case is stated; the other failing outcomes are carried over from the semantics of each test."
+        constrained_by:
+          - "rfc-2693#R-0082"
+          - "rfc-2693#R-0083"
       - id: M02-T11
         from: validity-intersected
         to: tupled
@@ -658,6 +746,9 @@ machines:
           - locator: "§6.5.6"
             quote: "An SPKI certificate maps directly to one 4- or 5- tuple, depending respectively on whether it is a name certificate or carries an authorization."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0110"
+          - "rfc-2693#R-0207"
       - id: M02-T12
         from: validity-intersected
         to: rejected-empty-validity
@@ -668,6 +759,8 @@ machines:
             quote: "and if Vmin > Vmax, then the intersection failed."
         inferred: true
         inferred_reason: "The source states the failure for VIntersect in general, not for this step."
+        constrained_by:
+          - "rfc-2693#R-0158"
     error_states:
       - rejected-verification
       - rejected-online-test
@@ -742,6 +835,9 @@ machines:
             quote: "The traditional ones are validity dates: not-before and not-after."
         inferred: true
         inferred_reason: "The source names the dates; partitioning time into these states is ours. The not-before <= not-after conjunct here and in M03-T03 keeps the four completion guards mutually exclusive, so an inverted interval reaches only empty-interval (M03-T04) and is never stranded in not-yet-valid, where M03-T05 could not fire."
+        constrained_by:
+          - "rfc-2693#R-0066"
+          - "rfc-2693#R-0067"
       - id: M03-T02
         from: dated
         to: valid
@@ -756,6 +852,10 @@ machines:
             quote: "If the not-after date is missing then plus infinity is assumed."
         inferred: true
         inferred_reason: "Inclusive bounds are inferred (OQ-01)."
+        constrained_by:
+          - "rfc-2693#R-0126"
+          - "rfc-2693#R-0127"
+          - "rfc-2693#R-0128"
       - id: M03-T03
         from: dated
         to: expired
@@ -766,6 +866,8 @@ machines:
             quote: "The traditional ones are validity dates: not-before and not-after."
         inferred: true
         inferred_reason: "As M03-T01."
+        constrained_by:
+          - "rfc-2693#R-0067"
       - id: M03-T04
         from: dated
         to: empty-interval
@@ -776,6 +878,8 @@ machines:
             quote: "and if Vmin > Vmax, then the intersection failed."
         inferred: true
         inferred_reason: "The source states this failure only for an intersection. A credential whose own dates are inverted is the same empty interval; whether to reject it as malformed is OQ-22."
+        constrained_by:
+          - "rfc-2693#R-0158"
       - id: M03-T05
         from: not-yet-valid
         to: valid
@@ -786,6 +890,8 @@ machines:
             quote: "The traditional ones are validity dates: not-before and not-after."
         inferred: true
         inferred_reason: "As M03-T01."
+        constrained_by:
+          - "rfc-2693#R-0067"
       - id: M03-T06
         from: valid
         to: expired
@@ -798,6 +904,9 @@ machines:
             quote: "If the not-after date is missing then plus infinity is assumed."
         inferred: true
         inferred_reason: "As M03-T01."
+        constrained_by:
+          - "rfc-2693#R-0067"
+          - "rfc-2693#R-0128"
     error_states:
       - empty-interval
     terminal_states:
@@ -857,6 +966,11 @@ machines:
             quote: "It had a list of revoked certificate identifiers."
         inferred: true
         inferred_reason: "§5.2 never restates what a timed CRL contains; that it lists revoked certificates, and that an unlisted certificate passes, is carried over from the CRL described in §5.1."
+        constrained_by:
+          - "rfc-2693#R-0072"
+          - "rfc-2693#R-0077"
+          - "rfc-2693#R-0078"
+          - "rfc-2693#R-0079"
       - id: M04-T02
         from: no-current-crl
         to: revoked
@@ -870,6 +984,8 @@ machines:
             quote: "It had a list of revoked certificate identifiers."
         inferred: true
         inferred_reason: "As M04-T01."
+        constrained_by:
+          - "rfc-2693#R-0076"
       - id: M04-T03
         from: no-current-crl
         to: no-current-crl
@@ -883,6 +999,10 @@ machines:
             quote: "The CRL must carry validity dates."
         inferred: true
         inferred_reason: "The source states the conditions, not the handling of a CRL that fails them."
+        constrained_by:
+          - "rfc-2693#R-0077"
+          - "rfc-2693#R-0078"
+          - "rfc-2693#R-0079"
       - id: M04-T04
         from: no-current-crl
         to: unprocessable
@@ -894,6 +1014,9 @@ machines:
             quote: "Under these rules, no certificate that might use a CRL can be processed without a valid CRL and no CRL can be issued to show up as a surprise at the verifier."
         inferred: true
         inferred_reason: "That the certificate cannot be processed is stated; separating needed-now-and-unobtainable from merely holding no current CRL is ours."
+        constrained_by:
+          - "rfc-2693#R-0082"
+          - "rfc-2693#R-0083"
       - id: M04-T05
         from: unprocessable
         to: cleared
@@ -905,6 +1028,9 @@ machines:
             quote: "Under these rules, no certificate that might use a CRL can be processed without a valid CRL and no CRL can be issued to show up as a surprise at the verifier."
         inferred: true
         inferred_reason: "Recovery once a valid CRL arrives is not discussed."
+        constrained_by:
+          - "rfc-2693#R-0082"
+          - "rfc-2693#R-0083"
       - id: M04-T06
         from: unprocessable
         to: revoked
@@ -916,6 +1042,7 @@ machines:
             quote: "It had a list of revoked certificate identifiers."
         inferred: true
         inferred_reason: "As M04-T05."
+        constrained_by: []
       - id: M04-T07
         from: cleared
         to: no-current-crl
@@ -926,6 +1053,8 @@ machines:
             quote: "The CRL in this case is a completion of the certificate, rather than a message to the world announcing a change of mind."
         inferred: true
         inferred_reason: "That the clearance lapses with the CRL and a new CRL is needed follows from the CRL completing the certificate; it is not stated as a step."
+        constrained_by:
+          - "rfc-2693#R-0085"
       - id: M04-T08
         from: revoked
         to: no-current-crl
@@ -936,6 +1065,8 @@ machines:
             quote: "The CRL in this case is a completion of the certificate, rather than a message to the world announcing a change of mind."
         inferred: true
         inferred_reason: "The verifier evaluates only the CRL current at t, so it carries no memory of an earlier listing. Whether a later CRL may omit a certificate an earlier one listed is OQ-04."
+        constrained_by:
+          - "rfc-2693#R-0085"
       - id: M04-T09
         from: no-current-crl
         to: cleared
@@ -947,6 +1078,8 @@ machines:
             quote: "That is, one may not issue a new CRL to take effect before the expiration of the CRL currently deployed."
         inferred: true
         inferred_reason: "A CRL issued ahead of its slot is permitted by the letter of condition 3; its taking effect at its not-before is ours."
+        constrained_by:
+          - "rfc-2693#R-0081"
       - id: M04-T10
         from: no-current-crl
         to: revoked
@@ -958,6 +1091,8 @@ machines:
             quote: "That is, one may not issue a new CRL to take effect before the expiration of the CRL currently deployed."
         inferred: true
         inferred_reason: "As M04-T09."
+        constrained_by:
+          - "rfc-2693#R-0081"
     error_states:
       - revoked
       - unprocessable
@@ -1018,6 +1153,8 @@ machines:
           - locator: "§5.2"
             quote: "That is, a CRL might be a full CRL followed by a sequence of delta-CRLs."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0086"
       - id: M05-T02
         from: full-crl-current
         to: full-plus-deltas-current
@@ -1027,6 +1164,8 @@ machines:
           - locator: "§5.2"
             quote: "That sequence of instruments is then treated as a current CRL and the combined CRL must follow the conditions listed above."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0087"
       - id: M05-T03
         from: full-plus-deltas-current
         to: full-plus-deltas-current
@@ -1036,6 +1175,8 @@ machines:
           - locator: "§5.2"
             quote: "That sequence of instruments is then treated as a current CRL and the combined CRL must follow the conditions listed above."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0087"
       - id: M05-T04
         from: full-crl-current
         to: combined-crl-nonconforming
@@ -1046,6 +1187,8 @@ machines:
             quote: "That sequence of instruments is then treated as a current CRL and the combined CRL must follow the conditions listed above."
         inferred: true
         inferred_reason: "The source states the obligation, not the handling of a combined CRL that breaks it."
+        constrained_by:
+          - "rfc-2693#R-0087"
       - id: M05-T05
         from: full-plus-deltas-current
         to: combined-crl-nonconforming
@@ -1056,6 +1199,8 @@ machines:
             quote: "That sequence of instruments is then treated as a current CRL and the combined CRL must follow the conditions listed above."
         inferred: true
         inferred_reason: "As M05-T04."
+        constrained_by:
+          - "rfc-2693#R-0087"
     error_states:
       - combined-crl-nonconforming
     unspecified:
@@ -1117,6 +1262,9 @@ machines:
           - locator: "§5.4"
             quote: "That is, one must assume that the previous CRL or revalidation has just been signed and transmitted to at least one consumer, locking up a time slot."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0091"
+          - "rfc-2693#R-0093"
       - id: M06-T02
         from: no-instrument-deployed
         to: slot-locked
@@ -1128,6 +1276,9 @@ machines:
           - locator: "§5.3"
             quote: "As with the CRL, SPKI demands that this process be deterministic and therefore that the revalidation follow the same rules listed above (in section 5.2)."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0090"
+          - "rfc-2693#R-0093"
       - id: M06-T03
         from: slot-locked
         to: revocation-pending
@@ -1139,6 +1290,8 @@ machines:
           - locator: "§5.4"
             quote: "That is the earliest one can revoke a certificate one learns to be false."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0094"
       - id: M06-T04
         from: slot-locked
         to: slot-locked
@@ -1149,6 +1302,8 @@ machines:
             quote: "That is, one may not issue a new CRL to take effect before the expiration of the CRL currently deployed."
         inferred: true
         inferred_reason: "Issuing ahead is permitted by the letter of condition 3, not described. Each slot locked ahead pushes the earliest possible revocation later."
+        constrained_by:
+          - "rfc-2693#R-0081"
       - id: M06-T05
         from: slot-locked
         to: overlap-violation
@@ -1161,16 +1316,21 @@ machines:
             quote: "That is, one may not issue a new CRL to take effect before the expiration of the CRL currently deployed."
         inferred: true
         inferred_reason: "The prohibition is stated; modelling its breach as a state is ours."
+        constrained_by:
+          - "rfc-2693#R-0080"
+          - "rfc-2693#R-0081"
       - id: M06-T06
         from: slot-locked
         to: no-instrument-deployed
         trigger: clock-passes-crl-not-after
-        guard: "No successor has been issued. For a revalidation series read clock-passes-revalidation-not-after."
+        guard: "No successor has been issued (a CRL series; a revalidation series lapses by M06-T10)."
         source:
           - locator: "§5.4"
             quote: "The next available time slot starts after this validity interval ends."
         inferred: true
         inferred_reason: "Lapse with no successor is not described; verifiers are then left without a current CRL (M04 no-current-crl)."
+        constrained_by:
+          - "rfc-2693#R-0094"
       - id: M06-T07
         from: revocation-pending
         to: slot-locked
@@ -1181,6 +1341,8 @@ machines:
             quote: "That is the earliest one can revoke a certificate one learns to be false."
         inferred: true
         inferred_reason: "Issuing the revoking CRL in the next slot is the reading of the earliest-revocation sentence; the step is not described."
+        constrained_by:
+          - "rfc-2693#R-0094"
       - id: M06-T08
         from: revocation-pending
         to: slot-locked
@@ -1193,6 +1355,9 @@ machines:
             quote: "That is the earliest one can revoke a certificate one learns to be false."
         inferred: true
         inferred_reason: "A revalidation is a positive statement, so revoking means not revalidating; the source does not say so."
+        constrained_by:
+          - "rfc-2693#R-0088"
+          - "rfc-2693#R-0094"
       - id: M06-T09
         from: revocation-pending
         to: revocation-pending
@@ -1204,6 +1369,23 @@ machines:
             quote: "That is the earliest one can revoke a certificate one learns to be false."
         inferred: true
         inferred_reason: "Accumulating several pending revocations is ours."
+        constrained_by:
+          - "rfc-2693#R-0094"
+      - id: M06-T10
+        from: slot-locked
+        to: no-instrument-deployed
+        trigger: clock-passes-revalidation-not-after
+        guard: "No successor has been issued (a revalidation series)."
+        source:
+          - locator: "§5.4"
+            quote: "The next available time slot starts after this validity interval ends."
+          - locator: "§5.3"
+            quote: "As with the CRL, SPKI demands that this process be deterministic and therefore that the revalidation follow the same rules listed above (in section 5.2)."
+        inferred: true
+        inferred_reason: "As M06-T06, for a revalidation series through §5.3."
+        constrained_by:
+          - "rfc-2693#R-0090"
+          - "rfc-2693#R-0094"
     error_states:
       - overlap-violation
     unspecified:
@@ -1215,9 +1397,9 @@ machines:
         trigger: revalidation
         situation: "Whether non-intersection binds per certificate, per signing key, or per series when one revalidation lists several certificates."
         open_question: OQ-16
-      - from: no-instrument-deployed
-        trigger: clock-passes-crl-not-after
-        situation: "Whether consecutive intervals may abut. Closed intervals [a, b] and [b, c] intersect at b, which condition 3 forbids, so contiguity needs half-open intervals or a gap."
+      - from: slot-locked
+        trigger: timed-crl
+        situation: "A new CRL whose not-before equals the deployed CRL's not-after: whether it locks the next slot (M06-T04) or intersects the deployed one (M06-T05). Whether consecutive intervals may abut. Closed intervals [a, b] and [b, c] intersect at b, which condition 3 forbids, so contiguity needs half-open intervals or a gap."
         open_question: OQ-01
 
   # =====================================================================
@@ -1254,6 +1436,10 @@ machines:
             quote: "However, in SPKI, the certificate issuer must specify the issuer of validity confirmations."
         inferred: true
         inferred_reason: "The signer, dates and validity checks are the §5.2 rules carried over by §5.3."
+        constrained_by:
+          - "rfc-2693#R-0072"
+          - "rfc-2693#R-0089"
+          - "rfc-2693#R-0090"
       - id: M07-T02
         from: no-current-revalidation
         to: no-current-revalidation
@@ -1265,6 +1451,8 @@ machines:
             quote: "Typically a revalidation would list only one certificate (the one of interest), although it might list a set of certificates (to save digital signature effort)."
         inferred: true
         inferred_reason: "Handling of a non-qualifying revalidation is not described."
+        constrained_by:
+          - "rfc-2693#R-0089"
       - id: M07-T03
         from: no-current-revalidation
         to: unprocessable
@@ -1278,6 +1466,10 @@ machines:
             quote: "Under these rules, no certificate that might use a CRL can be processed without a valid CRL and no CRL can be issued to show up as a surprise at the verifier."
         inferred: true
         inferred_reason: "The cannot-be-processed rule is stated for CRLs and applies to revalidations only through the same-rules clause of §5.3."
+        constrained_by:
+          - "rfc-2693#R-0082"
+          - "rfc-2693#R-0083"
+          - "rfc-2693#R-0090"
       - id: M07-T04
         from: unprocessable
         to: revalidated
@@ -1289,6 +1481,8 @@ machines:
             quote: "The positive version of a CRL is what we call a revalidation."
         inferred: true
         inferred_reason: "Recovery is not discussed."
+        constrained_by:
+          - "rfc-2693#R-0088"
       - id: M07-T05
         from: revalidated
         to: no-current-revalidation
@@ -1301,6 +1495,9 @@ machines:
             quote: "That is the earliest one can revoke a certificate one learns to be false."
         inferred: true
         inferred_reason: "A positive statement lapses when its interval ends; this is also how an issuer revokes under revalidation, by issuing no successor that lists the certificate."
+        constrained_by:
+          - "rfc-2693#R-0088"
+          - "rfc-2693#R-0094"
       - id: M07-T06
         from: no-current-revalidation
         to: revalidated
@@ -1312,6 +1509,8 @@ machines:
             quote: "As with the CRL, SPKI demands that this process be deterministic and therefore that the revalidation follow the same rules listed above (in section 5.2)."
         inferred: true
         inferred_reason: "As M04-T09."
+        constrained_by:
+          - "rfc-2693#R-0090"
     error_states:
       - unprocessable
     unspecified:
@@ -1352,7 +1551,7 @@ machines:
         meaning: "The instrument is not signed by the issuer of validity confirmations the certificate specifies."
         inferred: true
       - name: no-confirmation
-        meaning: "No instrument arrives, or the responder does not confirm the certificate."
+        meaning: "No instrument arrives in this computation."
         inferred: true
     transitions:
       - id: M08-T01
@@ -1364,6 +1563,8 @@ machines:
           - locator: "§5.5"
             quote: "One applies for this on-line, one-time revalidation by submitting a request containing a nonce."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0099"
       - id: M08-T02
         from: awaiting-response
         to: confirmed
@@ -1376,6 +1577,9 @@ machines:
           - locator: "§5"
             quote: "However, in SPKI, the certificate issuer must specify the issuer of validity confirmations."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0072"
+          - "rfc-2693#R-0100"
       - id: M08-T03
         from: awaiting-response
         to: replay-rejected
@@ -1387,6 +1591,8 @@ machines:
             quote: "That nonce gets returned in the signed revalidation instrument, in order to prevent replay attacks."
         inferred: true
         inferred_reason: "The nonce's stated purpose is replay prevention; rejecting a mismatch is the only reading that achieves it, but the step is not written. The signer conjunct is ours: it makes this guard and M08-T04's mutually exclusive, so a replay is a genuine instrument answering another request and anything wrongly signed is wrong-signer, whatever nonce it carries."
+        constrained_by:
+          - "rfc-2693#R-0100"
       - id: M08-T04
         from: awaiting-response
         to: wrong-signer
@@ -1398,17 +1604,21 @@ machines:
             quote: "However, in SPKI, the certificate issuer must specify the issuer of validity confirmations."
         inferred: true
         inferred_reason: "Rejection of an unspecified signer is our reading of the specify-the-issuer rule."
+        constrained_by:
+          - "rfc-2693#R-0072"
       - id: M08-T05
         from: awaiting-response
         to: no-confirmation
         trigger: online-test-unavailable
-        guard: "No instrument arrives, or the responder declines to confirm."
+        guard: "No instrument arrives."
         action: "Emit online-test-fails."
         source:
           - locator: "§5.5"
             quote: "For those who want to set the validity interval to zero, SPKI defines a one-time revalidation."
         inferred: true
         inferred_reason: "The source describes no failure or negative response for a one-time revalidation (OQ-09)."
+        constrained_by:
+          - "rfc-2693#R-0097"
       - id: M08-T06
         from: confirmed
         to: consumed
@@ -1421,6 +1631,9 @@ machines:
           - locator: "§5.5"
             quote: "This protocol takes the place of a validity date range and represents a validity interval of zero, starting and ending at the time the authorization computation completes."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0098"
+          - "rfc-2693#R-0101"
     error_states:
       - replay-rejected
       - wrong-signer
@@ -1455,6 +1668,10 @@ machines:
         trigger: authorization-computation-completes
         situation: "How a one-time test deferred into a CRC (§6.3.2) can ever be evaluated, given it has no lifetime beyond one computation."
         open_question: OQ-10
+      - from: awaiting-response
+        trigger: one-time-revalidation
+        situation: "A correctly signed instrument with the right nonce that declines to confirm. messages.yaml one-time-revalidation names no verdict field, so M08-T02 cannot tell a refusal from a confirmation."
+        open_question: OQ-09
 
   # =====================================================================
   - id: M09
@@ -1485,6 +1702,8 @@ machines:
             quote: "A performance analysis of the various methods of achieving fine-grain control over the validity interval of a certificate should consider the possibility of just making the original certificate short-lived, especially if the online test result is issued by the same key that issued the certificate."
         inferred: true
         inferred_reason: "Expiry of a short-lived certificate follows from M03; the source does not walk through it."
+        constrained_by:
+          - "rfc-2693#R-0102"
       - id: M09-T02
         from: lapsed
         to: current
@@ -1494,6 +1713,8 @@ machines:
           - locator: "§5.6"
             quote: "If one wants to issue short-lived certificates, SPKI defines a kind of online test statement to tell the user of the certificate where a replacement short-lived certificate might be fetched."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0103"
       - id: M09-T03
         from: lapsed
         to: no-replacement
@@ -1504,6 +1725,8 @@ machines:
             quote: "That is, under SPKI one does not declare a key to be bad but rather stops empowering it and instead empowers some other key."
         inferred: true
         inferred_reason: "Revoking a short-lived certificate means issuing no replacement. The source does not describe the case."
+        constrained_by:
+          - "rfc-2693#R-0220"
       - id: M09-T04
         from: no-replacement
         to: current
@@ -1514,6 +1737,21 @@ machines:
             quote: "If one wants to issue short-lived certificates, SPKI defines a kind of online test statement to tell the user of the certificate where a replacement short-lived certificate might be fetched."
         inferred: true
         inferred_reason: "Recovery is not discussed."
+        constrained_by:
+          - "rfc-2693#R-0103"
+      - id: M09-T05
+        from: current
+        to: current
+        trigger: short-lived-certificate
+        guard: "A replacement, fetched from a location the online test statement gives, arrives before the current certificate's not-after."
+        action: "The replacement becomes the current certificate; M09-T01 now waits for its not-after."
+        source:
+          - locator: "§5.6"
+            quote: "If one wants to issue short-lived certificates, SPKI defines a kind of online test statement to tell the user of the certificate where a replacement short-lived certificate might be fetched."
+        inferred: true
+        inferred_reason: "Timing before expiry is what protocol.yaml short-lived-certificate-renewal step 4 infers; the source says only where a replacement might be fetched."
+        constrained_by:
+          - "rfc-2693#R-0103"
     error_states:
       - no-replacement
     notes:
@@ -1560,6 +1798,7 @@ machines:
             quote: "If one's payment instrument wasn't listed in the book, then that instrument was considered good."
         inferred: true
         inferred_reason: "Stated of the supermarket book the design was modelled on, not of the CRL itself."
+        constrained_by: []
       - id: M10-T02
         from: no-crl-held
         to: annihilated
@@ -1569,6 +1808,7 @@ machines:
           - locator: "§5.1"
             quote: "If the CRL encounters a certificate it has listed, it effectively annihilates that certificate."
         inferred: false
+        constrained_by: []
       - id: M10-T03
         from: good
         to: annihilated
@@ -1580,6 +1820,7 @@ machines:
           - locator: "§5.1"
             quote: "If the CRL encounters a certificate it has listed, it effectively annihilates that certificate."
         inferred: false
+        constrained_by: []
       - id: M10-T04
         from: good
         to: good
@@ -1593,6 +1834,7 @@ machines:
             quote: "If it encounters an older CRL, it annihilates that CRL also, leaving a copies of itself at the verifiers it encounters."
         inferred: true
         inferred_reason: "Replacement is stated; that an unlisted certificate stays good is the book analogy of M10-T01."
+        constrained_by: []
       - id: M10-T05
         from: good
         to: good
@@ -1604,6 +1846,9 @@ machines:
             quote: "It also had a sequence number, so that one could tell which of two CRLs was more recent."
         inferred: true
         inferred_reason: "The source describes a newer CRL meeting an older one, not an older one arriving late."
+        constrained_by: []
+    error_states:
+      - annihilated
     terminal_states:
       - annihilated
     defects:
@@ -1685,6 +1930,8 @@ machines:
           - locator: "§2.8"
             quote: "It is SDSI 1.0 convention, preserved in SPKI, that if a (local) SDSI name occurs within a certificate, then the public key of the issuer is the identifier of the name space in which that name is defined."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0033"
       - id: M11-T02
         from: local-name
         to: qualified
@@ -1694,6 +1941,8 @@ machines:
           - locator: "§2.8"
             quote: "That name is a public key followed by one or more names relative to that key."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0035"
       - id: M11-T03
         from: qualified
         to: qualified
@@ -1708,6 +1957,10 @@ machines:
           - locator: "§6.4.2"
             quote: "Whenever a 4-tuple is used to reduce the subject (or part of the subject) of another tuple, its validity interval is intersected with that of the tuple holding the subject being reduced and the intersection is used in the resulting tuple."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0177"
+          - "rfc-2693#R-0178"
+          - "rfc-2693#R-0190"
       - id: M11-T04
         from: qualified
         to: resolved
@@ -1719,6 +1972,8 @@ machines:
             quote: "Such applications should bring 4-tuples that started out in class (2) into class (1), and eventually reduce all names to keys."
         inferred: true
         inferred_reason: "That (name K2) with no names left is simply the key K2 is implied by reducing all names to keys, never written out."
+        constrained_by:
+          - "rfc-2693#R-0183"
       - id: M11-T05
         from: qualified
         to: qualified
@@ -1731,6 +1986,9 @@ machines:
           - locator: "§6.4"
             quote: "With the second form of name definition, one might have names that temporarily grow."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0179"
+          - "rfc-2693#R-0180"
       - id: M11-T06
         from: qualified
         to: qualified
@@ -1745,6 +2003,10 @@ machines:
           - locator: "§6.4"
             quote: "Any naming loops are avoided by this process."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0182"
+          - "rfc-2693#R-0183"
+          - "rfc-2693#R-0184"
       - id: M11-T07
         from: qualified
         to: definition-mismatch
@@ -1755,6 +2017,8 @@ machines:
             quote: "If the prover is providing certificates in order, then the verifier need only do as it is told."
         inferred: true
         inferred_reason: "The source does not consider a prover whose order is wrong."
+        constrained_by:
+          - "rfc-2693#R-0181"
       - id: M11-T08
         from: qualified
         to: validity-intersection-failed
@@ -1767,6 +2031,9 @@ machines:
             quote: "and if Vmin > Vmax, then the intersection failed."
         inferred: true
         inferred_reason: "The failure of this intersection is not discussed for names."
+        constrained_by:
+          - "rfc-2693#R-0158"
+          - "rfc-2693#R-0190"
       - id: M11-T09
         from: qualified
         to: unresolved
@@ -1777,6 +2044,8 @@ machines:
             quote: "Uses of names are replaced with simple definitions (keys or hashes), based on the name definitions available from reducing name 4-tuples."
         inferred: true
         inferred_reason: "The failure path is not described."
+        constrained_by:
+          - "rfc-2693#R-0116"
     error_states:
       - definition-mismatch
       - validity-intersection-failed
@@ -1809,6 +2078,10 @@ machines:
         trigger: name-4-tuple
         situation: "Whether 4-tuples may be applied interleaved with 5-tuple reduction in the prover's one sequence, or only in a separate pass before it."
         open_question: OQ-23
+      - from: qualified
+        trigger: name-4-tuple
+        situation: "A 4-tuple defining the leading name as a threshold subject, which §6.2 allows and neither §6.4 class covers; protocol.yaml four-tuple-name-reduction step 4 applies it only when no names follow (inferred)."
+        open_question: OQ-25
 
   # =====================================================================
   - id: M12
@@ -1865,6 +2138,9 @@ machines:
             quote: "the ACL is the source of empowerment for certificates."
         inferred: true
         inferred_reason: "That the fold starts from an ACL entry is our reading of under this ACL (OQ-20)."
+        constrained_by:
+          - "rfc-2693#R-0002"
+          - "rfc-2693#R-0214"
       - id: M12-T02
         from: accumulating
         to: accumulating
@@ -1877,6 +2153,12 @@ machines:
           - locator: "§6.3.4"
             quote: "All reduction operations are in the order provided by the prover."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0136"
+          - "rfc-2693#R-0137"
+          - "rfc-2693#R-0138"
+          - "rfc-2693#R-0139"
+          - "rfc-2693#R-0171"
       - id: M12-T03
         from: accumulating
         to: subject-issuer-mismatch
@@ -1887,6 +2169,11 @@ machines:
             quote: "The two 5-tuples: <I1,S1,D1,A1,V1> + <I2,S2,D2,A2,V2> yield <I1,S2,D2,AIntersect(A1,A2),VIntersect(V1,V2)> provided the two intersections succeed, S1 = I2 and D1 = TRUE"
         inferred: true
         inferred_reason: "The source gives the provisos, not the failure behaviour. With the order fixed by the prover, a step whose proviso fails ends the reduction; the verifier does not search for another order."
+        constrained_by:
+          - "rfc-2693#R-0136"
+          - "rfc-2693#R-0137"
+          - "rfc-2693#R-0138"
+          - "rfc-2693#R-0139"
       - id: M12-T04
         from: accumulating
         to: delegation-not-permitted
@@ -1899,6 +2186,10 @@ machines:
             quote: "The subject of a certificate or ACL entry may exercise any permission granted and, if delegation is TRUE, may also delegate that permission or some subset of it to others."
         inferred: true
         inferred_reason: "As M12-T03."
+        constrained_by:
+          - "rfc-2693#R-0061"
+          - "rfc-2693#R-0062"
+          - "rfc-2693#R-0124"
       - id: M12-T05
         from: accumulating
         to: authorization-intersection-failed
@@ -1911,6 +2202,8 @@ machines:
             quote: "AIntersect( (tag (* range numeric ge #30# le #39# )), (tag #26#) ) fails to intersect."
         inferred: true
         inferred_reason: "As M12-T03."
+        constrained_by:
+          - "rfc-2693#R-0156"
       - id: M12-T06
         from: accumulating
         to: validity-intersection-failed
@@ -1921,6 +2214,9 @@ machines:
             quote: "Vmin = max( Xmin, Ymin ) Vmax = min( Xmax, Ymax ) and if Vmin > Vmax, then the intersection failed."
         inferred: true
         inferred_reason: "As M12-T03."
+        constrained_by:
+          - "rfc-2693#R-0157"
+          - "rfc-2693#R-0158"
       - id: M12-T07
         from: accumulating
         to: threshold-pending
@@ -1931,6 +2227,8 @@ machines:
           - locator: "§6.3"
             quote: "If S1 is a threshold subject, there is a slight modification to this rule, as described below in section 6.3.3."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0140"
       - id: M12-T08
         from: threshold-pending
         to: accumulating
@@ -1941,6 +2239,8 @@ machines:
           - locator: "§6.3.3"
             quote: "At that point, those K tuples are validity-, authorization- and delegation- intersected to yield the single tuple that will replace the list of tuples."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0170"
       - id: M12-T09
         from: threshold-pending
         to: threshold-not-satisfied
@@ -1951,6 +2251,8 @@ machines:
             quote: "A threshold subject is reduced to a single subject by selecting K of the N subjects and reducing each of those K to the same subject, through a sequence of certificates."
         inferred: true
         inferred_reason: "The failure case is not described."
+        constrained_by:
+          - "rfc-2693#R-0166"
       - id: M12-T10
         from: accumulating
         to: reduced
@@ -1960,6 +2262,8 @@ machines:
           - locator: "§6"
             quote: "Authorization 5-tuples are then reduced to a final authorization result."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0117"
       - id: M12-T11
         from: threshold-pending
         to: reduced
@@ -1970,6 +2274,8 @@ machines:
             quote: "This might be used by a service that produces Certificate Result Certificates [see 6.7]."
         inferred: true
         inferred_reason: "§6.4.1 allows leaving a subject in threshold form for a CRC service; ending the fold there is our reading. Its cross-reference to §6.7 is dangling (OQ-15)."
+        constrained_by:
+          - "rfc-2693#R-0189"
       - id: M12-T12
         from: empty
         to: empty-sequence
@@ -1980,6 +2286,8 @@ machines:
             quote: "All reduction operations are in the order provided by the prover."
         inferred: true
         inferred_reason: "The empty case is not discussed."
+        constrained_by:
+          - "rfc-2693#R-0171"
     error_states:
       - subject-issuer-mismatch
       - delegation-not-permitted
@@ -2016,12 +2324,14 @@ machines:
           - locator: "§6.3.1"
             quote: "Special semantics would require special reduction software."
       - name: VIntersect
-        meaning: "Vmin is the later of the two not-befores, Vmax the earlier of the two not-afters; it fails when Vmin > Vmax. The full form also intersects the validity interval of each online test (M02-T09, M01-T09)."
+        meaning: "Vmin is the later of the two not-befores, Vmax the earlier of the two not-afters; it fails when Vmin > Vmax. The full form also intersects the validity interval of each online test (M02-T09, M01-T09). In the deferred mode of §6.3.2 it also takes the union of the operands' deferred online tests (the online_tests list of each tuple's validity; schema tuple-validity online-tests), which is how the tests every tuple carries (M02-T08) reach the result tuple M01-T07 tests; M11-T03 to M11-T05, M13-T04 and M13-T07 carry them the same way."
         source:
           - locator: "§6.3.2"
             quote: "Vmin = max( Xmin, Ymin ) Vmax = min( Xmax, Ymax ) and if Vmin > Vmax, then the intersection failed."
           - locator: "§6.3.2"
             quote: "The full SPKI VIntersect() also deals with online tests."
+          - locator: "§6.3.2"
+            quote: "It is possible for an implementation of VIntersect() to gather up online tests that are present in each certificate and include the union of all those tests in the accumulating tuples."
     notes:
       - text: "The verifier does not search. Finding a reducible order is the prover's job, and a keyholder extends its own sequence by appending one certificate when it delegates."
         source:
@@ -2042,6 +2352,15 @@ machines:
             quote: "The two 5-tuples: <I1,S1,D1,A1,V1> + <I2,S2,D2,A2,V2> yield <I1,S2,D2,AIntersect(A1,A2),VIntersect(V1,V2)> provided the two intersections succeed, S1 = I2 and D1 = TRUE"
         inferred: true
         inferred_reason: "Absence noted, nothing inferred beyond it."
+    unspecified:
+      - from: accumulating
+        trigger: 5-tuple
+        situation: "acc.S and next.I name the same key, one as the key and one as its hash: whether S1 = I2 holds (M12-T02) or fails (M12-T03). The same comparison decides K1 = K in M11 and entry.S = next.I in M13."
+        open_question: OQ-26
+      - from: accumulating
+        trigger: name-4-tuple
+        situation: "A name 4-tuple met during the fold: protocol.yaml five-tuple-chain-reduction step 2 reduces a name subject of acc in place, while M01-T04 finishes stage 2 first, so M12 consumes no name 4-tuple."
+        open_question: OQ-23
 
   # =====================================================================
   - id: M13
@@ -2091,16 +2410,22 @@ machines:
           - locator: "§6.3.3"
             quote: "The intermediate form for a threshold subject is a copy of the tuple in which the threshold subject appears, but with only one of the subordinate subjects."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0165"
+          - "rfc-2693#R-0168"
       - id: M13-T02
         from: threshold-tuple
         to: invalid-parameters
         trigger: completion
         guard: "K <= 0, or K > N, or the number of subordinate subjects listed is not N."
+        action: "Emit threshold-unsatisfiable."
         source:
           - locator: "§6.3.3"
             quote: "A threshold subject is specified by two numbers, K and N [0<K<=N], and N subordinate subjects."
         inferred: true
         inferred_reason: "The source states the constraint, not the handling of a subject that breaks it."
+        constrained_by:
+          - "rfc-2693#R-0165"
       - id: M13-T03
         from: reducing
         to: reducing
@@ -2113,6 +2438,9 @@ machines:
           - locator: "§6.3.3"
             quote: "Those subordinate tuples are reduced individually until the list of subordinate tuples has (N-K) (null) entries and K entries with the same subject."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0166"
+          - "rfc-2693#R-0169"
       - id: M13-T04
         from: reducing
         to: reducing
@@ -2125,6 +2453,9 @@ machines:
           - locator: "§6.4.1"
             quote: "The name reduction process proceeds independently on each name in the subordinate subject as indicated in 6.3.3 above."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0185"
+          - "rfc-2693#R-0186"
       - id: M13-T05
         from: reducing
         to: reducing
@@ -2135,6 +2466,8 @@ machines:
           - locator: "§6.3.3"
             quote: "The (N-K) unselected subordinate subjects are set to (null)."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0167"
       - id: M13-T06
         from: reducing
         to: converged
@@ -2144,6 +2477,8 @@ machines:
           - locator: "§6.3.3"
             quote: "Those subordinate tuples are reduced individually until the list of subordinate tuples has (N-K) (null) entries and K entries with the same subject."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0169"
       - id: M13-T07
         from: converged
         to: merged
@@ -2155,6 +2490,8 @@ machines:
             quote: "At that point, those K tuples are validity-, authorization- and delegation- intersected to yield the single tuple that will replace the list of tuples."
         inferred: true
         inferred_reason: "Delegation-intersection of booleans is not defined; AND is our reading."
+        constrained_by:
+          - "rfc-2693#R-0170"
       - id: M13-T08
         from: converged
         to: merge-failed
@@ -2166,17 +2503,21 @@ machines:
             quote: "At that point, those K tuples are validity-, authorization- and delegation- intersected to yield the single tuple that will replace the list of tuples."
         inferred: true
         inferred_reason: "The failure case is not described."
+        constrained_by:
+          - "rfc-2693#R-0170"
       - id: M13-T09
         from: reducing
         to: unsatisfiable
         trigger: sequence-exhausted
-        guard: "Fewer than K live entries share one subject."
+        guard: "The list has not converged: fewer than K live entries share one subject, or K do and some other entry was never set to (null). More than K live entries sharing one subject is under unspecified (OQ-13 (c))."
         action: "Emit threshold-unsatisfiable."
         source:
           - locator: "§6.3.3"
             quote: "A threshold subject is reduced to a single subject by selecting K of the N subjects and reducing each of those K to the same subject, through a sequence of certificates."
         inferred: true
-        inferred_reason: "The failure case is not described."
+        inferred_reason: "The failure case is not described. Treating an un-nulled entry as failure follows from attributing nulling to the prover (prover-nulls-subordinate); a verifier that nulls the unselected entries itself is the other reading, OQ-13 (f)."
+        constrained_by:
+          - "rfc-2693#R-0166"
       - id: M13-T10
         from: reducing
         to: left-in-threshold-form
@@ -2191,6 +2532,10 @@ machines:
           - locator: "§6.4.1"
             quote: "This might be used by a service that produces Certificate Result Certificates [see 6.7]."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0187"
+          - "rfc-2693#R-0188"
+          - "rfc-2693#R-0189"
     error_states:
       - invalid-parameters
       - merge-failed
@@ -2235,6 +2580,10 @@ machines:
         trigger: completion
         situation: "The meaning of delegation-intersection for boolean flags."
         open_question: OQ-12
+      - from: reducing
+        trigger: sequence-exhausted
+        situation: "More than K live entries share one subject when the prover's sequence ends."
+        open_question: OQ-13
 
   # =====================================================================
   - id: M14
@@ -2269,6 +2618,8 @@ machines:
           - locator: "§4.2"
             quote: "We decided that a delegator is free to create a new key pair, also controlled by it, and delegate the rights to that key to exercise the delegated permission."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0065"
       - id: M14-T02
         from: created
         to: empowered
@@ -2278,15 +2629,18 @@ machines:
           - locator: "§7.6"
             quote: "In the first model, it will be a <name,key> certificate."
         inferred: false
+        constrained_by: []
       - id: M14-T03
         from: empowered
         to: empowered
         trigger: authorization-certificate
-        guard: "A replacement certificate issued before the current one expires. A name-certificate serves equally in the first model."
+        guard: "Model 2: a replacement authorization certificate issued before the current one expires (model 1 is M14-T09)."
         source:
           - locator: "§7"
             quote: "Rather than define a mechanism for declaring a key to be bad or replaced, SPKI defines a mechanism for giving certificates limited lifetimes so that they can be replaced."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0219"
       - id: M14-T04
         from: empowered
         to: disempowered
@@ -2298,6 +2652,9 @@ machines:
           - locator: "§7"
             quote: "Therefore, all key lifetime control becomes certificate lifetime control."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0220"
+          - "rfc-2693#R-0222"
       - id: M14-T05
         from: empowered
         to: loss-reported
@@ -2309,6 +2666,7 @@ machines:
           - locator: "§7.6"
             quote: "That service could run a 24x7 manned desk, to receive phone calls reporting loss of a key."
         inferred: false
+        constrained_by: []
       - id: M14-T06
         from: loss-reported
         to: disempowered
@@ -2319,6 +2677,8 @@ machines:
             quote: "That authority would not have the power to generate a new key for the user, only to revoke a current one."
         inferred: true
         inferred_reason: "The source says the service can revoke; that it does so through the certificate's CRL, at the next slot, is the application of §5.2 and §5.4."
+        constrained_by:
+          - "rfc-2693#R-0236"
       - id: M14-T07
         from: loss-reported
         to: disempowered
@@ -2329,6 +2689,7 @@ machines:
             quote: "Whether this test is in the form of a CRL, a re-validation or a one-time test, it will be supplied by some entity that is on-line."
         inferred: true
         inferred_reason: "As M14-T06, through revalidation (M06-T08)."
+        constrained_by: []
       - id: M14-T08
         from: loss-reported
         to: disempowered
@@ -2339,6 +2700,20 @@ machines:
             quote: "Whether this test is in the form of a CRL, a re-validation or a one-time test, it will be supplied by some entity that is on-line."
         inferred: true
         inferred_reason: "As M14-T06, through one-time revalidation (M08-T05). Takes effect at the next computation, with no slot to wait for."
+        constrained_by: []
+      - id: M14-T09
+        from: empowered
+        to: empowered
+        trigger: name-certificate
+        guard: "Model 1: a replacement <name,key> certificate issued before the current one expires."
+        source:
+          - locator: "§7.6"
+            quote: "In the first model, it will be a <name,key> certificate."
+          - locator: "§7"
+            quote: "Rather than define a mechanism for declaring a key to be bad or replaced, SPKI defines a mechanism for giving certificates limited lifetimes so that they can be replaced."
+        inferred: false
+        constrained_by:
+          - "rfc-2693#R-0219"
     terminal_states:
       - disempowered
     constraints:
@@ -2404,6 +2779,8 @@ machines:
           - locator: "§7.6"
             quote: "If, in the worst case, a user loses his master key, then the same process that occurs today with lost wallets would apply."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0237"
       - id: M15-T02
         from: master-in-use
         to: stolen-reissuing-and-cancelling
@@ -2413,6 +2790,9 @@ machines:
           - locator: "§7.6"
             quote: "All issuers of authorizations through that master key would need to issue new authorizations through the new master key and, if the old master key had been stolen, cancel all old authorizations through that key."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0237"
+          - "rfc-2693#R-0238"
       - id: M15-T03
         from: lost-reissuing
         to: stolen-reissuing-and-cancelling
@@ -2423,6 +2803,9 @@ machines:
             quote: "All issuers of authorizations through that master key would need to issue new authorizations through the new master key and, if the old master key had been stolen, cancel all old authorizations through that key."
         inferred: true
         inferred_reason: "Discovering theft after loss is not discussed."
+        constrained_by:
+          - "rfc-2693#R-0237"
+          - "rfc-2693#R-0238"
       - id: M15-T04
         from: lost-reissuing
         to: lost-reissuing
@@ -2432,6 +2815,9 @@ machines:
           - locator: "§7.6"
             quote: "All issuers of authorizations through that master key would need to issue new authorizations through the new master key and, if the old master key had been stolen, cancel all old authorizations through that key."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0237"
+          - "rfc-2693#R-0238"
       - id: M15-T05
         from: stolen-reissuing-and-cancelling
         to: stolen-reissuing-and-cancelling
@@ -2441,6 +2827,9 @@ machines:
           - locator: "§7.6"
             quote: "All issuers of authorizations through that master key would need to issue new authorizations through the new master key and, if the old master key had been stolen, cancel all old authorizations through that key."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0237"
+          - "rfc-2693#R-0238"
       - id: M15-T06
         from: stolen-reissuing-and-cancelling
         to: stolen-reissuing-and-cancelling
@@ -2451,6 +2840,8 @@ machines:
             quote: "This limitation of a certificate's lifetime might be by limited lifetime at time of issuance or might be via the lifetime acquired through an on-line test (CRL, revalidation or one-time)."
         inferred: true
         inferred_reason: "The source says cancel without saying how; in SPKI only an online test or expiry ends a certificate (OQ-18)."
+        constrained_by:
+          - "rfc-2693#R-0221"
       - id: M15-T07
         from: lost-reissuing
         to: recovered
@@ -2461,6 +2852,9 @@ machines:
             quote: "All issuers of authorizations through that master key would need to issue new authorizations through the new master key and, if the old master key had been stolen, cancel all old authorizations through that key."
         inferred: true
         inferred_reason: "An end state for the process is ours."
+        constrained_by:
+          - "rfc-2693#R-0237"
+          - "rfc-2693#R-0238"
       - id: M15-T08
         from: stolen-reissuing-and-cancelling
         to: recovered
@@ -2471,6 +2865,9 @@ machines:
             quote: "All issuers of authorizations through that master key would need to issue new authorizations through the new master key and, if the old master key had been stolen, cancel all old authorizations through that key."
         inferred: true
         inferred_reason: "As M15-T07."
+        constrained_by:
+          - "rfc-2693#R-0237"
+          - "rfc-2693#R-0238"
     terminal_states:
       - recovered
     unspecified:
@@ -2513,6 +2910,8 @@ machines:
             quote: "This use of threshold subject would allow the set of root keys to elect new members to that set and retire old members."
         inferred: true
         inferred_reason: "The edit operation is not defined (OQ-19)."
+        constrained_by:
+          - "rfc-2693#R-0243"
       - id: M16-T02
         from: member
         to: failed-or-compromised
@@ -2522,6 +2921,8 @@ machines:
           - locator: "§7.7"
             quote: "As soon as a component fails (or a key is assumed compromised), it must be replaced."
         inferred: false
+        constrained_by:
+          - "rfc-2693#R-0241"
       - id: M16-T03
         from: failed-or-compromised
         to: retired
@@ -2534,6 +2935,9 @@ machines:
             quote: "This use of threshold subject would allow the set of root keys to elect new members to that set and retire old members."
         inferred: true
         inferred_reason: "As M16-T01."
+        constrained_by:
+          - "rfc-2693#R-0241"
+          - "rfc-2693#R-0243"
       - id: M16-T04
         from: member
         to: retired
@@ -2544,6 +2948,20 @@ machines:
             quote: "This use of threshold subject would allow the set of root keys to elect new members to that set and retire old members."
         inferred: true
         inferred_reason: "As M16-T01."
+        constrained_by:
+          - "rfc-2693#R-0243"
+      - id: M16-T05
+        from: candidate
+        to: member
+        trigger: acl-entry
+        guard: "The ACL owner installs the ACL's threshold entries with this key among their N subordinate subjects: the founding set, which M16-T01 cannot admit because no members yet exist to agree."
+        source:
+          - locator: "§7.7"
+            quote: "If we use a threshold subject in place of a single key subject, in an ACL (or a certificate), then we achieve redundancy immediately."
+        inferred: true
+        inferred_reason: "§7.7 shows the founding entries, not their installation; installation by the ACL owner is protocol.yaml threshold-acl-membership-change step 1."
+        constrained_by:
+          - "rfc-2693#R-0240"
     terminal_states:
       - retired
     notes:
@@ -2823,7 +3241,7 @@ open_questions:
       - M13-T07
   - id: OQ-13
     locator: "§6.3.3, §6.3.4, §6.1"
-    question: "(a) How does a linear prover-ordered sequence say which subordinate entry each tuple extends, especially when two entries have the same key? (b) What if a tuple extends no entry? (c) If more than K entries reduce to the same subject, must the prover null the extras? (d) May the N subordinate subjects repeat a key, and does a repeat count twice? (e) May a subordinate subject itself be a threshold subject?"
+    question: "(a) How does a linear prover-ordered sequence say which subordinate entry each tuple extends, especially when two entries have the same key? (b) What if a tuple extends no entry? (c) If more than K entries reduce to the same subject, must the prover null the extras? (d) May the N subordinate subjects repeat a key, and does a repeat count twice? (e) May a subordinate subject itself be a threshold subject? (f) Who sets the N-K unselected entries to (null): the prover, as M13-T05 reads it, or the verifier once K entries share a subject?"
     matters_because: "A verifier cannot implement M13 deterministically without (a), and (d) bears on the security of K."
     source:
       - locator: "§6.3.3"
@@ -2930,7 +3348,7 @@ open_questions:
   - id: OQ-23
     locator: "§6, §6.4, §6.4.1"
     question: "§6 processes inputs in three stages, names before 5-tuples, but §6.4 has name 4-tuples delivered in the order the prover needs, and §6.4.1 reduces names inside threshold subjects as part of threshold reduction. Is name reduction a separate pass before any 5-tuple reduction, or may 4-tuples be interleaved with 5-tuples in the prover's one sequence?"
-    matters_because: "Decides whether M11 runs to completion before M12 starts, and therefore what order a prover must use."
+    matters_because: "Decides whether M11 runs to completion before M12 starts, and therefore what order a prover must use. protocol.yaml takes the interleaved reading; this file takes the separate pass."
     source:
       - locator: "§6"
         quote: "These entities are processed in three stages."
@@ -2941,6 +3359,7 @@ open_questions:
     affects:
       - M01-T04
       - M11
+      - M12
       - M13-T04
   - id: OQ-24
     locator: "§2.8, §3.4, §1.1"
@@ -2954,4 +3373,35 @@ open_questions:
     affects:
       - M11-T01
       - M02
+  - id: OQ-25
+    locator: "§6.2, §6.4"
+    question: "Does a threshold-valued name definition apply in name reduction, and to what, when names follow the one it defines?"
+    matters_because: "M11 has no transition for it; design-notes.md open question 8 asks the same of our design."
+    source:
+      - locator: "§6.2"
+        quote: "Subject: a public key (or its hash), a name, or a threshold function of subordinate subjects."
+      - locator: "§6.4"
+        quote: "There will be name 4-tuples in two different classes, those that define the name as a key and those that define the name as another name."
+    affects:
+      - M11
+  - id: OQ-26
+    locator: "§6.3, §6.1, §2.7"
+    question: "Does a key equal its own hash in S1 = I2 and in name reduction's K1 = K?"
+    matters_because: "Whether a chain mixing a key and its hash reduces; design-notes.md open question 5."
+    source:
+      - locator: "§6.3"
+        quote: "The two 5-tuples: <I1,S1,D1,A1,V1> + <I2,S2,D2,A2,V2> yield <I1,S2,D2,AIntersect(A1,A2),VIntersect(V1,V2)> provided the two intersections succeed, S1 = I2 and D1 = TRUE"
+      - locator: "§6.1"
+        quote: 'Issuer: a public key (or its hash), or the reserved word "Self".'
+      - locator: "§2.7"
+        quote: "If there exists a collision-free hash function, then a collision-free hash of the public key is also a globally unique identifier for the keyholder, and probably a shorter one than the public key."
+    affects:
+      - M11-T03
+      - M11-T04
+      - M11-T05
+      - M11-T07
+      - M12-T02
+      - M12-T03
+      - M13-T03
+      - M13-T06
 

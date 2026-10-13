@@ -48,10 +48,11 @@ conventions:
     signs an instrument that others consume later. Computations local to one
     role are listed under algorithms, not flows.
   message_names: >-
-    Message names are descriptive kebab-case names chosen for this file and
-    listed in messages_referenced, for reconciliation with messages.yaml in the
-    cross-check pass. Names in message_notes marked not-in-source have no
-    counterpart in RFC 2693.
+    Message names are messages.yaml identifiers, reconciled in the
+    cross-check pass (2026-10-12), and are listed in messages_referenced.
+    Names in message_notes marked not-in-source have no counterpart in RFC
+    2693; messages.yaml carries them as placeholders with normative_status
+    not-in-source.
 framing:
   - id: example-not-mandate
     text: "The tuple-reduction plan is an example; its main purpose is to fix what a certificate means."
@@ -392,34 +393,41 @@ messages_referenced:
   - access-request
   - access-decision
   - certificate-sequence
+  - certificate
   - authorization-certificate
   - name-certificate
   - attribute-certificate
   - acl-entry
   - acl-edit-request
-  - five-tuple
-  - four-tuple
+  - '5-tuple'
+  - name-4-tuple
   - threshold-subject
+  - threshold-intermediate-form
   - authorization-tag
-  - validity-interval
-  - sdsi-name
-  - fully-qualified-name
-  - online-test-condition
-  - crl
+  - validity-conditions
+  - sdsi-basic-name
+  - sdsi-compound-name
+  - sdsi-fully-qualified-name
+  - x509-fully-qualified-name
+  - principal
+  - hash
+  - online-test-specification
+  - anti-matter-crl
   - timed-crl
+  - current-crl
   - delta-crl
   - revalidation
   - one-time-revalidation-request
   - one-time-revalidation
-  - short-lived-renewal-statement
+  - short-lived-certificate
   - certificate-result-certificate
   - authorization-question
   - key-loss-report
-  - x509v1-certificate
-  - x509v3-certificate
-  - pgp-certificate
-  - sdsi-1-0-certificate
-  - ssl-certificate
+  - translation-x509v1
+  - translation-x509v3
+  - translation-pgp
+  - translation-sdsi-1-0
+  - translation-ssl
 message_notes:
   - name: access-request
     in_source: "no"
@@ -439,22 +447,22 @@ message_notes:
   - name: certificate-sequence
     in_source: "yes"
     note: "The ordered certificates the prover supplies (§6.3.4, §6.4). No container format is defined."
-  - name: online-test-condition
+  - name: online-test-specification
     in_source: "yes"
-    note: "The validity condition by which a certificate names its on-line test, the key (or hash) that signs the confirmations, and optional fetch locations (§5, §5.2)."
-  - name: short-lived-renewal-statement
+    note: "The validity condition by which a certificate names its on-line test, the key (or hash) that signs the confirmations, and optional fetch locations (§5, §5.2); messages.yaml fields kind, issuer, locations."
+  - name: short-lived-certificate
     in_source: "yes"
-    note: "§5.6 'a kind of online test statement' telling the user of a certificate where a replacement short-lived certificate might be fetched. No format given."
+    note: "§5.6 short-lived certificate. The 'kind of online test statement' that tells its user where a replacement might be fetched is its online-test-specification of the kind §5 does not count (messages.yaml short-lived-certificate.replacement_location; source_defects online-test-kinds-count). No format given."
   - name: one-time-revalidation-request
     in_source: "yes"
     note: "§5.5 'a request containing a nonce'. No other content given."
-  - name: crl
+  - name: anti-matter-crl
     in_source: "yes"
-    note: "The wandering anti-matter CRL of §5.1, which SPKI rules out: a list of revoked certificate identifiers plus a sequence number."
-  - name: five-tuple
+    note: "The wandering anti-matter CRL of §5.1, which SPKI rules out: a list of revoked certificate identifiers plus a sequence number (messages.yaml fields revoked_certificates, sequence_number). Not the bare name crl, which messages.yaml and state-machine.yaml use as an alias of timed-crl."
+  - name: '5-tuple'
     in_source: "yes"
     note: "Intermediate form held in trusted memory and never transmitted (§6.1); appears in flows only as the content of a local step."
-  - name: four-tuple
+  - name: name-4-tuple
     in_source: "yes"
     note: "Name 4-tuple (§6.2); intermediate form, never transmitted."
 flows:
@@ -533,7 +541,7 @@ flows:
       - n: 3
         from: verifier
         to: verifier
-        message: online-test-condition
+        message: online-test-specification
         action: "Read each certificate's validity conditions; where one names an on-line test, note the test and the issuer (key or hash) the certificate names for it."
         basis: stated
         locator: "§5, §5.2"
@@ -569,11 +577,11 @@ flows:
           - |-
             As with the CRL, SPKI demands that this process be deterministic and therefore that the revalidation follow the same rules listed above (in section 5.2).
       - n: 5
-        from: verifier
-        to: translator
-        message: five-tuple
+        from: translator
+        to: verifier
+        message: '5-tuple'
         message_alternatives:
-          - four-tuple
+          - name-4-tuple
         action: "Stage 1. Verify each certificate's signature and do its format-specific work, then map it to 5-tuples or name 4-tuples. Where on-line tests apply, VIntersect their validity with the certificate's to give the tuple's dates."
         invokes:
           - certificate-to-tuple-translation
@@ -604,7 +612,7 @@ flows:
       - n: 7
         from: verifier
         to: verifier
-        message: four-tuple
+        message: name-4-tuple
         action: "Stage 2. Replace every use of a name with its definition (a key or a hash), using the name 4-tuples."
         invokes:
           - four-tuple-name-reduction
@@ -619,7 +627,7 @@ flows:
       - n: 8
         from: verifier
         to: verifier
-        message: five-tuple
+        message: '5-tuple'
         action: "Stage 3. Reduce the 5-tuples to a final authorization result, starting from the ACL entry's tuple and applying the prover's tuples in order."
         invokes:
           - five-tuple-chain-reduction
@@ -633,7 +641,7 @@ flows:
       - n: 9
         from: verifier
         to: application
-        message: five-tuple
+        message: '5-tuple'
         action: "Answer form 1 of the authorization question. The final tuple is <Self, S, D, A, V>. Grant when S is the requester's key, the requested access lies inside A (AIntersect(A, request) equals the request), and the time of the computation lies inside V. D does not matter for exercising the permission."
         basis: inferred
         locator: "§6.6, §4.1.4"
@@ -647,7 +655,7 @@ flows:
       - n: 10
         from: application
         to: application
-        message: five-tuple
+        message: '5-tuple'
         action: "Where the decision needs several kinds of permission rooted in different ACL entries, run a separate reduction for each and AND the results in application code; the certificate does not express the AND."
         basis: stated
         locator: "§6.5.7"
@@ -696,6 +704,7 @@ flows:
       - signature-invalid
       - chain-validation-failed
       - no-valid-crl
+      - no-valid-revalidation
       - certificate-listed-in-crl
       - validity-intersection-empty
       - non-monotonic-time
@@ -884,7 +893,7 @@ flows:
       - n: 4
         from: verifier
         to: verifier
-        message: four-tuple
+        message: name-4-tuple
         action: "A verifier that works from an unordered pool instead applies only those name 4-tuples that define a name as a key (unordered-pool-name-reduction)."
         invokes:
           - unordered-pool-name-reduction
@@ -919,7 +928,7 @@ flows:
       - n: 1
         from: issuer
         to: verifier
-        message: online-test-condition
+        message: online-test-specification
         action: "The certificate lists the key, or its hash, that will sign the CRL, and may list locations to fetch it from (condition 1). This is how the certificate issuer names the issuer of validity confirmations."
         basis: stated
         locator: "§5.2, §5"
@@ -931,20 +940,6 @@ flows:
         on_error: "A CRL signed by any other key is not the CRL the certificate names and does not count as a valid CRL."
         on_error_basis: inferred
       - n: 2
-        from: validity-confirmation-issuer
-        to: fetch-location
-        message: timed-crl
-        action: "Issue each CRL with validity dates (condition 2), and never issue one whose range intersects the range of the CRL currently deployed (condition 3)."
-        basis: stated
-        locator: "§5.2"
-        quotes:
-          - |-
-            The CRL must carry validity dates.
-          - |-
-            CRL validity date ranges must not intersect. That is, one may not issue a new CRL to take effect before the expiration of the CRL currently deployed.
-        on_error: "unspecified in this document; nothing says what a verifier does on seeing two CRLs whose ranges intersect."
-        on_error_basis: unspecified
-      - n: 3
         from: validity-confirmation-issuer
         to: validity-confirmation-issuer
         message: timed-crl
@@ -963,11 +958,25 @@ flows:
         on_error_quotes:
           - |-
             Validity intervals of length zero are not possible. Since transmission takes time, by the time a CRL was received by the verifier, it would be out of date and unusable. That assumes perfect clock synchronization. If clock skew is taken into consideration, validity intervals need to be that much larger to be meaningful.
+      - n: 3
+        from: validity-confirmation-issuer
+        to: fetch-location
+        message: timed-crl
+        action: "Issue each CRL with validity dates (condition 2), and never issue one whose range intersects the range of the CRL currently deployed (condition 3)."
+        basis: stated
+        locator: "§5.2"
+        quotes:
+          - |-
+            The CRL must carry validity dates.
+          - |-
+            CRL validity date ranges must not intersect. That is, one may not issue a new CRL to take effect before the expiration of the CRL currently deployed.
+        on_error: "unspecified in this document; nothing says what a verifier does on seeing two CRLs whose ranges intersect."
+        on_error_basis: unspecified
       - n: 4
         from: validity-confirmation-issuer
         to: fetch-location
         message: delta-crl
-        action: "Optionally publish a full CRL followed by delta-CRLs. The sequence is treated as the current CRL and the combination must meet the same three conditions."
+        action: "Optionally follow the full CRL with delta-CRLs, each one a delta-crl. The full CRL with its deltas is treated as the current CRL (current-crl), and the combination must meet the same three conditions."
         basis: stated
         locator: "§5.2"
         quotes:
@@ -976,12 +985,12 @@ flows:
         on_error: "A combined CRL that breaks a condition is not a valid CRL."
         on_error_basis: inferred
       - n: 5
-        from: verifier
-        to: fetch-location
+        from: fetch-location
+        to: verifier
         message: timed-crl
         message_alternatives:
           - delta-crl
-        action: "Fetch the current CRL, and any deltas, from a listed location."
+        action: "The verifier fetches the current CRL, and any deltas, from a location the certificate lists."
         basis: inferred
         locator: "§5.2"
         quotes:
@@ -996,7 +1005,9 @@ flows:
         from: verifier
         to: verifier
         message: timed-crl
-        action: "Accept the CRL only if it is signed by the key the certificate lists and its validity range covers the time of the computation."
+        message_alternatives:
+          - current-crl
+        action: "Accept the CRL, or the full CRL with its deltas taken together as the current CRL (current-crl), only if it is signed by the key the certificate lists and its validity range covers the time of the computation."
         basis: inferred
         locator: "§5.2"
         quotes:
@@ -1011,7 +1022,9 @@ flows:
         from: verifier
         to: verifier
         message: timed-crl
-        action: "Check that the certificate is not listed."
+        message_alternatives:
+          - current-crl
+        action: "Check that the certificate is not listed in it."
         basis: inferred
         locator: "§5.1, §5.2"
         quotes:
@@ -1022,7 +1035,7 @@ flows:
       - n: 8
         from: verifier
         to: verifier
-        message: validity-interval
+        message: validity-conditions
         action: "VIntersect the CRL's validity dates with the certificate's to give the dates of the certificate's tuple."
         invokes:
           - vintersect
@@ -1072,7 +1085,7 @@ flows:
       - n: 1
         from: issuer
         to: verifier
-        message: online-test-condition
+        message: online-test-specification
         action: "The certificate names the revalidation issuer; by the cross-reference to §5.2, it lists that issuer's key or hash and may give locations."
         basis: inferred
         locator: "§5, §5.3"
@@ -1084,20 +1097,6 @@ flows:
         on_error: "A revalidation from any other issuer does not count."
         on_error_basis: inferred
       - n: 2
-        from: validity-confirmation-issuer
-        to: verifier
-        message: revalidation
-        action: "Issue a revalidation listing the certificate of interest, or a set of certificates to save signature effort, with validity dates; successive revalidation ranges do not intersect."
-        basis: stated
-        locator: "§5.3"
-        quotes:
-          - |-
-            CRLs are negative statements. The positive version of a CRL is what we call a revalidation. Typically a revalidation would list only one certificate (the one of interest), although it might list a set of certificates (to save digital signature effort).
-          - |-
-            As with the CRL, SPKI demands that this process be deterministic and therefore that the revalidation follow the same rules listed above (in section 5.2).
-        on_error: "unspecified in this document; the source does not say who fetches or carries the revalidation."
-        on_error_basis: unspecified
-      - n: 3
         from: validity-confirmation-issuer
         to: validity-confirmation-issuer
         message: revalidation
@@ -1112,6 +1111,20 @@ flows:
         on_error_quotes:
           - |-
             For those who want to set the validity interval to zero, SPKI defines a one-time revalidation.
+      - n: 3
+        from: validity-confirmation-issuer
+        to: verifier
+        message: revalidation
+        action: "Issue a revalidation listing the certificate of interest, or a set of certificates to save signature effort, with validity dates; successive revalidation ranges do not intersect."
+        basis: stated
+        locator: "§5.3"
+        quotes:
+          - |-
+            CRLs are negative statements. The positive version of a CRL is what we call a revalidation. Typically a revalidation would list only one certificate (the one of interest), although it might list a set of certificates (to save digital signature effort).
+          - |-
+            As with the CRL, SPKI demands that this process be deterministic and therefore that the revalidation follow the same rules listed above (in section 5.2).
+        on_error: "unspecified in this document; the source does not say who fetches or carries the revalidation."
+        on_error_basis: unspecified
       - n: 4
         from: verifier
         to: verifier
@@ -1127,7 +1140,7 @@ flows:
       - n: 5
         from: verifier
         to: verifier
-        message: validity-interval
+        message: validity-conditions
         action: "VIntersect the revalidation's validity with the certificate's."
         invokes:
           - vintersect
@@ -1189,6 +1202,19 @@ flows:
         on_error: "unspecified in this document."
         on_error_basis: unspecified
       - n: 3
+        from: requester
+        to: verifier
+        message: one-time-revalidation
+        action: "Hand the signed instrument to the verifier. There is nothing to hand over when the requester is the verifier."
+        basis: inferred
+        locator: "§5.5"
+        quotes:
+          - |-
+            One applies for this on-line, one-time revalidation by submitting a request containing a nonce.
+        note: "The source never names the applicant (source_defects_and_ambiguities: one-time-applicant), so this step exists only when the requester is not the verifier."
+        on_error: "unspecified in this document."
+        on_error_basis: unspecified
+      - n: 4
         from: verifier
         to: verifier
         message: one-time-revalidation
@@ -1202,10 +1228,10 @@ flows:
             However, in SPKI, the certificate issuer must specify the issuer of validity confirmations.
         on_error: "Nonce mismatch or wrong signer: treat as a replay and do not use the instrument."
         on_error_basis: inferred
-      - n: 4
+      - n: 5
         from: verifier
         to: verifier
-        message: validity-interval
+        message: validity-conditions
         action: "Use it in place of a validity date range: a zero-length interval that starts and ends when the authorization computation completes; VIntersect it with the certificate's dates."
         invokes:
           - vintersect
@@ -1218,7 +1244,7 @@ flows:
             If on-line tests are involved in the certificate processing, then the validity dates of those on-line test results are intersected by VIntersect() [defined in 6.3.2, below] with the validity dates of the certificate to yield the dates in the certificate's tuple(s).
         on_error: "Completion time outside the certificate's own dates: VIntersect fails (Vmin > Vmax)."
         on_error_basis: inferred
-      - n: 5
+      - n: 6
         from: verifier
         to: verifier
         message: one-time-revalidation
@@ -1254,7 +1280,7 @@ flows:
       - n: 1
         from: issuer
         to: requester
-        message: authorization-certificate
+        message: short-lived-certificate
         action: "Issue the certificate with a short validity interval instead of a long one plus an on-line test."
         basis: stated
         locator: "§5.6"
@@ -1266,7 +1292,7 @@ flows:
       - n: 2
         from: issuer
         to: requester
-        message: short-lived-renewal-statement
+        message: online-test-specification
         action: "Carry in the certificate the on-line test statement naming where a replacement short-lived certificate might be fetched."
         basis: stated
         locator: "§5.6"
@@ -1278,7 +1304,7 @@ flows:
       - n: 3
         from: issuer
         to: fetch-location
-        message: authorization-certificate
+        message: short-lived-certificate
         action: "Make each replacement available at the named location, normally signed by the same key."
         basis: inferred
         locator: "§5.6"
@@ -1290,20 +1316,20 @@ flows:
       - n: 4
         from: requester
         to: fetch-location
-        message: short-lived-renewal-statement
+        message: online-test-specification
         action: "The user of the certificate fetches the replacement from the location the statement gives, before the current certificate expires."
         basis: stated
         locator: "§5.6"
         quotes:
           - |-
             to tell the user of the certificate where a replacement short-lived certificate might be fetched.
-        note: "Timing before expiry is inferred. Whether the user of the certificate is its keyholder or a verifier is not said."
+        note: "Timing before expiry is inferred. Whether the user of the certificate is its keyholder or a verifier is not said. The fetch request itself is not defined; the message named is the online-test-specification whose location the requester uses."
         on_error: "No replacement available before expiry: once the not-after date passes, the certificate's validity no longer covers the computation and the keyholder is no longer empowered."
         on_error_basis: inferred
       - n: 5
         from: fetch-location
         to: requester
-        message: authorization-certificate
+        message: short-lived-certificate
         action: "Return the replacement short-lived certificate."
         basis: stated
         locator: "§5.6"
@@ -1361,7 +1387,7 @@ flows:
       - n: 1
         from: issuer
         to: issuer
-        message: crl
+        message: anti-matter-crl
         action: "List the certificate to be revoked in the next CRL, which carries a sequence number; if urgent, release it at once."
         basis: stated
         locator: "§5.1"
@@ -1375,7 +1401,7 @@ flows:
       - n: 2
         from: issuer
         to: verifier
-        message: crl
+        message: anti-matter-crl
         action: "The CRL travels by some dissemination process unrelated to the consumers' needs."
         basis: stated
         locator: "§5.1"
@@ -1390,7 +1416,7 @@ flows:
       - n: 3
         from: verifier
         to: verifier
-        message: crl
+        message: anti-matter-crl
         action: "On meeting a certificate it lists, the CRL annihilates it; on meeting an older CRL it annihilates that too, leaving a copy of itself at each verifier."
         basis: stated
         locator: "§5.1"
@@ -1402,7 +1428,7 @@ flows:
       - n: 4
         from: adversary
         to: verifier
-        message: crl
+        message: anti-matter-crl
         action: "Block delivery of the new CRL by tampering with the network, so the revoked certificate keeps working."
         basis: stated
         locator: "§5.1"
@@ -1453,7 +1479,7 @@ flows:
       - n: 2
         from: crc-issuer
         to: crc-issuer
-        message: five-tuple
+        message: '5-tuple'
         action: "Run stages 1 to 3. VIntersect may gather the on-line tests present in each certificate and carry their union in the accumulating tuples, deferring their evaluation to the end."
         invokes:
           - five-tuple-chain-reduction
@@ -1520,7 +1546,7 @@ flows:
       - n: 7
         from: verifier
         to: validity-confirmation-issuer
-        message: online-test-condition
+        message: online-test-specification
         action: "Evaluate any on-line tests the CRC carries forward."
         basis: inferred
         locator: "§6.3.2"
@@ -1588,9 +1614,9 @@ flows:
         on_error: "unspecified in this document."
         on_error_basis: unspecified
       - n: 4
-        from: verifier
-        to: translator
-        message: attribute-certificate
+        from: translator
+        to: verifier
+        message: '5-tuple'
         action: "Translate the attribute certificate into one or more 5-tuples with a name as Subject, building a fully qualified name for the Distinguished Name; if it refers to an ID certificate explicitly, use that certificate's key as Subject and skip the name 4-tuples."
         invokes:
           - certificate-to-tuple-translation
@@ -1605,7 +1631,7 @@ flows:
       - n: 5
         from: verifier
         to: verifier
-        message: four-tuple
+        message: name-4-tuple
         action: "Resolve the name to the key with the 4-tuple from the ID certificate."
         invokes:
           - four-tuple-name-reduction
@@ -1622,7 +1648,7 @@ flows:
       - n: 6
         from: verifier
         to: verifier
-        message: five-tuple
+        message: '5-tuple'
         action: "Reduce the resulting 5-tuple chain as in authorization-decision."
         invokes:
           - five-tuple-chain-reduction
@@ -1691,9 +1717,9 @@ flows:
         on_error_basis: inferred
       - n: 3
         from: name-definer
-        to: name-definer
-        message: sdsi-name
-        action: "Refer to a name another key defines, by chaining: fred: (name sam) lets george say (name fred sam)."
+        to: keyholder
+        message: name-certificate
+        action: "A second definer, fred, defines a name in its own name space: fred: (name sam)."
         basis: stated
         locator: "§2.6.2"
         quotes:
@@ -1702,6 +1728,18 @@ flows:
         on_error: "unspecified in this document."
         on_error_basis: unspecified
       - n: 4
+        from: name-definer
+        to: name-definer
+        message: sdsi-compound-name
+        action: "Refer to a name another key defines, by chaining: fred: (name sam) lets george say (name fred sam)."
+        basis: stated
+        locator: "§2.6.2"
+        quotes:
+          - |-
+            If fred in turn defines a name, for example, fred: (name sam) then george can refer to this same entity as george: (name fred sam)
+        on_error: "unspecified in this document."
+        on_error_basis: unspecified
+      - n: 5
         from: issuer
         to: keyholder
         message: authorization-certificate
@@ -1720,10 +1758,10 @@ flows:
         on_error_quotes:
           - |-
             the name space within which it is defined must be identified.
-      - n: 5
+      - n: 6
         from: verifier
         to: verifier
-        message: four-tuple
+        message: name-4-tuple
         action: "Resolve the name by 4-tuple reduction when the authority is used."
         invokes:
           - four-tuple-name-reduction
@@ -1816,7 +1854,7 @@ flows:
       - n: 4
         from: verifier
         to: verifier
-        message: four-tuple
+        message: name-4-tuple
         action: "Resolve (name Kroot jim) to the current key by name reduction, intersecting validity, then reduce the authorization."
         invokes:
           - four-tuple-name-reduction
@@ -1884,7 +1922,7 @@ flows:
       - n: 2
         from: keyholder
         to: keyholder
-        message: online-test-condition
+        message: online-test-specification
         action: "That certificate carries an on-line validity test (CRL, revalidation or one-time) and, as every SPKI certificate must, names who issues the confirmations: the hired service."
         basis: inferred
         locator: "§7.6, §5"
@@ -1947,7 +1985,7 @@ flows:
       - n: 6
         from: verifier
         to: verifier
-        message: validity-interval
+        message: validity-conditions
         action: "The certificate's on-line test now fails (no valid revalidation, or a CRL listing it), so the temporary key yields no tuple."
         basis: inferred
         locator: "§5.2, §5.3"
@@ -1986,6 +2024,8 @@ flows:
       - temporary-key-lost
       - master-key-lost
       - revocation-latency
+      - no-valid-revalidation
+      - certificate-listed-in-crl
   - name: threshold-acl-membership-change
     title: "Threshold ACL subjects: K of N root keys for normal access, a larger K to edit the ACL itself"
     locator: "§7.7, §6.3.3, §1.1"
@@ -2052,7 +2092,7 @@ flows:
       - n: 4
         from: verifier
         to: verifier
-        message: five-tuple
+        message: '5-tuple'
         action: "Reduce from the (acl-edit) entry; threshold-subject-reduction with K = 5 must leave a single tuple whose subject is the submitting key and whose authorization covers acl-edit."
         invokes:
           - threshold-subject-reduction
@@ -2087,6 +2127,8 @@ flows:
     error_path_ids:
       - root-key-compromised
       - threshold-not-satisfied
+      - validity-intersection-empty
+      - authorization-intersection-empty
 algorithms:
   - name: certificate-to-tuple-translation
     title: "Stage 1: verify a credential and translate it into 5-tuples or name 4-tuples"
@@ -2101,11 +2143,11 @@ algorithms:
           - name-certificate
           - attribute-certificate
           - acl-entry
-          - x509v1-certificate
-          - x509v3-certificate
-          - pgp-certificate
-          - sdsi-1-0-certificate
-          - ssl-certificate
+          - translation-x509v1
+          - translation-x509v3
+          - translation-pgp
+          - translation-sdsi-1-0
+          - translation-ssl
         description: "One certificate or ACL entry."
       - name: online-test-results
         messages:
@@ -2116,12 +2158,12 @@ algorithms:
     outputs:
       - name: tuples
         messages:
-          - five-tuple
-          - four-tuple
+          - '5-tuple'
+          - name-4-tuple
         description: "Zero or more tuples. Zero when verification fails."
     steps:
       - n: 1
-        message: authorization-certificate
+        message: certificate
         action: "Verify the credential's signature."
         basis: stated
         locator: "§6"
@@ -2131,7 +2173,7 @@ algorithms:
         on_error: "No tuple. The source does not state the outcome."
         on_error_basis: inferred
       - n: 2
-        message: authorization-certificate
+        message: certificate
         action: "Do the format's other work: on-line test results for SPKI and SDSI, a web-of-trust computation for PGP, and for X.509 whatever the documentation tied to the root key requires, possibly including the parent certificate and extensions."
         basis: stated
         locator: "§6"
@@ -2147,7 +2189,7 @@ algorithms:
         on_error: "Failed chain validation or web-of-trust computation: no tuple."
         on_error_basis: inferred
       - n: 3
-        message: validity-interval
+        message: validity-conditions
         action: "Give missing dates their defaults: a missing not-before is minus infinity, a missing not-after is plus infinity."
         basis: stated
         locator: "§6.1, §6.2"
@@ -2157,7 +2199,7 @@ algorithms:
         on_error: "none; a missing date is not an error."
         on_error_basis: stated
       - n: 4
-        message: validity-interval
+        message: validity-conditions
         action: "If on-line tests are involved, VIntersect the validity dates of their results with the credential's dates; the result is the tuple's dates."
         invokes:
           - vintersect
@@ -2169,7 +2211,9 @@ algorithms:
         on_error: "Empty intersection: no tuple."
         on_error_basis: inferred
       - n: 5
-        message: sdsi-name
+        message: sdsi-basic-name
+        message_alternatives:
+          - sdsi-compound-name
         action: "Qualify every local SDSI name in the credential with the issuer's key."
         invokes:
           - name-qualification
@@ -2181,7 +2225,7 @@ algorithms:
         on_error: "unspecified in this document."
         on_error_basis: unspecified
       - n: 6
-        message: five-tuple
+        message: '5-tuple'
         action: "Map the credential to tuples by the format rules in translation_rules."
         basis: stated
         locator: "§6.5"
@@ -2214,14 +2258,14 @@ algorithms:
         quotes:
           - |-
             An SPKI certificate maps directly to one 4- or 5- tuple, depending respectively on whether it is a name certificate or carries an authorization.
-      - input: sdsi-1-0-certificate
+      - input: translation-sdsi-1-0
         output: "one 4-tuple"
         locator: "§6.5.5"
         basis: stated
         quotes:
           - |-
             A SDSI 1.0 certificate maps directly to one 4-tuple.
-      - input: x509v1-certificate
+      - input: translation-x509v1
         output: "4-tuple [Kroot, (name <leaf-name>), K1, validity] when the hierarchy's leaf names are unique under the root; otherwise [Kroot, (name CA1 CA2 ... CAk <leaf-name>), K1, validity], after verifying the chain by that chain's own rules"
         locator: "§6.5.1, §2.9"
         basis: stated
@@ -2230,14 +2274,14 @@ algorithms:
             The original X.509 certificate is a <name,key> certificate. It translates directly to a name tuple. The form [Kroot, (name <leaf-name>), K1, validity] is used if the rules for that particular X.509 hierarchy is that all leaf names are unique, under that root. If uniqueness of names applies only to individual CAs in the X.509 hierarchy, then one must generate
           - |-
             [Kroot, (name CA1 CA2 ... CAk <leaf-name>), K1, validity] after verifying the certificate chain by the rules appropriate to that particular chain.
-      - input: pgp-certificate
+      - input: translation-pgp
         output: "after web-of-trust verification, one 4-tuple [Ki, name, K1, validity] per key Ki that signed the (UserID, key) pair"
         locator: "§6.5.2"
         basis: stated
         quotes:
           - |-
             A PGP certificate is a <name,key> certificate. It is verified by web-of-trust rules (as specified in the PGP documentation). Once verified, it yields name tuples of the form [Ki, name, K1, validity] where Ki is a key that signed that PGP (UserID,key) pair. There would be one tuple produced for each signature on the key, K1.
-      - input: x509v3-certificate
+      - input: translation-x509v3
         output: "a name 4-tuple, explicit authorizations from extensions, or the implicit authorization (tag (*)); the actual set is fixed by the documentation for that line of certificates and produced by root-specific chain validation code"
         locator: "§6.5.3"
         basis: stated
@@ -2253,7 +2297,7 @@ algorithms:
         quotes:
           - |-
             An X9.57 attribute certificate should yield one or more 5-tuples, with names as Subject. The code translating the attribute certificate will have to build a fully-qualified name to represent the Distinguished Name in the Subject. For any attribute certificates that refer to an ID certificate explicitly, the Subject of the 5-tuple can be the key in that ID certificate, bypassing the construction of name 4-tuples.
-      - input: ssl-certificate
+      - input: translation-ssl
         output: "5-tuples carrying implicit (tag (ssl)), (tag (dns <domain-name>)) for the server's DNS name, and (tag (us-crypto)) for the global-cert permission; a CA certificate translates to (tag (*)); a leaf server certificate to, for example, (tag (* set (ssl) (dns www.datafellows.com)))"
         locator: "§6.5.7"
         basis: stated
@@ -2306,21 +2350,26 @@ algorithms:
     inputs:
       - name: name
         messages:
-          - sdsi-name
+          - sdsi-basic-name
+          - sdsi-compound-name
         description: "(name n1 ... nk), k at least 1, as it occurs in a credential or elsewhere."
       - name: issuer_key
         messages:
-          - authorization-certificate
-          - name-certificate
+          - principal
+          - hash
         description: "The public key (or its hash) of the credential's issuer, when the name occurs inside a credential."
     outputs:
       - name: fully_qualified_name
         messages:
-          - fully-qualified-name
+          - sdsi-fully-qualified-name
+          - x509-fully-qualified-name
         description: "(name K n1 ... nk): a public key followed by one or more names relative to it."
     steps:
       - n: 1
-        message: sdsi-name
+        message: sdsi-basic-name
+        message_alternatives:
+          - sdsi-compound-name
+          - sdsi-fully-qualified-name
         action: "If the first element after the word name is already a key or a hash, the name is already fully qualified; keep it."
         basis: inferred
         locator: "§2.8"
@@ -2330,7 +2379,7 @@ algorithms:
         on_error: "none"
         on_error_basis: inferred
       - n: 2
-        message: fully-qualified-name
+        message: sdsi-fully-qualified-name
         action: "If the name occurs inside a credential, prefix the issuer's key: (name n1 ... nk) becomes (name K_issuer n1 ... nk)."
         basis: stated
         locator: "§2.8"
@@ -2340,7 +2389,7 @@ algorithms:
         on_error: "none"
         on_error_basis: inferred
       - n: 3
-        message: fully-qualified-name
+        message: sdsi-fully-qualified-name
         action: "If the name occurs outside any credential, it must already identify its name space."
         basis: stated
         locator: "§2.8"
@@ -2350,7 +2399,7 @@ algorithms:
         on_error: "An unqualified name outside a credential has no defined name space and cannot be used."
         on_error_basis: inferred
       - n: 4
-        message: fully-qualified-name
+        message: x509-fully-qualified-name
         action: "For an X.509 Distinguished Name, produce (name <root key> <leaf name>) when leaf names are unique under the root, otherwise (name <root key> <CA(1)> ... <CA(k)> <leaf name>) built from the certificate chain; for an X9.57 attribute certificate, build such a name for the Distinguished Name in the Subject."
         basis: stated
         locator: "§2.9, §6.5.4"
@@ -2383,22 +2432,22 @@ algorithms:
     inputs:
       - name: T
         messages:
-          - five-tuple
-          - four-tuple
+          - '5-tuple'
+          - name-4-tuple
         description: "The tuple whose subject (or a subordinate subject of it) is the fully qualified name (name K1 N R1 ... Rm), m at least 0."
       - name: F
         messages:
-          - four-tuple
+          - name-4-tuple
         description: "The next name 4-tuple in the prover's order: issuer K1', name N', subject Def, validity VF."
     outputs:
       - name: T_prime
         messages:
-          - five-tuple
-          - four-tuple
+          - '5-tuple'
+          - name-4-tuple
         description: "T with the name replaced, validity intersected, delegation and authorization unchanged."
     steps:
       - n: 1
-        message: four-tuple
+        message: name-4-tuple
         action: "Check that F defines the head of the name: K1' equals K1 and N' equals N."
         basis: inferred
         locator: "§6.4"
@@ -2408,7 +2457,7 @@ algorithms:
         on_error: "F does not apply to this name."
         on_error_basis: inferred
       - n: 2
-        message: four-tuple
+        message: name-4-tuple
         action: "Class 1, Def is a key K2: the subject becomes (name K2 R1 ... Rm), or K2 itself when m is 0."
         basis: stated
         locator: "§6.4"
@@ -2419,7 +2468,7 @@ algorithms:
         on_error: "none"
         on_error_basis: inferred
       - n: 3
-        message: four-tuple
+        message: name-4-tuple
         action: "Class 2, Def is a name (name K2 N1 ... Nk): the subject becomes (name K2 N1 ... Nk R1 ... Rm). The name can temporarily grow."
         basis: stated
         locator: "§6.4"
@@ -2443,7 +2492,7 @@ algorithms:
         on_error: "With m greater than 0 there is no defined result."
         on_error_basis: inferred
       - n: 5
-        message: validity-interval
+        message: validity-conditions
         action: "Intersect F's validity with T's and use the result in T_prime; delegation and authorization of T do not change."
         invokes:
           - four-tuple-validity-intersection
@@ -2455,7 +2504,7 @@ algorithms:
         on_error: "Empty intersection: no T_prime."
         on_error_basis: inferred
       - n: 6
-        message: four-tuple
+        message: name-4-tuple
         action: "Repeat with the next 4-tuple until the subject is a key or a hash. The verifier just follows the given order."
         basis: stated
         locator: "§6.4, §6"
@@ -2511,22 +2560,22 @@ algorithms:
     inputs:
       - name: pool
         messages:
-          - four-tuple
+          - name-4-tuple
         description: "An unordered set of name 4-tuples."
       - name: subjects
         messages:
-          - five-tuple
-          - four-tuple
+          - '5-tuple'
+          - name-4-tuple
         description: "Tuples whose subjects are names to reduce."
     outputs:
       - name: reduced
         messages:
-          - five-tuple
-          - four-tuple
+          - '5-tuple'
+          - name-4-tuple
         description: "The tuples with names reduced to keys wherever the pool defines them."
     steps:
       - n: 1
-        message: four-tuple
+        message: name-4-tuple
         action: "Classify the pool: class 1 defines a name as a key, class 2 defines a name as another name."
         basis: stated
         locator: "§6.4"
@@ -2536,7 +2585,7 @@ algorithms:
         on_error: "A 4-tuple whose subject is a threshold subject fits neither class; this procedure says nothing about it."
         on_error_basis: inferred
       - n: 2
-        message: four-tuple
+        message: name-4-tuple
         action: "Apply only class 1 4-tuples to names."
         basis: stated
         locator: "§6.4"
@@ -2546,7 +2595,7 @@ algorithms:
         on_error: "none"
         on_error_basis: inferred
       - n: 3
-        message: four-tuple
+        message: name-4-tuple
         action: "Bring class 2 4-tuples into class 1: reduce the subject name of each with class 1 4-tuples (intersecting validity each time) until it is a key; the result is a new class 1 4-tuple for the same (K1, N)."
         invokes:
           - four-tuple-validity-intersection
@@ -2559,7 +2608,7 @@ algorithms:
         on_error: "A class 2 4-tuple whose subject cannot be reduced stays class 2 and is never applied."
         on_error_basis: inferred
       - n: 4
-        message: four-tuple
+        message: name-4-tuple
         action: "Repeat steps 2 and 3 until no new class 1 4-tuple appears."
         basis: inferred
         locator: "§6.4"
@@ -2594,22 +2643,22 @@ algorithms:
     inputs:
       - name: T
         messages:
-          - five-tuple
-          - four-tuple
+          - '5-tuple'
+          - name-4-tuple
         description: "The tuple holding the subject being reduced, with validity VT, delegation D (5-tuple only) and authorization A (5-tuple only)."
       - name: F
         messages:
-          - four-tuple
+          - name-4-tuple
         description: "The 4-tuple used for the reduction, with validity VF."
     outputs:
       - name: T_prime
         messages:
-          - five-tuple
-          - four-tuple
+          - '5-tuple'
+          - name-4-tuple
         description: "Validity VIntersect(VT, VF); D and A exactly as in T."
     steps:
       - n: 1
-        message: validity-interval
+        message: validity-conditions
         action: "Set the resulting tuple's validity to VIntersect(VT, VF)."
         invokes:
           - vintersect
@@ -2621,7 +2670,7 @@ algorithms:
         on_error: "Empty intersection: no resulting tuple."
         on_error_basis: inferred
       - n: 2
-        message: five-tuple
+        message: '5-tuple'
         action: "Leave delegation and authorization unchanged."
         basis: stated
         locator: "§6.4.2"
@@ -2648,26 +2697,24 @@ algorithms:
     inputs:
       - name: T
         messages:
-          - five-tuple
-          - four-tuple
+          - '5-tuple'
+          - name-4-tuple
         description: "A tuple whose subject is a threshold subject with some subordinate subjects that are names."
       - name: four_tuples
         messages:
-          - four-tuple
+          - name-4-tuple
         description: "Name 4-tuples."
       - name: mode
-        messages:
-          - threshold-subject
         description: "full (continue into threshold-subject-reduction) or partial (stop with the subject still in threshold form)."
     outputs:
       - name: T_prime
         messages:
-          - five-tuple
-          - four-tuple
+          - '5-tuple'
+          - name-4-tuple
         description: "Mode partial: T with named subordinates replaced by keys, validity intersected, still a threshold subject. Mode full: the single tuple of threshold-subject-reduction."
     steps:
       - n: 1
-        message: four-tuple
+        message: name-4-tuple
         action: "Reduce each named subordinate subject independently with 4-tuples, as each subordinate is handled separately in §6.3.3."
         invokes:
           - four-tuple-name-reduction
@@ -2679,7 +2726,7 @@ algorithms:
         on_error: "A subordinate name that cannot be resolved cannot count toward K."
         on_error_basis: inferred
       - n: 2
-        message: validity-interval
+        message: validity-conditions
         action: "Intersect validity for every 4-tuple applied; do not intersect delegation or authorization."
         invokes:
           - four-tuple-validity-intersection
@@ -2730,16 +2777,16 @@ algorithms:
     inputs:
       - name: T1
         messages:
-          - five-tuple
+          - '5-tuple'
         description: "<I1,S1,D1,A1,V1>, the tuple nearer the ACL."
       - name: T2
         messages:
-          - five-tuple
+          - '5-tuple'
         description: "<I2,S2,D2,A2,V2>, the next tuple in the prover's order. The rule is not commutative."
     outputs:
       - name: T
         messages:
-          - five-tuple
+          - '5-tuple'
         description: "<I1,S2,D2,AIntersect(A1,A2),VIntersect(V1,V2)>"
     steps:
       - n: 1
@@ -2755,7 +2802,7 @@ algorithms:
         on_error: "As in threshold-subject-reduction."
         on_error_basis: inferred
       - n: 2
-        message: five-tuple
+        message: '5-tuple'
         action: "Require S1 = I2."
         basis: stated
         locator: "§6.3"
@@ -2766,7 +2813,7 @@ algorithms:
         on_error: "The rule does not apply; no tuple."
         on_error_basis: inferred
       - n: 3
-        message: five-tuple
+        message: '5-tuple'
         action: "Require D1 = TRUE."
         basis: stated
         locator: "§6.3"
@@ -2791,7 +2838,7 @@ algorithms:
           - |-
             the two intersections succeed,
       - n: 5
-        message: validity-interval
+        message: validity-conditions
         action: "Compute V = VIntersect(V1, V2)."
         invokes:
           - vintersect
@@ -2806,7 +2853,7 @@ algorithms:
           - |-
             the two intersections succeed,
       - n: 6
-        message: five-tuple
+        message: '5-tuple'
         action: "Return <I1, S2, D2, A, V>."
         basis: stated
         locator: "§6.3"
@@ -2861,20 +2908,20 @@ algorithms:
     inputs:
       - name: T0
         messages:
-          - five-tuple
+          - '5-tuple'
         description: "The 5-tuple of the anchoring ACL entry, <Self, S0, D0, A0, V0>."
       - name: chain
         messages:
-          - five-tuple
+          - '5-tuple'
         description: "T1 ... Tn in the prover's order, names already reduced or reduced as they are met."
     outputs:
       - name: result
         messages:
-          - five-tuple
+          - '5-tuple'
         description: "The final authorization result <Self, Sn, Dn, A, V>, or failure."
     steps:
       - n: 1
-        message: five-tuple
+        message: '5-tuple'
         action: "Start the accumulator at T0."
         basis: inferred
         locator: "§1.1"
@@ -2884,7 +2931,7 @@ algorithms:
         on_error: "none"
         on_error_basis: inferred
       - n: 2
-        message: five-tuple
+        message: '5-tuple'
         action: "For each Ti in order: if the accumulator's subject is a name, reduce it first; if it is a threshold subject, apply threshold-subject-reduction; otherwise apply five-tuple-reduction(accumulator, Ti)."
         invokes:
           - five-tuple-reduction
@@ -2899,7 +2946,7 @@ algorithms:
         on_error: "Any step fails: stop; there is no result."
         on_error_basis: inferred
       - n: 3
-        message: five-tuple
+        message: '5-tuple'
         action: "Return the accumulator as the final authorization result."
         basis: stated
         locator: "§6"
@@ -3156,28 +3203,26 @@ algorithms:
     inputs:
       - name: X
         messages:
-          - validity-interval
+          - validity-conditions
         description: "(Xmin, Xmax)"
       - name: Y
         messages:
-          - validity-interval
+          - validity-conditions
         description: "(Ymin, Ymax)"
       - name: online_tests
         messages:
-          - online-test-condition
+          - online-test-specification
         description: "The on-line tests the certificate is subject to, if any."
       - name: mode
-        messages:
-          - online-test-condition
         description: "immediate (evaluate each test now) or deferred (carry the union forward), the latter for a Certificate Result Certificate."
     outputs:
       - name: V
         messages:
-          - validity-interval
+          - validity-conditions
         description: "(Vmin, Vmax), plus in deferred mode the union of pending on-line tests; or failure."
     steps:
       - n: 1
-        message: validity-interval
+        message: validity-conditions
         action: "Read a missing not-before as minus infinity and a missing not-after as plus infinity."
         basis: stated
         locator: "§6.1"
@@ -3187,7 +3232,7 @@ algorithms:
         on_error: "none"
         on_error_basis: stated
       - n: 2
-        message: validity-interval
+        message: validity-conditions
         action: "Vmin = max(Xmin, Ymin); Vmax = min(Xmax, Ymax)."
         basis: stated
         locator: "§6.3.2"
@@ -3197,7 +3242,7 @@ algorithms:
         on_error: "none"
         on_error_basis: stated
       - n: 3
-        message: validity-interval
+        message: validity-conditions
         action: "If Vmin > Vmax the intersection fails. Vmin = Vmax is not a failure."
         basis: stated
         locator: "§6.3.2"
@@ -3208,7 +3253,7 @@ algorithms:
         on_error: "The intersection failed."
         on_error_basis: stated
       - n: 4
-        message: online-test-condition
+        message: online-test-specification
         action: "Immediate mode: evaluate each on-line test the certificate is subject to and intersect the validity interval it carries with the certificate's."
         basis: stated
         locator: "§6.3.2"
@@ -3218,7 +3263,7 @@ algorithms:
         on_error: "A test that fails, or whose interval does not intersect, leaves no valid interval."
         on_error_basis: inferred
       - n: 5
-        message: online-test-condition
+        message: online-test-specification
         action: "Deferred mode: gather the on-line tests present in each certificate, carry their union in the accumulating tuples, and evaluate them at the end of the process."
         basis: stated
         locator: "§6.3.2"
@@ -3264,17 +3309,17 @@ algorithms:
     inputs:
       - name: T
         messages:
-          - five-tuple
+          - '5-tuple'
         description: "<I, (k-of-n K N S1 ... SN), D, A, V> with 0 < K <= N; the source's own notation is (k-of-n #03# #07# K1 ... K7)."
       - name: chains
         messages:
-          - five-tuple
-          - four-tuple
+          - '5-tuple'
+          - name-4-tuple
         description: "For each selected subordinate, the tuples that reduce it, in the prover's order."
     outputs:
       - name: T_prime
         messages:
-          - five-tuple
+          - '5-tuple'
         description: "One tuple <I, S, D', A', V'> replacing the list of subordinate tuples, S being the subject the K branches share."
     steps:
       - n: 1
@@ -3288,7 +3333,7 @@ algorithms:
         on_error: "Malformed threshold subject: no reduction."
         on_error_basis: inferred
       - n: 2
-        message: five-tuple
+        message: threshold-intermediate-form
         action: "Form N subordinate tuples, each a copy of T with only one subordinate subject: Ti = <I, Si, D, A, V>."
         basis: stated
         locator: "§6.3.3"
@@ -3298,7 +3343,7 @@ algorithms:
         on_error: "none"
         on_error_basis: inferred
       - n: 3
-        message: five-tuple
+        message: threshold-intermediate-form
         action: "Select K of the N; set the N-K unselected subordinate tuples to (null)."
         basis: stated
         locator: "§6.3.3"
@@ -3308,7 +3353,7 @@ algorithms:
         on_error: "none"
         on_error_basis: inferred
       - n: 4
-        message: five-tuple
+        message: '5-tuple'
         action: "Reduce each selected subordinate tuple individually through its sequence of certificates (5-tuple reduction; names by 4-tuple reduction)."
         invokes:
           - five-tuple-reduction
@@ -3322,7 +3367,7 @@ algorithms:
         on_error: "A branch that cannot be reduced cannot count toward K."
         on_error_basis: inferred
       - n: 5
-        message: five-tuple
+        message: threshold-intermediate-form
         action: "Stop when the list holds N-K (null) entries and K entries with the same subject."
         basis: stated
         locator: "§6.3.3"
@@ -3332,7 +3377,7 @@ algorithms:
         on_error: "Fewer than K branches reach a common subject: the threshold is not met and there is no tuple."
         on_error_basis: inferred
       - n: 6
-        message: five-tuple
+        message: '5-tuple'
         action: "Intersect the K tuples: VIntersect their validities, AIntersect their authorizations, and intersect their delegation bits (logical AND); the result replaces the list."
         invokes:
           - vintersect
@@ -3510,6 +3555,7 @@ error_paths:
     flows:
       - timed-crl-check
       - authorization-decision
+      - key-revocation-service
     outcome: "Revoked; no tuple. Stated only for the ruled-out anti-matter CRL (annihilation); inferred for timed CRLs."
     basis: inferred
     locator: "§5.1, §5.2"
@@ -3555,6 +3601,8 @@ error_paths:
     detected_by: verifier
     flows:
       - timed-revalidation-check
+      - authorization-decision
+      - key-revocation-service
     outcome: "The certificate cannot be processed, by the §5.2 rules §5.3 adopts."
     basis: inferred
     locator: "§5.3"
@@ -3625,6 +3673,7 @@ error_paths:
       - timed-revalidation-check
       - one-time-revalidation
       - short-lived-certificate-renewal
+      - threshold-acl-membership-change
     outcome: "The intersection failed; the reduction that needed it yields nothing."
     basis: stated
     locator: "§6.3.2"
@@ -3637,6 +3686,7 @@ error_paths:
     flows:
       - authorization-decision
       - delegation-by-certificate-issuance
+      - threshold-acl-membership-change
     outcome: "Fails to intersect; the reduction yields nothing."
     basis: stated
     locator: "§6.3.1"
