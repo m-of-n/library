@@ -29,6 +29,8 @@ pub struct VCon {
     pub analysis: Option<Vec<serde_json::Value>>,  // §4.1.12 none
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attachments: Option<Vec<serde_json::Value>>,  // §4.1.13 none
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub group: Option<serde_json::Value>,  // §6.3.2 none
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,12 +45,14 @@ pub struct Party {
     pub mailto: Option<String>,  // §4.2.4 MAY
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,  // §4.2.5 SHOULD
-    pub did: String,  // §4.2.6 MUST
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub did: Option<String>,  // §4.2.6 MUST
     #[serde(skip_serializing_if = "Option::is_none")]
     pub validation: Option<String>,  // §4.2.7 SHOULD NOT
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gmlpos: Option<String>,  // §4.2.8 none
-    pub civicaddress: serde_json::Value,  // §4.2.9 MUST
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub civicaddress: Option<serde_json::Value>,  // §4.2.9 MUST
     #[serde(skip_serializing_if = "Option::is_none")]
     pub uuid: Option<String>,  // §4.2.10 MAY
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -61,63 +65,184 @@ pub struct Party {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Dialog {
-    pub type: String,  // §4.3.1 MUST
+    pub type: String,  // §4.3 / §4.3.1 MUST
     #[serde(skip_serializing_if = "Option::is_none")]
     pub start: Option<String>,  // §4.3.2 SHOULD
-    pub duration: serde_json::Value,  // §4.3.3 MUST
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration: Option<serde_json::Value>,  // §4.3.3 MUST
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parties: Option<serde_json::Value>,  // §4.3.4 MUST NOT
     #[serde(skip_serializing_if = "Option::is_none")]
     pub originator: Option<serde_json::Value>,  // §4.3.5 MUST NOT
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub recordings: Option<serde_json::Value>,  // §4.3.6 MUST NOT
+    pub recordings: Option<serde_json::Value>,  // §4.3.6 MUST
     #[serde(skip_serializing_if = "Option::is_none")]
     pub recording_set: Option<serde_json::Value>,  // §4.3.7 MUST NOT
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mediatype: Option<serde_json::Value>,  // §4.3.8 MUST NOT
     #[serde(skip_serializing_if = "Option::is_none")]
     pub filename: Option<String>,  // §4.3.9 MUST NOT
-    pub disposition: String,  // §4.3.11 MUST
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub body: Option<serde_json::Value>,  // §4.3.10 / §2.3 / §2.3.1 MUST NOT
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub encoding: Option<String>,  // §4.3.10 / §4.3.1.6 / §2.3.2 MUST
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,  // §4.3.10 / §4.3.1.6 / §2.4.1 MUST NOT
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_hash: Option<serde_json::Value>,  // §4.3.10 / §4.3.1.6 / §2.4 / §2.4.2 MUST
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub disposition: Option<String>,  // §4.3.11 MUST
     #[serde(skip_serializing_if = "Option::is_none")]
     pub session_id: Option<serde_json::Value>,  // §4.3.12 MUST NOT
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub application: Option<serde_json::Value>,  // §4.3.15 none
+    pub party_history: Option<Vec<serde_json::Value>>,  // §4.3.13 MUST NOT
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transferee: Option<serde_json::Value>,  // §4.3.14 MUST NOT
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transferor: Option<serde_json::Value>,  // §4.3.14 MUST NOT
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transfer_target: Option<serde_json::Value>,  // §4.3.14 MUST NOT
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub original: Option<serde_json::Value>,  // §4.3.14 MUST NOT
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub consultation: Option<serde_json::Value>,  // §4.3.14 MUST NOT
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_dialog: Option<serde_json::Value>,  // §4.3.14 MUST NOT
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub application: Option<String>,  // §4.3.15 none
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message_id: Option<String>,  // §4.3.16 MUST NOT
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PartyHistory {
+    pub party: serde_json::Value,  // §4.3.13.1 none
+    pub time: String,  // §4.3.13.1 none
+    pub event: String,  // §4.3.13.1 MUST
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub party_history_objects_array: Option<serde_json::Value>,  // §4.3.13 MUST NOT
+    pub button: Option<String>,  // §4.3.13.1 none
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Attachment {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub purpose: Option<String>,  // §4.4.1 none
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub start: Option<String>,  // §4.4.2 none
+    pub start: String,  // §4.4.2 none
     pub party: serde_json::Value,  // §4.4.3 MUST
+    pub dialog: serde_json::Value,  // §4.4.4 none
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub dialog: Option<serde_json::Value>,  // §4.4.4 none
-    pub mediatype: serde_json::Value,  // §4.4.5 MUST
+    pub mediatype: Option<serde_json::Value>,  // §4.4.5 MUST
     #[serde(skip_serializing_if = "Option::is_none")]
     pub filename: Option<String>,  // §4.4.6 none
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub body: Option<serde_json::Value>,  // §4.4.7 / §2.3 / §2.3.1 SHOULD
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub encoding: Option<String>,  // §4.4.7 / §2.3.2 MUST
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,  // §4.4.7 / §2.4.1 SHOULD
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_hash: Option<serde_json::Value>,  // §4.4.7 / §2.4 / §2.4.2 MUST
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Analysis {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub type: Option<String>,  // §4.5.1 SHOULD
+    pub type: String,  // §4.5.1 SHOULD
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dialog: Option<serde_json::Value>,  // §4.5.2 none
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attachment: Option<serde_json::Value>,  // §4.5.3 none
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub mediatype: Option<serde_json::Value>,  // §4.5.4 SHOULD
+    pub mediatype: Option<serde_json::Value>,  // §4.5 / §4.5.4 SHOULD
     #[serde(skip_serializing_if = "Option::is_none")]
     pub filename: Option<String>,  // §4.5.5 none
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub vendor: Option<String>,  // §4.5.6 none
+    pub vendor: String,  // §4.5 / §4.5.6 SHOULD
     #[serde(skip_serializing_if = "Option::is_none")]
     pub product: Option<String>,  // §4.5.7 none
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub schema: Option<String>,  // §4.5.8 none
+    pub schema: Option<String>,  // §4.5 / §4.5.8 SHOULD
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub body: Option<serde_json::Value>,  // §4.5.9 / §2.3 / §2.3.1 SHOULD
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub encoding: Option<String>,  // §4.5.9 / §2.3.2 MUST
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,  // §4.5.9 / §2.4.1 SHOULD
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_hash: Option<serde_json::Value>,  // §4.5.9 / §2.4 / §2.4.2 MUST
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Redacted {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uuid: Option<String>,  // §4.1.8 / §4.1.8.1 SHOULD
+    pub type: String,  // §4.1.8.1 none
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,  // §4.1.8 / §4.1.8.1 / §2.4.1 MAY
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_hash: Option<serde_json::Value>,  // §4.1.8.1 / §2.4.2 MUST
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Amended {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uuid: Option<String>,  // §4.1.9 / §4.1.9.1 SHOULD
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,  // §4.1.9.1 / §2.4.1 MAY
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_hash: Option<serde_json::Value>,  // §4.1.9.1 / §2.4.2 MUST
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VConSignedForm {
+    pub payload: String,  // §5.2 / §5.4 none
+    pub signatures: Vec<serde_json::Value>,  // §5.2 / §5.2.1 MUST
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Signature {
+    pub header: serde_json::Value,  // §5.2.1 MUST
+    pub protected: String,  // §5.2.1 MUST
+    pub signature: String,  // §5.2.1 MUST
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HeaderJWS {
+    pub alg: String,  // §5.2.2 MUST
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub x5c: Option<Vec<String>>,  // §5.2.2 MUST
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub x5u: Option<String>,  // §5.2.2 MUST
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uuid: Option<String>,  // §5.2.2 / §6.5 SHOULD
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VConEncryptedForm {
+    pub unprotected: serde_json::Value,  // §5.3 / §5.3.1 none
+    pub recipients: Vec<serde_json::Value>,  // §5.3 / §5.4 none
+    pub iv: String,  // §5.3 none
+    pub ciphertext: String,  // §5.3 / §5.4 MUST
+    pub tag: String,  // §5.3 none
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub protected: Option<String>,  // §5.3 (omitted from its member list) / [JWE] RFC 7516 §7.2.1 / Appendix A.7 MUST
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aad: Option<String>,  // §5.3 (omitted from its member list) / [JWE] RFC 7516 §7.2.1 MUST
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Unprotected {
+    pub cty: String,  // §5.3.1 SHOULD
+    pub enc: String,  // §5.3.1 SHOULD
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uuid: Option<String>,  // §5.3.1 / §6.5 SHOULD
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Recipient {
+    pub header: serde_json::Value,  // §5.3.2 / §5.3.3 none
+    pub encrypted_key: String,  // §5.3.2 none
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HeaderJWE {
+    pub alg: String,  // §5.3.3 SHOULD
 }

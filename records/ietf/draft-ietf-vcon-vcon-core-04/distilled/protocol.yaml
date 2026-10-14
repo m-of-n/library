@@ -222,49 +222,91 @@ roles:
 # ------------------------------------------------------------------
 messages:
   status: >-
-    distilled/messages.yaml was still the unpopulated scaffold when this pass
-    ran, so no name below can yet be resolved against it. The names used in
-    `flows` are the names the SOURCE gives each structure, so that the
-    cross-check pass can wire them without renaming. The list here is what
-    that pass must find in messages.yaml.
+    RESOLVED AT PASS 3. distilled/messages.yaml was still the unpopulated
+    scaffold when this pass ran, so no name below could be resolved against
+    it; the names used in `flows` are the names the SOURCE gives each
+    structure, chosen so the cross-check could wire them without renaming.
+    messages.yaml now holds 28 structures and 187 fields, and every name
+    below carries the `resolves_to` that locates it. Eleven of the twelve
+    resolve to a structure. The twelfth, vcon_gzip, resolves to a FIELD and
+    not a structure, and that is correct rather than a miss - §5.4 makes gzip
+    a modifier on all three forms, not a fourth form, so messages.yaml has
+    nothing to decompose. The asymmetry runs the other way too, and is
+    recorded so it is not read as a gap: messages.yaml holds sixteen
+    structures this file never names, because they are data shapes inside a
+    vCon - party, dialog, attachment, analysis, civicaddress, party_history,
+    the §4.3.1.6 applicability table and so on - and this file models
+    party-to-party flows, not the container's interior.
   expected_in_messages_yaml:
     - name: vcon_unsigned
+      resolves_to: >-
+        messages.yaml structure `unsigned-vcon-object` (15 fields)
       locator: "Sections 3, 4, 4.1"
       media_type: "application/vcon"
       note: "the top level unsigned vCon object; also the JWS payload and, once signed, the JWE plaintext"
     - name: vcon_signed
+      resolves_to: >-
+        messages.yaml structure `signed-vcon-object` (3 fields)
       locator: "Section 5.2"
       encoding: "JWS General JSON Serialization, RFC 7515 section 7.2.1"
       fields: "payload, signatures"
     - name: signature_object
+      resolves_to: >-
+        messages.yaml structure `signature-object` (3 fields)
       locator: "Section 5.2.1"
       fields: "header, protected, signature"
     - name: jws_header_object
+      resolves_to: >-
+        messages.yaml structure `jws-header-object` (4 fields)
       locator: "Section 5.2.2"
       fields: "alg, x5c, x5u, uuid"
     - name: vcon_encrypted
+      resolves_to: >-
+        messages.yaml structure `encrypted-vcon-object` (7 fields - the 5
+        §5.3 lists plus `protected` and `aad`, which §5.3 omits and RFC 7516
+        §7.2.1 defines)
       locator: "Section 5.3"
       encoding: "JWE General JSON Serialization, RFC 7516 section 7.2.1"
       fields: "unprotected, recipients, iv, ciphertext, tag"
     - name: unprotected_object
+      resolves_to: >-
+        messages.yaml structure `unprotected-object` (3 fields)
       locator: "Section 5.3.1"
       fields: "cty, enc, uuid"
     - name: recipient_object
+      resolves_to: >-
+        messages.yaml structure `recipient-object` (2 fields). Its locator
+        §5.3.2 resolves to ZERO requirement ids - the only structure locator
+        in messages.yaml of which that is true
       locator: "Section 5.3.2"
       fields: "header, encrypted_key"
     - name: jwe_header_object
+      resolves_to: >-
+        messages.yaml structure `jwe-header-object` (1 field)
       locator: "Section 5.3.3"
       fields: "alg"
     - name: vcon_gzip
+      resolves_to: >-
+        NOT A STRUCTURE - messages.yaml field `form-differentiation.gzip-
+        test`. §5.4 makes compression a modifier on all three forms rather
+        than a fourth form, so there is no object to decompose
       locator: "Sections 5.4, 6.2"
       media_type: "application/vcon+gzip"
     - name: redacted_object
+      resolves_to: >-
+        messages.yaml structure `redacted-object` (4 fields). Its `type`
+        member is constrained by nothing
       locator: "Section 4.1.8.1"
       fields: "uuid, type, url, content_hash"
     - name: amended_object
+      resolves_to: >-
+        messages.yaml structure `amended-object` (3 fields)
       locator: "Section 4.1.9.1"
       fields: "uuid, url, content_hash"
     - name: content_hash
+      resolves_to: >-
+        messages.yaml structure `contenthash-token` (algorithm, separator,
+        digest), plus the `ContentHash` entry of `json-notation-types`
       locator: "Sections 2.2, 2.4.2"
       note: "a token value, not a message - carried inside the structures above"
   not_messages_in_this_document:
@@ -315,11 +357,19 @@ flows:
       - >-
         "The SHA-512 [SHA-512] algorithm MUST be supported. Other algorithms
         MAY be included." (2.4.2, lines 579-580)
+    precondition_requirements:
+      - draft-ietf-vcon-vcon-core-04#R-0046
+      - draft-ietf-vcon-vcon-core-04#R-0047
+      - draft-ietf-vcon-vcon-core-04#R-0049
+      - draft-ietf-vcon-vcon-core-04#R-0050
     steps:
       - n: 1
         from: "implementation (consumer)"
         to: "implementation (consumer)"
         message: vcon_unsigned
+        requirements:
+          - draft-ietf-vcon-vcon-core-04#R-0047
+          - draft-ietf-vcon-vcon-core-04#R-0181
         action: >-
           Read url and content_hash from the Dialog, Attachment or Analysis
           Object. Both are inside the signed payload, so the vCon's own
@@ -332,6 +382,10 @@ flows:
         from: "implementation (consumer)"
         to: "HTTPS origin server for externally referenced files"
         message: https_get_external_file
+        requirements:
+          - draft-ietf-vcon-vcon-core-04#R-0048
+          - draft-ietf-vcon-vcon-core-04#R-0182
+          - draft-ietf-vcon-vcon-core-04#R-0183
         message_defined_by_source: false
         action: >-
           Retrieve the file. "HTTPS MUST be used for retrieval to protect the
@@ -346,6 +400,9 @@ flows:
         from: "HTTPS origin server for externally referenced files"
         to: "implementation (consumer)"
         message: https_get_external_file
+        requirements:
+          - draft-ietf-vcon-vcon-core-04#R-0146
+          - draft-ietf-vcon-vcon-core-04#R-0248
         message_defined_by_source: false
         action: >-
           Return the file, and optionally its media type. The Content-Type
@@ -361,6 +418,13 @@ flows:
         from: "implementation (consumer)"
         to: "implementation (consumer)"
         message: content_hash
+        requirements:
+          - draft-ietf-vcon-vcon-core-04#R-0185
+          - draft-ietf-vcon-vcon-core-04#R-0230
+        requirements_note: >-
+          Both are lowercase-verb entries (kind stated, verb none). The one
+          ordering rule a consumer has is not a BCP 14 SHOULD, which is the
+          defect recorded below.
         action: >-
           Verify the digest BEFORE use. This is the only explicit ordering
           constraint on a consumer in the document - "After retrieving
@@ -403,6 +467,9 @@ flows:
         from: "constructing security domain"
         to: "constructing security domain"
         message: vcon_unsigned
+        requirements:
+          - draft-ietf-vcon-vcon-core-04#R-0067
+          - draft-ietf-vcon-vcon-core-04#R-0068
         action: >-
           Construct and accumulate. "The vCon may start with only meta data and
           party information, then progress to contain dialog information. It
@@ -415,6 +482,10 @@ flows:
         from: "constructing security domain"
         to: "constructing security domain"
         message: vcon_signed
+        requirements:
+          - draft-ietf-vcon-vcon-core-04#R-0006
+          - draft-ietf-vcon-vcon-core-04#R-0176
+          - draft-ietf-vcon-vcon-core-04#R-0186
         action: >-
           Set updated_at to the signing time, then sign. "Future updates MUST
           first set the updated_at to the new signing time as the vcon object
@@ -428,6 +499,10 @@ flows:
         from: "constructing security domain"
         to: "constructing security domain"
         message: vcon_encrypted
+        requirements:
+          - draft-ietf-vcon-vcon-core-04#R-0180
+          - draft-ietf-vcon-vcon-core-04#R-0184
+          - draft-ietf-vcon-vcon-core-04#R-0195
         optional: true
         guard: >-
           "A vCon MUST be signed first using JWS as defined in Signed Form of
@@ -444,6 +519,13 @@ flows:
         from: "constructing security domain"
         to: "subsequent security domain"
         message: "vcon_signed or vcon_encrypted"
+        requirements:
+          - draft-ietf-vcon-vcon-core-04#R-0059
+        requirements_note: >-
+          R-0059 is the only requirement that reaches this step, and it
+          constrains the FORM the vCon must be in before transfer, not the
+          transfer. No requirement describes the transfer itself, because no
+          transport is defined.
         action: >-
           Transfer. NO TRANSPORT IS DEFINED. The document names email only as
           an example of a channel that forces the encrypted form, and
@@ -454,6 +536,10 @@ flows:
         from: "subsequent security domain"
         to: "subsequent security domain"
         message: "vcon_signed or vcon_encrypted"
+        requirements:
+          - draft-ietf-vcon-vcon-core-04#R-0008
+          - draft-ietf-vcon-vcon-core-04#R-0060
+          - draft-ietf-vcon-vcon-core-04#R-0061
         action: >-
           Consume, by the consume-received-vcon flow. If the domain needs to
           change anything, it leaves this flow for derive-new-instance-version,
@@ -482,6 +568,10 @@ flows:
         from: "implementation (consumer)"
         to: "implementation (consumer)"
         message: vcon_gzip
+        requirements:
+          - draft-ietf-vcon-vcon-core-04#R-0205
+          - draft-ietf-vcon-vcon-core-04#R-0206
+          - draft-ietf-vcon-vcon-core-04#R-0208
         action: >-
           Decide whether the octets are gzip. "A gzip compressed vCon is not
           JSON and is differentiated from the JSON forms before the above
@@ -505,6 +595,16 @@ flows:
         from: "implementation (consumer)"
         to: "implementation (consumer)"
         message: "vcon_unsigned, vcon_signed or vcon_encrypted"
+        requirements:
+          - draft-ietf-vcon-vcon-core-04#R-0202
+          - draft-ietf-vcon-vcon-core-04#R-0203
+          - draft-ietf-vcon-vcon-core-04#R-0204
+          - draft-ietf-vcon-vcon-core-04#R-0207
+        requirements_note: >-
+          R-0207, the JSON format being mandatory to implement, is wired here
+          because this is the first step that requires parsing JSON at all; it
+          is a conformance statement about implementations rather than about
+          this step.
         action: >-
           Recognise the form by parameter presence. "It is necessary to
           distinguish which form a vCon is in, and whether it is compressed, in
@@ -522,6 +622,8 @@ flows:
         from: "implementation (consumer)"
         to: "implementation (consumer)"
         message: vcon_encrypted
+        requirements:
+          - draft-ietf-vcon-vcon-core-04#R-0200
         condition: "encrypted form"
         action: >-
           Decrypt, yielding the signed form. "The value of this uuid parameter
@@ -532,6 +634,9 @@ flows:
         from: "implementation (consumer)"
         to: "implementation (consumer)"
         message: vcon_signed
+        requirements:
+          - draft-ietf-vcon-vcon-core-04#R-0188
+          - draft-ietf-vcon-vcon-core-04#R-0194
         condition: "signed form, including after step 3"
         action: >-
           Verify the signature and the uuid. "When the vCon is verified, the
@@ -549,6 +654,14 @@ flows:
         from: "implementation (consumer)"
         to: "implementation (consumer)"
         message: vcon_unsigned
+        requirements:
+          - draft-ietf-vcon-vcon-core-04#R-0003
+          - draft-ietf-vcon-vcon-core-04#R-0004
+          - draft-ietf-vcon-vcon-core-04#R-0055
+          - draft-ietf-vcon-vcon-core-04#R-0056
+          - draft-ietf-vcon-vcon-core-04#R-0066
+          - draft-ietf-vcon-vcon-core-04#R-0224
+          - draft-ietf-vcon-vcon-core-04#R-0225
         action: >-
           Admission decision on `critical`. "Implementations that encounter a
           vCon containing a disruptive extension listed in the critical
@@ -572,6 +685,10 @@ flows:
         from: "implementation (consumer)"
         to: "implementation (consumer)"
         message: vcon_unsigned
+        requirements: []
+        requirements_note: >-
+          No requirement reaches this step. The document states what a
+          consumer must not process and never states what processing IS.
         action: "Process the vCon."
         on_error: "not applicable"
 
@@ -589,12 +706,20 @@ flows:
         from: "constructing security domain"
         to: "subsequent security domain"
         message: "vcon_signed or vcon_encrypted"
+        requirements:
+          - draft-ietf-vcon-vcon-core-04#R-0059
+          - draft-ietf-vcon-vcon-core-04#R-0061
+          - draft-ietf-vcon-vcon-core-04#R-0176
+          - draft-ietf-vcon-vcon-core-04#R-0180
         action: "Export, by the export-from-security-domain flow."
         on_error: "not specified"
       - n: 2
         from: "subsequent security domain"
         to: "subsequent security domain"
         message: vcon_unsigned
+        requirements:
+          - draft-ietf-vcon-vcon-core-04#R-0002
+          - draft-ietf-vcon-vcon-core-04#R-0008
         action: >-
           Produce a new instance version with a new uuid. "If the new security
           domain needs to alter it, a new vCon is created with the removed or
@@ -605,6 +730,17 @@ flows:
         from: "subsequent security domain"
         to: "subsequent security domain"
         message: "redacted_object or amended_object"
+        requirements:
+          - draft-ietf-vcon-vcon-core-04#R-0062
+          - draft-ietf-vcon-vcon-core-04#R-0070
+          - draft-ietf-vcon-vcon-core-04#R-0074
+          - draft-ietf-vcon-vcon-core-04#R-0076
+          - draft-ietf-vcon-vcon-core-04#R-0077
+          - draft-ietf-vcon-vcon-core-04#R-0078
+          - draft-ietf-vcon-vcon-core-04#R-0079
+          - draft-ietf-vcon-vcon-core-04#R-0080
+          - draft-ietf-vcon-vcon-core-04#R-0081
+          - draft-ietf-vcon-vcon-core-04#R-0082
         guard: >-
           Exactly one of the two. "redacted: Redacted (optional, mutually
           exclusive with amended parameter)" (4.1.8, lines 921-922).
@@ -620,6 +756,9 @@ flows:
         from: "subsequent security domain"
         to: "subsequent security domain"
         message: vcon_signed
+        requirements:
+          - draft-ietf-vcon-vcon-core-04#R-0072
+          - draft-ietf-vcon-vcon-core-04#R-0176
         action: >-
           Sign the derivative. For redaction this is an accountability
           statement, not merely an export step - "The assurance of the accuracy
@@ -631,6 +770,11 @@ flows:
         from: "implementation (consumer)"
         to: "implementation (consumer)"
         message: "redacted_object or amended_object"
+        requirements:
+          - draft-ietf-vcon-vcon-core-04#R-0007
+          - draft-ietf-vcon-vcon-core-04#R-0075
+          - draft-ietf-vcon-vcon-core-04#R-0076
+          - draft-ietf-vcon-vcon-core-04#R-0081
         action: >-
           A later consumer resolves the predecessor. NO RESOLUTION PROCEDURE
           EXISTS. The reference is a uuid; the document defines no resolver,
@@ -662,12 +806,24 @@ flows:
         from: archiver
         to: archiver
         message: vcon_signed
+        requirements: []
+        requirements_note: >-
+          NO REQUIREMENT EXISTS TO WIRE. Section 5.2.3 carries no BCP 14
+          keyword and no lowercase obligation, so requirements.yaml holds not
+          one entry at that locator - it is the only flow in this file of
+          which that is true. The section opens "Below is an approach on how
+          integrity may be maintained on the archived vCon. There may be other
+          approaches to this as well.", which is the draft declining to
+          legislate. Every step here therefore cites the source directly, and
+          that is the finished state, not an unwired one.
         action: "Hold JWS1, the signed vCon."
         on_error: "not applicable"
       - n: 2
         from: archiver
         to: archiver
         message: vcon_signed
+        requirements: []
+        requirements_note: "as step 1: Section 5.2.3 states no requirement to wire"
         guard: "before the JWS1 signing certificate expires"
         action: >-
           "Before the expiration of the JWS1 signing certificate, the content
@@ -682,6 +838,8 @@ flows:
         from: archiver
         to: archiver
         message: vcon_signed
+        requirements: []
+        requirements_note: "as step 1: Section 5.2.3 states no requirement to wire"
         action: >-
           Repeat, unboundedly. "The process is continued for the life of the
           vCon archiving." (5.2.3, lines 2771-2772). The figure shows JWS3
@@ -691,6 +849,8 @@ flows:
         from: "archive reader"
         to: "archive reader"
         message: vcon_signed
+        requirements: []
+        requirements_note: "as step 1: Section 5.2.3 states no requirement to wire"
         action: >-
           Unwind outermost first. "When it is desired to access the data in the
           archived vCon, first the outer JWS (JWS3 in diagram) is verified
@@ -959,17 +1119,24 @@ formal_schema_coverage:
 cross_references:
   state_machine: "distilled/state-machine.yaml"
   prose_and_diagrams: "distilled/protocol.md"
-  requirements_wired:
-    - id: "draft-ietf-vcon-vcon-core-04#R-0004"
-      used_by: "consume-received-vcon step 5"
-    - id: "draft-ietf-vcon-vcon-core-04#R-0007"
-      used_by: "derive-new-instance-version step 5"
-    - id: "draft-ietf-vcon-vcon-core-04#R-0008"
-      used_by: "derive-new-instance-version step 2"
-  requirements_not_yet_wired: >-
-    requirements.yaml held 33 field-derived entries when this pass ran and
-    covers nothing from 2.4, 2.5, 5.1, 5.2, 5.2.3, 5.3 or 5.4. Every step in
-    external-content-retrieval, export-from-security-domain,
-    consume-received-vcon and long-term-archive therefore cites the source
-    directly. The cross-check pass must wire them once those sections are
-    extracted.
+  requirements_wired: >-
+    RESOLVED AT PASS 3. Three ids were wired when this file was written
+    (R-0004, R-0007, R-0008). Every flow step now carries its own
+    `requirements` list: 19 of the 24 steps are wired, with 60 links over 52
+    distinct requirement ids, plus 4 more on this file's one
+    `precondition_requirements` block. The five steps carrying
+    `requirements: []` say in `requirements_note` why - four of them are the
+    whole of long-term-archive, whose §5.2.3 states no requirement at all,
+    and the fifth is consume-received-vcon step 6, "Process the vCon", for
+    which the document states what must NOT be processed and never what
+    processing is.
+  requirements_not_wirable: >-
+    Twenty-seven of the 249 requirements are cited by neither this file nor
+    distilled/messages.yaml, and each is correct to be: R-0209 to R-0215 and
+    R-0231 to R-0243 bind the four IANA registration templates and the two
+    media type registrations - they constrain a registrant filling in a form,
+    not a party in a flow - and R-0217 to R-0219 are the §7 version history,
+    which records renames rather than obligations. R-0059 to R-0061 and
+    R-0207 are wired HERE and nowhere else, because they bind an
+    implementation or a security domain rather than any parameter, which is
+    exactly what this file is for.
