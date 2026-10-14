@@ -31,12 +31,32 @@ test vectors, and design notes mapped to our decisions. Multi-agent passes
 is a started record, not a finished one. `docs/extraction.md` is normative;
 `.claude/skills/extract` is the procedure; CI enforces it.
 
-**Extracting, not touching** (amended 2026-10-03). FX-1 fires when the record
-has `status: distilled`, already declares `distillation`, or the PR changes its
-`distilled/`. Summarising a record is ingestion and is held to the summary bar
-instead — `summarized`, valid relations, `bin/validate` clean. It is a ratchet:
-an extracted record can never regress to a summary. Say in the PR body which
-bar you are claiming, and name the issue that owns the eventual extraction.
+**Extracting, not touching** (amended 2026-10-03, rewritten 2026-10-13 for #73).
+FX-1 fires on what a record **says it was measured against**, never on `status`:
+
+```yaml
+distillation:
+  standard: FX-1        # required whenever `distillation` is present
+  profile: full         # how completely it met THAT standard
+```
+
+- `standard: FX-1` → held to FX-1; `bin/validate` enforces the artifact set.
+- an **earlier** standard (`distillation/0.1.0`, `threat-radar`) → **grandfathered**.
+  Reported, never failed. FX-1 is not retroactive.
+- **adding** a file to `distilled/` → extracting now, so FX-1 applies.
+  **Editing or renaming one is maintenance, not extraction.**
+- otherwise → the summary bar: `summarized`, valid relations, `bin/validate` clean.
+
+`profile: partial` is a deliberate reasoned scope below the standard — paywalled
+source, secondary reference — and requires `profile_reason` naming what is *not*
+covered. An unfinished extraction has no profile at all.
+
+Still a ratchet: a record may not drop `distillation`, fall back a standard, or
+regress `full` → `partial`, and extending a grandfathered record's `distilled/`
+brings it to the current standard. Say in the PR body which bar you are
+claiming, and name the issue that owns the eventual extraction.
+
+`docs/extraction.md` is normative for all of this; this is a summary of it.
 
 ## Shape
 
