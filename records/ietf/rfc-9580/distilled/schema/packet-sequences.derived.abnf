@@ -1,0 +1,146 @@
+; packet-sequences.derived.abnf
+;
+; DERIVED -- not part of RFC 9580. RFC 9580 prints its packet-sequence
+; grammars in prose notation (Section 10; verbatim in grammars.verbatim.txt,
+; regions G-13 to G-23). This file renders them in ABNF (RFC 5234) so that a
+; tool can run them. Each rule names its source section and verbatim region.
+; Where a rule goes beyond the printed grammar it says so ("derived").
+;
+; ALPHABET. A packet stream is read as a string of terminals, ONE TERMINAL
+; PER PACKET. A packet's terminal value is its Packet Type ID (Table 3,
+; region T-03), except that a Signature packet (Type ID 2) has the value
+; %x200 + its Signature Type ID (Table 4, region T-04). Type IDs stop at 63
+; (%x3F), so the two ranges do not overlap. validate.derived.py builds this
+; string with chr() and runs the same rules as Python regular expressions
+; (key structures) and a recursive-descent parser (messages).
+;
+; PRE-FILTER (applied before matching; derived from the printed text):
+;   * every Marker packet (Type ID 10) is removed: "a Marker packet
+;     (Section 5.8) can appear anywhere in the sequence" (10.1.1, 10.1.3,
+;     10.1.4, 10.3; regions G-13, G-16, G-18, G-21);
+;   * every non-critical packet (Type IDs 40-63) is removed: "unknown
+;     non-critical packets can appear anywhere within any sequence" (10);
+;   * for detached signatures, Padding (Type ID 21) is also removed (10.4,
+;     region G-23).
+;   Padding elsewhere is NOT removed by default: the printed grammars place it
+;   only at the end of a v6 certificate and of an Optionally Padded Message.
+;   Section 5.14 (rfc-9580#R-0239) says an implementation "MUST be able to
+;   process Padding packets anywhere else"; validate.derived.py
+;   --padding-anywhere removes Padding first. See README finding SF-10.
+;
+; NOT EXPRESSIBLE HERE (checked by validate.derived.py instead): packet and
+; key versions (which grammar applies is chosen by the primary key version);
+; that a self-signature is by the primary key; OPS / Signature
+; correspondence; ESK / SEIPD version alignment (Table 26); unwrapping of
+; Compressed Data and decrypted SEIPD contents (10.3.1).
+
+; ------------------------------------------------------------- terminals
+PKESK        = %x01                ; Public Key Encrypted Session Key (5.1)
+SKESK        = %x03                ; Symmetric Key Encrypted Session Key (5.3)
+OPS          = %x04                ; One-Pass Signature (5.4)
+SECKEY       = %x05                ; Secret Key (5.5.1.3)
+PUBKEY       = %x06                ; Public Key (5.5.1.1)
+SECSUBKEY    = %x07                ; Secret Subkey (5.5.1.4)
+COMP         = %x08                ; Compressed Data (5.6)
+SED          = %x09                ; Symmetrically Encrypted Data (5.7)
+LIT          = %x0B                ; Literal Data (5.9)
+UID          = %x0D                ; User ID (5.11)
+PUBSUBKEY    = %x0E                ; Public Subkey (5.5.1.2)
+UAT          = %x11                ; User Attribute (5.12)
+SEIPD        = %x12                ; Symmetrically Encrypted and Integrity
+                                   ; Protected Data (5.13)
+PADDING      = %x15                ; Padding (5.14)
+
+any-signature            = %x200-2FF   ; Signature packet, any type
+certification            = %x210-213   ; 0x10-0x13 (5.2.1.4-5.2.1.7)
+subkey-binding           = %x218       ; 0x18 (5.2.1.8)
+direct-key-signature     = %x21F       ; 0x1F (5.2.1.10)
+key-revocation           = %x220       ; 0x20 (5.2.1.11)
+subkey-revocation        = %x228       ; 0x28 (5.2.1.12)
+certification-revocation = %x230       ; 0x30 (5.2.1.13)
+
+; ------------------------------------------------------------- keys, 10.1 / 10.2
+; 10.2 (region G-20): a Transferable Secret Key has the same format as a
+; Transferable Public Key except that Secret Key and Secret Subkey packets can
+; be used in addition to Public Key and Public Subkey packets; "If a single
+; Secret Key or Secret Subkey packet is included in a packet sequence, it is a
+; Transferable Secret Key". So these rules admit both kinds. A Transferable
+; Public Key is a match that contains no SECKEY or SECSUBKEY terminal.
+primary-key  = PUBKEY / SECKEY
+subkey       = PUBSUBKEY / SECSUBKEY
+
+; 10.1.1, region G-13: "Entries in square brackets are optional and
+; ellipses indicate repetition." "X..." is rendered 1*X and "[X...]" *X.
+;   Primary Key
+;      [Revocation Signature...]
+;       Direct Key Signature...
+;      [User ID or User Attribute
+;              [Certification Revocation Signature...]
+;              [Certification Signature...]]...
+;      [Subkey [Subkey Revocation Signature...]
+;              Subkey Binding Signature...]...
+;      [Padding]
+v6-certificate = primary-key *key-revocation 1*direct-key-signature
+                 *v6-identity *subkey-block [PADDING]
+v6-identity    = (UID / UAT) *certification-revocation *certification
+subkey-block   = subkey *subkey-revocation 1*subkey-binding
+
+; 10.1.2, region G-15
+v6-revocation-certificate = primary-key key-revocation
+
+; 10.1.3, region G-16. "Signature..." after a User ID or User Attribute is
+; printed without a type; any-signature renders it as printed. The printed
+; v4 structure has no [Padding]; 10.1.5 (region G-19) nevertheless discusses
+; an optional trailing Padding packet for v4 keys (README finding SF-09).
+v4-certificate = primary-key [key-revocation] *direct-key-signature
+                 *v4-identity *subkey-block
+v4-identity    = (UID / UAT) *any-signature
+
+; 10.1.4, region G-18. "RSA Public Key" (an RSA v3 key) is a version check.
+v3-key = primary-key [key-revocation] UID *any-signature
+         *(UID *any-signature)
+
+; 10.1.5 (region G-19) and 3.6: Transferable Public Key sequences may be
+; concatenated. Which alternative applies to each key is decided by its
+; primary key version (6, 4, or 2/3), which the alphabet does not carry.
+transferable-key = v6-certificate / v6-revocation-certificate
+                   / v4-certificate / v3-key
+keyring          = 1*transferable-key
+
+; ------------------------------------------------------------- messages, 10.3
+; Region G-21: "a comma (,) represents sequential composition, and a
+; vertical bar (|) separates alternatives". The printed rules are rendered
+; one for one. "ESK Sequence: ESK | ESK Sequence, ESK." is left-recursive and
+; is rendered 1*esk, which generates the same strings. "Signed Message:
+; Signature Packet, OpenPGP Message | One-Pass Signed Message." is read with
+; the comma binding tighter than the bar (derived; the source states no
+; precedence).
+openpgp-message           = encrypted-message / signed-message
+                            / compressed-message / literal-message
+compressed-message        = COMP
+literal-message           = LIT
+esk                       = PKESK / SKESK
+esk-sequence              = 1*esk
+encrypted-data            = SED / SEIPD
+encrypted-message         = encrypted-data / esk-sequence encrypted-data
+one-pass-signed-message   = OPS openpgp-message corresponding-signature
+signed-message            = any-signature openpgp-message
+                            / one-pass-signed-message
+optionally-padded-message = openpgp-message [PADDING]
+
+; "Corresponding Signature Packet" is not defined by the grammar. Region G-01
+; (5.4) defines the correspondence: nested signatures bracket the message,
+; the first Signature after the message matching the last OPS. Field
+; agreement (type, hash, algorithm, issuer, salt) is checked by
+; validate.derived.py.
+corresponding-signature   = any-signature
+
+; 10.3.1, region G-22 (unwrapping, derived from the prose):
+;   decrypted v2 SEIPD content   = optionally-padded-message
+;   decrypted v1 SEIPD or SED    = openpgp-message
+;   decompressed Compressed Data = openpgp-message
+
+; ------------------------------------------------------------- 10.4
+; Region G-23: "simply one or more Signature packets"; Marker and Padding
+; may appear anywhere (removed by the pre-filter).
+detached-signatures = 1*any-signature

@@ -1,0 +1,99 @@
+; text-formats.derived.abnf
+;
+; DERIVED -- not part of RFC 9580. ABNF (RFC 5234) renderings of the three
+; text structures RFC 9580 describes in prose: ASCII Armor (Section 6.2;
+; verbatim regions G-02 to G-08, T-16, T-17), the Cleartext Signature
+; Framework (Section 7.1, 7.2; regions G-09 to G-11) and the Regular
+; Expression syntax of the Regular Expression subpacket (Section 8; region
+; G-12). Terminals are Unicode code points (the armor is 7-bit text; regular
+; expressions are UTF-8, Section 5.2.3.22).
+;
+; Choices that are ours, not the source's (each also marked inline):
+;   * line ends: RFC 9580 does not fix LF or CRLF for armor; eol admits both;
+;   * the Armor Tail Line must repeat the header's label (6.2.3); ABNF
+;     cannot tie the two, so the label agreement is a separate check
+;     (validate.derived.py dearmor);
+;   * the base64 alphabet and padding are those of RFC 4648 Section 4,
+;     which Section 6 cites; the 76-character line limit is a generator
+;     rule and is not enforced here, because decoders MUST ignore all
+;     whitespace (rfc-9580#R-0241).
+
+; ------------------------------------------------------------- common
+eol          = %x0D.0A / %x0A                  ; derived: either line end
+wsp          = %x20 / %x09
+text-char    = %x20-7E / %x80-10FFFF / %x09    ; any non-control character
+
+; ------------------------------------------------------------- 6.2 armor
+; Region G-04: Armor Header Line, Armor Headers, a blank line (zero length
+; or containing only whitespace), the ASCII-Armored data, an optional Armor
+; Checksum, the Armor Tail.
+armor              = armor-header-line *armor-header blank-line
+                     *base64-line [armor-checksum] armor-tail-line
+; Region G-05, G-06, T-16: five dashes either side; complete line, nothing
+; but whitespace after it.
+armor-header-line  = "-----BEGIN PGP " armor-label "-----" *wsp eol
+armor-tail-line    = "-----END PGP " armor-label "-----" *wsp [eol]
+armor-label        = "MESSAGE" / "PUBLIC KEY BLOCK" / "PRIVATE KEY BLOCK"
+                     / "SIGNATURE"                ; Table 16
+; Region G-07, T-17: key and value separated by a colon and a single space.
+; Unknown keys are ignored (R-0256), so any key is admitted.
+armor-header       = armor-key ": " *text-char eol
+armor-key          = 1*(%x21-39 / %x3B-7E)        ; derived: no colon, no space
+known-armor-key    = "Version" / "Comment" / "Hash" / "Charset"   ; Table 17
+blank-line         = *wsp eol
+base64-line        = 1*(base64-char / wsp) eol
+base64-char        = %x41-5A / %x61-7A / %x30-39 / "+" / "/" / "="
+; Region G-03: the checksum, if present, is on the next line after the data:
+; "=" and four base64 characters.
+armor-checksum     = "=" 4(%x41-5A / %x61-7A / %x30-39 / "+" / "/") *wsp eol
+
+; ------------------------------------------------------------- 7 cleartext
+; Region G-09: the cleartext header line, legacy Hash Armor Headers, an
+; empty line, the dash-escaped cleartext, a line ending, the armored
+; signature(s). Region G-10: between the header line and the first empty
+; line only a well-formed Hash header is permitted (R-0267).
+cleartext-signed   = "-----BEGIN PGP SIGNED MESSAGE-----" *wsp eol
+                     *hash-header blank-line
+                     dash-escaped-text
+                     1*signature-armor
+hash-header        = "Hash: " hash-name *("," hash-name) eol
+                     ; 6.2.2.3: comma-separated "Text Name" values of
+                     ; Table 23; derived: no spaces around the commas
+hash-name          = "MD5" / "SHA1" / "RIPEMD160" / "SHA256" / "SHA384"
+                     / "SHA512" / "SHA224" / "SHA3-256" / "SHA3-512"
+; Region G-11: every line starting with "-" is prefixed by "- "; any other
+; line MAY be. A dash-escaped line therefore never starts with "-" unless
+; followed by a space.
+dash-escaped-text  = *(text-line eol)
+text-line          = "- " *text-char / [plain-first *text-char]
+plain-first        = %x20-2C / %x2E-7E / %x80-10FFFF / %x09   ; not "-"
+signature-armor    = "-----BEGIN PGP SIGNATURE-----" *wsp eol
+                     *armor-header blank-line *base64-line [armor-checksum]
+                     "-----END PGP SIGNATURE-----" *wsp [eol]
+
+; ------------------------------------------------------------- 8 regex
+; Region G-12, rendered one definition per rule.
+; "Zero or more branches, separated by |": an empty expression is a regex.
+regex         = [branch *("|" branch)]
+; "Zero or more pieces, concatenated."
+branch        = *piece
+; "An atom possibly followed by *, +, or ?."
+piece         = atom ["*" / "+" / "?"]
+; "A Regular Expression in parentheses ..., a range ..., a . ..., a ^ ...,
+; a $ ..., a \ followed by a single Unicode character ..., or a single
+; Unicode character with no other significance".
+atom          = "(" regex ")" / range / "." / "^" / "$"
+                / "\" any-char / ordinary-char
+any-char      = %x0-10FFFF
+; derived: the characters the definitions above give significance to
+ordinary-char = %x0-23 / %x25-27 / %x2C-2D / %x2F-3E / %x40-5A
+                / %x5D / %x5F-7B / %x7D-10FFFF
+                ; excludes $ ( ) * + . ? [ \ ^ |
+; "A sequence of characters enclosed in []. ... If the sequence begins with
+; ^, it matches any single Unicode character not from the rest of the
+; sequence. ... To include a literal ] in the sequence, make it the first
+; character (following a possible ^). To include a literal -, make it the
+; first or last character."
+range         = "[" ["^"] ["]" / "-"] *range-item ["-"] "]"
+range-item    = range-char ["-" range-char]
+range-char    = %x0-2C / %x2E-5C / %x5E-10FFFF       ; not "-" and not "]"

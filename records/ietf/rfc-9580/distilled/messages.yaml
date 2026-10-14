@@ -1,13 +1,4607 @@
 record: rfc-9580
 reviewed_by: ""
-# Every message, structure, header or envelope the document defines.
+extracted: "2026-10-13"
+
+# ---------------------------------------------------------------------------
+applicability: >-
+  RFC 9580 defines a data format, not a wire protocol. There is no transport, no session, no
+  handshake and no request/response exchange: every structure here is an octet string that an
+  implementation writes to, or reads from, a file, a mail body, a key server response or any
+  other carrier the application chooses. The unit of the format is the packet (§4): a header
+  carrying a Packet Type ID and a body length, then a body whose layout depends on the type and,
+  for most types, on a version octet. Packets are concatenated into the three packet sequences of
+  §10 (Transferable Public/Secret Keys, OpenPGP Messages, Detached Signatures); the grammar of
+  those sequences is the business of protocol.yaml and state-machine.yaml, and this file defines
+  only the structures they are built from. Several packets carry nested structures that are not
+  packets: signature subpackets (§5.2.3.7), User Attribute subpackets (§5.12), S2K Specifiers
+  (§3.7.1), the algorithm-specific key, signature and session-key fields (§5.1.3-§5.1.7,
+  §5.2.3.1-§5.2.3.5, §5.5.5), EC point and scalar encodings (§11.2, §11.3) and the ECDH KDF
+  parameter strings (§5.5.5.6, §11.5). Other structures here are never transmitted but are byte
+  strings an implementation must build exactly: the data hashed for a signature (§5.2.4), the
+  fingerprint input (§5.5.4), the HKDF info and AEAD additional data of v6 SKESK, v2 SEIPD and
+  AEAD-protected secret keys (§5.3.2, §5.13.2, §5.5.3), the X25519/X448 HKDF input (§5.1.6,
+  §5.1.7), the ECDH key-wrap input and KDF OtherInfo (§11.4, §11.5) and the PKCS#1 encodings
+  (§12.1). Those carry encoding: computed. Two structures are text, not binary: ASCII Armor
+  (§6) and the Cleartext Signature Framework (§7); their layouts are given as line structures.
+  Cryptographic primitives (RSA, DSA, ECDSA, EdDSA, X25519, X448, AES, Camellia, OCB, EAX, GCM,
+  HKDF, Argon2, AES Key Wrap, the hash functions) are delegated to the references the source names
+  and are out of scope except where OpenPGP fixes a parameter or an input layout. The Trust packet
+  body (§5.10) is implementation-defined and has no layout. Keyring storage (§3.6) is out of scope.
+
+# ---------------------------------------------------------------------------
+note: >-
+  Conventions. (1) Text in double quotes is verbatim from the source (.cache/rfc-9580.txt, sha256
+  36540e57...1ff18) with the RFC line wrapping undone: a line break and the indent that follows
+  become one space; a word hyphenated at a line end is quoted rejoined. Every quote was checked
+  mechanically against the source. Unquoted text is this file's own description. Anything not
+  literally stated by the source is prefixed Derived: and names its basis (another section,
+  arithmetic, a test vector in Appendix A, or an external specification the source cites).
+  (2) source gives the section and source line range of the definition. (3) Field types:
+  u8, u16, u32 are 1-, 2- and 4-octet unsigned big-endian scalars (§3.1); u64 is an 8-octet
+  big-endian value (used only in §5.13.2); time32 is a u32 count of seconds since 1970-01-01
+  00:00:00 UTC (§3.5); MPI is the §3.2 multiprecision integer (u16 bit count, then
+  ceil(bits/8) octets); octets[N] is a fixed-length octet string; octets[var] runs to the end of
+  the enclosing length; utf8[...] is UTF-8 text (§3.4); keyid is octets[8] (§3.3); fingerprint is
+  octets[20] for a version 4 key and octets[32] for a version 6 key (§5.5.4); body-length is the
+  1-, 2- or 5-octet OpenPGP-format length (§4.2.1.1-§4.2.1.3); s2k is an S2K Specifier
+  (§3.7.1); subpackets is a §5.2.3.7 subpacket data set. (4) required is true, false or
+  conditional; conditional fields carry required_when. (5) constrained_by lists
+  rfc-9580#R-NNNN ids from distilled/requirements.yaml. Each id is cited on the field it binds
+  or, for a rule that binds the structure as a whole, on the entry. A requirement cited on more
+  than one entry binds each of them (for example the algorithm deprecations bind both the key and
+  the signature or session-key fields of that algorithm). constrained_by_locators names source
+  text that binds a field but has no R-id. (6) normative_status: current (generate and accept);
+  deprecated (the source says do not generate or avoid, but defines the format for reading);
+  obsolete (MUST NOT be generated; read only for historic data); reserved (an ID with no
+  format); private (100-110 or 60-63 ranges); computed (never on the wire; built for hashing,
+  key derivation or encryption); text (ASCII Armor and Cleartext Signature Framework).
+  (7) generate restates the source's Generate? column or BCP 14 rule for that version; it is
+  absent where the source says nothing. (8) layout is the octet-level structure, written as
+  concatenation (a || b) with each field's width; hex constants are written 0xNN. Example
+  octets are cited from Appendix A by line and were re-derived mechanically: the Appendix A
+  armored blocks were base64-decoded and split into packets, the v4 and v6 fingerprints
+  (A.1, A.3), the v4 and v6 signature hash inputs (A.2, A.6), and the HKDF outputs of A.5.1,
+  A.8.2, A.8.4 and A.9.2 were recomputed with Python hashlib/hmac and all match the source.
+  (9) Wiring: see wiring at the end of this file for counts and the requirements deliberately
+  not wired here.
+
+# ---------------------------------------------------------------------------
+# Data element types (§3). Each is cited by the fields that use it.
+data_types:
+  - id: scalar
+    source: "§3.1, lines 544-549"
+    definition: >-
+      "Scalar numbers are unsigned and always stored in big-endian format." The value of a
+      2-octet scalar is ((n[0] << 8) + n[1]); of a 4-octet scalar ((n[0] << 24) + (n[1] << 16) +
+      (n[2] << 8) + n[3]).
+    widths: [u8, u16, u32]
+    notes: >-
+      The one exception in the document is the image header length of the Image Attribute
+      subpacket, which "due to a historical accident, this value is encoded as a little-endian
+      number" (§5.12.1, lines 3927-3929). u64 appears only in §5.13.2 ("an 8-octet, big-endian
+      value", line 4169; chunk index "as a big-endian value", line 4183).
+  - id: MPI
+    source: "§3.2, lines 551-586; §3.2.1, lines 588-596"
+    definition: >-
+      "An MPI consists of two pieces: a 2-octet scalar that is the length of the MPI in bits,
+      followed by a string of octets that contain the actual integer." "The size of an MPI is
+      ((MPI.length + 7) / 8) + 2 octets." "The length field of an MPI describes the length
+      starting from its most significant non-zero bit."
+    layout: "u16 bitlen || octets[(bitlen + 7) / 8], big-endian, no leading zero octet"
+    examples:
+      - "[00 00] = 0; [00 01 01] = 1; [00 09 01 FF] = 511 (lines 568-572)"
+      - "[00 02 01] is not formed correctly; it should be [00 01 01] (lines 579-580)"
+    constraints: >-
+      Version 6 Key, Signature and PKESK packets: the bit length must match the most significant
+      non-zero bit or the packet is rejected as malformed. Unused bits must be zero. For other
+      packet versions the check is not required (Derived: R-0003 names only version 6 packets).
+    constrained_by:
+      - rfc-9580#R-0003
+      - rfc-9580#R-0004
+    notes: >-
+      §3.2.1: MPIs also carry EC points (§11.2) and fixed-length octet strings (§11.3); the wire
+      form is the same: "2 octets of length in bits counted from the first non-zero bit,
+      followed by the smallest series of octets that can represent the value while stripping
+      off any leading zero octets." Derived: the zero MPI is [00 00] with no value octets.
+  - id: keyid
+    source: "§3.3, lines 598-605; §5.5.4, lines 3318-3344"
+    definition: >-
+      "A Key ID is an 8-octet scalar that identifies a key." Computation per key version is in
+      fingerprint-and-keyid below.
+    constrained_by:
+      - rfc-9580#R-0005
+  - id: text
+    source: "§3.4, lines 607-610"
+    definition: >-
+      "Unless otherwise specified, the character set for text is the UTF-8 [RFC3629] encoding of
+      Unicode [ISO10646]."
+    notes: >-
+      Derived: no text field in a packet is null-terminated except the Regular Expression
+      subpacket (§5.2.3.22); every other text field's length is given by an enclosing length
+      (packet length, subpacket length or a 1-octet or 2-octet length prefix).
+  - id: time32
+    source: "§3.5, lines 612-615"
+    definition: >-
+      "A time field is an unsigned 4-octet number containing the number of seconds elapsed since
+      midnight, 1 January 1970 UTC."
+    notes: >-
+      The Key Expiration Time and Signature Expiration Time subpackets are labelled "(4-octet
+      time field)" but hold a duration in seconds (SD-M05).
+  - id: body-length
+    source: "§4.2.1, lines 1005-1049; §5.2.3.7, lines 1880-1896; §5.12, lines 3893-3901"
+    definition: >-
+      The OpenPGP-format length: first octet < 192: one octet, value = octet; 192..223: two
+      octets, value = ((o1 - 192) << 8) + o2 + 192; 255: five octets, value = u32 of octets 2-5.
+      "This basic set of 1-octet, 2-octet, and 5-octet lengths is also used internally to some
+      packets." (signature subpacket lengths and User Attribute subpacket lengths).
+    ranges:
+      one-octet: "0..191"
+      two-octet: "192..8383 (first octet 0xC0..0xDF)"
+      five-octet: "0..4294967295 (first octet 0xFF)"
+    notes: >-
+      In a packet header the first-octet range 224..254 is a Partial Body Length (packet-length
+      below). In a signature subpacket length the source's decoding rule maps every first octet
+      from 192 to 254 to the two-octet form (§5.2.3.7, lines 1890-1892), so 224..254 have no
+      partial meaning there; Derived: a two-octet subpacket length with first octet 224..254
+      decodes to 8384..16319, a value the packet-header two-octet form (192..223) cannot
+      express (SD-M06).
+  - id: checksum16
+    source: "§5.1.3, lines 1335-1336; §5.5.3, lines 3296-3298; §3.7.2.1, lines 836-837"
+    definition: >-
+      "the sum of all octets in x mod 65536" stored as u16. Used for the session-key checksum in
+      RSA, Elgamal and ECDH PKESK plaintexts and for the deprecated secret-key checksum.
+
+# ---------------------------------------------------------------------------
+# Encoding rules that apply across structures.
+encoding_rules:
+  - id: ENC-01
+    rule: packet boundaries come only from the packet header
+    source: "§4.1, lines 941-955"
+    text: >-
+      "When handling a stream of packets, the length information in each packet header is the
+      canonical source of packet boundaries." A subfield length that points outside the packet
+      makes the packet malformed; octets outside the header's range are not packet contents.
+    constrained_by:
+      - rfc-9580#R-0020
+      - rfc-9580#R-0021
+      - rfc-9580#R-0022
+  - id: ENC-02
+    rule: unwrapped streams are parsed as fresh packet streams bounded by the unwrapped length
+    source: "§10.3.1, lines 5400-5424"
+    text: >-
+      "When any unwrapping is performed, the resulting stream of octets is parsed into a series
+      of OpenPGP packets like any other stream of octets." Applies to the plaintext of SED,
+      v1 SEIPD and v2 SEIPD and to decompressed Compressed Data.
+    constrained_by:
+      - rfc-9580#R-0331
+      - rfc-9580#R-0332
+      - rfc-9580#R-0333
+      - rfc-9580#R-0334
+      - rfc-9580#R-0335
+  - id: ENC-03
+    rule: Packet Type ID in OpenPGP-format encoding, as used inside derived byte strings
+    source: "§5.3.2, lines 2985-2987; §5.5.3, lines 3275-3277; §5.13.2, lines 4136-4138"
+    text: >-
+      HKDF info and AEAD additional data begin with "the Packet Type ID in OpenPGP format
+      encoding (bits 7 and 6 are set, and bits 5-0 carry the Packet Type ID)". Derived: 0xC3
+      for SKESK (3), 0xC5 Secret Key (5), 0xC7 Secret Subkey (7), 0xD2 SEIPD (18); the source
+      confirms 0xC3 (line 2998), 0xC5 and 0xC7 (lines 3289, 3292) and 0xD2 (line 4163).
+  - id: ENC-04
+    rule: CFB mode
+    source: "§12.9, lines 6227-6233"
+    text: >-
+      "The CFB segment size s is equal to the block size of the cipher (i.e., n-bit CFB mode,
+      where n is the block size used)." Used by SED, v1 SEIPD, v4 SKESK session-key encryption
+      and CFB-protected secret keys.
+    constrained_by:
+      - rfc-9580#R-0399
+  - id: ENC-05
+    rule: Private or Experimental ranges
+    source: "§12.10, lines 6235-6246; §9, lines 4629-4632"
+    text: >-
+      S2K Specifier types, Signature Subpacket Type IDs, User Attribute Subpacket Type IDs, image
+      format IDs and the Section 9 algorithm IDs reserve 100 to 110; Packet Type IDs reserve 60
+      to 63. An implementation may implement an algorithm not in the tables "as long as the
+      algorithm IDs are chosen from the Private or Experimental Use algorithm range."
+    constrained_by:
+      - rfc-9580#R-0276
+  - id: ENC-06
+    rule: no symmetric algorithm 0 for encrypted data, no compression algorithm 0 in a Compressed Data packet
+    source: "§12.2.1, lines 6101-6107; §12.3.1.1, lines 6129-6135"
+    text: >-
+      Symmetric algorithm 0, plaintext, "may only be used to denote secret keys that are stored
+      in the clear." Compression algorithm 0, uncompressed, "may only be used to denote a
+      preference for uncompressed data."
+    constrained_by:
+      - rfc-9580#R-0377
+      - rfc-9580#R-0380
+
+# ---------------------------------------------------------------------------
 messages:
-  - name: TODO
-    locator: "§TODO"
-    encoding: TODO            # CBOR / JSON / COSE_Sign1 / HTTP / ...
+
+  # ======================= §4 packet framing =======================
+
+  - name: packet
+    source: "§4.1, lines 928-955; §4.2, lines 957-1003"
+    normative_status: current
+    encoding: binary
+    description: >-
+      "Each packet consists of a packet header, followed by the packet body. The packet header is
+      of variable length." The first header octet selects the OpenPGP or Legacy format and carries
+      the Packet Type ID; the rest of the header is the body length.
     fields:
-      - name: TODO
-        type: TODO
+      - name: header
+        type: packet-header-openpgp | packet-header-legacy
         required: true
-        constrained_by: [rfc-9580#R-0001]
-    layout: "TODO byte-level / structural layout"
+        constraints: >-
+          Bit 7 of the first octet is always one; bit 6 selects the format (one: OpenPGP, zero:
+          Legacy). Derived: a first octet with bit 7 clear is not a packet header; the source
+          gives no rule for it beyond ENC-01.
+        constrained_by:
+          - rfc-9580#R-0023
+          - rfc-9580#R-0024
+          - rfc-9580#R-0025
+      - name: body
+        type: octets[body length]
+        required: true
+        constraints: >-
+          Layout by Packet Type ID (packet_types). "An implementation MUST NOT interpret octets
+          outside the range indicated in the packet header as part of the contents of the
+          packet."
+        constrained_by:
+          - rfc-9580#R-0021
+          - rfc-9580#R-0022
+    constrained_by:
+      - rfc-9580#R-0020
+      - rfc-9580#R-0032
+      - rfc-9580#R-0033
+    layout: >-
+      header (1 to 6 octets) || body. "the total length of the packet is the length of the
+      header(s) plus the length of the body" (§4.2.3, lines 1131-1133); with partial lengths the
+      body is interleaved with further length headers (packet-length-openpgp).
+
+  - name: packet-header-openpgp
+    source: "§4.2, lines 969-979 and 986-1003; §4.2.1, lines 1005-1074"
+    normative_status: current
+    encoding: binary
+    fields:
+      - name: first-octet
+        type: u8
+        required: true
+        constraints: >-
+          Bit 7 = 1, bit 6 = 1, bits 5-0 = Packet Type ID (0..63). "the OpenPGP format headers can
+          encode IDs as great as 63." Derived: first octet = 0xC0 | type.
+        constrained_by:
+          - rfc-9580#R-0034
+      - name: length
+        type: packet-length-openpgp
+        required: true
+    layout: >-
+      0b11tttttt || length, where length is 1, 2 or 5 octets, or a Partial Body Length octet
+      followed by a body portion and further length headers. Examples (Appendix A): 0xC6 Public
+      Key, 0xC2 Signature, 0xCE Public Subkey (A.3, decoded); 0xC5, 0xC7 Secret Key and Secret
+      Subkey (A.4); 0xC1 PKESK, 0xD2 SEIPD (A.8.1 line 8118, A.8.3 line 8198); 0xC3 SKESK (A.9.1
+      line 8313); 0xC4 OPS, 0xCB Literal Data (A.7, decoded).
+
+  - name: packet-header-legacy
+    source: "§4.2, lines 980-1003; §4.2.2, lines 1076-1098"
+    normative_status: deprecated
+    generate: >-
+      "The Legacy packet format SHOULD NOT be used to generate new data, unless the recipient is
+      known to only support the Legacy packet format." Compressed Data and Literal Data MUST NOT
+      be generated with it (R-0203, R-0204, R-0219, R-0220).
+    encoding: binary
+    fields:
+      - name: first-octet
+        type: u8
+        required: true
+        constraints: >-
+          Bit 7 = 1, bit 6 = 0, bits 5-2 = Packet Type ID, bits 1-0 = length-type. "Legacy format
+          headers only have 4 bits for the Packet Type ID and hence can only encode Packet Type
+          IDs less than 16". Derived: first octet = 0x80 | (type << 2) | length-type.
+        constrained_by:
+          - rfc-9580#R-0023
+          - rfc-9580#R-0024
+          - rfc-9580#R-0025
+      - name: length
+        type: "u8 | u16 | u32 | absent"
+        required: conditional
+        required_when: >-
+          length-type 0: 1-octet length, header 2 octets; 1: 2-octet length, header 3 octets;
+          2: 4-octet length, header 5 octets; 3: no length field, header 1 octet, indeterminate
+          length ("If the packet is in a file, it means that the packet extends until the end of
+          the file.").
+        constraints: >-
+          "An implementation MUST NOT generate a Legacy format packet with indeterminate length."
+          It MAY interpret one for historic data.
+        constrained_by:
+          - rfc-9580#R-0030
+          - rfc-9580#R-0031
+    layout: >-
+      0b10ttttll || (u8 | u16 | u32 | nothing). Example: Appendix A.1 and A.2 use Legacy headers
+      0x98 0x33 (Public Key, length-type 0, length 51; line 7601) and 0x88 0x5E (Signature,
+      length-type 0, length 94; line 7635).
+    notes: >-
+      Derived: the constants 0x99 (v4 key hashing and fingerprint), 0x88 (Third-Party
+      Confirmation hashing) and 0xB4 (User ID certification hashing) are Legacy-format first
+      octets: 0x99 = Public Key with length-type 1, 0x88 = Signature with length-type 0, 0xB4 =
+      User ID with length-type 0. 0x9B (v6 key hashing) is Public Key with length-type 3, yet a
+      4-octet length follows it, and 0xD1 (User Attribute certification hashing) is an
+      OpenPGP-format first octet for type 17. They are hashing constants, not headers (SD-M08).
+
+  - name: packet-length-openpgp
+    source: "§4.2.1, lines 1005-1021; §4.2.1.1-§4.2.1.4, lines 1023-1074; §4.2.3, lines 1100-1133"
+    normative_status: current
+    encoding: binary
+    fields:
+      - name: one-octet
+        type: u8
+        required: conditional
+        required_when: first octet < 192
+        constraints: "bodyLen = 1st_octet; encodes 0 to 191."
+      - name: two-octet
+        type: octets[2]
+        required: conditional
+        required_when: first octet 192..223
+        constraints: "bodyLen = ((1st_octet - 192) << 8) + (2nd_octet) + 192; encodes 192 to 8383."
+      - name: five-octet
+        type: "0xFF || u32"
+        required: conditional
+        required_when: first octet 255
+        constraints: >-
+          bodyLen = (2nd_octet << 24) | (3rd_octet << 16) | (4th_octet << 8) | 5th_octet;
+          encodes up to 4,294,967,295.
+      - name: partial
+        type: u8
+        required: conditional
+        required_when: first octet 224..254
+        constraints: >-
+          "partialBodyLen = 1 << (1st_octet & 0x1F);" a power of 2 from 1 to 2^30. Each partial
+          length header is followed by that many body octets and then another length header
+          (1-octet, 2-octet, 5-octet or partial). "The last length header in the packet MUST NOT
+          be a Partial Body Length header." "Note also that the last Body Length header can be a
+          zero-length header." "The first partial length MUST be at least 512 octets long."
+          Partial lengths are for data packets only: "Partial Body Lengths MUST NOT be used for
+          any other packet types."
+        constrained_by:
+          - rfc-9580#R-0026
+          - rfc-9580#R-0027
+          - rfc-9580#R-0028
+          - rfc-9580#R-0029
+    layout: >-
+      Definite: one of the three forms, then bodyLen octets. Partial: (P_i || portion_i of
+      2^(P_i & 0x1F) octets)+ || L || last portion of L octets, where P_i in 0xE0..0xFE and L is
+      a 1-, 2- or 5-octet length. Examples (§4.2.3): 100 = 0x64; 1723 = 0xC5 0xFB; 100000 = 0xFF
+      0x00 0x01 0x86 0xA0, or 0xEF (32768 octets), 0xE1 (2), 0xE0 (1), 0xF0 (65536), 0xC5 0xDD
+      (1693).
+    notes: >-
+      Derived: the packet types that may use partial lengths are the data packets the source
+      lists, "whether they are literal, compressed, or encrypted" (Literal Data 11, Compressed
+      Data 8, SED 9, SEIPD 18); the source does not enumerate encrypted types by ID. Derived:
+      0xE0 is a partial length of 1 octet and 0xFF is never a partial length; a Legacy header
+      cannot carry partial lengths (its indeterminate form, length-type 3, is the Legacy
+      analogue and is not generated). Derived arithmetic check: 0xC5 0xFB = ((197-192)<<8)+251+192
+      = 1723, and 0xC5 0xDD = 1693; 32768 + 2 + 1 + 65536 + 1693 = 100000.
+
+  # ======================= §5 Table 3 packet types: reserved and unassigned =======================
+
+  - name: packet-type-0-reserved
+    packet_type: 0
+    source: "§5 Table 3, lines 1154-1156"
+    normative_status: reserved
+    critical: true
+    description: "Reserved - this Packet Type ID MUST NOT be used"
+    fields: []
+    constrained_by:
+      - rfc-9580#R-0034
+    notes: >-
+      Derived: being critical (§4.3), a packet of type 0 in a sequence is an unknown critical
+      packet, so the whole sequence is rejected (R-0032, R-0311).
+
+  - name: packet-type-15-16-unlisted
+    packet_type: "15, 16"
+    source: "§5 Table 3, lines 1200-1205; §4.3, lines 1143-1144"
+    normative_status: reserved
+    critical: true
+    description: >-
+      Table 3 has no row for 15 or 16 (it jumps from 14 Public Subkey to 17 User Attribute).
+      Derived: by §4.3 "Packets with Type IDs from 0 to 39 are critical", so they are critical and
+      unknown; see SD-M01.
+    fields: []
+    constrained_by:
+      - rfc-9580#R-0032
+
+  - name: packet-type-19-reserved-mdc
+    packet_type: 19
+    source: "§5 Table 3, lines 1211-1214; Appendix B.1, lines 9040-9046"
+    normative_status: reserved
+    critical: true
+    description: >-
+      Table 3 row: Reserved (formerly Modification Detection Code Packet). The MDC is now intrinsic to the
+      v1 SEIPD plaintext (seipd-v1). Derived: the two constant octets 0xD3 0x14 that precede the
+      MDC hash in v1 SEIPD plaintext are an OpenPGP-format header for type 19 with length 20.
+    fields: []
+    constrained_by:
+      - rfc-9580#R-0032
+
+  - name: packet-type-20-reserved
+    packet_type: 20
+    source: "§5 Table 3, line 1216"
+    normative_status: reserved
+    critical: true
+    description: "Reserved"
+    fields: []
+    constrained_by:
+      - rfc-9580#R-0032
+
+  - name: packet-type-22-39-unassigned-critical
+    packet_type: "22-39"
+    source: "§5 Table 3, lines 1221-1222; §4.3, lines 1135-1144"
+    normative_status: reserved
+    critical: true
+    description: "Unassigned Critical Packets"
+    fields: []
+    constrained_by:
+      - rfc-9580#R-0032
+      - rfc-9580#R-0309
+      - rfc-9580#R-0310
+      - rfc-9580#R-0311
+
+  - name: packet-type-40-59-unassigned-non-critical
+    packet_type: "40-59"
+    source: "§5 Table 3, lines 1224-1225; §4.3, lines 1135-1144; §10, lines 5154-5161"
+    normative_status: reserved
+    critical: false
+    description: >-
+      "Unassigned Non-Critical Packets". "unknown non-critical packets can appear anywhere within
+      any sequence." Derived: only the OpenPGP header format can carry these IDs (Legacy carries
+      IDs below 16).
+    fields: []
+    constrained_by:
+      - rfc-9580#R-0033
+      - rfc-9580#R-0309
+
+  - name: packet-type-60-63-private
+    packet_type: "60-63"
+    source: "§5 Table 3, lines 1227-1228; §12.10, lines 6240-6242"
+    normative_status: private
+    critical: false
+    description: "Private or Experimental Use"
+    fields: []
+    constrained_by:
+      - rfc-9580#R-0033
+
+  # ======================= §5.1 PKESK (Type ID 1) =======================
+
+  - name: pkesk-v3
+    packet_type: 1
+    shorthand: PKESK
+    version: 3
+    source: "§5.1, lines 1238-1260; §5.1.1, lines 1262-1291; §5.1.8, lines 1456-1462"
+    normative_status: current
+    generate: >-
+      Yes, only ahead of a v1 SEIPD payload (Table 26 row "v1 SEIPD | v4 SKESK | v3 PKESK | Yes").
+    encoding: binary packet body
+    fields:
+      - name: version
+        type: u8
+        value: 3
+        required: true
+        constrained_by:
+          - rfc-9580#R-0035
+          - rfc-9580#R-0337
+          - rfc-9580#R-0338
+          - rfc-9580#R-0340
+          - rfc-9580#R-0341
+          - rfc-9580#R-0342
+          - rfc-9580#R-0343
+      - name: key-id
+        type: keyid
+        required: true
+        constraints: >-
+          The Key ID of the recipient public key; for a subkey, the subkey's Key ID. "The Key ID
+          may also be all zeros, for an "anonymous recipient"" (§5.1.8), in which case the
+          receiver tries all available private keys.
+        constrained_by:
+          - rfc-9580#R-0042
+          - rfc-9580#R-0005
+      - name: public-key-algorithm
+        type: u8
+        required: true
+        constraints: >-
+          Table 18 ID of an encryption-capable algorithm: 1 RSA, 2 RSA Encrypt-Only, 16 Elgamal,
+          18 ECDH, 25 X25519, 26 X448 (Derived: the algorithms with a PKESK Format column entry).
+      - name: encrypted-session-key
+        type: octets[var]
+        required: true
+        constraints: >-
+          "A series of values comprising the encrypted session key. This is algorithm specific
+          and described below." See pkesk-fields-rsa, -elgamal, -ecdh, -x25519, -x448. For v3 the
+          public-key algorithm is passed the session key and "The 1-octet algorithm identifier
+          that specifies the symmetric key encryption algorithm used to encrypt the v1 SEIPD
+          packet".
+    layout: >-
+      0x03 || keyid (8) || pkalgo (1) || algorithm-specific fields (to end of body).
+    notes: >-
+      The symmetric algorithm ID reaches the recipient inside the encrypted plaintext for RSA,
+      Elgamal and ECDH, and in the clear, prepended to the wrapped key, for X25519 and X448
+      (§5.1.6, §5.1.7). In historic data a v3 PKESK may precede a SED packet (§5.1.1); the source's
+      wording "used to encrypt the v1 SEIPD packet" does not cover that case (SD-M28).
+
+  - name: pkesk-v6
+    packet_type: 1
+    shorthand: PKESK
+    version: 6
+    source: "§5.1, lines 1238-1260; §5.1.2, lines 1293-1321; §5.1.8, lines 1456-1462"
+    normative_status: current
+    generate: >-
+      Yes, only ahead of a v2 SEIPD payload (Table 26 row "v2 SEIPD | v6 SKESK | v6 PKESK | Yes").
+    encoding: binary packet body
+    fields:
+      - name: version
+        type: u8
+        value: 6
+        required: true
+        constrained_by:
+          - rfc-9580#R-0036
+          - rfc-9580#R-0337
+          - rfc-9580#R-0339
+          - rfc-9580#R-0341
+          - rfc-9580#R-0342
+          - rfc-9580#R-0343
+      - name: recipient-length
+        type: u8
+        required: true
+        constraints: >-
+          "A 1-octet size of the following two fields. This size may be zero, if the key version
+          number field and the fingerprint field are omitted for an "anonymous recipient"".
+          Derived: the values in use are 0, 21 (v4 recipient: 1 + 20) and 33 (v6 recipient:
+          1 + 32); Appendix A.8.1 has 0x21 (line 8121).
+        constrained_by:
+          - rfc-9580#R-0042
+      - name: key-version
+        type: u8
+        required: conditional
+        required_when: recipient-length > 0
+        constraints: >-
+          "A 1-octet key version number." Derived: 4 or 6, the versions with a defined fingerprint.
+      - name: fingerprint
+        type: fingerprint
+        required: conditional
+        required_when: recipient-length > 0
+        constraints: >-
+          "The fingerprint of the public key or subkey to which the session key is encrypted.
+          Note that the length N of the fingerprint for a version 4 key is 20 octets; for a
+          version 6 key, N is 32."
+      - name: public-key-algorithm
+        type: u8
+        required: true
+        constraints: >-
+          As for pkesk-v3. Elgamal (16) is excluded: "An implementation MUST NOT generate
+          ElGamal v6 PKESK packets."
+        constrained_by:
+          - rfc-9580#R-0039
+      - name: encrypted-session-key
+        type: octets[var]
+        required: true
+        constraints: >-
+          Algorithm-specific fields. "No symmetric key encryption algorithm identifier is passed
+          to the public key algorithm for a v6 PKESK packet, as it is included in the v2 SEIPD
+          packet."
+    layout: >-
+      0x06 || n (1) || [ keyver (1) || fingerprint (n - 1) ] || pkalgo (1) || algorithm-specific
+      fields. Appendix A.8.1 (lines 8118-8138): c1 5d | 06 | 21 | 06 | 12c83f...930885 (32) | 19
+      (X25519) | 87cf...6764 (32, ephemeral) | 18 | dea355...3ab7 (24, wrapped key).
+    notes: >-
+      Derived: a v4 recipient key is addressable by a v6 PKESK (key-version 4, 20-octet
+      fingerprint); nothing in §5.1.2 restricts the recipient key version.
+
+  - name: pkesk-fields-rsa
+    applies_to: "pkesk-v3, pkesk-v6; public-key-algorithm 1 or 2"
+    source: "§5.1.3, lines 1323-1347; Table 18 rows 1-2, lines 4645-4654"
+    normative_status: deprecated
+    generate: >-
+      RSA keys "SHOULD NOT be generated" (R-0279); RSA Encrypt-Only (2) "MUST NOT be generated"
+      (R-0280). Encrypting to RSA keys under 2048 bits is forbidden (R-0386).
+    encoding: binary
+    fields:
+      - name: m^e-mod-n
+        type: MPI
+        required: true
+        constraints: >-
+          "MPI of RSA-encrypted value m^e mod n." m is the EME-PKCS1-v1_5 encoding
+          (eme-pkcs1-v1_5) of pkcs1-session-key-plaintext.
+        constrained_by:
+          - rfc-9580#R-0037
+          - rfc-9580#R-0279
+          - rfc-9580#R-0280
+          - rfc-9580#R-0382
+          - rfc-9580#R-0383
+          - rfc-9580#R-0384
+          - rfc-9580#R-0385
+          - rfc-9580#R-0386
+          - rfc-9580#R-0387
+          - rfc-9580#R-0003
+    layout: "MPI(m^e mod n)"
+
+  - name: pkesk-fields-elgamal
+    applies_to: "pkesk-v3 only (v6 forbidden); public-key-algorithm 16"
+    source: "§5.1.4, lines 1349-1377; Table 18 row 16, lines 4660-4667"
+    normative_status: deprecated
+    generate: >-
+      "An implementation MUST NOT encrypt using Elgamal keys." (R-0391); "An implementation MUST
+      NOT generate ElGamal v6 PKESK packets." (R-0039).
+    encoding: binary
+    fields:
+      - name: g^k-mod-p
+        type: MPI
+        required: true
+        constraints: "MPI of Elgamal (Diffie-Hellman) value g^k mod p."
+      - name: m*y^k-mod-p
+        type: MPI
+        required: true
+        constraints: >-
+          "MPI of Elgamal (Diffie-Hellman) value m * y^k mod p." m is the EME-PKCS1-v1_5
+          encoding of pkcs1-session-key-plaintext.
+        constrained_by:
+          - rfc-9580#R-0038
+    constrained_by:
+      - rfc-9580#R-0039
+      - rfc-9580#R-0281
+      - rfc-9580#R-0390
+      - rfc-9580#R-0391
+      - rfc-9580#R-0392
+    layout: "MPI(g^k mod p) || MPI(m * y^k mod p)"
+
+  - name: pkcs1-session-key-plaintext
+    applies_to: "pkesk-fields-rsa, pkesk-fields-elgamal (the message M input to EME-PKCS1-v1_5)"
+    source: "§5.1.3, lines 1327-1342; §5.1.4, lines 1355-1370"
+    normative_status: computed
+    encoding: computed
+    fields:
+      - name: symmetric-algorithm
+        type: u8
+        required: conditional
+        required_when: pkesk-v3 ("if it was passed (in the case of a v3 PKESK packet)")
+      - name: session-key
+        type: octets[key size of the symmetric algorithm]
+        required: true
+      - name: checksum
+        type: checksum16
+        required: true
+        constraints: >-
+          "A 2-octet checksum of the session key, equal to the sum of the session key octets,
+          modulo 65536."
+    layout: "[symalgo (1)] || session key || u16 checksum; then EME-PKCS1-v1_5 encoded to k octets"
+    constrained_by:
+      - rfc-9580#R-0037
+      - rfc-9580#R-0038
+
+  - name: eme-pkcs1-v1_5
+    source: "§12.1.1, lines 5961-5988; §12.1.2, lines 5990-6013; §13.5, lines 6437-6462"
+    normative_status: computed
+    encoding: computed
+    fields:
+      - name: lead
+        type: octets[2]
+        value: "0x00 0x02"
+        required: true
+      - name: PS
+        type: "octets[k - mLen - 3], each non-zero"
+        required: true
+        constraints: >-
+          "Generate an octet string PS of length k - mLen - 3 consisting of pseudorandomly
+          generated non-zero octets. The length of PS will be at least 8 octets."
+        constrained_by:
+          - rfc-9580#R-0364
+      - name: separator
+        type: u8
+        value: "0x00"
+        required: true
+      - name: M
+        type: octets[mLen]
+        required: true
+        constraints: >-
+          mLen <= k - 11; "If mLen > k - 11, output "message too long" and stop."
+        constrained_by:
+          - rfc-9580#R-0363
+    layout: "EM = 0x00 || 0x02 || PS || 0x00 || M, k octets (k = modulus length in octets)"
+    constrained_by:
+      - rfc-9580#R-0365
+      - rfc-9580#R-0366
+      - rfc-9580#R-0367
+      - rfc-9580#R-0403
+    notes: >-
+      Decoding rejects with "decryption error" if octet 1 is not 0x00, octet 2 is not 0x02, no
+      0x00 separator exists, or PS is shorter than 8 octets. §13.5 asks for padding checks that
+      are strict, robust and constant time.
+
+  - name: pkesk-fields-ecdh
+    applies_to: "pkesk-v3, pkesk-v6; public-key-algorithm 18"
+    source: "§5.1.5, lines 1379-1386; §11.5, lines 5748-5909; Table 18 row 18, lines 4675-4688"
+    normative_status: current
+    encoding: binary
+    fields:
+      - name: ephemeral-point
+        type: MPI (EC point)
+        required: true
+        constraints: >-
+          "MPI of an EC point representing an ephemeral public key in the point format associated
+          with the curve as specified in Section 9.2." SEC1 for the NIST and brainpool curves,
+          prefixed native for Curve25519Legacy (Table 20). Never the point at infinity.
+        constrained_by:
+          - rfc-9580#R-0350
+          - rfc-9580#R-0351
+          - rfc-9580#R-0003
+      - name: wrapped-key-length
+        type: u8
+        required: true
+        constraints: >-
+          "One octet encoding the size in octets of the result of the key wrapping method; the
+          value 255 is reserved for future extensions."
+      - name: wrapped-key
+        type: "octets[wrapped-key-length], at most 254"
+        required: true
+        constraints: >-
+          AES Key Wrap (RFC 3394, default IV) under the KDF output (ecdh-kdf) of
+          ecdh-key-wrap-input. "Note that for session key sizes 128, 192, and 256 bits, the size
+          of the result of the key wrapping method is, respectively, 32, 40, and 48 octets, unless
+          size obfuscation is used."
+        constrained_by:
+          - rfc-9580#R-0353
+          - rfc-9580#R-0354
+          - rfc-9580#R-0355
+          - rfc-9580#R-0360
+          - rfc-9580#R-0362
+    layout: "MPI(ephemeral point V) || len(C) (1) || C"
+    notes: >-
+      Derived: §5.1.5 calls the second field "A 1-octet size, followed by a symmetric key
+      encoded using the method described in Section 11.5"; §11.5 output is "(MPI(VB) || len(C) ||
+      C)" (line 5903). Curve25519Legacy is forbidden for v6 keys (R-0198, R-0286), so a v6 PKESK
+      with ECDH uses a SEC1 curve.
+
+  - name: ecdh-key-wrap-input
+    applies_to: pkesk-fields-ecdh
+    source: "§11.5, lines 5816-5871"
+    normative_status: computed
+    encoding: computed
+    fields:
+      - name: symmetric-algorithm
+        type: u8
+        required: conditional
+        required_when: pkesk-v3
+      - name: session-key
+        type: octets[key size]
+        required: true
+      - name: checksum
+        type: checksum16
+        required: true
+      - name: padding
+        type: "octets[p], each octet = p"
+        required: true
+        constraints: >-
+          "the above values are padded to an 8-octet granularity using the method described in
+          [RFC8018]." Larger padding is permitted to hide the key size: 21, 13 and 5 octets (v3)
+          or 22, 14 and 6 octets (v6) for AES-128, AES-192 and AES-256 to reach 40 octets.
+        constrained_by:
+          - rfc-9580#R-0356
+          - rfc-9580#R-0357
+    layout: >-
+      v3: symalgo || k0..kn || s0 s1 || pad; example AES-256: 09 k0 k1 ... k31 s0 s1 05 05 05 05 05
+      (40 octets, line 5834). v6: k0..kn || s0 s1 || pad; example AES-256: k0 k1 ... k31 s0 s1 06
+      06 06 06 06 06 (40 octets, line 5849).
+    notes: >-
+      Derived arithmetic check: v3 AES-128/192/256 plaintexts are 19, 27, 35 octets, + 21/13/5 =
+      40; v6 are 18, 26, 34, + 22/14/6 = 40; without obfuscation they pad to 24, 32, 40 and wrap
+      to 32, 40, 48, as the source states. The 21-, 22-, 13- and 14-octet paddings exceed the 1
+      to 8 octets of the RFC 8018 padding method the source cites (SD-M19).
+
+  - name: ecdh-kdf-param
+    applies_to: "pkesk-fields-ecdh (KDF OtherInfo); computed, not transmitted"
+    source: "§11.5, lines 5763-5807 and 5885-5890"
+    normative_status: computed
+    encoding: computed
+    fields:
+      - name: curve-oid-length
+        type: u8
+        required: true
+      - name: curve-oid
+        type: octets[curve-oid-length]
+        required: true
+        constraints: The truncated DER OID of Table 19 (curve-oid).
+      - name: public-key-algorithm
+        type: u8
+        value: 18
+        required: true
+      - name: kdf-params
+        type: ecdh-kdf-params
+        required: true
+        constraints: "identical to the corresponding field in the ECDH public key"
+      - name: anonymous-sender
+        type: octets[20]
+        value: "41 6E 6F 6E 79 6D 6F 75 73 20 53 65 6E 64 65 72 20 20 20 20"
+        required: true
+        constraints: >-
+          "20 octets representing the UTF-8 encoding of the string "Anonymous Sender" padded at
+          the end with spaces (0x20) to 20 octets"
+      - name: recipient-fingerprint
+        type: fingerprint
+        required: true
+        constraints: >-
+          "the fingerprint of the recipient encryption subkey identifying the key material that
+          is needed for decryption. For version 4 keys, this field is 20 octets. For version 6
+          keys, this field is 32 octets."
+    layout: >-
+      Param = curve_OID_len || curve_OID || public_key_alg_ID || 03 || 01 || KDF_hash_ID ||
+      KEK_alg_ID || "Anonymous Sender" (20) || recipient_fingerprint. Total for a v4 recipient:
+      54 (NIST P-256), 51 (P-384, P-521), 55 (brainpool), 56 (Curve25519Legacy); for v6: 66, 63,
+      67.
+    notes: >-
+      Derived arithmetic check: 1 + OID length (8, 5, 9, 10) + 1 + 4 + 20 + 20 = 54, 51, 55, 56;
+      + 12 for a 32-octet fingerprint = 66, 63, 67. The source lists no v6 size for
+      Curve25519Legacy, consistent with R-0198. The source says the recipient "encryption
+      subkey" but the key may be a primary key; Derived: the fingerprint is that of the key
+      whose ECDH public key is used.
+
+  - name: ecdh-kdf
+    applies_to: pkesk-fields-ecdh
+    source: "§11.4, lines 5720-5746; §11.5, lines 5892-5896"
+    normative_status: computed
+    encoding: computed
+    fields:
+      - name: counter
+        type: octets[4]
+        value: "00 00 00 01"
+        required: true
+      - name: ZB
+        type: octets[fsize]
+        required: true
+        constraints: >-
+          The x coordinate of the shared point S: "ZB = x;", "the compact representation of X as
+          defined in Section 4.2 of [RFC6090]".
+      - name: Param
+        type: ecdh-kdf-param
+        required: true
+    layout: >-
+      MB = Hash(00 || 00 || 00 || 01 || ZB || Param); Z = leftmost oBits of MB, oBits = the KEK
+      key size (Z_len). Hash is the KDF hash of ecdh-kdf-params; oBits <= hBits.
+    constrained_by:
+      - rfc-9580#R-0352
+      - rfc-9580#R-0353
+      - rfc-9580#R-0302
+    notes: >-
+      For Curve25519Legacy the shared secret is an X25519 output, not an (x, y) point; the source
+      does not say what ZB is for that curve (SD-M20).
+
+  - name: pkesk-fields-x25519
+    applies_to: "pkesk-v3, pkesk-v6; public-key-algorithm 25"
+    source: "§5.1.6, lines 1388-1420; Table 18 row 25, lines 4726-4734"
+    normative_status: current
+    encoding: binary
+    fields:
+      - name: ephemeral-public-key
+        type: octets[32]
+        required: true
+        constraints: "32 octets representing an ephemeral X25519 public key."
+      - name: length
+        type: u8
+        required: true
+        constraints: "A 1-octet size of the following fields."
+      - name: symmetric-algorithm
+        type: u8
+        required: conditional
+        required_when: pkesk-v3
+        constraints: >-
+          In the clear: "the symmetric algorithm ID is not encrypted. Instead, it is prepended to
+          the encrypted session key in plaintext. In this case, the symmetric algorithm used MUST
+          be AES-128, AES-192, or AES-256 (algorithm IDs 7, 8, or 9, respectively)."
+        constrained_by:
+          - rfc-9580#R-0040
+      - name: encrypted-session-key
+        type: octets[var]
+        required: true
+        constraints: >-
+          AES-128 key wrap (RFC 3394) of the bare session key under the HKDF output of
+          x25519-hkdf-input; "no checksum or padding are appended to the session key before key
+          wrapping."
+    layout: >-
+      eph (32) || n (1) || [symalgo (1)] || wrapped key (n or n - 1). A.8.1: n = 0x18, 24-octet
+      wrapped key of a 16-octet AES-128 session key in a v6 PKESK.
+    constrained_by:
+      - rfc-9580#R-0277
+    notes: >-
+      Derived: n counts the optional algorithm octet; wrapped length = session key length + 8
+      (RFC 3394), so 24, 32 or 40 octets for AES-128/192/256.
+
+  - name: x25519-hkdf-input
+    applies_to: pkesk-fields-x25519
+    source: "§5.1.6, lines 1399-1412"
+    normative_status: computed
+    encoding: computed
+    fields:
+      - name: ephemeral-public-key
+        type: octets[32]
+        required: true
+      - name: recipient-public-key
+        type: octets[32]
+        required: true
+      - name: shared-secret
+        type: octets[32]
+        required: true
+    layout: >-
+      HKDF-SHA256(IKM = eph || recipient public key || X25519 shared secret, salt = none, info =
+      "OpenPGP X25519") -> 16-octet AES-128 KEK. A.8.2: HKDF output f6 6d ad cf f6 45 92 23 9b 25
+      45 39 b6 4f f6 07 (line 8171), recomputed.
+    notes: >-
+      Derived: the HKDF output length is the AES-128 key size, 16 octets; the source names the
+      cipher (AES-128 key wrap) but not the HKDF L parameter.
+
+  - name: pkesk-fields-x448
+    applies_to: "pkesk-v3, pkesk-v6; public-key-algorithm 26"
+    source: "§5.1.7, lines 1422-1454; Table 18 row 26, lines 4735-4743"
+    normative_status: current
+    encoding: binary
+    fields:
+      - name: ephemeral-public-key
+        type: octets[56]
+        required: true
+      - name: length
+        type: u8
+        required: true
+      - name: symmetric-algorithm
+        type: u8
+        required: conditional
+        required_when: pkesk-v3
+        constraints: In the clear; must be 7, 8 or 9.
+        constrained_by:
+          - rfc-9580#R-0041
+      - name: encrypted-session-key
+        type: octets[var]
+        required: true
+        constraints: >-
+          AES-256 key wrap of the bare session key under HKDF-SHA512(IKM = eph (56) || recipient
+          public key (56) || shared secret (56), no salt, info "OpenPGP X448").
+    layout: "eph (56) || n (1) || [symalgo (1)] || wrapped key"
+    constrained_by:
+      - rfc-9580#R-0278
+    notes: >-
+      Derived: the HKDF output is 32 octets, the AES-256 key size; not stated by the source.
+
+  # ======================= §5.2 Signature (Type ID 2) =======================
+
+  - name: signature-v3
+    packet_type: 2
+    shorthand: SIG
+    version: 3
+    source: "§5.2, lines 1464-1484; §5.2.2, lines 1653-1696"
+    normative_status: deprecated
+    generate: >-
+      No. "Implementations MUST NOT create version 3 signatures; they MAY accept version 3
+      signatures." Table 27 rows for v3 signatures are all Generate? No.
+    encoding: binary packet body
+    fields:
+      - name: version
+        type: u8
+        value: 3
+        required: true
+        constrained_by:
+          - rfc-9580#R-0045
+          - rfc-9580#R-0046
+          - rfc-9580#R-0346
+      - name: hashed-length
+        type: u8
+        value: 5
+        required: true
+        constraints: "A 1-octet length of the following hashed material; it MUST be 5:"
+        constrained_by:
+          - rfc-9580#R-0058
+      - name: signature-type
+        type: u8
+        required: true
+        constraints: >-
+          Table 4 (signature_types). Must not be 0xFF (R-0176). "Version 3 Standalone signatures
+          MUST NOT be generated and MUST be ignored." (type 0x02).
+        constrained_by:
+          - rfc-9580#R-0176
+          - rfc-9580#R-0048
+      - name: creation-time
+        type: time32
+        required: true
+      - name: signer-key-id
+        type: keyid
+        required: true
+      - name: public-key-algorithm
+        type: u8
+        required: true
+        constraints: >-
+          RSA (1, 3) or DSA (17) per the algorithm-specific fields the section gives. Version 3
+          is forbidden with ECDSA, EdDSALegacy, Ed25519 and Ed448.
+        constrained_by:
+          - rfc-9580#R-0061
+          - rfc-9580#R-0065
+          - rfc-9580#R-0069
+          - rfc-9580#R-0072
+      - name: hash-algorithm
+        type: u8
+        required: true
+        constraints: Table 23 ID.
+      - name: hash-left-16
+        type: octets[2]
+        required: true
+        constraints: >-
+          "A 2-octet field holding left 16 bits of the signed hash value." "The high 16 bits
+          (first two octets) of the hash are included in the Signature packet to provide a way to
+          reject some invalid signatures without performing a signature verification."
+      - name: signature
+        type: "MPI+"
+        required: true
+        constraints: >-
+          RSA: MPI(m^d mod n) (sig-fields-rsa); DSA: MPI(r) || MPI(s) (sig-fields-dsa-ecdsa).
+    layout: >-
+      0x03 || 0x05 || sigtype (1) || ctime (4) || keyid (8) || pkalgo (1) || hashalgo (1) ||
+      left16 (2) || algorithm-specific MPIs. Hash input: data || sigtype || ctime
+      (signature-hash-trailer-v3).
+    constrained_by:
+      - rfc-9580#R-0059
+      - rfc-9580#R-0178
+      - rfc-9580#R-0179
+      - rfc-9580#R-0180
+    notes: >-
+      Derived: a v3 signature has no subpackets, so it can carry no Issuer Fingerprint, no
+      expiration and no preferences; the signer is named only by the Key ID.
+
+  - name: signature-v4
+    packet_type: 2
+    shorthand: SIG
+    version: 4
+    source: "§5.2, lines 1464-1484; §5.2.3, lines 1698-1739; §5.2.3.6, lines 1833-1860"
+    normative_status: current
+    generate: >-
+      Yes, by a version 4 key: "An implementation MUST generate a version 4 signature when signing
+      with a version 4 key." (Table 27 row 4 | 4 | 3 | Yes).
+    encoding: binary packet body
+    fields:
+      - name: version
+        type: u8
+        value: 4
+        required: true
+        constrained_by:
+          - rfc-9580#R-0044
+          - rfc-9580#R-0346
+          - rfc-9580#R-0347
+      - name: signature-type
+        type: u8
+        required: true
+        constraints: Table 4 (signature_types); 0xFF never created nor validated.
+        constrained_by:
+          - rfc-9580#R-0057
+      - name: public-key-algorithm
+        type: u8
+        required: true
+        constraints: Table 18 ID with a Signature Format entry (1, 3, 17, 19, 22, 27, 28).
+      - name: hash-algorithm
+        type: u8
+        required: true
+        constraints: >-
+          Table 23 ID. MD5, SHA-1 and RIPEMD-160 are not generated and recent signatures using
+          them are not validated.
+        constrained_by:
+          - rfc-9580#R-0297
+          - rfc-9580#R-0298
+          - rfc-9580#R-0299
+          - rfc-9580#R-0300
+          - rfc-9580#R-0301
+          - rfc-9580#R-0305
+          - rfc-9580#R-0306
+      - name: hashed-subpacket-length
+        type: u16
+        required: true
+        constraints: >-
+          "Note that this is the length in octets of all of the hashed subpackets; an
+          implementation's pointer incremented by this number will skip over the hashed
+          subpackets." A hashed area longer than the packet makes the signature malformed (§5.2.5).
+      - name: hashed-subpackets
+        type: subpackets
+        required: true
+        constraints: >-
+          Zero or more subpackets (signature-subpacket). Covered by the signature. Must contain a
+          Signature Creation Time subpacket (R-0101).
+        constrained_by:
+          - rfc-9580#R-0101
+      - name: unhashed-subpacket-length
+        type: u16
+        required: true
+      - name: unhashed-subpackets
+        type: subpackets
+        required: true
+        constraints: >-
+          Zero or more subpackets. "The second set of subpackets (the "unhashed section") is not
+          cryptographically protected by the signature and should include only advisory
+          information."
+        constrained_by:
+          - rfc-9580#R-0077
+          - rfc-9580#R-0417
+          - rfc-9580#R-0418
+      - name: hash-left-16
+        type: octets[2]
+        required: true
+        constraints: "A 2-octet field holding the left 16 bits of the signed hash value."
+      - name: signature
+        type: algorithm-specific
+        required: true
+        constraints: >-
+          "One or more MPIs comprising the signature. This portion is algorithm specific." For
+          Ed25519 and Ed448 it is a fixed octet string, not MPIs (SD-M03). See sig-fields-*.
+    layout: >-
+      0x04 || sigtype (1) || pkalgo (1) || hashalgo (1) || u16 hlen || hashed subpackets (hlen) ||
+      u16 ulen || unhashed subpackets (ulen) || left16 (2) || algorithm-specific fields. A.2
+      (lines 7635-7640): 04 00 16 08 | 0006 | 05 02 55f95f95 | 000a | 09 10 8cfde12197965a9a |
+      f622 | MPI 00ff r | MPI 0100 s (Binary signature, EdDSALegacy, SHA2-256; the Issuer Key ID
+      subpacket is unhashed).
+    constrained_by:
+      - rfc-9580#R-0075
+      - rfc-9580#R-0178
+      - rfc-9580#R-0179
+      - rfc-9580#R-0180
+      - rfc-9580#R-0043
+      - rfc-9580#R-0344
+
+  - name: signature-v6
+    packet_type: 2
+    shorthand: SIG
+    version: 6
+    source: "§5.2, lines 1464-1484; §5.2.3, lines 1698-1739; §5.2.3.6, lines 1833-1860; §13.2, lines 6363-6390"
+    normative_status: current
+    generate: >-
+      Yes, by a version 6 key, for every signature type: "When a version 6 key produces a
+      Signature packet, it MUST produce a version 6 Signature packet, regardless of the Signature
+      packet type."
+    encoding: binary packet body
+    fields:
+      - name: version
+        type: u8
+        value: 6
+        required: true
+        constrained_by:
+          - rfc-9580#R-0043
+          - rfc-9580#R-0315
+          - rfc-9580#R-0344
+          - rfc-9580#R-0346
+          - rfc-9580#R-0347
+      - name: signature-type
+        type: u8
+        required: true
+        constrained_by:
+          - rfc-9580#R-0057
+      - name: public-key-algorithm
+        type: u8
+        required: true
+        constraints: >-
+          Table 18 signing algorithm. Ed25519Legacy (EdDSALegacy, 22) is forbidden in version 6
+          signatures (R-0068); v6 keys cannot use the deprecated OIDs (R-0286).
+        constrained_by:
+          - rfc-9580#R-0068
+      - name: hash-algorithm
+        type: u8
+        required: true
+        constraints: Table 23 ID with a defined V6 Signature Salt Size (8, 9, 10, 11, 12, 14).
+        constrained_by:
+          - rfc-9580#R-0297
+          - rfc-9580#R-0298
+          - rfc-9580#R-0299
+          - rfc-9580#R-0301
+          - rfc-9580#R-0305
+      - name: hashed-subpacket-length
+        type: u32
+        required: true
+        constraints: "For a version 6 signature, this is a 4-octet field."
+      - name: hashed-subpackets
+        type: subpackets
+        required: true
+        constrained_by:
+          - rfc-9580#R-0101
+      - name: unhashed-subpacket-length
+        type: u32
+        required: true
+      - name: unhashed-subpackets
+        type: subpackets
+        required: true
+        constrained_by:
+          - rfc-9580#R-0077
+          - rfc-9580#R-0417
+          - rfc-9580#R-0418
+      - name: hash-left-16
+        type: octets[2]
+        required: true
+        constraints: >-
+          "When verifying a version 6 signature, an implementation MUST reject the signature if
+          these octets do not match the first two octets of the computed hash."
+        constrained_by:
+          - rfc-9580#R-0076
+      - name: salt-length
+        type: u8
+        required: true
+        constraints: >-
+          "A 1-octet salt size. The value MUST match the value defined for the hash algorithm as
+          specified in Table 23." (16 for SHA2-256, SHA2-224, SHA3-256; 24 for SHA2-384; 32 for
+          SHA2-512, SHA3-512). A mismatch makes the signature malformed (§5.2.5).
+        constrained_by:
+          - rfc-9580#R-0060
+      - name: salt
+        type: octets[salt-length]
+        required: true
+        constraints: >-
+          "The salt, which is a random value of the specified size." It is hashed first
+          (signature-hash-input), and must be fresh for each signature (§13.2).
+        constrained_by:
+          - rfc-9580#R-0164
+          - rfc-9580#R-0415
+      - name: signature
+        type: algorithm-specific
+        required: true
+    layout: >-
+      0x06 || sigtype (1) || pkalgo (1) || hashalgo (1) || u32 hlen || hashed subpackets || u32
+      ulen || unhashed subpackets || left16 (2) || saltlen (1) || salt || algorithm-specific
+      fields. A.6 (lines 7971-8007): c2 98 | 06 01 1b 0a | 00000029 | 05 82 6398a363 | 22 21 06
+      cb18...acc9 | 00000000 | 69 36 | 20 | 76495f...fbac (32) | 64-octet Ed25519 signature.
+    constrained_by:
+      - rfc-9580#R-0075
+      - rfc-9580#R-0178
+      - rfc-9580#R-0179
+      - rfc-9580#R-0180
+    notes: >-
+      The two differences from v4 are the 4-octet subpacket area lengths and the salt (§5.2.3.6,
+      lines 1853-1857). The salt is transmitted after the left-16 field but hashed before all
+      other data. Derived (Appendix A.3, A.6): every v6 signature in the vectors carries a
+      critical Signature Creation Time and an Issuer Fingerprint in the hashed area.
+
+  # ----- algorithm-specific signature fields -----
+
+  - name: sig-fields-rsa
+    applies_to: "signature-v3, signature-v4, signature-v6; public-key-algorithm 1 or 3"
+    source: "§5.2.3.1, lines 1741-1750; §5.2.2, lines 1683-1685; §12.1.3, lines 6015-6063"
+    normative_status: deprecated
+    encoding: binary
+    fields:
+      - name: m^d-mod-n
+        type: MPI
+        required: true
+        constraints: >-
+          "MPI of RSA signature value m^d mod n." m is EMSA-PKCS1-v1_5 of the signature hash
+          (emsa-pkcs1-v1_5).
+        constrained_by:
+          - rfc-9580#R-0003
+          - rfc-9580#R-0279
+          - rfc-9580#R-0280
+          - rfc-9580#R-0383
+          - rfc-9580#R-0384
+          - rfc-9580#R-0385
+          - rfc-9580#R-0386
+    layout: "MPI(m^d mod n)"
+
+  - name: emsa-pkcs1-v1_5
+    applies_to: sig-fields-rsa
+    source: "§12.1.3, lines 6015-6063; Table 24, lines 5036-5094"
+    normative_status: computed
+    encoding: computed
+    fields:
+      - name: lead
+        type: octets[2]
+        value: "0x00 0x01"
+        required: true
+      - name: PS
+        type: "octets[emLen - tLen - 3], each 0xFF"
+        required: true
+        constraints: "The length of PS will be at least 8 octets."
+        constrained_by:
+          - rfc-9580#R-0371
+      - name: separator
+        type: u8
+        value: "0x00"
+        required: true
+      - name: T
+        type: "Table 24 Full Hash Prefix || H"
+        required: true
+        constraints: >-
+          "Let T be the Full Hash Prefix from Table 24 for the given hash function, concatenated
+          with the hash digest H". emLen < tLen + 11 is an error.
+        constrained_by:
+          - rfc-9580#R-0368
+          - rfc-9580#R-0369
+          - rfc-9580#R-0370
+    layout: "EM = 0x00 || 0x01 || PS || 0x00 || T"
+    constrained_by:
+      - rfc-9580#R-0372
+    full_hash_prefixes:
+      MD5: "30 20 30 0C 06 08 2A 86 48 86 F7 0D 02 05 05 00 04 10"
+      SHA-1: "30 21 30 09 06 05 2B 0E 03 02 1A 05 00 04 14"
+      RIPEMD-160: "30 21 30 09 06 05 2B 24 03 02 01 05 00 04 14"
+      SHA2-256: "30 31 30 0D 06 09 60 86 48 01 65 03 04 02 01 05 00 04 20"
+      SHA2-384: "30 41 30 0D 06 09 60 86 48 01 65 03 04 02 02 05 00 04 30"
+      SHA2-512: "30 51 30 0D 06 09 60 86 48 01 65 03 04 02 03 05 00 04 40"
+      SHA2-224: "30 2D 30 0D 06 09 60 86 48 01 65 03 04 02 04 05 00 04 1C"
+      SHA3-256: "30 31 30 0D 06 09 60 86 48 01 65 03 04 02 08 05 00 04 20"
+      SHA3-512: "30 51 30 0D 06 09 60 86 48 01 65 03 04 02 0A 05 00 04 40"
+    notes: >-
+      Derived: the last prefix octet is the digest length (0x10 = 16 for MD5, 0x14 = 20, 0x1C =
+      28, 0x20 = 32, 0x30 = 48, 0x40 = 64), which gives the digest sizes the source does not
+      tabulate. Table 24 writes the SHA3-512 octet in lowercase (0x0a, line 5089).
+
+  - name: sig-fields-dsa-ecdsa
+    applies_to: "signature-v3 (DSA only), signature-v4, signature-v6; public-key-algorithm 17 or 19"
+    source: "§5.2.3.2, lines 1752-1774; §5.2.2, lines 1687-1691"
+    normative_status: "DSA deprecated; ECDSA current"
+    encoding: binary
+    fields:
+      - name: r
+        type: MPI
+        required: true
+        constraints: "MPI of DSA or ECDSA value r."
+      - name: s
+        type: MPI
+        required: true
+        constraints: "MPI of DSA or ECDSA value s."
+    constrained_by:
+      - rfc-9580#R-0003
+      - rfc-9580#R-0061
+      - rfc-9580#R-0062
+      - rfc-9580#R-0063
+      - rfc-9580#R-0064
+      - rfc-9580#R-0282
+      - rfc-9580#R-0388
+      - rfc-9580#R-0389
+    layout: "MPI(r) || MPI(s)"
+    notes: >-
+      DSA: the hash is truncated to the bit length of q. ECDSA: digest size at least the curve's
+      fsize, and at least 512 bits for NIST P-521. DSA signing and verifying are forbidden
+      (R-0389), so the DSA form is read-only and cannot be validated.
+
+  - name: sig-fields-eddsa-legacy
+    applies_to: "signature-v4 only; public-key-algorithm 22 with the Ed25519Legacy OID"
+    source: "§5.2.3.3, lines 1776-1788; §5.2.3.3.1, lines 1790-1804; Table 20, lines 4894-4898"
+    normative_status: deprecated
+    encoding: binary
+    fields:
+      - name: R
+        type: MPI (EC octet string, little-endian native)
+        required: true
+        constraints: >-
+          "MPI of an EC point R, represented as a (non-prefixed) native (little-endian) octet
+          string up to 32 octets."
+      - name: S
+        type: MPI (EC octet string, little-endian native)
+        required: true
+        constraints: >-
+          "MPI of EdDSA value S, also in (non-prefixed) native (little-endian) format with a
+          length up to 32 octets."
+    constrained_by:
+      - rfc-9580#R-0065
+      - rfc-9580#R-0066
+      - rfc-9580#R-0067
+      - rfc-9580#R-0068
+      - rfc-9580#R-0285
+    layout: >-
+      MPI(R) || MPI(S), each an ec-scalar-octet-string of 32 octets with leading zero octets
+      stripped. A.2: 00ff 56f9...3366 (R, 255 bits), 0100 d09c...b404 (S, 256 bits).
+    notes: >-
+      Derived: a decoder must left-pad R and S to 32 octets (§11.3.1) before passing them to
+      Ed25519 verification.
+
+  - name: sig-fields-ed25519
+    applies_to: "signature-v4, signature-v6; public-key-algorithm 27"
+    source: "§5.2.3.4, lines 1806-1818; §12.7, lines 6192-6207"
+    normative_status: current
+    encoding: binary
+    fields:
+      - name: signature
+        type: octets[64]
+        required: true
+        constraints: "64 octets of the native signature."
+    constrained_by:
+      - rfc-9580#R-0069
+      - rfc-9580#R-0070
+      - rfc-9580#R-0071
+      - rfc-9580#R-0277
+      - rfc-9580#R-0393
+      - rfc-9580#R-0394
+      - rfc-9580#R-0395
+    layout: "64 octets (RFC 8032 R || S), no MPI framing"
+
+  - name: sig-fields-ed448
+    applies_to: "signature-v4, signature-v6; public-key-algorithm 28"
+    source: "§5.2.3.5, lines 1820-1831; §12.7, lines 6192-6207"
+    normative_status: current
+    encoding: binary
+    fields:
+      - name: signature
+        type: octets[114]
+        required: true
+        constraints: "114 octets of the native signature."
+    constrained_by:
+      - rfc-9580#R-0072
+      - rfc-9580#R-0073
+      - rfc-9580#R-0074
+      - rfc-9580#R-0278
+      - rfc-9580#R-0393
+      - rfc-9580#R-0394
+      - rfc-9580#R-0395
+      - rfc-9580#R-0396
+    layout: "114 octets, no MPI framing; PureEdDSA with the empty context string"
+
+  - name: sig-fields-elgamal-reserved
+    applies_to: "public-key-algorithm 20 (formerly Elgamal Encrypt or Sign)"
+    source: "§12.8, lines 6209-6225; Table 18 row 20, lines 4696-4700"
+    normative_status: reserved
+    encoding: none
+    fields: []
+    constrained_by:
+      - rfc-9580#R-0397
+      - rfc-9580#R-0398
+    notes: >-
+      No format is given. Algorithms 21 (X9.42), 23 (AEDH) and 24 (AEDSA) are also reserved
+      without parameters (§12.8, lines 6216-6219).
+
+  # ----- what is hashed (§5.2.4) -----
+
+  - name: signature-hash-input
+    applies_to: "signature-v3, signature-v4, signature-v6 (computed, never transmitted)"
+    source: "§5.2.4, lines 2739-2827; §5.2.3.6, lines 1835-1838; §5.2.4.1, lines 2829-2844"
+    normative_status: computed
+    encoding: computed
+    description: >-
+      One hash context receives, in order: the v6 salt, the signed data for the signature type
+      (signature_types.hashes and the key, User ID and signature encodings below), then the
+      version-specific trailer. "After all this has been hashed in a single hash context, the
+      resulting hash field is used in the signature algorithm, and its first two octets are
+      placed in the Signature packet".
+    fields:
+      - name: salt
+        type: octets[saltlen]
+        required: conditional
+        required_when: version 6 ("the salt is fed into the hash context before any other data")
+        constrained_by:
+          - rfc-9580#R-0164
+      - name: document
+        type: octets[var]
+        required: conditional
+        required_when: sigtype 0x00 (raw octets) or 0x01 (canonical text); empty for 0x02
+        constraints: >-
+          "For binary document signatures (Type ID 0x00), the document data is hashed directly."
+          For text signatures, "the implementation MUST first canonicalize the document by
+          converting line endings to <CR><LF> and encoding it in UTF-8". A Standalone signature
+          (0x02) "is calculated identically to a signature over a zero-length binary document."
+        constrained_by:
+          - rfc-9580#R-0165
+          - rfc-9580#R-0166
+          - rfc-9580#R-0047
+      - name: primary-key
+        type: key-hash-encoding
+        required: conditional
+        required_when: sigtype 0x10-0x13, 0x18, 0x19, 0x1F, 0x20, 0x28, 0x30
+        constrained_by:
+          - rfc-9580#R-0167
+          - rfc-9580#R-0168
+          - rfc-9580#R-0170
+      - name: subkey
+        type: key-hash-encoding
+        required: conditional
+        required_when: sigtype 0x18, 0x19, 0x28 (after the primary key)
+        constrained_by:
+          - rfc-9580#R-0169
+          - rfc-9580#R-0171
+      - name: user-id-or-attribute
+        type: userid-hash-encoding
+        required: conditional
+        required_when: sigtype 0x10-0x13, and 0x30 when it revokes such a certification
+        constrained_by:
+          - rfc-9580#R-0172
+          - rfc-9580#R-0055
+      - name: confirmed-signature
+        type: signature-hash-encoding
+        required: conditional
+        required_when: sigtype 0x50
+        constrained_by:
+          - rfc-9580#R-0173
+      - name: trailer
+        type: "signature-hash-trailer-v3 | signature-hash-trailer-v4-v6"
+        required: true
+        constrained_by:
+          - rfc-9580#R-0174
+          - rfc-9580#R-0175
+          - rfc-9580#R-0176
+          - rfc-9580#R-0177
+    layout: >-
+      [salt] || type-specific data || trailer. Worked examples: A.3.1 (Direct Key signature,
+      lines 7691-7771: salt (32) || 9b 0000002a <42-octet key body> || 06 1f 1b 0a 00000042
+      <66 octets> || 06 ff 0000004a) and the Subkey Binding signature (lines 7776-7854); A.6
+      (Text signature, lines 8011-8069: salt || canonical text with 0d 0a line ends || 06 01 1b 0a
+      00000029 <41 octets> || 06 ff 00000031).
+    notes: >-
+      Derived (recomputed): SHA2-256 over the A.2 input m (line 7620) gives d at line 7624, and
+      SHA2-512 over the A.6 data gives the digest at lines 8073-8074, whose first two octets 69
+      36 are the A.6 hash-left-16. The Timestamp signature (0x40) has no stated hash input
+      (SD-M10).
+
+  - name: key-hash-encoding
+    applies_to: signature-hash-input (primary-key, subkey)
+    source: "§5.2.4, lines 2753-2765"
+    normative_status: computed
+    encoding: computed
+    variants:
+      - when: version 4 signature
+        layout: "0x99 || u16 length of the key packet body || key packet body"
+        constrained_by:
+          - rfc-9580#R-0167
+      - when: version 6 signature
+        layout: "0x9B || u32 length of the key packet body || key packet body (the salt is hashed before, not here)"
+        constrained_by:
+          - rfc-9580#R-0168
+      - when: version 3 signature
+        layout: not stated by the source (SD-M09)
+    constraints: >-
+      The key body is the Public Key (or Public Subkey) packet body from the version octet; a
+      subkey "using the same format as the main key (also using 0x99 or 0x9B as the first
+      octet)". Derived: for a Secret Key or Secret Subkey packet, only the public-key fields are
+      hashed, as A.3.1 and A.4 share the signature packets.
+    notes: >-
+      Derived: the prefix octet follows the signature version, not the key version; Table 27
+      ties v4 signatures to v4 keys and v6 to v6, so in conforming data they coincide. The 0x99
+      form cannot carry a key body longer than 65535 octets.
+
+  - name: userid-hash-encoding
+    applies_to: signature-hash-input (user-id-or-attribute)
+    source: "§5.2.4, lines 2767-2775"
+    normative_status: computed
+    encoding: computed
+    variants:
+      - when: version 3 certification
+        layout: "User ID or User Attribute packet body, without the packet header"
+      - when: version 4 or 6 certification of a User ID
+        layout: "0xB4 || u32 length || User ID packet body"
+      - when: version 4 or 6 certification of a User Attribute
+        layout: "0xD1 || u32 length || User Attribute packet body"
+    constrained_by:
+      - rfc-9580#R-0172
+
+  - name: signature-hash-encoding
+    applies_to: "signature-hash-input (confirmed-signature, sigtype 0x50)"
+    source: "§5.2.4, lines 2777-2784"
+    normative_status: computed
+    encoding: computed
+    layout: >-
+      [salt (v6 only, as for every v6 signature)] || 0x88 || u32 length || Signature packet body
+      of the confirmed signature with its unhashed subpacket data removed and its unhashed
+      subpacket length field set to zero.
+    constrained_by:
+      - rfc-9580#R-0173
+    notes: >-
+      "(Note that this is a Legacy packet header for a Signature packet with the length-of-length
+      field set to zero.)" Length-type 0 denotes a 1-octet length, yet 4 octets follow (SD-M08).
+      Derived: "the 4-octet length of the signature" is the length of the body as modified.
+
+  - name: signature-hash-trailer-v3
+    applies_to: signature-v3
+    source: "§5.2.2, lines 1676-1681; §5.2.4, lines 2789-2791; §5.2.4.1, lines 2838-2839"
+    normative_status: computed
+    encoding: computed
+    layout: "sigtype (1) || creation time (4)"
+    constrained_by:
+      - rfc-9580#R-0059
+      - rfc-9580#R-0174
+      - rfc-9580#R-0176
+    notes: >-
+      The fifth octet from the end of the hashed stream is the signature type, which "MUST NOT be
+      Signature Type ID 0xFF" so that no v3 stream ends like a v4/v6 stream.
+
+  - name: signature-hash-trailer-v4-v6
+    applies_to: "signature-v4, signature-v6"
+    source: "§5.2.4, lines 2793-2819; §5.2.4.1, lines 2841-2844"
+    normative_status: computed
+    encoding: computed
+    fields:
+      - name: version
+        type: u8
+        required: true
+      - name: signature-type
+        type: u8
+        required: true
+      - name: public-key-algorithm
+        type: u8
+        required: true
+      - name: hash-algorithm
+        type: u8
+        required: true
+      - name: hashed-subpacket-length
+        type: "u16 (v4) | u32 (v6)"
+        required: true
+      - name: hashed-subpackets
+        type: octets[hashed-subpacket-length]
+        required: true
+      - name: version-again
+        type: u8
+        required: true
+        constraints: "a second version octet (0x04 for version 4, and 0x06 for version 6),"
+      - name: sentinel
+        type: u8
+        value: "0xFF"
+        required: true
+      - name: hashed-length
+        type: u32
+        required: true
+        constraints: >-
+          "a number representing the length (in octets) of the hashed data from the Signature
+          packet through the hashed subpacket body. This a 4-octet big-endian unsigned integer of
+          the length modulo 2^32."
+    layout: >-
+      v4: 0x04 || sigtype || pkalgo || hashalgo || u16 hlen || hashed || 0x04 || 0xFF || u32
+      (6 + hlen). v6: 0x06 || sigtype || pkalgo || hashalgo || u32 hlen || hashed || 0x06 || 0xFF
+      || u32 (8 + hlen). A.2: 04 00 16 08 0006 05 02 55f95f95 04 ff 0000000c (line 7620).
+    constrained_by:
+      - rfc-9580#R-0075
+      - rfc-9580#R-0175
+      - rfc-9580#R-0177
+    notes: >-
+      Derived arithmetic check: A.2 6 + 6 = 12 = 0x0C; A.3.1 Direct Key 8 + 0x42 = 0x4A; A.3.1
+      Subkey Binding 8 + 0x2C = 0x34; A.6 8 + 0x29 = 0x31. The trailer is the "6-octet trailer"
+      of §5.2.3.6: version, 0xFF, u32.
+
+  # ======================= §5.2.3.7 signature subpackets =======================
+
+  - name: signature-subpacket
+    applies_to: "hashed and unhashed areas of signature-v4 and signature-v6"
+    source: "§5.2.3.7, lines 1862-1914; §5.2.3.8, lines 2016-2029; §5.2.3.9, lines 2031-2050; §13.13, lines 6784-6808"
+    normative_status: current
+    encoding: binary
+    fields:
+      - name: length
+        type: body-length
+        required: true
+        constraints: >-
+          "The subpacket length field covers the encoded Subpacket Type ID and the
+          subpacket-specific data, and it does not include the subpacket length field itself."
+          Decoding: first octet < 192: 1 octet; 192..254: 2 octets, ((o1 - 192) << 8) + o2 + 192;
+          255: 5 octets, u32. A length that "diverges from the expected length" makes the
+          signature malformed (§5.2.5).
+        constrained_by:
+          - rfc-9580#R-0078
+      - name: type
+        type: u8
+        required: true
+        constraints: >-
+          Bit 7 "is the "critical" bit"; bits 6-0 are the Subpacket Type ID (Table 5). Unknown and
+          critical: the evaluator "SHOULD consider the signature to be in error"; unknown and not
+          critical: ignored. An unknown critical subpacket in the hashed area is listed among
+          malformed signatures (§5.2.5).
+        constrained_by:
+          - rfc-9580#R-0079
+          - rfc-9580#R-0080
+          - rfc-9580#R-0081
+      - name: data
+        type: octets[length - 1]
+        required: true
+        constraints: Layout by type (the subpacket-* entries below).
+    layout: >-
+      length (1, 2 or 5) || C|type (1) || data. Example A.3.1 line 7737-7739: 05 82 63877fe3 =
+      length 5, critical type 2 (Signature Creation Time).
+    constrained_by:
+      - rfc-9580#R-0082
+      - rfc-9580#R-0083
+      - rfc-9580#R-0084
+      - rfc-9580#R-0085
+      - rfc-9580#R-0086
+      - rfc-9580#R-0417
+      - rfc-9580#R-0418
+    placement_rules: >-
+      A subpacket may be in either area; "If a subpacket is not hashed, then the information in
+      it cannot be considered definitive because it is not covered by the cryptographic
+      signature." An implementation MAY synthesize an Issuer Fingerprint subpacket in the
+      unhashed area (R-0417) and SHOULD ignore subpackets that are only useful hashed when found
+      unhashed with unknown provenance (R-0418). Conflicts: "In most cases, an implementation
+      SHOULD use the last subpacket in the hashed section of the signature".
+    self_signature_scope: >-
+      §5.2.3.10: subpackets in a certification self-signature apply to the User ID, in a subkey
+      self-signature to the subkey, and on the Direct Key signature to the entire key. Preference
+      subpackets are interpreted "as narrowly as possible". Multiple self-signatures: the most
+      recent valid one is selected.
+    self_signature_constrained_by:
+      - rfc-9580#R-0087
+      - rfc-9580#R-0088
+      - rfc-9580#R-0089
+      - rfc-9580#R-0092
+      - rfc-9580#R-0093
+      - rfc-9580#R-0094
+      - rfc-9580#R-0095
+      - rfc-9580#R-0096
+      - rfc-9580#R-0097
+      - rfc-9580#R-0098
+      - rfc-9580#R-0099
+      - rfc-9580#R-0100
+    notes: >-
+      The source says "The header consists of:" the length, the type "and" the subpacket-specific
+      data (lines 1871-1878), placing the body inside the header (SD-M04). On the 192..254 range
+      see body-length and SD-M06.
+
+  - name: subpacket-reserved
+    subpacket_type: "0, 1, 8, 13, 14, 15, 17, 18, 19, 34"
+    source: "§5.2.3.7 Table 5, lines 1921-1923, 1937, 1950, 1954, 1985"
+    normative_status: reserved
+    fields: []
+    notes: >-
+      "Reserved". Derived: treat as unknown (critical bit governs, R-0080, R-0081). Table 5
+      has no row for 36 (SD-M01).
+    constrained_by:
+      - rfc-9580#R-0080
+      - rfc-9580#R-0081
+
+  - name: subpacket-placeholder-10
+    subpacket_type: 10
+    source: "§5.2.3.7 Table 5, lines 1941-1942"
+    normative_status: reserved
+    description: "Placeholder for backward compatibility"
+    fields: []
+    constrained_by:
+      - rfc-9580#R-0081
+
+  - name: subpacket-reserved-37-38
+    subpacket_type: "37 (Attested Certifications), 38 (Key Block)"
+    source: "§5.2.3.7 Table 5, lines 1990-1993"
+    normative_status: reserved
+    fields: []
+    notes: Named reservations; no format in this document.
+    constrained_by:
+      - rfc-9580#R-0081
+
+  - name: subpacket-private-100-110
+    subpacket_type: "100-110"
+    source: "§5.2.3.7 Table 5, lines 1998-1999; §12.10"
+    normative_status: private
+    fields: []
+    constrained_by:
+      - rfc-9580#R-0080
+      - rfc-9580#R-0081
+
+  - name: subpacket-signature-creation-time
+    subpacket_type: 2
+    source: "§5.2.3.11, lines 2142-2150"
+    normative_status: current
+    body: "(4-octet time field)"
+    fields:
+      - name: creation-time
+        type: time32
+        required: true
+        constraints: "The time the signature was made."
+    placement: "hashed, required: \"This subpacket MUST be present in the hashed area.\""
+    critical: "SHOULD be marked critical when generated (R-0102)"
+    signature_types: all v4 and v6 signatures (Derived from R-0101, which names no type)
+    constrained_by:
+      - rfc-9580#R-0101
+      - rfc-9580#R-0102
+    layout: "len 0x05 || 0x02 (or 0x82) || u32"
+
+  - name: subpacket-signature-expiration-time
+    subpacket_type: 3
+    source: "§5.2.3.18, lines 2253-2262"
+    normative_status: current
+    body: "(4-octet time field)"
+    fields:
+      - name: validity-period
+        type: u32 seconds
+        required: true
+        constraints: >-
+          "This is the number of seconds after the Signature Creation Time that the signature
+          expires. If this is not present or has a value of zero, it never expires."
+    critical: "SHOULD be marked critical when generated (R-0108)"
+    signature_types: not restricted by the source
+    constrained_by:
+      - rfc-9580#R-0107
+      - rfc-9580#R-0108
+    layout: "len 0x05 || 0x03 (or 0x83) || u32"
+
+  - name: subpacket-exportable-certification
+    subpacket_type: 4
+    source: "§5.2.3.19, lines 2264-2296"
+    normative_status: current
+    body: "(1 octet of exportability, 0 for not, 1 for exportable)"
+    fields:
+      - name: exportable
+        type: u8 boolean
+        required: true
+        constraints: >-
+          "If this packet is not present, the certification is exportable; it is equivalent to a
+          flag containing a 1." Non-exportable ("local") certifications are deleted on export and
+          trimmed on import.
+    critical: >-
+      "When an implementation generates this subpacket and denotes the signature as
+      non-exportable, the subpacket MUST be marked as critical."
+    signature_types: certification signatures (0x10-0x13), per "whether a certification signature is "exportable""
+    constrained_by:
+      - rfc-9580#R-0109
+      - rfc-9580#R-0110
+      - rfc-9580#R-0111
+    layout: "len 0x02 || 0x84 || 0x00 (local), or len 0x02 || 0x04|0x84 || 0x01"
+
+  - name: subpacket-trust-signature
+    subpacket_type: 5
+    source: "§5.2.3.21, lines 2309-2325"
+    normative_status: current
+    body: "(1 octet \"level\" (depth), 1 octet of trust amount)"
+    fields:
+      - name: level
+        type: u8
+        required: true
+        constraints: >-
+          Depth. "Level 0 has the same meaning as an ordinary validity signature." Level 1: the
+          signed key is a trusted introducer. Level 2: "the signed key is asserted to be trusted
+          to issue level 1 Trust Signatures; that is, the signed key is a "meta introducer"."
+          "Generally, a level n Trust Signature asserts that a key is trusted to issue level n-1
+          Trust Signatures."
+        constrained_by:
+          - rfc-9580#R-0114
+          - rfc-9580#R-0115
+          - rfc-9580#R-0116
+          - rfc-9580#R-0117
+          - rfc-9580#R-0118
+      - name: amount
+        type: u8
+        required: true
+        constraints: >-
+          "The trust amount is in a range from 0-255, interpreted such that values less than 120
+          indicate partial trust and values of 120 or greater indicate complete trust." Emit 60
+          (partial) or 120 (complete).
+        constrained_by:
+          - rfc-9580#R-0119
+          - rfc-9580#R-0120
+    critical: not stated by the source
+    placement: >-
+      Derived: hashed (it is an assertion by the signer; R-0418 lets an implementation ignore it
+      unhashed). The source states no placement.
+    signature_types: >-
+      Derived: certifications over another key's User ID (0x10-0x13), since level 0 "has the same
+      meaning as an ordinary validity signature"; the source does not restrict types.
+    layout: "len 0x03 || 0x05|0x85 || level || amount"
+    notes: >-
+      Scope can be limited by a Regular Expression subpacket in the same signature when level >
+      0 (subpacket-regular-expression).
+
+  - name: subpacket-regular-expression
+    subpacket_type: 6
+    source: "§5.2.3.22, lines 2327-2350; §8, lines 4591-4623"
+    normative_status: current
+    body: "(null-terminated UTF-8 encoded Regular Expression)"
+    fields:
+      - name: regex
+        type: utf8[var]
+        required: true
+        constraints: >-
+          §8 syntax (Henry Spencer); matches "a sequence of UTF-8-encoded Unicode characters from
+          User IDs". Only signatures by the target key on User IDs that match have trust
+          extended by the Trust Signature subpacket.
+        constrained_by:
+          - rfc-9580#R-0121
+          - rfc-9580#R-0122
+          - rfc-9580#R-0123
+          - rfc-9580#R-0124
+          - rfc-9580#R-0125
+      - name: terminator
+        type: u8
+        value: "0x00"
+        required: true
+        constraints: >-
+          "When an implementation parses a Regular Expression subpacket, it MUST remove this
+          octet; if it is not present, it MUST reject the subpacket (i.e., ignore the subpacket if
+          it's non-critical and reject the signature if it's critical). When an implementation
+          generates a Regular Expression subpacket, it MUST include the null terminator."
+        constrained_by:
+          - rfc-9580#R-0126
+          - rfc-9580#R-0127
+          - rfc-9580#R-0128
+    critical: "SHOULD be marked critical when generated (R-0129)"
+    signature_types: "signatures carrying a Trust Signature subpacket of level > 0"
+    constrained_by:
+      - rfc-9580#R-0129
+    layout: "len (n + 2) || 0x06|0x86 || regex (n octets UTF-8) || 0x00"
+    regex_grammar: >-
+      §8: Regular Expression = zero or more branches separated by |. Branch = zero or more
+      pieces, concatenated. Piece = atom optionally followed by * (0 or more), + (1 or more) or
+      ? (0 or 1). Atom = ( regex ) | range | . (any single Unicode character) | ^ (null string at
+      start) | $ (null string at end) | \ followed by one Unicode character | any other single
+      Unicode character. Range = [ ... ], [^ ...] negated; a-b spans codepoints; a literal ] is
+      first (after a possible ^); a literal - is first or last.
+    notes: >-
+      The section says "Used in conjunction with Trust Signature packets (of level > 0)"; Trust
+      Signature is a subpacket, not a packet (SD-M25). Derived: the terminator is part of the
+      subpacket length.
+
+  - name: subpacket-revocable
+    subpacket_type: 7
+    source: "§5.2.3.20, lines 2298-2307"
+    normative_status: current
+    body: "(1 octet of revocability, 0 for not, 1 for revocable)"
+    fields:
+      - name: revocable
+        type: u8 boolean
+        required: true
+        constraints: >-
+          "Signatures that are not revocable ignore any later Revocation Signatures." "If this
+          packet is not present, the signature is revocable."
+        constrained_by:
+          - rfc-9580#R-0112
+          - rfc-9580#R-0113
+    critical: not stated by the source
+    signature_types: not restricted by the source
+    layout: "len 0x02 || 0x07|0x87 || 0x00|0x01"
+    notes: >-
+      Derived: only meaningful hashed, since an unhashed 0 could be added by anyone to block a
+      revocation; the source states no placement for it.
+
+  - name: subpacket-key-expiration-time
+    subpacket_type: 9
+    source: "§5.2.3.13, lines 2164-2176"
+    normative_status: current
+    body: "(4-octet time field)"
+    fields:
+      - name: validity-period
+        type: u32 seconds
+        required: true
+        constraints: >-
+          "This is the number of seconds after the key creation time that the key expires. For a
+          direct or certification self-signature, the key creation time is that of the primary
+          key. For a Subkey Binding signature, the key creation time is that of the subkey. If
+          this is not present or has a value of zero, the key never expires."
+        constrained_by:
+          - rfc-9580#R-0104
+    critical: "SHOULD be marked critical when generated (R-0105)"
+    signature_types: "self-signatures only (0x10-0x13 self, 0x18, 0x1F): \"This is found only on a self-signature.\""
+    constrained_by:
+      - rfc-9580#R-0105
+      - rfc-9580#R-0098
+    layout: "len 0x05 || 0x09|0x89 || u32"
+
+  - name: subpacket-preferred-symmetric-ciphers-v1-seipd
+    subpacket_type: 11
+    source: "§5.2.3.14, lines 2178-2191; §12.2, lines 6065-6099"
+    normative_status: current
+    body: "(array of 1-octet values)"
+    fields:
+      - name: algorithms
+        type: "u8[n]"
+        required: true
+        constraints: >-
+          Table 21 IDs, most preferred first. "It is assumed that only the algorithms listed are
+          supported by the recipient's implementation." AES-128 is tacitly at the end if
+          absent. Relevant only when generating v1 SEIPD.
+        constrained_by:
+          - rfc-9580#R-0373
+          - rfc-9580#R-0374
+          - rfc-9580#R-0375
+          - rfc-9580#R-0376
+    signature_types: "self-signatures only: \"This is only found on a self-signature.\""
+    placement: hashed (R-0418; §13.13 gives the analogous AEAD example)
+    constrained_by:
+      - rfc-9580#R-0082
+      - rfc-9580#R-0084
+    layout: "len (n + 1) || 0x0B || id1 ... idn. A.3.1 lines 7740-7743: 03 0b 09 07 = [AES-256, AES-128]"
+
+  - name: subpacket-revocation-key
+    subpacket_type: 12
+    source: "§5.2.3.23, lines 2352-2383; §13.9, lines 6679-6717; §10.1.5, lines 5333-5337"
+    normative_status: deprecated
+    generate: "\"This mechanism is deprecated. Applications MUST NOT generate such a subpacket.\""
+    body: "(1 octet of class, 1 octet of public key algorithm ID, 20 octets of version 4 fingerprint)"
+    fields:
+      - name: class
+        type: u8 flags
+        required: true
+        constraints: >-
+          "The class octet must have bit 0x80 set. If bit 0x40 is set, it means the revocation
+          information is sensitive. Other bits are for future expansion to other kinds of
+          authorizations." Sensitive: SHOULD NOT export except to the designated revoker or
+          with that revoker's Revocation Signature.
+        constrained_by:
+          - rfc-9580#R-0132
+          - rfc-9580#R-0133
+          - rfc-9580#R-0135
+      - name: public-key-algorithm
+        type: u8
+        required: true
+        constraints: Table 18 ID of the authorized revoker key.
+      - name: fingerprint
+        type: octets[20]
+        required: true
+        constraints: >-
+          Version 4 fingerprint of the authorized revoker. Derived: there is no form for a v6
+          revoker (32-octet fingerprint).
+    signature_types: >-
+      "This is only found on a Direct Key self-signature (Type ID 0x1F). The use on other types
+      of self-signatures is unspecified."
+    constrained_by:
+      - rfc-9580#R-0130
+      - rfc-9580#R-0131
+      - rfc-9580#R-0134
+      - rfc-9580#R-0051
+      - rfc-9580#R-0053
+      - rfc-9580#R-0054
+    layout: "len 0x17 || 0x0C|0x8C || class || pkalgo || fp (20)"
+    notes: >-
+      Derived: body is 22 octets, length octet 0x17 = 23. Replaced by escrowed Revocation
+      Signatures (§13.9).
+
+  - name: subpacket-issuer-key-id
+    subpacket_type: 16
+    source: "§5.2.3.12, lines 2152-2162; §5.2.3.9, lines 2044-2050"
+    normative_status: current
+    body: "(8-octet Key ID)"
+    fields:
+      - name: key-id
+        type: keyid
+        required: true
+        constraints: >-
+          "The OpenPGP Key ID of the key issuing the signature. If the version of that key is
+          greater than 4, this subpacket MUST NOT be included in the signature." For a v4 issuer
+          with an Issuer Fingerprint present, it MUST equal the low 64 bits of that fingerprint
+          (R-0158). A signature may carry one per key sharing key material (§5.2.3.9).
+        constrained_by:
+          - rfc-9580#R-0103
+          - rfc-9580#R-0158
+          - rfc-9580#R-0005
+    signature_types: v4 signatures (Derived from R-0103 and Table 27)
+    placement: either; A.2 carries it unhashed (line 7636)
+    layout: "len 0x09 || 0x10 || keyid (8). A.2: 09 10 8cfde12197965a9a"
+    notes: Formerly called the "Issuer" subpacket.
+
+  - name: subpacket-notation-data
+    subpacket_type: 20
+    source: "§5.2.3.24, lines 2385-2443"
+    normative_status: current
+    body: "(4 octets of flags, 2 octets of name length (M), 2 octets of value length (N), M octets of name data, N octets of value data)"
+    fields:
+      - name: flags
+        type: octets[4]
+        required: true
+        constraints: >-
+          "All undefined flags MUST be zero." Defined: 0x80000000 (first bit of the first octet),
+          human-readable (Table 6: Notation value is UTF-8 text).
+        constrained_by:
+          - rfc-9580#R-0136
+      - name: name-length
+        type: u16
+        required: true
+      - name: value-length
+        type: u16
+        required: true
+      - name: name
+        type: utf8[name-length]
+        required: true
+        constraints: >-
+          IETF namespace (IANA-registered, Table 7 is empty) names "MUST NOT contain the "@"
+          character (0x40)". User namespace: tag "@" DNS domain; "the tag MUST NOT contain an "@"
+          character."
+        constrained_by:
+          - rfc-9580#R-0137
+          - rfc-9580#R-0138
+          - rfc-9580#R-0139
+      - name: value
+        type: octets[value-length]
+        required: true
+        constraints: UTF-8 text when the human-readable flag is set; otherwise arbitrary octets.
+    critical: >-
+      "If there is a critical notation, the criticality applies to that specific notation and not
+      to notations in general." Derived: a verifier that does not recognize the notation name of
+      a critical Notation Data subpacket treats the subpacket as unknown critical.
+    signature_types: not restricted ("There may be more than one notation in a signature.")
+    layout: "len (9 + M + N) || 0x14|0x94 || flags (4) || u16 M || u16 N || name (M) || value (N)"
+
+  - name: subpacket-preferred-hash-algorithms
+    subpacket_type: 21
+    source: "§5.2.3.16, lines 2233-2240; §12.3.2, lines 6137-6151"
+    normative_status: current
+    body: "(array of 1-octet values)"
+    fields:
+      - name: algorithms
+        type: "u8[n]"
+        required: true
+        constraints: >-
+          Table 23 IDs, ordered. SHA2-256 is tacitly at the end if not listed.
+        constrained_by:
+          - rfc-9580#R-0381
+    signature_types: "self-signatures only (\"This is only found on a self-signature.\")"
+    constrained_by:
+      - rfc-9580#R-0082
+      - rfc-9580#R-0084
+    layout: "len (n + 1) || 0x15 || ids. A.3.1 lines 7744-7747: 05 15 0a 0e 08 0c"
+
+  - name: subpacket-preferred-compression-algorithms
+    subpacket_type: 22
+    source: "§5.2.3.17, lines 2242-2251; §12.3.1, lines 6116-6127"
+    normative_status: current
+    body: "(array of 1-octet values)"
+    fields:
+      - name: algorithms
+        type: "u8[n]"
+        required: true
+        constraints: >-
+          Table 22 IDs, ordered. "A zero, or the absence of this subpacket, denotes that
+          uncompressed data is preferred". Uncompressed (0) is tacitly at the end; a sender MUST
+          NOT use an algorithm not in the list.
+        constrained_by:
+          - rfc-9580#R-0378
+          - rfc-9580#R-0379
+    signature_types: self-signatures only
+    constrained_by:
+      - rfc-9580#R-0082
+      - rfc-9580#R-0084
+    layout: "len (n + 1) || 0x16 || ids. A.3.1 lines 7748-7750: 02 16 00"
+
+  - name: subpacket-key-server-preferences
+    subpacket_type: 23
+    source: "§5.2.3.25, lines 2445-2463"
+    normative_status: current
+    body: "(N octets of flags)"
+    fields:
+      - name: flags
+        type: octets[n]
+        required: true
+        constraints: >-
+          "All undefined flags MUST be zero." Defined: 0x80 of the first octet, No-modify (Table 8: the
+          keyholder requests that this key only be modified or updated by the keyholder or an
+          administrator of the key server).
+        constrained_by:
+          - rfc-9580#R-0140
+    signature_types: "self-signatures only (\"This is found only on a self-signature.\")"
+    layout: "len (n + 1) || 0x17 || flags"
+
+  - name: subpacket-preferred-key-server
+    subpacket_type: 24
+    source: "§5.2.3.26, lines 2465-2473"
+    normative_status: current
+    body: "(String)"
+    fields:
+      - name: uri
+        type: utf8[var]
+        required: true
+        constraints: >-
+          "This is a URI of a key server that the keyholder prefers be used for updates." One per
+          User ID is possible.
+    signature_types: "Derived: self-signatures (the text speaks of the keyholder and of User IDs)"
+    layout: "len (n + 1) || 0x18 || URI (n octets, not terminated)"
+    notes: >-
+      Derived: the String encoding and termination are not stated; §3.4 makes it UTF-8 and the
+      subpacket length bounds it.
+
+  - name: subpacket-primary-user-id
+    subpacket_type: 25
+    source: "§5.2.3.27, lines 2475-2493"
+    normative_status: current
+    body: "(1 octet, Boolean)"
+    fields:
+      - name: primary
+        type: u8 boolean
+        required: true
+        constraints: >-
+          "If this flag is absent, its value is zero." With several primaries, priority goes to
+          the most recent self-signature (RECOMMENDED). User IDs and User Attributes have
+          independent primaries.
+        constrained_by:
+          - rfc-9580#R-0141
+    signature_types: "User ID or User Attribute self-signatures (0x10-0x13 by the key itself)"
+    layout: "len 0x02 || 0x19 || 0x00|0x01"
+
+  - name: subpacket-policy-uri
+    subpacket_type: 26
+    source: "§5.2.3.28, lines 2495-2500"
+    normative_status: current
+    body: "(String)"
+    fields:
+      - name: uri
+        type: utf8[var]
+        required: true
+        constraints: "a URI of a document that describes the policy under which the signature was issued."
+    signature_types: not restricted by the source
+    layout: "len (n + 1) || 0x1A || URI"
+
+  - name: subpacket-key-flags
+    subpacket_type: 27
+    source: "§5.2.3.29, lines 2502-2561"
+    normative_status: current
+    body: "(N octets of flags)"
+    fields:
+      - name: flags
+        type: octets[n]
+        required: true
+        constraints: >-
+          "an implementation MUST NOT assume a fixed size, so that it can grow over time. If a
+          list is shorter than an implementation expects, the unstated flags are considered to be
+          zero." First octet: 0x01 certify (User ID certifications 0x10-0x13 or Direct Key 0x1F
+          over other keys); 0x02 sign data; 0x04 encrypt communications; 0x08 encrypt storage;
+          0x10 split key; 0x20 authentication; 0x80 group key. Second octet: 0x04 reserved
+          (ADSK); 0x08 reserved (timestamping). Split and group flags only on a self-signature,
+          and SHOULD be on a Direct Key or Subkey Binding signature.
+        constrained_by:
+          - rfc-9580#R-0142
+          - rfc-9580#R-0143
+          - rfc-9580#R-0144
+    critical: "SHOULD be marked critical when generated (R-0145)"
+    signature_types: >-
+      Self-signatures and certification signatures ("The flags in this packet may appear in
+      self-signatures or in certification signatures."). A self-signature is valid regardless of
+      the primary key's flags (§5.2.3.10).
+    constrained_by:
+      - rfc-9580#R-0145
+    layout: "len (n + 1) || 0x1B|0x9B || flags. A.3.1 lines 7751-7753: 02 9b 03 = {certify, sign}; Subkey Binding line 7842-7843: 02 9b 0c = {EncComms, EncStorage}"
+    notes: >-
+      Derived: first-octet bit 0x40 is not defined; second-octet notation 0x0004... means the
+      second octet's 0x04 bit. RSA Encrypt-Only and Sign-Only algorithm IDs are deprecated in
+      favour of these flags (R-0383).
+
+  - name: subpacket-signers-user-id
+    subpacket_type: 28
+    source: "§5.2.3.30, lines 2563-2574"
+    normative_status: current
+    body: "(String)"
+    fields:
+      - name: user-id
+        type: utf8[var]
+        required: true
+        constraints: >-
+          States which User ID is responsible for the signing. "This subpacket is not appropriate
+          to use to refer to a User Attribute packet."
+    signature_types: not restricted by the source
+    layout: "len (n + 1) || 0x1C || User ID text"
+
+  - name: subpacket-reason-for-revocation
+    subpacket_type: 29
+    source: "§5.2.3.31, lines 2576-2632"
+    normative_status: current
+    body: "(1 octet of revocation code, N octets of reason string)"
+    fields:
+      - name: code
+        type: u8
+        required: true
+        constraints: >-
+          Table 10: 0 no reason specified (Key or Certification Revocation); 1 key is superseded
+          (Key Revocation); 2 key material has been compromised (Key Revocation); 3 key is retired
+          and no longer used (Key Revocation); 32 User ID information is no longer valid
+          (Certification Revocation); 100-110 private use. A revocation of a User ID
+          self-certification SHOULD use code 32. Compromise makes all signatures by the key
+          suspect; superseded or retired leaves old signatures valid.
+        constrained_by:
+          - rfc-9580#R-0149
+          - rfc-9580#R-0150
+          - rfc-9580#R-0151
+      - name: reason
+        type: utf8[var]
+        required: true
+        constraints: >-
+          "a string of octets that gives information about the Reason for Revocation in
+          human-readable form (UTF-8). The string may be null (of zero length). The length of the
+          subpacket is the length of the reason string plus one."
+        constrained_by:
+          - rfc-9580#R-0147
+    signature_types: >-
+      "This subpacket is used only in Key Revocation and Certification Revocation signatures."
+      (0x20, 0x30). R-0148 asks for it in "all Revocation Signatures", which includes 0x28
+      (SD-M07).
+    constrained_by:
+      - rfc-9580#R-0146
+      - rfc-9580#R-0148
+      - rfc-9580#R-0082
+    layout: "len (n + 2) || 0x1D || code || reason (n)"
+    notes: >-
+      Derived: the source's "length of the subpacket is the length of the reason string plus
+      one" counts the code octet and not the type octet, so it describes the body (subpacket
+      data), not the §5.2.3.7 subpacket length, which is n + 2.
+
+  - name: subpacket-features
+    subpacket_type: 30
+    source: "§5.2.3.32, lines 2634-2676; §13.7, lines 6573-6584; §12.11"
+    normative_status: current
+    body: "(N octets of flags)"
+    fields:
+      - name: flags
+        type: octets[n]
+        required: true
+        constraints: >-
+          First octet: 0x01 v1 SEIPD supported; 0x02 reserved; 0x04 reserved; 0x08 v2 SEIPD
+          supported. A sender SHOULD NOT use an unlisted feature unless it can infer support
+          another way; v2 SEIPD is chosen when every recipient sets 0x08 or is a v6 key with no
+          Features subpacket.
+        constrained_by:
+          - rfc-9580#R-0152
+          - rfc-9580#R-0153
+          - rfc-9580#R-0085
+          - rfc-9580#R-0411
+          - rfc-9580#R-0412
+    signature_types: "self-signatures only (\"only appears in a self-signature\")"
+    constrained_by:
+      - rfc-9580#R-0082
+    layout: "len (n + 1) || 0x1E || flags. A.3.1 lines 7754-7756: 02 1e 09 = {v1SEIPD, v2SEIPD}"
+    notes: >-
+      Derived: unstated flags in a short list are zero by analogy with Key Flags; the source
+      states that rule only for Key Flags (R-0143).
+
+  - name: subpacket-signature-target
+    subpacket_type: 31
+    source: "§5.2.3.33, lines 2678-2691"
+    normative_status: current
+    body: "(1 octet public key algorithm, 1 octet hash algorithm, N octets hash)"
+    fields:
+      - name: public-key-algorithm
+        type: u8
+        required: true
+        constraints: Of the target signature.
+      - name: hash-algorithm
+        type: u8
+        required: true
+        constraints: Of the target signature.
+      - name: hash
+        type: octets[digest size of hash-algorithm]
+        required: true
+        constraints: >-
+          "The N octets of hash data MUST be the size of the signature's hash. For example, a
+          target signature with a SHA-1 hash MUST have 20 octets of hash data."
+        constrained_by:
+          - rfc-9580#R-0155
+          - rfc-9580#R-0156
+    signature_types: >-
+      Revocation Signatures (0x20, 0x28, 0x30): "provides explicit designation of which signature
+      is being revoked"; Third-Party Confirmation (0x50) and Timestamp (0x40): "designates what
+      signature is signed".
+    constrained_by:
+      - rfc-9580#R-0154
+      - rfc-9580#R-0056
+    layout: "len (n + 3) || 0x1F || pkalgo || hashalgo || hash (n)"
+    notes: >-
+      The source does not say over what data the N-octet hash is computed (SD-M11). Derived:
+      "the signature's hash" most plausibly means the target signature's own digest (the value
+      whose left 16 bits it carries), but that is an inference.
+
+  - name: subpacket-embedded-signature
+    subpacket_type: 32
+    source: "§5.2.3.34, lines 2693-2699; §5.2.1.8, lines 1585-1593; §10.1.5, lines 5326-5331"
+    normative_status: current
+    body: "(1 Signature packet body)"
+    fields:
+      - name: signature
+        type: "signature-v4 | signature-v6 body (no packet header)"
+        required: true
+        constraints: >-
+          "This subpacket contains a complete Signature packet body as specified in Section 5.2."
+          In a Subkey Binding signature (0x18) for a signing-capable subkey it holds the Primary
+          Key Binding signature (0x19) made by the subkey.
+        constrained_by:
+          - rfc-9580#R-0049
+          - rfc-9580#R-0326
+          - rfc-9580#R-0317
+    signature_types: >-
+      Subkey Binding signatures of signing subkeys (required, R-0049); the source does not
+      restrict other uses ("useful when one signature needs to refer to, or be incorporated in,
+      another signature").
+    layout: "len (n + 1) || 0x20|0xA0 || Signature packet body (n)"
+    notes: >-
+      Derived: the embedded body's own version must follow Table 27 for the subkey, and it is
+      subject to §5.2.5 like any signature. Placement: Derived, hashed, since the 0x19 binding is
+      meaningful only if the primary key's signature covers it; the source does not say.
+
+  - name: subpacket-issuer-fingerprint
+    subpacket_type: 33
+    source: "§5.2.3.35, lines 2701-2717; §13.13, lines 6792-6798"
+    normative_status: current
+    body: "(1 octet key version number, N octets of fingerprint)"
+    fields:
+      - name: key-version
+        type: u8
+        required: true
+        constraints: >-
+          "Since the version of the signature is bound to the version of the key, the version
+          octet here MUST match the version of the signature. If the version octet does not match
+          the signature version, the receiving implementation MUST treat it as a malformed
+          signature (see Section 5.2.5)."
+        constrained_by:
+          - rfc-9580#R-0159
+          - rfc-9580#R-0160
+      - name: fingerprint
+        type: fingerprint
+        required: true
+        constraints: >-
+          20 octets for a v4 key, 32 for a v6 key. For a v4 issuer with an Issuer Key ID
+          subpacket, that Key ID MUST match the low 64 bits.
+        constrained_by:
+          - rfc-9580#R-0158
+    critical: not stated by the source
+    placement: >-
+      Either. A.3 and A.6 put it hashed; an implementation MAY synthesize one into the unhashed
+      area (R-0417).
+    signature_types: "all: \"This subpacket SHOULD be included in all signatures.\""
+    constrained_by:
+      - rfc-9580#R-0157
+      - rfc-9580#R-0417
+    layout: >-
+      v6: len 0x22 || 0x21 || 0x06 || fp (32). v4: len 0x16 || 0x21 || 0x04 || fp (20). A.6 lines
+      7982-7989: 22 21 06 cb186c4f...bad9acc9.
+
+  - name: subpacket-intended-recipient-fingerprint
+    subpacket_type: 35
+    source: "§5.2.3.36, lines 2719-2737; §13.12, lines 6775-6782; §13.8, lines 6630-6635"
+    normative_status: current
+    body: "(1 octet key version number, N octets of fingerprint)"
+    fields:
+      - name: key-version
+        type: u8
+        required: true
+        constraints: >-
+          Version of the recipient primary key. Derived: unlike Issuer Fingerprint, no rule ties
+          it to the signature version, so a v6 signature may name a v4 recipient.
+      - name: fingerprint
+        type: fingerprint
+        required: true
+        constraints: >-
+          "The OpenPGP Key fingerprint of the intended recipient primary key." 20 octets for v4,
+          32 for v6.
+    semantics: >-
+      With one or more of these, the signature "SHOULD be considered valid only in an encrypted
+      context, where the key it was encrypted to is one of the indicated primary keys or one of
+      their subkeys." Generate one per recipient when signing and encrypting.
+    critical: "SHOULD be marked critical in a version 6 signature (R-0163)"
+    signature_types: "Derived: data signatures (0x00, 0x01) inside an encrypted message"
+    constrained_by:
+      - rfc-9580#R-0161
+      - rfc-9580#R-0162
+      - rfc-9580#R-0163
+      - rfc-9580#R-0083
+      - rfc-9580#R-0416
+    layout: "v6 recipient: len 0x22 || 0x23|0xA3 || 0x06 || fp (32); v4 recipient: len 0x16 || 0x23|0xA3 || 0x04 || fp (20)"
+    notes: >-
+      Derived: placement must be hashed for the mechanism to resist forwarding; the source states
+      no placement. §5.2.3.7 spells the name "Intended Recipients Fingerprint" (line 2008).
+
+  - name: subpacket-preferred-aead-ciphersuites
+    subpacket_type: 39
+    source: "§5.2.3.15, lines 2193-2231; §13.13, lines 6800-6808"
+    normative_status: current
+    body: "(array of pairs of octets indicating Symmetric Cipher and AEAD algorithms)"
+    fields:
+      - name: pairs
+        type: "(u8 cipher, u8 aead)[n]"
+        required: true
+        constraints: >-
+          "The Symmetric Cipher Algorithm ID precedes the AEAD algorithm ID in each pair." Most
+          preferred first. Only listed combinations are assumed supported, except AES-128 with
+          OCB: "If AES-128 and OCB are not found in the subpacket, it is implicitly listed at the
+          end." Relevant only when generating v2 SEIPD. Example 09 02 09 03 13 02: AES-256/OCB,
+          AES-256/GCM, Camellia-256/OCB, then implicit AES-128/OCB.
+        constrained_by:
+          - rfc-9580#R-0106
+    signature_types: "self-signatures only (\"This subpacket is only found on a self-signature.\")"
+    placement: hashed; §13.13 uses it as the example of a subpacket to ignore when unhashed
+    constrained_by:
+      - rfc-9580#R-0082
+      - rfc-9580#R-0084
+      - rfc-9580#R-0418
+    layout: "len (2n + 1) || 0x27 || c1 a1 ... cn an. A.3.1 lines 7765-7768: 05 27 09 02 07 02"
+    notes: >-
+      Derived: 0x13 in the example is 19 decimal; Table 21 has Camellia-256 at 13 decimal (0x0D),
+      and 19 is unassigned, so the example's third pair does not decode as "Camellia-256 with OCB"
+      (SD-M29).
+
+  # ======================= §5.3 SKESK (Type ID 3) =======================
+
+  - name: skesk-v4
+    packet_type: 3
+    shorthand: SKESK
+    version: 4
+    source: "§5.3, lines 2888-2914; §5.3.1, lines 2916-2952; §3.7.2.2, lines 909-922"
+    normative_status: current
+    generate: Yes, only ahead of a v1 SEIPD payload (Table 26).
+    encoding: binary packet body
+    fields:
+      - name: version
+        type: u8
+        value: 4
+        required: true
+        constrained_by:
+          - rfc-9580#R-0181
+          - rfc-9580#R-0337
+          - rfc-9580#R-0338
+          - rfc-9580#R-0340
+          - rfc-9580#R-0341
+          - rfc-9580#R-0342
+          - rfc-9580#R-0343
+      - name: symmetric-algorithm
+        type: u8
+        required: true
+        constraints: >-
+          "A 1-octet number describing the symmetric algorithm used." Without an encrypted
+          session key it is the message cipher; with one, it is the cipher used to decrypt that
+          field (Derived from lines 2935-2947).
+        constrained_by:
+          - rfc-9580#R-0287
+          - rfc-9580#R-0289
+          - rfc-9580#R-0019
+      - name: s2k
+        type: s2k
+        required: true
+        constraints: >-
+          "The length of the S2K Specifier depends on its type". "because an all-zero IV is used
+          for this decryption, the S2K Specifier MUST use a salt value, a Salted S2K, an Iterated
+          and Salted S2K, or Argon2."
+        constrained_by:
+          - rfc-9580#R-0182
+          - rfc-9580#R-0011
+      - name: encrypted-session-key
+        type: octets[var]
+        required: false
+        constraints: >-
+          "Optionally, the encrypted session key itself, which is decrypted with the S2K object."
+          Absence "can be detected on the basis of packet length and S2K Specifier size"; then
+          the S2K output is the session key. Present: CFB with an all-zero IV under the S2K
+          output; plaintext = 1-octet symmetric algorithm ID of the encryption container ||
+          session key.
+    layout: >-
+      0x04 || symalgo (1) || S2K (2, 10, 11 or 20 octets) || [CFB(S2K(pass), IV = 0, symalgo' ||
+      session key)]. A.12.1 (decoded): 04 07 | 04 9c52...3601 04 15 (Argon2, t=1, p=4, m=2^21) |
+      17 octets (1 + 16).
+    notes: >-
+      Derived: the S2K length is fixed by its type (Table 1), so the parser can tell whether the
+      encrypted session key is present. A v4 SKESK carries no integrity check, which is why the
+      v1 SEIPD quick check exists (§13.4). The IDEA-with-Simple-S2K case with no ESK at all is
+      the pre-RFC 2440 SED convention (§3.7.2.2, §5.7).
+
+  - name: skesk-v6
+    packet_type: 3
+    shorthand: SKESK
+    version: 6
+    source: "§5.3, lines 2888-2914; §5.3.2, lines 2954-2998"
+    normative_status: current
+    generate: Yes, only ahead of a v2 SEIPD payload (Table 26).
+    encoding: binary packet body
+    fields:
+      - name: version
+        type: u8
+        value: 6
+        required: true
+        constrained_by:
+          - rfc-9580#R-0183
+          - rfc-9580#R-0337
+          - rfc-9580#R-0339
+          - rfc-9580#R-0341
+          - rfc-9580#R-0342
+          - rfc-9580#R-0343
+      - name: params-length
+        type: u8
+        required: true
+        constraints: >-
+          "A 1-octet scalar octet count for the 5 fields following this octet." Derived (A.9.1,
+          A.10.1, A.11.1): it counts cipher, AEAD, S2K length, S2K and IV; 0x1E, 0x1D, 0x1A for a
+          16-, 15- and 12-octet nonce with an 11-octet S2K.
+      - name: symmetric-algorithm
+        type: u8
+        required: true
+        constraints: "A 1-octet Symmetric Cipher Algorithm ID (from Table 21)."
+        constrained_by:
+          - rfc-9580#R-0287
+          - rfc-9580#R-0289
+      - name: aead-algorithm
+        type: u8
+        required: true
+        constraints: "A 1-octet AEAD algorithm identifier (from Table 25)."
+        constrained_by:
+          - rfc-9580#R-0307
+          - rfc-9580#R-0308
+      - name: s2k-length
+        type: u8
+        required: true
+        constraints: "A 1-octet scalar octet count of the following field."
+      - name: s2k
+        type: s2k
+        required: true
+        constrained_by:
+          - rfc-9580#R-0011
+          - rfc-9580#R-0303
+          - rfc-9580#R-0304
+      - name: iv
+        type: octets[nonce length of aead-algorithm]
+        required: true
+        constraints: >-
+          "A starting IV of the size specified by the AEAD algorithm." 16 (EAX), 15 (OCB), 12 (GCM).
+        constrained_by:
+          - rfc-9580#R-0415
+      - name: encrypted-session-key
+        type: octets[session key size]
+        required: true
+      - name: tag
+        type: octets[16]
+        required: true
+        constraints: >-
+          "An authentication tag for the AEAD mode." 16 octets for EAX, OCB and GCM.
+    key_derivation: >-
+      KEK = HKDF-SHA256(IKM = S2K output, salt = none, info = 0xC3 || 0x06 || cipher || aead),
+      length = cipher key size. Session key = AEAD-Decrypt(KEK, nonce = iv, AD = 0xC3 || 0x06 ||
+      cipher || aead, ciphertext || tag). "Note that no chunks are used and that there is only one
+      authentication tag." Example AD for AES-128 with OCB: 0xC3, 0x06, 0x07, 0x02.
+    layout: >-
+      0x06 || n (1) || cipher (1) || aead (1) || s (1) || S2K (s) || IV || ESK || tag (16), with
+      n = 3 + s + IV length. A.9.1 (lines 8313-8333): 06 1e 07 01 0b | 03 08 a5ae579d1fc5d82b ff |
+      nonce (16) | ESK (16) | tag (16).
+    constrained_by:
+      - rfc-9580#R-0406
+    notes: >-
+      Derived (recomputed): HKDF-SHA256 of the A.9.2 derived key with info c3 06 07 01 gives
+      the A.9.2 HKDF output 2fce331f...c72139. The info and AD omit the S2K and nonce.
+
+  # ======================= §5.4 One-Pass Signature (Type ID 4) =======================
+
+  - name: ops-v3
+    packet_type: 4
+    shorthand: OPS
+    version: 3
+    source: "§5.4, lines 3000-3052; §10.3.2.2 Table 27, lines 5509-5526"
+    normative_status: current
+    generate: Yes, for a v4 signature by a v4 key ("there is no version 4 OPS").
+    encoding: binary packet body
+    fields:
+      - name: version
+        type: u8
+        value: 3
+        required: true
+        constrained_by:
+          - rfc-9580#R-0186
+          - rfc-9580#R-0345
+      - name: signature-type
+        type: u8
+        required: true
+      - name: hash-algorithm
+        type: u8
+        required: true
+        constraints: >-
+          Note the order: hash algorithm precedes public-key algorithm here, the reverse of the
+          Signature packet (Derived from lines 3017-3019 vs 1707-1709).
+      - name: public-key-algorithm
+        type: u8
+        required: true
+      - name: key-id
+        type: keyid
+        required: true
+        constraints: "Only for v3 packets, an 8-octet number holding the Key ID of the signing key."
+      - name: nested
+        type: u8
+        required: true
+        constraints: >-
+          "A zero value indicates that the next packet is another One-Pass Signature packet that
+          describes another signature to be applied to the same message data." Derived: non-zero
+          (A.7 uses 0x01) marks the last OPS before the signed data.
+    layout: "0x03 || sigtype || hashalgo || pkalgo || keyid (8) || nested (1); 13 octets"
+    notes: >-
+      Several OPS packets are bracketed: the first Signature after the data matches the last
+      OPS. A mismatch between OPS and Signature versions makes the signature malformed (§5.2.5).
+
+  - name: ops-v6
+    packet_type: 4
+    shorthand: OPS
+    version: 6
+    source: "§5.4, lines 3000-3052"
+    normative_status: current
+    generate: Yes, for a v6 signature.
+    encoding: binary packet body
+    fields:
+      - name: version
+        type: u8
+        value: 6
+        required: true
+        constrained_by:
+          - rfc-9580#R-0186
+          - rfc-9580#R-0345
+      - name: signature-type
+        type: u8
+        required: true
+      - name: hash-algorithm
+        type: u8
+        required: true
+      - name: public-key-algorithm
+        type: u8
+        required: true
+      - name: salt-length
+        type: u8
+        required: true
+        constraints: >-
+          "A 1-octet salt size. The value MUST match the value defined for the hash algorithm as
+          specified in Table 23."
+        constrained_by:
+          - rfc-9580#R-0184
+      - name: salt
+        type: octets[salt-length]
+        required: true
+        constraints: >-
+          "The salt; a random value of the specified size. The value MUST match the salt field of
+          the corresponding Signature packet."
+        constrained_by:
+          - rfc-9580#R-0185
+      - name: fingerprint
+        type: octets[32]
+        required: true
+        constraints: >-
+          "Only for version 6 packets, 32 octets of the fingerprint of the signing key. Since a
+          version 6 signature can only be made by a version 6 key, the length of the fingerprint
+          is fixed."
+      - name: nested
+        type: u8
+        required: true
+    layout: >-
+      0x06 || sigtype || hashalgo || pkalgo || saltlen || salt || fingerprint (32) || nested.
+      A.7 (decoded): c4 46 | 06 01 0a 1b 20 | 76495f...fbac (32) | cb186c4f...acc9 (32) | 01.
+
+  # ======================= §5.5 key material packets =======================
+
+  - name: public-key-v3
+    packet_type: "6 (Public Key), 14 (Public Subkey)"
+    version: "3 (and 2, identical except for the version number)"
+    source: "§5.5.2, lines 3091-3105; §5.5.2.1, lines 3107-3135; §10.1.4, lines 5260-5278"
+    normative_status: deprecated
+    generate: "No: \"an implementation MUST NOT generate a version 3 key but MAY accept it\"; likewise version 2."
+    encoding: binary packet body
+    fields:
+      - name: version
+        type: u8
+        value: "3 (or 2)"
+        required: true
+        constrained_by:
+          - rfc-9580#R-0189
+          - rfc-9580#R-0190
+          - rfc-9580#R-0320
+      - name: creation-time
+        type: time32
+        required: true
+      - name: validity-days
+        type: u16
+        required: true
+        constraints: >-
+          "A 2-octet number denoting the time in days that the key is valid. If this number is
+          zero, then it does not expire."
+      - name: public-key-algorithm
+        type: u8
+        required: true
+        constraints: RSA; "A different mode is used with version 3 keys (which are only RSA)".
+      - name: n
+        type: MPI
+        required: true
+      - name: e
+        type: MPI
+        required: true
+    layout: "0x03 || ctime (4) || days (2) || pkalgo (1) || MPI(n) || MPI(e)"
+    constrained_by:
+      - rfc-9580#R-0321
+      - rfc-9580#R-0348
+    notes: >-
+      Version 3 keys may not have subkeys (R-0321), so in conforming data this layout appears
+      only as Public Key (6). No ECC algorithm is allowed with v3 keys (§11).
+
+  - name: public-key-v4
+    packet_type: "6 (Public Key), 14 (Public Subkey)"
+    version: 4
+    source: "§5.5.1.1-§5.5.1.2, lines 3066-3078; §5.5.2, lines 3091-3105; §5.5.2.2, lines 3137-3154"
+    normative_status: deprecated
+    generate: "\"Version 4 keys are deprecated; an implementation SHOULD NOT generate a version 4 key but SHOULD accept it.\""
+    encoding: binary packet body
+    fields:
+      - name: version
+        type: u8
+        value: 4
+        required: true
+        constrained_by:
+          - rfc-9580#R-0187
+          - rfc-9580#R-0188
+          - rfc-9580#R-0318
+      - name: creation-time
+        type: time32
+        required: true
+      - name: public-key-algorithm
+        type: u8
+        required: true
+        constraints: >-
+          Table 18. A primary key must be signing-capable (R-0323).
+        constrained_by:
+          - rfc-9580#R-0323
+          - rfc-9580#R-0277
+          - rfc-9580#R-0283
+      - name: key-material
+        type: algorithm-specific public part (key-part-*)
+        required: true
+        constraints: "A series of values comprising the key material. This is algorithm specific and described in Section 5.5.5."
+    layout: >-
+      0x04 || ctime (4) || pkalgo (1) || algorithm-specific public fields. A.1 (lines 7601-7604):
+      98 33 | 04 53f35f0b 16 | 09 2b06010401da470f01 | 0107 40 3f09...2406.
+    notes: >-
+      A v4 key has no key-material length, so a parser that does not know the algorithm cannot
+      find the end of the public part inside a Secret Key packet (the reason v6 adds one).
+
+  - name: public-key-v6
+    packet_type: "6 (Public Key), 14 (Public Subkey)"
+    version: 6
+    source: "§5.5.1.1-§5.5.1.2, lines 3066-3078; §5.5.2, lines 3091-3105; §5.5.2.3, lines 3156-3177"
+    normative_status: current
+    generate: "\"OpenPGP implementations SHOULD create keys with version 6 format.\""
+    encoding: binary packet body
+    fields:
+      - name: version
+        type: u8
+        value: 6
+        required: true
+        constrained_by:
+          - rfc-9580#R-0187
+          - rfc-9580#R-0312
+      - name: creation-time
+        type: time32
+        required: true
+      - name: public-key-algorithm
+        type: u8
+        required: true
+        constraints: >-
+          Table 18. Not EdDSALegacy or ECDH over Curve25519Legacy (deprecated OIDs, R-0286).
+        constrained_by:
+          - rfc-9580#R-0323
+          - rfc-9580#R-0286
+          - rfc-9580#R-0277
+          - rfc-9580#R-0283
+      - name: key-material-length
+        type: u32
+        required: true
+        constraints: "A 4-octet scalar octet count for the public key material specified in the next field."
+        constrained_by:
+          - rfc-9580#R-0021
+      - name: key-material
+        type: algorithm-specific public part (key-part-*)
+        required: true
+    layout: >-
+      0x06 || ctime (4) || pkalgo (1) || u32 len || public fields (len). A.3 (decoded): c6 2a |
+      06 63877fe3 1b 00000020 f94d...95a3 (Ed25519). Subkey: ce 2a | 06 63877fe3 19 00000020
+      8693...4435 (X25519).
+    constrained_by:
+      - rfc-9580#R-0003
+
+  - name: secret-key
+    packet_type: "5 (Secret Key), 7 (Secret Subkey)"
+    shorthand: "SECKEY, SECSUBKEY"
+    version: "3, 4, 6 (the public part's version)"
+    source: "§5.5.1.3-§5.5.1.4, lines 3080-3089; §5.5.3, lines 3179-3316; §3.7.2.1, lines 809-907"
+    normative_status: current
+    encoding: binary packet body
+    fields:
+      - name: public-fields
+        type: "public-key-v3 | public-key-v4 | public-key-v6 body"
+        required: true
+        constraints: "The fields of a Public Key or Public Subkey packet, as described above."
+      - name: s2k-usage
+        type: u8
+        required: true
+        constraints: >-
+          0 unprotected; 253 AEAD; 254 CFB; 255 MalleableCFB; any other value a Symmetric Cipher
+          Algorithm ID (LegacyCFB, MD5 of the passphrase). "A version 6 packet MUST NOT use the
+          value 255 (MalleableCFB)." See s2k-usage-forms.
+        constrained_by:
+          - rfc-9580#R-0191
+          - rfc-9580#R-0015
+          - rfc-9580#R-0016
+          - rfc-9580#R-0017
+          - rfc-9580#R-0193
+          - rfc-9580#R-0194
+          - rfc-9580#R-0413
+      - name: params-length
+        type: u8
+        required: conditional
+        required_when: version 6 and s2k-usage != 0
+        constraints: >-
+          "a 1-octet scalar octet count of the cumulative length of all the following
+          conditionally included S2K parameter fields."
+      - name: symmetric-algorithm
+        type: u8
+        required: conditional
+        required_when: s2k-usage 253, 254 or 255
+        constrained_by:
+          - rfc-9580#R-0287
+          - rfc-9580#R-0289
+      - name: aead-algorithm
+        type: u8
+        required: conditional
+        required_when: s2k-usage 253
+        constrained_by:
+          - rfc-9580#R-0307
+      - name: s2k-length
+        type: u8
+        required: conditional
+        required_when: version 6 and s2k-usage 253 or 254
+        constraints: "a 1-octet count of the size of the one field following this octet."
+      - name: s2k
+        type: s2k
+        required: conditional
+        required_when: s2k-usage 253, 254 or 255
+        constraints: >-
+          Argon2 only with usage 253: "An implementation MUST NOT create and MUST reject as
+          malformed any Secret Key packet where the S2K usage octet is not AEAD (253) and the S2K
+          Specifier Type is Argon2."
+        constrained_by:
+          - rfc-9580#R-0018
+          - rfc-9580#R-0303
+          - rfc-9580#R-0304
+      - name: iv
+        type: octets[var]
+        required: conditional
+        required_when: s2k-usage != 0
+        constraints: >-
+          Usage 253: nonce of the AEAD algorithm's nonce length. Usage 254, 255 or a cipher ID:
+          "an IV of the same length as the cipher's block size."
+        constrained_by:
+          - rfc-9580#R-0415
+      - name: secret-material
+        type: algorithm-specific secret part (key-part-*), plain or encrypted
+        required: true
+        constraints: >-
+          Usage 253: AEAD ciphertext of the secret part followed by the AEAD tag. Usage 254:
+          CFB(secret part || SHA-1(secret part)). Usage 255 or cipher ID: CFB(secret part ||
+          checksum16). With v3 keys only the MPI value octets are encrypted, the 2-octet bit
+          counts stay clear and CFB resynchronizes at each MPI; v4 and v6 encrypt the MPIs whole.
+          After decryption the cleartext must parse exactly into the secret part.
+        constrained_by:
+          - rfc-9580#R-0192
+          - rfc-9580#R-0195
+          - rfc-9580#R-0196
+          - rfc-9580#R-0197
+          - rfc-9580#R-0399
+      - name: checksum
+        type: checksum16
+        required: conditional
+        required_when: version 3 or 4 and s2k-usage 0
+        constraints: >-
+          "Only for a version 3 or 4 packet where the S2K usage octet is zero, a 2-octet checksum
+          of the algorithm-specific portion (sum of all octets, mod 65536)." A v6 unprotected key
+          has none (A.4).
+    layout: >-
+      public fields || usage || [v6: n] || [cipher] || [aead] || [v6: s] || [S2K] || [IV] ||
+      secret part (plain or encrypted, with tag, SHA-1 or checksum per usage) || [v3/v4 usage 0:
+      u16 checksum]. A.4 (decoded, v6 unprotected): c5 4b | <42-octet v6 public part> | 00 |
+      1972...b0b7 (32-octet Ed25519 secret). A.5 (decoded, v6 locked): c5 82 | <public part> |
+      fd | 26 | 09 | 02 | 14 | 04 <16 salt> 01 04 15 | <15-octet OCB nonce> | 48 octets (32
+      encrypted + 16 tag).
+    aead_derivation: >-
+      Usage 253: KEK = HKDF-SHA256(IKM = S2K output, salt = none, info = packet type octet in
+      OpenPGP format || packet version || cipher || aead); AD = packet type octet || the public
+      key packet fields starting with the version octet. Example AD for a v4 Secret Key: 0xC5,
+      0x04, creation time, algorithm, public parameters; Secret Subkey 0xC7; v6 includes the
+      4-octet key-material count.
+    constrained_by:
+      - rfc-9580#R-0405
+      - rfc-9580#R-0406
+    notes: >-
+      Derived (recomputed): HKDF-SHA256 of the A.5.1 S2K output with info c5 06 09 02 gives the
+      A.5.1 key 9e37cb26...77fd51, and the A.5.1 AD (lines 7925-7926) is c5 || the 42-octet v6
+      public part, confirming the info layout (type, version, cipher, AEAD) and the AD layout.
+      Derived arithmetic check: A.5 params-length 0x26 = 38 = cipher 1 + aead 1 + s2k-length 1 +
+      Argon2 S2K 20 + nonce 15. Table 2 says LegacyCFB and MalleableCFB encrypt check(secrets),
+      but §5.5.3 says "With version 3 keys, the checksum is stored in the clear." (SD-M12).
+
+  - name: s2k-usage-forms
+    applies_to: secret-key.s2k-usage
+    source: "§3.7.2.1 Table 2, lines 841-907; §5.5.3, lines 3190-3242"
+    normative_status: current
+    rows:
+      - usage: 0
+        shorthand: Unprotected
+        parameter_fields: none
+        encryption: "v3 or v4: cleartext secrets || check(secrets); v6: cleartext secrets"
+        generate: "Yes"
+      - usage: "known symmetric cipher ID"
+        shorthand: LegacyCFB
+        parameter_fields: IV
+        encryption: "CFB(MD5(passphrase), secrets || check(secrets))"
+        generate: "No"
+      - usage: 253
+        shorthand: AEAD
+        parameter_fields: "params-length (v6-only), cipher-algo, AEAD-mode, S2K-specifier-length (v6-only), S2K-specifier, nonce"
+        encryption: "AEAD(HKDF(S2K(passphrase), info), secrets, packetprefix)"
+        generate: "Yes"
+      - usage: 254
+        shorthand: CFB
+        parameter_fields: "params-length (v6-only), cipher-algo, S2K-specifier-length (v6-only), S2K-specifier, IV"
+        encryption: "CFB(S2K(passphrase), secrets || SHA1(secrets))"
+        generate: "Yes"
+      - usage: 255
+        shorthand: MalleableCFB
+        parameter_fields: "cipher-algo, S2K-specifier, IV"
+        encryption: "CFB(S2K(passphrase), secrets || check(secrets))"
+        generate: "No"
+    constrained_by:
+      - rfc-9580#R-0015
+      - rfc-9580#R-0016
+      - rfc-9580#R-0017
+      - rfc-9580#R-0191
+      - rfc-9580#R-0413
+    notes: >-
+      Symmetric algorithm IDs 253-255 are reserved in Table 21 to avoid collision with these
+      usage values. Integrity failures of protected key material (bad AEAD tag, SHA-1 mismatch,
+      checksum mismatch) indicate malleable ciphertext (§13.7).
+
+  # ----- S2K Specifiers (§3.7.1) -----
+
+  - name: s2k-simple
+    s2k_type: 0
+    source: "§3.7.1.1, lines 670-697; Table 1, lines 637-663"
+    normative_status: deprecated
+    generate: "No (Table 1); \"an implementation MUST NOT use Simple S2K\""
+    encoding: binary
+    fields:
+      - name: type
+        type: u8
+        value: "0x00"
+        required: true
+      - name: hash-algorithm
+        type: u8
+        required: true
+    layout: "00 || hash (2 octets)"
+    derivation: >-
+      Key = leftmost key-size octets of H0(pass) || H1(pass) || ..., where context Hi is preloaded
+      with i zero octets.
+    constrained_by:
+      - rfc-9580#R-0006
+      - rfc-9580#R-0011
+
+  - name: s2k-salted
+    s2k_type: 1
+    source: "§3.7.1.2, lines 699-711"
+    normative_status: current
+    generate: "Only when string is high entropy (Table 1)"
+    encoding: binary
+    fields:
+      - name: type
+        type: u8
+        value: "0x01"
+        required: true
+      - name: hash-algorithm
+        type: u8
+        required: true
+      - name: salt
+        type: octets[8]
+        required: true
+    layout: "01 || hash || salt (8); 10 octets"
+    derivation: As Simple S2K with hash input salt || passphrase.
+    constrained_by:
+      - rfc-9580#R-0006
+      - rfc-9580#R-0012
+
+  - name: s2k-reserved-2
+    s2k_type: 2
+    source: "Table 1, lines 649-650"
+    normative_status: reserved
+    fields: []
+    constrained_by:
+      - rfc-9580#R-0006
+
+  - name: s2k-iterated-salted
+    s2k_type: 3
+    source: "§3.7.1.3, lines 713-749"
+    normative_status: current
+    generate: "Yes (Table 1); MAY be used if Argon2 is not available"
+    encoding: binary
+    fields:
+      - name: type
+        type: u8
+        value: "0x03"
+        required: true
+      - name: hash-algorithm
+        type: u8
+        required: true
+      - name: salt
+        type: octets[8]
+        required: true
+      - name: coded-count
+        type: u8
+        required: true
+        constraints: >-
+          count = ((Int32)16 + (c & 15)) << ((c >> 4) + EXPBIAS), EXPBIAS = 6. "Note that the
+          resulting count value is an octet count of how many octets will be hashed, not an
+          iteration count." At least one full salt || passphrase is hashed regardless of count.
+    layout: "03 || hash || salt (8) || c; 11 octets. A.9.1: 03 08 a5ae579d1fc5d82b ff (count 65011712)"
+    derivation: >-
+      Each context hashes (salt || passphrase) repeated and truncated to count octets; key data
+      as for Simple S2K.
+    constrained_by:
+      - rfc-9580#R-0014
+      - rfc-9580#R-0303
+      - rfc-9580#R-0304
+    notes: >-
+      Derived arithmetic check: c = 0xFF gives (16 + 15) << (15 + 6) = 65011712, matching A.9.1
+      line 8324; the range is 1024 (c = 0) to 65011712.
+
+  - name: s2k-argon2
+    s2k_type: 4
+    source: "§3.7.1.4, lines 751-790"
+    normative_status: current
+    generate: "Yes (Table 1); \"It is RECOMMENDED that implementations use Argon2.\""
+    encoding: binary
+    fields:
+      - name: type
+        type: u8
+        value: "0x04"
+        required: true
+      - name: salt
+        type: octets[16]
+        required: true
+        constraints: "The salt SHOULD be unique for each passphrase."
+        constrained_by:
+          - rfc-9580#R-0007
+      - name: t
+        type: u8
+        required: true
+        constraints: number of passes; non-zero
+        constrained_by:
+          - rfc-9580#R-0008
+      - name: p
+        type: u8
+        required: true
+        constraints: degree of parallelism; non-zero
+        constrained_by:
+          - rfc-9580#R-0008
+      - name: encoded-m
+        type: u8
+        required: true
+        constraints: >-
+          m = 2^encoded_m KiB. "The encoded memory size MUST be a value from 3+ceil(log_2(p)) to
+          31, such that the decoded memory size m is a value from 8*p to 2^31."
+        constrained_by:
+          - rfc-9580#R-0009
+          - rfc-9580#R-0010
+    layout: "04 || salt (16) || t || p || encoded_m; 20 octets. Example (line 787-788): 04 XX..XX 01 04 15 (t=1, p=4, m=2^21)"
+    derivation: >-
+      Argon2id, version 0x13, P = passphrase, S = salt, tag length T = required key size.
+    constrained_by:
+      - rfc-9580#R-0013
+      - rfc-9580#R-0018
+    notes: >-
+      Argon2 has no hash-algorithm octet. Only with secret-key usage 253 (R-0018); permitted in
+      v4 and v6 SKESK (R-0182; A.12 uses v4 SKESK).
+
+  - name: s2k-private-100-110
+    s2k_type: "100-110"
+    source: "Table 1, lines 658-660"
+    normative_status: private
+    generate: As appropriate
+    fields: []
+
+  # ----- fingerprints and Key IDs (§5.5.4) -----
+
+  - name: fingerprint-and-keyid
+    source: "§5.5.4, lines 3318-3419; Table 12, lines 3326-3344; §14.1, lines 6869-6883"
+    normative_status: computed
+    encoding: computed
+    variants:
+      - key_version: 3
+        fingerprint: "MD5(n value octets || e value octets), MPI bit counts excluded; 128 bits"
+        key_id: low 64 bits of the RSA modulus n
+      - key_version: 4
+        fingerprint: "SHA-1(0x99 || u16 body length || Public Key packet body from the version octet); 160 bits"
+        hash_material: "a.1) 0x99; a.2) 2-octet count of (b)-(e); b) version 4; c) creation time (4); d) algorithm (1); e) algorithm-specific fields"
+        key_id: low-order 64 bits (last 8 octets) of the fingerprint
+      - key_version: 6
+        fingerprint: "SHA2-256(0x9B || u32 body length || Public Key packet body from the version octet); 256 bits"
+        hash_material: "a.1) 0x9B; a.2) 4-octet count of (b)-(f); b) version 6; c) creation time (4); d) algorithm (1); e) 4-octet key-material count; f) algorithm-specific public key material"
+        key_id: high-order 64 bits (first 8 octets) of the fingerprint
+    constraints: >-
+      Subkeys use the same computation, "including the 0x99 (version 4 key) or 0x9B (version 6
+      key) as the first octet (even though this is not a valid Packet Type ID for a public
+      subkey)." Secret packets are fingerprinted over their public fields (Derived). A v6
+      fingerprint must not be squeezed into a 20-octet legacy field.
+    constrained_by:
+      - rfc-9580#R-0005
+      - rfc-9580#R-0420
+      - rfc-9580#R-0421
+      - rfc-9580#R-0404
+      - rfc-9580#R-0300
+    examples: >-
+      Recomputed: A.1 v4 key gives C959 BDBA FA32 A2F8 9A15 3B67 8CFD E121 9796 5A9A (line 7590),
+      Key ID 8CFDE12197965A9A as in the A.2 Issuer Key ID subpacket; A.3 v6 primary gives
+      CB186C4F...BAD9ACC9 and subkey 12C83F1E...A9930885 (lines 7664, 7668).
+    notes: >-
+      §5.5.4 says the Key ID "is only used in v3 PKESK packets", but Key IDs also appear in the
+      Issuer Key ID subpacket, v3 OPS and v3 signatures (SD-M02). Same RSA material in v3, v4 and
+      v6 keys yields different Key IDs and fingerprints.
+
+  # ----- algorithm-specific key parts (§5.5.5) -----
+
+  - name: key-part-rsa
+    public_key_algorithm: "1, 2, 3"
+    source: "§5.5.5.1, lines 3426-3443; §12.4, lines 6153-6171"
+    normative_status: deprecated
+    public: "MPI(n) || MPI(e)"
+    secret: "MPI(d) || MPI(p) || MPI(q) || MPI(u), p < q, u = p^-1 mod q"
+    constrained_by:
+      - rfc-9580#R-0279
+      - rfc-9580#R-0280
+      - rfc-9580#R-0382
+      - rfc-9580#R-0383
+      - rfc-9580#R-0384
+      - rfc-9580#R-0385
+      - rfc-9580#R-0386
+      - rfc-9580#R-0387
+      - rfc-9580#R-0003
+    notes: "Derived: key size is the bit length of n; generation below 3072 bits is forbidden."
+
+  - name: key-part-dsa
+    public_key_algorithm: 17
+    source: "§5.5.5.2, lines 3445-3460; §12.5, lines 6173-6178"
+    normative_status: deprecated
+    public: "MPI(p) || MPI(q) || MPI(g) || MPI(y), q a prime divisor of p-1, y = g^x mod p"
+    secret: "MPI(x)"
+    constrained_by:
+      - rfc-9580#R-0282
+      - rfc-9580#R-0388
+      - rfc-9580#R-0389
+
+  - name: key-part-elgamal
+    public_key_algorithm: 16
+    source: "§5.5.5.3, lines 3462-3475; §12.6, lines 6180-6190"
+    normative_status: deprecated
+    public: "MPI(p) || MPI(g) || MPI(y), y = g^x mod p"
+    secret: "MPI(x)"
+    constrained_by:
+      - rfc-9580#R-0281
+      - rfc-9580#R-0390
+      - rfc-9580#R-0391
+      - rfc-9580#R-0392
+
+  - name: key-part-ecdsa
+    public_key_algorithm: 19
+    source: "§5.5.5.4, lines 3477-3494"
+    normative_status: current
+    public: "curve-oid || MPI(EC point, SEC1)"
+    secret: "MPI(secret scalar, integer)"
+    fields:
+      - name: curve-oid
+        type: curve-oid
+        required: true
+        constraints: NIST P-256/384/521 or brainpoolP256r1/384r1/512r1 (Table 19 usage ECDSA).
+      - name: public-point
+        type: ec-point-sec1
+        required: true
+        constrained_by:
+          - rfc-9580#R-0350
+          - rfc-9580#R-0351
+      - name: secret-scalar
+        type: ec-scalar-integer
+        required: true
+    constrained_by:
+      - rfc-9580#R-0003
+
+  - name: key-part-eddsa-legacy
+    public_key_algorithm: 22
+    source: "§5.5.5.5, lines 3496-3528; Table 20 row Ed25519Legacy, lines 4894-4898"
+    normative_status: deprecated
+    public: "curve-oid (Ed25519Legacy only) || MPI(0x40 || 32-octet native public key)"
+    secret: "MPI(32-octet native secret seed), leading zero octets stripped (Table 20: 32 octets of secret)"
+    fields:
+      - name: curve-oid
+        type: curve-oid
+        required: true
+        constraints: "Note that the only curve defined for use with EdDSALegacy is the Ed25519Legacy OID."
+        constrained_by:
+          - rfc-9580#R-0285
+          - rfc-9580#R-0286
+      - name: public-point
+        type: ec-point-prefixed-native
+        required: true
+        constraints: "An MPI of an EC point representing a public key Q in prefixed native form"
+      - name: secret
+        type: ec-scalar-octet-string
+        required: true
+        constraints: >-
+          "The value stored in an OpenPGP EdDSALegacy Secret Key packet is the original sequence
+          of random octets."
+    constrained_by:
+      - rfc-9580#R-0068
+    layout: "A.1: 09 2b06010401da470f01 | 0107 40 3f09...2406 (263-bit MPI)"
+
+  - name: key-part-ecdh
+    public_key_algorithm: 18
+    source: "§5.5.5.6, lines 3530-3562; §5.5.5.6.1, lines 3564-3570; §5.5.5.6.1.1, lines 3572-3595; §11.5.1, lines 5911-5945"
+    normative_status: current
+    public: "curve-oid || MPI(EC point in the curve's format) || ecdh-kdf-params"
+    secret: "MPI(secret in the curve-specific format)"
+    fields:
+      - name: curve-oid
+        type: curve-oid
+        required: true
+        constraints: The six SEC1 curves or Curve25519Legacy (not for v6 keys).
+        constrained_by:
+          - rfc-9580#R-0198
+          - rfc-9580#R-0285
+          - rfc-9580#R-0286
+      - name: public-point
+        type: "ec-point-sec1 | ec-point-prefixed-native"
+        required: true
+        constraints: SEC1 for NIST and brainpool curves; prefixed native for Curve25519Legacy (Table 20).
+        constrained_by:
+          - rfc-9580#R-0350
+          - rfc-9580#R-0351
+      - name: kdf-params
+        type: ecdh-kdf-params
+        required: true
+      - name: secret
+        type: MPI
+        required: true
+        constraints: >-
+          NIST and brainpool: "a simple integer in standard MPI form". Curve25519Legacy: "stored
+          as a standard integer in big-endian MPI form", the byte-reverse of the RFC 7748 native
+          scalar, and "it MUST be divisible by 8, MUST be at least 2^254, and MUST be less than
+          2^255". Its bit length is always 255, so the MPI starts 00 FF.
+        constrained_by:
+          - rfc-9580#R-0199
+          - rfc-9580#R-0200
+          - rfc-9580#R-0201
+          - rfc-9580#R-0202
+    constrained_by:
+      - rfc-9580#R-0358
+      - rfc-9580#R-0359
+      - rfc-9580#R-0361
+      - rfc-9580#R-0003
+    curve25519legacy_secret_from_random: >-
+      octet_list[0] &= 248; octet_list[31] &= 127; octet_list[31] |= 64; return [0x00, 0xFF] ||
+      reversed(octet_list) (lines 3590-3595).
+
+  - name: ecdh-kdf-params
+    applies_to: "key-part-ecdh.kdf-params; also inside ecdh-kdf-param"
+    source: "§5.5.5.6, lines 3545-3557; §11.5, lines 5776-5789; Table 30, lines 5927-5945"
+    normative_status: current
+    encoding: binary
+    fields:
+      - name: length
+        type: u8
+        value: 3
+        required: true
+        constraints: "values 0 and 0xFF are reserved for future extensions."
+      - name: reserved
+        type: u8
+        value: "0x01"
+        required: true
+        constraints: "A 1-octet value 1, reserved for future extensions."
+      - name: kdf-hash
+        type: u8
+        required: true
+        constraints: Table 23 ID; not MD5, SHA-1 or RIPEMD-160 (R-0302); SHA2-256 or stronger (R-0352).
+        constrained_by:
+          - rfc-9580#R-0302
+          - rfc-9580#R-0352
+      - name: kek-algorithm
+        type: u8
+        required: true
+        constraints: Table 21 ID of the key-wrap cipher; SHOULD be AES-128, AES-192 or AES-256.
+        constrained_by:
+          - rfc-9580#R-0354
+          - rfc-9580#R-0362
+    layout: "03 || 01 || hash || kek"
+    table_30: >-
+      NIST P-256: SHA2-256, AES-128; NIST P-384: SHA2-384, AES-192; NIST P-521: SHA2-512,
+      AES-256; brainpoolP256r1: SHA2-256, AES-128; brainpoolP384r1: SHA2-384, AES-192;
+      brainpoolP512r1: SHA2-512, AES-256; Curve25519Legacy: SHA2-256, AES-128. MUST for v6 keys,
+      SHOULD for v4 keys.
+    constrained_by:
+      - rfc-9580#R-0358
+      - rfc-9580#R-0359
+      - rfc-9580#R-0360
+      - rfc-9580#R-0361
+
+  - name: key-part-x25519
+    public_key_algorithm: 25
+    source: "§5.5.5.7, lines 3597-3611"
+    normative_status: current
+    public: "32 octets native public key = X25519(secretKey, 9)"
+    secret: "32 octets native secret key (the original random octets)"
+    constrained_by:
+      - rfc-9580#R-0277
+    layout: "A.3 subkey: 00000020 || 8693...4435"
+
+  - name: key-part-x448
+    public_key_algorithm: 26
+    source: "§5.5.5.8, lines 3613-3626"
+    normative_status: current
+    public: "56 octets native public key = X448(secretKey, 5)"
+    secret: "56 octets native secret key"
+    constrained_by:
+      - rfc-9580#R-0278
+
+  - name: key-part-ed25519
+    public_key_algorithm: 27
+    source: "§5.5.5.9, lines 3628-3640"
+    normative_status: current
+    public: "32 octets native public key"
+    secret: "32 octets native secret key (the original random octets, RFC 8032 §5.1.5)"
+    constrained_by:
+      - rfc-9580#R-0277
+    layout: "A.3 primary: 00000020 || f94d...95a3; A.4 secret: 1972...b0b7"
+
+  - name: key-part-ed448
+    public_key_algorithm: 28
+    source: "§5.5.5.10, lines 3642-3654"
+    normative_status: current
+    public: "57 octets native public key"
+    secret: "57 octets native secret key"
+    constrained_by:
+      - rfc-9580#R-0278
+
+  # ======================= §5.6-§5.14 data and auxiliary packets =======================
+
+  - name: compressed-data
+    packet_type: 8
+    shorthand: COMP
+    source: "§5.6, lines 3656-3690; §9.4, lines 4963-4985; §13.14, lines 6810-6820"
+    normative_status: current
+    generate: "OpenPGP packet format only (R-0203, R-0204); partial body lengths allowed (R-0027)"
+    encoding: binary packet body
+    fields:
+      - name: compression-algorithm
+        type: u8
+        required: true
+        constraints: >-
+          Table 22: 1 ZIP (raw DEFLATE, RFC 1951), 2 ZLIB (RFC 1950), 3 BZip2, 100-110 private.
+          Not 0: "An implementation MUST NOT use algorithm 0 as the indicated compression
+          algorithm in a Compressed Data packet". MUST implement uncompressed, SHOULD implement
+          ZLIB, SHOULD decompress ZIP.
+        constrained_by:
+          - rfc-9580#R-0380
+          - rfc-9580#R-0293
+          - rfc-9580#R-0294
+          - rfc-9580#R-0295
+          - rfc-9580#R-0296
+          - rfc-9580#R-0378
+      - name: compressed-data
+        type: octets[var]
+        required: true
+        constraints: >-
+          "Compressed data, which makes up the remainder of the packet." It decompresses to an
+          OpenPGP Message (ENC-02). Implementations should cap nesting depth (R-0419). A
+          decompression failure inside an encrypted container indicates malleable ciphertext
+          (§13.7).
+        constrained_by:
+          - rfc-9580#R-0333
+          - rfc-9580#R-0334
+          - rfc-9580#R-0335
+          - rfc-9580#R-0419
+    constrained_by:
+      - rfc-9580#R-0001
+      - rfc-9580#R-0203
+      - rfc-9580#R-0204
+      - rfc-9580#R-0205
+    layout: "algo (1) || compressed stream (to end of packet)"
+    notes: >-
+      Derived: "raw ZLIB-style blocks" for ZLIB means the RFC 1950 stream with header and
+      Adler-32; the source's "raw" qualifier is unexplained.
+
+  - name: symmetrically-encrypted-data
+    packet_type: 9
+    shorthand: SED
+    source: "§5.7, lines 3692-3751; §13.7, lines 6500-6595; §13.4, lines 6406-6435"
+    normative_status: obsolete
+    generate: "\"This packet is obsolete. An implementation MUST NOT create this packet.\""
+    encoding: binary packet body
+    fields:
+      - name: encrypted-prefix
+        type: octets[block size + 2]
+        required: true
+        constraints: >-
+          CFB, IV all zeros, over block-size random octets followed by copies of the last two
+          ("for a 16-octet block length, octet 17 is a copy of octet 15, and octet 18 is a copy of
+          octet 16").
+      - name: encrypted-data
+        type: octets[var]
+        required: true
+        constraints: >-
+          CFB with "the last block-size octets of the first ciphertext as the IV" (a CFB
+          resynchronization). Decrypts to an OpenPGP Message; no integrity check.
+    constrained_by:
+      - rfc-9580#R-0206
+      - rfc-9580#R-0207
+      - rfc-9580#R-0208
+      - rfc-9580#R-0336
+      - rfc-9580#R-0410
+      - rfc-9580#R-0405
+      - rfc-9580#R-0407
+      - rfc-9580#R-0332
+      - rfc-9580#R-0290
+      - rfc-9580#R-0291
+      - rfc-9580#R-0399
+    layout: >-
+      CFB_0(R || R[bs-2..bs-1]) || CFB_resync(plaintext packets); no version octet. Without a
+      preceding ESK: IDEA keyed by MD5(passphrase) (deprecated).
+    notes: >-
+      Derived: the resynchronized IV is ciphertext octets 3..bs+2 of the prefix (the last bs
+      octets of the bs+2 ciphertext octets). Every SED packet is treated as malleable (§13.7).
+
+  - name: marker
+    packet_type: 10
+    shorthand: MARKER
+    source: "§5.8, lines 3753-3759"
+    normative_status: current
+    encoding: binary packet body
+    fields:
+      - name: body
+        type: octets[3]
+        value: "0x50 0x47 0x50"
+        required: true
+        constraints: "The three octets 0x50, 0x47, 0x50 (which spell \"PGP\" in UTF-8)."
+    constrained_by:
+      - rfc-9580#R-0209
+    layout: "50 47 50; may appear anywhere in any sequence (§10.1.1, §10.3, §10.4)"
+
+  - name: literal-data
+    packet_type: 11
+    shorthand: LIT
+    source: "§5.9, lines 3761-3837; §5.9.1, lines 3839-3854"
+    normative_status: current
+    generate: "OpenPGP packet format only (R-0219, R-0220); partial body lengths allowed"
+    encoding: binary packet body
+    fields:
+      - name: format
+        type: u8
+        required: true
+        constraints: >-
+          b (0x62) binary; u (0x75) UTF-8 text. t (0x74) is deprecated: not emitted, read as
+          UTF-8. l and 1 (local modes) are deprecated. A generator MAY use u only when certain the
+          data is UTF-8 text (for example followed by a 0x01 signature); "Otherwise, it MUST set
+          the format octet to b."
+        constrained_by:
+          - rfc-9580#R-0210
+          - rfc-9580#R-0211
+          - rfc-9580#R-0216
+          - rfc-9580#R-0217
+      - name: filename-length
+        type: u8
+        required: true
+      - name: filename
+        type: octets[filename-length]
+        required: true
+        constraints: >-
+          May be empty; SHOULD be empty (a single zero length octet) when generated. _CONSOLE
+          means "for your eyes only" and is NOT RECOMMENDED.
+        constrained_by:
+          - rfc-9580#R-0212
+          - rfc-9580#R-0215
+          - rfc-9580#R-0218
+          - rfc-9580#R-0222
+          - rfc-9580#R-0223
+      - name: date
+        type: time32
+        required: true
+        constraints: SHOULD be zero (four zero octets) when generated.
+        constrained_by:
+          - rfc-9580#R-0218
+      - name: data
+        type: octets[var]
+        required: true
+        constraints: >-
+          "Text data MUST be encoded with UTF-8 (see [RFC3629]) and stored with <CR><LF> text
+          endings (that is, network-normal line endings)."
+        constrained_by:
+          - rfc-9580#R-0213
+    constrained_by:
+      - rfc-9580#R-0214
+      - rfc-9580#R-0219
+      - rfc-9580#R-0220
+      - rfc-9580#R-0221
+    layout: >-
+      format (1) || n (1) || filename (n) || date (4) || data. A.8.4 (lines 8264-8265): cb 13 |
+      62 | 00 | 00000000 | "Hello, world!".
+    notes: >-
+      "OpenPGP signatures do not include the formatting octet, the file name, and the date field
+      of the Literal Data packet in a signature hash". Derived: a data signature over a Literal
+      Data packet hashes only the data field. A.7 stores u-format text with LF line endings,
+      contrary to R-0213 (SD-M22).
+
+  - name: trust
+    packet_type: 12
+    shorthand: TRUST
+    source: "§5.10, lines 3856-3867"
+    normative_status: current
+    encoding: implementation-defined
+    fields:
+      - name: body
+        type: octets[var]
+        required: true
+        constraints: "The format of Trust packets is defined by a given implementation."
+    constrained_by:
+      - rfc-9580#R-0224
+      - rfc-9580#R-0225
+    notes: Keyring-local only; not exported and ignored on input other than local keyrings.
+
+  - name: user-id
+    packet_type: 13
+    shorthand: UID
+    source: "§5.11, lines 3869-3875"
+    normative_status: current
+    encoding: binary packet body
+    fields:
+      - name: user-id
+        type: utf8[packet length]
+        required: true
+        constraints: >-
+          "By convention, it includes a mail name-addr as described in [RFC2822], but there are no
+          restrictions on its content. The packet length in the header specifies the length of
+          the User ID."
+    layout: "UTF-8 octets, no terminator; hashed as 0xB4 || u32 length || octets (userid-hash-encoding)"
+
+  - name: user-attribute
+    packet_type: 17
+    shorthand: UAT
+    source: "§5.12, lines 3877-3918"
+    normative_status: current
+    encoding: binary packet body
+    fields:
+      - name: subpackets
+        type: "user-attribute-subpacket+"
+        required: true
+        constraints: "The User Attribute packet is made up of one or more attribute subpackets."
+    constrained_by:
+      - rfc-9580#R-0226
+      - rfc-9580#R-0227
+    layout: "subpacket+ ; hashed as 0xD1 || u32 length || body (userid-hash-encoding)"
+
+  - name: user-attribute-subpacket
+    applies_to: user-attribute
+    source: "§5.12, lines 3893-3918; Table 13"
+    normative_status: current
+    encoding: binary
+    fields:
+      - name: length
+        type: body-length
+        required: true
+        constraints: "the subpacket length (1, 2, or 5 octets)"
+      - name: type
+        type: u8
+        required: true
+        constraints: >-
+          Table 13: 0 reserved, 1 Image Attribute, 100-110 private. Unknown types SHOULD be
+          ignored. Derived: no critical bit is defined for User Attribute subpackets.
+        constrained_by:
+          - rfc-9580#R-0227
+      - name: data
+        type: octets[length - 1]
+        required: true
+    layout: "length || type || data"
+    notes: >-
+      Derived: the source does not say whether the subpacket length covers the type octet; by
+      analogy with §5.2.3.7 it does.
+
+  - name: image-attribute-subpacket
+    user_attribute_subpacket_type: 1
+    source: "§5.12.1, lines 3920-3973; Tables 14 and 15"
+    normative_status: current
+    encoding: binary
+    fields:
+      - name: header-length
+        type: u16 little-endian
+        value: "0x0010"
+        required: true
+        constraints: >-
+          "Note that unlike other multi-octet numerical values in this document, due to a
+          historical accident, this value is encoded as a little-endian number."
+      - name: header-version
+        type: u8
+        value: 1
+        required: true
+      - name: encoding
+        type: u8
+        required: true
+        constraints: "1 JPEG (JFIF); 0 reserved; 100-110 private."
+      - name: reserved
+        type: octets[12]
+        required: true
+        constraints: "12 reserved octets, all of which MUST be set to 0."
+        constrained_by:
+          - rfc-9580#R-0228
+      - name: image
+        type: octets[var]
+        required: true
+        constraints: JFIF image data for encoding 1.
+        constrained_by:
+          - rfc-9580#R-0229
+    layout: "10 00 01 || enc (1) || 00 x 12 || image; the first three octets of a version 1 header are 0x10, 0x00, 0x01"
+
+  - name: seipd-v1
+    packet_type: 18
+    shorthand: SEIPD
+    version: 1
+    source: "§5.13, lines 3975-3995; §5.13.1, lines 3997-4105"
+    normative_status: current
+    generate: >-
+      Yes (Table 26) when a recipient lacks v2 SEIPD support (R-0412); v2 SEIPD is preferred
+      (R-0409, R-0411).
+    encoding: binary packet body
+    fields:
+      - name: version
+        type: u8
+        value: 1
+        required: true
+        constrained_by:
+          - rfc-9580#R-0338
+          - rfc-9580#R-0409
+          - rfc-9580#R-0411
+          - rfc-9580#R-0412
+      - name: encrypted-data
+        type: octets[var]
+        required: true
+        constraints: >-
+          "Encrypted data -- the output of the selected symmetric key cipher operating in CFB
+          mode." IV all zeros; the cipher and session key come from the preceding v3 PKESK or v4
+          SKESK ("The symmetric cipher used MUST be specified in a Public Key or Symmetric Key
+          Encrypted Session Key packet").
+        constrained_by:
+          - rfc-9580#R-0230
+          - rfc-9580#R-0399
+          - rfc-9580#R-0377
+    plaintext_layout:
+      - name: prefix
+        type: octets[block size + 2]
+        constraints: >-
+          Block-size random octets, then copies of the 2nd-preceding octets ("copies of the 15th
+          and 16th octets" for a 16-octet block). Same CFB context, no resynchronization.
+      - name: packets
+        type: octets[var]
+        constraints: An OpenPGP Message (ENC-02).
+        constrained_by:
+          - rfc-9580#R-0332
+          - rfc-9580#R-0334
+          - rfc-9580#R-0335
+      - name: mdc-header
+        type: octets[2]
+        value: "0xD3 0x14"
+      - name: mdc
+        type: octets[20]
+        constraints: >-
+          SHA-1(prefix || packets || 0xD3 0x14). "A mismatch of the hash indicates that the
+          message has been modified and MUST be treated as a security problem. Any failure SHOULD
+          be reported to the user."
+        constrained_by:
+          - rfc-9580#R-0231
+          - rfc-9580#R-0232
+          - rfc-9580#R-0300
+          - rfc-9580#R-0405
+    layout: >-
+      0x01 || CFB(K, IV = 0, R (bs) || R[bs-2..bs-1] || packets || D3 14 || SHA-1(...) (20))
+    notes: >-
+      The quick-check octets are an oracle risk (§13.4). Derived: D3 14 is an OpenPGP-format
+      header for the former MDC packet (type 19) with length 20. The SHA-1 exception in §9.5
+      mentions "computing version 4 key fingerprints for purposes of the MDC", but the MDC
+      hashes plaintext, not fingerprints (SD-M21).
+
+  - name: seipd-v2
+    packet_type: 18
+    shorthand: SEIPD
+    version: 2
+    source: "§5.13, lines 3975-3995; §5.13.2, lines 4107-4184; §5.13.3-§5.13.5, lines 4186-4209; §13.7; §13.8"
+    normative_status: current
+    generate: Yes (Table 26); SHOULD be used when every recipient supports it (R-0411).
+    encoding: binary packet body
+    fields:
+      - name: version
+        type: u8
+        value: 2
+        required: true
+        constrained_by:
+          - rfc-9580#R-0339
+          - rfc-9580#R-0340
+          - rfc-9580#R-0409
+          - rfc-9580#R-0411
+      - name: symmetric-algorithm
+        type: u8
+        required: true
+        constraints: >-
+          "A 1-octet cipher algorithm ID." Derived: a 16-octet-block cipher (EAX, OCB, GCM require it).
+        constrained_by:
+          - rfc-9580#R-0287
+          - rfc-9580#R-0288
+          - rfc-9580#R-0289
+          - rfc-9580#R-0377
+      - name: aead-algorithm
+        type: u8
+        required: true
+        constraints: "1 EAX (nonce 16, tag 16), 2 OCB (nonce 15, tag 16), 3 GCM (nonce 12, tag 16)."
+        constrained_by:
+          - rfc-9580#R-0307
+          - rfc-9580#R-0308
+      - name: chunk-size
+        type: u8
+        required: true
+        constraints: >-
+          "chunk_size = (uint32_t) 1 << (c + 6)". "An implementation MUST accept chunk size
+          octets with values from 0 to 16. An implementation MUST NOT create data with a chunk
+          size octet value larger than 16 (4 MiB chunks)."
+        constrained_by:
+          - rfc-9580#R-0234
+          - rfc-9580#R-0235
+      - name: salt
+        type: octets[32]
+        required: true
+        constraints: >-
+          "The salt is used to derive the message key and MUST be securely generated (see Section
+          13.10)." A fresh salt allows session-key reuse in replies (§13.8).
+        constrained_by:
+          - rfc-9580#R-0233
+          - rfc-9580#R-0415
+      - name: chunks
+        type: "(octets[<= chunk_size] || tag (16))+"
+        required: true
+        constraints: >-
+          "The encrypted data consists of the encryption of each chunk of plaintext, followed
+          immediately by the relevant authentication tag. If the last chunk of plaintext is
+          smaller than the chunk size, the ciphertext for that data may be shorter; nevertheless,
+          it is followed by a full authentication tag."
+        constrained_by:
+          - rfc-9580#R-0406
+          - rfc-9580#R-0408
+      - name: final-tag
+        type: octets[16]
+        required: true
+        constraints: >-
+          "A final summary authentication tag for the AEAD mode." Computed over the empty string
+          with AD || u64 total plaintext octets; "This allows detection of a truncated
+          ciphertext."
+        constrained_by:
+          - rfc-9580#R-0408
+    plaintext: >-
+      The decrypted chunks concatenate to an Optionally Padded Message (OpenPGP Message,
+      optionally followed by a Padding packet) (R-0331).
+    key_derivation: seipd-v2-key-schedule
+    layout: >-
+      0x02 || cipher || aead || c || salt (32) || C_0 || T_0 || ... || C_{n-1} || T_{n-1} ||
+      T_final. A.8.3 (lines 8198-8220): d2 69 | 02 07 02 06 | salt 6164...69a2 | 37-octet chunk
+      #0 ciphertext | 16-octet tag #0 | 16-octet final tag.
+    constrained_by:
+      - rfc-9580#R-0331
+      - rfc-9580#R-0334
+      - rfc-9580#R-0335
+      - rfc-9580#R-0405
+    notes: >-
+      Derived: ciphertext and plaintext lengths are equal for EAX, OCB and GCM, so a parser
+      splits the body after the 36-octet header into ceil(P / chunk_size) chunks of (chunk_size
+      + 16) octets, the last shorter, plus the 16-octet final tag. The source says the packet has
+      "one or more chunks"; it does not say what an empty plaintext produces.
+
+  - name: seipd-v2-key-schedule
+    applies_to: seipd-v2
+    source: "§5.13.2, lines 4129-4184"
+    normative_status: computed
+    encoding: computed
+    fields:
+      - name: hkdf-info
+        type: octets[5]
+        required: true
+        constraints: >-
+          Packet type octet in OpenPGP format (0xD2) || version (0x02) || cipher || aead ||
+          chunk-size octet.
+      - name: hkdf-output
+        type: "octets[M/8 + N/8 - 8]"
+        required: true
+        constraints: >-
+          HKDF-SHA256(IKM = session key, salt = packet salt, info); "The leftmost M bits are used
+          as a symmetric algorithm key, and the remaining N - 64 bits are used as an IV." M =
+          cipher key size, N = AEAD nonce size.
+      - name: nonce
+        type: octets[N/8]
+        required: true
+        constraints: >-
+          "The leftmost N - 64 bits are the IV derived using HKDF. The rightmost 64 bits are the
+          chunk index as a big-endian value. The index of the first chunk is zero."
+      - name: chunk-ad
+        type: octets[5]
+        required: true
+        constraints: >-
+          The same five octets as hkdf-info: "the additional data of the first chunk using EAX and
+          AES-128 with a chunk size of 2^22 octets consists of the octets 0xD2, 0x02, 0x07, 0x01,
+          and 0x10."
+      - name: final-ad
+        type: octets[13]
+        required: true
+        constraints: chunk-ad || u64 total number of plaintext octets.
+      - name: final-nonce
+        type: octets[N/8]
+        required: true
+        constraints: >-
+          Not stated by the source (SD-M14). Derived from A.8.4, A.9.4, A.10.4 and A.11.4: IV ||
+          u64 number of chunks (the index after the last chunk).
+    layout: >-
+      A.8.4 (lines 8226-8279): info d2 02 07 02 06; HKDF output (23 octets) = message key 4512...fc42
+      (16) || IV 5faf3250212ff9 (7); nonce #0 = IV || 00 x 8; final nonce = IV || 00..01; final
+      AD = d2 02 07 02 06 || 00 00 00 00 00 00 00 25 (37 plaintext octets = 21 LIT + 16 PADDING).
+    notes: >-
+      Derived (recomputed): HKDF-SHA256 of the A.8.2 session key with the A.8.3 salt and info d2
+      02 07 02 06, L = 23, gives the A.8.4 HKDF output. Unlike v6 SKESK and AEAD secret keys, the
+      info includes the chunk-size octet. AEAD failure of any chunk or of the final tag: halt,
+      release nothing (R-0406); truncation: error as soon as detected (R-0408). §13.7 calls the
+      final tag a "final zero-octet chunk" (SD-M13).
+
+  - name: padding
+    packet_type: 21
+    shorthand: PADDING
+    source: "§5.14, lines 4211-4237; §13.11, lines 6752-6773; §10.1.5, lines 5339-5346"
+    normative_status: current
+    encoding: binary packet body
+    fields:
+      - name: body
+        type: octets[var]
+        required: true
+        constraints: "Its contents SHOULD be random octets to make the length obfuscation it provides more robust even when compressed."
+        constrained_by:
+          - rfc-9580#R-0237
+    constrained_by:
+      - rfc-9580#R-0236
+      - rfc-9580#R-0238
+      - rfc-9580#R-0239
+      - rfc-9580#R-0327
+      - rfc-9580#R-0328
+    layout: "random octets; A.8.4 line 8269: d5 0e + 14 octets"
+    notes: >-
+      Placement: end of a v6 TPK sent over an encrypted channel, last packet inside v2 SEIPD;
+      accepted anywhere. Size policy is out of scope. Derived: a zero-length Padding packet is not
+      excluded.
+
+  # ======================= §9.2, §11 EC wire formats =======================
+
+  - name: curve-oid
+    applies_to: "key-part-ecdsa, key-part-eddsa-legacy, key-part-ecdh, ecdh-kdf-param"
+    source: "§5.5.5.4, lines 3481-3487; §9.2, lines 4781-4867; Table 19"
+    normative_status: current
+    encoding: binary
+    fields:
+      - name: length
+        type: u8
+        required: true
+        constraints: "values 0 and 0xFF are reserved for future extensions."
+      - name: oid
+        type: octets[length]
+        required: true
+        constraints: >-
+          DER encoding of the OID with the tag and length octets removed. "Only the truncated
+          sequence of octets is the valid representation of a curve OID."
+        constrained_by:
+          - rfc-9580#R-0284
+          - rfc-9580#R-0286
+    table_19:
+      - "NIST P-256 | 1.2.840.10045.3.1.7 | 08 | 2A 86 48 CE 3D 03 01 07 | ECDSA, ECDH | fsize 32"
+      - "NIST P-384 | 1.3.132.0.34 | 05 | 2B 81 04 00 22 | ECDSA, ECDH | fsize 48"
+      - "NIST P-521 | 1.3.132.0.35 | 05 | 2B 81 04 00 23 | ECDSA, ECDH | fsize 66"
+      - "brainpoolP256r1 | 1.3.36.3.3.2.8.1.1.7 | 09 | 2B 24 03 03 02 08 01 01 07 | ECDSA, ECDH | fsize 32"
+      - "brainpoolP384r1 | 1.3.36.3.3.2.8.1.1.11 | 09 | 2B 24 03 03 02 08 01 01 0B | ECDSA, ECDH | fsize 48"
+      - "brainpoolP512r1 | 1.3.36.3.3.2.8.1.1.13 | 09 | 2B 24 03 03 02 08 01 01 0D | ECDSA, ECDH | fsize 64"
+      - "Ed25519Legacy | 1.3.6.1.4.1.11591.15.1 | 09 | 2B 06 01 04 01 DA 47 0F 01 | EdDSALegacy | fsize 32 | v4 only"
+      - "Curve25519Legacy | 1.3.6.1.4.1.3029.1.5.1 | 0A | 2B 06 01 04 01 97 55 01 05 01 | ECDH | fsize 32 | v4 only"
+    layout: "len || OID octets. NIST P-256: 08 2A 86 48 CE 3D 03 01 07 (from DER 06 08 2A 86 48 CE 3D 03 01 07)"
+    constrained_by:
+      - rfc-9580#R-0285
+      - rfc-9580#R-0348
+
+  - name: ec-point-sec1
+    source: "§11.2, lines 5571-5588; §11.2.1, lines 5590-5601; §11.2.3, lines 5614-5632"
+    normative_status: current
+    encoding: "MPI content"
+    layout: "MPI( 0x04 || x (fsize) || y (fsize) ), x and y big-endian, zero-padded to fsize"
+    sizes: "515 bits (P-256, brainpoolP256r1), 771 (P-384, brainpoolP384r1), 1059 (P-521), 1027 (brainpoolP512r1)"
+    constrained_by:
+      - rfc-9580#R-0349
+      - rfc-9580#R-0350
+      - rfc-9580#R-0351
+    notes: >-
+      Derived arithmetic check: 0x04 contributes 3 bits, so 3 + 16 x fsize: 3 + 512 = 515, 3 +
+      768 = 771, 3 + 1056 = 1059, 3 + 1024 = 1027. Compressed SEC1 points are not allowed.
+
+  - name: ec-point-prefixed-native
+    source: "§11.2.2, lines 5603-5612; §11.2.3, lines 5616-5622"
+    normative_status: current
+    encoding: "MPI content"
+    layout: "MPI( 0x40 || native point (32) ); 263 bits for Curve25519Legacy and Ed25519Legacy"
+    constrained_by:
+      - rfc-9580#R-0350
+      - rfc-9580#R-0351
+    notes: Used by Curve25519Legacy ECDH and EdDSALegacy public points. A.1 shows 0107 40 ... (263 = 0x107).
+
+  - name: ec-scalar-integer
+    source: "§11.3, lines 5634-5662; Table 29"
+    normative_status: current
+    encoding: "MPI"
+    layout: "standard big-endian MPI (§3.2)"
+    notes: ECDSA and SEC1-curve ECDH secret keys; Curve25519Legacy secret (reverse of native).
+
+  - name: ec-scalar-octet-string
+    source: "§11.3.1, lines 5664-5690"
+    normative_status: current
+    encoding: "MPI"
+    layout: >-
+      MPI(N octets of X): leading zero octets stripped, bit count from the highest set bit.
+      Example: X = 00 02 EE 19 00 (N = 5) is 00 1A 02 EE 19 00. Decode: check bit count <= 8N,
+      left-pad the value octets with zeros to N.
+    notes: EdDSALegacy R, S and secret.
+
+  - name: ec-scalar-prefixed
+    source: "§11.3.2, lines 5692-5718"
+    normative_status: current
+    encoding: "MPI"
+    layout: >-
+      MPI(prefixed N octets of X) = u16 (8N + 7) || 0x40 || X. Example: X = 00 02 EE 19 00 is 00 2F
+      40 00 02 EE 19 00. Decode: check the first three octets are 00 2F 40 (for N = 5).
+    notes: >-
+      The source says "the 2-bit count octets" for the 2-octet count (line 5712, SD-M23). No
+      algorithm in this document is listed in Table 20 as using this scalar form; Derived: it is
+      defined for registry completeness.
+
+  # ======================= §6 ASCII Armor (text) =======================
+
+  - name: ascii-armor
+    source: "§6, lines 4239-4258; §6.2, lines 4328-4348; §6.2.1-§6.2.3, lines 4350-4480"
+    normative_status: text
+    encoding: "text lines; base64 per RFC 4648 §4"
+    structure:
+      - name: armor-header-line
+        format: "-----BEGIN <label>-----"
+        required: true
+        constraints: >-
+          Labels (Table 16): PGP MESSAGE (signed, encrypted or compressed files), PGP PUBLIC KEY
+          BLOCK, PGP PRIVATE KEY BLOCK, PGP SIGNATURE (detached, OpenPGP/MIME and cleartext
+          signatures). "the header lines MUST start at the beginning of a line and MUST NOT have
+          text other than whitespace following them on the same line." A sequence with any Secret
+          Key packet is marked as a Transferable Secret Key (§10.2).
+        constrained_by:
+          - rfc-9580#R-0252
+          - rfc-9580#R-0253
+      - name: armor-headers
+        format: "<key>: <value>, one per line, zero or more"
+        required: false
+        constraints: >-
+          "A colon (: 0x3A) and a single space (0x20) separate the key and value." Keys (Table 17):
+          Version (SHOULD NOT emit), Comment, Hash (deprecated, cleartext v4 only), Charset. Unknown
+          keys ignored; malformed headers: try to recover. No length limit; a key may repeat. Not
+          protected by any signature.
+        constrained_by:
+          - rfc-9580#R-0254
+          - rfc-9580#R-0255
+          - rfc-9580#R-0256
+          - rfc-9580#R-0257
+          - rfc-9580#R-0258
+          - rfc-9580#R-0261
+          - rfc-9580#R-0262
+          - rfc-9580#R-0263
+      - name: blank-line
+        format: "zero length or containing only whitespace"
+        required: true
+      - name: base64-data
+        format: "base64 lines of at most 76 characters"
+        required: true
+        constraints: "When decoding base64, an OpenPGP implementation MUST ignore all whitespace."
+        constrained_by:
+          - rfc-9580#R-0240
+          - rfc-9580#R-0241
+          - rfc-9580#R-0002
+          - rfc-9580#R-0251
+      - name: checksum
+        format: "= followed by 4 base64 characters of the CRC24 (3 octets)"
+        required: false
+        constraints: >-
+          "If present, the checksum with its leading equal sign MUST appear on the next line after
+          the base64-encoded data." Never a reason to reject; SHOULD NOT be generated; MUST NOT be
+          generated for v2 SEIPD messages, v6-only signature sequences, v6 TPKs and v6-only
+          keyrings.
+        constrained_by:
+          - rfc-9580#R-0242
+          - rfc-9580#R-0243
+          - rfc-9580#R-0244
+          - rfc-9580#R-0245
+          - rfc-9580#R-0246
+          - rfc-9580#R-0247
+          - rfc-9580#R-0248
+          - rfc-9580#R-0249
+          - rfc-9580#R-0250
+      - name: armor-tail-line
+        format: "-----END <label>-----"
+        required: true
+        constraints: "composed in the same manner as the Armor Header Line, except the string \"BEGIN\" is replaced by the string \"END\"."
+    crc24: >-
+      Generator 0x864CFB, initial value 0xB704CE, over the binary data before base64; per octet:
+      crc ^= octet << 16; 8 times: crc <<= 1; if crc & 0x1000000 then crc &= 0xFFFFFF, crc ^=
+      generator; result crc & 0xFFFFFF (§6.1.1, lines 4307-4326).
+    layout: >-
+      A.1 (lines 7608-7612): -----BEGIN PGP PUBLIC KEY BLOCK----- / (blank) / two base64 lines /
+      -----END PGP PUBLIC KEY BLOCK-----, no checksum. A.12.1 carries Comment headers (lines
+      8829-8830).
+    notes: >-
+      Derived: §6 states the armor format; an implementation is not required to implement it
+      (R-0002 is SHOULD; §14 "this is not a "MUST" feature").
+
+  # ======================= §7 Cleartext Signature Framework (text) =======================
+
+  - name: cleartext-signed-message
+    source: "§7, lines 4482-4491; §7.1, lines 4493-4529; §7.2, lines 4531-4547; §7.3, lines 4549-4589"
+    normative_status: text
+    encoding: text lines
+    structure:
+      - name: header
+        format: "-----BEGIN PGP SIGNED MESSAGE-----"
+        required: true
+      - name: hash-headers
+        format: "Hash: <comma-separated Table 23 Text Names>"
+        required: false
+        constraints: >-
+          Only Hash headers are permitted here; any other Armor Header makes a verifier decline
+          every signature; a non-conformant Hash header likewise; a conformant one is ignored.
+          Emit only for a v4 SHA2 signature that a legacy verifier needs.
+        constrained_by:
+          - rfc-9580#R-0258
+          - rfc-9580#R-0259
+          - rfc-9580#R-0260
+          - rfc-9580#R-0264
+          - rfc-9580#R-0267
+      - name: empty-line
+        required: true
+        constraints: not part of the signed text
+      - name: dash-escaped-text
+        required: true
+        constraints: >-
+          Lines starting with "-" are prefixed with "- "; MAY escape any line, SHOULD escape lines
+          starting "From ", MUST escape lines starting with a dash. The digest covers the
+          unescaped text. On reversal strip the prefix and warn on "-" followed by a non-space.
+        constrained_by:
+          - rfc-9580#R-0268
+          - rfc-9580#R-0269
+          - rfc-9580#R-0270
+          - rfc-9580#R-0271
+          - rfc-9580#R-0272
+          - rfc-9580#R-0273
+          - rfc-9580#R-0274
+      - name: line-ending
+        required: true
+        constraints: the line ending before the signature armor is not signed
+      - name: signature-armor
+        required: true
+        constraints: "-----BEGIN PGP SIGNATURE----- armor (ascii-armor) of one or more Signature packets of type 0x01"
+    signed_data: >-
+      The cleartext with escapes removed, trailing spaces (0x20) and tabs (0x09) removed from
+      every line, lines joined with <CR><LF>, and no final line ending; hashed as a Text
+      signature (0x01).
+    constrained_by:
+      - rfc-9580#R-0265
+      - rfc-9580#R-0266
+      - rfc-9580#R-0275
+    layout: >-
+      A.6 (lines 7953-7967): header / blank / "What we need from the grocery store:" / blank /
+      "- - tofu" / "- - vegetables" / "- - noodles" / blank / signature armor. The signed bytes
+      (lines 8039-8048) end 6e 6f 6f 64 6c 65 73 0d 0a: the CRLF after "- noodles" is signed
+      because the source text has an empty line before the armor.
+    notes: >-
+      §7.1 lists "One or more legacy Hash Armor Headers that MAY be included" (SD-M16); §6.2.2.3
+      defers to "the hash algorithm indicated in the Embedded Signature" (SD-M15); Table 16 has
+      no row for BEGIN PGP SIGNED MESSAGE (SD-M17); §7.2 says to strip "the string -" without the
+      space (SD-M18).
+
+# ---------------------------------------------------------------------------
+# Enumerations needed to parse the structures above.
+enumerations:
+  packet_types:
+    source: "§5 Table 3, lines 1150-1231; §4.3, lines 1143-1144"
+    rows:
+      - "0 | critical | Reserved, MUST NOT be used | packet-type-0-reserved"
+      - "1 | critical | PKESK | pkesk-v3, pkesk-v6"
+      - "2 | critical | SIG | signature-v3, signature-v4, signature-v6"
+      - "3 | critical | SKESK | skesk-v4, skesk-v6"
+      - "4 | critical | OPS | ops-v3, ops-v6"
+      - "5 | critical | SECKEY | secret-key"
+      - "6 | critical | PUBKEY | public-key-v3, public-key-v4, public-key-v6"
+      - "7 | critical | SECSUBKEY | secret-key"
+      - "8 | critical | COMP | compressed-data"
+      - "9 | critical | SED | symmetrically-encrypted-data"
+      - "10 | critical | MARKER | marker"
+      - "11 | critical | LIT | literal-data"
+      - "12 | critical | TRUST | trust"
+      - "13 | critical | UID | user-id"
+      - "14 | critical | PUBSUBKEY | public-key-v4, public-key-v6 (v3 keys have no subkeys)"
+      - "15-16 | critical (by §4.3) | not listed | packet-type-15-16-unlisted"
+      - "17 | critical | UAT | user-attribute"
+      - "18 | critical | SEIPD | seipd-v1, seipd-v2"
+      - "19 | critical | Reserved (formerly MDC) | packet-type-19-reserved-mdc"
+      - "20 | critical | Reserved | packet-type-20-reserved"
+      - "21 | critical | PADDING | padding"
+      - "22-39 | critical | Unassigned | packet-type-22-39-unassigned-critical"
+      - "40-59 | non-critical | Unassigned | packet-type-40-59-unassigned-non-critical"
+      - "60-63 | non-critical | Private or Experimental | packet-type-60-63-private"
+    constrained_by:
+      - rfc-9580#R-0032
+      - rfc-9580#R-0033
+      - rfc-9580#R-0309
+      - rfc-9580#R-0310
+      - rfc-9580#R-0311
+
+  signature_types:
+    source: "§5.2.1 Table 4, lines 1497-1533; §5.2.1.1-§5.2.1.16, lines 1538-1651; §5.2.4, lines 2747-2784"
+    rows:
+      - id: "0x00"
+        name: Binary Signature
+        meaning: "the signer owns it, created it, or certifies that it has not been modified"
+        hashes: document octets
+      - id: "0x01"
+        name: Text Signature
+        meaning: as 0x00, over the canonical text
+        hashes: "document with line endings converted to <CR><LF>, UTF-8"
+        constrained_by: [rfc-9580#R-0047, rfc-9580#R-0166]
+      - id: "0x02"
+        name: Standalone Signature
+        meaning: "a signature of only its own subpacket contents"
+        hashes: nothing (a zero-length binary document); v3 forms MUST NOT be generated and MUST be ignored
+        constrained_by: [rfc-9580#R-0048]
+      - id: "0x10"
+        name: Generic Certification
+        meaning: no assertion about how well the certifier checked the User ID
+        hashes: primary key, User ID or User Attribute
+      - id: "0x11"
+        name: Persona Certification
+        meaning: no verification of the identity claim
+        hashes: primary key, User ID or User Attribute
+      - id: "0x12"
+        name: Casual Certification
+        meaning: some casual verification
+        hashes: primary key, User ID or User Attribute
+      - id: "0x13"
+        name: Positive Certification
+        meaning: substantial verification
+        hashes: primary key, User ID or User Attribute
+      - id: "0x18"
+        name: Subkey Binding
+        meaning: the primary key owns the subkey; for a signing subkey MUST embed a 0x19
+        hashes: primary key, subkey
+        constrained_by: [rfc-9580#R-0049, rfc-9580#R-0313, rfc-9580#R-0314, rfc-9580#R-0316, rfc-9580#R-0317, rfc-9580#R-0325, rfc-9580#R-0326]
+      - id: "0x19"
+        name: Primary Key Binding
+        meaning: the signing subkey is owned by the primary key
+        hashes: primary key, subkey
+      - id: "0x1F"
+        name: Direct Key
+        meaning: binds its subpackets to the key; carries v6 key-wide preferences and flags
+        hashes: the key
+        constrained_by: [rfc-9580#R-0097, rfc-9580#R-0098]
+      - id: "0x20"
+        name: Key Revocation
+        meaning: >-
+          "A revoked key is not to be used." Valid only by the key itself or a (deprecated) Revocation Key
+        hashes: the key being revoked
+        constrained_by: [rfc-9580#R-0050, rfc-9580#R-0051, rfc-9580#R-0319]
+      - id: "0x28"
+        name: Subkey Revocation
+        meaning: "A revoked subkey is not to be used."
+        hashes: primary key, subkey
+        constrained_by: [rfc-9580#R-0052, rfc-9580#R-0053]
+      - id: "0x30"
+        name: Certification Revocation
+        meaning: revokes a 0x10-0x13 certification or a 0x1F Direct Key signature; later creation date than it
+        hashes: the same data as the revoked signature
+        constrained_by: [rfc-9580#R-0054, rfc-9580#R-0055, rfc-9580#R-0090, rfc-9580#R-0091]
+      - id: "0x40"
+        name: Timestamp
+        meaning: "only meaningful for the timestamp contained in it"
+        hashes: not stated (SD-M10)
+      - id: "0x50"
+        name: Third-Party Confirmation
+        meaning: a notary seal over another signature; SHOULD carry a Signature Target
+        hashes: "[salt] || 0x88 || u32 length || target Signature body without unhashed subpackets"
+        constrained_by: [rfc-9580#R-0056, rfc-9580#R-0173]
+      - id: "0xFF"
+        name: Reserved
+        meaning: never created, never validated
+        constrained_by: [rfc-9580#R-0057, rfc-9580#R-0176]
+    notes: >-
+      Self-signatures are the certifications by the key on its own User IDs, the Direct Key
+      signature and Subkey Binding signatures (§5.2.3.10). §5.2.4 calls 0x20 "Primary Key
+      Revocation signatures" (SD-M30).
+
+  public_key_algorithms:
+    source: "§9.1 Table 18, lines 4638-4758; §12.4-§12.8"
+    rows:
+      - "1 RSA | key-part-rsa | sig-fields-rsa | pkesk-fields-rsa | SHOULD NOT generate"
+      - "2 RSA Encrypt-Only | key-part-rsa | - | pkesk-fields-rsa | MUST NOT generate"
+      - "3 RSA Sign-Only | key-part-rsa | sig-fields-rsa | - | MUST NOT generate"
+      - "16 Elgamal | key-part-elgamal | - | pkesk-fields-elgamal | MUST NOT generate"
+      - "17 DSA | key-part-dsa | sig-fields-dsa-ecdsa | - | MUST NOT generate"
+      - "18 ECDH | key-part-ecdh | - | pkesk-fields-ecdh |"
+      - "19 ECDSA | key-part-ecdsa | sig-fields-dsa-ecdsa | - |"
+      - "20 Reserved (formerly Elgamal Encrypt or Sign) | sig-fields-elgamal-reserved"
+      - "21 Reserved (X9.42) | none"
+      - "22 EdDSALegacy (deprecated) | key-part-eddsa-legacy | sig-fields-eddsa-legacy | - | v4 only"
+      - "23 Reserved (AEDH), 24 Reserved (AEDSA) | none"
+      - "25 X25519 | key-part-x25519 | - | pkesk-fields-x25519 | MUST implement"
+      - "26 X448 | key-part-x448 | - | pkesk-fields-x448 | SHOULD implement"
+      - "27 Ed25519 | key-part-ed25519 | sig-fields-ed25519 | - | MUST implement"
+      - "28 Ed448 | key-part-ed448 | sig-fields-ed448 | - | SHOULD implement"
+      - "100-110 Private or Experimental"
+    constrained_by:
+      - rfc-9580#R-0276
+      - rfc-9580#R-0277
+      - rfc-9580#R-0278
+      - rfc-9580#R-0283
+
+  symmetric_algorithms:
+    source: "§9.3 Table 21, lines 4910-4961"
+    rows:
+      - "0 Plaintext (secret keys only)"
+      - "1 IDEA | 2 TripleDES | 3 CAST5 (decrypt only, with warning)"
+      - "4 Blowfish (128-bit key) | 5, 6 Reserved"
+      - "7 AES-128 (MUST) | 8 AES-192 | 9 AES-256 (SHOULD)"
+      - "10 Twofish (256-bit key) | 11 Camellia-128 | 12 Camellia-192 | 13 Camellia-256"
+      - "100-110 Private | 253-255 Reserved (S2K usage collision)"
+    block_sizes: >-
+      Not given by the source (SD-M26). Derived (external specifications): 8 octets for IDEA,
+      TripleDES, CAST5 and Blowfish; 16 octets for AES, Twofish and Camellia. The CFB prefix and
+      the secret-key IV lengths depend on it.
+    constrained_by:
+      - rfc-9580#R-0287
+      - rfc-9580#R-0288
+      - rfc-9580#R-0289
+      - rfc-9580#R-0290
+      - rfc-9580#R-0291
+      - rfc-9580#R-0292
+
+  hash_algorithms:
+    source: "§9.5 Table 23, lines 4987-5034"
+    rows:
+      - "1 MD5 \"MD5\" | 2 SHA-1 \"SHA1\" | 3 RIPEMD-160 \"RIPEMD160\" | no v6 salt (not usable in v6)"
+      - "8 SHA2-256 \"SHA256\" salt 16 (MUST implement)"
+      - "9 SHA2-384 \"SHA384\" salt 24 | 10 SHA2-512 \"SHA512\" salt 32 (SHOULD)"
+      - "11 SHA2-224 \"SHA224\" salt 16 | 12 SHA3-256 \"SHA3-256\" salt 16 | 14 SHA3-512 \"SHA3-512\" salt 32"
+      - "0, 4-7, 13 Reserved | 100-110 Private"
+    constrained_by:
+      - rfc-9580#R-0297
+      - rfc-9580#R-0298
+      - rfc-9580#R-0299
+      - rfc-9580#R-0300
+      - rfc-9580#R-0301
+      - rfc-9580#R-0302
+      - rfc-9580#R-0303
+      - rfc-9580#R-0304
+      - rfc-9580#R-0305
+      - rfc-9580#R-0306
+    notes: Digest sizes are not tabulated; Derived from Table 24's final prefix octet (emsa-pkcs1-v1_5).
+
+  aead_algorithms:
+    source: "§9.6 Table 25, lines 5115-5136; §5.13.3-§5.13.5"
+    rows:
+      - "1 EAX | nonce 16 | tag 16"
+      - "2 OCB | nonce 15 | tag 16 | MUST implement"
+      - "3 GCM | nonce 12 | tag 16"
+      - "0 Reserved | 100-110 Private"
+    constrained_by:
+      - rfc-9580#R-0307
+      - rfc-9580#R-0308
+
+  compression_algorithms:
+    source: "§9.4 Table 22, lines 4963-4985"
+    rows:
+      - "0 Uncompressed (MUST) | 1 ZIP (SHOULD decompress) | 2 ZLIB (SHOULD) | 3 BZip2 | 100-110 Private"
+    constrained_by:
+      - rfc-9580#R-0293
+      - rfc-9580#R-0294
+      - rfc-9580#R-0295
+      - rfc-9580#R-0296
+
+  encrypted_message_versions:
+    source: "§10.3.2.1 Table 26, lines 5465-5487"
+    rows:
+      - "SED | - | v2 PKESK [RFC2440] | No"
+      - "SED | v4 SKESK | v3 PKESK | No"
+      - "v1 SEIPD | v4 SKESK | v3 PKESK | Yes"
+      - "v2 SEIPD | v6 SKESK | v6 PKESK | Yes"
+    constrained_by:
+      - rfc-9580#R-0337
+      - rfc-9580#R-0338
+      - rfc-9580#R-0339
+      - rfc-9580#R-0340
+      - rfc-9580#R-0341
+      - rfc-9580#R-0342
+      - rfc-9580#R-0343
+    notes: v2 PKESK is not defined in this document (SD-M24).
+
+  key_and_signature_versions:
+    source: "§10.3.2.2 Table 27, lines 5509-5526"
+    rows:
+      - "key 3 | signature 3 | OPS 3 | No"
+      - "key 4 | signature 3 | OPS 3 | No"
+      - "key 4 | signature 4 | OPS 3 | Yes"
+      - "key 6 | signature 6 | OPS 6 | Yes"
+    constrained_by:
+      - rfc-9580#R-0344
+      - rfc-9580#R-0345
+      - rfc-9580#R-0346
+      - rfc-9580#R-0347
+
+# ---------------------------------------------------------------------------
+# Source defects, ambiguities and absences that bear on the structures.
+source_defects:
+  - id: SD-M01
+    locator: "§5 Table 3 lines 1200-1205; §5.2.3.7 Table 5 lines 1985-1990"
+    finding: >-
+      Absence: Table 3 has no row for Packet Type IDs 15 and 16, and Table 5 no row for
+      Subpacket Type ID 36. §4.3 makes 15 and 16 critical; neither table says whether the gaps
+      are reserved or unassigned.
+  - id: SD-M02
+    locator: "§5.5.4 lines 3322-3323"
+    finding: >-
+      "the Key ID (which is only used in v3 PKESK packets; see Section 5.1.1)" contradicts the
+      Issuer Key ID subpacket (§5.2.3.12), the v3 OPS (§5.4) and the v3 Signature (§5.2.2), all
+      of which carry Key IDs.
+  - id: SD-M03
+    locator: "§5.2.2 line 1673; §5.2.3 lines 1738-1739; §5.5.3 lines 3227-3229"
+    finding: >-
+      The signature and secret-key formats say the algorithm-specific portion is "One or more
+      MPIs" / "multiprecision integers", but Ed25519, Ed448, X25519 and X448 fields are native
+      octet strings without MPI framing (§5.2.3.4, §5.2.3.5, §5.5.5.7-§5.5.5.10).
+  - id: SD-M04
+    locator: "§5.2.3.7 lines 1871-1878"
+    finding: >-
+      "Each subpacket consists of a subpacket header and a body. The header consists of:" then
+      lists the subpacket-specific data as a header item. §5.12 (lines 3893-3901) states the same
+      structure correctly ("and is followed by the subpacket specific data").
+  - id: SD-M05
+    locator: "§5.2.3.13 line 2166; §5.2.3.18 line 2255; §3.5"
+    finding: >-
+      Key Expiration Time and Signature Expiration Time are labelled "(4-octet time field)", the
+      §3.5 term for an absolute time since the epoch, but hold a relative number of seconds.
+  - id: SD-M06
+    locator: "§5.2.3.7 lines 1886-1896 vs §4.2.1.2 lines 1031-1037"
+    finding: >-
+      Subpacket lengths are said to be "encoded similarly to a 1-octet, 2-octet, or 5-octet
+      OpenPGP format packet header" but the decoding rule treats every first octet from 192 to
+      254 as a 2-octet length, where a packet header uses 192..223 only (224..254 being partial
+      lengths). First octets 224..254 in a subpacket length are thus 2-octet lengths 8384..16319,
+      a form that cannot be produced by the packet-header encoder; generators and parsers can
+      disagree.
+  - id: SD-M07
+    locator: "§5.2.3.31 lines 2580-2581, 2614-2616; Table 10"
+    finding: >-
+      Reason for Revocation is "used only in Key Revocation and Certification Revocation
+      signatures", omitting Subkey Revocation (0x28), while the same section says to "include it
+      in all Revocation Signatures" (R-0148); Table 10 marks codes 1-3 for "Key Revocation
+      signatures" only, so their use on 0x28 is not stated.
+  - id: SD-M08
+    locator: "§5.2.4 lines 2777-2781"
+    finding: >-
+      Third-Party Confirmation hashing uses 0x88 followed by "the 4-octet length", and the
+      source notes this "is a Legacy packet header for a Signature packet with the
+      length-of-length field set to zero". Length-type 0 denotes a 1-octet length; a 4-octet
+      length would be length-type 2 (0x8A). The constant is right (A.3.1-style test vectors are
+      absent for 0x50); the explanation is not.
+  - id: SD-M09
+    locator: "§5.2.4 lines 2753-2758; §10.1.3 lines 5246-5248"
+    finding: >-
+      Absence: the key hash prefix is given for version 4 (0x99) and version 6 (0x9B)
+      signatures only. Version 3 Subkey Binding signatures are permitted for v4 keys (§10.1.3)
+      and v3 key revocations exist, but the data a v3 signature hashes over a key is not stated.
+  - id: SD-M10
+    locator: "§5.2.1.14 line 1638; §5.2.4"
+    finding: >-
+      Absence: §5.2.4 does not say what a Timestamp signature (0x40) hashes; §5.2.3.33 implies it
+      can designate a target signature.
+  - id: SD-M11
+    locator: "§5.2.3.33 lines 2680-2691"
+    finding: >-
+      Absence: the Signature Target's N octets of "hash" have a stated size but no stated input;
+      the data hashed to identify the target signature is not defined.
+  - id: SD-M12
+    locator: "§3.7.2.1 Table 2 lines 852-859, 885-888 vs §5.5.3 lines 3263-3267, 3299-3300"
+    finding: >-
+      Table 2 gives LegacyCFB and MalleableCFB as CFB(..., secrets || check(secrets)), but for
+      version 3 keys the checksum "is stored in the clear", the MPI bit counts are not encrypted
+      and CFB resynchronizes per MPI. Table 2 does not distinguish v3.
+  - id: SD-M13
+    locator: "§13.7 lines 6528-6530, 6549-6551 vs §5.13.2 lines 4166-4170"
+    finding: >-
+      §13.7 speaks of "the final zero-octet chunk"; §5.13.2 defines a final authentication tag
+      over the empty string, not a chunk (the chunk index used for it is not stated, SD-M14).
+  - id: SD-M14
+    locator: "§5.13.2 lines 4166-4184"
+    finding: >-
+      Absence: the nonce of the final authentication tag is not stated. The test vectors (A.8.4,
+      A.9.4, A.10.4, A.11.4) use the IV with the chunk index equal to the number of chunks.
+  - id: SD-M15
+    locator: "§6.2.2.3 lines 4458-4460"
+    finding: >-
+      "deferring to the hash algorithm indicated in the Embedded Signature": a cleartext signed
+      message carries ordinary Signature packets, not an Embedded Signature subpacket; the hash
+      algorithm is the Signature packet's own field.
+  - id: SD-M16
+    locator: "§7.1 lines 4500-4502"
+    finding: >-
+      "One or more legacy Hash Armor Headers that MAY be included" contradicts optionality (and
+      §6.2.2.3's SHOULD NOT emit); it should read zero or more. A.6 has none.
+  - id: SD-M17
+    locator: "§6.2.1 Table 16 lines 4358-4374; §7.1 line 4497"
+    finding: >-
+      Absence: the cleartext header -----BEGIN PGP SIGNED MESSAGE----- is not in the Armor Header
+      Lines registry.
+  - id: SD-M18
+    locator: "§7.2 lines 4544-4547"
+    finding: >-
+      Dash-escaping prefixes "-" and " " but the reverse rule says to "strip the string -", with
+      the space lost (plain-text rendering); whether the following space is stripped is only
+      implied by the warning for "-" followed by a non-space.
+  - id: SD-M19
+    locator: "§11.5 lines 5827-5857"
+    finding: >-
+      The session key is "padded to an 8-octet granularity using the method described in
+      [RFC8018]", whose padding is 1 to 8 octets, yet the obfuscation paddings of 13, 14, 21
+      and 22 octets are permitted (R-0356, R-0357). The padding rule a decoder must accept is
+      thus wider than RFC 8018.
+  - id: SD-M20
+    locator: "§11.4 lines 5732-5746"
+    finding: >-
+      The KDF synopsis takes a point X = (x, y) and uses ZB = x; for Curve25519Legacy the shared
+      secret is a Montgomery-curve value whose wire form is native little-endian; the octet
+      string used as ZB for that curve is not stated.
+  - id: SD-M21
+    locator: "§9.5 lines 5098-5101"
+    finding: >-
+      SHA-1 exception "computing version 4 key fingerprints for purposes of the MDC in version 1
+      Symmetrically Encrypted and Integrity Protected Data packets" conflates two uses of SHA-1
+      (v4 fingerprints and the MDC); the MDC hashes plaintext, not fingerprints.
+  - id: SD-M22
+    locator: "Appendix A.7 lines 8084-8090; §5.9 lines 3803-3804"
+    finding: >-
+      The A.7 inline-signed message's Literal Data packet (decoded) has format u and LF (0x0A)
+      line endings, contrary to "Text data MUST be encoded with UTF-8" and "stored with <CR><LF>
+      text endings" (R-0213). The signature still verifies because 0x01 canonicalizes.
+  - id: SD-M23
+    locator: "§11.3.2 line 5712"
+    finding: "\"the 2-bit count octets\" should be the 2-octet count."
+  - id: SD-M24
+    locator: "§10.3.2.1 Table 26 line 5471"
+    finding: >-
+      Table 26 lists a "v2 PKESK [RFC2440]" row; this document defines only versions 3 and 6
+      (§5.1) and gives no v2 format.
+  - id: SD-M25
+    locator: "§5.2.3.22 line 2331"
+    finding: "\"Used in conjunction with Trust Signature packets\": Trust Signature is a subpacket (§5.2.3.21)."
+  - id: SD-M26
+    locator: "§9.3 Table 21; §5.5.3 lines 3223-3225; §5.7; §5.13.1"
+    finding: >-
+      Absence: cipher block sizes, on which the CFB IV, the SED/v1 SEIPD prefix and the secret-key
+      IV length depend, are not tabulated; only the AES-style examples (16 octets) and an 8-octet
+      example are given.
+  - id: SD-M27
+    locator: "Appendix A.3.1 line 7735; A.8.3 line 8219; A.9.3 line 8388; A.12 line 8824"
+    finding: >-
+      Annotation typos in the test vectors: "hash ago"; a stray "S" before 0x0060; the salt row
+      labelled 0x0005 (it starts at 0x0006); "m = 21" where m = 2^21 and encoded_m = 21.
+  - id: SD-M28
+    locator: "§5.1.1 lines 1289-1291"
+    finding: >-
+      The v3 PKESK's symmetric algorithm is described as the one "used to encrypt the v1 SEIPD
+      packet", although §5.1.1 itself says a v3 PKESK may precede a SED packet in historic data.
+  - id: SD-M29
+    locator: "§5.2.3.15 lines 2216-2222; Table 21 line 4943"
+    finding: >-
+      The Preferred AEAD Ciphersuites example octets "09 02 09 03 13 02" are said to include
+      Camellia-256 with OCB, but Camellia-256 is ID 13 decimal (0x0D); octet 0x13 is ID 19,
+      unassigned. The example should read 0D 02.
+  - id: SD-M30
+    locator: "§5.2.4 line 2763 vs Table 4 line 1520"
+    finding: "§5.2.4 names 0x20 \"Primary Key Revocation signatures\"; Table 4 names it Key Revocation Signature."
+
+# ---------------------------------------------------------------------------
+wiring:
+  wired: 413
+  total: 421
+  method: >-
+    Counted mechanically: the distinct rfc-9580#R-NNNN ids cited anywhere in this file, every one
+    of which exists in distilled/requirements.yaml.
+  not_wired:
+    - id: rfc-9580#R-0322
+      reason: "§10.1.5 sequence order (Public Key packet first); a grammar rule for protocol.yaml."
+    - id: rfc-9580#R-0324
+      reason: "§10.1.5 TPK SHOULD include a User ID packet; sequence composition, no field."
+    - id: rfc-9580#R-0329
+      reason: "§10.2 TSK SHOULD include self-signatures; sequence composition."
+    - id: rfc-9580#R-0330
+      reason: "§10.2 TSK MAY omit self-signatures; sequence composition."
+    - id: rfc-9580#R-0400
+      reason: "§12.11 guidance for extension proposals; binds no structure."
+    - id: rfc-9580#R-0401
+      reason: "§12.11 guidance for extension proposals; binds no structure."
+    - id: rfc-9580#R-0402
+      reason: "§13.1 SHA-1 collision detection is a hashing-implementation behaviour, not a field."
+    - id: rfc-9580#R-0414
+      reason: "§13.7 recommendation to users to migrate to AEAD; no field."
