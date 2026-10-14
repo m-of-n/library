@@ -9,7 +9,7 @@ reviewed_by: ""
 
 # Schema — derived
 
-`attestation-form.schema.json` (JSON Schema 2020-12) is **derived** by the library: the source
+`attestation-form.derived.schema.json` (JSON Schema 2020-12) is **derived** by the library: the source
 is a PDF form with no machine-readable schema. Every property has `x-locator` (page/section of the
 form) and, where one exists, `x-requirement` (the requirement id it renders).
 
