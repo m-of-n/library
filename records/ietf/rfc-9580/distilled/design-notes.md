@@ -1448,3 +1448,35 @@ Each item gives one line of evidence. The analysis is in the note cited.
       been run against an implementation (examples/README.md, "Not
       verified"). Fixtures for the D-1 email
       scenario cannot be checked against the source's own examples.
+
+    Then, found by the cross-check (pass 3):
+    - **Revoking a binding signature has no signature type.** §5.2.3.10 says
+      *"Revoking a binding signature effectively retires that subkey"*
+      (R-0091, line 2092). The Certification Revocation revokes only
+      *"an earlier User ID certification signature (Type IDs 0x10 through
+      0x13) or Direct Key signature (Type ID 0x1F)"* (lines 1629-1630), and
+      the Subkey Revocation *"is calculated directly on the primary key and
+      the subkey being revoked"* (lines 1621-1622). No type revokes a 0x18
+      itself (protocol.md, `subkey-revocation`). For R-O-02, the subkey is
+      retired either way, and only 0x28 is a defined way to do it.
+    - **The CRC24 MUST NOT list has gaps.** §6.1 forbids the footer for an
+      encrypted message ending in v2 SEIPD, an armored *"sequence of Signature
+      packets that only includes version 6 Signature packets"*, a v6 Transferable
+      Public Key and a keyring of only v6 keys (lines 4283-4294). It does not
+      cover an unencrypted v6 signed or one-pass-signed message, or a v6
+      Transferable Secret Key. These fall back to the SHOULD NOT at lines
+      4275-4277 and to the context test at lines 4279-4282. Whether "sequence
+      of Signature packets" includes a whole signed message is unstated
+      (protocol.yaml, `sign-message-inline` step 11).
+    - **A failing final AEAD tag falls under two rules.** *"if the
+      authentication tag fails to verify, the implementation MUST NOT attempt
+      to parse nor release decrypted data to the user, and it MUST halt with
+      an error"* (R-0406, lines 6518-6520). A truncated message, *"the final
+      zero-octet chunk and possibly (part of) some chunks before it are
+      missing"*, MAY have released authenticated chunks while streaming
+      (R-0408, lines 6526-6531). A missing final chunk shows up only as a
+      failing final tag. `state-machine.yaml` M13-T08 reads it as truncation
+      (OQ-40). `protocol.yaml` `seipd-v2-decryption` step 4 reads it as a tag
+      failure. Both release nothing further. They differ only on whether chunks
+      already released may stand. A native profile that streams has to pick
+      one reading.

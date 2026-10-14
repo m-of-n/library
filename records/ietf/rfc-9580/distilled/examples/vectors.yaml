@@ -2648,6 +2648,7 @@ vectors:
   derived:
     in_source: false
     outcome: 'malformed: ignored for validation, never reported as valid, and the rest of the stream is still processed'
+    note: a v4 version octet in front of a 32-octet fingerprint is also inconsistent in length, since a v4 fingerprint is 20 octets. Both readings make the signature malformed. No conforming v4 fingerprint exists for a v6 key, so the case cannot be isolated further
     construction: 'built in scratch by re-signing the A.6 canonical text with the A.4 primary secret key (Ed25519 is deterministic: re-signing the unchanged A.6 data reproduces the A.6 signature byte for byte, which was checked)'
     ed25519_verifies: true
     left16_matches_digest: true
@@ -2726,6 +2727,7 @@ vectors:
   derived:
     in_source: false
     outcome: 'valid: the unknown subpacket is skipped'
+    validator_note: 'validate.derived.py agrees: schema valid. Pass 3 gave the derived schema an opaque branch for an unassigned non-critical subpacket type (R-0081). Before, it reported hashed/2/type_id 40 as below the minimum of 100'
     construction: 'built in scratch by re-signing the A.6 canonical text with the A.4 primary secret key (Ed25519 is deterministic: re-signing the unchanged A.6 data reproduces the A.6 signature byte for byte, which was checked)'
     ed25519_verifies: true
     left16_matches_digest: true
@@ -2815,8 +2817,9 @@ vectors:
   in_source: false
   fidelity: constructed
   input:
-    description: a version 4 signature (2-octet counts, no salt) over the A.6 text made by the v6 A.3 primary key
-    signature_packet_hex: c27304011b0a002905826398a363222106cb186c4f0609a697e4d52dfa6c722b0c1f1e27c18a56708f6525ec27bad9acc90000d6921b49fc3028dce45144da6cd8cfa0ee911d6e44d77446acba918b361adc69e8a805a272714965d8577579c2ea75ef0fc35a0b8b8b3761cc54f4d3f8b1f9c8000c
+    description: a version 4 signature (2-octet counts, no salt) over the A.6 text made by the v6 A.3 primary key; its only hashed subpacket is the critical Signature Creation Time 6398a363, and it carries no issuer subpacket
+    signature_packet_sha256: 1de17522f45869bc616a6cbc9f46c337518c08cb1901197e89c1e72d0f52821d
+    signature_packet_hex: c25004011b0a000605826398a3630000a8fd14d3576b5037a887dcbc36cfe5d1126180c04c1ae555d790d174a91f97f93b153e392fd287f16ae83c97c8bef66e74579335154a3973cd5391d1ff1f5cc8e60b
   expected_basis: rule-quoted
   rule_text:
   - A signature with a version other than 6, made by a version 6 key
@@ -2830,8 +2833,10 @@ vectors:
   derived:
     in_source: false
     outcome: ignored for validation
-    construction: 'built in scratch by re-signing the A.6 canonical text with the A.4 primary secret key (Ed25519 is deterministic: re-signing the unchanged A.6 data reproduces the A.6 signature byte for byte, which was checked)'
+    construction: 'built in scratch by signing SHA2-512(A.6 canonical text || 04 01 1b 0a 0006 05 82 6398a363 || 04 ff 0000000c) with the A.4 primary secret key; left 16 bits a8fd'
     ed25519_verifies: true
+    left16_matches_digest: true
+    pass3_rebuild: 'pass 3 rebuilt this vector. The pass-1 bytes carried a hashed Issuer Fingerprint with key version 6 inside a version 4 signature, which is a second defect on its own (R-0159, R-0160: malformed). A v4 signature cannot name a v6 key conformantly: a v4 Issuer Fingerprint must carry version 4 (R-0159), and an Issuer Key ID must not be used for a key newer than v4 (R-0103). So the issuer subpackets are left out, and the only defect is the one under test. validate.derived.py: schema valid. It cannot see this defect, because it needs the signing key'
 - id: PGP-0622-C01
   source:
     locator: §6.2.2.3
@@ -2876,6 +2881,7 @@ vectors:
   derived:
     in_source: false
     outcome: declined, although the signature would verify
+    validator_note: 'validate.derived.py reports ''non-conformant Hash header ... MUST decline (§6.2.2.3, R-0259)''. It checks each comma-separated item against the Table 23 Text Names (pass 3; before it checked only the ''Hash: '' prefix)'
     armor_headers_seen:
     - 'Hash: SHA512; see below'
     ed25519_verifies_over_reconstructed_text: true
@@ -3221,8 +3227,8 @@ vectors:
   in_source: false
   fidelity: constructed
   input:
-    description: Literal Data packet framed e8 (256 octets, partial) then 10 (16 octets)
-    packet_hex: cbe8000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000
+    description: 'Literal Data packet framed e8 (256 octets, partial) then 10 (16 octets); the 272-octet body is format ''b'', empty filename, date 0, then 266 zero octets'
+    packet_hex: cbe8620000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000
   expected_basis: rule-quoted
   rule_text:
   - The first partial length MUST be at least 512 octets long.
@@ -3233,6 +3239,7 @@ vectors:
     in_source: false
     outcome: 'malformed: the first partial length is 256'
     framing_parses: true
+    pass3_rebuild: 'pass 3 rebuilt the body. In the pass-1 bytes the body was all zero octets, so its format octet 0x00 was a second defect. validate.derived.py now reports only the partial-length error: parts[0] 256 is below the minimum of 512'
 - id: PGP-0421-C04
   source:
     locator: §4.2.1.4
@@ -3241,8 +3248,8 @@ vectors:
   in_source: false
   fidelity: constructed
   input:
-    description: 'a Signature packet framed with a 512-octet partial body then a zero-length final header: c2 e9 || 512 zero octets || 00'
-    packet_sha256: a30d99c068340b78cb5809dc821f0f165d0f6f48c9bdce55acd8602bf43802cf
+    description: 'a Signature packet framed with a 512-octet partial body then a zero-length final header: c2 e9 || 512-octet body || 00. The body is the A.6 signature body with its unhashed area grown to 360 octets: unhashed length 00000168, then one Notation Data subpacket c0 a6 14 || flags 00000000 || name length 000f || value length 014e || ''pad@example.org'' || 334 zero octets. The unhashed area is not hashed, so the A.6 signature still verifies'
+    packet_sha256: ebeb0e1f59dd1dad78fe32d1cb1ef6a07a415a2b8276f9f71a41aa71d5a7c5ab
     total_length: 515
   expected_basis: rule-quoted
   rule_text:
@@ -3253,6 +3260,7 @@ vectors:
   derived:
     in_source: false
     outcome: 'malformed: only Literal, Compressed and encrypted data packets may use partial lengths'
+    pass3_rebuild: 'pass 3 rebuilt the body. In the pass-1 bytes it was 512 zero octets, which is also an unknown signature version 0. validate.derived.py now reports only the partial-length error: type_id 2 is not one of [8, 9, 11, 18]'
 - id: PGP-0421-C05
   source:
     locator: §4.2.1.4
@@ -3558,8 +3566,8 @@ vectors:
   in_source: false
   fidelity: constructed
   input:
-    description: the A.5 primary Secret Key packet with S2K usage changed from 253 (AEAD) to 254 (CFB), all else unchanged (Argon2 specifier kept)
-    packet_hex: c5820663877fe31b00000020f94da7bb48d60a61e567706a6587d0331999bb9d891a08242ead84543df895a3fe26090214045d6fd71c9e096d1eb6917b6e6e1eecae010415b4a8a9274fabe632f875a70659202178258fa484d88b27f220e3d2de0203ca0f1feecb6b775381e3e2d9b1485c22338ca551e09a263f22eb4992e9677a8058
+    description: 'the A.5 primary key re-protected under S2K usage 254 (CFB), with the A.5 Argon2 specifier kept and the usage-254 layout: fe || count 26 || cipher 09 || S2K length 14 || 045d6fd71c9e096d1eb6917b6e6e1eecae010415 || 16-octet IV b4a8a9274fabe632f875a70659202100 || AES-256-CFB(A.4 secret || SHA-1(A.4 secret)) under the A.5.1 Argon2 output'
+    packet_hex: c5860663877fe31b00000020f94da7bb48d60a61e567706a6587d0331999bb9d891a08242ead84543df895a3fe260914045d6fd71c9e096d1eb6917b6e6e1eecae010415b4a8a9274fabe632f875a70659202100679f166edb7159c0a740ac7cb1b888b1e305dc7baacc5820ea9934f56cfc55296907b1f049231a783ad495ba189880fbd8deb4d2
   expected_basis: rule-quoted
   rule_text:
   - An implementation MUST NOT create and MUST reject as malformed any Secret Key packet where the S2K usage octet is not AEAD (253) and the S2K Specifier Type is Argon2.
@@ -3569,6 +3577,7 @@ vectors:
   derived:
     in_source: false
     outcome: rejected as malformed
+    pass3_rebuild: 'pass 3 rebuilt this vector. The pass-1 bytes changed only the usage octet and kept the AEAD layout. Read as usage 254, the AEAD octet 02 then becomes the S2K length, the S2K Specifier becomes 14 04 (type 20, unassigned), and the count 38 no longer matches the fields. So no Argon2 specifier was present at the usage-254 position, and R-0018 was not exercised. The rebuilt packet is well formed for usage 254: count 38 = 1 + 1 + 20 + 16, and the CFB plaintext decrypts with a valid SHA-1. Its only defect is Argon2 under a usage other than 253. validate.derived.py: the schema requires s2k_usage 253 for an Argon2 S2K'
 - id: PGP-0553-C01
   source:
     locator: §5.5.3
@@ -3577,8 +3586,8 @@ vectors:
   in_source: false
   fidelity: constructed
   input:
-    description: the A.5 primary Secret Key packet (v6) with S2K usage 255 (MalleableCFB)
-    packet_hex: c5820663877fe31b00000020f94da7bb48d60a61e567706a6587d0331999bb9d891a08242ead84543df895a3ff26090214045d6fd71c9e096d1eb6917b6e6e1eecae010415b4a8a9274fabe632f875a70659202178258fa484d88b27f220e3d2de0203ca0f1feecb6b775381e3e2d9b1485c22338ca551e09a263f22eb4992e9677a8058
+    description: 'the A.4 primary key (v6) protected under S2K usage 255 (MalleableCFB) with the usage-255 layout: ff || count 1c || cipher 09 || the A.9.1 Iterated and Salted S2K 0308a5ae579d1fc5d82bff || 16-octet IV b4a8a9274fabe632f875a70659202100 || AES-256-CFB(A.4 secret || checksum 0da7). The key is the PGP-0371-C01 32-octet S2K output for ''password'''
+    packet_hex: c56a0663877fe31b00000020f94da7bb48d60a61e567706a6587d0331999bb9d891a08242ead84543df895a3ff1c090308a5ae579d1fc5d82bffb4a8a9274fabe632f875a7065920210002ab91c24e2e15a9e4b839bd77882a5c218f3ab901784ef4cb56068cb3398959a689
   expected_basis: rule-quoted
   rule_text:
   - A version 6 packet MUST NOT use the value 255 (MalleableCFB).
@@ -3589,6 +3598,7 @@ vectors:
   derived:
     in_source: false
     outcome: rejected
+    pass3_rebuild: 'pass 3 rebuilt this vector. The pass-1 bytes changed only the usage octet of the A.5 packet. Under usage 255 there is no AEAD octet and no S2K length, so 02 was read as the S2K type (reserved) and the packet ran out before its IV. It was malformed in structure before R-0191 applied. The rebuilt packet follows the usage-255 layout: count 28 = 1 + 11 + 16, and the CFB plaintext decrypts to the A.4 secret with a matching checksum. It uses Iterated and Salted, not Argon2, so that R-0018 is not hit as well. validate.derived.py: s2k_usage 255 is not one of [0, 253, 254] for a v6 key'
 - id: PGP-053221-C01
   source:
     locator: §5.2.3.21

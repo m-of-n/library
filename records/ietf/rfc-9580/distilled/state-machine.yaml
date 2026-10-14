@@ -46,14 +46,37 @@ note: >-
   of the Signature packet in hand; key.created is the key creation time
   field of a key packet. := is assignment. tag(p) is the Packet Type ID of
   packet p. Hexadecimal values are written 0xNN. Sets are written in
-  braces; {} is the empty set.
+  braces; {} is the empty set. The short field names map onto the field
+  names of messages.yaml as follows: sig.version, key.version = version;
+  sig.type = signature-type; sig.pk_algo = public-key-algorithm;
+  sig.hash_algo = hash-algorithm (signature-v3, signature-v4,
+  signature-v6); the salt size octet = salt-length; the hashed-material
+  length octet (v3) = hashed-length; the left-16-bits field = hash-left-16;
+  key.created, subkey.created = creation-time (public-key-v3, public-key-v4,
+  public-key-v6); OPS.nested_flag and the nested_flag of an ops frame =
+  nested (ops-v3, ops-v6); the sig_type, hash_algo, pk_algo, key_id and
+  fingerprint of an ops frame = signature-type, hash-algorithm,
+  public-key-algorithm, key-id and fingerprint of the OPS; the S2K usage
+  octet = s2k-usage (secret-key); c of M13 = chunk-size (seipd-v2); t, p and
+  encoded_m of M14 = t, p and encoded-m (s2k-argon2).
+
+  From and to. from names one state, several states joined by 'or', 'any
+  state', or 'any non-final state' (every state not in terminal_states),
+  optionally 'other than' a named state. to 'same state' is a self-loop on
+  each from state; a to of several states joined by 'or' is chosen by the
+  guard.
 
   Triggers. A packet trigger is named by the source's own shorthand from
   Table 3 (section 5): PKESK, SIG, SKESK, OPS, SECKEY, PUBKEY, SECSUBKEY,
-  COMP, SED, MARKER, LIT, TRUST, UID, PUBSUBKEY, UAT, SEIPD, PADDING. For the
-  cross-check pass these map one to one onto the packet names in
-  messages.yaml (Public Key Encrypted Session Key Packet and so on). Every
+  COMP, SED, MARKER, LIT, TRUST, UID, PUBSUBKEY, UAT, SEIPD, PADDING. One
+  shorthand covers every version of its packet, so it maps onto one or more
+  messages.yaml entries; messages_yaml on each packet event (and on the
+  stream events next_octet and text_line) names them. Every
   other trigger is a named event defined under events_used with a locator.
+  A trigger written 'X or Y' (or 'X, Y or Z') fires on any of the named
+  events. A trigger written 'any packet event not accepted by another
+  transition from the current state' fires on each packet event above for
+  which no other transition from the current state has a guard that holds.
   completion is the UML completion event: the activity of the source state
   has finished and the guards choose the branch. ignorable(p) holds for
   MARKER, PADDING, an unknown non-critical packet (Type IDs 40 to 63), and
@@ -81,95 +104,114 @@ events_used:
   # ---------------------------------------------------------------- packets
   - name: 'PKESK'
     kind: 'packet'
+    messages_yaml: ['pkesk-v3', 'pkesk-v6']
     locator: '§5.1'
     quote: 'Zero or more PKESK packets and/or SKESK packets (Section 5.3) precede an encryption container (that is, a Symmetrically Encrypted and Integrity Protected Data (SEIPD) packet or -- for historic data -- a Symmetrically Encrypted Data (SED) packet), which holds an Encrypted Message.'
     note: 'Public Key Encrypted Session Key Packet, Type ID 1, versions 3 and 6.'
   - name: 'SIG'
     kind: 'packet'
+    messages_yaml: ['signature-v3', 'signature-v4', 'signature-v6']
     locator: '§5.2'
     quote: 'A Signature packet describes a binding between some public key and some data.'
     note: 'Signature Packet, Type ID 2, versions 3, 4 and 6. Where a guard names a signature type it is the Signature Type ID of Table 4.'
   - name: 'SKESK'
     kind: 'packet'
+    messages_yaml: ['skesk-v4', 'skesk-v6']
     locator: '§5.3'
     quote: 'The Symmetric Key Encrypted Session Key (SKESK) packet holds the symmetric key encryption of a session key used to encrypt a message.'
     note: 'Type ID 3, versions 4 and 6.'
   - name: 'OPS'
     kind: 'packet'
+    messages_yaml: ['ops-v3', 'ops-v6']
     locator: '§5.4'
     quote: 'The One-Pass Signature packet precedes the signed data and contains enough information to allow the receiver to begin calculating any hashes needed to verify the signature.'
     note: 'One-Pass Signature Packet, Type ID 4, versions 3 and 6.'
   - name: 'SECKEY'
     kind: 'packet'
+    messages_yaml: ['secret-key']
     locator: '§5.5.1.3'
     quote: 'A Secret Key packet contains all the information that is found in a Public Key packet, including the public key material, but it also includes the secret key material after all the public key fields.'
     note: 'Type ID 5.'
   - name: 'PUBKEY'
     kind: 'packet'
+    messages_yaml: ['public-key-v3', 'public-key-v4', 'public-key-v6']
     locator: '§5.5.1.1'
     quote: 'A Public Key packet starts a series of packets that forms an OpenPGP Key (sometimes called an OpenPGP certificate).'
     note: 'Type ID 6, versions 2, 3, 4 and 6.'
   - name: 'SECSUBKEY'
     kind: 'packet'
+    messages_yaml: ['secret-key']
     locator: '§5.5.1.4'
     quote: 'A Secret Subkey packet (Type ID 7) is the subkey analog of the Secret Key packet and has exactly the same format.'
   - name: 'COMP'
     kind: 'packet'
+    messages_yaml: ['compressed-data']
     locator: '§5.6'
     quote: 'A Compressed Data packet''s body contains data that is a compression of a series of OpenPGP packets.'
     note: 'Compressed Data Packet, Type ID 8.'
   - name: 'SED'
     kind: 'packet'
+    messages_yaml: ['symmetrically-encrypted-data']
     locator: '§5.7'
     quote: 'This packet is obsolete.  An implementation MUST NOT create this packet.'
     note: 'Symmetrically Encrypted Data Packet, Type ID 9.'
   - name: 'MARKER'
     kind: 'packet'
+    messages_yaml: ['marker']
     locator: '§5.8'
     quote: 'Such a packet MUST be ignored when received.'
     note: 'Marker Packet, Type ID 10, body 0x50 0x47 0x50.'
   - name: 'LIT'
     kind: 'packet'
+    messages_yaml: ['literal-data']
     locator: '§5.9'
     quote: 'A Literal Data packet contains the body of a message; that is, data that is not to be further interpreted.'
     note: 'Type ID 11.'
   - name: 'TRUST'
     kind: 'packet'
+    messages_yaml: ['trust']
     locator: '§5.10'
     quote: 'The Trust packet is used only within keyrings and is not normally exported.'
     note: 'Type ID 12; format implementation-defined.'
   - name: 'UID'
     kind: 'packet'
+    messages_yaml: ['user-id']
     locator: '§5.11'
     quote: 'A User ID packet consists of UTF-8 text that is intended to represent the name and email address of the keyholder.'
     note: 'Type ID 13.'
   - name: 'PUBSUBKEY'
     kind: 'packet'
+    messages_yaml: ['public-key-v4', 'public-key-v6']
     locator: '§5.5.1.2'
     quote: 'A Public Subkey packet (Type ID 14) has exactly the same format as a Public Key packet, but it denotes a subkey.'
   - name: 'UAT'
     kind: 'packet'
+    messages_yaml: ['user-attribute']
     locator: '§5.12'
     quote: 'Except as noted, a User Attribute packet may be used anywhere that a User ID packet may be used.'
     note: 'User Attribute Packet, Type ID 17.'
   - name: 'SEIPD'
     kind: 'packet'
+    messages_yaml: ['seipd-v1', 'seipd-v2']
     locator: '§5.13'
     quote: 'The SEIPD packet contains integrity-protected and encrypted data.'
     note: 'Type ID 18, versions 1 and 2.'
   - name: 'PADDING'
     kind: 'packet'
+    messages_yaml: ['padding']
     locator: '§5.14'
     quote: 'The Padding packet contains random data and can be used to defend against traffic analysis (see Section 13.11) on v2 SEIPD messages (see Section 5.13.2) and Transferable Public Keys (see Section 10.1).'
     note: 'Type ID 21.'
   - name: 'unknown_critical_packet'
     kind: 'event'
+    messages_yaml: ['packet-type-0-reserved', 'packet-type-15-16-unlisted', 'packet-type-19-reserved-mdc', 'packet-type-20-reserved', 'packet-type-22-39-unassigned-critical']
     locator: '§4.3'
     quote: 'Packets with Type IDs from 0 to 39 are critical.  Packets with Type IDs from 40 to 63 are non-critical.'
     basis: inferred
     inferred_reason: 'The source defines the partition, not an event. Raised by M01 for a complete packet whose Type ID is in 0 to 39 and is not one of the packets above: 22 to 39 (unassigned), the reserved IDs 0, 19 and 20, and 15 and 16, which Table 3 does not list (see OQ-02).'
   - name: 'unknown_noncritical_packet'
     kind: 'event'
+    messages_yaml: ['packet-type-40-59-unassigned-non-critical', 'packet-type-60-63-private']
     locator: '§4.3'
     quote: 'On the other hand, an unknown non-critical packet MUST be ignored.'
     basis: inferred
@@ -177,6 +219,7 @@ events_used:
   # ---------------------------------------------------------------- stream
   - name: 'next_octet'
     kind: 'event'
+    messages_yaml: ['packet-header-openpgp', 'packet-header-legacy', 'packet-length-openpgp']
     locator: '§4.2'
     quote: 'The first octet of the packet denotes the format of the rest of the header, and it encodes the Packet Type ID, indicating the type of the packet (see Section 5).'
     basis: inferred
@@ -186,7 +229,7 @@ events_used:
     locator: '§10.3.1'
     quote: 'The packet boundaries found in the series of octets are expected to align with the length of the unwrapped octet stream.'
     basis: inferred
-    inferred_reason: 'The end of the octet stream being parsed: the end of a file or transport object at top level, or the end of the unwrapped octet stream of a Compressed Data, SED or SEIPD packet.'
+    inferred_reason: 'The end of the input being parsed: the end of a file or transport object at top level, or the end of the unwrapped octet stream of a Compressed Data, SED or SEIPD packet (M01 to M04); the end of the encrypted data in the body of the SED or SEIPD packet (M12, M13); the end of the text input (M15, M16).'
   - name: 'completion'
     kind: 'event'
     locator: 'none'
@@ -206,6 +249,7 @@ events_used:
     inferred_reason: 'Raised to a parent M02 instance when the child instance reaches rejected, when decompression fails, or when M11, M12 or M13 ends in an error state.'
   - name: 'text_line'
     kind: 'event'
+    messages_yaml: ['ascii-armor', 'cleartext-signed-message']
     locator: '§6.2, §7.1'
     quote: 'Note that all of these Armor Header Lines are to consist of a complete line.'
     basis: inferred
@@ -248,6 +292,25 @@ events_used:
     quote: 'Within any encrypted container, any Compressed Data packet (Section 5.6) where there is a decompression failure.'
     basis: inferred
     inferred_reason: 'The decompressor fails on the body of a COMP packet. It is not a trigger of its own: M02 receives it as unwrap_rejected (M02-T16), whose actions single out a decompression failure inside an encrypted container.'
+  - name: 'stream_malformed'
+    kind: 'event'
+    locator: '§4.1, §10.3.1'
+    quote: 'If an implementation encounters a packet whose header length indicates that it would extend beyond the boundaries of the unwrapped octet stream, the implementation MUST reject that packet as malformed and unusable.'
+    basis: inferred
+    inferred_reason: 'Raised by M01 to its sequence machine (M02, M03 or M04) when M01 reaches malformed: the stream cannot be cut into packets, so no further packet or end_of_stream reaches the sequence machine. Added in pass 3: without it a sequence machine had no transition for a framing failure.'
+  # ---------------------------------------------------------------- status
+  - name: 'primary_status_change'
+    kind: 'event'
+    locator: '§5.2.1.11'
+    quote: 'A revoked key is not to be used.'
+    basis: inferred
+    inferred_reason: 'Raised to an M07 instance when the M06 state of its primary key changes (by a clock event, a new self-signature or a revocation). The source gives no event; that a subkey follows its primary is our reading (OQ-24).'
+  - name: 'key_export_or_import'
+    kind: 'event'
+    locator: '§5.2.3.19'
+    quote: 'Thus, when an implementation prepares a user''s copy of a key for transport to another user (this is the process of "exporting" the key), any local certification signatures are deleted from the key.'
+    basis: inferred
+    inferred_reason: 'An implementation prepares a key for transport (export) or receives a transported key (import). The source describes the processes; the event is ours.'
 
 machines:
   # ======================================================================
@@ -302,7 +365,7 @@ machines:
         meaning: 'End of stream at a packet boundary.'
         basis: inferred
       - name: 'malformed'
-        meaning: 'The stream cannot be cut into packets; parsing stops.'
+        meaning: 'The stream cannot be cut into packets; parsing stops and stream_malformed is raised to the sequence machine.'
         basis: inferred
         kind: 'error'
     transitions:
@@ -327,7 +390,7 @@ machines:
           - locator: '§4.2'
             quote: 'The Legacy packet format MAY be used when consuming packets to facilitate interoperability and accessing archived data.'
         basis: stated
-        constrained_by: ['rfc-9580#R-0023', 'rfc-9580#R-0024']
+        constrained_by: ['rfc-9580#R-0023']
         note: 'A consumer that does not implement the Legacy format takes M01-T03 instead (inferred).'
       - id: 'M01-T03'
         from: 'at-boundary'
@@ -414,7 +477,7 @@ machines:
           - locator: '§4.2.2'
             quote: 'An implementation MAY interpret an indeterminate length Legacy format packet in order to deal with historic data or data generated by a legacy system that predates support for [RFC2440].'
         basis: stated
-        constrained_by: ['rfc-9580#R-0030', 'rfc-9580#R-0031']
+        constrained_by: ['rfc-9580#R-0031']
       - id: 'M01-T11'
         from: 'legacy-length'
         to: 'malformed'
@@ -556,8 +619,8 @@ machines:
       - 'From openpgp-length, T05 to T08 partition o1 into 0-191, 192-223, 224-254, 255.'
       - 'From partial-next-length, T13 and T14 partition the next length octet the same way.'
       - 'From packet-complete, T20 to T22 partition on whether tag is implemented and its criticality; T23 overrides when a subfield overruns.'
-    note: 'Framing is the same for the top-level stream and for every unwrapped stream (§10.3.1). Legacy-format COMP and LIT packets MAY be interpreted (R-0205, R-0221) but MUST NOT be generated (R-0203, R-0204, R-0219, R-0220).'
-    constrained_by: ['rfc-9580#R-0203', 'rfc-9580#R-0204', 'rfc-9580#R-0205', 'rfc-9580#R-0219', 'rfc-9580#R-0220', 'rfc-9580#R-0221', 'rfc-9580#R-0025']
+    note: 'Framing is the same for the top-level stream and for every unwrapped stream (§10.3.1). Legacy-format COMP and LIT packets MAY be interpreted (R-0205, R-0221) but MUST NOT be generated (R-0203, R-0204, R-0219, R-0220). Producer rules on the Legacy format bind generation and redistribution only: it SHOULD NOT be used for new data (R-0024), Legacy packets MAY be redistributed as they are or transformed (R-0025), and an indeterminate length MUST NOT be generated (R-0030).'
+    constrained_by: ['rfc-9580#R-0203', 'rfc-9580#R-0204', 'rfc-9580#R-0205', 'rfc-9580#R-0219', 'rfc-9580#R-0220', 'rfc-9580#R-0221', 'rfc-9580#R-0024', 'rfc-9580#R-0025', 'rfc-9580#R-0030']
 
   # ======================================================================
   - id: 'M02'
@@ -698,8 +761,9 @@ machines:
       - id: 'M02-T06'
         from: 'any non-final state'
         to: 'rejected'
-        trigger: 'any known critical packet not accepted by another transition from the current state (for example PUBKEY, SECKEY, PUBSUBKEY, SECSUBKEY, UID or UAT anywhere; LIT, SIG or OPS in esk-sequence; a second message after expect-end)'
+        trigger: 'any packet event not accepted by another transition from the current state'
         guard: 'always'
+        note: 'For example PUBKEY, SECKEY, PUBSUBKEY, SECSUBKEY, UID or UAT anywhere; LIT, SIG or OPS in esk-sequence; a packet beginning a second message in expect-end. MARKER, PADDING, TRUST and the unknown packets have transitions of their own (M02-T01 to M02-T05).'
         source:
           - locator: '§10'
             quote: 'When consuming a sequence of OpenPGP packets, if an implementation encounters a critical packet of an inappropriate type according to the relevant grammar, the implementation MUST reject the sequence with an error.'
@@ -734,7 +798,7 @@ machines:
           - locator: '§5.4'
             quote: 'A zero value indicates that the next packet is another One-Pass Signature packet that describes another signature to be applied to the same message data.'
         basis: stated
-        constrained_by: ['rfc-9580#R-0184', 'rfc-9580#R-0164']
+        constrained_by: ['rfc-9580#R-0164']
         unspecified:
           - 'An OPS with nested flag 0 followed by anything other than another OPS (OQ-08).'
       - id: 'M02-T09'
@@ -747,7 +811,7 @@ machines:
           - locator: '§10.3'
             quote: 'Signed Message:  Signature Packet, OpenPGP Message | One-Pass Signed Message.'
         basis: stated
-        constrained_by: ['rfc-9580#R-0311']
+        constrained_by: ['rfc-9580#R-0311', 'rfc-9580#R-0178', 'rfc-9580#R-0179', 'rfc-9580#R-0180']
         note: 'A malformed or unknown SIG still occupies its place in the grammar; it is only ignored for validation (R-0178 to R-0180).'
       - id: 'M02-T10'
         from: 'expect-message'
@@ -836,7 +900,7 @@ machines:
         from: 'message-done'
         to: 'expect-signature'
         trigger: 'completion'
-        guard: 'stack top is an ops frame.'
+        guard: 'stack top is an ops frame pushed by this instance.'
         source:
           - locator: '§5.4'
             quote: 'It allows the Signature packet to be placed at the end of the message so that the signer can compute the entire signed message in one pass.'
@@ -845,7 +909,7 @@ machines:
         from: 'message-done'
         to: 'message-done'
         trigger: 'completion'
-        guard: 'stack top is a prefix frame.'
+        guard: 'stack top is a prefix frame pushed by this instance.'
         actions: ['pop it; invoke M05 on its SIG with the frame''s hash context; record the result']
         source:
           - locator: '§10.3'
@@ -896,6 +960,8 @@ machines:
         basis: inferred
         inferred_reason: 'The grammar makes the Corresponding Signature Packet part of the production; no rule says what a consumer does with a stream that ends before it (R-0311 concerns a packet of an inappropriate type, not a missing one). Rejection is the grammar reading, as in M02-T25.'
         constrained_by: ['rfc-9580#R-0311']
+        unspecified:
+          - 'What makes a Signature packet the Corresponding Signature Packet of an OPS, and the consumer action when it is missing (OQ-38).'
       - id: 'M02-T23'
         from: 'expect-padding-or-end'
         to: 'expect-end'
@@ -923,10 +989,22 @@ machines:
         basis: inferred
         inferred_reason: 'An empty stream, a stream of only signatures or OPS packets, and an ESK sequence with no encrypted data are not OpenPGP Messages under the grammar.'
         constrained_by: ['rfc-9580#R-0311']
+      - id: 'M02-T26'
+        from: 'any non-final state'
+        to: 'rejected'
+        trigger: 'stream_malformed'
+        guard: 'always'
+        actions: ['raise unwrap_rejected to the parent instance, if any']
+        source:
+          - locator: '§10.3.1'
+            quote: 'If an implementation encounters a packet whose header length indicates that it would extend beyond the boundaries of the unwrapped octet stream, the implementation MUST reject that packet as malformed and unusable.'
+        basis: inferred
+        inferred_reason: 'Added in pass 3. M01 stops on a stream it cannot cut into packets; the source states that the packet is malformed and unusable, and rejecting the sequence that contains it is ours.'
+        constrained_by: ['rfc-9580#R-0021', 'rfc-9580#R-0335']
     error_states: ['rejected']
     terminal_states: ['accepted', 'rejected']
     guard_coverage:
-      - 'message-done: T17, T18 and T19/T20 partition on the stack top (ops frame, prefix frame, none of this instance''s frames); T19 and T20 partition on goal.'
+      - 'message-done: T17, T18 and T19/T20 partition on the stack top (an ops frame of this instance, a prefix frame of this instance, no frame of this instance: a child instance shares its parent''s stack and must not close the parent''s frames); T19 and T20 partition on goal.'
       - 'expect-message: every packet type has a transition: LIT T07, OPS T08, SIG T09, COMP T10/T11, PKESK/SKESK T12, SEIPD/SED T14, ignorable T01 to T04, unknown critical T05, anything else T06.'
     note: 'The SIG and OPS packets that are malformed or of an unknown version keep their grammatical place; M05 ignores them without halting the stream (§5.2.5). SED handling (reject, or process with a warning) is in M12.'
 
@@ -968,13 +1046,16 @@ machines:
       - id: 'M03-T02'
         from: 'start or signatures'
         to: 'same state'
-        trigger: 'MARKER, PADDING or unknown_noncritical_packet'
+        trigger: 'MARKER, PADDING, TRUST or unknown_noncritical_packet'
         guard: 'always'
         source:
           - locator: '§10.4'
             quote: 'In addition, a Marker packet (Section 5.8) and a Padding packet (Section 5.14) can appear anywhere in the sequence.'
+          - locator: '§5.10'
+            quote: 'Trust packets SHOULD NOT be emitted to output streams that are transferred to other users, and they SHOULD be ignored on any input other than local keyring files.'
         basis: stated
-        constrained_by: ['rfc-9580#R-0209', 'rfc-9580#R-0236', 'rfc-9580#R-0033']
+        constrained_by: ['rfc-9580#R-0209', 'rfc-9580#R-0236', 'rfc-9580#R-0033', 'rfc-9580#R-0225']
+        note: 'TRUST added in pass 3 so that M03 ignores it as M02-T04 does and as OQ-05 says; the same tension with the 10 rule on known but unexpected packets applies (OQ-05).'
       - id: 'M03-T03'
         from: 'signatures'
         to: 'accepted'
@@ -992,16 +1073,27 @@ machines:
       - id: 'M03-T05'
         from: 'start or signatures'
         to: 'rejected'
-        trigger: 'unknown_critical_packet, or any known critical packet other than SIG, MARKER and PADDING'
+        trigger: 'unknown_critical_packet, or any packet event not accepted by another transition from the current state'
         guard: 'always'
         source:
           - locator: '§10'
             quote: 'When consuming a sequence of OpenPGP packets, if an implementation encounters a critical packet of an inappropriate type according to the relevant grammar, the implementation MUST reject the sequence with an error.'
         basis: stated
         constrained_by: ['rfc-9580#R-0311', 'rfc-9580#R-0032']
+      - id: 'M03-T06'
+        from: 'start or signatures'
+        to: 'rejected'
+        trigger: 'stream_malformed'
+        guard: 'always'
+        source:
+          - locator: '§10.3.1'
+            quote: 'If an implementation encounters a packet whose header length indicates that it would extend beyond the boundaries of the unwrapped octet stream, the implementation MUST reject that packet as malformed and unusable.'
+        basis: inferred
+        inferred_reason: 'Added in pass 3. M01 stops on a stream it cannot cut into packets; the source states that the packet is malformed and unusable, and rejecting the sequence that contains it is ours.'
+        constrained_by: ['rfc-9580#R-0021', 'rfc-9580#R-0335']
     error_states: ['rejected']
     terminal_states: ['accepted', 'rejected']
-    note: 'Each SIG is typically 0x00 (binary) or 0x01 (text) over the external document; text canonicalisation is M05 step H2.'
+    note: 'Each SIG is typically 0x00 (binary) or 0x01 (text) over the external document; text canonicalisation is M05 step H02.'
 
   # ======================================================================
   - id: 'M04'
@@ -1086,7 +1178,7 @@ machines:
         from: 'start'
         to: 'primary'
         trigger: 'PUBKEY or SECKEY'
-        guard: 'key version v in {4, 6}; or v in {2, 3} and the implementation accepts deprecated versions; for v in {2, 3} the algorithm is RSA.'
+        guard: 'key version v in {4, 6}; or v in {2, 3} and the implementation accepts deprecated versions; for v in {2, 3} the algorithm is RSA; for v = 6, the key material uses no deprecated curve OID and is not Curve25519Legacy.'
         actions: ['v := version', 'tsk := (trigger = SECKEY)', 'current := primary']
         source:
           - locator: '§5.5.2'
@@ -1095,8 +1187,12 @@ machines:
             quote: 'The primary key MUST be an algorithm capable of making signatures (that is, not an encryption-only algorithm).'
           - locator: '§10.2'
             quote: 'If a single Secret Key or Secret Subkey packet is included in a packet sequence, it is a Transferable Secret Key and should be handled and marked as such (see Section 6.2.1).'
+          - locator: '§5.5.3'
+            quote: 'A different mode is used with version 3 keys (which are only RSA) than with other key formats.'
+          - locator: '§9.2'
+            quote: 'Implementations MUST NOT accept or generate version 6 key material using the deprecated OIDs.'
         basis: stated
-        constrained_by: ['rfc-9580#R-0187', 'rfc-9580#R-0188', 'rfc-9580#R-0189', 'rfc-9580#R-0190', 'rfc-9580#R-0322', 'rfc-9580#R-0323', 'rfc-9580#R-0320']
+        constrained_by: ['rfc-9580#R-0188', 'rfc-9580#R-0189', 'rfc-9580#R-0190', 'rfc-9580#R-0322', 'rfc-9580#R-0323', 'rfc-9580#R-0320', 'rfc-9580#R-0286', 'rfc-9580#R-0198']
         unspecified:
           - 'A primary key whose algorithm cannot sign (R-0323): whether the consumer rejects the sequence or only finds no valid self-signature (OQ-10).'
       - id: 'M04-T02'
@@ -1113,7 +1209,7 @@ machines:
         from: 'start'
         to: 'rejected'
         trigger: 'SIG'
-        guard: 'sig.version = 6 (a v6 revocation certificate must include the primary key), or sig.type != 0x20.'
+        guard: 'not (sig.type = 0x20 and sig.version = 4): a v6 revocation by itself (a v6 revocation certificate must include the primary key), a v3 one, or any other signature type.'
         source:
           - locator: '§10.1.3'
             quote: 'Instead, a version 6 revocation certificate MUST include the primary key packet, as described in Section 10.1.2.'
@@ -1161,7 +1257,7 @@ machines:
         to: 'subkey-unbound'
         trigger: 'PUBSUBKEY or SECSUBKEY'
         guard: 'v in {4, 6}.'
-        actions: ['if trigger = SECSUBKEY: tsk := true', 'current := the new subkey', 'subkey_bindings := 0', 'if subkey version != v: mark the subkey unusable']
+        actions: ['if trigger = SECSUBKEY: tsk := true', 'current := the new subkey', 'subkey_bindings := 0', 'if subkey version != v, or v = 6 and the subkey key material uses a deprecated curve OID or Curve25519Legacy (R-0286, R-0198): mark the subkey unusable']
         source:
           - locator: '§10.1.5'
             quote: 'After the sequence of User ID packets and Attribute packets and their associated signatures, zero or more Subkey packets follow, each with their own signatures.'
@@ -1207,13 +1303,13 @@ machines:
         basis: stated
         constrained_by: ['rfc-9580#R-0313', 'rfc-9580#R-0325', 'rfc-9580#R-0088']
       - id: 'M04-T11'
-        from: 'subkey-unbound'
-        to: 'subkey-unbound'
+        from: 'subkey-unbound or subkey-bound'
+        to: 'same state'
         trigger: 'SIG'
         guard: 'sig.type not in {0x18, 0x28}.'
         actions: ['attach to current subkey; it has no validity effect']
         basis: inferred
-        inferred_reason: 'A signature of another type after a subkey is not described (OQ-09).'
+        inferred_reason: 'A signature of another type after a subkey is not described (OQ-09). Pass 3 extended the transition to subkey-bound, which had no transition for such a SIG.'
       - id: 'M04-T12'
         from: 'subkey-unbound'
         to: 'subkey-unbound'
@@ -1295,13 +1391,48 @@ machines:
       - id: 'M04-T19'
         from: 'any non-final state'
         to: 'rejected'
-        trigger: 'unknown_critical_packet, or any known critical packet not accepted above (PKESK, SKESK, OPS, COMP, SED, LIT, SEIPD)'
+        trigger: 'unknown_critical_packet, or any packet event not accepted by another transition from the current state'
         guard: 'always'
+        note: 'For example PKESK, SKESK, OPS, COMP, SED, LIT or SEIPD anywhere; UID, UAT, PUBSUBKEY or SECSUBKEY in start.'
         source:
           - locator: '§10'
             quote: 'The presence of an unknown critical packet, or a known but unexpected packet, is a critical error, invalidating the entire sequence (see Section 4.3).'
         basis: stated
         constrained_by: ['rfc-9580#R-0032', 'rfc-9580#R-0309', 'rfc-9580#R-0311']
+      - id: 'M04-T20'
+        from: 'start'
+        to: 'rejected'
+        trigger: 'PUBKEY or SECKEY'
+        guard: 'the guard of M04-T01 does not hold: a key version the implementation does not accept (including an undefined one), a v2 or v3 key that is not RSA, or v6 key material over a deprecated curve OID or Curve25519Legacy.'
+        source:
+          - locator: '§9.2'
+            quote: 'Implementations MUST NOT accept or generate version 6 key material using the deprecated OIDs.'
+        basis: inferred
+        inferred_reason: 'Added in pass 3: start had no transition for a key packet M04-T01 refuses. R-0286 forbids accepting the key material; rejecting the whole sequence, rather than skipping to the next key, is ours, and for an undefined version the consumer action is open (OQ-37).'
+        constrained_by: ['rfc-9580#R-0286', 'rfc-9580#R-0198']
+        unspecified:
+          - 'A primary key packet of a version the source does not define (OQ-37).'
+      - id: 'M04-T21'
+        from: 'primary'
+        to: 'primary'
+        trigger: 'SIG'
+        guard: 'the guard of M04-T04 does not hold: v in {4, 6} and sig.type not in {0x20, 0x1F}, or v in {2, 3} and sig.type != 0x20.'
+        actions: ['attach to primary; it has no validity effect except where M06 uses it (a 0x30 that revokes a Direct Key signature)']
+        basis: inferred
+        inferred_reason: 'Added in pass 3: primary had no transition for such a SIG. A signature of another type directly after the primary key is not described (OQ-09); attaching it rather than rejecting mirrors M04-T11.'
+        unspecified:
+          - 'A SIG of a type the grammar does not place after the primary key: attach, ignore, or reject the sequence (OQ-09).'
+      - id: 'M04-T22'
+        from: 'any non-final state'
+        to: 'rejected'
+        trigger: 'stream_malformed'
+        guard: 'always'
+        source:
+          - locator: '§10.3.1'
+            quote: 'If an implementation encounters a packet whose header length indicates that it would extend beyond the boundaries of the unwrapped octet stream, the implementation MUST reject that packet as malformed and unusable.'
+        basis: inferred
+        inferred_reason: 'Added in pass 3. M01 stops on a stream it cannot cut into packets; the source states that the packet is malformed and unusable, and rejecting the sequence that contains it is ours.'
+        constrained_by: ['rfc-9580#R-0021', 'rfc-9580#R-0335']
     error_states: ['rejected']
     terminal_states: ['complete', 'rejected']
     invariants:
@@ -1312,7 +1443,7 @@ machines:
           - locator: '§10.1.3'
             quote: 'Subkeys that can issue signatures MUST have a version 4 binding signature due to the REQUIRED embedded Primary Key Binding signature.'
         constrained_by: ['rfc-9580#R-0314', 'rfc-9580#R-0315', 'rfc-9580#R-0316', 'rfc-9580#R-0317']
-    note: 'Version 6 key material over the deprecated curve OIDs and Curve25519Legacy in v6 key packets are rejected at packet level (R-0198, R-0286); see M05 S14 and M14.'
+    note: 'Version 6 key material over the deprecated curve OIDs and Curve25519Legacy in v6 key packets are refused (R-0198, R-0286): a primary key by M04-T01 and M04-T20, a subkey by marking it unusable in M04-T07 (as for a version mismatch, OQ-12).'
     constrained_by: ['rfc-9580#R-0198', 'rfc-9580#R-0286']
 
   # ======================================================================
@@ -1436,7 +1567,7 @@ machines:
               - locator: '§5.4'
                 quote: 'The salt; a random value of the specified size.  The value MUST match the salt field of the corresponding Signature packet.'
             basis: stated
-            constrained_by: ['rfc-9580#R-0185', 'rfc-9580#R-0186', 'rfc-9580#R-0345', 'rfc-9580#R-0347']
+            constrained_by: ['rfc-9580#R-0185', 'rfc-9580#R-0186', 'rfc-9580#R-0345', 'rfc-9580#R-0347', 'rfc-9580#R-0184']
             note: 'Whether a mismatch of signature type, hash algorithm, public key algorithm or issuer between OPS and SIG is also a malformed signature is not stated (OQ-13).'
       - name: 'subpackets'
         meaning: 'Parsing the hashed and unhashed subpacket areas (v4, v6).'
@@ -1545,7 +1676,7 @@ machines:
           - id: 'K01'
             kind: 'action'
             applies_when: 'always'
-            action: 'select candidate keys by Issuer Fingerprint (v4, v6) or Issuer Key ID (v3, v4); with no issuer information, the caller''s candidates; try each candidate in turn.'
+            action: 'select candidate keys by Issuer Fingerprint (v4, v6) or Issuer Key ID (v3, v4), or for a one-pass signature by the OPS key-id (v3 OPS) or fingerprint (v6 OPS); with no issuer information, the caller''s candidates; try each candidate in turn.'
             source:
               - locator: '§5.2.3.35'
                 quote: 'This subpacket SHOULD be included in all signatures.'
@@ -1589,7 +1720,7 @@ machines:
               - locator: '§5.2.5'
                 quote: 'A hash algorithm known to be weak (e.g., MD5)'
             basis: stated
-            constrained_by: ['rfc-9580#R-0305', 'rfc-9580#R-0306', 'rfc-9580#R-0297', 'rfc-9580#R-0402']
+            constrained_by: ['rfc-9580#R-0305', 'rfc-9580#R-0306', 'rfc-9580#R-0402']
             note: '5.2.5 lists a weak hash among malformed signatures, so T02 (ignored) is an equally conforming outcome; both end without success (OQ-16 on what counts as recent).'
           - id: 'K05'
             kind: 'check'
@@ -1873,7 +2004,7 @@ machines:
             quote: 'By convention, a version 4 key stores information about the primary Public Key (key flags, key expiration, etc.) and the Transferable Public Key as a whole (features, algorithm preferences, etc.) in a User ID self-signature of type 0x10 or 0x13.'
         basis: stated
         constrained_by: ['rfc-9580#R-0095', 'rfc-9580#R-0096', 'rfc-9580#R-0097', 'rfc-9580#R-0141', 'rfc-9580#R-0091']
-        note: 'Where in the key a 0x30 that revokes a Direct Key signature sits is not stated: the grammars name only Revocation and Direct Key signatures after the primary key, and M04-T04 does not admit 0x30 there (OQ-09). For v4, how a Direct Key signature and a User ID self-signature combine when both carry a Key Expiration Time is not stated (OQ-19).'
+        note: 'Where in the key a 0x30 that revokes a Direct Key signature sits is not stated: the grammars name only Revocation and Direct Key signatures after the primary key, and M04-T04 does not admit 0x30 there; M04-T21 attaches it to the primary by our reading (OQ-09). For v4, how a Direct Key signature and a User ID self-signature combine when both carry a Key Expiration Time is not stated (OQ-19).'
       - name: 'expires_at'
         text: 'key.created + Key Expiration Time of effective_self_signature; never if the subpacket is absent or zero. For v3 keys, the validity-days field of the key packet (zero: does not expire).'
         source:
@@ -2064,7 +2195,7 @@ machines:
         constrained_by: ['rfc-9580#R-0050', 'rfc-9580#R-0051', 'rfc-9580#R-0148', 'rfc-9580#R-0149']
         note: 'From revoked-soft: a later compromise revocation hardens an earlier superseded or retired one (inferred). Treating 0, private and absent as hard is OQ-20.'
       - id: 'M06-T13'
-        from: 'any state'
+        from: 'any non-final state'
         to: 'same state'
         trigger: 'SIG'
         guard: 'sig.type = 0x20 and (not valid under M05, or not authorised_revoker(sig)).'
@@ -2222,7 +2353,7 @@ machines:
           - locator: '§5.2.3.10'
             quote: 'An implementation that encounters multiple self-signatures on the same object MUST select the most recent valid self-signature and ignore all other self-signatures.'
         basis: stated
-        constrained_by: ['rfc-9580#R-0095', 'rfc-9580#R-0092']
+        constrained_by: ['rfc-9580#R-0095']
       - id: 'M07-T08'
         from: 'bound or expired or unbound'
         to: 'revoked'
@@ -2236,10 +2367,18 @@ machines:
       - id: 'M07-T09'
         from: 'bound'
         to: 'primary-unusable'
-        trigger: 'completion'
-        guard: 'primary_status changes to a state other than valid.'
+        trigger: 'primary_status_change'
+        guard: 'the new primary_status is not valid.'
         basis: inferred
-        inferred_reason: 'As M07-T03.'
+        inferred_reason: 'As M07-T03. Pass 3 replaced the completion trigger: a change of the primary key status is an external event, not the end of an activity of bound.'
+      - id: 'M07-T10'
+        from: 'primary-unusable'
+        to: 'candidate'
+        trigger: 'primary_status_change'
+        guard: 'the new primary_status is valid (for example the primary key was renewed by a newer self-signature, M06-T09).'
+        actions: ['re-evaluate']
+        basis: inferred
+        inferred_reason: 'Added in pass 3: primary-unusable had no outgoing transition and is not terminal, while M06 lets an expired or unusable primary key become valid again. That the subkey follows its primary is our reading (OQ-24).'
     error_states: ['unbound', 'revoked', 'primary-unusable']
     terminal_states: ['revoked']
     note: 'Encryption-subkey choice by Key Flags (0x04 communications, 0x08 storage) is left wholly to the implementation (5.2.3.29 usage notes); the split-key (0x10) and group-key (0x80) flags belong only on 0x1F or 0x18 (R-0144).'
@@ -2304,7 +2443,9 @@ machines:
             quote: 'If the revoked signature is the self-signature for certifying a User ID, a revocation denotes that that user name is no longer in use.  Such a signature revocation SHOULD include a Reason for Revocation subpacket containing code 32.'
         basis: stated
         constrained_by: ['rfc-9580#R-0054', 'rfc-9580#R-0055', 'rfc-9580#R-0090', 'rfc-9580#R-0112', 'rfc-9580#R-0150']
-        note: 'Which self-certification a 0x30 revokes (all earlier ones, or the one its Signature Target names) is not fully stated (OQ-25).'
+        note: 'Which self-certification a 0x30 revokes (all earlier ones, or the one its Signature Target names) is not fully stated (OQ-25). The later-creation clause of the guard is ours as a hard condition: the source says only that the revocation should have a later creation date (OQ-39).'
+        unspecified:
+          - 'A 0x30 whose creation time is not later than the certification it names (OQ-39).'
       - id: 'M08-T02'
         from: 'candidate'
         to: 'unbound'
@@ -2448,6 +2589,9 @@ machines:
             quote: 'For Revocation Signatures, this subpacket provides explicit designation of which signature is being revoked.'
         basis: stated
         constrained_by: ['rfc-9580#R-0054', 'rfc-9580#R-0055', 'rfc-9580#R-0113', 'rfc-9580#R-0151', 'rfc-9580#R-0154', 'rfc-9580#R-0155', 'rfc-9580#R-0156']
+        note: 'The created-after clause of the guard is ours as a hard condition: the source says only that the revocation should have a later creation date (OQ-39).'
+        unspecified:
+          - 'A 0x30 whose creation time is not later than the certification it names (OQ-39).'
       - id: 'M09-T06'
         from: 'valid or expired'
         to: 'same state'
@@ -2461,8 +2605,8 @@ machines:
       - id: 'M09-T07'
         from: 'issued or valid or expired'
         to: 'stripped'
-        trigger: 'completion'
-        guard: 'the key is being exported or imported, and the certification has a hashed Exportable Certification subpacket with value 0.'
+        trigger: 'key_export_or_import'
+        guard: 'the certification has a hashed Exportable Certification subpacket with value 0.'
         actions: ['delete the certification from the copy']
         source:
           - locator: '§5.2.3.19'
@@ -2562,7 +2706,7 @@ machines:
         basis: stated
         constrained_by: ['rfc-9580#R-0115', 'rfc-9580#R-0119']
       - id: 'M10-T03'
-        from: 'introducer'
+        from: 'root or introducer'
         to: 'exhausted'
         trigger: 'SIG'
         guard: 'as T01 but depth = 0.'
@@ -2692,7 +2836,7 @@ machines:
               - locator: '§11.5'
                 quote: 'The decryption is the inverse of the method given.'
             basis: stated
-            constrained_by: ['rfc-9580#R-0366', 'rfc-9580#R-0367', 'rfc-9580#R-0353', 'rfc-9580#R-0355', 'rfc-9580#R-0352', 'rfc-9580#R-0302', 'rfc-9580#R-0360']
+            constrained_by: ['rfc-9580#R-0366', 'rfc-9580#R-0367', 'rfc-9580#R-0353', 'rfc-9580#R-0355', 'rfc-9580#R-0352', 'rfc-9580#R-0302']
           - id: 'E05'
             kind: 'check'
             applies_when: 'ESK is a PKESK with RSA, Elgamal or ECDH'
@@ -2717,9 +2861,9 @@ machines:
             inferred_reason: 'The MUST binds the content; treating any other value as a failed ESK is ours.'
             constrained_by: ['rfc-9580#R-0040', 'rfc-9580#R-0041']
           - id: 'E07'
-            kind: 'invoke'
+            kind: 'check'
             applies_when: 'ESK is an SKESK'
-            invoke: 'wait for passphrase_supplied (or a cached passphrase); derive the S2K key from the S2K Specifier (as M14 step U04, with the cipher key size of the SKESK).'
+            check: 'a passphrase is available (passphrase_supplied, or a cached passphrase) and the S2K Specifier is one the implementation supports; derive the S2K key from it as M14 steps U02 to U04 do, with the cipher key size of the SKESK.'
             on_failure: 'M11-T03'
             basis: stated
             source:
@@ -2778,7 +2922,7 @@ machines:
         source:
           - locator: '§5.1'
             quote: 'The recipient of the message finds a session key that is encrypted to their public key, decrypts the session key, and then uses the session key to decrypt the message.'
-        constrained_by: ['rfc-9580#R-0337']
+        constrained_by: ['rfc-9580#R-0337', 'rfc-9580#R-0343']
       - id: 'M11-T02'
         from: 'filtering'
         to: 'legacy-passphrase'
@@ -2806,7 +2950,7 @@ machines:
         to: 'session-key'
         trigger: 'completion'
         guard: 'E01 to E10 that apply passed.'
-        actions: ['hand (cipher, session key) to M12 (SEIPD v1, SED) or M13 (SEIPD v2)', 'if the cipher is not in the recipient''s preferences: warn the keyholder (and decrypt anyway)', 'if the cipher is IDEA, TripleDES or CAST5: warn that confidentiality is suspect']
+        actions: ['hand (cipher, session key) to M12 (SEIPD v1, SED) or M13 (SEIPD v2)', 'if the cipher is not in the recipient''s preferences: warn the keyholder (and decrypt anyway)', 'if the cipher is IDEA, TripleDES or CAST5: warn that confidentiality is suspect', 'if the PKESK was decrypted with an RSA secret key of fewer than 3072 bits or with an Elgamal secret key: generate a deprecation warning that the key is too weak for modern use']
         source:
           - locator: '§12.2'
             quote: 'If an implementation can decrypt a message that a keyholder doesn''t have in their preferences, the implementation SHOULD decrypt the message anyway, but it MUST warn the keyholder.'
@@ -2837,7 +2981,7 @@ machines:
     error_states: ['no-session-key']
     terminal_states: ['session-key', 'no-session-key']
     note: 'Producer-side rules that a recipient may meet and not reject on structure alone: a new PKCS#1 encoding per key (R-0037, R-0038), no Elgamal v6 PKESK (R-0039), no Elgamal encryption (R-0391), the ECDH KDF and KEK parameters for v6 keys (R-0358 to R-0362), ECDH padding for size obfuscation (R-0356, R-0357), the KEK being AES (R-0354).'
-    constrained_by: ['rfc-9580#R-0037', 'rfc-9580#R-0038', 'rfc-9580#R-0039', 'rfc-9580#R-0391', 'rfc-9580#R-0354', 'rfc-9580#R-0356', 'rfc-9580#R-0357', 'rfc-9580#R-0358', 'rfc-9580#R-0359', 'rfc-9580#R-0361', 'rfc-9580#R-0362']
+    constrained_by: ['rfc-9580#R-0037', 'rfc-9580#R-0038', 'rfc-9580#R-0039', 'rfc-9580#R-0391', 'rfc-9580#R-0354', 'rfc-9580#R-0356', 'rfc-9580#R-0357', 'rfc-9580#R-0358', 'rfc-9580#R-0359', 'rfc-9580#R-0360', 'rfc-9580#R-0361', 'rfc-9580#R-0362']
 
   # ======================================================================
   - id: 'M12'
@@ -2914,7 +3058,7 @@ machines:
         to: 'released-unprotected'
         trigger: 'completion'
         guard: 'the implementation chooses to process SED, the data is known historic archived legacy data, and the user is aware of the risks.'
-        actions: ['CFB-decrypt (random prefix with all-zero IV; resynchronise; data)', 'return a clear warning that a non-integrity-protected packet has been processed', 'hand the plaintext to the child M02']
+        actions: ['CFB-decrypt (random prefix with all-zero IV; resynchronise; data)', 'generate a clear error message that the integrity of the message is suspect (SED is malleable, 13.7)', 'return a clear warning that a non-integrity-protected packet has been processed', 'hand the plaintext to the child M02']
         source:
           - locator: '§13.7'
             quote: 'An implementation that encounters malleable ciphertext MAY choose to release cleartext to the user if it is not encrypted using AEAD, it is known to be dealing with historic archived legacy data, and the user is aware of the risks.'
@@ -3054,7 +3198,7 @@ machines:
           - locator: '§5.13.2'
             quote: 'The session key is used as IKM and the salt as salt.'
         basis: stated
-        constrained_by: ['rfc-9580#R-0233', 'rfc-9580#R-0234', 'rfc-9580#R-0307', 'rfc-9580#R-0308', 'rfc-9580#R-0377']
+        constrained_by: ['rfc-9580#R-0234', 'rfc-9580#R-0307', 'rfc-9580#R-0308', 'rfc-9580#R-0377']
       - id: 'M13-T02'
         from: 'header'
         to: 'unsupported'
@@ -3134,8 +3278,10 @@ machines:
           - locator: '§13.7'
             quote: 'In the case of AEAD encrypted messages, if the message is truncated, i.e., the final zero-octet chunk and possibly (part of) some chunks before it are missing, the implementation MAY choose to release cleartext from the fully authenticated chunks before it to the user if it is operating in a streaming fashion, but it MUST indicate a clear error message as soon as the truncation is detected.'
         basis: stated
-        constrained_by: ['rfc-9580#R-0408', 'rfc-9580#R-0405']
-        note: 'With chunk boundaries removed the split in T05 misaligns and a chunk tag fails first (T07); either path is a failure. Distinguishing truncation from tampering is not required by the source.'
+        constrained_by: ['rfc-9580#R-0408', 'rfc-9580#R-0405', 'rfc-9580#R-0406']
+        note: 'With chunk boundaries removed the split in T05 misaligns and a chunk tag fails first (T07); either path is a failure. Distinguishing truncation from tampering is not required by the source. A final tag that fails is both an authentication tag failure (R-0406: release nothing, halt) and the sign of a missing final zero-octet chunk (R-0408: chunks released while streaming may stand); the source does not reconcile the two (OQ-40). Either way nothing further is released.'
+        unspecified:
+          - 'Whether a failing final tag is a tag failure (R-0406) or a truncation (R-0408) (OQ-40).'
       - id: 'M13-T09'
         from: 'keyed or chunk-ok'
         to: 'truncated'
@@ -3210,7 +3356,7 @@ machines:
                 quote: 'Argon2 is invoked with the passphrase as P, the salt as S, the values of t, p, and m as described above, the required key size as the tag length T, 0x13 as the version v, and Argon2id as the type.'
             basis: inferred
             inferred_reason: 'R-0008 and R-0009 state the valid ranges; rejecting out-of-range parameters (rather than running Argon2 with them) is ours (OQ-32).'
-            constrained_by: ['rfc-9580#R-0008', 'rfc-9580#R-0009', 'rfc-9580#R-0007', 'rfc-9580#R-0010', 'rfc-9580#R-0013', 'rfc-9580#R-0014']
+            constrained_by: ['rfc-9580#R-0008', 'rfc-9580#R-0009']
       - name: 'decrypting'
         meaning: 'Key derived; decrypting the secret material.'
         basis: stated
@@ -3343,13 +3489,17 @@ machines:
         from: 'protected'
         to: 'malformed'
         trigger: 'completion'
-        guard: 'usage 253 with an AEAD algorithm or cipher the implementation does not implement, or an unknown S2K Specifier type (v4: the rest of the packet cannot be parsed).'
+        guard: 'usage 253 with an AEAD algorithm or cipher the implementation does not implement, or an unknown S2K Specifier type (v4: the rest of the packet cannot be parsed), or an S2K hash the implementation does not implement, or a version 6 packet whose S2K hash is MD5, SHA-1 or RIPEMD-160.'
+        source:
+          - locator: '§9.5'
+            quote: 'Implementations MUST NOT decrypt a secret using MD5, SHA-1, or RIPEMD-160 as a hash function in an S2K KDF in a version 6 (or later) packet.'
         basis: inferred
-        inferred_reason: 'No consumer rule is stated for unknown algorithms here; the v6 counts allow the public part to be used even so (5.5.3 note).'
+        inferred_reason: 'No consumer rule is stated for unknown algorithms here; the v6 counts allow the public part to be used even so (5.5.3 note). The weak-hash clause (R-0304) and the unimplemented-hash clause were added in pass 3: M14-T05 excludes them, and protected had no transition for them.'
+        constrained_by: ['rfc-9580#R-0304']
     error_states: ['malformed', 'wrong-passphrase-or-corrupt', 'unusable']
     terminal_states: ['unlocked', 'malformed', 'wrong-passphrase-or-corrupt', 'unusable']
-    note: 'Generation-side rules: emit only Generate? Yes rows (R-0015, R-0016), never Simple S2K (R-0011), Salted only for high-entropy strings (R-0012), Argon2 RECOMMENDED (R-0013), no MD5/SHA-1/RIPEMD-160 in an S2K KDF (R-0303), v6 passphrase-protected keys SHOULD use AEAD (R-0413), users RECOMMENDED to migrate (R-0414).'
-    constrained_by: ['rfc-9580#R-0006', 'rfc-9580#R-0011', 'rfc-9580#R-0012', 'rfc-9580#R-0303', 'rfc-9580#R-0413', 'rfc-9580#R-0414', 'rfc-9580#R-0199', 'rfc-9580#R-0200', 'rfc-9580#R-0201', 'rfc-9580#R-0202']
+    note: 'Generation-side rules: emit only Generate? Yes rows (R-0015, R-0016), never Simple S2K (R-0011), Salted only for high-entropy strings (R-0012), Argon2 RECOMMENDED (R-0013), no MD5/SHA-1/RIPEMD-160 in an S2K KDF (R-0303), a unique salt per passphrase and m rounded to a power of 2 for Argon2 (R-0007, R-0010), Iterated and Salted only when Argon2 is not available (R-0014), v6 passphrase-protected keys SHOULD use AEAD (R-0413), users RECOMMENDED to migrate (R-0414).'
+    constrained_by: ['rfc-9580#R-0006', 'rfc-9580#R-0011', 'rfc-9580#R-0012', 'rfc-9580#R-0013', 'rfc-9580#R-0014', 'rfc-9580#R-0007', 'rfc-9580#R-0010', 'rfc-9580#R-0303', 'rfc-9580#R-0413', 'rfc-9580#R-0414', 'rfc-9580#R-0199', 'rfc-9580#R-0200', 'rfc-9580#R-0201', 'rfc-9580#R-0202']
 
   # ======================================================================
   - id: 'M15'
@@ -3637,6 +3787,13 @@ machines:
         guard: 'no complete signature block.'
         basis: inferred
         inferred_reason: 'A cleartext signed message without its armored signature cannot be verified.'
+      - id: 'M16-T10'
+        from: 'signature-armor'
+        to: 'failed'
+        trigger: 'completion'
+        guard: 'M15 ended in not-armor, or M03 ended in rejected.'
+        basis: inferred
+        inferred_reason: 'Added in pass 3: failed covers signature armor that did not decode, but only end_of_stream led there; M15 can also end in not-armor on a line (M15-T09) and M03 can reject the decoded packets.'
     error_states: ['failed']
     terminal_states: ['verified', 'failed']
     note: 'Producers MAY dash-escape any line, SHOULD escape lines starting "From ", MUST escape lines starting "-" (R-0269 to R-0271), and SHOULD NOT use the framework for text with meaningful trailing whitespace or very large text (R-0275); a cleartext message cannot be verified in one pass because salt and hash algorithm come at the end (7.3).'
@@ -3768,7 +3925,7 @@ open_questions:
     source:
       - locator: '§10.1.3'
         quote: 'The format of an OpenPGP version 4 key is as follows.'
-    affects: ['M04-T04', 'M04-T06', 'M04-T11']
+    affects: ['M04-T04', 'M04-T06', 'M04-T11', 'M04-T21']
   - id: 'OQ-10'
     locator: '§10.1.5'
     question: 'A primary key with an encryption-only algorithm (for example X25519): rejection of the sequence, or only an unusable key, is not stated.'
@@ -3873,7 +4030,7 @@ open_questions:
     source:
       - locator: '§5.2.1.11'
         quote: 'A revoked key is not to be used.'
-    affects: ['M07-T03', 'M07-T09']
+    affects: ['M07-T03', 'M07-T09', 'M07-T10']
   - id: 'OQ-25'
     locator: '§5.2.1.13, §5.2.3.33'
     question: 'A Certification Revocation without a Signature Target: does it revoke every earlier certification by the same issuer on that User ID, or only one?'
@@ -3962,12 +4119,38 @@ open_questions:
     affects: ['M16-T02', 'M16-T03']
   - id: 'OQ-37'
     locator: '§5.1, §5.3, §5.5.2, §5.13, §5.2.5'
-    question: 'Unknown packet versions. Only a Signature packet of unknown version has stated handling (5.2.5: ignore it, continue). For a PKESK, SKESK, Key or Subkey packet, or SEIPD packet whose version octet is not one the source defines, no consumer action is stated. M11 F04 discards an unknown-version ESK (inferred); M04-T01 accepts only key versions 2, 3, 4 and 6 and M12-T01 and M13 only SEIPD versions 1 and 2, so an unknown version has no transition: whether it rejects the sequence, makes only that key or packet unusable, or is skipped is open.'
+    question: 'Unknown packet versions. Only a Signature packet of unknown version has stated handling (5.2.5: ignore it, continue). For a PKESK, SKESK, Key or Subkey packet, or SEIPD packet whose version octet is not one the source defines, no consumer action is stated. M11 F04 discards an unknown-version ESK (inferred); M04-T01 accepts only key versions 2, 3, 4 and 6 and M04-T20 rejects the sequence otherwise (inferred); M12-T01 and M13 accept only SEIPD versions 1 and 2, so an unknown SEIPD version has no transition: whether it rejects the sequence, makes only that key or packet unusable, or is skipped is open.'
     source:
       - locator: '§5.1'
         quote: 'The currently defined versions are 3 and 6.'
       - locator: '§5.2.5'
         quote: 'An unknown signature version'
-    affects: ['M11 F04', 'M04-T01', 'M12-T01', 'M13-T01']
+    affects: ['M11 F04', 'M04-T01', 'M04-T20', 'M12-T01', 'M13-T01']
 
-source_defects: ['OQ-02', 'OQ-23', 'OQ-31', 'OQ-33', 'OQ-35', 'OQ-36']
+  - id: 'OQ-38'
+    locator: '§10.3, §5.4'
+    question: 'The One-Pass Signed Message production ends in a "Corresponding Signature Packet", which the source does not define. M02-T21 pairs the last OPS pushed with the first SIG after its message (the bracketing reading of 5.4); whether a SIG whose type, algorithms or issuer differ from the OPS is still the corresponding one is OQ-13. The consumer action when the stream ends before the Corresponding Signature Packet is not stated either; M02-T22 rejects by the grammar reading. Added in pass 3.'
+    source:
+      - locator: '§10.3'
+        quote: 'One-Pass Signed Message:  One-Pass Signature Packet, OpenPGP Message, Corresponding Signature Packet.'
+    affects: ['M02-T21', 'M02-T22']
+  - id: 'OQ-39'
+    locator: '§5.2.1.13'
+    question: 'A Certification Revocation "should have a later creation date than that certification", with no consequence stated for one that does not. M08-T01 and M09-T05 require a later creation time before the revocation takes effect; ignoring the revocation, or honouring it regardless of date, are also readings the source admits. Added in pass 3.'
+    source:
+      - locator: '§5.2.1.13'
+        quote: 'The signature is computed over the same data as the certification that it revokes, and it should have a later creation date than that certification.'
+    affects: ['M08-T01', 'M08-T07', 'M09-T05']
+  - id: 'OQ-40'
+    locator: '§13.7, §5.13.2'
+    question: 'Source tension. For AEAD data, a tag that fails to verify forbids parsing or releasing any decrypted data and requires a halt (R-0406), while a truncated message, whose final zero-octet chunk is missing, MAY have released the fully authenticated chunks before it when streaming (R-0408). A missing or altered final chunk is detected only by the final authentication tag failing to verify, so the same event falls under both rules; 13.7 also lists both "the authentication tag of any chunk fails" and "there is no final zero-octet chunk" as separate signs of malleable ciphertext. M13-T08 treats a failing final tag after a verified last chunk as truncation and keeps already-released chunks released; M13-T07 treats a failing last-chunk tag as a tag failure. Added in pass 3.'
+    source:
+      - locator: '§13.7'
+        quote: 'In the case of AEAD encrypted data, if the authentication tag fails to verify, the implementation MUST NOT attempt to parse nor release decrypted data to the user, and it MUST halt with an error.'
+      - locator: '§13.7'
+        quote: 'In the case of AEAD encrypted messages, if the message is truncated, i.e., the final zero-octet chunk and possibly (part of) some chunks before it are missing, the implementation MAY choose to release cleartext from the fully authenticated chunks before it to the user if it is operating in a streaming fashion, but it MUST indicate a clear error message as soon as the truncation is detected.'
+      - locator: '§13.7'
+        quote: 'Any version 2 Symmetrically Encrypted and Integrity Protected Data packet (Section 5.13.2) where the authentication tag of any chunk fails or where there is no final zero-octet chunk.'
+    affects: ['M13-T03', 'M13-T07', 'M13-T08']
+
+source_defects: ['OQ-02', 'OQ-23', 'OQ-31', 'OQ-33', 'OQ-35', 'OQ-36', 'OQ-40']

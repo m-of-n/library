@@ -38,10 +38,10 @@ obsoletes RFC 4880, 5581 and 6637.
 | `grammars.verbatim.txt` | verbatim | §10.1.1–§10.4 packet-sequence grammars; §8 Regular Expressions; §6–§6.2.3 ASCII Armor; §7.1–§7.2 Cleartext Signature Framework; §5.4 OPS bracketing | 3048–5542, 347 lines in 23 ranges | 23 | 512 · 24142 | `82977365f68fa43d6d8e5eaf00f127a1c36b233040f417e80ca4f6f909fd7b6d` |
 | `encodings.verbatim.txt` | verbatim | §3.1–§3.7.2.1, §4.2–§4.3, §5.1.3–§5.1.7, §5.2.2–§5.2.4.1, §5.3.2, §5.5.3–§5.5.4.3, §5.5.5.6.1.1, §5.7, §5.12.1, §5.13.1–§5.13.5, §6.1.1, §9.2, §11.2.1–§11.5, §12.1.1–§12.1.3 | 546–6063, 1065 lines in 60 ranges | 60 | 1453 · 64297 | `e6832ef2f6848742614a521fa8b14ad74caa3d5274a6ca8bfdae43ca4febbc79` |
 | `fields.verbatim.txt` | verbatim | §5.1.1–§5.13.2: every packet field list, algorithm-specific field list and subpacket body format | 1269–4127, 723 lines in 83 ranges | 83 | 1248 · 52196 | `85a3b1e52441450ee8a9226f38534f1e9403fd1e4dff98fd9df2235d0af7e73d` |
-| `openpgp-packets.derived.schema.json` | **derived** | JSON Schema (draft 2020-12) for a decoded packet stream; §3, §4, §5, §9, §11 | — | — | 10362 · 193675 | `48287b9d4939536615ad0ab93b43cb2d0f471fc9752e5edff0e3d625976ab23b` |
+| `openpgp-packets.derived.schema.json` | **derived** | JSON Schema (draft 2020-12) for a decoded packet stream; §3, §4, §5, §9, §11 | — | — | 10402 · 194572 | `8ebc41e80dd75455ae548b69364ddb666b1b723d3295ae1d09203ed04dfbafc1` |
 | `packet-sequences.derived.abnf` | **derived** | ABNF of the §10 grammars over a one-terminal-per-packet alphabet | — | — | 146 · 7939 | `c4feaef2fbe409189315975f8bffe0b22bfc3e03f32b6144cd72ce47f41f51bf` |
 | `text-formats.derived.abnf` | **derived** | ABNF of §6.2 ASCII Armor, §7 cleartext signed messages, §8 Regular Expressions | — | — | 103 · 5922 | `1fb191d3f8c059b6fbdc4241db701bb6733f46a2fa36a9f6f7a8cd2afbece91b` |
-| `validate.derived.py` | **derived** | decoder, schema check, cross-field checks and grammar matcher; self-test on Appendix A | — | — | 988 · 40417 | `ca83f01610434686aa37c7b8705d39490b0075cabe089a7ab8efc920712021ec` |
+| `validate.derived.py` | **derived** | decoder, schema check, cross-field checks and grammar matcher; self-test on Appendix A | — | — | 992 · 40775 | `fad2e36cb6a35130c3cd1449974fd660b6a58cfc53566476fa8d14a6bde803fd` |
 
 `sha256` is the digest of the file as committed. In the verbatim files, each
 region also carries the digest of its own bytes (see the region tables).
@@ -87,6 +87,9 @@ non-critical packets (R-0033), to ignore and not reject unknown signatures
 (R-0178–R-0180), and to reject sequences that contain an unknown critical
 packet (R-0032). The schema accepts non-critical Type IDs 40–63 as opaque, and
 rejects critical Type IDs that have no definition (0, 15, 16, 19, 20, 22–39).
+Subpackets follow the same rule: an unassigned or reserved subpacket type is
+accepted as an opaque body when not critical (R-0081), and rejected when
+critical (R-0080).
 
 **Which rules are enforced.** The schema enforces structure, and every MUST
 on the content of a packet that makes the packet malformed or unusable. It
@@ -129,7 +132,8 @@ cross-packet rules:
 - ESK/payload version alignment from Table 26 (R-0343);
 - that decompressed contents form an OpenPGP Message (R-0333);
 - armor: Tail Line label, CRC24 (R-0244, R-0245), and cleartext Hash-only
-  headers (R-0267).
+  headers (R-0267), each a comma-separated list of Table 23 Text Names
+  (R-0259).
 
 It does no cryptography: it verifies no signature and decrypts nothing.
 

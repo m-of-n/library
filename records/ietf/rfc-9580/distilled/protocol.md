@@ -26,7 +26,7 @@ Key discovery, keyservers, trust computation (web of trust), keyring management 
 |---|---|
 | `applicability`, `framing` | the PARTIAL statement and 5 quoted framing statements |
 | `roles` | 12 roles with the source's names for them, locators and quotes |
-| `messages_used`, `message_notes` | the 77 message names the steps use: packets with version (and Signature Type ID), §10 sequences, text encodings, and signature subpackets named in `subpackets`; to be reconciled with `messages.yaml` in pass 3 |
+| `messages_used`, `message_notes` | the 77 message names the steps use: packets with version (and Signature Type ID), §10 sequences, text encodings, and signature subpackets named in `subpackets`; each resolved to its `messages.yaml` entry (`messages_yaml`) or, for §10 sequences, its `schema/packet-sequences.derived.abnf` production (`grammar`) |
 | `flows` | 18 flows, 121 steps: `from`, `to`, `message`, `message_alternatives`, `subpackets`, `action`, `basis`, `locator`, `quotes`, `constrained_by`, `on_error`, `on_error_basis`, and where needed `invokes`, `status`, `note` |
 | `algorithms` | 13 algorithms, 76 steps: `kind`, `action`, `basis`, `locator`, `quotes`, `constrained_by`, `on_fail`, `on_fail_basis`, `invokes` |
 | `error_paths` | 33 error paths: trigger, detecting role, where, outcome, basis |
@@ -80,7 +80,7 @@ sequenceDiagram
 
 | n | from → to | message | step | basis | locator | on error |
 |---|---|---|---|---|---|---|
-| 1 | keyring → sender | `OpenPGP Version 6 Certificate` (or `OpenPGP Version 4 Certificate`) | Obtain each recipient's certificate and establish that it is the authentic, currently valid key of that recipient: a v6 key is usable only with a valid Direct Key signature; no User ID self-signature is needed unless the use depends on the User ID. How the certificate is found and authenticated is not defined. Invokes `key-validity-evaluation`. | inferred | §11.5, §5.2.3.10, §2.1 | unspecified |
+| 1 | keyring → sender | `OpenPGP Version 6 Certificate` (or `OpenPGP Version 4 Certificate`) | Obtain each recipient's certificate and establish that it is the authentic, currently valid key of that recipient: a v6 key is usable only with a valid Direct Key signature; no User ID self-signature is needed unless the use depends on the User ID. How the certificate is found and authenticated is not defined. Invokes `key-validity-evaluation`. | inferred | §11.5, §5.2.3.10, §2.1 | stated |
 | 2 | sender → sender | `OpenPGP Version 6 Certificate`; subpackets: Key Flags | In each recipient certificate select the encryption key or keys: a primary key or bound subkey whose Key Flags allow communications (0x04) or storage (0x08) encryption, which is not expired or revoked, and whose algorithm and size may still be used for encryption. | inferred | §5.2.3.29, §10.1.5, §11.5.1, §12.4, §12.6 | unspecified |
 | 3 | sender → sender | `OpenPGP Version 6 Certificate`; subpackets: Features | Choose the encryption container. v2 SEIPD when every recipient key advertises it in Features, or every recipient key is v6 with no Features subpacket, or support can otherwise be inferred; otherwise v1 SEIPD may be used. Never SED. The choice fixes the ESK versions (step 10 and 11): one row of Table 26. Invokes `preference-negotiation`. | stated | §13.7, §5.2.3.7, §5.2.3.32, §10.3.2.1 | stated |
 | 4 | sender → sender | `OpenPGP Version 6 Certificate`; subpackets: Preferred AEAD Ciphersuites, Preferred Symmetric Ciphers for v1 SEIPD, Preferred Compression Algorithms | Choose the algorithms from the intersection of the recipients' preferences, read from hashed subpackets of the self-signature that applies (the Direct Key signature of a v6 key, or the self-signature of the User ID the key was located by): for v2 SEIPD a (cipher, AEAD mode) pair, with AES-128/OCB implicitly last; for v1 SEIPD a cipher, with AES-128 tacitly last; and a compression algorithm, with Uncompressed tacitly last. Never a cipher outside the recipients' lists, never IDEA, TripleDES or CAST5, never algorithm 0. Invokes `preference-negotiation`. | stated | §5.2.3.14, §5.2.3.15, §5.2.3.17, §5.2.3.10, §12.2, §12.2.1, §12.3.1, §9.3, §13.13, §5.2.3.7 | stated |
@@ -164,7 +164,7 @@ sequenceDiagram
 | 8 | signer → signer | `Signature Packet v6 (type 0x00)` (or `Signature Packet v6 (type 0x01)`, `Signature Packet v4 (type 0x00)`) | Sign the digest and emit the Signature packet after the content: left 16 bits of the digest, (v6) salt, algorithm-specific fields. Ed25519 and Ed448 sign the digest with PureEdDSA (Ed448 with an empty context), RSA uses EMSA-PKCS1-v1_5 with the Table 24 prefix, ECDSA and DSA take the possibly truncated digest. | stated | §5.2.3, §5.2.3.1, §5.2.3.2, §5.2.3.4, §5.2.3.5, §12.1.3, §12.7 | stated |
 | 9 | signer → signer | `One-Pass Signed Message` | With several signatures over the same data, nest the OPS packets (nested flag 0 on all but the last) and emit the Signature packets in reverse order, so the first Signature after the data matches the last OPS. | stated | §5.4 | unspecified |
 | 10 | signer → signer | `Signed Message` | Alternative form without one-pass: the Signature packet precedes the message. The signer must have hashed the whole content before emitting anything. | inferred | §10.3, §5.4 | unspecified |
-| 11 | signer → verifier | `One-Pass Signed Message` (or `Signed Message`, `Encrypted Message`, `ASCII Armor`) | Transfer the signed message, either alone (armored with no CRC24 footer when every Signature packet is v6) or as the plaintext of encrypt-and-sign-message. *(not-defined)* | stated | §2.2, §6.1 | unspecified |
+| 11 | signer → verifier | `One-Pass Signed Message` (or `Signed Message`, `Encrypted Message`, `ASCII Armor`) | Transfer the signed message, either alone or as the plaintext of encrypt-and-sign-message. If armored alone, a CRC24 footer should not be generated and must not be where the context or the object shows that the consumer accepts armor without one; the explicit MUST NOT for v6 is stated for a sequence of only v6 Signature packets, and the source does not say whether that covers a whole signed message. *(not-defined)* | stated | §2.2, §6.1 | unspecified |
 | 12 | verifier → verifier | `One-Pass Signed Message` | The verifier hashes the content as it streams, using the hash algorithm and salt the OPS announced, matches each Signature to its OPS, and verifies. A version mismatch between OPS and Signature invalidates that signature only. Invokes `signature-verification`. | stated | §5.4, §5.2.5, §10.3.2.2 | stated |
 
 ### 4. `detached-signature` (§10.4, §5.2.1.1, §5.2.1.2, §5.2.4, §6.1, §6.2.1, §7.3)
@@ -279,7 +279,7 @@ sequenceDiagram
 | 7 | keyholder → keyholder | `Signature Packet v6 (type 0x18)`; subpackets: Key Flags, Key Expiration Time, Embedded Signature | Bind each subkey with a Subkey Binding signature made by the primary key over the primary key and the subkey: Key Flags for the subkey (encrypt 0x04 and/or 0x08, sign 0x02, authenticate 0x20), optional Key Expiration Time counted from the subkey's creation, and for a signing subkey an Embedded Signature holding the 0x19 from step 6. v4: binding signatures should be v4, and must be when the subkey can sign. Invokes `signature-hash-computation`. | stated | §5.2.1.8, §5.2.3.13, §5.2.3.29, §5.2.3.34, §10.1.1, §10.1.3, §10.1.5, §5.2.3.10 | unspecified |
 | 8 | keyholder → keyholder | `OpenPGP Version 6 Certificate` (or `OpenPGP Version 4 Certificate`, `Transferable Secret Key`) | Assemble the Transferable Public Key in grammar order: Primary Key, [Revocation Signature...], Direct Key Signature..., [User ID or User Attribute [Certification Revocation...] [Certification...]]..., [Subkey [Subkey Revocation...] Subkey Binding...]..., [Padding]. A Transferable Secret Key is the same with Secret Key and Secret Subkey packets and should keep the self-signatures. | stated | §10.1.1, §10.1.5, §10.2, §10 | unspecified |
 | 9 | keyholder → keyholder | `Padding Packet` | Optionally end a v6 certificate that will go over an encrypted channel with a Padding packet, to hide its length. Not on a v4 certificate unless the recipient is known to ignore it. | stated | §5.14, §10.1.5, §13.11 | unspecified |
-| 10 | keyring → keyholder | `OpenPGP Version 6 Certificate` | Export: delete local (non-exportable) certifications, emit no Trust packets, keep a sensitive Revocation Key signature back unless it goes to the designated revoker; armor as BEGIN PGP PUBLIC KEY BLOCK (PRIVATE KEY BLOCK for a TSK) with no CRC24 footer for v6. | stated | §5.2.3.19, §5.10, §5.2.3.23, §6.1, §6.2.1, §10.2 | unspecified |
+| 10 | keyring → keyholder | `OpenPGP Version 6 Certificate` | Export: delete local (non-exportable) certifications, emit no Trust packets, keep a sensitive Revocation Key signature back unless it goes to the designated revoker; armor as BEGIN PGP PUBLIC KEY BLOCK (PRIVATE KEY BLOCK for a TSK) with no CRC24 footer for a v6 TPK or an all-v6 keyring. For a TSK only the general rules apply: a CRC24 footer should not be generated, and must not be where the context or the object shows that the consumer accepts armor without one. | stated | §5.2.3.19, §5.10, §5.2.3.23, §6.1, §6.2.1, §10.2 | unspecified |
 | 11 | keyholder → key-server | `OpenPGP Version 6 Certificate` (or `ASCII Armor`) | Distribute the certificate to correspondents, directly or through a key server or any URI-reachable copy. Several certificates may be concatenated in one transfer. *(not-defined)* | stated | §10.1, §10.1.5, §5.2.3.26 | unspecified |
 | 12 | key-server → sender | `OpenPGP Version 6 Certificate` | Correspondents obtain the certificate (and later its updates) and import it (flow certificate-import-and-evaluation). *(not-defined)* | inferred | §5.2.3.26, §5.2.3.10 | unspecified |
 
@@ -585,7 +585,7 @@ flowchart TD
   N5 -. fail .-> F5[/"Abort without writing outside the range, the packet is..."/]
   N6{"6. check: Criticality by Packet Type ID: 0 to 39 critical, 40 to 63 non-critical"}
   N6 --> N7
-  N6 -. fail .-> F6[/"Reject the whole packet sequence (R-0032)."/]
+  N6 -. fail .-> F6[/"Unknown critical type: reject the whole packet sequence..."/]
   N7{"7. check: Inside v6 Key, Signature and PKESK packets, every MPI's bit count..."}
   N7 --> E([end])
   N7 -. fail .-> F7[/"Reject the packet as malformed (R-0003)."/]
@@ -598,7 +598,7 @@ flowchart TD
 | 3 | check | Partial Body Lengths: only on Literal, Compressed or encrypted data packets; the first part at least 512 octets; the last length header a regular one (possibly zero). | stated | §4.2.1.4 | unspecified. These are producer obligations; the source does not say whether a consumer must reject a violation. | unspecified |
 | 4 | compute | Legacy format length by length-type: 0 one octet, 1 two octets, 2 four octets, 3 indeterminate (to end of file; may be read for historic data, never generated). | stated | §4.2.2 | n/a | n/a |
 | 5 | check | Bound the body by the header length: look for the next packet exactly there; never read outside the range; a subfield length that would extend beyond it makes the packet malformed. | stated | §4.1 | Abort without writing outside the range; the packet is malformed and unusable (R-0021). | stated |
-| 6 | check | Criticality by Packet Type ID: 0 to 39 critical, 40 to 63 non-critical. An unknown critical type rejects the whole sequence; an unknown non-critical type is skipped. ID 0 is reserved and never valid. | stated | §4.3, §5 | Reject the whole packet sequence (R-0032). | stated |
+| 6 | check | Criticality by Packet Type ID: 0 to 39 critical, 40 to 63 non-critical. An unknown critical type rejects the whole sequence; an unknown non-critical type is skipped. ID 0 is reserved and never valid. | stated | §4.3, §5 | Unknown critical type: reject the whole packet sequence (R-0032). Unknown non-critical type: skip the packet and continue (R-0033). | stated |
 | 7 | check | Inside v6 Key, Signature and PKESK packets, every MPI's bit count must equal the position of its most significant non-zero bit; unused bits zero. | stated | §3.2 | Reject the packet as malformed (R-0003). | stated |
 
 ### A2. `message-grammar-parsing` (§10, §10.3, §10.3.1, §10.3.2, §5.4, §5.8, §5.14, §13.14)
@@ -649,7 +649,7 @@ flowchart TD
 | 2 | parse | Match the first significant packet. PKESK or SKESK: an ESK Sequence must be followed by one Encrypted Data packet (SEIPD, or historic SED), which ends this level. SEIPD or SED alone: an Encrypted Message without ESKs. Signature: a Signed Message, Signature then an OpenPGP Message. One-Pass Signature: an OPS, a nested OpenPGP Message, then the corresponding Signature. Compressed Data: a Compressed Message. Literal Data: a Literal Message. | stated | §10.3, §10 | A critical packet the grammar does not allow here rejects the sequence (R-0311). | stated |
 | 3 | check | Pair OPS and Signature packets by bracketing: with nested OPS packets the first Signature after the content belongs to the last OPS. An OPS with nested flag 0 is followed directly by another OPS over the same content. | stated | §5.4, §10.3.2.2 | A version mismatch between an OPS and its Signature invalidates only that signature (R-0347). A missing corresponding Signature: unspecified. | stated |
 | 4 | check | Version constraints: discard ESKs not aligned with the payload version (Table 26); OPS, Signature and key versions per Table 27. | stated | §10.3.2.1, §10.3.2.2 | Discard the misaligned ESK (R-0343); discard the misaligned signature (R-0347). | stated |
-| 5 | control | Unwrap: after decryption (seipd-v2-decryption, seipd-v1-decryption) or decompression, parse the resulting octets from step 1 as a new, bounded stream: v2 SEIPD content must be an Optionally Padded Message, v1 SEIPD and SED content an OpenPGP Message, decompressed content an OpenPGP Message. Limit compression depth. Invokes `packet-stream-parsing`. | stated | §10.3.1, §13.14 | A packet whose length crosses the end of the unwrapped stream is malformed and unusable (R-0335). | stated |
+| 5 | control | Unwrap: after decryption (seipd-v2-decryption, seipd-v1-decryption) or decompression, parse the resulting octets from step 1 as a new, bounded stream: v2 SEIPD content must be an Optionally Padded Message, v1 SEIPD and SED content an OpenPGP Message, decompressed content an OpenPGP Message. Limit compression depth. Invokes `packet-stream-parsing`. | stated | §10.3.1, §13.14 | A packet whose length crosses the end of the unwrapped stream is malformed and unusable (R-0335). More nested compression layers than the implementation's limit: stop decompressing; what to report is unspecified (R-0419). | stated |
 | 6 | control | Padding packets: accept one as the last packet inside a v2 SEIPD (Optionally Padded Message), and be able to process (ignore) one anywhere else. | stated | §5.14, §10.3 | n/a | n/a |
 
 ### A3. `session-key-recovery` (§5.1, §5.1.1 to §5.1.8, §5.3, §5.3.1, §5.3.2, §11.5, §12.1.2, §13.5)
@@ -715,7 +715,7 @@ flowchart TD
 
 | n | kind | step | basis | locator | on fail | on-fail basis |
 |---|---|---|---|---|---|---|
-| 1 | check | Accept chunk size octets 0 to 16; chunk_size = 1 << (c + 6). | stated | §5.13.2 | unspecified for c > 16 (only acceptance of 0 to 16 is required). | unspecified |
+| 1 | check | Accept chunk size octets 0 to 16; chunk_size = 1 << (c + 6). The cipher ID must name a cipher with 16-octet blocks, for every AEAD mode. | stated | §5.13.2, §5.13.3, §5.13.4, §5.13.5 | unspecified for c > 16 (only acceptance of 0 to 16 is required), and for a cipher without 16-octet blocks (the source states the constraint, not the outcome). | unspecified |
 | 2 | compute | HKDF-SHA256 with IKM the session key, salt the packet salt, info the packet type octet 0xD2, version, cipher ID, AEAD ID, chunk size octet; take M + N - 64 bits: the leftmost M bits are the message key, the remaining N - 64 bits the IV (N: 128 EAX, 120 OCB, 96 GCM). | stated | §5.13.2, §9.6 | n/a | n/a |
 | 3 | control | For chunk i = 0, 1, ...: nonce = IV \|\| i (64-bit big-endian); additional data = the five header octets; decrypt and verify the chunk's 16-octet tag. The last chunk may be short. | stated | §5.13.2, §13.7 | Tag failure: MUST NOT parse or release decrypted data, MUST halt with an error (R-0406). | stated |
 | 4 | check | Verify the final tag: AEAD over the empty string with additional data the five header octets plus the 8-octet total plaintext length (the nonce index is the number of chunks, shown only by the test vectors). | stated | §5.13.2, Appendix A.8.4, §13.7 | Bad final tag: halt with an error, release nothing (R-0406). Missing final chunk (truncation): a streaming implementation may have released fully authenticated chunks but must give a clear error at once (R-0408). | stated |
@@ -825,7 +825,7 @@ flowchart TD
 
 | n | kind | step | basis | locator | on fail | on-fail basis |
 |---|---|---|---|---|---|---|
-| 1 | check | Well-formedness: known signature type and version (v3 may be accepted, 0xFF never validated), lengths consistent, hashed area within the packet, salt length equal to Table 23 for the hash (v6), no weak hash, OPS version matching. | stated | §5.2.5, §5.2.1.16, §5.2.3, §5.2 | Ignore the signature for validation (R-0178); never report it valid (R-0179). | stated |
+| 1 | check | Well-formedness: known signature type and version (v3 may be accepted, 0xFF never validated), lengths consistent, hashed area within the packet, salt length equal to Table 23 for the hash (v6), no recent signature over a weak hash (step 9), OPS version matching. | stated | §5.2.5, §5.2.1.16, §5.2.3, §5.2 | Ignore the signature for validation (R-0178); never report it valid (R-0179). | stated |
 | 2 | check | Subpackets: an unknown subpacket with the critical bit set (in the hashed area) makes the signature in error; unknown non-critical ones are ignored; a critical notation's criticality applies to that notation only. A Regular Expression without its null terminator is rejected (critical: the signature). | stated | §5.2.3.7, §5.2.3.24, §5.2.3.22, §5.2.5 | The signature is in error, hence ignored for validation (R-0080, R-0178). | stated |
 | 3 | check | Signature Creation Time must be present in the hashed area. Use hashed subpackets for anything definitive; unhashed ones are advisory and may be ignored when their provenance is unknown. | stated | §5.2.3.11, §5.2.3.8, §13.13 | unspecified for a missing creation time: R-0101 binds the producer; treating the signature as malformed is the inferred reading. | unspecified |
 | 4 | select | Find the issuer key: by Issuer Fingerprint (whose version octet must equal the signature version; with a v4 key an Issuer Key ID must equal the fingerprint's low 64 bits), or by Issuer Key ID (not unique; try every candidate), or by the OPS fingerprint or Key ID. The signature version must match the key version (a v6 key signs only v6). | stated | §5.2.3.12, §5.2.3.35, §3.3, §5.2.5, §10.3.2.2 | Version octet mismatch: malformed signature (R-0160), ignored. No key found: no successful validation (inferred). | stated |
@@ -875,7 +875,7 @@ flowchart TD
 | 3 | select | Self-signatures: verify each (accepted regardless of the primary key's own Key Flags), and for each object keep only the most recent valid one. A v6 key needs a valid Direct Key signature before any use; a v4 key's metadata is conventionally in a User ID self-signature. A Direct Key signature revoked by a valid Certification Revocation (0x30) is cancelled and does not count. Invokes `signature-verification`. | stated | §5.2.3.10, §5.2.1.13 | v6 without a valid Direct Key signature: MUST NOT be used (R-0098). | stated |
 | 4 | compute | Expiry: the primary key expires Key Expiration Time seconds after its creation (from the Direct Key or certification self-signature); zero or absent means never. Subpackets in the most recent self-signature apply to the key, User ID or subkey that signature covers. | stated | §5.2.3.13, §5.2.3.10 | An expired key: unspecified beyond the definition (not usable is the inferred reading). | unspecified |
 | 5 | check | Each User ID: bound if its most recent valid self-signature is not revoked by a valid Certification Revocation; a revoked self-signature retires the name. Third-party certifications on it are kept for the verifier's own validity calculation, minus revoked ones. | stated | §5.2.3.10, §5.2.1.13, §5.2.3.31, §5.2.3.20 | The User ID is not bound (inferred). | inferred |
-| 6 | check | Each subkey: at least one valid Subkey Binding signature by the primary key; a signing-capable subkey also needs the embedded Primary Key Binding signature made by the subkey; not revoked by a Subkey Revocation from the primary key; not expired (Key Expiration Time counted from the subkey's creation). Invokes `signature-verification`. | stated | §5.2.1.8, §5.2.1.12, §5.2.3.13, §10.1.1, §10.1.5, §5.2.3.10 | The subkey is not usable (inferred from R-0052 and the MUST rules). | inferred |
+| 6 | check | Each subkey: at least one valid Subkey Binding signature by the primary key; a signing-capable subkey also needs the embedded Primary Key Binding signature made by the subkey; not revoked by a Subkey Revocation from the primary key or a (deprecated) Revocation Key; not expired (Key Expiration Time counted from the subkey's creation). Invokes `signature-verification`. | stated | §5.2.1.8, §5.2.1.12, §5.2.3.13, §10.1.1, §10.1.5, §5.2.3.10 | The subkey is not usable (inferred from R-0052 and the MUST rules). | inferred |
 | 7 | compute | Effective use: Key Flags of the most recent binding (Direct Key or Subkey Binding) say what the key may be used for; a flags list shorter than expected has the missing flags zero. Effective preferences and Features come from the hashed area of the applicable self-signature. | stated | §5.2.3.29, §5.2.3.32, §5.2.3.10, §13.13 | n/a | n/a |
 
 ### A9. `preference-negotiation` (§5.2.3.7, §5.2.3.14 to §5.2.3.17, §5.2.3.32, §12.2, §12.3, §13.7)
@@ -1127,87 +1127,87 @@ No error is ever signalled to the producing role: every outcome below is local t
 
 ## Message names used
 
-Names are the source's; each resolves in `message_notes` and is to be reconciled with `messages.yaml` (written in parallel) in the cross-check pass.
+Names are the source's; each resolves in `message_notes`. The `messages.yaml` column is the entry that defines the structure (reconciled in pass 3). §10 packet sequences have no `messages.yaml` entry by design (`messages.yaml` leaves sequence grammars to this file and `state-machine.yaml`); their column gives the production in `schema/packet-sequences.derived.abnf` instead. `passphrase` is not a structure.
 
-| name | kind | locator |
-|---|---|---|
-| `OpenPGP Version 6 Certificate` | sequence | §10.1.1, §10.1.5 |
-| `OpenPGP Version 4 Certificate` | sequence | §10.1.3, §10.1.5 |
-| `Key Flags` | signature-subpacket | §5.2.3.29 |
-| `Features` | signature-subpacket | §5.2.3.32 |
-| `Preferred AEAD Ciphersuites` | signature-subpacket | §5.2.3.15 |
-| `Preferred Symmetric Ciphers for v1 SEIPD` | signature-subpacket | §5.2.3.14 |
-| `Preferred Compression Algorithms` | signature-subpacket | §5.2.3.17 |
-| `Encrypted Message` | sequence | §10.3, §10.3.2.1 |
-| `One-Pass Signed Message` | sequence | §10.3, §5.4 |
-| `Signed Message` | sequence | §10.3 |
-| `Intended Recipient Fingerprint` | signature-subpacket | §5.2.3.36 |
-| `Literal Data Packet` | packet | §5.9 |
-| `Compressed Data Packet` | packet | §5.6 |
-| `Padding Packet` | packet | §5.14 |
-| `Public Key Encrypted Session Key Packet v6` | packet | §5.1.2 |
-| `Public Key Encrypted Session Key Packet v3` | packet | §5.1.1 |
-| `Symmetric Key Encrypted Session Key Packet v6` | packet | §5.3.2 |
-| `Symmetric Key Encrypted Session Key Packet v4` | packet | §5.3.1 |
-| `Symmetrically Encrypted and Integrity Protected Data Packet v2` | packet | §5.13.2 |
-| `Symmetrically Encrypted and Integrity Protected Data Packet v1` | packet | §5.13.1 |
-| `ASCII Armor` | text-encoding | §6.2 |
-| `Compressed Message` | sequence | §10.3 |
-| `Literal Message` | sequence | §10.3 |
-| `Symmetrically Encrypted Data Packet` | packet | §5.7 |
-| `Optionally Padded Message` | sequence | §10.3, §10.3.1 |
-| `Secret Key Packet v6` | packet | §5.5.1.3, §5.5.3 |
-| `Secret Subkey Packet v6` | packet | §5.5.1.4, §5.5.3 |
-| `Signature Packet v6 (type 0x00)` | packet | §5.2.3, §5.2.1, Table 4 |
-| `Preferred Hash Algorithms` | signature-subpacket | §5.2.3.16 |
-| `One-Pass Signature Packet v6` | packet | §5.4 |
-| `One-Pass Signature Packet v3` | packet | §5.4 |
-| `Signature Packet v6 (type 0x01)` | packet | §5.2.3, §5.2.1, Table 4 |
-| `Signature Creation Time` | signature-subpacket | §5.2.3.11 |
-| `Issuer Fingerprint` | signature-subpacket | §5.2.3.35 |
-| `Issuer Key ID` | signature-subpacket | §5.2.3.12 |
-| `Signature Expiration Time` | signature-subpacket | §5.2.3.18 |
-| `Notation Data` | signature-subpacket | §5.2.3.24 |
-| `Signer's User ID` | signature-subpacket | §5.2.3.30 |
-| `Policy URI` | signature-subpacket | §5.2.3.28 |
-| `Signature Packet v4 (type 0x00)` | packet | §5.2.3, §5.2.1, Table 4 |
-| `Detached Signature` | sequence | §10.4 |
-| `Cleartext Signed Message` | text-encoding | §7.1 |
-| `passphrase` | out-of-band | §2.1, §3.7 |
-| `Public Key Packet v6` | packet | §5.5.1.1, §5.5.2.3 |
-| `Signature Packet v6 (type 0x1F)` | packet | §5.2.3, §5.2.1, Table 4 |
-| `Key Expiration Time` | signature-subpacket | §5.2.3.13 |
-| `Key Server Preferences` | signature-subpacket | §5.2.3.25 |
-| `Preferred Key Server` | signature-subpacket | §5.2.3.26 |
-| `User ID Packet` | packet | §5.11 |
-| `User Attribute Packet` | packet | §5.12 |
-| `Signature Packet v6 (type 0x13)` | packet | §5.2.3, §5.2.1, Table 4 |
-| `Primary User ID` | signature-subpacket | §5.2.3.27 |
-| `Public Subkey Packet v6` | packet | §5.5.1.2, §5.5.2.3 |
-| `Signature Packet v6 (type 0x19)` | packet | §5.2.3, §5.2.1, Table 4 |
-| `Signature Packet v6 (type 0x18)` | packet | §5.2.3, §5.2.1, Table 4 |
-| `Embedded Signature` | signature-subpacket | §5.2.3.34 |
-| `Transferable Secret Key` | sequence | §10.2 |
-| `OpenPGP Version 6 Revocation Certificate` | sequence | §10.1.2 |
-| `Exportable Certification` | signature-subpacket | §5.2.3.19 |
-| `Signature Packet v6 (type 0x10-0x13)` | packet | §5.2.3, §5.2.1, Table 4 |
-| `Revocable` | signature-subpacket | §5.2.3.20 |
-| `Trust Signature` | signature-subpacket | §5.2.3.21 |
-| `Regular Expression` | signature-subpacket | §5.2.3.22 |
-| `Trust Packet` | packet | §5.10 |
-| `Signature Packet v6 (type 0x20)` | packet | §5.2.3, §5.2.1, Table 4 |
-| `Reason for Revocation` | signature-subpacket | §5.2.3.31 |
-| `Signature Packet v6 (type 0x28)` | packet | §5.2.3, §5.2.1, Table 4 |
-| `Signature Packet v6 (type 0x30)` | packet | §5.2.3, §5.2.1, Table 4 |
-| `Signature Target` | signature-subpacket | §5.2.3.33 |
-| `Signature Packet v4 (type 0x1F)` | packet | §5.2.3, §5.2.1, Table 4 |
-| `Revocation Key (deprecated)` | signature-subpacket | §5.2.3.23 |
-| `Signature Packet v4 (type 0x20)` | packet | §5.2.3, §5.2.1, Table 4 |
-| `Signature Packet v4 (type 0x28)` | packet | §5.2.3, §5.2.1, Table 4 |
-| `Signature Packet v4 (type 0x30)` | packet | §5.2.3, §5.2.1, Table 4 |
-| `Signature Packet v6 (type 0x50)` | packet | §5.2.3, §5.2.1, Table 4 |
-| `Signature Packet v6 (type 0x40)` | packet | §5.2.3, §5.2.1, Table 4 |
-| `Signature Packet v6 (type 0x02)` | packet | §5.2.3, §5.2.1, Table 4 |
+| name | kind | locator | messages.yaml |
+|---|---|---|---|
+| `OpenPGP Version 6 Certificate` | sequence | §10.1.1, §10.1.5 | none; grammar `v6-certificate` |
+| `OpenPGP Version 4 Certificate` | sequence | §10.1.3, §10.1.5 | none; grammar `v4-certificate` |
+| `Key Flags` | signature-subpacket | §5.2.3.29 | `subpacket-key-flags` |
+| `Features` | signature-subpacket | §5.2.3.32 | `subpacket-features` |
+| `Preferred AEAD Ciphersuites` | signature-subpacket | §5.2.3.15 | `subpacket-preferred-aead-ciphersuites` |
+| `Preferred Symmetric Ciphers for v1 SEIPD` | signature-subpacket | §5.2.3.14 | `subpacket-preferred-symmetric-ciphers-v1-seipd` |
+| `Preferred Compression Algorithms` | signature-subpacket | §5.2.3.17 | `subpacket-preferred-compression-algorithms` |
+| `Encrypted Message` | sequence | §10.3, §10.3.2.1 | none; grammar `encrypted-message` |
+| `One-Pass Signed Message` | sequence | §10.3, §5.4 | none; grammar `one-pass-signed-message` |
+| `Signed Message` | sequence | §10.3 | none; grammar `signed-message` |
+| `Intended Recipient Fingerprint` | signature-subpacket | §5.2.3.36 | `subpacket-intended-recipient-fingerprint` |
+| `Literal Data Packet` | packet | §5.9 | `literal-data` |
+| `Compressed Data Packet` | packet | §5.6 | `compressed-data` |
+| `Padding Packet` | packet | §5.14 | `padding` |
+| `Public Key Encrypted Session Key Packet v6` | packet | §5.1.2 | `pkesk-v6` |
+| `Public Key Encrypted Session Key Packet v3` | packet | §5.1.1 | `pkesk-v3` |
+| `Symmetric Key Encrypted Session Key Packet v6` | packet | §5.3.2 | `skesk-v6` |
+| `Symmetric Key Encrypted Session Key Packet v4` | packet | §5.3.1 | `skesk-v4` |
+| `Symmetrically Encrypted and Integrity Protected Data Packet v2` | packet | §5.13.2 | `seipd-v2`, `seipd-v2-key-schedule` |
+| `Symmetrically Encrypted and Integrity Protected Data Packet v1` | packet | §5.13.1 | `seipd-v1` |
+| `ASCII Armor` | text-encoding | §6.2 | `ascii-armor` |
+| `Compressed Message` | sequence | §10.3 | none; grammar `compressed-message` |
+| `Literal Message` | sequence | §10.3 | none; grammar `literal-message` |
+| `Symmetrically Encrypted Data Packet` | packet | §5.7 | `symmetrically-encrypted-data` |
+| `Optionally Padded Message` | sequence | §10.3, §10.3.1 | none; grammar `optionally-padded-message` |
+| `Secret Key Packet v6` | packet | §5.5.1.3, §5.5.3 | `secret-key` |
+| `Secret Subkey Packet v6` | packet | §5.5.1.4, §5.5.3 | `secret-key` |
+| `Signature Packet v6 (type 0x00)` | packet | §5.2.3, §5.2.1, Table 4 | `signature-v6` |
+| `Preferred Hash Algorithms` | signature-subpacket | §5.2.3.16 | `subpacket-preferred-hash-algorithms` |
+| `One-Pass Signature Packet v6` | packet | §5.4 | `ops-v6` |
+| `One-Pass Signature Packet v3` | packet | §5.4 | `ops-v3` |
+| `Signature Packet v6 (type 0x01)` | packet | §5.2.3, §5.2.1, Table 4 | `signature-v6` |
+| `Signature Creation Time` | signature-subpacket | §5.2.3.11 | `subpacket-signature-creation-time` |
+| `Issuer Fingerprint` | signature-subpacket | §5.2.3.35 | `subpacket-issuer-fingerprint` |
+| `Issuer Key ID` | signature-subpacket | §5.2.3.12 | `subpacket-issuer-key-id` |
+| `Signature Expiration Time` | signature-subpacket | §5.2.3.18 | `subpacket-signature-expiration-time` |
+| `Notation Data` | signature-subpacket | §5.2.3.24 | `subpacket-notation-data` |
+| `Signer's User ID` | signature-subpacket | §5.2.3.30 | `subpacket-signers-user-id` |
+| `Policy URI` | signature-subpacket | §5.2.3.28 | `subpacket-policy-uri` |
+| `Signature Packet v4 (type 0x00)` | packet | §5.2.3, §5.2.1, Table 4 | `signature-v4` |
+| `Detached Signature` | sequence | §10.4 | none; grammar `detached-signatures` |
+| `Cleartext Signed Message` | text-encoding | §7.1 | `cleartext-signed-message` |
+| `passphrase` | out-of-band | §2.1, §3.7 | none (not a structure) |
+| `Public Key Packet v6` | packet | §5.5.1.1, §5.5.2.3 | `public-key-v6` |
+| `Signature Packet v6 (type 0x1F)` | packet | §5.2.3, §5.2.1, Table 4 | `signature-v6` |
+| `Key Expiration Time` | signature-subpacket | §5.2.3.13 | `subpacket-key-expiration-time` |
+| `Key Server Preferences` | signature-subpacket | §5.2.3.25 | `subpacket-key-server-preferences` |
+| `Preferred Key Server` | signature-subpacket | §5.2.3.26 | `subpacket-preferred-key-server` |
+| `User ID Packet` | packet | §5.11 | `user-id` |
+| `User Attribute Packet` | packet | §5.12 | `user-attribute` |
+| `Signature Packet v6 (type 0x13)` | packet | §5.2.3, §5.2.1, Table 4 | `signature-v6` |
+| `Primary User ID` | signature-subpacket | §5.2.3.27 | `subpacket-primary-user-id` |
+| `Public Subkey Packet v6` | packet | §5.5.1.2, §5.5.2.3 | `public-key-v6` |
+| `Signature Packet v6 (type 0x19)` | packet | §5.2.3, §5.2.1, Table 4 | `signature-v6` |
+| `Signature Packet v6 (type 0x18)` | packet | §5.2.3, §5.2.1, Table 4 | `signature-v6` |
+| `Embedded Signature` | signature-subpacket | §5.2.3.34 | `subpacket-embedded-signature` |
+| `Transferable Secret Key` | sequence | §10.2 | none; grammar `v6-certificate`, `v4-certificate` |
+| `OpenPGP Version 6 Revocation Certificate` | sequence | §10.1.2 | none; grammar `v6-revocation-certificate` |
+| `Exportable Certification` | signature-subpacket | §5.2.3.19 | `subpacket-exportable-certification` |
+| `Signature Packet v6 (type 0x10-0x13)` | packet | §5.2.3, §5.2.1, Table 4 | `signature-v6` |
+| `Revocable` | signature-subpacket | §5.2.3.20 | `subpacket-revocable` |
+| `Trust Signature` | signature-subpacket | §5.2.3.21 | `subpacket-trust-signature` |
+| `Regular Expression` | signature-subpacket | §5.2.3.22 | `subpacket-regular-expression` |
+| `Trust Packet` | packet | §5.10 | `trust` |
+| `Signature Packet v6 (type 0x20)` | packet | §5.2.3, §5.2.1, Table 4 | `signature-v6` |
+| `Reason for Revocation` | signature-subpacket | §5.2.3.31 | `subpacket-reason-for-revocation` |
+| `Signature Packet v6 (type 0x28)` | packet | §5.2.3, §5.2.1, Table 4 | `signature-v6` |
+| `Signature Packet v6 (type 0x30)` | packet | §5.2.3, §5.2.1, Table 4 | `signature-v6` |
+| `Signature Target` | signature-subpacket | §5.2.3.33 | `subpacket-signature-target` |
+| `Signature Packet v4 (type 0x1F)` | packet | §5.2.3, §5.2.1, Table 4 | `signature-v4` |
+| `Revocation Key (deprecated)` | signature-subpacket | §5.2.3.23 | `subpacket-revocation-key` |
+| `Signature Packet v4 (type 0x20)` | packet | §5.2.3, §5.2.1, Table 4 | `signature-v4` |
+| `Signature Packet v4 (type 0x28)` | packet | §5.2.3, §5.2.1, Table 4 | `signature-v4` |
+| `Signature Packet v4 (type 0x30)` | packet | §5.2.3, §5.2.1, Table 4 | `signature-v4` |
+| `Signature Packet v6 (type 0x50)` | packet | §5.2.3, §5.2.1, Table 4 | `signature-v6` |
+| `Signature Packet v6 (type 0x40)` | packet | §5.2.3, §5.2.1, Table 4 | `signature-v6` |
+| `Signature Packet v6 (type 0x02)` | packet | §5.2.3, §5.2.1, Table 4 | `signature-v6` |
 
 ## Outside the source
 

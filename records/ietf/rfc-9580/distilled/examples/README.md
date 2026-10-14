@@ -364,6 +364,61 @@ listed in the brief. Defects 1, 3, 4, 6, 7, 8, 9 and 10 are new. The checker
 found 3, 6 and 7 mechanically, from offset and column bookkeeping on the
 annotated dumps. It found 1 by comparing the dump octets with the armor.
 
+## Pass 3 cross-check
+
+Pass 3 compared this directory with `messages.yaml`, `requirements.yaml`
+and `schema/`. It checked four things:
+
+- **Structures against `messages.yaml`.** Every decoded fixture packet and
+  every structure vector was matched to a `messages.yaml` entry, and its
+  field widths were checked against that entry's `layout`. That covers the
+  hash inputs, the HKDF info, the AEAD additional data, the KDF Param, the
+  key-wrap input and the PKCS#1 encodings.
+- **Annotated dumps.** Every label in the 12 `.annotated.txt` dumps was
+  matched to a field, and every label's width was checked against the
+  layout.
+- **R-ids.** Every R-id cited here and in `vectors.yaml` exists in
+  `requirements.yaml`.
+- **Constructed vectors.** Every binary constructed vector was run through
+  `schema/validate.derived.py`. The checks of pass 1 were repeated on them:
+  the Ed25519 signatures and their left-16 fields, the AEAD tags, the S2K
+  outputs, the PKCS#1 and Curve25519Legacy outputs, the fingerprints and
+  the cleartext message digests.
+
+Five constructed vectors had a second defect besides the rule they test.
+A reader could reject them for the wrong reason, so they were rebuilt. Each
+rebuilt vector carries `derived.pass3_rebuild`, which says why. Because of
+these rebuilds, the pass-1 checker's regenerated output no longer matches
+`vectors.yaml` for these five vectors:
+
+- `PGP-0525-C02`: a v4 signature by a v6 key. The old bytes also carried a
+  v6 Issuer Fingerprint, which is malformed in a v4 signature (R-0160).
+- `PGP-03721-C01`: Argon2 under usage 254. The old bytes kept the
+  usage-253 layout. Read under usage 254 they hold no Argon2 specifier, so
+  R-0018 was not exercised.
+- `PGP-0553-C01`: a v6 key with usage 255. The old bytes kept the
+  usage-253 layout, so the packet was malformed in structure before
+  R-0191 applied.
+- `PGP-0421-C03` and `PGP-0421-C04`: bad partial-length framing. The old
+  bodies were all zero octets, which gives an invalid Literal Data format
+  and an unknown signature version 0.
+
+In two places the validator disagreed with a vector's stated outcome. Both
+were tooling gaps, the vectors were correct, and pass 3 closed both gaps:
+
+- On `PGP-05237-C01` the schema rejected the unassigned non-critical
+  subpacket type 40, but R-0081 says to ignore it. The schema now keeps an
+  unassigned non-critical subpacket as an opaque body.
+- On `PGP-0622-C02` the validator did not flag the non-conformant Hash
+  header (R-0259). It now checks each item against the Table 23 Text Names.
+
+Every constructed verdict now agrees with the validator. Where the
+validator cannot judge a vector, because the check needs cryptography or
+the key, it reported no conflicting error. That was the case for
+`PGP-05236-C01`, `PGP-0525-C02`, `PGP-137-C01`, `PGP-137-C02` and
+`PGP-072-C01`. The lone PKESK and key packets fail only the §10 grammar,
+which is expected.
+
 ## Reproducing the checks
 
 - A fixture's octets are `decoded.hex` in `vectors.yaml`. Alternatively,

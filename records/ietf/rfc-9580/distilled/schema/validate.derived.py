@@ -34,6 +34,8 @@ SALT = {8: 16, 9: 24, 10: 32, 11: 16, 12: 16, 14: 32}                 # Table 23
 DIGEST = {1: 16, 2: 20, 3: 20, 8: 32, 9: 48, 10: 64, 11: 28, 12: 32, 14: 64}
 NONCE = {1: 16, 2: 15, 3: 12}                                         # Table 25
 TAG = {1: 16, 2: 16, 3: 16}
+HASH_TEXT_NAMES = {'MD5', 'SHA1', 'RIPEMD160', 'SHA256', 'SHA384',     # Table 23
+                   'SHA512', 'SHA224', 'SHA3-256', 'SHA3-512'}         # Text Name
 BLOCK = {1: 8, 2: 8, 3: 8, 4: 8, 7: 16, 8: 16, 9: 16, 10: 16, 11: 16, 12: 16, 13: 16}  # INFERRED
 CURVE25519_LEGACY = '2b060104019755010501'
 
@@ -113,6 +115,8 @@ def dearmor(text, notes):
             for h in headers:
                 if not h.startswith('Hash: '):
                     notes.append(f'cleartext header other than Hash: {h!r} -> MUST decline (§7.1, R-0267)')
+                elif not all(n.strip() in HASH_TEXT_NAMES for n in h[6:].split(',')):
+                    notes.append(f'non-conformant Hash header: {h!r} -> MUST decline (§6.2.2.3, R-0259)')
             while i < len(lines) and not lines[i].startswith('-----BEGIN PGP SIGNATURE-----'):
                 if lines[i].startswith('-') and not lines[i].startswith('- '):
                     notes.append(f'unescaped dash line in cleartext: {lines[i]!r} (§7.2, R-0271)')
