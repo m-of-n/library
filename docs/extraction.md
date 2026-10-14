@@ -75,6 +75,16 @@ the record used to claim — the first row of the table above outranks the other
 two. A grandfathered record cannot grow artifacts that quietly miss the bar; it
 can only be left alone or raised.
 
+**A vintage only moves forward.** It is self-declared, so without this it would
+also be backdatable: a PR could rewrite `standard: FX-1` to an older token, drop
+`profile: full`, and have the gate waive the record it had just demoted —
+dissolving the ratchet this whole mechanism exists to keep.
+`bin/check-pr-extraction` compares each touched record's vintage against the
+base ref and rejects any change whose new value is not the current standard.
+Grandfathering protects records that history left behind; it is not a lever a PR
+pulls on itself. A record a PR *adds* is unconstrained — that is how a fold like
+#62 brings another library's vintages in.
+
 This is also what makes the *next* standard survivable. When FX-2 lands, the 35
 records saying `profile: full` will still say `full` — and they will also still
 say `standard: FX-1`, so the gate grandfathers them instead of failing all 35 at
