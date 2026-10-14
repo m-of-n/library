@@ -171,10 +171,13 @@ deliberately did not ingest.
 | File | What it is |
 |---|---|
 | `record.yaml` | metadata, relations, `bears_on`, implementations survey |
-| `summary.md` | this file — the only written artifact |
+| `summary.md` | this file — written from a narrow read; see Limits |
+| `distilled/` | the FX-1 artifact set: normative, requirements, schema, messages, protocol, state machine, examples, design notes — start at `distilled/README.md` |
 
-No `distilled/`. This record is at the **summary bar**, not FX-1; the full
-extraction is owned by **#45**.
+**The FX-1 artifacts under `distilled/` have landed** — extract, verify and
+cross-check complete, `record.yaml` declares `distillation.standard: FX-1`,
+`profile: full` — and they, not this summary, are the citable detail. Where
+the two differ, the artifacts win. Extraction was owned by **#64**.
 
 ## Limits
 
