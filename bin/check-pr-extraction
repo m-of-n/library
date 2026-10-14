@@ -4,22 +4,35 @@
     bin/check-pr-extraction <base-ref>
 
 FX-1 (docs/extraction.md) is triggered by the INTENT TO EXTRACT, not by mere
-contact with a record. A PR that only summarises an in-scope record is doing
-ingestion, not extraction, and is held to the summary bar instead.
+contact with a record, and it is NOT retroactive: "older records are
+grandfathered until someone extracts them".
 
-A touched record of type rfc/draft/spec/ietf must declare
-distillation.profile: full when any of these is true — bin/validate then
-enforces the artifact set:
+Both halves of that sentence need a fact this library did not used to record.
+`status: distilled` has meant three different things — the pre-FX-1 procedure
+(docs/distillation.md, library#9), FX-1 itself, and a foreign library's
+convention folded in by library#62 — so reading `status` cannot tell a
+grandfathered record from a delinquent one. It guessed "FX-1" and put 20
+records permanently in breach of a standard that postdated them (library#73).
 
-  * status: distilled                     the record claims to be extracted
-  * a `distillation` block is present     extraction has been declared
-  * the PR touches its distilled/         the PR is doing extraction now
+So a record now declares the standard it was measured against:
 
-Otherwise `summarized` is sufficient and `distillation` is left alone.
+    distillation:
+      standard: FX-1          # the denominator
+      profile: full           # how completely it met THAT standard
 
-This is a ratchet: once a record is extracted it cannot quietly regress to a
-summary, because the first two conditions keep firing on every later PR that
-touches it.
+and this gate compares that against the standard in force:
+
+  * standard == CURRENT    held to it; bin/validate enforces the artifact set
+  * standard != CURRENT    GRANDFATHERED — reported, not failed
+  * adding to distilled/   extracting now, so CURRENT applies whatever it says
+
+`profile: partial` is a deliberate, reasoned scope below the standard — a
+paywalled source, a secondary reference — and needs `profile_reason`. It is a
+legitimate terminal state, not an unfinished one.
+
+The ratchet is enforced directly against the base ref rather than as a side
+effect of `status`: a record may not drop its distillation, fall back to an
+older standard, or regress from `full` to `partial`.
 """
 import pathlib, subprocess, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -28,44 +41,100 @@ from _yaml import parse
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 IN_SCOPE = {"rfc", "draft", "spec", "ietf"}
 STUB_OK = {"stub", "queued"}
+CURRENT = "FX-1"          # docs/extraction.md, in force from 2026-09-28
+
+
+def git(*args):
+    return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True).stdout
+
+
+def base_record(base, path):
+    """The record.yaml as it stood at the base ref, or None if it is new."""
+    out = subprocess.run(["git", "show", f"{base}:{path}"], cwd=ROOT,
+                         capture_output=True, text=True)
+    return parse(out.stdout) if out.returncode == 0 else None
+
 
 if len(sys.argv) < 2:
     print(__doc__); sys.exit(2)
-changed = subprocess.run(["git", "diff", "--name-only", f"{sys.argv[1]}...HEAD", "--", "records/"],
-                         cwd=ROOT, capture_output=True, text=True, check=True).stdout.split()
+base = sys.argv[1]
+
+# -M so a rename inside distilled/ is a rename, not a delete plus an add:
+# renaming a file is maintenance, adding one is extraction.
+status = git("diff", "--name-status", "-M", f"{base}...HEAD", "--", "records/").split("\n")
+changed, added = [], []
+for line in status:
+    if not line.strip():
+        continue
+    parts = line.split("\t")
+    code, paths = parts[0], parts[1:]
+    changed.extend(paths)
+    if code.startswith("A"):
+        added.extend(paths)
+
 paths = [pathlib.Path(p) for p in changed if len(pathlib.Path(p).parts) >= 3]
 recs = sorted({pathlib.Path(*p.parts[:3]) for p in paths})
-# records whose distilled/ this PR adds to or changes — extraction in progress
-extracting = {pathlib.Path(*p.parts[:3]) for p in paths
-              if len(p.parts) >= 4 and p.parts[3] == "distilled"}
+extracting = {pathlib.Path(*pathlib.Path(p).parts[:3]) for p in added
+              if len(pathlib.Path(p).parts) >= 4 and pathlib.Path(p).parts[3] == "distilled"}
 
-bad, summarised_only = [], []
+bad, grandfathered, summarised_only = [], [], []
 for r in recs:
     y = ROOT / r / "record.yaml"
     if not y.exists():
         continue                                  # removed or moved
     d = parse(y.read_text())
+    dist = d.get("distillation") if isinstance(d.get("distillation"), dict) else None
+    std = (dist or {}).get("standard")
+    prof = (dist or {}).get("profile")
+
+    # --- the ratchet, against the base ref rather than against `status`
+    was = base_record(base, f"{r}/record.yaml")
+    wdist = (was or {}).get("distillation") if isinstance((was or {}).get("distillation"), dict) else None
+    if wdist and not dist:
+        bad.append(f"{r}  RATCHET: had a distillation block at {base}, now has none")
+        continue
+    if wdist and wdist.get("profile") == "full" and prof == "partial":
+        bad.append(f"{r}  RATCHET: profile full -> partial; an extraction does not regress")
+        continue
+    if wdist and wdist.get("standard") == CURRENT and std and std != CURRENT:
+        bad.append(f"{r}  RATCHET: standard {CURRENT} -> {std}; a record does not fall back a standard")
+        continue
+
     if d.get("type") not in IN_SCOPE or d.get("status") in STUB_OK:
         continue
-    dist = d.get("distillation") if isinstance(d.get("distillation"), dict) else None
-    prof = (dist or {}).get("profile")
-    under_fx1 = d.get("status") == "distilled" or dist is not None or r in extracting
-    if not under_fx1:
+    if not dist and r not in extracting:
         summarised_only.append(f"{r}  (type {d.get('type')}, status {d.get('status')})")
         continue
-    if prof != "full":
-        why = ("status: distilled" if d.get("status") == "distilled"
-               else "PR touches distilled/" if r in extracting
-               else "distillation declared")
-        bad.append(f"{r}  (type {d.get('type')}, status {d.get('status')}, "
-                   f"profile {prof or 'none'} — under FX-1 because {why})")
+    if not std:
+        bad.append(f"{r}  declares a distillation but no `standard` — say which standard it was "
+                   f"measured against ({CURRENT}, distillation/0.1.0, threat-radar)")
+        continue
+    if std != CURRENT:
+        if r in extracting:
+            bad.append(f"{r}  is adding to distilled/ under the grandfathered standard '{std}'. "
+                       f"Extending an extraction brings it to {CURRENT}")
+        else:
+            grandfathered.append(f"{r}  (standard {std}, not {CURRENT} — untouched by this PR's changes)")
+        continue
+    if prof == "full":
+        continue                                   # bin/validate enforces the artifact set
+    if prof == "partial":
+        if not str((dist or {}).get("profile_reason", "")).strip():
+            bad.append(f"{r}  profile: partial with no `profile_reason` — an unexplained partial "
+                       f"is indistinguishable from an abandoned one")
+        continue
+    bad.append(f"{r}  (type {d.get('type')}, status {d.get('status')}) is held to {CURRENT} and "
+               f"declares no profile — declare `full`, or `partial` with a reason")
 
-print(f"check-pr-extraction: {len(recs)} record(s) touched")
+print(f"check-pr-extraction: {len(recs)} record(s) touched; standard in force: {CURRENT}")
 if summarised_only:
     print(f"\nsummary bar ({len(summarised_only)}) — not extracting, FX-1 not required:")
     for s in summarised_only: print("  " + s)
+if grandfathered:
+    print(f"\ngrandfathered ({len(grandfathered)}) — measured against an earlier standard:")
+    for g in grandfathered: print("  " + g)
 if bad:
-    print("\nFX-1 not met — these records are being extracted but are not complete:")
+    print("\nFX-1 not met:")
     for b in bad: print("  " + b)
     print("\nSee docs/extraction.md. Start with: bin/extract-scaffold <record-dir>")
     sys.exit(1)
