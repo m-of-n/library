@@ -12,7 +12,7 @@ updated: "2026-10-02"
 |---|---|---|
 | `normative.md` | normative | all 67 extracted statements verbatim by part (instructions, Section I, II, III, burden, appendix) + the Appendix crosswalk table verbatim |
 | `requirements.yaml` | requirements | 67 entries: instruction obligations (INS-*), form controls (I-*, II-*), the 12+ Section III attestation items with the form's own `maps_to` EO 14028 §4(e) + SSDF tasks; counts reconciled |
-| `schema/attestation-form.schema.json` | schema | DERIVED JSON Schema 2020-12 of the PDF form (Sections I–III, signature vs 3PAO oneOf), x-locator on every field |
+| `schema/attestation-form.derived.schema.json` | schema | DERIVED JSON Schema 2020-12 of the PDF form (Sections I–III, signature vs 3PAO oneOf), x-locator on every field |
 | `messages.yaml` | messages | the form as a message (sections, fields, encodings online/PDF) + 3PAO assessment, POA&M package, extension/waiver request, lapse notification, addendum, Privacy Act statement |
 | `protocol.yaml`, `protocol.md` | protocol | 6 flows (online, PDF, 3PAO, cannot-attest, revise/lapse, addendum) with error paths; Mermaid |
 | `state-machine.yaml` | state-machine | attestation lifecycle: 10 states, 15 transitions (incl. forward-binding across versions, lapse, PRA expiry) |

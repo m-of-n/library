@@ -20,7 +20,7 @@ Expected result: producer `Acme`, product `SecuritySuite`, version `4.6.2.1`, at
 2023-01-24 (`examples/filename-vectors.yaml`).
 
 The JSON instances are **ours** (constructed, not from the source), built from that example to
-exercise `schema/attestation-form.schema.json`:
+exercise `schema/attestation-form.derived.schema.json`:
 
 | file | expected |
 |---|---|
