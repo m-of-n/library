@@ -36,6 +36,7 @@ VERDICTS = {"useful", "marginal", "not-useful", "unassessed"}
 STATUS = {"stub", "queued", "fetched", "reading", "read", "summarized", "distilled"}
 TYPES = {"rfc", "draft", "spec", "paper", "book", "article", "repo", "dataset",
          "consortium", "hierarchy", "spreadsheet", "web", "note", "ietf", "url", "md"}
+FX1 = "FX-1"   # the extraction standard in force; see docs/extraction.md and #73
 # FX-1 (docs/extraction.md): the artifact set a `profile: full` record must carry.
 FX1_ALWAYS = ["normative", "requirements", "design-notes"]
 FX1_UNLESS_NA = ["schema", "messages", "protocol", "state-machine", "examples"]
@@ -206,8 +207,9 @@ def main():
         s_md = rec.parent / "summary.md"
         if not s_md.exists() or any(m in s_md.read_text() for m in SCAFFOLD):
             scaffolds.append(where)
-        if isinstance(d.get("distillation"), dict) and d["distillation"].get("profile") == "full":
-            extracted += 1
+        _dd = d.get("distillation")
+        if isinstance(_dd, dict) and _dd.get("profile") == "full" and _dd.get("standard") == FX1:
+            extracted += 1          # full against the standard in force, not against an older one
         # duplicate detection (library#35): the same document held twice, usually
         # because a second publisher looked like a second document
         all_ids.add(rid)
@@ -284,8 +286,20 @@ def main():
             if not md.read_text().startswith("---"):
                 errs.append(f"{where}: distilled/{md.name} needs YAML front matter")
         dist = d.get("distillation") or {}
-        if isinstance(dist, dict) and dist.get("profile") == "full":
-            check_full(rec.parent, d, where, errs)
+        if isinstance(dist, dict) and dist:
+            # The denominator for `profile` (#73). Without it "full" names no
+            # standard, and `status: distilled` cannot be read as a claim.
+            std = dist.get("standard")
+            if not std:
+                errs.append(f"{where}: distillation declares no `standard` — say which standard "
+                            f"it was measured against (FX-1, distillation/0.1.0, threat-radar)")
+            if dist.get("profile") == "partial" and not str(dist.get("profile_reason", "")).strip():
+                errs.append(f"{where}: profile: partial needs a `profile_reason` — an unexplained "
+                            f"partial is indistinguishable from an abandoned one")
+            # FX-1's artifact set is FX-1's. A record measured against an earlier
+            # standard is grandfathered and is not held to it.
+            if std == FX1 and dist.get("profile") == "full":
+                check_full(rec.parent, d, where, errs)
         # Not gated on profile: full — the drift this catches (#44) happens
         # the moment a schema/ directory exists, not when the record finishes.
         check_derived_naming(rec.parent, where, errs, warns)

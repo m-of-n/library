@@ -17,7 +17,7 @@ never means *finished*.
 | `normative.md` | normative | §4.1–4.5 data model, §2 conventions, §5 delegation. **Not** §6 IANA, §7 examples, §5 in full | — (hand) | ✗ |
 | `fields.yaml` | fields | **54 fields**, all five objects | `normative.md` + `bin/extract-fields` | ✗ |
 | `requirements.yaml` | requirements | **33 requirements**, externally referenceable | `fields.yaml` | ✗ |
-| `schema/types.cddl` | schema | structural shape only | `fields.yaml` | ✗ |
+| `schema/types.derived.cddl` | schema | structural shape only | `fields.yaml` | ✗ |
 | `code/types.py` | code | Python dataclasses | `fields.yaml` | ✗ |
 | `code/types.rs` | code | Rust serde structs | `fields.yaml` | ✗ |
 | `examples/` | examples | **empty** — §7 examples not yet lifted | — | — |
