@@ -58,7 +58,7 @@ a figure appears in this record, it names which it means.
 
 Pass 2 was adversarial and re-derived everything from the source rather than
 reading the artifacts as truth. It found **10 defects and fixed 10**. The one
-that mattered: `schema/sorting.md` carried the Hebrew property name
+that mattered: `schema/sorting.derived.md` carried the Hebrew property name
 **decomposed** as `U+05D3 U+05BC` instead of the precomposed `U+FB33` the
 §3.2.3 test vector specifies — wrong bytes, wrong UTF-16 length, and a wrong
 sort position. That is precisely the hazard `examples/README.md` warns about,
@@ -88,7 +88,7 @@ that is verbatim everywhere else.
 
 ## What pass 3 landed on resumption
 
-5. **`i-json-input.schema.json` passes the JSON Schema 2020-12 metaschema.**
+5. **`i-json-input.derived.schema.json` passes the JSON Schema 2020-12 metaschema.**
    `jsonschema` 4.26.0, `Draft202012Validator`: `check_schema` raises nothing
    and a full `iter_errors` run against the metaschema returns **0 errors**.
    Nothing was changed. Detail in `schema/README.md`.
@@ -118,8 +118,8 @@ Each vector was therefore checked against what it claims to be, in its own
 
 | check | population | result |
 |---|---|---|
-| `input` admitted by `i-json-input.schema.json` | 15 JSON-document inputs | all admitted except `JCS-D-01`, which the schema correctly rejects |
-| `expected` admitted by `canonical-output.abnf` | 10 whole-document expecteds | all admitted |
+| `input` admitted by `i-json-input.derived.schema.json` | 15 JSON-document inputs | all admitted except `JCS-D-01`, which the schema correctly rejects |
+| `expected` admitted by `canonical-output.derived.abnf` | 10 whole-document expecteds | all admitted |
 | `expected` admitted by the `number` production | 24 serializing Appendix B rows | all admitted |
 | `expected` lines admitted by the `string` production | `JCS-323-02` (7), `JCS-323-03` (4) | all admitted |
 | octet layer `jcs-octets` + decode round trip | `JCS-324-01` | 118 bytes, matches, decodes to exactly the `input` |
@@ -136,7 +136,7 @@ Three results are worth keeping:
   runs every `expected` through the grammar will flag this one; it should not.
 - **`JCS-322-01`'s `expected` is admitted by the ABNF although it is not
   canonical.** Its properties are unsorted. The grammar admits it because the
-  grammar cannot express member order — `canonical-output.abnf` gap item 1.
+  grammar cannot express member order — `canonical-output.derived.abnf` gap item 1.
   The vector is therefore a live demonstration of that gap, which is a better
   argument for the gap than the prose about it.
 - **The 24 serializing Appendix B rows were re-derived by a real ECMAScript
@@ -152,7 +152,7 @@ wrong reason.
 | vector | rejected by | the input schema? |
 |---|---|---|
 | `JCS-31-E1` duplicate names | a raw-token duplicate-name scan (confirmed: it finds `a`) — `rfc-8785#R-0003` | **no** — admits it; `NOT-EXPRESSIBLE` 1 |
-| `JCS-3222-E1` lone surrogate | `canonical-output.abnf` (`unescaped` skips U+D800–DFFF; `UTF8-3` excludes the block) — `rfc-8785#R-0017` | **no** — admits it; `NOT-EXPRESSIBLE` 2 |
+| `JCS-3222-E1` lone surrogate | `canonical-output.derived.abnf` (`unescaped` skips U+D800–DFFF; `UTF8-3` excludes the block) — `rfc-8785#R-0017` | **no** — admits it; `NOT-EXPRESSIBLE` 2 |
 | `JCS-3223-E1` NaN | the JSON parser: RFC 8259 has no `NaN` token — `rfc-8785#R-0019` | n/a — not representable |
 | `JCS-3223-E2` Infinity | the JSON parser: RFC 8259 has no `Infinity` token — `rfc-8785#R-0019` | n/a — not representable |
 | `JCS-B-10` NaN bit pattern | `7fffffffffffffff` denotes NaN; no JSON token exists for it — `rfc-8785#R-0019` | n/a — not representable |
@@ -314,7 +314,7 @@ readings.
 
 ## Known gaps
 
-~~1. `i-json-input.schema.json` has not been checked against the metaschema.~~
+~~1. `i-json-input.derived.schema.json` has not been checked against the metaschema.~~
 **Closed.** 0 errors against JSON Schema 2020-12; nothing changed.
 
 ~~2. The 44 vectors have not been validated as a set.~~ **Closed.** 44 of 44,
@@ -330,12 +330,17 @@ requirements, 31 correctly excluded.
 
 **Still open:**
 
-1. **`$id` in `i-json-input.schema.json` is a placeholder**, pending whether
-   this library publishes schema identifiers at all — a project decision, not a
-   record one. See `library#44`. The metaschema run confirms this is a
-   publication question and not a validity defect.
-2. **Derived files here do not use the `.derived.` filename infix** that
-   `rfc-8949` uses; the marker is in each file's header instead. `library#44`.
+1. ~~**`$id` in `i-json-input.derived.schema.json` is a placeholder**, pending
+   whether this library publishes schema identifiers at all.~~ **Closed by
+   `library#44`, 2026-10-13.** Derived schemas take
+   `urn:library:<record-id>:<artifact>`; this one is now
+   `urn:library:rfc-8785:i-json-input.derived`. The metaschema run had already
+   confirmed this was a publication question and not a validity defect.
+2. ~~**Derived files here do not use the `.derived.` filename infix** that
+   `rfc-8949` uses; the marker is in each file's header instead.~~ **Closed by
+   `library#44`, 2026-10-13.** The three derived files were renamed and the
+   convention is now normative in `docs/extraction.md`: `.derived.` mandatory,
+   `.verbatim.` optional, unmarked means verbatim. The header markers stay.
 3. **`protocol.yaml` has no machine-readable link to `messages.yaml`** — no
    `structure:` key and no requirement ids, so the cross-check above is a
    reading and cannot be re-run by a tool. This is the same wiring gap that
@@ -356,9 +361,9 @@ completeness claim behind it. **A human closed that loop on 2026-10-04**, after
 reading this report, and set both.
 
 Items 1–5 under *Still open* survive that approval and were weighed in it. None
-blocks `profile: full`: two are `library#44` publication decisions, one is the
-`library#43` tooling limitation, one is a `protocol.yaml` wiring improvement,
-and one is the deferred flag-breadth question. Item 5 is the one to keep in
+blocks `profile: full`: two were `library#44` publication decisions and are now
+closed, one is the `library#43` tooling limitation, one is a `protocol.yaml`
+wiring improvement, and one is the deferred flag-breadth question. Item 5 is the one to keep in
 view — pass 3's vector validation used `pyyaml` and is therefore **not
 reproducible by `bin/validate` as it stands**, so CI's checks over
 `vectors.yaml` values remain vacuous. The validation was real; CI cannot re-run
@@ -372,4 +377,4 @@ reads as `"|-"` through it, and both `bin/validate` and
 `bin/check-pr-extraction` import it — so **any CI check over those values is
 vacuous**. The in-file warnings in `protocol.yaml` and `messages.yaml` against
 `>` and `|` are working around this, not expressing a style preference. A
-defect of the `sorting.md` class above would not be caught by CI today.
+defect of the `sorting.derived.md` class above would not be caught by CI today.

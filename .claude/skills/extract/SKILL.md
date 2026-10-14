@@ -27,7 +27,7 @@ Each agent reads the **source**, never the summary or another agent's output.
 |---|---|---|
 | normative | `normative.md` | every BCP 14 statement *and* every normative table, ABNF, CDDL, IANA rule; verbatim; locator on each |
 | requirements | `requirements.yaml` | one entry per statement; split compound sentences only where each part is separately testable; `actor` is who must comply; `testable: yes/partial/no` with a reason when not yes; `kind: inferred` marks anything not literally stated |
-| schema | `schema/*.cddl`, `*.schema.json` | the source's own CDDL/ASN.1/JSON Schema **copied verbatim** with section; where only prose exists, a derived schema marked `derived` |
+| schema | `schema/*.cddl`, `*.schema.json` | the source's own CDDL/ASN.1/JSON Schema **copied verbatim** with section; where only prose exists, a derived schema. **Derived files are named `*.derived.*`** — the infix is mandatory, not just a header marker; an unmarked name asserts verbatim. Derived JSON Schemas take `$id: urn:library:<record-id>:<artifact-name>`. `bin/validate` enforces both |
 | messages | `messages.yaml` | every message, header, envelope, structure; field, type, required, encoding, byte-level layout; `constrained_by` links to R-ids |
 | protocol | `protocol.yaml`, `protocol.md` | roles, every flow, every error path; a Mermaid sequence diagram per flow |
 | state machine | `state-machine.yaml` | anything with lifecycle — registration, issuance, receipt, verification, key rollover; states, triggers, guards, error states |

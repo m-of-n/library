@@ -19,8 +19,8 @@ blockquote was written for this record and **must not be quoted as RFC 8785's
 own text**. Source quotations are blockquoted and attributed to their section.
 
 This file exists because sorting is the one JCS rule that **no grammar can
-express**. `canonical-output.abnf` admits any member order (its gap item 1);
-`i-json-input.schema.json` does not reach the output at all. A harness that
+express**. `canonical-output.derived.abnf` admits any member order (its gap item 1);
+`i-json-input.derived.schema.json` does not reach the output at all. A harness that
 checks only those two has not checked canonicalization. This is the missing
 decision procedure.
 
@@ -252,7 +252,7 @@ and:
 - the canonical form is **unique**, which is the whole point;
 - conversely, if an implementation ever observes two equal keys while sorting,
   the input violated §3.1 and the §3.1 check was skipped upstream. That is a
-  useful place to assert, because — see `i-json-input.schema.json` — the
+  useful place to assert, because — see `i-json-input.derived.schema.json` — the
   duplicate-name rule is unenforceable by schema and most parsers have already
   collapsed the duplicate before the canonicalizer is reached.
 
@@ -363,10 +363,10 @@ specification aid, not a conformant implementation.
 - **S-3, "array element order MUST NOT be changed", is a relation between input
   and output.** Nothing examining the output alone can verify it; only a
   differential test against the input can. Same gap as
-  `canonical-output.abnf` item 3.
+  `canonical-output.derived.abnf` item 3.
 - **Whether the sort key was built from the raw form** is likewise invisible in
   the output for names containing no escapable character — which is most names.
   §3.2.3's test vector is the check; there is no structural one.
 - **This file states the order; it does not state the serialization.** The
-  escaping, number and whitespace rules are in `canonical-output.abnf`. A
+  escaping, number and whitespace rules are in `canonical-output.derived.abnf`. A
   correct order with incorrect escaping is still a wrong digest.

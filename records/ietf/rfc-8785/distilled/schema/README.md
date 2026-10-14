@@ -50,9 +50,9 @@ never be cited as RFC 8785's own schema.
 | file | covers | kind | source |
 |---|---|---|---|
 | `canonicalizer.ecmascript.js` | the sample canonicalizer, in full, with the source's own comment banners and page indentation preserved | **verbatim** | Appendix A, complete (lines 518–579 of the cached text) |
-| `i-json-input.schema.json` | the §3.1 constraints on **input** data, as JSON Schema 2020-12: object/array/string/number/literal, binary64 magnitude bounds, and a recorded gap wherever JSON Schema cannot reach | **derived** | §3.1 in full, §3.2.2.1, §3.2.2.3, Appendix B notes (1) and (3), Appendix D, Appendix E, E.1 |
-| `canonical-output.abnf` | the JCS **output** grammar as ABNF (RFC 5234), in two layers: code points (structure, literals, the complete §3.2.2.2 escaping, the ECMAScript number output language) and octets (the RFC 3629 UTF-8 encoding §3.2.4 requires) | **derived** | §3.2.1, §3.2.2.1, §3.2.2.2, §3.2.2.3, §3.2.3, §3.2.4, Appendix B; number productions additionally from ECMA-262 §7.1.12.1, which §3.2.2.3 makes normative by reference |
-| `sorting.md` | the §3.2.3 sorting algorithm as an implementable procedure — the one JCS rule no grammar can express | **derived** | §3.2.3 in full, with §3.1 and Appendix A |
+| `i-json-input.derived.schema.json` | the §3.1 constraints on **input** data, as JSON Schema 2020-12: object/array/string/number/literal, binary64 magnitude bounds, and a recorded gap wherever JSON Schema cannot reach | **derived** | §3.1 in full, §3.2.2.1, §3.2.2.3, Appendix B notes (1) and (3), Appendix D, Appendix E, E.1 |
+| `canonical-output.derived.abnf` | the JCS **output** grammar as ABNF (RFC 5234), in two layers: code points (structure, literals, the complete §3.2.2.2 escaping, the ECMAScript number output language) and octets (the RFC 3629 UTF-8 encoding §3.2.4 requires) | **derived** | §3.2.1, §3.2.2.1, §3.2.2.2, §3.2.2.3, §3.2.3, §3.2.4, Appendix B; number productions additionally from ECMA-262 §7.1.12.1, which §3.2.2.3 makes normative by reference |
+| `sorting.derived.md` | the §3.2.3 sorting algorithm as an implementable procedure — the one JCS rule no grammar can express | **derived** | §3.2.3 in full, with §3.1 and Appendix A |
 
 Naming note: the sibling `rfc-8949` record marks derived files with a
 `.derived.` infix. These four filenames were fixed by the extraction task that
@@ -68,17 +68,17 @@ They are not alternative views of one thing; they constrain three different
 objects, and **a harness needs all three**.
 
 ```
-input document ──────► i-json-input.schema.json   (§3.1: is this canonicalizable?)
+input document ──────► i-json-input.derived.schema.json   (§3.1: is this canonicalizable?)
        │
        ▼  canonicalization
-canonical octets ────► canonical-output.abnf      (§3.2.1/2/4: is this well-formed JCS?)
+canonical octets ────► canonical-output.derived.abnf      (§3.2.1/2/4: is this well-formed JCS?)
        │
-       └─────────────► sorting.md                 (§3.2.3: is the member order right?)
+       └─────────────► sorting.derived.md                 (§3.2.3: is the member order right?)
 ```
 
-`canonical-output.abnf` **cannot** check member order — it admits any
+`canonical-output.derived.abnf` **cannot** check member order — it admits any
 permutation (its gap item 1). A string can satisfy the entire grammar and not
-be canonical JCS. `sorting.md` is therefore not supplementary prose; it is the
+be canonical JCS. `sorting.derived.md` is therefore not supplementary prose; it is the
 missing half of the output check, and it has to be run separately.
 
 Test fixtures belong in `../examples/`, not here. This directory holds the
@@ -133,25 +133,26 @@ here and there is pass 1's work, which is weaker but mechanical, not assertion:
   gap was then **confirmed empirically to be a real false positive** — see
   below.
 - **Every quoted passage was diffed against the cached source**: 8 blockquotes
-  in `sorting.md` and 27 quoted sentences across the ABNF, the JSON Schema and
+  in `sorting.derived.md` and 27 quoted sentences across the ABNF, the JSON Schema and
   the verbatim file's header. All verbatim, after one defect was found and
   fixed (the §3.2.2.3 quote in the ABNF had dropped the `[IEEE754]` citation
   from inside its quotation marks), and after four property names in
-  `sorting.md`'s §3.2.3 test-data quote were restored to the source's escape
+  `sorting.derived.md`'s §3.2.3 test-data quote were restored to the source's escape
   spellings (`\u20ac`, `\ufb33`, `\ud83d\ude00`, `\u00f6`) from the literal
   characters they had been written as.
 
 **Pass 3, with real tooling installed.** Both outstanding parser checks ran:
 
-- **`i-json-input.schema.json` was validated against the JSON Schema 2020-12
+- **`i-json-input.derived.schema.json` was validated against the JSON Schema 2020-12
   metaschema** with `jsonschema` 4.26.0 (Python). `Draft202012Validator` is the
   class the `$schema` keyword selects; `check_schema` raises nothing, and an
   explicit `iter_errors` run against the full metaschema reports **0 errors** —
   not merely the first, the complete list. The schema then instantiates and
   every `$ref` resolves. **No schema-level error was found and nothing was
-  changed.** The `$id` remains a placeholder (`library#44`); that is a
-  publication decision, not a validity defect, and the metaschema does not care.
-- **`canonical-output.abnf` was transcribed rule-for-rule into an executable
+  changed.** The `$id` was a placeholder when this ran; #44 has since settled
+  it as `urn:library:rfc-8785:i-json-input.derived`. That was a publication
+  decision, not a validity defect, and the metaschema does not care either way.
+- **`canonical-output.derived.abnf` was transcribed rule-for-rule into an executable
   validator a second time**, independently of pass 1's transcription, and
   guarded by 36 positive and 31 negative controls before use — including `-0`,
   `1E+30`, `1e30`, `1e+0`, `0.0000001`, an uppercase-hex escape, a `\u0008`
@@ -171,7 +172,7 @@ here and there is pass 1's work, which is weaker but mechanical, not assertion:
 
 Stated gaps, not omissions. Each is a real RFC 8785 rule that the derived files
 cannot decide; each lives in full in the file it belongs to
-(`canonical-output.abnf` gap items 1–8, `i-json-input.schema.json`
+(`canonical-output.derived.abnf` gap items 1–8, `i-json-input.derived.schema.json`
 `$defs/NOT-EXPRESSIBLE` items 1–8) and in `../requirements.yaml` and
 `../normative.md`. Collected here for the cross-check pass.
 
@@ -189,7 +190,7 @@ cannot decide; each lives in full in the file it belongs to
 2. **Member sort order** (§3.2.3 — `rfc-8785#R-0020`, `rfc-8785#R-0021`,
    `rfc-8785#R-0023`; the sort *predicate* those three invoke is
    `rfc-8785#R-0025` through `rfc-8785#R-0029`) — the largest gap in the ABNF.
-   See `sorting.md`.
+   See `sorting.derived.md`.
 3. **"Array element order MUST NOT be changed"** (§3.2.3 — `rfc-8785#R-0024`,
    with the scan obligation `rfc-8785#R-0022`) — a relation between
    input and output; only a differential test can see it.
@@ -259,7 +260,7 @@ cannot decide; each lives in full in the file it belongs to
     arbitrary input.
 
 **The dangerous subset.** In items 1, 10 and 12 — and in 8 — non-conforming
-data validates **cleanly**. A green result from `i-json-input.schema.json` is
+data validates **cleanly**. A green result from `i-json-input.derived.schema.json` is
 therefore *not* evidence that §3.1 was met. Any harness built on this directory
 should say so where it reports results.
 
@@ -271,6 +272,9 @@ should say so where it reports results.
   metaschema run reports 0 errors. See *What was checked* above.
 - Items 1 and 9 want a raw-token-level checker that is neither file. If one is
   written for this library, it serves RFC 8259 and I-JSON too, not just JCS.
-- `$id` in `i-json-input.schema.json` is a placeholder
-  (`https://m-of-n.example/…`) pending a decision on whether this library
-  publishes schema identifiers at all.
+- ~~`$id` in `i-json-input.derived.schema.json` is a placeholder pending a
+  decision on whether this library publishes schema identifiers at all.~~
+  **Settled, #44.** Derived schemas take `urn:library:<record-id>:<artifact>`;
+  this one is `urn:library:rfc-8785:i-json-input.derived`. A URN, not an HTTP
+  URL, because the library makes no commitment to serve a schema at a
+  resolvable address. See `docs/extraction.md`, *Schema `$id`*.
