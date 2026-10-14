@@ -26,6 +26,12 @@ and this gate compares that against the standard in force:
   * standard != CURRENT    GRANDFATHERED — reported, not failed
   * adding to distilled/   extracting now, so CURRENT applies whatever it says
 
+A grandfathered `full` is the one completeness claim nothing verifies:
+bin/validate enforces the artifact set only against the standard in force, so
+`full` against an older one is pure assertion. That is why the ratchet lets a
+record be CORRECTED down to `partial` — artifacts untouched, reason given —
+while still refusing a demotion that moves files (library#9).
+
 `profile: partial` is a deliberate, reasoned scope below the standard — a
 paywalled source, a secondary reference — and needs `profile_reason`. It is a
 legitimate terminal state, not an unfinished one.
@@ -76,6 +82,11 @@ paths = [pathlib.Path(p) for p in changed if len(pathlib.Path(p).parts) >= 3]
 recs = sorted({pathlib.Path(*p.parts[:3]) for p in paths})
 extracting = {pathlib.Path(*pathlib.Path(p).parts[:3]) for p in added
               if len(pathlib.Path(p).parts) >= 4 and pathlib.Path(p).parts[3] == "distilled"}
+# Records whose distilled/ this PR touches AT ALL — added, edited, renamed or
+# removed. Wider than `extracting`, and used only by the full -> partial
+# ratchet below: if the artifacts did not move, nothing was un-extracted.
+distilled_touched = {pathlib.Path(*pathlib.Path(p).parts[:3]) for p in changed
+                     if len(pathlib.Path(p).parts) >= 4 and pathlib.Path(p).parts[3] == "distilled"}
 
 bad, grandfathered, summarised_only = [], [], []
 for r in recs:
@@ -94,8 +105,30 @@ for r in recs:
         bad.append(f"{r}  RATCHET: had a distillation block at {base}, now has none")
         continue
     if wdist and wdist.get("profile") == "full" and prof == "partial":
-        bad.append(f"{r}  RATCHET: profile full -> partial; an extraction does not regress")
-        continue
+        # full -> partial is two different events wearing one name.
+        #
+        #   the WORK shrank   artifacts removed, scope withdrawn.  A real
+        #                     regression, and the ratchet exists for it.
+        #   the LABEL was wrong   the artifacts are untouched and the claim is
+        #                     being corrected to match what they always were.
+        #                     Nothing is un-extracted; the record moves TOWARD
+        #                     the truth, which is the direction a ratchet is
+        #                     supposed to allow.
+        #
+        # `distilled/` untouched separates them, because the first cannot
+        # happen without moving a file. The reason is required so the
+        # correction states what was wrong — an unexplained demotion is
+        # indistinguishable from an abandoned one (library#9).
+        why = str((dist or {}).get("profile_reason", "")).strip()
+        if r in distilled_touched:
+            bad.append(f"{r}  RATCHET: profile full -> partial while changing distilled/; "
+                       f"an extraction does not regress. Correcting a wrong label leaves "
+                       f"the artifacts alone")
+            continue
+        if not why:
+            bad.append(f"{r}  RATCHET: profile full -> partial with no `profile_reason` — "
+                       f"a correction says what the earlier claim got wrong")
+            continue
     if wdist and wdist.get("standard") == CURRENT and std and std != CURRENT:
         bad.append(f"{r}  RATCHET: standard {CURRENT} -> {std}; a record does not fall back a standard")
         continue
