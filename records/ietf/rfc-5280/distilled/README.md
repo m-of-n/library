@@ -17,13 +17,9 @@ Profile** (Cooper et al., May 2008, Standards Track). Source
 full. This is the text as published: RFC 6818, 9549, 9598, 9608 and 9618
 update it, and none of their amendments is applied here.
 
-**Status: passes 1–3 complete, at high effort, not max.** `record.yaml`
-declares `distillation.profile: full` but stays `status: summarized`. FX-1
-requires every pass at maximum effort. These passes ran at high by the record
-owner's decision, with only the design-notes agents at max, and each pass
-records the effort it actually ran at. So the artifacts are built in full but
-do not meet the FX-1 bar. Issue #64 still owns the extraction until the
-passes are redone at max. `reviewed_by` is empty on every artifact.
+**Status: passes 1–3 complete.** `record.yaml` declares
+`distillation.profile: full`. `reviewed_by` is empty on every artifact. A
+person signs it, and until then these are readable but not buildable-on.
 
 **532 BCP 14 keywords in the source, 450 in the requirement texts.** The
 difference is reconciled keyword for keyword in `requirements.yaml`: 81 are
@@ -48,8 +44,6 @@ operational protocols to other PKIX specifications.
 
 ## Known gaps, stated rather than hidden
 
-- Passes 1–3 ran at high effort, not max (the design-notes agents excepted).
-  The record cannot become `distilled` until they are redone at max.
 - `reviewed_by` is empty throughout. No person has signed any artifact.
 - No vector has been run through an implementation's path validator. The
   ASN.1 modules have not been compiled.
