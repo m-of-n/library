@@ -10,6 +10,7 @@ import pathlib, re, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from _yaml import parse as miniyaml
 import _bcp14
+import _fx1
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 REQUIRED = ["schema", "id", "body", "type", "title", "content", "tags", "status"]
@@ -32,6 +33,10 @@ def bodies():
 
 
 BODIES = bodies()
+# The extraction standard of the day and every vintage a record may name, both
+# declared once in schema/record.schema.yaml and parsed here — library#73.
+FX1_CURRENT = _fx1.current()
+FX1_STANDARDS = _fx1.standards()
 VERDICTS = {"useful", "marginal", "not-useful", "unassessed"}
 STATUS = {"stub", "queued", "fetched", "reading", "read", "summarized", "distilled"}
 TYPES = {"rfc", "draft", "spec", "paper", "book", "article", "repo", "dataset",
@@ -57,7 +62,14 @@ REL = {"supersedes", "superseded_by", "updates", "updated_by", "cited_by",
 
 
 def check_full(recdir, d, where, errs):
-    """Enforce FX-1 on a record that declares distillation.profile: full."""
+    """Enforce FX-1 on a record that claims profile: full AGAINST FX-1.
+
+    A record whose `distillation.standard` names an earlier vintage claims
+    completeness against a standard this file does not describe, so there is
+    nothing here to enforce against it. The claim stays readable and honest;
+    it is simply not measured against a denominator it never used (library#73).
+    The caller does the comparison.
+    """
     dist = d.get("distillation") or {}
     na = {x.get("kind"): x.get("reason", "") for x in (dist.get("not_applicable") or [])
           if isinstance(x, dict)}
@@ -122,7 +134,7 @@ def check_full(recdir, d, where, errs):
 
 def main():
     errs, warns, n = [], [], 0
-    scaffolds, extracted = [], 0
+    scaffolds, extracted, old_standard = [], 0, 0
     by_url, by_ident = {}, {}
     dup_of, all_ids, ident_text = {}, set(), {}
     for rec in sorted((ROOT / "records").glob("*/*/record.yaml")):
@@ -143,8 +155,12 @@ def main():
         s_md = rec.parent / "summary.md"
         if not s_md.exists() or any(m in s_md.read_text() for m in SCAFFOLD):
             scaffolds.append(where)
-        if isinstance(d.get("distillation"), dict) and d["distillation"].get("profile") == "full":
-            extracted += 1
+        dist0 = d.get("distillation") if isinstance(d.get("distillation"), dict) else None
+        if dist0 and dist0.get("profile") == "full":
+            if _fx1.vintage(d, FX1_CURRENT) == FX1_CURRENT:
+                extracted += 1
+            else:
+                old_standard += 1
         # duplicate detection (library#35): the same document held twice, usually
         # because a second publisher looked like a second document
         all_ids.add(rid)
@@ -221,8 +237,23 @@ def main():
             if not md.read_text().startswith("---"):
                 errs.append(f"{where}: distilled/{md.name} needs YAML front matter")
         dist = d.get("distillation") or {}
-        if isinstance(dist, dict) and dist.get("profile") == "full":
-            check_full(rec.parent, d, where, errs)
+        if isinstance(dist, dict):
+            std = str(dist.get("standard") or "").strip()
+            if std and std not in FX1_STANDARDS:
+                errs.append(f"{where}: distillation.standard '{std}' is not a known "
+                            f"extraction standard {FX1_STANDARDS} — declare it in "
+                            f"schema/record.schema.yaml before a record claims it")
+            # An unlabelled completeness claim is the library#73 defect itself:
+            # it says how completely and never against what. Omission still
+            # fails closed (it reads as the current standard, so FX-1 is
+            # enforced), which is why this is a warning and not an error.
+            if not std and d.get("type") in _fx1.IN_SCOPE \
+                    and d.get("status") not in _fx1.STUB_OK \
+                    and (dist or d.get("status") == "distilled"):
+                warns.append(f"{where}: distillation claim names no standard — "
+                             f"add distillation.standard (read as '{FX1_CURRENT}')")
+            if dist.get("profile") == "full" and _fx1.vintage(d, FX1_CURRENT) == FX1_CURRENT:
+                check_full(rec.parent, d, where, errs)
         if (rec.parent / "distilled.md").exists():
             errs.append(f"{where}: distilled.md is superseded by distilled/ (schema v5)")
         # A summary must not declare the absence of a distilled/ the record
@@ -279,8 +310,10 @@ def main():
         print(f"warn  {w}")
     for e in errs:
         print(f"ERROR {e}")
+    older = f", {old_standard} under an earlier standard" if old_standard else ""
     print(f"\n{n} records ({n - len(scaffolds)} written, {len(scaffolds)} scaffold, "
-          f"{extracted} fully extracted), {t} topics — {len(errs)} errors, {len(warns)} warnings")
+          f"{extracted} fully extracted against {FX1_CURRENT}{older}), {t} topics — "
+          f"{len(errs)} errors, {len(warns)} warnings")
     return 1 if errs else 0
 
 

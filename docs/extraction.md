@@ -32,12 +32,64 @@ of these holds:
 
 | trigger | meaning |
 |---|---|
-| `status: distilled` | the record claims to be extracted |
-| a `distillation` block is present | extraction has been declared |
 | the PR adds or changes its `distilled/` | the PR is extracting it now |
+| `status: distilled` **and** `distillation.standard` is the current standard | the record claims to be extracted under the standard we enforce |
+| a `distillation` block is present, same condition on its `standard` | extraction has been declared under that standard |
 
 Otherwise the record is held to the **summary bar** — `summarized`, valid
 relations, `bin/validate` clean — and `distillation` is left alone.
+
+## The vintage — what "complete" is measured against
+
+**Added 2026-10-13 (#73).** `distillation.profile` says *how completely* a
+record was extracted. `distillation.standard` — the **vintage** — says *against
+what*. A numerator without its denominator is not a claim, and for a year the
+record format carried only the numerator.
+
+```yaml
+distillation:
+  standard: FX-1      # what it was measured against
+  profile: full       # how completely it met that
+```
+
+The grandfather clause in the first paragraph of this document — *older records
+are grandfathered until someone extracts them* — was written here and
+implemented nowhere. `bin/check-pr-extraction` read `status: distilled` as
+"claims FX-1" with no regard for *when* or *under which standard* the status
+was earned, so a record legitimately distilled under an earlier meaning of the
+word was permanently delinquent, and **every PR touching it failed CI whatever
+the PR did**. That stranded eleven records at the time #73 was written, and
+twenty-three once the `distillation`-block trigger is counted too.
+
+With a vintage the clause becomes a comparison a tool can make:
+
+- **names the current standard** → enforce it. The ratchet: an extracted record
+  cannot regress to a summary.
+- **names an earlier one** → grandfathered, held to the summary bar.
+- **names nothing** → read as the current standard. Omission fails *closed*, so
+  new work is measured against the standard of the day.
+
+**Grandfathering is not a licence to edit `distilled/`.** Touching the artifacts
+is extraction, and extraction is measured against the current standard whatever
+the record used to claim — the first row of the table above outranks the other
+two. A grandfathered record cannot grow artifacts that quietly miss the bar; it
+can only be left alone or raised.
+
+This is also what makes the *next* standard survivable. When FX-2 lands, the 35
+records saying `profile: full` will still say `full` — and they will also still
+say `standard: FX-1`, so the gate grandfathers them instead of failing all 35 at
+once. `profile: partial` was considered and rejected for exactly this: it
+relabels today's stranded records and leaves tomorrow's.
+
+The legal vintages and the current one are declared **once**, in
+`schema/record.schema.yaml` under `fields.distillation.keys.standard`, and
+parsed by `bin/_fx1.py`. The three vintages in the corpus today:
+
+| vintage | what it is |
+|---|---|
+| `FX-1` | this document, normative from 2026-09-28 |
+| `distillation/0.1.0` | `docs/distillation.md` v0.1.0 (2026-09-22), the #9 procedure |
+| `threat-radar/import` | Threat-Radar/library's own practice, imported wholesale by #62, never re-measured here |
 
 This is a **ratchet, not a loophole**. Once a record is extracted the first
 two triggers keep firing on every later PR that touches it, so an extracted
@@ -127,7 +179,15 @@ only by the mechanical checks.
 bin/extract-scaffold records/ietf/rfc-9943   # creates the full artifact set as templates
 bin/bcp14-count .cache/rfc-9943.txt          # source keyword count for the header
 bin/validate                                  # enforces all of the above
+bin/check-pr-extraction main                  # which bar each touched record was held to
 ```
+
+`bin/_fx1.py` is the **single implementation** of the trigger, and
+`schema/record.schema.yaml` the single declaration of the vintages. Both exist
+because the rule was previously stated three incompatible ways — here, in
+`library/CLAUDE.md`, and in the schema, which still documented the "moves past
+stub" trigger retired on 2026-10-03 (#73). A rule stated three ways is a rule
+nobody can follow.
 
 The skill `.claude/skills/extract` carries the judgement: how to run the passes,
 what a good artifact looks like, and the failure modes to hunt for.

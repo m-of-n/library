@@ -31,12 +31,21 @@ test vectors, and design notes mapped to our decisions. Multi-agent passes
 is a started record, not a finished one. `docs/extraction.md` is normative;
 `.claude/skills/extract` is the procedure; CI enforces it.
 
-**Extracting, not touching** (amended 2026-10-03). FX-1 fires when the record
-has `status: distilled`, already declares `distillation`, or the PR changes its
-`distilled/`. Summarising a record is ingestion and is held to the summary bar
+**Extracting, not touching** (amended 2026-10-03). FX-1 fires when the PR
+changes the record's `distilled/`, or when the record has `status: distilled`
+or declares `distillation` **and its `distillation.standard` is the current
+standard**. Summarising a record is ingestion and is held to the summary bar
 instead — `summarized`, valid relations, `bin/validate` clean. It is a ratchet:
 an extracted record can never regress to a summary. Say in the PR body which
 bar you are claiming, and name the issue that owns the eventual extraction.
+
+**The vintage** (amended 2026-10-13, #73). `profile` says how completely a
+record was extracted; `standard` says against what. A record naming an earlier
+standard is **grandfathered** — held to the summary bar, not failed on a bar
+that postdates it. Omitting `standard` reads as the current one, so new work
+fails closed. Grandfathering never licenses editing `distilled/`: that is
+extraction, measured against the current standard. The trigger is implemented
+once in `bin/_fx1.py`, the vintages declared once in `schema/record.schema.yaml`.
 
 ## Shape
 

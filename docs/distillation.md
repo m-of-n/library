@@ -9,6 +9,7 @@ updated: "2026-09-22"
 needs_review: true
 reviewed: false
 source: "library#9; first applied to draft-ietf-vcon-vcon-core-04"
+vintage: "distillation/0.1.0"   # the token a record names in distillation.standard
 ---
 
 # Distillation procedure
@@ -21,6 +22,14 @@ source: "library#9; first applied to draft-ietf-vcon-vcon-core-04"
 > prose source is worked through, and because `docs/gaps.md` §3 rests on its
 > §8 test. Read it as method, not as scope. Its outputs land in `distilled/`,
 > never in a `distilled.md`.
+>
+> **A record extracted under this document names it**, as
+> `distillation.standard: distillation/0.1.0` — the vintage that grandfathers
+> it against FX-1 (`docs/extraction.md`, *The vintage*; library#73). Today that
+> is one record, `draft-ietf-vcon-vcon-core-04`, and it does not yet meet §7
+> below: `reviewed_by` is empty on every artifact and `fields.yaml` still
+> carries a `pending:` block. It therefore claims a vintage and **no**
+> `profile`. library#9 owns raising it.
 
 **Goal:** a compacted form an implementer can build from **without re-reading
 the source**, plus field definitions in a machine-usable shape.
