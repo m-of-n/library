@@ -1229,3 +1229,73 @@ between.**
     amount, and a reader must check the prose for every one. The repair is
     mechanical — mark the exceptions at the declaration, as 52 declarations
     already do. Same issue tracker as items 11–15.
+17. **Source defect — §5.3.2 places no obligation on the Recipient Object at all,
+    while its signed-form twin §5.2.1 places a `MUST`.** `[pass 3, 2026-10-14]`
+    Found by resolving every `constrained_by_locator` in `messages.yaml` to
+    requirement ids: **§5.3.2 is the only structure locator in the file that
+    resolves to zero.** The section is two bare declarations — `header:
+    "Header"`, `encrypted_key: "String"` — and one sentence of delegation, **"The
+    string value of encrypted_key is defined in section 7.2.1 of [JWE]."** No BCP
+    14 keyword, no lowercase obligation. Thirty lines earlier §5.2.1 says of the
+    structurally identical member of the signed form: **"The Signature Object
+    MUST contain a header, protected and signature parameter as defined in
+    section 7.2.1 of [JWS]."** So the draft states a conformance requirement for
+    the JWS array element and states none for the JWE one. The asymmetry is
+    invisible while reading either section alone, which is why it took a
+    locator-to-id resolution to find it. *Open:* is the omission deliberate —
+    the recipient structure being wholly RFC 7516's — or is it the §5.2.1
+    sentence that was never mirrored? Either reading is defensible from the text,
+    and nothing else in §5.3 settles it. Same issue tracker as items 11–16.
+18. **Source defect — `group` is registered as a vCon parameter and defined
+    nowhere.** `[pass 3, 2026-10-14]` The name occurs **exactly once in 8904
+    lines**, at source line 3146, as a row of the §6.3.2 *vCon Object Parameter
+    Names Registry*: Parameter Description **"reserved for future"**, Change
+    Controller IESG, Specification Document **"RFC XXXX"** — that is, *this
+    document*, which never mentions it again. No subsection of §4.1 defines it,
+    neither Appendix B nor Appendix C carries it, and no requirement names it.
+    The registry is normative output, so a consumer that meets `group` in a vCon
+    is pointed by IANA at a document that does not describe it. It is carried in
+    `messages.yaml` as a member of `unsigned-vcon-object` with
+    `constrained_by: []` for exactly that reason — there is nowhere else for a
+    reader to look. *Open:* delete the row, or define the parameter. Not ours to
+    choose; the point is that a registration naming a specification which does
+    not specify is a defect in the registration.
+19. **Source defect — `redacted.type` is the one `type` parameter in the document
+    with a stated purpose and no value space.** `[pass 3, 2026-10-14]` §4.1.8.1
+    says the value **"is used to indicate the type of redaction that was
+    performed on this vCon relative to the less redacted version referenced by
+    the redacted uuid parameter"** and that it **"should indicate the type of
+    information that was redacted"** — a lowercase *should*, with no
+    enumeration, no IANA registry and no syntax. The other three are all
+    constrained: `dialog.type` by a closed `MUST` list of five tokens (R-0017),
+    `analysis.type` by a `SHOULD` list of six (R-0031), `party.type` by a
+    `SHOULD` list of three (R-0016), and the first of those even gets its own
+    registry at §6.3.4. The unconstrained one is the parameter on which the
+    *meaning* of a redaction rests: two redacted vCons carrying `"type":
+    "pii"` and `"type": "PII masked"` are saying the same thing and no consumer
+    can know it. §5 prints an informal ladder of levels — "PII masked",
+    "De-identified" — and never connects it to this parameter. *Open:* is the
+    omission the same scope exclusion §4.1.8 makes for redaction methods
+    themselves, or an oversight? If the former, the parameter is decorative and
+    should say so.
+20. **Source gap, with an extraction consequence — two array-ordering
+    obligations are stated in lowercase, and the third array has none.**
+    `[pass 3, 2026-10-14]` §4.1.11 ends **"It is the applications responsibility
+    to sort dialog and transcriptions if they are needed in chronological
+    order."** §4.4.2 says Attachment Objects **"are in order that they were added
+    to the vCon and cannot be reordered with out correcting the attachment
+    indices which may occur in other Objects in the vCon."** Both bind a producer
+    or a consumer, both use no BCP 14 keyword, and **neither is carried in
+    `requirements.yaml`** — §4.1.11 and §4.4.2 resolve to zero requirement ids,
+    which is why `unsigned-vcon-object.dialog` carries only the §4 and §5.4 rules
+    and `attachment-object.start` carries none. Meanwhile `party_history`, whose
+    every element carries a `time`, gets no ordering statement at all, which is
+    the hole `state-machine.yaml` records under `ordering_gap`. The *source*
+    question is why one array's ordering is the application's responsibility, the
+    second's is a hard constraint on an editor, and the third's is unstated. The
+    *extraction* question is separate and is left open deliberately rather than
+    resolved here: registering the two sentences would mean new ids from R-0250,
+    all `verb: none`, which moves no BCP 14 total but does change the
+    reconciliation note — a decision that belongs to whoever owns
+    `requirements.yaml`'s coverage, not to the cross-check that found the gap.
+    Recorded so it cannot be lost either way.

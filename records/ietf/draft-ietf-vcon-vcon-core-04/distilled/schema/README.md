@@ -127,9 +127,24 @@ unwrap, before the `$id` rewrite and that key, is sha256
 `63414c658efa8f618c9fbf8f7b6d9fcaa267cf1852d3e093d41c14945a6794b6`. It parses.
 It is the unsigned form only, so of the record's nine `distilled/examples/`
 files it is the applicable schema for seven; `a6-signed-vcon.json` and
-`a7-encrypted-vcon.json` are the §5 forms that only `types.cddl` covers. No
-validator was run against it in this pass — `jsonschema` is not installed here
-— so *parses* is the whole of what has been checked.
+`a7-encrypted-vcon.json` are the §5 forms that only `types.cddl` covers.
+
+**Run at the cross-check pass, and the prediction holds exactly.** `jsonschema`
+was not installed when that sentence was written; it was installed in a
+throwaway virtualenv outside this repository — nothing globally, and this
+repository stays dependency-free — and every fixture was validated. Seven pass
+with **zero** errors. The two that fail are `a6` and `a7`, each with the same
+two errors and no others: no `uuid` and no `created_at` at top level, because
+one is a JWS and the other a JWE. A.6's payload was then base64url-decoded and
+the enclosed vCon validated on its own — **zero errors, and deep-equal to the
+A.4 fixture** — which puts the gap in the schema's coverage rather than in the
+example. A clean pass is only worth as much as the schema's bite, so seven
+negative controls were run: six mutations rejected (two Table 1 `X` cells,
+`redacted` with `amended`, a missing `uuid`, a wrong `vcon` const, a
+string-valued `duration`) and the unmodified A.1 accepted. Full result,
+including the `format` keyword — which draft-07 treats as an annotation, and
+whose three uses here have no checker in the default set — is in
+`../examples/index.yaml` under `schema_validation`.
 
 ## Appendix B and Appendix C are not equivalent
 
@@ -252,68 +267,106 @@ parameter `(optional)`; a bullet without it is required.
 | `analysis.type` (§4.5.1) | required | `required` | `type:` (no `?`) | **optional** |
 | `analysis.vendor` (§4.5.6) | required | `required` | `vendor:` (no `?`) | **optional** |
 
-Nine named parameters, and `types.derived.cddl` is wrong on all nine — **five by
+Nine named parameters, and `types.derived.cddl` was wrong on all nine — **five by
 over-requiring** (`did`, `civicaddress`, `duration`, `disposition`,
 `attachment.mediatype`) and **four by under-requiring** (`attachment.start`,
 `attachment.dialog`, `analysis.type`, `analysis.vendor`). The fault was in our
-`fields.yaml`, and `fields.yaml` has since been corrected on all nine; it is
-recorded here rather than silently repaired in place because `bin/derive` output
-is never hand-edited. **`types.derived.cddl` is therefore stale, not wrong about
-its own inputs** — it is a faithful rendering of a field table that no longer
-exists, and the one step left is to re-run `bin/derive`.
+`fields.yaml` and never in the generator, `fields.yaml` was corrected on all
+nine, and the table above is kept as the record of one source defect reaching
+three generated artifacts at once. **Regenerated at the cross-check pass, so the
+rightmost column is now history.** All nine rows agree with the §4 prose bullet
+and with both appendices.
 
-Re-running it changes far more than the nine rows, because `fields.yaml` grew as
-well as corrected. The file goes from 71 lines and 5 groups to 152 lines and 15.
-Ten groups appear for the first time — `party_history`, `redacted`, `amended`
-and, with them, the whole of §5: the signed form, `signature`, the JWS header,
-the encrypted form, `unprotected`, `recipient` and the JWE header. `dialog`
-gains §4.3.10's `body`, `encoding`, `url` and `content_hash` and all six §4.3.14
-transfer parameters, which closes the 4.3.9 → 4.3.11 numbering jump; `attachment`
-and `analysis` gain the same four Content members. The leaked heading
-`"party_history Objects Array"` becomes `"party_history"`, typed
+Regeneration changed far more than the nine rows, because `fields.yaml` had grown
+as well as been corrected. The file went from 71 lines and 5 groups to **162 and
+15** — 153 lines of model plus a 9-line generator banner that did not exist
+before. Pass 2 predicted 152 model lines; the extra one is arithmetic rather than
+surprise, because `bin/derive` emits exactly one line per field, so 153 means the
+field table carried one row more (106 fields) than the simulation was run
+against. Everything else pass 2 predicted arrived exactly: ten groups appear for
+the first time — `party_history`, `redacted`, `amended` and, with them, the whole
+of §5: the signed form, `signature`, the JWS header, the encrypted form,
+`unprotected`, `recipient` and the JWE header. `dialog` gained §4.3.10's `body`,
+`encoding`, `url` and `content_hash` and all six §4.3.14 transfer parameters,
+which closes the 4.3.9 → 4.3.11 numbering jump; `attachment` and `analysis`
+gained the same four Content members. The leaked heading
+`"party_history Objects Array"` became `"party_history"`, typed
 `[* { * tstr => any }]`. `vCon.group`, which exists only in the §6.3.2 registry,
-appears. `civicaddress` goes from `any` to `{ * tstr => any }` and `application`
-from `any` to `tstr`, and one stale comment — `recordings` annotated
-`; §4.3.6 MUST NOT` — becomes `; §4.3.6 MUST`.
+appeared. `civicaddress` went from `any` to `{ * tstr => any }` and `application`
+from `any` to `tstr`, and the stale comment on `recordings` —
+`; §4.3.6 MUST NOT` — became `; §4.3.6 MUST`. Two members pass 2 did not call
+also arrived, and they are the §5.3 finding made mechanical: `protected` and
+`aad`, each annotated `§5.3 (omitted from its member list) / [JWE] RFC 7516
+§7.2.1`.
 
-Four of the criticisms in the list below are answered by that regeneration and
-must be struck when it happens: the missing signed and encrypted forms, the
-missing Dialog Content and transfer parameters, the section-numbering jump, and
-the leaked heading. The rest stand. Two cosmetic faults arrive with it, both in
-`bin/derive` rather than in the field table: object names containing spaces and
-parentheses are flattened to `vcon__signed_form_`, `header__jws_` and
-`header__jwe_`, and the generator still emits no `extension_parameters_type`.
+**Four of the criticisms below were answered by that regeneration and are struck:**
+the missing signed and encrypted forms, the missing Dialog Content and transfer
+parameters, the section-numbering jump, and the leaked heading. The rest stand,
+two of them in corrected form.
 
-Beyond optionality, `types.derived.cddl` is structurally much weaker:
+Three faults in `bin/derive` itself surfaced with the run. They were handled
+differently because they are different kinds of fault, and `bin/derive` is the
+only place any of them could be fixed — hand-editing generated output is
+forbidden, and none of the three is a defect in `fields.yaml`.
 
-- **No signed or encrypted form.** It models §4 only; §5.2 and §5.3 are absent.
+- **Object names were flattened.** `snake()` mapped every non-identifier
+  character one for one, so `vCon (signed form)` became `vcon__signed_form_`.
+  **Fixed in `bin/derive`**: runs collapse and edges are stripped, giving
+  `vcon_signed_form`, `vcon_encrypted_form`, `header_jws`, `header_jwe`. Note
+  that the prediction named three of these and there are **four** —
+  `vcon__encrypted_form_` was missed. The fix touches no other record: this is
+  the only record in the library with `bin/derive` output, and `snake()` alters
+  no field name in this table, so only the four group heads moved.
+- **No `extension_parameters_type`.** **Not fixed, and deliberately so.** A field
+  table records the parameters a source *defines*; it does not record whether the
+  source permits others, so the generator has nothing to read an extension
+  wildcard off. Emitting one unconditionally would make `bin/derive` assert a
+  permission most specs do not grant. It is recorded as a stated limit instead —
+  the generated file now carries it in its own header, so a reader who never
+  opens this README still learns that a rejection may be the generator's fault
+  and not the document's non-conformance.
+- **It wrote generated output to `schema/types.cddl`.** Found here, not
+  predicted, and the most dangerous of the three: `types.cddl` in this record is
+  Appendix C copied **verbatim**, so a plain `bin/derive <record> cddl` would
+  have destroyed 413 lines of the source's own bytes. It also violated the
+  `.derived.` naming rule (#44, `docs/extraction.md`). **Fixed**: the generator
+  writes `schema/types.derived.cddl`. A fourth, same family: `bin/derive … all`
+  would have overwritten this record's hand-read 249-entry `requirements.yaml`
+  with a 34-entry projection of the field table. The generator now refuses to
+  write a `requirements.yaml` that does not carry its own `generated_by` banner.
+
+Beyond optionality, `types.derived.cddl` is still structurally much weaker:
+
 - **No extension wildcard.** It omits `extension_parameters_type`, so a strict
   CDDL validator reading it rejects the extension parameters §2.5 permits — the
-  opposite of the source's over-permissiveness, and equally wrong.
+  opposite of the source's over-permissiveness, and equally wrong. The file now
+  says so in its own header; saying so is not fixing it.
 - **No dialog type discrimination.** It has one flat `dialog` map with
   `"type" => tstr`. The source splits five branches that pin `type` to a literal
-  and carry their own parameter sets. Its `MUST NOT` annotations on
-  `recordings`, `recording_set`, `session_id`, `message_id`, `mediatype`,
-  `parties`, `originator` and `filename` are comments on a single flat map, so
-  they no longer say *which* dialog type prohibits what — the information
-  Table 1 exists to carry.
-- **No §4.3.10 Dialog Content and no §4.3.14 transfer parameters.** `body`,
-  `encoding`, `url`, `content_hash`, `transferee`, `transferor`,
-  `transfer_target`, `original`, `consultation` and `target_dialog` are all
-  missing. Its section numbering jumps 4.3.9 → 4.3.11.
-- **Nested objects are opaque.** `redacted`, `amended`, `parties`, `dialog`,
-  `analysis` and `attachments` are `{ * tstr => any }`. The source names a type
-  for each.
+  and carry their own parameter sets. Regeneration made this worse rather than
+  better: the flat map now carries **16** `MUST NOT` annotations — `parties`,
+  `originator`, `recording_set`, `mediatype`, `filename`, `body`, `url`,
+  `session_id`, `party_history`, `message_id` and all six transfer parameters —
+  and not one of them says *which* dialog type prohibits what, which is the only
+  information Table 1 exists to carry. (`recordings` is no longer among them; its
+  annotation was the stale `MUST NOT` corrected to `MUST`.)
+- **Nested objects are still opaque, and now pointlessly so.** `redacted`,
+  `amended`, `parties`, `dialog`, `analysis`, `attachments` and `party_history`
+  are `{ * tstr => any }` or `[* { * tstr => any }]` inside `vcon`, while the
+  `redacted`, `amended` and `party_history` groups now exist in the same file and
+  nothing references them. `bin/derive` has no notion of a member whose type is
+  another object in the table, so every group it emits is an island.
 - **No value types.** The source defines `civicaddress_type` (17 GEOPRIV
   fields), `party_history_object_type` with the event choice that pairs
   `keydown`/`keyup` with a required `button`, `session_id_parameter_type` with
   its nested-array form, `dialog_parties_type` with per-channel nesting and
   `null` for an unused channel, `disposition_value_type` as a six-value literal
-  choice, and `duration_type = uint / float`. `types.derived.cddl` has none of
-  them; its `duration`, `civicaddress`, `parties` and `session_id` are `any`.
-- **A leaked heading.** Its last `dialog` member is keyed
-  `"party_history Objects Array"` — a section title from §4.3.13 that reached
-  the field table as a parameter name. The parameter is `party_history`.
+  choice, `duration_type = uint / float`, and — covering §2's and §5's ground as
+  well as §4 — `file_content_type = ( inline_content_type // external_content_type )`
+  with both arms, and `dialog_transfer_type`. `types.derived.cddl` has none of
+  them: its `duration`, `parties`, `session_id`, `body`, `content_hash` and every
+  transfer parameter are `any`, and `civicaddress` reaches only the anonymous
+  `{ * tstr => any }`.
 
 **Reading order, then:** `vcon.schema.json` (or `vcon.derived.schema.json` to
 run it) for §4, `types.cddl` for §5 and for the shape of the value types, the

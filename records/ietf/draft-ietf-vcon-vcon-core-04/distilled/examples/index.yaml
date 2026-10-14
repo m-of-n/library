@@ -27,6 +27,22 @@ json_fixture_count: 9
 json_fixtures_parsing: 9
 diagram_fixture_count: 3
 
+# --------------------------------------------------------------------
+# Added at pass 3, the cross-check. This check had never been run: no JSON
+# Schema implementation was installed when pass 2 ran, and pass 2 said so
+# rather than claiming a result.
+schema_validation:
+  run: "pass 3, 2026-10-14"
+  tool: "python jsonschema 4.26.0 with the format-nongpl extras, in a throwaway virtualenv outside this repository. Nothing was installed globally and this repository remains dependency-free."
+  schema: "distilled/schema/vcon.derived.schema.json - Appendix B with its 89 string-internal line breaks closed, draft-07, accepted by Draft7Validator.check_schema"
+  scope_warning: "Appendix B's own title is \"vCon - Unsigned Form\" and its top-level required list is [uuid, created_at]. It models the UNSIGNED form only. A signed or encrypted vCon therefore cannot validate against it, and a failure for that reason is a statement about the schema's coverage, not about the fixture."
+  result: "9 JSON fixtures. SEVEN validate with ZERO errors - A.1, A.2, A.3, A.4, A.5, A.8 and A.9. TWO fail, each with exactly two errors and both the same two: A.6 and A.7 have neither uuid nor created_at at top level, because A.6 is a JWS and A.7 a JWE. No fixture produced any other error. The three .txt fixtures are object-tree diagrams and are not schema-validatable."
+  the_signed_payload_checked_separately: "A.6's payload was base64url-decoded and the enclosed vCon validated on its own: ZERO errors, and deep-equal to the A.4 fixture. So A.6's content is conformant and only its JOSE wrapper is unmodelled - which locates the gap in the schema rather than in the example."
+  format_assertion: "draft-07 treats `format` as an annotation, so this was run twice. The schema uses three formats - uuid (3 uses), date-time (5), uri (5) - and NONE of the three has a checker in jsonschema's default draft-07 set, so an unaugmented run asserts nothing. Re-run with rfc3339-validator and rfc3986-validator installed and a uuid checker registered by hand: ZERO additional errors on all ten documents, including the decoded A.6 payload. Recorded because a format pass that was never actually performed is worse than none."
+  negative_controls: "A clean pass means nothing unless the schema bites, so seven controls were run. Six mutations were REJECTED as they should be: a recording Dialog carrying `transferee`; a recording Dialog carrying `recordings` (both Table 1 X cells, enforced through Appendix B's 14 if/then chains); `redacted` and `amended` together; a vCon with no `uuid`; `vcon` set to 0.3.0 against the const 0.4.0; `duration` as a string. The seventh, unmodified A.1, was ACCEPTED. The validation is live."
+  what_this_check_cannot_see: "Every source defect this file records survives it, and none of them is re-opened by the clean result. Appendix B has no JOSE vocabulary at all, so it cannot see A.6's protected/header collision on alg and x5c, A.7's three-way enc collision, or A.7's recipient header carrying no alg - that last being a failure against the draft's own Appendix C CDDL, not against Appendix B. It cannot see the sha512 lowercase-letters contradiction of 2.2, which is a rule about a token's spelling that the schema types as a plain string. It cannot see the A.4/A.5 uuid collision, which is a cross-document fact. And it cannot see A.8's redaction incoherence, which is about what the content MEANS. All three JOSE defects were re-derived from the fixture bytes at this pass and reproduce exactly: A.6 protected and header share {alg, x5c}; A.7's protected, unprotected and recipients[0].header all carry enc with the same value, which RFC 7516 section 7.2.1 forbids - \"The Header Parameter names in the three locations MUST be disjoint.\"; A.7's recipients[0].header carries enc and nothing else."
+  not_run: "No CDDL validator exists in this environment, so neither types.cddl (verbatim Appendix C) nor types.derived.cddl has been run against the fixtures by a real parser. The Appendix C findings in this file were derived by reading, as they were at pass 2."
+
 # ====================================================================
 # Where the examples are, and where the old note said they were
 # ====================================================================
