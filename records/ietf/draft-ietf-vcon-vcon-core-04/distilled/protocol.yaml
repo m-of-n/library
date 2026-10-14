@@ -1,0 +1,975 @@
+record: draft-ietf-vcon-vcon-core-04
+kind: protocol
+reviewed_by: ""
+
+source:
+  file: ".cache/draft-ietf-vcon-vcon-core-04.txt"
+  sha256: "cc2a2cb5051b860e2f29478a9ff946e3d882818bfad55dff48e0f5ae033cd722"
+  lines: 8904
+
+# VERDICT: APPLICABLE, and PARTIAL. The partiality is stated rather than
+# implied, and what is missing is enumerated under `absent` below.
+applicable: true
+applicability: partial
+
+headline_finding:
+  name: "the hash binding is mandatory to write and optional to read"
+  evidence: >-
+    Checked exhaustively rather than sampled: every occurrence of
+    `content_hash` in sections 1 to 7 was pulled with its sentence and scored
+    for BCP 14 keywords. EVERY obligation on it is about CARRIAGE. "Objects
+    that refer to a file which is externally stored from the vCon MUST have
+    the parameters: url, content_hash." (2.4, lines 546-548). "content_hash
+    MUST be included if url is provided." (4.1.8.1, line 944). "content_hash
+    MUST be provided if url is provided." (4.1.9.1, line 1043). "The Dialog
+    Object SHOULD contain the body and encoding parameters or the url and
+    content_hash parameters" (4.3.10), and the same SHOULD for Attachment
+    (4.4.7) and Analysis (4.5.9) Content. Not one of them is about CHECKING
+    it. The only sentence in the entire document that asks anyone to verify an
+    external hash is 5.1 lines 2667-2670, and it is lowercase - "the payload
+    of the HTTPS request should be verified" - so it carries no BCP 14 weight,
+    and it names `signature`, a parameter 7.3 records as folded into
+    content_hash at the earliest version boundary Section 7 documents
+    (0.0.1 to 0.0.2), two further version steps ago.
+  the_same_pattern_at_every_integrity_point: >-
+    It is not confined to external content. 5.2.2's convenience uuid exists
+    expressly so that a consumer need NOT verify - "This is added for
+    convenience to not require verification of the signed vCon to get it's
+    UUID." (lines 2750-2751) - and the cross-check that would catch a
+    substituted payload is itself optional: "When the vCon is verified, the
+    value of this uuid parameter SHOULD be verified against the UUID in the
+    signed vCon." (lines 2751-2752). 5.3.1 is the same shape for the encrypted
+    form (lines 2862-2864). Section 5.4 does not even reach SHOULD: it has
+    zero MUST in 59 lines, while telling a consumer that distinguishing the
+    form is "necessary" and that "a signed vCon needs to be verified".
+  consequence: >-
+    A fully conforming implementation may fetch externally referenced media
+    over HTTPS and use it without ever computing a digest; may read a signed
+    vCon's uuid from the header without verifying the signature; and may act
+    on the payload without checking that the header uuid matches it. The
+    integrity machinery of this document is mandatory to CONSTRUCT and
+    optional to USE. Everything in `error_model` follows from that, and it is
+    the single most important thing this extraction found.
+
+verdict: >-
+  APPLICABLE, and PARTIAL, decided against a serious case for the opposite.
+
+  THE CASE FOR NOT-APPLICABLE, stated at its strongest: vCon defines no
+  network protocol, no transport binding, no wire message and no request or
+  response. It mandates no verification procedure anywhere - see
+  headline_finding - and it defines no error path for a failed check. On the
+  usual test, a format with no mandated verification and no failure handling
+  is a pure data format, and rfc-9804 in this library was declared
+  not-applicable on exactly that ground.
+
+  WHY THAT DISPOSAL IS NEVERTHELESS WRONG HERE. rfc-9804's reason says of that
+  document that "There are no roles, no messages between parties, no error
+  signalling and no processing order anywhere". Three of those four clauses
+  are false of vCon, and they were checked one at a time. ROLES: 2.5 names a
+  transcriber and a redactor and gives them DIFFERENT admission rules on the
+  same input; 4 and 5 name a constructing and a subsequent security domain.
+  ERROR SIGNALLING: 2.5 and 4.1.4 define one, with a MUST NOT and a named exit
+  - reject, or notify the user. PROCESSING ORDER: 5.3 mandates sign-then-
+  encrypt with a MUST, 5.2.3 orders verify-then-re-sign and outer-then-inner,
+  and 5.4 orders decompress-then-differentiate. The library's own precedent is
+  decisive on the third: rfc-9804's README contrasts it with RFC 8785 section
+  5, "which mandates the ordering R-O-05 forbids, and whose protocol.md exists
+  precisely to hold that contradiction". A mandated processing order is the
+  thing that makes this artifact exist. vCon has one.
+
+  AND THE ABSENCE NEEDS SOMEWHERE TO LIVE. This is the decisive practical
+  argument. Declaring not-applicable would compress the richest finding of
+  this extraction - that integrity is mandatory to write and optional to read,
+  at six distinct points - into one reason string in record.yaml. Modelling
+  the flows puts every undefined failure beside the step that should have
+  defined it, with a locator, so the gap is citable per-step rather than
+  asserted wholesale. rfc-9804 made the same judgement in the other direction
+  and for the same reason: its README says the absence there "is load-bearing
+  rather than incidental, which is why it is argued in design-notes.md
+  condition 3 instead of being buried here". Here the absence is load-bearing
+  too, and the flows are where it argues.
+
+  WHAT IS CLAIMED IS THEREFORE NARROW. Five flows, one of which
+  (external-content-retrieval) has a genuine second party and a mandatory
+  transport, and four of which are ordered local procedures with named roles.
+  One defined error path across all five. Everything else is enumerated under
+  `absent` and `error_model.undefined`.
+
+absent:
+  - "No transport binding for a vCon itself. The document registers two media types (6.1, 6.2) and specifies no method, path, request, response, status code or framing for moving a vCon between parties."
+  - "No request/response pairing anywhere except the HTTPS GET implied by 2.4.1, which is never written out."
+  - "No negotiation. The `extensions` and `critical` parameters are unilateral in-band declarations by the producer; there is no capability exchange, no reply channel, and no way for a consumer to tell a producer what it supports. 'Extension negotiation' is a misnomer for what 2.5 defines; it is extension ADMISSION."
+  - "No error signalling. 2.5 and 4.1.4 say a consumer MUST NOT process and may reject or notify; they do not define a rejection message, a code, or a recipient for it."
+  - "No sessions, no retries, no timeouts, no idempotency, no ordering guarantees between parties."
+  - "No discovery. A redacted or amended vCon names its predecessor by uuid, and the document provides no resolver for a uuid."
+
+roles:
+
+  - name: "constructing security domain"
+    locator: "Sections 4, 5"
+    defined_by_source: true
+    text: >-
+      "A vCon may be constructed across several security domains. When a vCon
+      is to be exported from one security domain to another, it SHOULD be
+      signed or encrypted by the domain that constructed it." (4, lines
+      745-747)
+
+  - name: "subsequent security domain"
+    locator: "Section 4, lines 750-753"
+    defined_by_source: true
+    text: >-
+      "The second or subsequent domain, MAY modify the prior vCon instance
+      version and when complete or exporting to another security domain, it
+      SHOULD sign or encrypt the new vCon instance version."
+
+  - name: "implementation (consumer)"
+    locator: "Sections 2.5, 4.1.4"
+    defined_by_source: true
+    text: >-
+      "An implementation that does not recognize or support the extensions
+      listed in the critical parameter MUST NOT attempt to process or operate
+      on the vCon, except to reject it or report unsupported content."
+      (4.1.4, lines 828-831)
+
+  - name: "the user"
+    locator: "Section 2.5, lines 694-696"
+    defined_by_source: true
+    text: >-
+      "Implementations that encounter a vCon containing a disruptive extension
+      listed in the critical parameter, but do not support that extension,
+      *MUST NOT* process the vCon except to reject it or notify the user."
+      (2.5, lines 693-696)
+    note: >-
+      NAMED BUT NEVER DEFINED, and recorded as a role because the diagram for
+      consume-received-vcon has to draw something at the far end of the one
+      defined failure exit in the document. "the user" occurs in exactly this
+      sentence; no section says who the user is, what a notification contains,
+      or by what channel it travels. The parallel sentence at 4.1.4 lines
+      829-831 covers the same case and does NOT mention a user - it says
+      "reject it or report unsupported content" - so the two statements of the
+      same obligation name different recipients, and neither defines one.
+      Flagged here rather than silently dropped from the role list.
+
+  - name: transcriber
+    locator: "Section 2.5, lines 679-684"
+    defined_by_source: true
+    is_a: "implementation (consumer)"
+    text: >-
+      "A transcriber for vCon can be fairly tolerant of changes adding new
+      parameters or objects to a vCon." and "In these cases a transcriber will
+      likely only need to look at the critical extensions."
+    note: >-
+      One of only two consumer roles the document distinguishes by processing
+      behaviour. Both sentences are lowercase and hedged ("can be", "will
+      likely"), so the differentiation is descriptive, not normative.
+
+  - name: redactor
+    locator: "Section 2.5, lines 681-686"
+    defined_by_source: true
+    is_a: "implementation (consumer)"
+    text: >-
+      "On the other hand, a redactor must be aware of the implications of all
+      parameters in the vCon to be sure to redact all of the objective
+      information." and "However the redactor perhaps should reject vCons with
+      any extension that it does not support."
+    note: >-
+      The second sentence is the strongest role-specific rule in the document
+      and is written as "perhaps should" - a hedge on a BCP 14 word, which is
+      neither a keyword nor plain prose. It asks a redactor to apply a
+      STRICTER admission rule than 4.1.4 requires - reject on ANY unsupported
+      extension, not only on an unsupported CRITICAL one. Recorded in
+      `contradictions` because 4.1.3 makes `extensions` a SHOULD, so a
+      redactor applying this rule rejects on a list its producer was never
+      obliged to populate.
+
+  - name: "HTTPS origin server for externally referenced files"
+    locator: "Sections 2.4, 2.4.1, 5.1"
+    defined_by_source: false
+    inference: >-
+      The document never names this party. It is implied by "The url value
+      contains the [HTTPS] URL where the externally referenced file is stored.
+      HTTPS MUST be used for retrieval to protect the privacy of the contents
+      of the file." (2.4.1, lines 566-569) and by "After retrieving externally
+      referenced files..." (5.1, lines 2667-2670). It is the only party in the
+      document that a vCon consumer actually talks to.
+    scope_exclusion: >-
+      "The secure storage and access of externally referenced conversation
+      data is considered out of scope from this document." (5, lines
+      2594-2595), and "Identity and credentials for accessing externally
+      stored data will be exchanged out of band from the vCon." (5, lines
+      2597-2598). So the one real exchange in the document is also the one the
+      document declines to specify beyond its integrity check.
+
+  - name: archiver
+    locator: "Section 5.2.3"
+    defined_by_source: false
+    inference: >-
+      5.2.3 describes the re-signing procedure in the passive voice throughout
+      ("the content of JWS1 (the vCon) is verified and then JWS1 is signed")
+      and never names the actor. The role name is this extraction's, introduced
+      only so the flow has a participant; nothing is claimed about it beyond
+      performing the steps 5.2.3 states.
+
+  - name: "archive reader"
+    locator: "Section 5.2.3, lines 2774-2776"
+    defined_by_source: false
+    inference: >-
+      Same construction - "When it is desired to access the data in the
+      archived vCon, first the outer JWS (JWS3 in diagram) is verified (payload
+      of JWS2), then the vCon (payload in JWS1) is assumed to have valid
+      integrity." No actor is named.
+
+# ------------------------------------------------------------------
+messages:
+  status: >-
+    distilled/messages.yaml was still the unpopulated scaffold when this pass
+    ran, so no name below can yet be resolved against it. The names used in
+    `flows` are the names the SOURCE gives each structure, so that the
+    cross-check pass can wire them without renaming. The list here is what
+    that pass must find in messages.yaml.
+  expected_in_messages_yaml:
+    - name: vcon_unsigned
+      locator: "Sections 3, 4, 4.1"
+      media_type: "application/vcon"
+      note: "the top level unsigned vCon object; also the JWS payload and, once signed, the JWE plaintext"
+    - name: vcon_signed
+      locator: "Section 5.2"
+      encoding: "JWS General JSON Serialization, RFC 7515 section 7.2.1"
+      fields: "payload, signatures"
+    - name: signature_object
+      locator: "Section 5.2.1"
+      fields: "header, protected, signature"
+    - name: jws_header_object
+      locator: "Section 5.2.2"
+      fields: "alg, x5c, x5u, uuid"
+    - name: vcon_encrypted
+      locator: "Section 5.3"
+      encoding: "JWE General JSON Serialization, RFC 7516 section 7.2.1"
+      fields: "unprotected, recipients, iv, ciphertext, tag"
+    - name: unprotected_object
+      locator: "Section 5.3.1"
+      fields: "cty, enc, uuid"
+    - name: recipient_object
+      locator: "Section 5.3.2"
+      fields: "header, encrypted_key"
+    - name: jwe_header_object
+      locator: "Section 5.3.3"
+      fields: "alg"
+    - name: vcon_gzip
+      locator: "Sections 5.4, 6.2"
+      media_type: "application/vcon+gzip"
+    - name: redacted_object
+      locator: "Section 4.1.8.1"
+      fields: "uuid, type, url, content_hash"
+    - name: amended_object
+      locator: "Section 4.1.9.1"
+      fields: "uuid, url, content_hash"
+    - name: content_hash
+      locator: "Sections 2.2, 2.4.2"
+      note: "a token value, not a message - carried inside the structures above"
+  not_messages_in_this_document:
+    - name: https_get_external_file
+      locator: "Sections 2.4.1, 5.1"
+      defined_by_source: false
+      reason: >-
+        The document requires HTTPS retrieval and never writes the request or
+        the response. There is no method, no header set, no status code
+        handling. The flow below models it because without it the integrity
+        check of 5.1 has nothing to check, and marks it undefined.
+    - name: https_get_x5u_certificate
+      locator: "Section 5.2.2, lines 2732-2733"
+      defined_by_source: false
+      reason: >-
+        "The string value of x5u MUST contain an [HTTPS] URL as defined in
+        section 4.1.5 of [JWS]." The fetch is delegated to JWS and is not
+        specified here, and unlike the content_hash case there is no integrity
+        parameter in the vCon covering what comes back.
+    - name: rejection_notice
+      locator: "Sections 2.5, 4.1.4"
+      defined_by_source: false
+      reason: >-
+        "except to reject it or notify the user" and "except to reject it or
+        report unsupported content" are the document's only exits from a
+        failure, and neither defines what a rejection or a report IS - no
+        structure, no code, no recipient, no channel.
+
+# ------------------------------------------------------------------
+flows:
+
+  - name: external-content-retrieval
+    locator: "Sections 2.4, 2.4.1, 2.4.2, 2.2, 4.3.8, 5.1"
+    roles_involved: "implementation (consumer), HTTPS origin server for externally referenced files"
+    summary: >-
+      The only flow in the document with two independent parties and a wire.
+      A vCon that references content externally carries url and content_hash;
+      a consumer fetches over HTTPS and checks the digest before use.
+    diagram: "distilled/protocol.md, flow 1"
+    preconditions:
+      - >-
+        "Objects that refer to a file which is externally stored from the vCon
+        MUST have the parameters: url, content_hash." (2.4, lines 546-548)
+      - >-
+        "Files and data stored externally from the vCon MUST be signed to
+        ensure that they have not been modified." (2.4, lines 545-546; the
+        source puts quotation marks around signed)
+      - >-
+        "The SHA-512 [SHA-512] algorithm MUST be supported. Other algorithms
+        MAY be included." (2.4.2, lines 579-580)
+    steps:
+      - n: 1
+        from: "implementation (consumer)"
+        to: "implementation (consumer)"
+        message: vcon_unsigned
+        action: >-
+          Read url and content_hash from the Dialog, Attachment or Analysis
+          Object. Both are inside the signed payload, so the vCon's own
+          signature covers them - "As the hash for each externally referenced
+          file is contained in the vCon which will be signed, the chain of
+          authentication is provided via the signature on the vCon itself."
+          (5, lines 2613-2616)
+        on_error: "not specified"
+      - n: 2
+        from: "implementation (consumer)"
+        to: "HTTPS origin server for externally referenced files"
+        message: https_get_external_file
+        message_defined_by_source: false
+        action: >-
+          Retrieve the file. "HTTPS MUST be used for retrieval to protect the
+          privacy of the contents of the file." (2.4.1, lines 568-569), and
+          "Externally referenced files SHOULD only be transported over [HTTPS]
+          and SHOULD be access controlled to those who are permitted to read
+          the contents of that non-redacted vCon." (5, lines 2649-2652)
+        on_error: >-
+          NOT SPECIFIED. No behaviour is defined for an unreachable url, a
+          non-2xx response, a redirect, or a url that is not HTTPS.
+      - n: 3
+        from: "HTTPS origin server for externally referenced files"
+        to: "implementation (consumer)"
+        message: https_get_external_file
+        message_defined_by_source: false
+        action: >-
+          Return the file, and optionally its media type. The Content-Type
+          header is load bearing - "The mediatype parameter MUST be provided
+          for inline dialog files and MUST be provided if the Content-Type
+          header in the [HTTPS] response for the externally referenced URL is
+          not provided." (4.3.8, lines 1875-1878)
+        on_error: >-
+          NOT SPECIFIED. If neither the mediatype parameter nor a Content-Type
+          header is present the vCon is malformed, and the document says
+          nothing about detecting or handling that.
+      - n: 4
+        from: "implementation (consumer)"
+        to: "implementation (consumer)"
+        message: content_hash
+        action: >-
+          Verify the digest BEFORE use. This is the only explicit ordering
+          constraint on a consumer in the document - "After retrieving
+          externally referenced files, before using its content, the payload of
+          the HTTPS request should be verified using the signature parameter
+          value for the hash for the url body using the procedure defined in
+          section 6.3 and 6.4 of [SHA-512]." (5.1, lines 2667-2670)
+        on_error: >-
+          NOT SPECIFIED. The document never says what a consumer does when the
+          digest does not match. See error_model.
+        defects:
+          - >-
+            The sentence names a parameter that does not exist. There is no
+            "signature parameter" in this version of the schema. Section 7.3
+            records that it was removed - 'alg and signature were combined into
+            content_hash' (7.3, line 3842) - in the 0.0.1 to 0.0.2 change. That
+            is the EARLIEST of the three non-upward-compatible version steps
+            Section 7 records, and two further steps have happened since it
+            (0.0.2 to 0.3.0 in 7.2, 0.3.0 to 0.4.0 in 7.1). The only normative
+            instruction to verify external content therefore points at a
+            parameter the document itself abolished at the first version
+            boundary it documents. The intended parameter is content_hash
+            (2.4.2).
+          - >-
+            The verb is lowercase. "should be verified" carries no BCP 14
+            weight, so the one verification-ordering rule in the document is
+            not a SHOULD in the RFC 2119 sense, while the surrounding section
+            uses capitalised keywords freely.
+
+  - name: export-from-security-domain
+    locator: "Sections 4, 5, 5.2, 5.2.1, 5.2.2, 5.3, 5.3.1, 4.1.6"
+    roles_involved: "constructing security domain, subsequent security domain"
+    summary: >-
+      The document's organising narrative. A domain builds a vCon in the
+      unsigned form, and before it crosses a trust boundary it is signed, and
+      optionally encrypted - in that order, by a MUST.
+    diagram: "distilled/protocol.md, flow 2"
+    steps:
+      - n: 1
+        from: "constructing security domain"
+        to: "constructing security domain"
+        message: vcon_unsigned
+        action: >-
+          Construct and accumulate. "The vCon may start with only meta data and
+          party information, then progress to contain dialog information. It
+          may then get analysis added or it could be passed to another security
+          domain for analysis." (4, lines 738-741). "For unsigned forms, the
+          updated_at of the vcon object SHOULD be updated as it is modified."
+          (4.1.6, lines 856-857)
+        on_error: "not applicable - local construction"
+      - n: 2
+        from: "constructing security domain"
+        to: "constructing security domain"
+        message: vcon_signed
+        action: >-
+          Set updated_at to the signing time, then sign. "Future updates MUST
+          first set the updated_at to the new signing time as the vcon object
+          is signed again." (4.1.6, lines 859-860). "Before a vCon leaves a
+          security domain, it SHOULD be signed to prevent it from being
+          altered." (5, lines 2583-2585). "The vCon General JWS JSON
+          Serialization MUST include x5c or x5u in the unprotected header."
+          (5.2, lines 2675-2677)
+        on_error: "not specified"
+      - n: 3
+        from: "constructing security domain"
+        to: "constructing security domain"
+        message: vcon_encrypted
+        optional: true
+        guard: >-
+          "A vCon MUST be signed first using JWS as defined in Signed Form of
+          vCon Object (Section 5.2), then encrypted using JWE as opposed to
+          just encrypted with integrity protection." (5.3, lines 2807-2809)
+        action: >-
+          Encrypt the SIGNED form. "Any time a vCon is shared outside its
+          original security domain, it SHOULD be signed and optionally
+          encrypted." (5, lines 2644-2645). Encryption becomes mandatory on an
+          insecure channel - "vCons transported over non-secure channels such
+          as email MUST be in the encrypted form." (5, lines 2652-2653)
+        on_error: "not specified"
+      - n: 4
+        from: "constructing security domain"
+        to: "subsequent security domain"
+        message: "vcon_signed or vcon_encrypted"
+        action: >-
+          Transfer. NO TRANSPORT IS DEFINED. The document names email only as
+          an example of a channel that forces the encrypted form, and
+          registers two media types without binding them to any protocol
+          operation.
+        on_error: "not specified"
+      - n: 5
+        from: "subsequent security domain"
+        to: "subsequent security domain"
+        message: "vcon_signed or vcon_encrypted"
+        action: >-
+          Consume, by the consume-received-vcon flow. If the domain needs to
+          change anything, it leaves this flow for derive-new-instance-version,
+          because "A signed or encrypted vCon cannot be modified without
+          invalidating it." (4.1.9, line 1015)
+        on_error: "see consume-received-vcon"
+
+  - name: consume-received-vcon
+    locator: "Sections 5.4, 6.2, 5.2.2, 5.3.1, 2.5, 4.1.4, 4.1.3"
+    roles_involved: "implementation (consumer), transcriber, redactor, the user"
+    summary: >-
+      The recognise-then-admit procedure. It is assembled from four sections
+      that never appear together, and the assembly order is the document's,
+      not this extraction's - 5.4 states that differentiation precedes
+      handling, and 2.5 and 4.1.4 state that admission precedes processing.
+    diagram: "distilled/protocol.md, flow 3"
+    assembly_note: >-
+      5.4 orders decompression before form recognition explicitly. 2.5 and
+      4.1.4 do not say where in the sequence the critical check falls; placing
+      it after the form is known is forced by the fact that `critical` lives
+      inside the unsigned object, which in the signed and encrypted forms is
+      not reachable until the outer layer is opened. That placement is this
+      extraction's inference and is marked as such in protocol.md.
+    steps:
+      - n: 1
+        from: "implementation (consumer)"
+        to: "implementation (consumer)"
+        message: vcon_gzip
+        action: >-
+          Decide whether the octets are gzip. "A gzip compressed vCon is not
+          JSON and is differentiated from the JSON forms before the above
+          parameter based rules can be applied." (5.4, lines 2930-2931). "The
+          gzip compressed vCon SHOULD be identified by the media type
+          application/vcon+gzip when a media type is available, such as in the
+          [HTTPS] Content-Type header." (5.4, lines 2932-2934). "When no media
+          type is available, a gzip compressed vCon can be identified by the
+          gzip member header magic numbers defined in section 2.3.1 of [GZIP]."
+          (5.4, lines 2934-2936)
+        on_error: "not specified"
+        defect: >-
+          The media type registration contradicts this step. 6.2 registers
+          application/vcon+gzip with "Magic number(s): N/A" (6.2) while 5.4
+          instructs a consumer to use exactly those magic numbers when no media
+          type is available. 6.1 and 6.2 also register the SAME file extension,
+          "vcon", and the same Windows Clipboard Name, "VCON", for both the
+          JSON and the gzip types, so a file extension cannot distinguish them
+          either.
+      - n: 2
+        from: "implementation (consumer)"
+        to: "implementation (consumer)"
+        message: "vcon_unsigned, vcon_signed or vcon_encrypted"
+        action: >-
+          Recognise the form by parameter presence. "It is necessary to
+          distinguish which form a vCon is in, and whether it is compressed, in
+          order to properly handle it. For example a signed vCon needs to be
+          verified." (5.4, lines 2885-2887). Unsigned, by one or more of
+          parties, dialog, analysis, attachments. Signed, by BOTH payload and
+          signatures. Encrypted, by BOTH ciphertext and recipients. (5.4, lines
+          2888-2928)
+        on_error: >-
+          NOT SPECIFIED, and reachable. See the `indeterminate-form` error
+          state in distilled/state-machine.yaml: a minimal vCon carrying only
+          vcon, uuid and created_at matches none of the three rules, because 4
+          makes the four unsigned recognisers a SHOULD.
+      - n: 3
+        from: "implementation (consumer)"
+        to: "implementation (consumer)"
+        message: vcon_encrypted
+        condition: "encrypted form"
+        action: >-
+          Decrypt, yielding the signed form. "The value of this uuid parameter
+          SHOULD be verified when the vCon is decrypted." (5.3.1, lines
+          2863-2864)
+        on_error: "NOT SPECIFIED for decryption failure, nor for a uuid that does not match"
+      - n: 4
+        from: "implementation (consumer)"
+        to: "implementation (consumer)"
+        message: vcon_signed
+        condition: "signed form, including after step 3"
+        action: >-
+          Verify the signature and the uuid. "When the vCon is verified, the
+          value of this uuid parameter SHOULD be verified against the UUID in
+          the signed vCon." (5.2.2, lines 2751-2752). The verifier needs the
+          certificate chain, which travels with the vCon by design - "The x5c
+          or x5u requirement makes the management and use of vCons easier,
+          allowing the certificate chain to be found as the vCon is moved."
+          (5.2.2, lines 2715-2717)
+        on_error: >-
+          NOT SPECIFIED. This is the largest hole in the document's processing
+          model: it instructs a consumer to verify and never says what a
+          verification failure means.
+      - n: 5
+        from: "implementation (consumer)"
+        to: "implementation (consumer)"
+        message: vcon_unsigned
+        action: >-
+          Admission decision on `critical`. "Implementations that encounter a
+          vCon containing a disruptive extension listed in the critical
+          parameter, but do not support that extension, *MUST NOT* process the
+          vCon except to reject it or notify the user." (2.5, lines 694-697).
+          Restated in 4.1.4 - "An implementation that does not recognize or
+          support the extensions listed in the critical parameter MUST NOT
+          attempt to process or operate on the vCon, except to reject it or
+          report unsupported content." (4.1.4, lines 828-831)
+        on_error: >-
+          REJECT, the one defined failure exit in the document. What a
+          rejection consists of is not defined.
+        role_dependence: >-
+          A redactor is asked to be stricter than the rule - "However the
+          redactor perhaps should reject vCons with any extension that it does
+          not support." (2.5, lines 684-686) - which widens the test from the
+          critical list to the extensions list. A transcriber is told the
+          opposite - "In these cases a transcriber will likely only need to
+          look at the critical extensions." (2.5, lines 683-684).
+      - n: 6
+        from: "implementation (consumer)"
+        to: "implementation (consumer)"
+        message: vcon_unsigned
+        action: "Process the vCon."
+        on_error: "not applicable"
+
+  - name: derive-new-instance-version
+    locator: "Sections 4, 4.1.8, 4.1.8.1, 4.1.9, 4.1.9.1, 5"
+    roles_involved: "constructing security domain, subsequent security domain, redactor, implementation (consumer)"
+    summary: >-
+      How a party that may not alter a signed vCon nonetheless changes it: by
+      making a new one that points back. The state model is in
+      distilled/state-machine.yaml, machine vcon-instance-version-chain; this
+      flow records the party-to-party sequence around it.
+    diagram: "distilled/protocol.md, flow 4"
+    steps:
+      - n: 1
+        from: "constructing security domain"
+        to: "subsequent security domain"
+        message: "vcon_signed or vcon_encrypted"
+        action: "Export, by the export-from-security-domain flow."
+        on_error: "not specified"
+      - n: 2
+        from: "subsequent security domain"
+        to: "subsequent security domain"
+        message: vcon_unsigned
+        action: >-
+          Produce a new instance version with a new uuid. "If the new security
+          domain needs to alter it, a new vCon is created with the removed or
+          added data and the prior version is referenced (i.e. via the redacted
+          (Section 4.1.8) or amended (Section 4.1.9))." (5, lines 2585-2589)
+        on_error: "not specified"
+      - n: 3
+        from: "subsequent security domain"
+        to: "subsequent security domain"
+        message: "redacted_object or amended_object"
+        guard: >-
+          Exactly one of the two. "redacted: Redacted (optional, mutually
+          exclusive with amended parameter)" (4.1.8, lines 921-922).
+          content_hash MUST accompany url on either object (4.1.8.1 line 944,
+          4.1.9.1 line 1043).
+        action: >-
+          Bind the predecessor by uuid, and optionally by url plus
+          content_hash. "The new vCon instance version SHOULD refer to the
+          prior vCon instance version via the redacted (Section 4.1.8) or
+          amended (Section 4.1.9) parameters." (4, lines 753-755)
+        on_error: "not specified"
+      - n: 4
+        from: "subsequent security domain"
+        to: "subsequent security domain"
+        message: vcon_signed
+        action: >-
+          Sign the derivative. For redaction this is an accountability
+          statement, not merely an export step - "The assurance of the accuracy
+          of the redaction is made by the entity that creates the redaction
+          which SHOULD sign the redacted version of the vCon." (4.1.8, lines
+          903-905)
+        on_error: "not specified"
+      - n: 5
+        from: "implementation (consumer)"
+        to: "implementation (consumer)"
+        message: "redacted_object or amended_object"
+        action: >-
+          A later consumer resolves the predecessor. NO RESOLUTION PROCEDURE
+          EXISTS. The reference is a uuid; the document defines no resolver,
+          and url is only MAY. Where url IS present the retrieval falls under
+          external-content-retrieval, with its access restriction - "If a
+          reference to the unredacted vCon is provided in the url parameter,
+          the access to that URL MUST be restricted to only those who should be
+          allowed to see the identity or PII for the redacted vCon." (4.1.8,
+          lines 889-892)
+        on_error: >-
+          Partly specified, for the redaction side only. "The absence of a
+          value for uuid indicates that the less redacted version of this vCon
+          is not available or does not exist." (4.1.8.1, lines 931-933). There
+          is no amended-side equivalent, and no behaviour is defined for a uuid
+          that is present but unresolvable.
+
+  - name: long-term-archive
+    locator: "Section 5.2.3"
+    roles_involved: "archiver, archive reader"
+    summary: >-
+      Nested re-signing to outlive a signing certificate, and the ordered
+      verification that unwinds it. The document calls this an approach rather
+      than a requirement - "Below is an approach on how integrity may be
+      maintained on the archived vCon. There may be other approaches to this as
+      well." (5.2.3, lines 2761-2762) - and it carries no BCP 14 keyword.
+    diagram: "distilled/protocol.md, flow 5"
+    steps:
+      - n: 1
+        from: archiver
+        to: archiver
+        message: vcon_signed
+        action: "Hold JWS1, the signed vCon."
+        on_error: "not applicable"
+      - n: 2
+        from: archiver
+        to: archiver
+        message: vcon_signed
+        guard: "before the JWS1 signing certificate expires"
+        action: >-
+          "Before the expiration of the JWS1 signing certificate, the content
+          of JWS1 (the vCon) is verified and then JWS1 is signed as the payload
+          to construct JWS2." (5.2.3, lines 2766-2769). Verification precedes
+          re-signing - an archiver that re-signs without verifying extends the
+          life of whatever is inside, valid or not.
+        on_error: >-
+          NOT SPECIFIED, in both branches: neither a failed verification nor a
+          certificate that expired before the re-signing happened.
+      - n: 3
+        from: archiver
+        to: archiver
+        message: vcon_signed
+        action: >-
+          Repeat, unboundedly. "The process is continued for the life of the
+          vCon archiving." (5.2.3, lines 2771-2772). The figure shows JWS3
+          wrapping JWS2 wrapping JWS1 wrapping the vCon.
+        on_error: "not specified"
+      - n: 4
+        from: "archive reader"
+        to: "archive reader"
+        message: vcon_signed
+        action: >-
+          Unwind outermost first. "When it is desired to access the data in the
+          archived vCon, first the outer JWS (JWS3 in diagram) is verified
+          (payload of JWS2), then the vCon (payload in JWS1) is assumed to have
+          valid integrity." (5.2.3, lines 2774-2776)
+        on_error: "not specified"
+        finding: >-
+          Read strictly, only the OUTER signature is verified and everything
+          inside is "assumed to have valid integrity". That assumption is sound
+          only because step 2 verified each layer at the moment it was wrapped,
+          which makes the archiver's discipline the load-bearing part of the
+          scheme and the reader's check the cheap part. The document does not
+          say this, and it provides no way for a reader to tell whether an
+          archiver ever performed step 2's verification - the nesting looks
+          identical either way.
+
+# ------------------------------------------------------------------
+error_model:
+  summary: >-
+    The document defines ONE error path and leaves at least six undefined.
+    This asymmetry is the most useful thing this artifact records.
+  defined:
+    - name: "unsupported critical extension"
+      locator: "Sections 2.5, 4.1.4"
+      behaviour: >-
+        "*MUST NOT* process the vCon except to reject it or notify the user"
+        (2.5) and "MUST NOT attempt to process or operate on the vCon, except
+        to reject it or report unsupported content" (4.1.4)
+      incomplete_because: >-
+        Neither rejection nor notification nor reporting is given a form. There
+        is no error structure, no code, no named recipient and no channel, so
+        two conforming implementations can be observably different and both
+        correct.
+  undefined:
+    - "signature verification failure (5.2, 5.2.2, 5.4 all require or assume verification; none states a consequence)"
+    - "content_hash mismatch on externally referenced content (2.4, 2.4.2, 5.1)"
+    - "decryption failure (5.3, 5.3.1)"
+    - "uuid in a JWS header or JWE unprotected object not matching the enclosed vCon (5.2.2, 5.3.1 - both say SHOULD be verified, neither says what a mismatch means)"
+    - "a vCon matching none of the three recognition rules of 5.4"
+    - "an unreachable, non-HTTPS or non-2xx url for externally referenced content (2.4.1, 5.1)"
+    - "an unresolvable predecessor uuid in a Redacted or Amended Object (4.1.8.1, 4.1.9.1)"
+    - "an archived JWS whose signing certificate expired before the next layer was added (5.2.3)"
+  vocabulary_evidence: >-
+    This is a fact about the document, not an artefact of searching. Across
+    sections 1 to 7 the words fail, failure, error, invalid, discard and abort
+    occur exactly twice: "ignore them while maintaining valid processing of the
+    vCon" (2.5, line 653) and "Call attempts may fail." (4.3.14, line 2194),
+    the second about telephony rather than processing. The word "invalid"
+    occurs only inside "invalidating" at 4.1.9 line 1015. Every other
+    occurrence of failure vocabulary in the document is in the 4.3.11
+    disposition token list, which describes a failed CALL, not failed
+    PROCESSING. There is no error section, no error registry, and no error
+    entry in any of the nine IANA registries of 6.3.
+
+# ------------------------------------------------------------------
+contradictions:
+
+  - name: "the only verification instruction names a parameter the document deleted"
+    locators: "Sections 5.1 and 7.3"
+    detail: >-
+      5.1 lines 2667-2670 say the retrieved payload "should be verified using
+      the signature parameter value for the hash for the url body". There is no
+      signature parameter on a Dialog, Attachment or Analysis Object. 7.3 line
+      3842 records its removal - 'alg and signature were combined into
+      content_hash' - in the 0.0.1 to 0.0.2 change, the earliest of the three
+      version steps Section 7 records, with two further steps since. The
+      instruction is stale.
+
+  - name: "gzip magic numbers are both required and registered as absent"
+    locators: "Sections 5.4 and 6.2"
+    detail: >-
+      5.4 lines 2934-2936 tell a consumer with no media type to identify a gzip
+      vCon "by the gzip member header magic numbers defined in section 2.3.1 of
+      [GZIP]". The 6.2 media type registration for application/vcon+gzip lists
+      "Magic number(s): N/A". The registration also gives the same file
+      extension, "vcon", and the same Windows Clipboard Name, "VCON", as the
+      uncompressed type in 6.1, so neither extension nor clipboard name
+      disambiguates either.
+
+  - name: "a redactor is asked to reject on a list the producer need not populate"
+    locators: "Sections 2.5 and 4.1.3"
+    detail: >-
+      2.5 lines 684-686 suggest a redactor "perhaps should reject vCons with
+      any extension that it does not support" - that is, on the `extensions`
+      list, not the `critical` list. But 4.1.3 lines 816-818 make `extensions`
+      a SHOULD - "The extensions parameter SHOULD contain the list of names of
+      all vCon extensions for any parameters used that are not defined in this
+      core vCon schema document." A producer that omits it is conforming, and a
+      redactor following 2.5 would admit that vCon while rejecting a more
+      honest one that declared its extensions. The stricter rule punishes
+      disclosure.
+
+  - name: "protection of a referenced unredacted vCon is stated at three strengths"
+    locators: "Sections 4.1.8 and 5, twice"
+    detail: >-
+      Recorded in full in distilled/state-machine.yaml under
+      vcon-instance-version-chain / contradiction_found. In short: 4.1.8 lines
+      889-892 require access control on the url (MUST, conditional); 5 lines
+      2589-2592 recommend encryption "if inline" (SHOULD, conditional on a
+      condition the schema cannot express, since the Redacted Object has no
+      inline carriage); 5 lines 2640-2642 require encryption unconditionally
+      (MUST). Three obligations, one subject.
+
+  - name: "a registry section describes the wrong registry"
+    locator: "Section 6.3.5.1.2, lines 3511-3512"
+    detail: >-
+      6.3.5.1.2 is titled "party_event Type Name Registration Initial Values"
+      and its body reads "The following table defines the initial values for
+      the Dialog Object Types Registry." That sentence is copied verbatim from
+      6.3.4.1.2 at lines 3403-3404, where it is correct. The table beneath it
+      is the party_event table. Editorial, but it is the registry text IANA
+      would be asked to act on.
+
+  - name: "the only verification instruction points at a name that now means something else"
+    locators: "Sections 5.1, 5.2.1 and 7.3"
+    supersedes_note: "This sharpens the first contradiction above rather than repeating it."
+    detail: >-
+      "signature" is not merely a deleted name. Across sections 1 to 7 it
+      occurs as a parameter name exactly twice: at 5.2.1 line 2709, where it
+      is a parameter of the JWS Signature Object and holds the signature over
+      the WHOLE vCon, and at 7.3 line 3842, which records that the old
+      per-file "signature" was folded into content_hash. So when 5.1 line 2669
+      says to verify the retrieved file "using the signature parameter value
+      for the hash for the url body", a reader who looks the name up finds a
+      live parameter that is the wrong one, covering the wrong bytes, with no
+      per-file hash in it. A dangling reference fails loudly; this one
+      resolves to something plausible and wrong.
+
+  - name: "the container's own version discriminator was deprecated in the document that records seven incompatible changes"
+    locators: "Sections 4.1.1 and 7"
+    detail: >-
+      "The "vcon" parameter is DEPRECATED as of the publication of this
+      document as an RFC... The extension mechanism replaces the need for
+      schema versioning." (4.1.1, lines 764-768). Section 7 then lists SEVEN
+      non-upward-compatible changes across three version steps - 7.1 (0.3.0 to
+      0.4.0) three of them, 7.2 (0.0.2 to 0.3.0) two, 7.3 (0.0.1 to 0.0.2) two.
+      SIX are renames of a core parameter or object - appended to amended,
+      must_support to critical, transfer-target to transfer_target,
+      target-dialog to target_dialog, mimetype to mediatype, and alg plus
+      signature combined into content_hash, which is a merge rather than a
+      straight rename. The seventh is not a rename at all but a TYPE change:
+      "The "session_id" Dialog Object parameter was changes from a String to a
+      SessionId Object" (7.1, lines 3824-3825; the grammatical error is the
+      source's). That seventh is the one that matters most to the argument,
+      because an extensions list cannot carry a core rename OR a type change -
+      it names additions a producer opted into - so the stated replacement does
+      not cover the stated failure mode in either form. Each old SPELLING
+      occurs exactly once in the whole source, in Section 7, and this was
+      checked rather than assumed: appended at line 3820, must_support at 3822,
+      transfer-target at 3830, target-dialog at 3834, mimetype at 3840, one
+      occurrence each. Nothing else in the document acknowledges them. Two of
+      the renames land on mechanisms modelled in this file: `appended` is the
+      amendment half of derive-new-instance-version, and `must_support` is the
+      admission parameter of consume-received-vcon step 5, which is therefore
+      one draft revision old under the name `critical`.
+
+source_defects:
+  - name: "an unresolved editorial placeholder is still in the document"
+    locator: "end of Appendix A.9, source line 6725"
+    detail: >-
+      The last line before Appendix B is an editorial note announcing a
+      recording-set example with party_history that was never written. It is
+      the three-letter editorial marker this library's own validator forbids,
+      left in a -04 working group draft.
+  - name: "the Redacted Object example carries a uuid older than the vCon it redacts"
+    locator: "Appendix A.8 source line 6591, against Appendix A.4 source line 4628"
+    detail: >-
+      4.1.2 says a vCon uuid SHOULD be a version 8 UUID "generated identically
+      to a version 7 UUID" except in rand_b, so the leading 48 bits are a
+      Unix millisecond timestamp. The A.8 redacted vCon's uuid
+      01928e10-193e-8231-b9a2-279e0d16bc46 decodes to 2024-10-15T02:44:32Z. Its
+      parent, the A.4 vCon it is a redaction of, is
+      01a07da8-c2bb-83e5-b9a2-279e0d16bc46, which decodes to
+      2026-09-07T20:56:47.035Z. The redaction's identifier is timestamped
+      23 months BEFORE the thing it was derived from. The A.9 amended example
+      is consistent by contrast - 01a07da8-c5c1-8db4-a20f-d188127fad29 decodes
+      to 774 ms after its parent. Found by decoding the identifiers, not by
+      reading them. Nothing in the draft requires the timestamps to be
+      monotonic along a chain, so this is a defective example rather than a
+      violated rule - but it is a trap for any implementer who assumes
+      otherwise, and the amended example invites exactly that assumption.
+
+
+# ====================================================================
+# Added after the coordinator's note of this pass.
+# ====================================================================
+
+guard_strength:
+  finding: >-
+    Every flow above is overwhelmingly advisory, and the one MUST that matters
+    cannot be checked by either of the draft's formal schemas. Counts were
+    re-derived over the source with word-boundary matching, MUST NOT
+    subtracted from MUST. The full per-section table is in
+    distilled/state-machine.yaml under guard_strength; what follows is the
+    protocol-relevant subset.
+  by_flow:
+    - flow: external-content-retrieval
+      strength: "MUST on the carriage, none on the check"
+      detail: >-
+        Section 2.4 is the hardest section in this flow - 4 MUST and 0 SHOULD
+        across lines 543-585 - and all four constrain what a PRODUCER puts in
+        the vCon: url and content_hash MUST be present, HTTPS MUST be used,
+        SHA-512 MUST be supported. Section 5.1, which is what a CONSUMER does
+        with them, has 0 MUST and 1 SHOULD across lines 2655-2671, and the
+        verification-ordering sentence itself is lowercase "should be
+        verified". So the obligation to CARRY integrity data is MUST and the
+        obligation to CHECK it is not even a SHOULD.
+    - flow: export-from-security-domain
+      strength: "MUST ordering, SHOULD trigger"
+      detail: >-
+        Signing is never required: "it SHOULD be signed or encrypted by the
+        domain that constructed it" (4), "Before a vCon leaves a security
+        domain, it SHOULD be signed" (5), "Any time a vCon is shared outside
+        its original security domain, it SHOULD be signed and optionally
+        encrypted" (5). The MUST appears only once you have chosen to do both
+        - sign before encrypt (5.3) - and once as a channel condition, "vCons
+        transported over non-secure channels such as email MUST be in the
+        encrypted form" (5).
+    - flow: consume-received-vcon
+      strength: "MUST only at the admission step"
+      detail: >-
+        Section 5.4, the whole recognise-the-form procedure, contains ZERO
+        MUST and one SHOULD across lines 2881-2939, even though the document
+        calls it necessary. Steps 3 and 4, decrypt and verify, rest on SHOULD
+        (5.2.2, 5.3.1). Only step 5, the critical-extension admission, is
+        MUST NOT - and it is the only step with a defined failure exit. The
+        pattern holds across the whole document: where there is a MUST there
+        is an error path, and where there is a SHOULD there is none.
+    - flow: derive-new-instance-version
+      strength: "MUST that a new version exists, SHOULD that it is linked"
+      detail: >-
+        "a new vCon instance version MUST be created" (4.1.9) is a MUST. The
+        back-reference that makes it a chain is SHOULD on both sides - "A
+        redacted vCon SHOULD provide a reference" (4.1.8), "The prior vCon
+        instance version SHOULD be referenced via the uuid" (4.1.9). The
+        mutual exclusion of the two parameters carries no BCP 14 keyword at
+        all. A conforming producer can emit an unbroken succession of
+        amendments that link to nothing.
+    - flow: long-term-archive
+      strength: NONE
+      detail: >-
+        Section 5.2.3 contains ZERO BCP 14 keywords of any kind across lines
+        2755-2804, and introduces itself as "an approach". The document's only
+        answer to signing-certificate expiry is entirely non-normative.
+
+formal_schema_coverage:
+  consequence_for_this_artifact: >-
+    The single MUST-guarded ordering in the document - sign, then encrypt -
+    is not expressible in either schema the document ships, so no validator
+    derived from them can detect the violation. Appendix B covers the unsigned
+    form only; its own title is "vCon - Unsigned Form". Appendix C covers all
+    three but as a flat union, "vcon = unsigned_vcon_type / signed_vcon_type /
+    encrypted_vcon_type", in which payload and ciphertext are both
+    base64url_value_type and base64url_value_type = tstr. Containment is typed
+    away to a plain string, so an encrypted-but-never-signed vCon validates
+    cleanly against the draft's own CDDL. Full treatment, with the verbatim
+    productions, is in distilled/state-machine.yaml under
+    formal_schema_coverage.
+  also_absent_from_both: >-
+    The Section 4.3.1.6 applicability table. Appendix B states its own limit -
+    "SHOULD-level statements are not enforced by this schema." (source line
+    8351) - and Appendix C states its own - the extension wildcard "(* tstr =>
+    any)" makes the per-type prohibitions advisory. Both schemas are
+    informative; the prose governs.
+
+cross_references:
+  state_machine: "distilled/state-machine.yaml"
+  prose_and_diagrams: "distilled/protocol.md"
+  requirements_wired:
+    - id: "draft-ietf-vcon-vcon-core-04#R-0004"
+      used_by: "consume-received-vcon step 5"
+    - id: "draft-ietf-vcon-vcon-core-04#R-0007"
+      used_by: "derive-new-instance-version step 5"
+    - id: "draft-ietf-vcon-vcon-core-04#R-0008"
+      used_by: "derive-new-instance-version step 2"
+  requirements_not_yet_wired: >-
+    requirements.yaml held 33 field-derived entries when this pass ran and
+    covers nothing from 2.4, 2.5, 5.1, 5.2, 5.2.3, 5.3 or 5.4. Every step in
+    external-content-retrieval, export-from-security-domain,
+    consume-received-vcon and long-term-archive therefore cites the source
+    directly. The cross-check pass must wire them once those sections are
+    extracted.
