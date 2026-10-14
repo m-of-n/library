@@ -1,0 +1,1291 @@
+record: draft-ietf-vcon-vcon-core-04
+kind: state-machine
+reviewed_by: ""
+
+source:
+  file: ".cache/draft-ietf-vcon-vcon-core-04.txt"
+  sha256: "cc2a2cb5051b860e2f29478a9ff946e3d882818bfad55dff48e0f5ae033cd722"
+  lines: 8904
+  read: "in full, sections 1-7 and Appendices A, B and C"
+
+# VERDICT: APPLICABLE. Three machines, and the hard part was deciding that the
+# obvious candidate is NOT one of them. See examined_and_rejected.
+applicable: true
+
+verdict: >-
+  vCon is a container format and defines no network protocol, which is the
+  usual ground for declaring this artifact not applicable. It does not hold
+  here. The draft defines its own term for a lifecycle subject - "vCon
+  instance version - a single version of an instance of a conversation, which
+  may be modified to redact or amend additional information forming a
+  subsequent vCon instance version" (2.1) - and then spends 4, 4.1.8, 4.1.9
+  and 5 saying how one version becomes the next, in what order the three
+  forms of 3 may be applied, and which orderings are forbidden. Section 5.3
+  states an ordering as a MUST, 4.1.9 states a creation obligation as a MUST,
+  and 4.1.8 and 4.1.9 state a mutual exclusion that is reproduced in both
+  formal schemas. Those are transitions, triggers and guards. Three machines
+  are extracted. A fourth candidate, Dialog type, was examined at length and
+  rejected with evidence.
+
+conventions:
+  kind_stated: "the transition is asserted by source text, quoted verbatim in `text`"
+  kind_inferred: "the transition is not asserted; `inference` says what it is read off and why"
+  locators: "section numbers as the draft prints them, plus source line numbers into the cached text"
+  quoting: >-
+    Quoted text is verbatim from the cached source with the draft's line
+    wrapping removed. The draft marks emphasis with asterisks (*MUST*); those
+    asterisks are kept where they occur, because in 2.5 the keyword appears
+    only in that marked-up form.
+  inner_quotes: >-
+    ONE systematic transformation is applied and is declared here rather than
+    left to be discovered. The draft puts double quotes around token values
+    and type names in its bullet definitions - `*  time: "Date"`, `-  "join" -
+    when the party joins the dialog`, `*  redacted: "Redacted" (optional,
+    ...)`, `SHOULD be "RS256"`. Carrying a quote inside a YAML scalar that is
+    itself delimited by double quotes would need escaping on every one, so
+    THE SOURCE'S INNER DOUBLE QUOTES ARE DROPPED in quoted text here. Nothing
+    else is changed: no word is added, removed or reordered. An elision inside
+    a quotation is always marked with an ellipsis, and there are two in this
+    file, both in guard_strength.
+  verification: >-
+    Every normative quotation in this file was checked mechanically against
+    the cached source after writing, by reducing both sides to lowercase word
+    sequences with punctuation stripped and testing for containment. All
+    passed. Line locators were likewise re-derived from the source rather than
+    typed, after a first pass in which several were wrong.
+
+machines:
+
+  # ------------------------------------------------------------------
+  - name: vcon-form
+    locator: "Sections 3, 4, 5.2, 5.3, 5.2.3, 5.4, 6.2"
+    subject: "one vCon instance version, as it is represented"
+    summary: >-
+      The three forms of 3 are representations of a single vCon instance
+      version, not successive versions of it. This is the finding that
+      separates this machine from vcon-instance-version-chain, and it is
+      checkable against the draft's own examples: Appendix A.4 (unsigned),
+      A.6 (signed form of A.4) and A.7 (encrypted form of A.6) all carry the
+      one uuid 01a07da8-c2bb-83e5-b9a2-279e0d16bc46, at source lines 4628,
+      5704, 5865 and 6399. Signing and encrypting preserve identity. Redaction
+      and amendment do not, and are therefore a different machine.
+    initial: unsigned
+    uuid_invariant: >-
+      "The string value of the UUID for the vCon contained in the payload
+      parameter." (5.2.2, lines 2749-2750) and "The string value of the UUID for the
+      vCon contained in the ciphertext parameter." (5.3.1, lines 2861-2862). The
+      header uuid of a JWS and the unprotected uuid of a JWE name the enclosed
+      vCon, so the identifier does not change across the transitions below.
+
+    states:
+      - name: unsigned
+        locator: "Sections 3, 4, 5.4"
+        meaning: >-
+          "The unsigned form of the vCon has a single top level object." (3,
+          line 710). Recognised by 5.4 through "The presence of one or more of
+          the following parameters indicates that the vCon is in the unsigned
+          form:" - parties, dialog, analysis, attachments.
+        mutable: true
+        note: >-
+          This is the only mutable state in the machine. "The unsigned form of
+          the top level vCon object is necessary as in many cases, a vCon will
+          be partially constructed and in process as conversation data is
+          collected." (4, line 735).
+      - name: signed
+        locator: "Sections 3, 5.2, 5.4"
+        meaning: >-
+          "A signed vCon uses [JWS] and takes the General JWS JSON
+          Serialization Syntax form as defined in section 7.2.1 of [JWS]."
+          (5.2, lines 2674-2675). Recognised by 5.4 through the presence of BOTH
+          payload and signatures.
+        mutable: false
+        note: >-
+          "A signed or encrypted vCon cannot be modified without invalidating
+          it." (4.1.9, line 1015). Any change leaves this machine and enters
+          vcon-instance-version-chain.
+      - name: encrypted
+        locator: "Sections 3, 5.3, 5.4"
+        meaning: >-
+          "A encrypted vCon uses [JWE] and takes the General JWE JSON
+          Serialization Syntax form as defined in section 7.2.1 of [JWE]."
+          (5.3, lines 2816-2817). Recognised by 5.4 through the presence of BOTH
+          ciphertext and recipients. The plaintext is always the SIGNED form -
+          "using the signed form of the vCon as the plaintext input for
+          encryption" (5.3, lines 2830-2832).
+        mutable: false
+      - name: gzip-compressed
+        locator: "Sections 5.4, 6.2"
+        meaning: >-
+          "A vCon in any of these forms may additionally be compressed using
+          [GZIP] as described in Section 6.2." (5.4, lines 2884-2885). Orthogonal to
+          the three forms rather than a fourth form - the compressed object
+          still is one of the three once decompressed.
+        orthogonal: true
+        recognition: >-
+          "A gzip compressed vCon is not JSON and is differentiated from the
+          JSON forms before the above parameter based rules can be applied."
+          (5.4, lines 2930-2931). Identified by media type application/vcon+gzip
+          "when a media type is available", otherwise "by the gzip member
+          header magic numbers defined in section 2.3.1 of [GZIP]".
+
+    transitions:
+
+      - id: T-F-01
+        from: unsigned
+        to: unsigned
+        trigger: "add or change conversation data while construction is in progress"
+        guard: >-
+          "For unsigned forms, the updated_at of the vcon object SHOULD be
+          updated as it is modified." (4.1.6, lines 856-857)
+        locator: "Sections 4, 4.1.6"
+        kind: stated
+        text: >-
+          "The vCon may start with only meta data and party information, then
+          progress to contain dialog information. It may then get analysis
+          added or it could be passed to another security domain for
+          analysis." (4, lines 738-741)
+
+      - id: T-F-02
+        from: unsigned
+        to: signed
+        trigger: "sign as a JWS General JSON Serialization"
+        guard: >-
+          "The vCon General JWS JSON Serialization MUST include x5c or x5u in
+          the unprotected header." (5.2, lines 2675-2677). "The Header Object for a
+          signed vCon MUST include the alg and either the x5c or x5u arrays."
+          (5.2.2, lines 2714-2715). "Future updates MUST first set the updated_at to
+          the new signing time as the vcon object is signed again." (4.1.6,
+          lines 859-860) - so updated_at is set BEFORE the signature is computed.
+        locator: "Sections 5.2, 5.2.1, 5.2.2, 4.1.6"
+        kind: stated
+        text: >-
+          "A signed vCon uses [JWS] and takes the General JWS JSON
+          Serialization Syntax form as defined in section 7.2.1 of [JWS]."
+          (5.2, lines 2674-2675)
+        weaker_obligations:
+          - '"For a signed vCon this value SHOULD be RS256 to maximize interoperability." (5.2.2, lines 2721-2723)'
+          - '"uuid: String (SHOULD be provided)" (5.2.2, line 2735)'
+
+      - id: T-F-03
+        from: signed
+        to: signed
+        trigger: "re-sign the whole JWS as the payload of an outer JWS, for long term archiving"
+        guard: >-
+          Two conditions, both stated in lowercase prose with no BCP 14
+          keyword: the re-signing happens "Before the expiration of the JWS1
+          signing certificate", and the inner content is verified first - "the
+          content of JWS1 (the vCon) is verified and then JWS1 is signed as
+          the payload to construct JWS2".
+        locator: "Section 5.2.3, lines 2765-2772"
+        kind: stated
+        text: >-
+          "For our example illustrated below, we have a vCon which was signed
+          (labeled as JWS1). The certificate used to sign JWS1 has an
+          expiration date. Before the expiration of the JWS1 signing
+          certificate, the content of JWS1 (the vCon) is verified and then
+          JWS1 is signed as the payload to construct JWS2. Before the
+          expiration of the JWS2 certificate, the contents of JWS2 (JWS1) is
+          verified and then JWS2 is signed as the payload to construct JWS3.
+          The process is continued for the life of the vCon archiving."
+        note: >-
+          Self-loop with unbounded depth. 5.2.3 opens "Below is an approach on
+          how integrity may be maintained on the archived vCon. There may be
+          other approaches to this as well." (lines 2761-2762), so this transition is
+          offered as an example rather than mandated. It is still the only
+          place in the draft where a signed vCon legitimately changes shape
+          without becoming a new instance version.
+
+      - id: T-F-04
+        from: signed
+        to: encrypted
+        trigger: "encrypt as a JWE General JSON Serialization"
+        guard: >-
+          The ordering is itself the guard, and it is the sharpest normative
+          statement in the document about processing order.
+        locator: "Section 5.3, lines 2807-2809"
+        kind: stated
+        text: >-
+          "A vCon MUST be signed first using JWS as defined in Signed Form of
+          vCon Object (Section 5.2), then encrypted using JWE as opposed to
+          just encrypted with integrity protection."
+        mandated_not_implied: >-
+          Asked and answered, because the question was put: this ordering is
+          MANDATED, not implied, and the transition is therefore `kind:
+          stated` rather than inferred. The sentence carries an explicit MUST
+          and an explicit sequence, "signed first ... then encrypted". The
+          trailing clause "as opposed to just encrypted with integrity
+          protection" is a rationale for preferring sign-then-encrypt over an
+          AEAD mode alone; it neither weakens nor conditions the MUST, and
+          nothing elsewhere in the document qualifies it. CORRECTED AT PASS 2:
+          pass 1 wrote here that the only-implied back edge is T-F-05. It is
+          not - T-F-05 is `stated`, because 5.3.1 attaches a SHOULD to the
+          moment the vCon "is decrypted". The edge that is only implied is
+          T-F-06, signed to unsigned, which pass 2 reclassified to `inferred`
+          for exactly the reason this note was reaching for.
+        unenforceable: >-
+          The mandate cannot be checked by either schema the document ships.
+          See formal_schema_coverage: Appendix C types the containment away to
+          an opaque string, so an encrypted-but-never-signed vCon - the one
+          thing 5.3 forbids outright - validates cleanly against the draft's
+          own CDDL. This is the clearest case in the document of a real guard
+          that no supplied artifact can enforce.
+
+      - id: T-F-05
+        from: encrypted
+        to: signed
+        trigger: "decrypt"
+        guard: >-
+          "The value of this uuid parameter SHOULD be verified when the vCon
+          is decrypted." (5.3.1, lines 2863-2864)
+        locator: "Sections 5.3, 5.3.1"
+        kind: stated
+        text: >-
+          "The value of this uuid parameter SHOULD be verified when the vCon
+          is decrypted." (5.3.1, lines 2863-2864). Supported by: "The string
+          value of ciphertext is constructed as defined in section 7.2.1 of
+          [JWE] using the signed form of the vCon as the plaintext input for
+          encryption." (5.3, lines 2830-2832)
+        why_stated: >-
+          Re-tested at pass 2 against conventions.kind_stated, by the same test
+          that moved T-F-06 to inferred, and this one PASSES it. The test is
+          whether the draft asserts the OPERATION, not merely the structure its
+          output has. For decryption it does: the draft names decrypting a vCon
+          four times (lines 2642, 2863, 2864, 6025) and at 2864 attaches a
+          normative SHOULD to the moment it happens - "when the vCon is
+          decrypted". An obligation that fires on an event is an assertion that
+          the event occurs. What that operation YIELDS is then fixed by
+          definition rather than inferred: 5.3 says the plaintext input to the
+          encryption IS the signed form, so decryption's output is the signed
+          form and nothing else. "vCons may be stored in unencrypted form"
+          (5.3, line 2813) sanctions resting there. The draft never prints
+          "decrypt" in the imperative, which is why pass 1 hesitated; but it
+          legislates for the operation, which is a stronger thing than naming
+          it in a procedure.
+
+      - id: T-F-06
+        from: signed
+        to: unsigned
+        trigger: "verify the signature and take the payload"
+        guard: >-
+          "When the vCon is verified, the value of this uuid parameter SHOULD
+          be verified against the UUID in the signed vCon." (5.2.2, lines 2751-2752)
+        locator: "Sections 5.2, 5.2.2"
+        kind: inferred
+        inference: >-
+          RECLASSIFIED AT PASS 2, from `stated`. The sentence pass 1 quoted
+          establishes only what the payload structurally IS - "The value of the
+          payload is the Base64Url Encoded string containing either: the
+          unsigned form of the JSON vCon; or the gzipped [GZIP] unsigned form
+          of the JSON vCon." (5.2, lines 2681-2683). It does not say that
+          projecting that value out and resting in the unsigned state is a
+          permitted operation. Written out so a reader sees exactly which half
+          is ours: THE DRAFT DEFINES THE PAYLOAD AS THE UNSIGNED VCON; WE INFER
+          THAT PROJECTING IT OUT IS PERMITTED; THE DRAFT NOWHERE STATES THIS AS
+          AN OPERATION. The negative was checked rather than assumed - no verb
+          in the document takes the payload as an object: a sweep for extract,
+          unwrap, recover and every "payload" mention in sections 1-7 returns
+          only definitions of what it contains and constructions that put
+          things INTO it. Contrast T-F-05, which stays `stated` because 5.3.1
+          attaches a SHOULD to the moment the vCon "is decrypted" and so
+          asserts the operation. The nearest the draft comes here is 5.2.3's
+          archival narrative - "When it is desired to access the data in the
+          archived vCon, first the outer JWS (JWS3 in diagram) is verified
+          (payload of JWS2), then the vCon (payload in JWS1) is assumed to have
+          valid integrity." (lines 2774-2776) - and that stops at a conclusion
+          about integrity, not at a state change. The 5.2.2 guard quoted above
+          names verification, whose output is a boolean, not a form.
+        constraint: >-
+          This is a read projection, not a discard. "vCons may be stored in
+          unencrypted form, but the signed form MUST be maintained to ensure
+          its integrity." (5.3, lines 2813-2814). The draft permits recovering
+          the unsigned object in order to read it; it does not permit dropping
+          the signature and keeping only what came out.
+
+      - id: T-F-07
+        from: "unsigned, signed or encrypted"
+        to: gzip-compressed
+        trigger: "gzip compress"
+        guard: >-
+          None stated. 6.2 adds a one-sided capability rule rather than a
+          guard - "Applications SHOULD support the receiving of gzip format
+          vCons, but do not need to use the gzip format when sending." (6.2,
+          lines 3004-3006)
+        locator: "Sections 5.4, 6.2"
+        kind: stated
+        text: >-
+          "A vCon in any of these forms may additionally be compressed using
+          [GZIP] as described in Section 6.2." (5.4, lines 2884-2885)
+
+      - id: T-F-08
+        from: gzip-compressed
+        to: "the form it was compressed from"
+        trigger: "decompress"
+        guard: >-
+          Recognition precedes decompression - "A gzip compressed vCon is not
+          JSON and is differentiated from the JSON forms before the above
+          parameter based rules can be applied." (5.4, lines 2930-2931)
+        locator: "Section 5.4, lines 2936-2938"
+        kind: stated
+        text: >-
+          "Once decompressed, the contained vCon is in one of the JSON forms
+          and is differentiated using the parameter based rules above."
+
+    forbidden_transitions:
+      - from: unsigned
+        to: encrypted
+        locator: "Section 5.3, lines 2807-2809"
+        kind: stated
+        text: >-
+          "A vCon MUST be signed first using JWS as defined in Signed Form of
+          vCon Object (Section 5.2), then encrypted using JWE as opposed to
+          just encrypted with integrity protection."
+        note: >-
+          Encrypting an unsigned vCon directly is prohibited by a MUST. This
+          is the single hardest ordering constraint in the document and the
+          main reason this machine is extractable at all.
+      - from: signed
+        to: "signed, with the payload altered in place"
+        locator: "Section 4.1.9, line 1015"
+        kind: stated
+        text: >-
+          "A signed or encrypted vCon cannot be modified without invalidating
+          it."
+        note: >-
+          Not a transition in this machine. The only sanctioned route is to
+          leave for vcon-instance-version-chain and create a new instance
+          version.
+      - from: encrypted
+        to: "encrypted, with the ciphertext altered in place"
+        locator: "Section 4.1.9, line 1015"
+        kind: stated
+        text: >-
+          "A signed or encrypted vCon cannot be modified without invalidating
+          it."
+
+    error_states:
+      - name: indeterminate-form
+        locator: "Section 5.4, lines 2888-2928"
+        kind: inferred
+        inference: >-
+          5.4 gives three recognition rules and no default branch. The rules
+          are also explicitly advisory - "The following is the recommended
+          approaches to identifying which form a particular vCon is in" (line
+          2888). A JSON object matching none of them has no defined handling.
+          The state is named here so the hole is citable; the draft does not
+          name it.
+        reachable_from: "any input a consumer is handed"
+        demonstrable_hole: >-
+          This is not hypothetical, and the shape of the gap is exact: 5.4
+          KEYS ON THE FOUR OPTIONAL MEMBERS AND IGNORES BOTH MANDATORY ONES.
+          Its unsigned rule is "The presence of one or more of the following
+          parameters indicates that the vCon is in the unsigned form:" over
+          parties, dialog, analysis, attachments (lines 2893-2902). Every one
+          of those four is marked "(optional)" at its own definition - at
+          lines 1109, 1130, 1143 and 1155 - and collectively they are only a
+          SHOULD, "A vCon in the unsigned form SHOULD contain at least one of
+          the parties, dialog, analysis or attachments parameters." (4, lines
+          741-743). Meanwhile the two members that MUST be present are never
+          consulted: "All vCon documents MUST have the uuid parameter and
+          value set." (4.1.2, lines 792-794) and created_at "MUST be present"
+          (4.1.5, lines 847-848). Appendix B agrees with the prose and lists
+          exactly those two and no others under `required` (source lines
+          6749-6752). So a vCon carrying vcon, uuid and created_at is valid
+          under both formal schemas, violates no MUST, and matches no rule in
+          5.4.
+        ruling: >-
+          This is a DEFECT IN THIS MACHINE, not evidence that the machine does
+          not exist, and the distinction matters because the question was
+          live. 5.4 is an OBSERVER - a procedure for deciding which state you
+          are holding - and the states it observes are established elsewhere
+          and without reference to it: 3 enumerates them, 5.2 and 5.3 define
+          their structures, Appendix C encodes them as a three-way union, 5.3
+          orders two of them with a MUST, and 4.1.9 makes two of them
+          immutable. An unsound recogniser is a broken thermometer, not an
+          absence of temperature. The unsoundness is in fact only STATABLE
+          because the states exist: saying "a metadata-only vCon matches no
+          rule" presupposes that there is nonetheless a form it is in.
+        avoidable: >-
+          Our analysis, not the draft's. The sound test was available in the
+          same document: recognise the unsigned form by the presence of the
+          two MUST-present members and the absence of payload, signatures,
+          ciphertext and recipients. That keys only on obligations the draft
+          already imposes, and it classifies every conforming vCon.
+      - name: unsupported-critical-extension
+        locator: "Sections 2.5 and 4.1.4"
+        kind: stated
+        text: >-
+          "Implementations that encounter a vCon containing a disruptive
+          extension listed in the critical parameter, but do not support that
+          extension, *MUST NOT* process the vCon except to reject it or notify
+          the user." (2.5, lines 694-697)
+        note: >-
+          The one error state in the document with a defined exit. It is a
+          one-shot admission decision rather than a position in a lifecycle,
+          so it is modelled as a flow in protocol.yaml
+          (consume-received-vcon) and recorded here only so that the set of
+          error states is complete.
+
+    undefined_error_states:
+      - name: signature-verification-failure
+        evidence: >-
+          The draft tells a consumer to verify - "For example a signed vCon
+          needs to be verified." (5.4, line 2887) - and never says what to do
+          when verification fails. Searched over the whole source: "invalid"
+          appears only inside "invalidating" at 4.1.9 line 1015; "fail",
+          "failure", "error", "discard" and "abort" appear in sections 1-7
+          only at 2.5 line 653 ("ignore them while maintaining valid
+          processing") and 4.3.14 line 2194 ("Call attempts may fail.", about
+          telephony, not processing). The only occurrences of failure
+          vocabulary in the document are the dialog disposition token values
+          of 4.3.11, which describe a failed CALL, not failed PROCESSING.
+      - name: content-hash-mismatch
+        evidence: >-
+          2.4 requires the hash and 5.1 requires the check, and neither names
+          a consequence. See protocol.yaml flow external-content-retrieval.
+      - name: uuid-mismatch
+        evidence: >-
+          5.2.2 and 5.3.1 each say a uuid SHOULD be verified against the
+          enclosed vCon, and neither says what a mismatch means.
+
+  # ------------------------------------------------------------------
+  - name: vcon-instance-version-chain
+    locator: "Sections 2.1, 4, 4.1.8, 4.1.8.1, 4.1.9, 4.1.9.1, 5"
+    subject: "the succession of vCon instance versions derived from one another"
+    summary: >-
+      The draft's own term. "vCon instance version - a single version of an
+      instance of a conversation, which may be modified to redact or amend
+      additional information forming a subsequent vCon instance version" (2.1, lines 382-384). A derived version does not replace its predecessor; it
+      names it by uuid, and optionally binds it by url plus content_hash. The
+      structure is a directed graph over instance versions, and the examples
+      show it branching.
+    initial: original
+    identity: >-
+      Each node is a distinct uuid. "The UUID value MUST be globally unique.
+      All vCon documents MUST have the uuid parameter and value set." (4.1.2, lines 792-794). Contrast vcon-form, where one uuid spans all states.
+
+    states:
+      - name: original
+        locator: "Sections 4.1.8, 4.1.9"
+        meaning: "an instance version carrying neither a redacted nor an amended parameter"
+      - name: redacted-derivative
+        locator: "Sections 4.1.8, 4.1.8.1"
+        meaning: >-
+          an instance version carrying a Redacted Object. "All data and
+          parameters in the prior, less redacted, vCon instance version are
+          either: Removed entirely in the redacted version; Copied and
+          partially redacted; Copied as is" (4.1.8, lines 907-914). Exactly
+          three dispositions, no fourth.
+      - name: amended-derivative
+        locator: "Sections 4.1.9, 4.1.9.1"
+        meaning: >-
+          an instance version carrying an Amended Object. "That is to say that
+          the newer version of the vCon is a deep copy of the prior version
+          with the amended and additional data added to it." (4.1.9, lines
+          1020-1022)
+      - name: predecessor-unavailable
+        locator: "Section 4.1.8.1, lines 931-933"
+        meaning: >-
+          "The absence of a value for uuid indicates that the less redacted
+          version of this vCon is not available or does not exist."
+        terminal: true
+        note: >-
+          A terminal state for traversal, stated only for the redacted side.
+          4.1.9.1 states no equivalent for amended, which is recorded under
+          undefined below.
+
+    transitions:
+
+      - id: T-V-01
+        from: "any instance version"
+        to: redacted-derivative
+        trigger: "redact, producing a new instance version with a new uuid"
+        guard: >-
+          Four guards, of three different strengths. (a) "The Redacted Object
+          (Section 4.1.8.1) SHOULD contain the uuid parameter and MAY include
+          the url, content_hash parameters" (4.1.8, lines 887-888). (b)
+          "content_hash MUST be included if url is provided." (4.1.8.1, line
+          944). (c) "If a reference to the unredacted vCon is provided in the
+          url parameter, the access to that URL MUST be restricted to only
+          those who should be allowed to see the identity or PII for the
+          redacted vCon." (4.1.8, lines 889-892). (d) mutual exclusion with
+          amended, see mutual_exclusion below.
+        locator: "Sections 4.1.8, 4.1.8.1, 5"
+        kind: stated
+        text: >-
+          "A redacted vCon SHOULD provide a reference to the unredacted or
+          prior, less redacted, vCon instance version of itself." (4.1.8,
+          lines 880-881)
+        producer_obligation: >-
+          "The assurance of the accuracy of the redaction is made by the
+          entity that creates the redaction which SHOULD sign the redacted
+          version of the vCon." (4.1.8, lines 903-905). This is the hand-off
+          into vcon-form transition T-F-02.
+        array_index_obligation: >-
+          "Data which is to be completely removed from the redacted version,
+          that is contained in a JSON array in the unredacted vCon, SHOULD
+          create an empty placeholder such that object array indices do not
+          change for the rest of the elements of the array." (4.1.8, lines
+          916-919). A redaction that drops an array element silently
+          invalidates every index reference into that array elsewhere in the
+          vCon, so this guard is load bearing and is only a SHOULD.
+
+      - id: T-V-02
+        from: "any signed or encrypted instance version"
+        to: amended-derivative
+        trigger: "amend, producing a new instance version with a new uuid"
+        guard: >-
+          "The prior vCon instance version SHOULD be referenced via the uuid
+          of the prior vCon instance version, and MAY include the url and
+          content_hash parameters" (4.1.9, lines 1024-1026). "content_hash
+          MUST be provided if url is provided." (4.1.9.1, line 1043). Mutual
+          exclusion with redacted, see mutual_exclusion below.
+        locator: "Section 4.1.9, lines 1015-1018"
+        kind: stated
+        text: >-
+          "A signed or encrypted vCon cannot be modified without invalidating
+          it. In these cases, to allow for adding of additional information a
+          new vCon instance version MUST be created."
+        precondition_note: >-
+          The MUST is conditioned on "In these cases", that is, on the prior
+          version being signed or encrypted. An UNSIGNED vCon is modified in
+          place instead, by T-F-01, and the draft gives no obligation to
+          record an amended reference in that case.
+
+      - id: T-V-03
+        from: redacted-derivative
+        to: redacted-derivative
+        trigger: "redact further"
+        guard: "same as T-V-01"
+        locator: "Section 4.1.8, lines 880-884"
+        kind: stated
+        text: >-
+          "A redacted vCon SHOULD provide a reference to the unredacted or
+          prior, less redacted, vCon instance version of itself. The purpose
+          of the Redacted Object (Section 4.1.8.1) is to provide the reference
+          to the unredacted or less redacted version of the vCon from which
+          this vCon was derived."
+        note: >-
+          The phrase "prior, less redacted" and the Section 5 list of redaction
+          levels ("PII masked", "De-identified", 5, lines 2550-2554) together
+          assert a chain of successively more redacted versions, not a single
+          hop. Stated, not inferred.
+
+      - id: T-V-04
+        from: amended-derivative
+        to: amended-derivative
+        trigger: "amend again"
+        guard: "same as T-V-02"
+        locator: "Section 4.1.9"
+        kind: inferred
+        inference: >-
+          The draft never prints a chain of amendments. It is inferred because
+          T-V-02's precondition is satisfied by any signed or encrypted vCon,
+          and an amended-derivative that has been signed - which Section 5
+          recommends for every domain export - satisfies it again. Nothing in
+          the document distinguishes the second amendment from the first, and
+          nothing bounds the count.
+
+    mutual_exclusion:
+      statement: >-
+        "redacted: Redacted (optional, mutually exclusive with amended
+        parameter)" (4.1.8, lines 921-922) and "amended: Amended (optional,
+        mutually exclusive with redacted parameter)" (4.1.9, lines 1029-1030).
+      corroborated_in_both_formal_schemas: true
+      json_schema: >-
+        Appendix B, source lines 8333-8339, encodes it as a negated
+        conjunction - a "not" containing required with both names - which
+        correctly forbids only the case where BOTH are present. Quoted
+        comment, verbatim - "The redacted and amended parameters are mutually
+        exclusive".
+      cddl: >-
+        Appendix C, source lines 8392-8393, encodes it as an optional group
+        choice - "? ( redacted: redacted_object_type // amended:
+        amended_object_type )" - which is the same constraint.
+      scope_finding: >-
+        The exclusion is per NODE, not per CHAIN. Both formal encodings
+        constrain a single vCon object and say nothing about its ancestors.
+        A redacted-derivative may therefore be signed and then amended, giving
+        a child that carries amended and points at a parent that carries
+        redacted. The draft never says whether that is intended. See undefined.
+
+    branching:
+      finding: >-
+        The version graph branches, and the draft's own examples demonstrate
+        it rather than merely permitting it.
+      evidence: >-
+        Appendix A.8's Redacted Object references uuid
+        01a07da8-c2bb-83e5-b9a2-279e0d16bc46 (source line 6593) and Appendix
+        A.9's Amended Object references the SAME uuid (source line 6713). That
+        uuid is the vCon of Appendix A.4 (line 4628), whose signed form is A.6
+        (line 5704) and whose encrypted form is A.7 (line 6399). One parent,
+        two children, one reached by redaction and one by amendment. The
+        structure is a directed acyclic graph if nothing cycles, not a list.
+      consequence: >-
+        A consumer cannot assume that resolving a predecessor reference walks
+        a line, nor that a given instance version has at most one successor.
+        Nothing in the draft provides a successor pointer at all - every edge
+        points backwards only - so the forward direction is not enumerable
+        from the vCons themselves.
+
+    undefined:
+      - question: "May a redacted vCon be amended, or an amended vCon redacted?"
+        answer: >-
+          NOT STATED ANYWHERE. This is the sharpest gap found. The mutual
+          exclusion of 4.1.8 and 4.1.9 is between two parameters of one
+          object; both formal schemas encode exactly that and no more. Nothing
+          in 4, 4.1.8, 4.1.9 or 5 addresses alternating the two operations
+          along a chain. The semantics matter: an amendment is defined as "a
+          deep copy of the prior version with the amended and additional data
+          added to it" (4.1.9, lines 1020-1022), so amending a redacted vCon
+          deep-copies a vCon from which data was deliberately removed, and the
+          resulting node carries amended, which gives a reader no indication
+          that a redaction lies behind it. The Redacted Object carries a type
+          parameter describing what was redacted (4.1.8.1, lines 935-940); the
+          Amended Object carries no such parameter and no pass-through, so the
+          redaction type is not visible one hop later.
+      - question: "Is the chain bounded?"
+        answer: >-
+          NO BOUND IS STATED, in either direction. There is no maximum depth,
+          no requirement that a chain terminate, and no requirement that the
+          referenced uuid differ from the referencing one. Nothing forbids a
+          cycle. The only terminus the draft defines is the redaction-side
+          sentinel of 4.1.8.1, "The absence of a value for uuid indicates that
+          the less redacted version of this vCon is not available or does not
+          exist." (lines 931-933), and even that is ambiguous between two
+          different facts - not available, versus does not exist - which a
+          consumer would need to tell apart to know whether to keep looking.
+      - question: "What terminates an amendment chain?"
+        answer: >-
+          NOT STATED. 4.1.9.1 makes uuid "optional if external reference
+          provided" (line 1036) and gives no reading for its absence, so the
+          4.1.8.1 sentinel has no amended-side counterpart. Under Appendix B
+          the amended object has no required properties at all, so an empty
+          amended object is schema-valid and means nothing.
+      - question: "Which FORM of the predecessor does the reference name?"
+        answer: >-
+          AMBIGUOUS BY CONSTRUCTION. The reference is a uuid, and by the
+          uuid_invariant finding of the vcon-form machine the unsigned, signed
+          and encrypted forms of one instance version all carry that same
+          uuid. So redacted.uuid or amended.uuid alone cannot say whether the
+          predecessor to fetch is the unsigned, signed or encrypted form. The
+          Figure 1 object tree of 4.1.8 shows the redacted vCon pointing at the
+          ENCRYPTED unredacted vCon, and the Figure 2 object tree of 4.1.9
+          shows the amended vCon pointing at the SIGNED original - two
+          different form choices in two adjacent figures, neither stated as a
+          rule. Only url plus content_hash disambiguates, and both are MAY.
+      - question: "Is the predecessor required to be retrievable?"
+        answer: >-
+          NO. url and content_hash are MAY on both objects, so the normal case
+          is a bare uuid with no locator, resolvable only out of band. Section
+          5 says identity and credentials for external data "will be exchanged
+          out of band from the vCon" (lines 2597-2598) and declares storage and
+          access out of scope.
+
+    contradiction_found:
+      name: "protection of the referenced predecessor is stated three times at three strengths"
+      locators: "Sections 4.1.8, 5 twice"
+      texts:
+        - '4.1.8, lines 889-892: "If a reference to the unredacted vCon is provided in the url parameter, the access to that URL MUST be restricted to only those who should be allowed to see the identity or PII for the redacted vCon." - access control on a URL, MUST, conditional on url being present.'
+        - '5, lines 2589-2592: "If information is redacted for privacy reasons, the vCon referenced in the redacted (Section 4.1.8), if inline, SHOULD be encrypted to protect the privacy information in the unredacted version of the vCon." - encryption, SHOULD, conditional on being inline.'
+        - '5, lines 2640-2642: "The non-redacted version of the vCon referenced from the redacted vCon MUST be encrypted such that only those with permission to view the non-redacted content can decrypt it." - encryption, MUST, unconditional.'
+      analysis: >-
+        The second and third are the same obligation at different strengths
+        with different preconditions, in the same section, 55 lines apart.
+        Taken together a consumer cannot tell whether encrypting the
+        predecessor is required or merely recommended. Worse, the second's
+        precondition cannot be met at all: "if inline" presupposes a way to
+        carry the predecessor vCon inside the Redacted Object, and the Redacted
+        Object defines only uuid, type, url and content_hash (4.1.8.1, lines
+        926-948), with no body or encoding parameter. Appendix C's
+        redacted_object_type (lines 8417-8423) confirms there is none. The
+        "if inline" branch of 5 has no realisation in the core schema.
+
+  # ------------------------------------------------------------------
+  - name: party-participation-in-dialog
+    locator: "Sections 4.3.13, 4.3.13.1, 6.3.5.1.2"
+    subject: "one party's participation in one Dialog Object"
+    summary: >-
+      The only lifecycle in the document that is about the CONVERSATION rather
+      than the container. The draft names eight events and zero states. The
+      events arrive in stated pairs, and the states below are the minimal set
+      of positions those pairs move between.
+    initial: not-joined
+    kind: inferred
+    inference: >-
+      Every state in this machine is inferred. The draft asserts the
+      transitions, by defining each event with a gloss that names the change
+      it makes - "join - when the party joins the dialog", "hold - when the
+      party is put on hold", "unhold - when the part is taken off hold"
+      (4.3.13.1, lines 2060-2081, the typo "part" is the source's). It never
+      asserts a state, never names an initial state, and never constrains the
+      order of events. The inference is only that an event whose gloss is "put
+      on hold" and an event whose gloss is "taken off hold" move between two
+      positions, and that those two positions are the states. Nothing stronger
+      is claimed.
+    structure: >-
+      Three independent regions plus one momentary region, not a single state
+      set. Nothing in the draft couples hold to mute or either to presence, so
+      a party may be simultaneously joined, on hold and muted.
+
+    regions:
+
+      - name: presence
+        states:
+          - not-joined
+          - joined
+          - departed
+        transitions:
+          - id: T-P-01
+            from: not-joined
+            to: joined
+            trigger: join
+            kind: stated
+            locator: "Section 4.3.13.1, line 2060"
+            text: '"join - when the party joins the dialog"'
+            guard: "none stated"
+          - id: T-P-02
+            from: joined
+            to: departed
+            trigger: drop
+            kind: stated
+            locator: "Section 4.3.13.1, line 2062"
+            text: '"drop - when the party drops out of the dialog"'
+            guard: "none stated"
+        note: >-
+          departed is NOT stated to be terminal. Nothing forbids a second join
+          after a drop, and in conferencing a party rejoining is ordinary, so
+          this is left non-terminal rather than guessed at.
+
+      - name: hold
+        states:
+          - not-on-hold
+          - on-hold
+        transitions:
+          - id: T-P-03
+            from: not-on-hold
+            to: on-hold
+            trigger: hold
+            kind: stated
+            locator: "Section 4.3.13.1, line 2064"
+            text: '"hold - when the party is put on hold"'
+            guard: "none stated"
+          - id: T-P-04
+            from: on-hold
+            to: not-on-hold
+            trigger: unhold
+            kind: stated
+            locator: "Section 4.3.13.1, line 2066"
+            text: '"unhold - when the part is taken off hold"'
+            guard: "none stated"
+        relevance: >-
+          4.3.14 relies on this region existing - "a call may go on hold where
+          recording is stopped and back off again resulting where recording is
+          started again in a separate recording file, resulting in multiple
+          Dialog Objects" (lines 2148-2151) - so hold and unhold have a
+          structural consequence on the dialog array, not merely a
+          descriptive one.
+
+      - name: mute
+        states:
+          - not-muted
+          - muted
+        transitions:
+          - id: T-P-05
+            from: not-muted
+            to: muted
+            trigger: mute
+            kind: stated
+            locator: "Section 4.3.13.1, line 2068"
+            text: '"mute - when the party is muted"'
+            guard: "none stated"
+          - id: T-P-06
+            from: muted
+            to: not-muted
+            trigger: unmute
+            kind: stated
+            locator: "Section 4.3.13.1, line 2077"
+            text: '"unmute - when the part is taken off mute"'
+            guard: "none stated"
+
+      - name: key
+        states:
+          - key-up
+          - key-down
+        transitions:
+          - id: T-P-07
+            from: key-up
+            to: key-down
+            trigger: keydown
+            kind: stated
+            locator: "Section 4.3.13.1, line 2079"
+            text: '"keydown - when a DTMF or application key/button was pressed"'
+            guard: >-
+              "button: String - (optional, required for keydown and keyup
+              events)" (4.3.13.1, lines 2083-2084). The only guard anywhere in
+              this machine.
+          - id: T-P-08
+            from: key-down
+            to: key-up
+            trigger: keyup
+            kind: stated
+            locator: "Section 4.3.13.1, line 2081"
+            text: '"keyup - when a DTMF or application key/button was released"'
+            guard: "same button requirement as T-P-07"
+        note: >-
+          The key region is per button, not per party. The draft gives no way
+          to say so - there is one flat party_history array and the button
+          value is the only discriminator - so two buttons held at once are
+          representable but their regions are not distinguished by the schema.
+
+    error_states: []
+    error_states_note: >-
+      None. The draft defines no invalid sequence here, because it defines no
+      valid sequence either. Nothing requires join to precede hold, nothing
+      forbids unhold without a preceding hold, nothing forbids two
+      consecutive drops.
+
+    ordering_gap:
+      finding: >-
+        A consumer cannot reconstruct this machine from a vCon without an
+        assumption the draft never licenses.
+      evidence: >-
+        Each Party_History entry carries a time - the parameter is printed as
+        `time: "Date"` at 4.3.13.1 line 2052 and glossed on the next paragraph,
+        "The time at which this event occurred." (line 2054) - but nothing requires the
+        party_history ARRAY to be in time order. The draft is explicit about
+        array ordering twice elsewhere and both times says the opposite of
+        sorted: "It should be noted that the Dialog Objects may not be sorted
+        in chronological order. They are in the order that they were added."
+        (4.1.11, lines 1133-1135) and the same for attachments (4.1.13, lines
+        1151-1153). For party_history it says nothing at all. Replaying the
+        events in array order is therefore unsafe, and sorting by time is an
+        unstated step.
+      registry_note: >-
+        6.3.5.1.2 registers these eight event names (source lines 3509-3563)
+        and the registry is open, so a later extension may add events that
+        this machine does not cover.
+
+# ====================================================================
+examined_and_rejected:
+
+  - candidate: "Dialog type as a lifecycle (4.3.1.1 through 4.3.1.6)"
+    verdict: NOT a state machine
+    reason: >-
+      Dialog type is a discriminator fixed at construction, not a position a
+      Dialog Object moves through. Four pieces of evidence, three of them
+      structural.
+    evidence:
+      - >-
+        4.3.1.6 is an APPLICABILITY table, and the draft says so in its own
+        words - "The following table summarizes which Dialog Object parameters
+        apply to each Dialog Object type. The parameter definitions in the
+        subsections of this document are definitive; this table is provided as
+        a summary." (lines 1575-1578). Its five symbols are M, S, O, SN, X and
+        a dash, all of them statements about PRESENCE in one object. Not one
+        cell describes a change of type, and the table has no column or row
+        for a transition. A state machine's table would be types by types; this
+        one is parameters by types.
+      - >-
+        The parameter sets are disjoint to the point of mutual prohibition. A
+        transfer Dialog Object MUST NOT carry parties, originator, mediatype,
+        filename, body, encoding, url, content_hash, session_id, party_history
+        or message_id, and SHOULD carry transferee, transferor, original and
+        target_dialog, which every other type MUST NOT carry. Changing type in
+        place would require dropping and adding most of the object, which is
+        not a transition but a replacement.
+      - >-
+        Appendix C encodes exactly this. dialog_object_type is a CDDL group
+        choice over five complete alternatives discriminated by a literal type
+        value - "type: recording", "type: text" and so on (source lines
+        8492-8498 and following). A group choice is a one-shot selection; the
+        grammar provides no way to express moving between arms.
+      - >-
+        Where the draft comes closest to a type change, it is classifying a
+        FACT, not re-typing an OBJECT. "As the consultative call is a call, a
+        placeholder Dialog Object for it MUST be of type recording if the call
+        was set up, or of type incomplete if it was not." (4.3, lines
+        1490-1493) decides the type from what happened, at creation time. The
+        4.3.11 note reads the same way - "Note: if a message was left with the
+        voicemail system this is no longer an incomplete type dialog, it is a
+        recording type and the conversation SHOULD be included in the Dialog
+        Content." (lines 1992-1994). Its subject is the dialog, the real
+        exchange, not a Dialog Object being mutated; it tells a constructor
+        which type to choose for a voicemail that received a message.
+      - >-
+        And if a constructor did want to re-type a Dialog Object after the
+        fact, the draft's answer is not a transition but a new instance
+        version. Once the vCon is signed, "A signed or encrypted vCon cannot
+        be modified without invalidating it." (4.1.9, line 1015). The
+        correction is an amendment, which is machine
+        vcon-instance-version-chain, not a Dialog type transition.
+    what_was_looked_for_and_not_found: >-
+      A rule saying when type may change; any parameter recording a previous
+      type; any guard on re-typing; any mention of type in 4.1.8 or 4.1.9. None
+      exists. The word transition does not occur anywhere in the source; the
+      words lifecycle, life-cycle and life cycle occur zero times; "state
+      machine" occurs zero times; "initial state" occurs zero times.
+    related_but_not_a_transition: >-
+      4.3's "It may not always be known at the time of vCon construction
+      whether an image or recording is transcribable." (lines 1474-1475) and
+      "There are situations when little or no information is available for a
+      dialog either initially or over the entire life of the vCon" (lines 1484-1485) both acknowledge that a constructor may learn more later.
+      Neither offers a mechanism for acting on it. That gap is recorded in
+      protocol.md rather than invented as a transition here.
+
+  - candidate: "Extension negotiation (2.5, 4.1.3, 4.1.4)"
+    verdict: "a decision procedure, not a lifecycle - modelled in protocol.yaml"
+    reason: >-
+      A consumer evaluates the critical list once, on receipt, and either
+      proceeds or rejects. There is no state it occupies afterwards, no
+      trigger that moves it back, and no negotiation in either direction - the
+      producer declares and the consumer admits or refuses, with no reply
+      channel defined. It is modelled as the admission branch of the
+      consume-received-vcon flow in protocol.yaml, where its one defined error
+      exit belongs.
+
+
+# ====================================================================
+# Added after the coordinator's note of this pass. Three checks, all
+# re-run against the source rather than taken on trust, and all three
+# change how these machines should be read.
+# ====================================================================
+
+guard_strength:
+  definition_of_must_guarded: >-
+    DEFINED HERE BECAUSE THE COUNT BELOW IS NOT CHECKABLE WITHOUT IT, and a
+    verifier who counts differently will get a different number from the same
+    table. A transition is MUST-GUARDED when a BCP 14 MUST or MUST NOT
+    determines WHETHER THE TRANSITION MAY BE TAKEN - it makes the move
+    mandatory, forbids it, or forbids an ordering of it - and when that
+    keyword cannot be evaded by declining an optional feature. Two kinds of
+    nearby MUST are deliberately EXCLUDED, and both occur in this file:
+      (a) a MUST that constrains the SHAPE OF THE RESULT once the transition
+          is taken rather than whether it may be taken. T-F-02 is the case:
+          signing is never required, but if you sign, x5c or x5u MUST be in
+          the unprotected header and the Header Object MUST carry alg. Scored
+          "MUST-constrained, SHOULD-triggered".
+      (b) a MUST that is CONDITIONAL ON A CHOICE THE PRODUCER NEED NOT MAKE,
+          so that omitting the optional feature makes it vacuous. T-V-01 is
+          the case: content_hash MUST accompany url, and url access MUST be
+          restricted, but only if url is given at all, and url is MAY.
+    So the `guard:` field of a transition may quote a MUST without that
+    transition being MUST-guarded. Counting MUSTs in `guard:` fields instead
+    yields two of eight in vcon-form (T-F-02, T-F-04) and two of four in
+    vcon-instance-version-chain (T-V-01, T-V-02); that is a different and
+    less useful question, and it is recorded here so the two numbers are not
+    mistaken for a contradiction.
+  finding: >-
+    A lifecycle whose guards are all SHOULD is a different object from one
+    whose guards bite, so every transition above is scored here. The headline,
+    on the definition immediately above: of the eight transitions in
+    vcon-form, ONE is MUST-guarded - T-F-04, sign-before-encrypt. Of the four
+    in vcon-instance-version-chain, one is - T-V-02, "a new vCon instance
+    version MUST be created". Of the eight in party-participation-in-dialog,
+    none is. The machines are real, but they are overwhelmingly advisory, and
+    an implementation can violate almost every edge below and still conform.
+  method: >-
+    Counted over the unwrapped source with word-boundary matching, MUST NOT
+    subtracted from MUST and SHOULD NOT from SHOULD so the two are not double
+    counted. Section ranges are the line ranges of the section bodies. These
+    are section-scoped counts and are not a document total; requirements.yaml
+    owns the document total and its reconciliation.
+  section_counts:
+    - section: "5 (the whole of Security Considerations)"
+      lines: "2535-2939"
+      must: 10
+      must_not: 0
+      should: 17
+      should_not: 0
+      may: 0
+      note: >-
+        Section 5 is where the entire vcon-form machine comes from, and it
+        contains no prohibition of any kind. Not one MUST NOT, not one
+        SHOULD NOT, in 405 lines.
+    - section: "5.1 Signing Externally Referenced Files"
+      lines: "2655-2671"
+      must: 0
+      should: 1
+      note: >-
+        Zero MUST. The one SHOULD is "any externally referenced files SHOULD
+        also have a signature" - NOT the verification-ordering sentence, whose
+        "should be verified" is lowercase and therefore carries no BCP 14
+        weight at all.
+    - section: "5.2 Signed Form"
+      lines: "2672-2804"
+      must: 6
+      should: 3
+    - section: "5.2.3 Long Term Archiving"
+      lines: "2755-2804"
+      must: 0
+      should: 0
+      may: 0
+      note: >-
+        ZERO BCP 14 keywords of any kind. The entire nested re-signing scheme,
+        transition T-F-03, is written in the indicative and announced as "an
+        approach". It is the least binding content in the document and the
+        only answer the document gives to certificate expiry.
+    - section: "5.3 Encrypted Form"
+      lines: "2805-2880"
+      must: 2
+      should: 5
+      note: "One of the two MUSTs is the sign-then-encrypt ordering, T-F-04. It is the load-bearing one."
+    - section: "5.4 Differentiation of vCon forms"
+      lines: "2881-2939"
+      must: 0
+      should: 1
+      note: >-
+        ZERO MUST. The recogniser that every consumer must run before it can
+        do anything else - and which the document itself calls necessary, "It
+        is necessary to distinguish which form a vCon is in, and whether it is
+        compressed, in order to properly handle it." - is entirely
+        SHOULD-and-prose. This is why `indeterminate-form` is not a pedantic
+        error state: nothing obliges a producer to make its vCon recognisable.
+    - section: "4.1.8 and 4.1.9 (redacted and amended)"
+      lines: "876-1060"
+      must: 4
+      should: 5
+      may: 4
+    - section: "4.3.13 and 4.3.13.1 (party_history)"
+      lines: "2034-2090"
+      must: 1
+      must_not: 1
+      should: 0
+      note: >-
+        The one MUST constrains the event token VALUE ("The string token for
+        the event which MUST be one of the following", line 2058) and the one
+        MUST NOT excludes party_history from transfer dialogs (line 2039).
+        Neither touches a transition. Every edge in that machine is a
+        keyword-free gloss.
+    - section: "2.5 Extending vCon"
+      lines: "586-698"
+      must: 2
+      must_not: 1
+      should: 1
+
+  by_transition:
+    - id: T-F-01
+      strength: SHOULD
+      evidence: "updated_at SHOULD be updated as the unsigned form is modified (4.1.6)"
+    - id: T-F-02
+      strength: "MUST-constrained, SHOULD-triggered"
+      evidence: >-
+        Signing itself is never required. "it SHOULD be signed or encrypted by
+        the domain that constructed it" (4, lines 745-747) and "Before a vCon
+        leaves a security domain, it SHOULD be signed" (5, lines 2583-2585).
+        What is MUST is the SHAPE once you do sign - x5c or x5u in the
+        unprotected header, alg plus x5c or x5u in the Header Object, and
+        updated_at set to the signing time first.
+    - id: T-F-03
+      strength: NONE
+      evidence: "5.2.3 contains no BCP 14 keyword. Offered as 'an approach'."
+    - id: T-F-04
+      strength: MUST
+      evidence: >-
+        "A vCon MUST be signed first using JWS ... then encrypted using JWE"
+        (5.3, lines 2807-2809). The only MUST-guarded transition in the
+        machine, and the only ordering constraint in the document that a
+        validator could enforce - if either formal schema expressed
+        containment, which neither does. See formal_schema_coverage.
+    - id: T-F-05
+      strength: SHOULD
+      evidence: "uuid SHOULD be verified on decryption (5.3.1)"
+    - id: T-F-06
+      strength: "SHOULD guard, MUST constraint - on an INFERRED transition"
+      evidence: >-
+        The uuid check is SHOULD (5.2.2); the prohibition on resting here
+        permanently is MUST - "the signed form MUST be maintained to ensure
+        its integrity" (5.3, lines 2813-2814). Note what the keyword strength
+        does NOT establish: both sentences constrain a transition the draft
+        never states, so this row prices a guard on an edge that is ours. See
+        the transition's `inference`.
+    - id: T-F-07
+      strength: NONE
+      evidence: "'may additionally be compressed' (5.4). The related 6.2 SHOULD is about supporting receipt, not about compressing."
+    - id: T-F-08
+      strength: SHOULD
+      evidence: "the media type SHOULD identify it (5.4, lines 2932-2934); the magic-number fallback carries no keyword"
+    - id: "forbidden: unsigned to encrypted"
+      strength: MUST
+      evidence: "the same 5.3 sentence as T-F-04, read as a prohibition"
+    - id: "forbidden: modify a signed or encrypted vCon in place"
+      strength: NONE
+      important: true
+      evidence: >-
+        "A signed or encrypted vCon cannot be modified without invalidating
+        it." (4.1.9, line 1015) carries NO BCP 14 keyword. It is a statement
+        of cryptographic fact, not a prohibition - and it does not need to be
+        one, because the consequence is self-enforcing. The MUST in that
+        paragraph attaches to the remedy, not the prohibition: "a new vCon
+        instance version MUST be created".
+    - id: T-V-01
+      strength: SHOULD
+      evidence: >-
+        "A redacted vCon SHOULD provide a reference" (4.1.8); the Redacted
+        Object "SHOULD contain the uuid parameter and MAY include the url,
+        content_hash parameters". The two MUSTs nearby are conditional on
+        choices a producer need not make - content_hash MUST accompany url,
+        and url access MUST be restricted if url is given. Omit url and both
+        MUSTs vanish.
+    - id: T-V-02
+      strength: MUST
+      evidence: >-
+        "a new vCon instance version MUST be created" (4.1.9, lines
+        1015-1018). But note what the MUST does and does not cover: it
+        requires a new version, and the BACK-REFERENCE to the prior version is
+        only SHOULD ("The prior vCon instance version SHOULD be referenced via
+        the uuid"). So the chain's existence is MUST and the chain's LINKS are
+        SHOULD. A conforming implementation can produce an unbroken sequence
+        of amended vCons that point at nothing.
+    - id: T-V-03
+      strength: SHOULD
+      evidence: "same as T-V-01"
+    - id: T-V-04
+      strength: "inferred, no guard"
+      evidence: "not stated at all; see the transition's own inference field"
+    - id: "mutual exclusion of redacted and amended"
+      strength: NONE
+      important: true
+      evidence: >-
+        Stated twice as a parenthetical - "(optional, mutually exclusive with
+        amended parameter)" (4.1.8, lines 921-922) and its mirror (4.1.9,
+        lines 1029-1030) - with no BCP 14 keyword in either. The single most
+        structurally significant constraint on the version graph is
+        keyword-free prose. Both formal schemas do encode it, which is the
+        only reason it is machine-checkable at all, and both formal schemas
+        are informative.
+    - id: "T-P-01 through T-P-08"
+      strength: NONE
+      evidence: >-
+        Every party_history transition is a keyword-free gloss. The sole
+        obligation attached to the button parameter is lowercase - "(optional,
+        required for keydown and keyup events)".
+
+formal_schema_coverage:
+  finding: >-
+    NEITHER of the draft's two formal schemas expresses ANY part of the
+    vcon-form machine, and neither expresses the 4.3.1.6 applicability table.
+    This was checked against the verbatim liftings in distilled/schema/, not
+    inferred.
+  appendix_b_json_schema:
+    file: "distilled/schema/vcon.schema.json"
+    scope: >-
+      Section 4 ONLY. Its own title is "vCon - Unsigned Form" and its $id is
+      https://ietf.org/vcon/schemas/unsigned-vcon.json (source lines
+      6744-6745). It has no definition for the signed or encrypted form, so
+      the three states of the vcon-form machine are two-thirds outside it.
+    self_limitation: >-
+      Its last description states "SHOULD-level statements are not enforced by
+      this schema." (source line 8351). Read against the guard_strength counts
+      above, that sentence disclaims most of this document: 17 of the 27 BCP
+      14 keywords in Section 5 are SHOULD, and Section 5.4's recogniser is
+      entirely SHOULD-and-prose.
+    status: >-
+      Informational. "This JSON schema is provided as informational. The text
+      in sections 1-6 of this document define the normative definition of the
+      vCon schema." (Appendix B, source lines 6729-6731)
+    what_it_does_encode: >-
+      The redacted/amended mutual exclusion, at source lines 8333-8339. That
+      is the one machine constraint either schema captures.
+  appendix_c_cddl:
+    file: "distilled/schema/types.cddl"
+    scope: >-
+      All three forms, as a FLAT UNION - "vcon = unsigned_vcon_type /
+      signed_vcon_type / encrypted_vcon_type". This is the only schema the
+      draft has for the Section 5 forms.
+    why_a_union_is_not_the_machine: >-
+      The union is three unrelated object shapes, not a lifecycle, because the
+      CDDL types the nesting away. signed_vcon_type has "payload:
+      base64url_value_type" and encrypted_vcon_type has "ciphertext:
+      base64url_value_type", and the file's last production is
+      "base64url_value_type = tstr". A plain string. The grammar therefore
+      does NOT say that a signed vCon's payload decodes to an unsigned vCon,
+      nor that an encrypted vCon's ciphertext decrypts to a SIGNED one. The
+      containment that makes the three forms successive states - and the 5.3
+      MUST that orders them - is prose only and is invisible to a validator.
+      An encrypted-but-never-signed vCon, the one thing 5.3 forbids outright,
+      validates cleanly against this CDDL.
+    self_limitation: >-
+      Its own header says the per-type prohibitions are advisory: "Note: the
+      extension parameter wildcard (* tstr => any) means the per-type
+      parameter prohibitions in this CDDL are advisory; a prohibited parameter
+      matches the wildcard. The prose and Table 1 of the draft are
+      definitive."
+    bearing_on_the_rejected_candidate: >-
+      This weakens the third of the five evidence items in
+      examined_and_rejected / Dialog type, and does not overturn it. The CDDL
+      still discriminates the five Dialog variants on a literal type value, so
+      it still models type as a one-shot selection with no way to express
+      moving between arms; what the wildcard note means is that the CDDL
+      cannot ENFORCE the prohibitions, not that it stops expressing the
+      discrimination. The other four evidence items are untouched.
+
+version_history_evidence:
+  finding: >-
+    Section 7 is the only place in the document where the pre-0.4.0 spellings
+    are written down, and two of the six renames land directly on the
+    mechanisms modelled here.
+  verified: >-
+    Each of "appended", "must_support", "transfer-target", "target-dialog" and
+    "mimetype" occurs EXACTLY ONCE in the whole 8904-line source, at lines
+    3820, 3822, 3830, 3834 and 3840 - all inside Section 7. Nothing else in
+    the document acknowledges that these mechanisms had other names.
+  bearing_on_vcon_instance_version_chain: >-
+    '"The "appended" Object was renamed to "amended"' (7.1, line 3820). The
+    amendment half of the chain machine was called `appended` as recently as
+    syntax version 0.3.0, and the rename is not cosmetic: append and amend
+    describe different operations, and 4.1.9's actual semantics are neither -
+    "the newer version of the vCon is a deep copy of the prior version with
+    the amended and additional data added to it" is a copy-and-overlay, which
+    is closer to the discarded name than to the chosen one.
+  bearing_on_the_rejected_extension_candidate: >-
+    '"The "must_support" parameter was renamed to "critical" to be consistent
+    with other IETF JSON schema extension mechanisms.' (7.1, lines 3822-3823).
+    The must-understand mechanism of 2.5 and 4.1.4 is one draft revision old
+    under its current name. That is worth knowing before treating its
+    semantics as settled, and it is why the admission decision is modelled in
+    protocol.yaml as a procedure rather than frozen here as a lifecycle.
+  the_versioning_gap:
+    detail: >-
+      The in-band mechanism that announced these changes has been withdrawn.
+      "The "vcon" parameter is DEPRECATED as of the publication of this
+      document as an RFC. The "vcon" parameter was used to differentiate
+      schema changes to the vCon core container when incompatibilities were
+      created in Internet-Draft versions. The extension mechanism replaces the
+      need for schema versioning." (4.1.1, lines 764-768)
+    consequence: >-
+      Section 7 records FOUR rounds of non-upward-compatible change across
+      three syntax versions, and the parameter that let a consumer detect
+      which one it was holding is deprecated in the same document. The
+      replacement named is the extension mechanism - but an extension
+      announces an ADDITION a producer opted into, whereas every change in
+      Section 7 is a RENAME of a core parameter, which no extensions list
+      would carry. A future 0.5.0 rename has, on this document's own terms, no
+      in-band signal at all. This is not a lifecycle and is not modelled
+      above; it is recorded because it is the container's version lifecycle
+      and it has just lost its discriminator.
+
+cross_references:
+  protocol: "distilled/protocol.yaml and distilled/protocol.md"
+  requirements_wired:
+    - id: "draft-ietf-vcon-vcon-core-04#R-0004"
+      locator_in_requirements: "4.1.4"
+      used_by: "error state unsupported-critical-extension"
+    - id: "draft-ietf-vcon-vcon-core-04#R-0007"
+      locator_in_requirements: "4.1.8 / 4.1.8.1"
+      used_by: "T-V-01 guard (c)"
+    - id: "draft-ietf-vcon-vcon-core-04#R-0008"
+      locator_in_requirements: "4.1.9 / 4.1.9.1"
+      used_by: "T-V-02"
+    - id: "draft-ietf-vcon-vcon-core-04#R-0017"
+      locator_in_requirements: "4.3.1"
+      used_by: "examined_and_rejected, Dialog type"
+    - id: "draft-ietf-vcon-vcon-core-04#R-0026"
+      locator_in_requirements: "4.3.11"
+      used_by: "examined_and_rejected, Dialog type"
+  requirements_not_yet_wired: >-
+    requirements.yaml at the time of this pass holds 33 entries derived from
+    fields.yaml and covers no statement from 2.4, 2.5, 5.1, 5.2, 5.2.3, 5.3 or
+    5.4. Every guard in the vcon-form machine and most of
+    vcon-instance-version-chain therefore cites the source directly and has no
+    requirement id to cite. The cross-check pass must wire them once
+    requirements.yaml carries the Section 5 statements.
