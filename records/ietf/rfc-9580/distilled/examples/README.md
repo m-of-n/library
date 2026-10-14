@@ -157,12 +157,14 @@ RFC 3394 key wrap, AES-OCB3, AES-GCM, AES-CFB, AES-CTR, CMAC),
     signature, PKESK, SKESK and SEIPD packet as "unknown version" 6, and it
     rejects S2K type 4 ("unknown S2K mode 4"). So it cannot check
     A.3–A.12.
-  - It also cannot read the **armored** A.2 or A.12 blocks. Their base64
-    ends without `=` padding and without a CRC24 line, and gpg reads on into
-    the `-----END` line ("invalid radix64 character 2D skipped"). This is
-    gpg's behaviour, not a fixture fault: the base64 is exact. R-0244 says a
-    reader must not depend on the footer. The dearmored bytes were used for
-    the gpg checks.
+  - It also cannot read the **armored** A.2, A.5 and A.12.1 blocks. Each
+    payload is a multiple of 3 octets (96, 600 and 105), so the base64
+    ends without `=` padding. There is no CRC24 line either, and gpg reads
+    on into the `-----END` line ("invalid radix64 character 2D skipped").
+    This is gpg's behaviour, not a fixture fault: the base64 is exact.
+    R-0244 says a reader must not depend on the footer. A.12.2 and A.12.3
+    end in `=` padding, and gpg dearmors them correctly. The dearmored
+    bytes were used for the gpg checks.
 - **The checker** (scratch `verify.py`, not committed) re-runs all of the
   above from the committed files and source alone:
   - it re-extracts every fixture;

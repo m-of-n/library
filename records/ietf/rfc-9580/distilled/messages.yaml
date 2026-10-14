@@ -318,9 +318,12 @@ messages:
           - rfc-9580#R-0030
           - rfc-9580#R-0031
     layout: >-
-      0b10ttttll || (u8 | u16 | u32 | nothing). Example: Appendix A.1 and A.2 use Legacy headers
-      0x98 0x33 (Public Key, length-type 0, length 51; line 7601) and 0x88 0x5E (Signature,
-      length-type 0, length 94; line 7635).
+      0b10ttttll || (u8 | u16 | u32 | nothing). Example: the A.1 hex dump and the A.2 packet use
+      Legacy headers 0x98 0x33 (Public Key, length-type 0, length 51; line 7601) and 0x88 0x5E
+      (Signature, length-type 0, length 94; line 7635; its armored form, lines 7644-7648, decodes
+      to the same 0x88 0x5E). The A.1 armored form (lines 7608-7612), which the source calls "The
+      same packet", decodes to the OpenPGP-format header 0xC6 0x33 over the same 51-octet body
+      (SD-M31).
     notes: >-
       Derived: the constants 0x99 (v4 key hashing and fingerprint), 0x88 (Third-Party
       Confirmation hashing) and 0xB4 (User ID certification hashing) are Legacy-format first
@@ -1330,7 +1333,8 @@ messages:
   - name: sig-fields-dsa-ecdsa
     applies_to: "signature-v3 (DSA only), signature-v4, signature-v6; public-key-algorithm 17 or 19"
     source: "§5.2.3.2, lines 1752-1774; §5.2.2, lines 1687-1691"
-    normative_status: "DSA deprecated; ECDSA current"
+    normative_status: current
+    normative_status_by_algorithm: {"17 DSA": deprecated, "19 ECDSA": current}
     encoding: binary
     fields:
       - name: r
@@ -1649,7 +1653,7 @@ messages:
 
   - name: signature-subpacket
     applies_to: "hashed and unhashed areas of signature-v4 and signature-v6"
-    source: "§5.2.3.7, lines 1862-1914; §5.2.3.8, lines 2016-2029; §5.2.3.9, lines 2031-2050; §13.13, lines 6784-6808"
+    source: "§5.2.3.7, lines 1862-1914; §5.2.3.8, lines 2016-2029; §5.2.3.9, lines 2031-2050; §5.2.3.10, lines 2052-2140; §13.13, lines 6784-6808"
     normative_status: current
     encoding: binary
     fields:
@@ -2303,8 +2307,9 @@ messages:
         constraints: >-
           First octet: 0x01 v1 SEIPD supported; 0x02 reserved; 0x04 reserved; 0x08 v2 SEIPD
           supported. A sender SHOULD NOT use an unlisted feature unless it can infer support
-          another way; v2 SEIPD is chosen when every recipient sets 0x08 or is a v6 key with no
-          Features subpacket.
+          another way; v2 SEIPD SHOULD be used when all recipient keys set 0x08, when all are
+          version 6 keys without a Features subpacket, or when support by all recipients can
+          otherwise be inferred (R-0411).
         constrained_by:
           - rfc-9580#R-0152
           - rfc-9580#R-0153
@@ -2615,7 +2620,7 @@ messages:
           "An authentication tag for the AEAD mode." 16 octets for EAX, OCB and GCM.
     key_derivation: >-
       KEK = HKDF-SHA256(IKM = S2K output, salt = none, info = 0xC3 || 0x06 || cipher || aead),
-      length = cipher key size. Session key = AEAD-Decrypt(KEK, nonce = iv, AD = 0xC3 || 0x06 ||
+      length = cipher key size (Derived; the source does not state the HKDF output length). Session key = AEAD-Decrypt(KEK, nonce = iv, AD = 0xC3 || 0x06 ||
       cipher || aead, ciphertext || tag). "Note that no chunks are used and that there is only one
       authentication tag." Example AD for AES-128 with OCB: 0xC3, 0x06, 0x07, 0x02.
     layout: >-
@@ -3185,8 +3190,11 @@ messages:
     constraints: >-
       Subkeys use the same computation, "including the 0x99 (version 4 key) or 0x9B (version 6
       key) as the first octet (even though this is not a valid Packet Type ID for a public
-      subkey)." Secret packets are fingerprinted over their public fields (Derived). A v6
-      fingerprint must not be squeezed into a 20-octet legacy field.
+      subkey)." Secret packets are fingerprinted over their public fields (Derived). No part of
+      a v6 fingerprint may be mapped into a constrained (for example 20-octet) fingerprint field
+      unless that environment's specification gives explicit guidance distinguishing it from a
+      v4 fingerprint (R-0420); such an implementation SHOULD recompute the v6 fingerprint from
+      the key material instead (R-0421).
     constrained_by:
       - rfc-9580#R-0005
       - rfc-9580#R-0420
@@ -3985,7 +3993,7 @@ messages:
       - rfc-9580#R-0351
     notes: >-
       Derived arithmetic check: 0x04 contributes 3 bits, so 3 + 16 x fsize: 3 + 512 = 515, 3 +
-      768 = 771, 3 + 1056 = 1059, 3 + 1024 = 1027. Compressed SEC1 points are not allowed.
+      768 = 771, 3 + 1056 = 1059, 3 + 1024 = 1027. Derived (§11.2.1 "uncompressed" point; R-0351): compressed SEC1 points are not allowed.
 
   - name: ec-point-prefixed-native
     source: "§11.2.2, lines 5603-5612; §11.2.3, lines 5616-5622"
@@ -4294,6 +4302,7 @@ enumerations:
   public_key_algorithms:
     source: "§9.1 Table 18, lines 4638-4758; §12.4-§12.8"
     rows:
+      - "0 Reserved | none"
       - "1 RSA | key-part-rsa | sig-fields-rsa | pkesk-fields-rsa | SHOULD NOT generate"
       - "2 RSA Encrypt-Only | key-part-rsa | - | pkesk-fields-rsa | MUST NOT generate"
       - "3 RSA Sign-Only | key-part-rsa | sig-fields-rsa | - | MUST NOT generate"
@@ -4580,6 +4589,14 @@ source_defects:
   - id: SD-M30
     locator: "§5.2.4 line 2763 vs Table 4 line 1520"
     finding: "§5.2.4 names 0x20 \"Primary Key Revocation signatures\"; Table 4 names it Key Revocation Signature."
+  - id: SD-M31
+    locator: "Appendix A.1 lines 7599-7612"
+    finding: >-
+      A.1 gives "The entire Public Key packet" as 98 33 04 53 f3 ... (a Legacy-format header,
+      line 7601) and then "The same packet represented in ASCII-armored form", but the armored
+      base64 (xjME...) decodes to c6 33 04 53 f3 ..., an OpenPGP-format header. The 51-octet
+      bodies are identical, so the fingerprint is unaffected; the two encodings of the header are
+      not the same octets.
 
 # ---------------------------------------------------------------------------
 wiring:

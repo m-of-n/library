@@ -1127,7 +1127,7 @@ flows:
           (Unsigned case; in the signed case step 6 already produced it.) Wrap the content in
           a Literal Data packet in OpenPGP packet format: format octet b, or u only for text
           known to be UTF-8; text in UTF-8 with CR LF line endings; empty file name and zero
-          date recommended; never t; _CONSOLE not recommended.
+          date recommended; t not to be emitted (SHOULD NOT); _CONSOLE not recommended.
         basis: "stated"
         locator: "§5.9, §5.9.1"
         constrained_by:
@@ -1321,7 +1321,7 @@ flows:
         message: "ASCII Armor"
         action: >-
           Optionally armor for a text-only channel: BEGIN PGP MESSAGE header line, no
-          Version header, base64 in lines of at most 76 characters, no CRC24 footer (an
+          Version header (SHOULD NOT be emitted), base64 in lines of at most 76 characters, no CRC24 footer (an
           armored message ending in a v2 SEIPD packet must not carry one).
         basis: "stated"
         locator: "§6, §6.1, §6.2, §6.2.1, §6.2.2.1, §2.4"
@@ -1451,7 +1451,8 @@ flows:
         action: >-
           Discard every ESK packet whose version does not align with the payload: before a v2
           SEIPD keep only v6 PKESK and v6 SKESK; before a v1 SEIPD (or SED) keep only v3
-          PKESK and v4 SKESK.
+          PKESK and v4 SKESK (before a historic SED, Table 26 also lists the v2 PKESK of
+          RFC 2440, which this document does not define).
         basis: "stated"
         locator: "§10.3.2.1"
         constrained_by:
@@ -3022,6 +3023,7 @@ flows:
       - "trusted-introducer"
       - "keyholder"
       - "verifier"
+      - "keyring"
     summary: >-
       The only trust-delegation mechanism the format carries. A level 1 Trust Signature
       says "this key is a trusted introducer" with an amount (under 120 partial, 120 or more
@@ -3723,7 +3725,12 @@ flows:
         action: >-
           Under the user's control, and only if the reply goes to exactly the original
           sender and recipients: copy the original v6 PKESK packets, draw a new random salt,
-          derive a new message key from the same session key, encrypt the reply.
+          derive a new message key from the same session key, encrypt the reply. The same
+          recipient-set safeguard applies when a reuse reply is saved (for example as a
+          draft) and reopened before sending; the feature must not be used silently where the
+          user assumes fresh public-key encryption (for example when a recipient's key is
+          known but expired); and a higher-layer protocol must not carry another, interfering
+          practice of session-key reuse.
         basis: "stated"
         locator: "§5.13.2, §13.8"
         quotes:
@@ -3731,6 +3738,12 @@ flows:
             Furthermore, an implementation can securely reply to a message even if a recipient's certificate is unknown by reusing the Encrypted Session Key packets and replying with a different salt that yields a new, unique message key.
           - |-
             Generally, the use of the session-key-reuse feature should be under the control of the user.
+          - |-
+            A modification of the list of recipients addressed in the above points also needs to be safeguarded when a message is initially composed as a reply with session-key reuse but then is stored (e.g., as a draft) and later reopened for further editing and to be finally sent.
+          - |-
+            Specifically, care should be taken so that this feature is not silently used when the user assumes that proper public key encryption is used.
+          - |-
+            When using the session-key-reuse feature in any higher-layer protocol, care should be taken to ensure that there is no other potentially interfering practice of session-key reuse established in that protocol.
         constrained_by:
           - "rfc-9580#R-0233"
         on_error: "unspecified."
@@ -3983,9 +3996,14 @@ algorithms:
     outputs:
       - "a parse tree of nested messages ending in Literal Data, or a sequence rejection"
     grammar:
+      locator: "§10.3"
       quotes:
         - |-
           OpenPGP Message: Encrypted Message | Signed Message | Compressed Message | Literal Message.
+        - |-
+          Compressed Message: Compressed Data Packet.
+        - |-
+          Literal Message: Literal Data Packet.
         - |-
           ESK: Public Key Encrypted Session Key Packet | Symmetric Key Encrypted Session Key Packet.
         - |-
@@ -3993,18 +4011,30 @@ algorithms:
         - |-
           Encrypted Data: Symmetrically Encrypted Data Packet | Symmetrically Encrypted and Integrity Protected Data Packet.
         - |-
+          Encrypted Message: Encrypted Data | ESK Sequence, Encrypted Data.
+        - |-
           One-Pass Signed Message: One-Pass Signature Packet, OpenPGP Message, Corresponding Signature Packet.
         - |-
+          Signed Message: Signature Packet, OpenPGP Message | One-Pass Signed Message.
+        - |-
           Optionally Padded Message: OpenPGP Message | OpenPGP Message, Padding Packet.
+        - |-
+          In addition to these rules, a Marker packet (Section 5.8) can appear anywhere in the sequence.
     steps:
       - n: "1"
         kind: "control"
         action: >-
           Drop Marker packets wherever they appear, and unknown non-critical packets.
+          Ignore Trust packets: they belong only to local keyring files and are to be
+          ignored on any other input.
         basis: "stated"
-        locator: "§10, §10.3, §5.8"
+        locator: "§10, §10.3, §5.8, §5.10"
+        quotes:
+          - |-
+            Trust packets SHOULD NOT be emitted to output streams that are transferred to other users, and they SHOULD be ignored on any input other than local keyring files.
         constrained_by:
           - "rfc-9580#R-0209"
+          - "rfc-9580#R-0225"
           - "rfc-9580#R-0309"
         on_fail: "n/a"
         on_fail_basis: "n/a"
@@ -4727,16 +4757,21 @@ algorithms:
           Self-signatures: verify each (accepted regardless of the primary key's own Key
           Flags), and for each object keep only the most recent valid one. A v6 key needs
           a valid Direct Key signature before any use; a v4 key's metadata is
-          conventionally in a User ID self-signature.
+          conventionally in a User ID self-signature. A Direct Key signature revoked by a
+          valid Certification Revocation (0x30) is cancelled and does not count.
         messages:
           - "Signature Packet v6 (type 0x1F)"
           - "Signature Packet v6 (type 0x13)"
+          - "Signature Packet v6 (type 0x30)"
         basis: "stated"
-        locator: "§5.2.3.10"
+        locator: "§5.2.3.10, §5.2.1.13"
         quotes:
           - |-
             A cryptographically valid self-signature should be accepted from any primary key, regardless of what Key Flags (Section 5.2.3.29) apply to the primary key.
+          - |-
+            Revoking a Direct Key signature cancels that signature.
         constrained_by:
+          - "rfc-9580#R-0091"
           - "rfc-9580#R-0095"
           - "rfc-9580#R-0096"
           - "rfc-9580#R-0098"
@@ -5633,19 +5668,23 @@ error_paths:
 source_defects_and_ambiguities:
   - id: "padding-vs-grammar"
     kind: "contradiction"
-    locator: "§5.14, §10, §10.3, §10.4"
+    locator: "§5.14, §10, §10.3, §10.4, §5.10"
     text: >-
       The Padding packet (Type ID 21) is critical. The message grammar admits it only as
       the last packet of an Optionally Padded Message, which is used only inside v2 SEIPD;
       §10 says a known but unexpected packet invalidates the entire sequence, while §5.14
       says an implementation must be able to process Padding packets anywhere else. A
       consumer cannot obey both for a Padding packet at the top level of a Signed Message.
-      This model follows §5.14 (ignore).
+      This model follows §5.14 (ignore). The Trust packet (Type ID 12, also critical) is in
+      the same position: no message grammar admits it, while §5.10 says to ignore it on any
+      input other than a local keyring file; this model ignores it too.
     quotes:
       - |-
         An implementation MUST be able to process Padding packets anywhere else in an OpenPGP stream so that future revisions of this document may specify further locations for padding.
       - |-
         The presence of an unknown critical packet, or a known but unexpected packet, is a critical error, invalidating the entire sequence (see Section 4.3).
+      - |-
+        Trust packets SHOULD NOT be emitted to output streams that are transferred to other users, and they SHOULD be ignored on any input other than local keyring files.
   - id: "subkey-followed-by-one-signature"
     kind: "contradiction"
     locator: "§10.1.5, §10.1.1, §10.1.3"
@@ -5916,6 +5955,20 @@ source_defects_and_ambiguities:
     quotes:
       - |-
         The validity period of the key. This is the number of seconds after the key creation time that the key expires.
+  - id: "unknown-packet-versions"
+    kind: "gap"
+    locator: "§5.1, §5.3, §5.5.2, §5.13, §5.2.5"
+    text: >-
+      Only a Signature packet of unknown version has a stated consumer rule (ignore it and
+      continue, §5.2.5). For a PKESK, SKESK, Key or SEIPD packet whose version is not one
+      the source defines, nothing says whether the packet is skipped, the key or message
+      is unusable, or the sequence is rejected. An unknown-version ESK cannot align with
+      the payload and so is discarded by the §10.3.2.1 rule (inferred).
+    quotes:
+      - |-
+        The currently defined versions are 3 and 6.
+      - |-
+        An unknown signature version
 not_defined:
   - item: >-
       Any wire protocol, transport, session or error signalling. Objects are produced and

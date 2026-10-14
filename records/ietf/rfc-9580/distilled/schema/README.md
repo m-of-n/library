@@ -36,11 +36,11 @@ obsoletes RFC 4880, 5581 and 6637.
 |---|---|---|---|---|---|---|
 | `registries.verbatim.txt` | verbatim | Tables 1–30: §3.7.1, §3.7.2.1, §5, §5.2.1, §5.2.3.7, §5.2.3.24, §5.2.3.25, §5.2.3.29, §5.2.3.31, §5.2.3.32, §5.5.4, §5.12, §5.12.1, §6.2.1, §6.2.2, §9.1–§9.6, §10.3.2.1, §10.3.2.2, §11.2, §11.3, §11.5.1 | 637–5945, 920 lines in 30 ranges | 30 | 1125 · 70790 | `d63b839e95ca03461fdef4b92d4ed1d29abe213980f8ca6c39986105e2ab21b7` |
 | `grammars.verbatim.txt` | verbatim | §10.1.1–§10.4 packet-sequence grammars; §8 Regular Expressions; §6–§6.2.3 ASCII Armor; §7.1–§7.2 Cleartext Signature Framework; §5.4 OPS bracketing | 3048–5542, 347 lines in 23 ranges | 23 | 512 · 24142 | `82977365f68fa43d6d8e5eaf00f127a1c36b233040f417e80ca4f6f909fd7b6d` |
-| `encodings.verbatim.txt` | verbatim | §3.1–§3.7.2.1, §4.2–§4.3, §5.1.3–§5.1.7, §5.2.2–§5.2.4.1, §5.3.2, §5.5.3–§5.5.4.3, §5.5.5.6.1.1, §5.7, §5.12.1, §5.13.1–§5.13.5, §6.1.1, §9.2, §11.2.1–§11.5, §12.1.1–§12.1.3 | 546–6063, 1063 lines in 60 ranges | 60 | 1451 · 64278 | `663a9f20f1764e28b4f472704d668e7fe41e9c7d7beb170143b6e5bbda9a35d6` |
+| `encodings.verbatim.txt` | verbatim | §3.1–§3.7.2.1, §4.2–§4.3, §5.1.3–§5.1.7, §5.2.2–§5.2.4.1, §5.3.2, §5.5.3–§5.5.4.3, §5.5.5.6.1.1, §5.7, §5.12.1, §5.13.1–§5.13.5, §6.1.1, §9.2, §11.2.1–§11.5, §12.1.1–§12.1.3 | 546–6063, 1065 lines in 60 ranges | 60 | 1453 · 64297 | `e6832ef2f6848742614a521fa8b14ad74caa3d5274a6ca8bfdae43ca4febbc79` |
 | `fields.verbatim.txt` | verbatim | §5.1.1–§5.13.2: every packet field list, algorithm-specific field list and subpacket body format | 1269–4127, 723 lines in 83 ranges | 83 | 1248 · 52196 | `85a3b1e52441450ee8a9226f38534f1e9403fd1e4dff98fd9df2235d0af7e73d` |
-| `openpgp-packets.derived.schema.json` | **derived** | JSON Schema (draft 2020-12) for a decoded packet stream; §3, §4, §5, §9, §11 | — | — | 10275 · 192222 | `8caecd65026a8ae4ec6cb2c096cf46968a2b44783d5f1c36b091b9a9b68ad544` |
+| `openpgp-packets.derived.schema.json` | **derived** | JSON Schema (draft 2020-12) for a decoded packet stream; §3, §4, §5, §9, §11 | — | — | 10362 · 193675 | `48287b9d4939536615ad0ab93b43cb2d0f471fc9752e5edff0e3d625976ab23b` |
 | `packet-sequences.derived.abnf` | **derived** | ABNF of the §10 grammars over a one-terminal-per-packet alphabet | — | — | 146 · 7939 | `c4feaef2fbe409189315975f8bffe0b22bfc3e03f32b6144cd72ce47f41f51bf` |
-| `text-formats.derived.abnf` | **derived** | ABNF of §6.2 ASCII Armor, §7 cleartext signed messages, §8 Regular Expressions | — | — | 99 · 5637 | `c8f5400a51d45a2d7d2b5ae83302c4a2745232f261d6961474661134f1b4456f` |
+| `text-formats.derived.abnf` | **derived** | ABNF of §6.2 ASCII Armor, §7 cleartext signed messages, §8 Regular Expressions | — | — | 103 · 5922 | `1fb191d3f8c059b6fbdc4241db701bb6733f46a2fa36a9f6f7a8cd2afbece91b` |
 | `validate.derived.py` | **derived** | decoder, schema check, cross-field checks and grammar matcher; self-test on Appendix A | — | — | 988 · 40417 | `ca83f01610434686aa37c7b8705d39490b0075cabe089a7ab8efc920712021ec` |
 
 `sha256` is the digest of the file as committed. In the verbatim files, each
@@ -69,9 +69,11 @@ Every field name is the source's field description shortened, for example
 
 - `x-derived: true`;
 - `x-source`, the section or sections it renders;
-- `x-verbatim`, the region ids in this directory;
-- `x-requirements`, where a requirement applies (158 distinct R-ids cited;
-  every id exists in `requirements.yaml`, checked by script).
+- `x-verbatim`, the region ids in this directory (an empty list for `hex`,
+  a representation choice, and `padding`, since §5.14 prints no field list);
+- `x-requirements`, where a requirement applies (155 distinct R-ids, and 3
+  more named only in descriptions, 158 in all; every id exists in
+  `requirements.yaml`, checked by script).
 
 Registry enums are `oneOf` lists of `{const, title}`, with the table's other
 columns kept as `x-` annotations: salt size, digest length, OID, nonce and tag
@@ -281,7 +283,7 @@ composition …").
 | E-55 | §11.5 | 5763–5807 | ECDH KDF parameters | `0aeaff984cdc3c51923249395037ebb335b65cacf0bcf760ae29b0f7a51fddc3` |
 | E-56 | §11.5 | 5816–5871 | ECDH session key padding and output | `f2076468539c7ddc04ef71b24b812a86df6d3f3c25b4c064f76120092808682f` |
 | E-57 | §11.5 | 5877–5909 | ECDH synopsis | `9ccd0b789d21f57ccfae6e13162e63153bb593fdb8f0cf689f061acc24a8c039` |
-| E-58 | §12.1.1 | 5963–5986 | EME-PKCS1-v1_5-ENCODE | `5b644374ee85ac04b36e3a860d4babb9d2f61c3f2a2abedf4ac831faa43b3dcf` |
+| E-58 | §12.1.1 | 5963–5988 | EME-PKCS1-v1_5-ENCODE | `c494ce8a307a51fb9c65c2aa8bc9c4c193a3a02611dcb137b68128ccab63e546` |
 | E-59 | §12.1.2 | 5992–6013 | EME-PKCS1-v1_5-DECODE | `994ce98b0504de80ba65b721903323a268f6a637e52be276258806d9ad39f6e3` |
 | E-60 | §12.1.3 | 6017–6063 | EMSA-PKCS1-v1_5 | `2e3860ee0207e2022188c45edb6512d9c67087b2deb116ed951fd51239c5f840` |
 

@@ -167,7 +167,7 @@ events_used:
     locator: '§4.3'
     quote: 'Packets with Type IDs from 0 to 39 are critical.  Packets with Type IDs from 40 to 63 are non-critical.'
     basis: inferred
-    inferred_reason: 'The source defines the partition, not an event. Raised by M01 for a complete packet whose Type ID is in 0 to 39 and is not one of the packets above: 22 to 39 (unassigned), and the reserved IDs 0, 15, 16, 19 and 20 (see OQ-02 on reserved IDs).'
+    inferred_reason: 'The source defines the partition, not an event. Raised by M01 for a complete packet whose Type ID is in 0 to 39 and is not one of the packets above: 22 to 39 (unassigned), the reserved IDs 0, 19 and 20, and 15 and 16, which Table 3 does not list (see OQ-02).'
   - name: 'unknown_noncritical_packet'
     kind: 'event'
     locator: '§4.3'
@@ -247,7 +247,7 @@ events_used:
     locator: '§13.7'
     quote: 'Within any encrypted container, any Compressed Data packet (Section 5.6) where there is a decompression failure.'
     basis: inferred
-    inferred_reason: 'The decompressor fails on the body of a COMP packet; raised in M02.'
+    inferred_reason: 'The decompressor fails on the body of a COMP packet. It is not a trigger of its own: M02 receives it as unwrap_rejected (M02-T16), whose actions single out a decompression failure inside an encrypted container.'
 
 machines:
   # ======================================================================
@@ -893,7 +893,8 @@ machines:
         source:
           - locator: '§10.3'
             quote: 'One-Pass Signed Message:  One-Pass Signature Packet, OpenPGP Message, Corresponding Signature Packet.'
-        basis: stated
+        basis: inferred
+        inferred_reason: 'The grammar makes the Corresponding Signature Packet part of the production; no rule says what a consumer does with a stream that ends before it (R-0311 concerns a packet of an inappropriate type, not a missing one). Rejection is the grammar reading, as in M02-T25.'
         constrained_by: ['rfc-9580#R-0311']
       - id: 'M02-T23'
         from: 'expect-padding-or-end'
@@ -1860,15 +1861,19 @@ machines:
         type: 'evaluation time'
     derived:
       - name: 'effective_self_signature'
-        text: 'The most recent valid (M05 valid) self-signature that carries key-wide information: for v6, the Direct Key signature (0x1F); for v4, a Direct Key signature or, by convention, the User ID self-signature (0x10 or 0x13) of the primary User ID.'
+        text: 'The most recent valid (M05 valid) self-signature that carries key-wide information: for v6, the Direct Key signature (0x1F); for v4, a Direct Key signature or, by convention, the User ID self-signature (0x10 or 0x13) of the primary User ID. A Direct Key signature revoked by a valid Certification Revocation (0x30) from the primary key or a Revocation Key is cancelled and does not count; if no other valid 0x1F remains, a v6 key falls to unusable (M06-T03).'
         source:
           - locator: '§5.2.3.10'
             quote: 'An implementation that encounters multiple self-signatures on the same object MUST select the most recent valid self-signature and ignore all other self-signatures.'
           - locator: '§5.2.3.10'
+            quote: 'Revoking a Direct Key signature cancels that signature.'
+          - locator: '§5.2.1.13'
+            quote: 'This signature revokes an earlier User ID certification signature (Type IDs 0x10 through 0x13) or Direct Key signature (Type ID 0x1F).'
+          - locator: '§5.2.3.10'
             quote: 'By convention, a version 4 key stores information about the primary Public Key (key flags, key expiration, etc.) and the Transferable Public Key as a whole (features, algorithm preferences, etc.) in a User ID self-signature of type 0x10 or 0x13.'
         basis: stated
-        constrained_by: ['rfc-9580#R-0095', 'rfc-9580#R-0096', 'rfc-9580#R-0097', 'rfc-9580#R-0141']
-        note: 'For v4, how a Direct Key signature and a User ID self-signature combine when both carry a Key Expiration Time is not stated (OQ-19).'
+        constrained_by: ['rfc-9580#R-0095', 'rfc-9580#R-0096', 'rfc-9580#R-0097', 'rfc-9580#R-0141', 'rfc-9580#R-0091']
+        note: 'Where in the key a 0x30 that revokes a Direct Key signature sits is not stated: the grammars name only Revocation and Direct Key signatures after the primary key, and M04-T04 does not admit 0x30 there (OQ-09). For v4, how a Direct Key signature and a User ID self-signature combine when both carry a Key Expiration Time is not stated (OQ-19).'
       - name: 'expires_at'
         text: 'key.created + Key Expiration Time of effective_self_signature; never if the subpacket is absent or zero. For v3 keys, the validity-days field of the key packet (zero: does not expire).'
         source:
@@ -1915,8 +1920,12 @@ machines:
         meaning: 'Created, bound by its effective self-signature, not expired, not revoked at t.'
         basis: stated
       - name: 'expired'
-        meaning: 't >= expires_at. Signatures it made while valid stay valid; it can be revived by a newer self-signature.'
-        basis: stated
+        meaning: 't >= expires_at. By our reading, signatures it made while valid stay valid, and a newer self-signature can revive it (M06-T09).'
+        basis: inferred
+        inferred_reason: 'Only the validity period is stated (5.2.3.13). The source states no consequence of key expiry, neither for signatures made before it nor for revival by a later self-signature; both are the plain reading.'
+        source:
+          - locator: '§5.2.3.13'
+            quote: 'The validity period of the key.  This is the number of seconds after the key creation time that the key expires.'
       - name: 'revoked-soft'
         meaning: 'Revoked by an authorised revoker with reason 1 (superseded) or 3 (retired): not to be used after the revocation; signatures created before it remain valid.'
         basis: stated
@@ -1950,6 +1959,8 @@ machines:
         trigger: 'completion'
         guard: 'no T01 revocation; some authorised valid 0x20 has reason in {1, 3} and creation time <= t.'
         source:
+          - locator: '§5.2.3.31'
+            quote: 'If a key has been revoked because of a compromise, all signatures created by that key are suspect.  However, if it was merely superseded or retired, old signatures are still valid.'
           - locator: '§10.1.2'
             quote: 'In this case, the Direct Key signature is no longer necessary, since the primary key itself has been marked as unusable.'
         basis: stated
@@ -2581,7 +2592,7 @@ machines:
             quote: 'When an implementation parses a Regular Expression subpacket, it MUST remove this octet; if it is not present, it MUST reject the subpacket (i.e., ignore the subpacket if it''s non-critical and reject the signature if it''s critical).'
         basis: stated
         constrained_by: ['rfc-9580#R-0151', 'rfc-9580#R-0127']
-        note: 'A non-critical Regular Expression without its terminator is ignored, which widens scope; an expression that fails to parse is not addressed (OQ-26).'
+        note: 'A non-critical Regular Expression without its terminator is ignored, which widens scope. The source does not address an expression that fails to parse (OQ-26): that clause of the guard is ours (inferred); the other two clauses are stated.'
     error_states: ['no-trust']
     terminal_states: ['validated', 'out-of-scope', 'exhausted', 'no-trust']
     note: 'The source defines what one trust signature asserts; how partial amounts add up to validity, and how many independent paths are required, are local policy (not_modelled). Implementations SHOULD emit 60 for partial and 120 for complete trust (R-0120). The Regular Expression syntax is section 8 (Henry Spencer); the matcher itself is not modelled.'
@@ -2638,7 +2649,7 @@ machines:
             applies_when: 'an ESK has an unknown version'
             action: 'discard it.'
             basis: inferred
-            inferred_reason: 'An unknown version cannot align with any payload (R-0343).'
+            inferred_reason: 'An unknown version cannot align with any payload (R-0343); the source states no consumer action for it (OQ-37).'
             constrained_by: ['rfc-9580#R-0343']
       - name: 'trying'
         meaning: 'Trying the next remaining ESK.'
@@ -3327,6 +3338,7 @@ machines:
             quote: 'Furthermore, an implementation MUST reject any secret key material whose cleartext length does not align with the lengths of the unwrapped MPI objects as unusable.'
         basis: stated
         constrained_by: ['rfc-9580#R-0197', 'rfc-9580#R-0008', 'rfc-9580#R-0009']
+        note: 'Only the cleartext-length clause is stated (R-0197). The Argon2 clause comes from the inferred step U04: R-0008 and R-0009 constrain the parameter values, and the consumer action for out-of-range values is open (OQ-32).'
       - id: 'M14-T10'
         from: 'protected'
         to: 'malformed'
@@ -3752,7 +3764,7 @@ open_questions:
     affects: ['M02-T08']
   - id: 'OQ-09'
     locator: '§10.1.1, §10.1.3'
-    question: 'The key grammars name signature roles (revocation, Direct Key, certification, binding) that are Signature Type IDs of one packet type. Whether a SIG of the wrong type for its position, a revocation after a Direct Key signature, or two revocations on a v4 primary ([Revocation Signature] without ellipsis) invalidates the sequence is not stated.'
+    question: 'The key grammars name signature roles (revocation, Direct Key, certification, binding) that are Signature Type IDs of one packet type. Whether a SIG of the wrong type for its position, a revocation after a Direct Key signature, or two revocations on a v4 primary ([Revocation Signature] without ellipsis) invalidates the sequence is not stated. Nor is the position of a Certification Revocation (0x30) that revokes a Direct Key signature (5.2.1.13 allows it; no grammar slot after the primary key names it).'
     source:
       - locator: '§10.1.3'
         quote: 'The format of an OpenPGP version 4 key is as follows.'
@@ -3948,5 +3960,14 @@ open_questions:
       - locator: '§7.1'
         quote: 'One or more legacy Hash Armor Headers that MAY be included by some implementations and MUST be ignored when well formed (see Section 6.2.2.3).'
     affects: ['M16-T02', 'M16-T03']
+  - id: 'OQ-37'
+    locator: '§5.1, §5.3, §5.5.2, §5.13, §5.2.5'
+    question: 'Unknown packet versions. Only a Signature packet of unknown version has stated handling (5.2.5: ignore it, continue). For a PKESK, SKESK, Key or Subkey packet, or SEIPD packet whose version octet is not one the source defines, no consumer action is stated. M11 F04 discards an unknown-version ESK (inferred); M04-T01 accepts only key versions 2, 3, 4 and 6 and M12-T01 and M13 only SEIPD versions 1 and 2, so an unknown version has no transition: whether it rejects the sequence, makes only that key or packet unusable, or is skipped is open.'
+    source:
+      - locator: '§5.1'
+        quote: 'The currently defined versions are 3 and 6.'
+      - locator: '§5.2.5'
+        quote: 'An unknown signature version'
+    affects: ['M11 F04', 'M04-T01', 'M12-T01', 'M13-T01']
 
 source_defects: ['OQ-02', 'OQ-23', 'OQ-31', 'OQ-33', 'OQ-35', 'OQ-36']

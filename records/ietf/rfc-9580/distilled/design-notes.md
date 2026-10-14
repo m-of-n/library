@@ -419,8 +419,9 @@ a departure"* is confirmed for OpenPGP.
    *"always trim local certifications from any key they handle"* (N-151).
    And *"When an implementation generates this subpacket and denotes the
    signature as non-exportable, the subpacket MUST be marked as critical."*
-   (R-0111), so an implementation that does not know the subpacket never
-   honours the signature as a valid certification (R-0080, R-0178). Criticality
+   (R-0111), so an implementation that does not know the subpacket does not
+   honour the signature as a valid certification: a SHOULD (R-0080), and a
+   MUST when the subpacket is in the hashed area (R-0178). Criticality
    governs evaluation, not transfer: such an implementation cannot know to trim
    it, and the bytes can still travel.
 
@@ -641,7 +642,7 @@ algorithm, and the OpenPGP fingerprint travels as provenance (reject 10;
 adapt 9).
 
 **Short identifiers.** *"Implementations SHOULD NOT assume that Key IDs are
-unique."* (R-0005). For keys of version 6 and above, the Issuer Key ID *"MUST NOT
+unique."* (R-0005). For keys of a version greater than 4, the Issuer Key ID *"MUST NOT
 be included in the signature"* (R-0103). §14.1 forbids mapping any part of a
 v6 fingerprint into a constrained field such as a 20-octet one, unless that
 field's own specification says how (R-0420). Reject 11.
@@ -1092,7 +1093,7 @@ Each item gives one line of evidence. The analysis is in the note cited.
    hashing"*.
 5. **Criticality decided once, when a type is defined, not by each issuer** —
    the packet layer's rule (§4.3, R-0032, R-0033; note 7, item 5). This is P5
-   with the source's own history behind it (§10, lines 5167–5172).
+   with the source's own history behind it (§10, lines 5168–5172).
 6. **No canonicalization during verification.** §7.3 is the incumbent's own case
    (R-0166, R-0266, R-0275; note 7, item 2). Evidence for R-O-05.
 7. **Domain separation of the signed bytes by statement type and format
