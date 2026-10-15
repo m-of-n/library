@@ -3,7 +3,7 @@ record: draft-ietf-vcon-vcon-core-04
 kind: design-notes
 title: "draft-ietf-vcon-vcon-core-04 — design notes"
 extracted: "2026-10-13"
-reviewed_by: "pass 2, adversarial verifier, 2026-10-14"
+reviewed_by: "nfnewbury 2026-10-14"
 ---
 
 # draft-ietf-vcon-vcon-core-04 — bearing on our design
