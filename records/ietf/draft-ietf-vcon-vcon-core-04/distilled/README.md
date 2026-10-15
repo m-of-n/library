@@ -12,19 +12,19 @@ pinned at sha256 `cc2a2cb5…033cd722`, 8904 lines, never committed.
 
 | artifact | kind | covers | reviewed |
 |---|---|---|---|
-| `normative.md` | normative | **202 blocks**, §1–§7 complete, source order. All 169 body BCP 14 occurrences | ✗ |
-| `requirements.yaml` | requirements | **251 entries** `R-0001`–`R-0251`, 169 keywords reconciled against the source's 216 | ✗ |
-| `fields.yaml` | fields | **106 rows**, 15 objects — reconciled against the draft's own IANA registries | ✗ |
-| `schema/vcon.schema.json` | schema | **Appendix B verbatim**, src 6742–8352 | ✗ |
-| `schema/types.cddl` | schema | **Appendix C verbatim**, src 8363–8839 | ✗ |
-| `schema/vcon.derived.schema.json` | schema | Appendix B made parseable — see below | ✗ |
-| `schema/types.derived.cddl` | schema | ours, `bin/derive` from `fields.yaml` | ✗ |
-| `messages.yaml` | messages | **28 structures, 187 fields**, 451 requirement links | ✗ |
-| `protocol.yaml` · `protocol.md` | protocol | **5 flows**, 5 Mermaid diagrams, `applicability: partial` | ✗ |
-| `state-machine.yaml` | state-machine | **3 machines, 20 transitions** | ✗ |
-| `examples/` | examples | **12 fixtures**, 108 checks, Appendix A | ✗ |
-| `design-notes.md` | design-notes | 7 adopt / 6 adapt / 9 reject, 20 open questions | ✗ |
-| `code/types.py` · `code/types.rs` | code | ours, `bin/derive` from `fields.yaml` | ✗ |
+| `normative.md` | normative | **202 blocks**, §1–§7 complete, source order. All 169 body BCP 14 occurrences | ✓ |
+| `requirements.yaml` | requirements | **251 entries** `R-0001`–`R-0251`, 169 keywords reconciled against the source's 216 | ✓ |
+| `fields.yaml` | fields | **106 rows**, 15 objects — reconciled against the draft's own IANA registries | ✓ |
+| `schema/vcon.schema.json` | schema | **Appendix B verbatim**, src 6742–8352 | ✓ |
+| `schema/types.cddl` | schema | **Appendix C verbatim**, src 8363–8839 | ✓ |
+| `schema/vcon.derived.schema.json` | schema | Appendix B made parseable — see below | ✓ |
+| `schema/types.derived.cddl` | schema | ours, `bin/derive` from `fields.yaml` | ✓ |
+| `messages.yaml` | messages | **28 structures, 187 fields**, 451 requirement links | ✓ |
+| `protocol.yaml` · `protocol.md` | protocol | **5 flows**, 5 Mermaid diagrams, `applicability: partial` | ✓ |
+| `state-machine.yaml` | state-machine | **3 machines, 20 transitions** | ✓ |
+| `examples/` | examples | **12 fixtures**, 108 checks, Appendix A | ✓ |
+| `design-notes.md` | design-notes | 7 adopt / 6 adapt / 9 reject, 20 open questions | ✓ |
+| `code/types.py` · `code/types.rs` | code | ours, `bin/derive` from `fields.yaml` | ✓ |
 
 ## Reading order
 
@@ -108,7 +108,16 @@ Recorded where they were found; `design-notes.md` §6 holds the full list.
 
 ## Review state
 
-**Every artifact is `reviewed_by: ""`.** All are readable; **nothing may be
-built on them** until a person who did not write them signs each one. That is
-FX-1 pass 4, and it is the one pass no agent can run. Passes 1–3 are recorded
-in `record.yaml` under `distillation.passes`.
+**FX-1 pass 4 is complete.** All eleven artifacts are signed
+`reviewed_by: "nfnewbury 2026-10-14"`, so this record is **buildable-on**.
+
+Passes 1–3 are recorded in `record.yaml` under `distillation.passes` and were
+run by agents. Pass 4 is the separate human check, and it is the one pass no
+agent can run — three artifacts were found carrying
+`reviewed_by: "pass 2, adversarial verifier"` at signing time, which is an
+agent writing itself into the field that attests a person read the work. That
+is what `distillation.passes` is for; `reviewed_by` means a human.
+
+What the signature does **not** cover: the draft's own defects, which are the
+WG's; the open questions in `design-notes.md` §6, which are recorded and not
+resolved; and whether we adopt any of it, which is ARCH/DEC work in `mofn`.

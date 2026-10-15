@@ -90,6 +90,8 @@ will take it.
   is a signal the versioning approach is unsettled.
 - **We conform to none of it.** Extraction here is to *understand a format*, not
   to implement one — no clause obliges us.
-- **The distillation and field extraction in this record are `reviewed_by:
-  ""`** — readable, but **nothing may be built on them** until step 6 of
-  library#9 is done.
+- **All eleven distilled artifacts are signed** — `reviewed_by: "nfnewbury
+  2026-10-14"`, FX-1 pass 4 — so this record is **buildable-on**. The signature
+  covers our extraction, not the draft: its defects are the WG's, and
+  `distilled/design-notes.md` §6 holds twenty open questions that are recorded
+  rather than resolved.
