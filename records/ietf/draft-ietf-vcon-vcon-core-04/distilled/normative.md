@@ -3,7 +3,7 @@ record: draft-ietf-vcon-vcon-core-04
 kind: normative
 title: "draft-ietf-vcon-vcon-core-04 — normative statements"
 extracted: "2026-10-13"
-reviewed_by: ""
+reviewed_by: "nfnewbury 2026-10-14"
 ---
 
 <!-- FX-1 pass 1. Every normative statement and normative block of

@@ -3,7 +3,7 @@ record: draft-ietf-vcon-vcon-core-04
 kind: examples
 title: "draft-ietf-vcon-vcon-core-04 — examples and test vectors"
 extracted: "2026-10-13"
-reviewed_by: "pass 2, adversarial verifier, 2026-10-14"
+reviewed_by: "nfnewbury 2026-10-14"
 ---
 
 # vCon core `-04` — examples and test vectors

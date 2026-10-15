@@ -3,7 +3,7 @@ record: draft-ietf-vcon-vcon-core-04
 kind: protocol
 title: "draft-ietf-vcon-vcon-core-04 — protocol model"
 extracted: "2026-10-13"
-reviewed_by: ""
+reviewed_by: "nfnewbury 2026-10-14"
 ---
 
 # Protocol model
