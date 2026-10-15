@@ -71,11 +71,21 @@ def enrich_ietf(src, meta, _type=None):
     dm = re.search(r"(draft-[a-z0-9]+(?:-[a-z0-9]+)*)", src, re.I)
     d = dm.group(1) if dm else [s for s in src.strip().split("/") if s][-1]
     d = re.sub(r"\.(txt|html|xml)$", "", d)
+    # Datatracker's /doc/ page is keyed on the UNVERSIONED name, so
+    # /doc/draft-ietf-vcon-overview-02/ is a 404 and --fetch failed on every
+    # revision-pinned draft. The versioned BYTES live in the archive instead.
+    # Keep both: identifiers.url is the document line, content.url is the
+    # revision we actually read and digest (library#9).
+    base = re.sub(r"-\d{2}$", "", d)
     meta.update(
         id=meta.get("id") or slug(d),
         identifiers={"draft": d,
-                     "url": f"https://datatracker.ietf.org/doc/{d}/"},
-        url=f"https://datatracker.ietf.org/doc/{d}/",
+                     "url": f"https://datatracker.ietf.org/doc/{base}/"},
+        # No revision given means no bytes to pin — a draft is a moving target,
+        # so leave the landing page and let --fetch fail loudly rather than
+        # digest whatever happened to be current today.
+        url=(f"https://www.ietf.org/archive/id/{d}.txt" if d != base
+             else f"https://datatracker.ietf.org/doc/{d}/"),
         type="draft")
     return meta
 
