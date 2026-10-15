@@ -1,0 +1,2276 @@
+schema: "library-examples/v1"
+record: rfc-2693
+kind: examples
+title: "RFC 2693 (SPKI Certificate Theory) — complete example and test vector set"
+source_version: "RFC 2693"
+source_digest: "6822d668195c3d9b391f0c4f2b023341ba0e5a72e59d63c366a520de42c99098"
+source_file: ".cache/rfc-2693.txt (2411 lines)"
+extracted: "2026-10-11"
+pass: 3
+reviewed_by: ""
+vector_count: 94
+source_vector_count: 58
+constructed_vector_count: 36
+count_reconciliation: "94 = 58 vectors whose input the source prints + 36 constructed vectors. The 58 by section: 2.6.1: 1, 2.6.2: 2, 2.8: 1, 2.9: 2, 3.1: 1, 3.2: 2, 3.3: 4, 6.3: 1, 6.3.1: 13, 6.3.2: 1, 6.3.3: 1, 6.4: 4, 6.5.1: 2, 6.5.2: 1, 6.5.3: 1, 6.5.7: 11, 7.3: 3, 7.5: 2, 7.7: 3, 8: 2. They cover all 34 body display lines that begin with an open parenthesis (the other 4 of the 38 source lines matching that pattern are running prose, at lines 481, 1087, 1167 and 1502), every other example display (3 SDSI names, 9 mapping chains, the 5-tuple rule, 5 AIntersect calls and their 4 printed results, the VIntersect definition, 2 name-tuple classes, 2 name reductions, 3 translation tuples, 2 quoted names), and 2 S-expressions printed inline in prose as values: (null) in 6.3.3 and (tag (*)) in 6.5.3. The other parenthesised forms in running prose, (* set) at lines 1757 and 1766, (ssl), (dns) and (us-crypto) at 1767-1770 and (acl-edit) at 2030, name forms the displays already carry. Two displays yield more than one vector: line 1764 prints two S-expressions (SPKI-657-10, SPKI-657-11), and the ftp pair at lines 1373 and 1379 yields a third vector, SPKI-631-03, for the intersection the source states between them. The 36 constructed vectors by section: 1.1: 2, 2.10: 1, 4.1.2: 1, 4.2: 1, 4.3: 1, 5.1: 1, 5.2: 6, 5.3: 1, 5.4: 1, 5.5: 3, 6.3: 5, 6.3.2: 4, 6.3.3: 3, 6.3.4: 1, 6.4: 1, 6.4.1: 1, 6.4.2: 1, 6.5.7: 1, 7.7: 1. Each tests a rule or a scenario outcome the source states and prints no literal for. Sections with no vector of either kind, and why, are listed in README.md."
+
+# ====================================================================
+# Conventions used in this file
+# ====================================================================
+#
+# Every vector carries:
+#   id              SPKI-<section digits>-NN, never reused. Section 2.10 is
+#                   210, Section 6.3.1 is 631, Section 8 is 8.
+#   locator         the section of RFC 2693 the vector is taken from
+#   kind            what the vector tests
+#   notation        how to read `input` (below)
+#   fidelity        describes `input` / `input_lines`:
+#                     verbatim     -- character-for-character the whole of
+#                                     the source display, margin removed
+#                     split        -- taken out of a larger display or out of
+#                                     running prose; every character is still
+#                                     the source's, but the vector does not
+#                                     reproduce the whole line (list numbers,
+#                                     trailing full stops, connectives and a
+#                                     second S-expression on the same line
+#                                     are left out)
+#                     constructed  -- built for this file from a rule or a
+#                                     scenario the source states but prints no
+#                                     literal for
+#   input / input_lines   the example. One line -> `input`. More than one
+#                   line -> `input_lines`, a YAML sequence in source order, and
+#                   NO `input` key (block scalars are not used, following the
+#                   rfc-9804 convention).
+#   expected        what the source says, or the rule that governs it
+#   expected_basis  how far `expected` can be trusted:
+#                     stated       -- the source states this result for this
+#                                     input; `expected` is a verbatim quote
+#                     rule-quoted  -- the source states no result for this
+#                                     input; `expected` quotes, verbatim, the
+#                                     rule that governs it, and the computed
+#                                     result is under `derived`
+#                     rule-prose   -- as rule-quoted, but `expected` is a
+#                                     prose statement of the rule, not a quote
+#                   Quotes are verbatim after whitespace normalisation: a line
+#                   break plus the next line's margin reads as one space, and
+#                   the page header and footer lines are not text. A word
+#                   the source hyphenates across a line break is rejoined
+#                   with no space: "LISP-" then "like" reads LISP-like. Three
+#                   quotes depend on that rule: SPKI-11-01, SPKI-11-02 and
+#                   SPKI-641-01.
+#   constrains      the rfc-2693#R-NNNN entries that govern `expected` or the
+#                   derived result (a YAML sequence; added by pass 3)
+#   notes           commentary; never a value an implementation consumes
+#
+# Optional fields:
+#   result, outcome     present at top level ONLY when the source states them.
+#                       `result` is the printed value, split from its display;
+#                       `outcome` is succeeds | fails for the operation named
+#                       by `kind`. Anything computed sits under `derived`.
+#   operands            for intersections and reductions: each operand, split
+#                       verbatim from the input
+#   conditions          the guard lines of the 5-tuple rule, verbatim
+#   sexp                the S-expression inside an input that also carries
+#                       notation (an SDSI name-space label, prose quotes)
+#   namespace_label     the "owner:" label written before an SDSI name
+#   bindings            what each symbol in a constructed input stands for
+#   query               for constructed vectors: what is being asked
+#   source_text         further verbatim quotes that ground the vector;
+#                       checked exactly like `expected`
+#   source_text_locator when any source_text quote is in another section
+#                       than `locator`: one locator per source_text quote,
+#                       in the same order
+#   expected_locator    when the quoted rule is in another section
+#   source_annotation   connective text the source prints with the example
+#   same_as / related   cross-links: same input text / bears on
+#   equivalent_to       the source states the two inputs are equivalent
+#   issuers_trusted     for mapping chains: how many issuers the source says
+#                       must be trusted
+#   source_issue        a defect, inconsistency or ambiguity in the SOURCE,
+#                       recorded and not repaired; see README
+#
+# NOTATION.
+#   sexp             a concrete S-expression in the advanced (human-readable)
+#                    form. Lexes under RFC 9804 rules and obeys the Section
+#                    1.1 restrictions (no empty list; every list starts with a
+#                    string) -- both checked mechanically
+#   sexp-schematic   lexically an S-expression, but its atoms are
+#                    metavariables (K1, N, N1 ... Nk) standing for keys and
+#                    names
+#   sexp-template    an S-expression shape holding <placeholders>, "..." or
+#                    a trailing "*" or "?" -- balanced, but not lexically
+#                    valid; never feed it to a parser
+#   sexp-labelled    an SDSI name written as "owner:  (name ...)"; the label
+#                    is notation for the name space, not part of the value
+#   function-call    AIntersect( x, y ) as printed in Section 6.3.1
+#   tuple-notation   the source's own <I,S,D,A,V> 5-tuples and [...] 4-tuples
+#   mapping-notation arrow chains such as authorization -> key
+#   quoted-text      a value written inside prose quotation marks
+#   prose            a constructed scenario stated in words
+#
+# INDENTATION. Every example sits inside the RFC's text margin. That margin
+# is page layout and has been removed. Indentation RELATIVE to the first line
+# of a multi-line example is preserved exactly: the second operand of each
+# AIntersect call is aligned under the first, twelve columns in, as printed.
+#
+# QUOTING. Every string is a YAML quoted scalar. The source contains no
+# backslash, so no value does either. Double quotes are used where a value
+# contains an apostrophe and no double quote; otherwise single quotes, with
+# an apostrophe doubled in the few values that contain both kinds of quote.
+#
+# TIME. RFC 2693 prescribes no date format ("These rules assume that
+# daytimes are expressed in a monotonic form"). Constructed vectors use
+# abstract monotonic integers; -inf and +inf are the values Sections 6.1
+# and 6.2 assume for a missing not-before and not-after.
+#
+# REQUIREMENTS. RFC 2693 contains no BCP 14 keyword, and every
+# requirements.yaml entry carries verb none. `constrains` lists the
+# rfc-2693#R-NNNN entries whose statements determine the vector's expected
+# or derived result. Pass 3 (cross-check) added the links; pass 1 extracted
+# this file from the source alone, in parallel with requirements.yaml.
+#
+# DERIVED MATERIAL is never mixed into `input`, `expected`, `result` or
+# `outcome`. It appears under `derived:` with `in_source: false`, together
+# with the rule applied.
+
+vectors:
+
+  # ===================================================================
+  # Section 1.1 -- Glossary (S-EXPRESSION)
+  # ===================================================================
+  #
+  # The glossary narrows the S-expression format: no empty lists, and the
+  # first element of every list is a string. The source prints no
+  # counter-example, so both vectors are constructed.
+
+  - id: SPKI-11-01
+    locator: "RFC 2693 Section 1.1"
+    kind: sexp-profile-restriction
+    notation: sexp
+    fidelity: constructed
+    input: '()'
+    expected: 'S-EXPRESSION: the data format chosen for SPKI/SDSI. This is a LISP-like parenthesized expression with the limitations that empty lists are not allowed and the first element in any S-expression must be a string, called the "type" of the expression.'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0015'
+    notes: 'The SPKI profile is narrower than the general format: RFC 9804 accepts the empty list (rfc-9804 vector SEXP-5-05), RFC 2693 forbids it. A general S-expression parser accepts this input; an SPKI consumer must reject it.'
+    derived:
+      in_source: false
+      rule: 'Section 1.1: "empty lists are not allowed"'
+      outcome: fails
+
+  - id: SPKI-11-02
+    locator: "RFC 2693 Section 1.1"
+    kind: sexp-profile-restriction
+    notation: sexp
+    fidelity: constructed
+    input: '((ftp) (host ftp.clark.net))'
+    expected: 'S-EXPRESSION: the data format chosen for SPKI/SDSI. This is a LISP-like parenthesized expression with the limitations that empty lists are not allowed and the first element in any S-expression must be a string, called the "type" of the expression.'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0016'
+    notes: 'Built from atoms the source prints in Section 6.3.1. Every concrete S-expression the source itself prints meets both restrictions; that is checked mechanically and recorded in README.'
+    derived:
+      in_source: false
+      rule: 'Section 1.1: "the first element in any S-expression must be a string"'
+      why: 'the first element of the outer list is the list (ftp), not a string'
+      outcome: fails
+
+  # ===================================================================
+  # Section 2.6.1 / 2.6.2 -- Basic and Compound SDSI Names
+  # ===================================================================
+
+  - id: SPKI-261-01
+    locator: "RFC 2693 Section 2.6.1"
+    kind: sdsi-basic-name
+    notation: sexp-labelled
+    fidelity: verbatim
+    input: 'george:  (name fred)'
+    sexp: '(name fred)'
+    namespace_label: 'george'
+    expected: 'represents a basic SDSI name "fred" in the name space defined by george.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0023'
+    source_text:
+      - 'A basic SDSI 2.0 name is an S-expression with two elements: the word "name" and the chosen name.'
+    related:
+      - SPKI-262-02
+    notes: 'The label "george:" names the name space; it is not part of the S-expression. Inside a certificate the name space is the issuer key (Section 2.8). The two spaces after the colon are as printed.'
+
+  - id: SPKI-262-01
+    locator: "RFC 2693 Section 2.6.2"
+    kind: sdsi-basic-name
+    notation: sexp-labelled
+    fidelity: verbatim
+    input: 'fred:  (name sam)'
+    sexp: '(name sam)'
+    namespace_label: 'fred'
+    expected: 'If fred in turn defines a name, for example, fred: (name sam)'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0023'
+      - 'rfc-2693#R-0024'
+    related:
+      - SPKI-262-02
+    notes: 'The same notation as SPKI-261-01: a basic name sam in the name space of fred, where fred is itself the entity george calls fred.'
+
+  - id: SPKI-262-02
+    locator: "RFC 2693 Section 2.6.2"
+    kind: sdsi-compound-name
+    notation: sexp-labelled
+    fidelity: verbatim
+    input: 'george:  (name fred sam)'
+    sexp: '(name fred sam)'
+    namespace_label: 'george'
+    expected: 'then george can refer to this same entity as george: (name fred sam)'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0024'
+      - 'rfc-2693#R-0177'
+      - 'rfc-2693#R-0178'
+    related:
+      - SPKI-261-01
+      - SPKI-262-01
+      - SPKI-64-03
+    notes: 'The document''s only compound-name example, and the case Section 2.8 points back to as "an example of SDSI name chaining". "This same entity" is the one fred calls sam.'
+    derived:
+      in_source: false
+      rule: 'Section 6.4: "the rule for name reduction is to replace the name just defined by its definition."'
+      bindings:
+        Kgeorge: 'the key of george, owner of the name space the label names'
+        Kfred: 'the key george''s name fred is bound to'
+        Ksam: 'the key fred''s name sam is bound to'
+      steps:
+        - '(name Kgeorge fred sam) + [(name Kgeorge fred) -> Kfred] -> (name Kfred sam)'
+        - '(name Kfred sam) + [(name Kfred sam) -> Ksam] -> Ksam'
+      result: 'Ksam'
+      outcome: succeeds
+      note: 'george''s (name fred sam) and fred''s (name sam) reduce to the same key, which is what "this same entity" asserts. The source prints no reduction in which nothing remains after the replacement; the bare key follows from the same replacement rule.'
+
+  # ===================================================================
+  # Section 2.8 -- Fully Qualified SDSI Names
+  # ===================================================================
+
+  - id: SPKI-28-01
+    locator: "RFC 2693 Section 2.8"
+    kind: sdsi-fully-qualified-name
+    notation: sexp
+    fidelity: verbatim
+    input: '(name (hash sha1 |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|) jim therese)'
+    expected: 'is a fully qualified SDSI name, using the SHA-1 hash of a public key as the global identifier defining the name space and anchoring this name string.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0035'
+      - 'rfc-2693#R-0036'
+      - 'rfc-2693#R-0037'
+    source_text:
+      - 'That name is a public key followed by one or more names relative to that key. If there are two or more names, then the string of names is a SDSI name chain.'
+    related:
+      - SPKI-73-01
+      - SPKI-75-01
+      - SPKI-75-02
+    notes: 'The document uses ONE key hash throughout: the same base-64 value recurs in Sections 7.3, 7.5 and 7.6. The public key it hashes is never printed, so the digest cannot be recomputed -- only its shape can be checked.'
+    derived:
+      in_source: false
+      hash_octets: 20
+      hash_hex: '4cb0a03cb165193ce051b71a60b5bc9064c49d49'
+      hash_check: 'The base-64 decodes to 20 octets, the length of a SHA-1 digest. One "=" pad, as 20 mod 3 = 2 requires. The unused low bits of the last character (k) are zero and re-encoding gives the same text, so this is the canonical base-64 spelling.'
+      name_count: 2
+      name_chain: 'two names follow the key (jim, therese), so by the source''s own definition this is a SDSI name chain'
+
+  # ===================================================================
+  # Section 2.9 -- Fully Qualified X.509 Names
+  # ===================================================================
+
+  - id: SPKI-29-01
+    locator: "RFC 2693 Section 2.9"
+    kind: x509-fully-qualified-name
+    notation: sexp-template
+    fidelity: verbatim
+    input: '(name <root key> <leaf name>)'
+    expected: 'Therefore, every X.509 name should be expressed as the pair (name <root key> <leaf name>) if all leaf names descending from that root are unique.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0038'
+      - 'rfc-2693#R-0039'
+    related:
+      - SPKI-651-01
+    notes: '<root key> and <leaf name> are placeholders. Section 6.5.1 gives the matching name 4-tuple (SPKI-651-01), with the root key moved to the issuer slot and the placeholder spelled <leaf-name>.'
+
+  - id: SPKI-29-02
+    locator: "RFC 2693 Section 2.9"
+    kind: x509-fully-qualified-name
+    notation: sexp-template
+    fidelity: split
+    input: '(name <root key> <CA(1)> <CA(2)> ... <CA(k)> <leaf name>)'
+    expected: 'If uniqueness is enforced only within each individual CA, then one would build a Fully Qualified Name chain from an X.509 certificate chain, yielding the form (name <root key> <CA(1)> <CA(2)> ... <CA(k)> <leaf name>).'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0038'
+      - 'rfc-2693#R-0040'
+    related:
+      - SPKI-651-02
+    notes: 'Printed with a trailing full stop, which is sentence punctuation and is left out (fidelity: split). The placeholders CA(1), CA(2) and CA(k) contain parentheses inside the angle brackets: a bare parenthesis counter still balances, but a template reader must treat <...> as opaque. Section 6.5.1 spells the same chain CA1 CA2 ... CAk.'
+
+  # ===================================================================
+  # Section 2.10 -- Group Names
+  # ===================================================================
+
+  - id: SPKI-210-01
+    locator: "RFC 2693 Section 2.10"
+    kind: group-name
+    notation: tuple-notation
+    fidelity: constructed
+    input_lines:
+      - '[(name K0 N) -> Ka]'
+      - '[(name K0 N) -> Kb]'
+      - '<Self,(name K0 N),FALSE,A,V0>'
+    bindings:
+      Ka: 'the first group member'
+      Kb: 'the second group member'
+      A: 'any authorization'
+      V0: 'any validity interval that intersects both 4-tuples'
+    expected: 'SPKI/SDSI does not claim to enforce one key per name. Therefore, a named group can be defined by issuing multiple (name,key) certificates with the same name -- one for each group member.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0030'
+      - 'rfc-2693#R-0041'
+      - 'rfc-2693#R-0042'
+    source_text:
+      - 'Each local name maps to one or more public keys and therefore to the corresponding keyholder(s).'
+    source_text_locator:
+      - "RFC 2693 Section 2.8"
+    notes: 'A reducer must treat the second definition of (name K0 N) as a second member, not as a conflict and not as an overwrite. The 4-tuples are written in the Section 6.4 notation, validity elided.'
+    derived:
+      in_source: false
+      rule: 'Section 6.4 name reduction, applied once with each 4-tuple'
+      result_tuples:
+        - '<Self,Ka,FALSE,A,VIntersect(V0,Va)>'
+        - '<Self,Kb,FALSE,A,VIntersect(V0,Vb)>'
+      outcome: succeeds
+      note: 'Va and Vb are the validity intervals of the two 4-tuples. Both members hold A.'
+
+  # ===================================================================
+  # Section 3 -- Authorization: mapping chains
+  # ===================================================================
+  #
+  # Displays in arrow notation. Not S-expressions. Each carries what the
+  # source says about how many issuers must be trusted, which is the one
+  # testable claim attached to them.
+
+  - id: SPKI-31-01
+    locator: "RFC 2693 Section 3.1"
+    kind: mapping-chain
+    notation: mapping-notation
+    fidelity: verbatim
+    input: 'authorization -> name -> key'
+    expected: 'However, if either of these issuers were subverted, then an attacker could obtain an authorization improperly. Therefore, both the issuers need to be trusted with the authorization decision.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0046'
+      - 'rfc-2693#R-0047'
+    issuers_trusted: 2
+    source_text:
+      - 'For an application to use this information, it must combine an attribute certificate with an ID certificate, in order to get the full mapping:'
+    related:
+      - SPKI-8-02
+
+  - id: SPKI-32-01
+    locator: "RFC 2693 Section 3.2"
+    kind: mapping-chain
+    notation: mapping-notation
+    fidelity: verbatim
+    input: 'authorization -> key'
+    expected: 'In this case, there is only one issuer, who must be an authority on both the authorization and the name.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0048'
+      - 'rfc-2693#R-0049'
+    issuers_trusted: 1
+    source_text:
+      - 'This makes the certificate an instrument mapping both:'
+    same_as:
+      - SPKI-33-01
+      - SPKI-33-03
+    related:
+      - SPKI-32-02
+    notes: 'One X.509v3 certificate mapping both authorization -> key and name -> key (SPKI-32-02).'
+
+  - id: SPKI-32-02
+    locator: "RFC 2693 Section 3.2"
+    kind: mapping-chain
+    notation: mapping-notation
+    fidelity: verbatim
+    input: 'name -> key'
+    expected: 'In this case, there is only one issuer, who must be an authority on both the authorization and the name.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0048'
+      - 'rfc-2693#R-0049'
+    issuers_trusted: 1
+    related:
+      - SPKI-32-01
+
+  - id: SPKI-33-01
+    locator: "RFC 2693 Section 3.3"
+    kind: mapping-chain
+    notation: mapping-notation
+    fidelity: verbatim
+    input: 'authorization -> key'
+    expected: 'A basic SPKI certificate defines a straight authorization mapping:'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0052'
+    same_as:
+      - SPKI-32-01
+      - SPKI-33-03
+    related:
+      - SPKI-8-01
+
+  - id: SPKI-33-02
+    locator: "RFC 2693 Section 3.3"
+    kind: mapping-chain
+    notation: mapping-notation
+    fidelity: verbatim
+    input: 'authorization -> key -> name'
+    expected: 'This mapping has an apparent security advantage over the attribute certificate mapping.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0053'
+      - 'rfc-2693#R-0054'
+    source_text:
+      - "If someone wants access to a keyholder's name, for logging purposes or even for punishment after wrong-doing, then one can map from key to location information (name, address, phone, ...) to get:"
+    related:
+      - SPKI-31-01
+      - SPKI-33-03
+      - SPKI-33-04
+    notes: 'The reverse of SPKI-31-01 in the second link: key -> name instead of name -> key, so the name is no longer on the authorization path.'
+
+  - id: SPKI-33-03
+    locator: "RFC 2693 Section 3.3"
+    kind: mapping-chain
+    notation: mapping-notation
+    fidelity: verbatim
+    input: 'authorization -> key'
+    expected: 'In the mapping above, only the authorization -> key mapping needs to be secure at the level required for the access control mechanism.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0054'
+    same_as:
+      - SPKI-32-01
+      - SPKI-33-01
+    notes: 'A display set inside a sentence; it names the first link of SPKI-33-02.'
+
+  - id: SPKI-33-04
+    locator: "RFC 2693 Section 3.3"
+    kind: mapping-chain
+    notation: mapping-notation
+    fidelity: verbatim
+    input: 'key -> name'
+    expected: 'The key -> name mapping (and the issuer of any certificates involved) needs to be secure enough to satisfy lawyers or private investigators, but a subversion of this mapping does not permit the attacker to defeat the access control.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0055'
+    notes: 'The second link of SPKI-33-02. Its issuer is off the access-control path entirely.'
+
+  # ===================================================================
+  # Section 4 -- Delegation scenarios (constructed)
+  # ===================================================================
+  #
+  # The source argues these cases in prose and prints no tuple. Each vector
+  # restates the scenario in the Section 6.3 tuple notation and reduces it.
+
+  - id: SPKI-412-01
+    locator: "RFC 2693 Section 4.1.2"
+    kind: delegation-scenario
+    notation: tuple-notation
+    fidelity: constructed
+    input_lines:
+      - '<Self,Kcommerce,TRUE,Aexport,V0>'
+      - '<Kcommerce,Kmfr,FALSE,Aexport,V1>'
+      - '<Kmfr,Kother,FALSE,Aexport,V2>'
+    bindings:
+      Kcommerce: 'the US Commerce Department key'
+      Kmfr: 'a manufacturer key'
+      Kother: 'a party the manufacturer tries to empower'
+      Aexport: 'the authority "to declare a cryptographic software module exportable"; the source prints no tag for it'
+      validity: 'V0, V1 and V2 mutually intersect'
+    expected: 'It is reasonable to assume the Commerce Department would not issue permission to delegate this further.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0060'
+      - 'rfc-2693#R-0061'
+      - 'rfc-2693#R-0062'
+      - 'rfc-2693#R-0139'
+    source_text:
+      - 'For example, one could imagine the US Commerce Department having a key that is authorized to declare a cryptographic software module exportable and also to delegate that authorization to others (e.g., manufacturers).'
+    notes: 'Boolean control: the manufacturer certificate carries delegation FALSE, so the chain ends at the manufacturer. The first tuple stands for the grant the source describes as the key being "authorized"; the third is the attempt Commerce wants ruled out. Both are constructed.'
+    derived:
+      in_source: false
+      rule: 'Section 6.3: two 5-tuples reduce only "provided ... D1 = TRUE"'
+      steps:
+        - '<Self,Kcommerce,TRUE,Aexport,V0> + <Kcommerce,Kmfr,FALSE,Aexport,V1> -> <Self,Kmfr,FALSE,Aexport,VIntersect(V0,V1)>'
+        - '<Self,Kmfr,FALSE,Aexport,VIntersect(V0,V1)> + <Kmfr,Kother,FALSE,Aexport,V2> -> fails: D1 = FALSE'
+      outcome: 'Kmfr holds Aexport and may exercise it; no certificate Kmfr issues reduces'
+
+  - id: SPKI-42-01
+    locator: "RFC 2693 Section 4.2"
+    kind: delegation-scenario
+    notation: tuple-notation
+    fidelity: constructed
+    input_lines:
+      - '<Self,Ka,TRUE,A,V0>'
+      - '<Ka,Ka2,FALSE,A,V1>'
+    bindings:
+      Ka: 'a key permitted to delegate A'
+      Ka2: '"a new key pair, also controlled by it"'
+      A: 'any authorization'
+      validity: 'V0 and V1 intersect'
+    expected: 'Therefore, there was no benefit from attempting to restrict the exercise of a permission by someone permitted to delegate it.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0065'
+      - 'rfc-2693#R-0136'
+    source_text:
+      - 'We decided that a delegator is free to create a new key pair, also controlled by it, and delegate the rights to that key to exercise the delegated permission.'
+      - 'One can always need to go one more level down, by creating a temporary signing key (e.g., for use in a laptop).'
+    source_text_locator:
+      - "RFC 2693 Section 4.2"
+      - "RFC 2693 Section 4.1.4"
+    notes: 'The second quote is Section 4.1.4''s argument against integer depth control, which rests on the same move: a keyholder can always add a key of its own to the chain.'
+    derived:
+      in_source: false
+      rule: 'Section 6.3 reduction'
+      steps:
+        - '<Self,Ka,TRUE,A,V0> + <Ka,Ka2,FALSE,A,V1> -> <Self,Ka2,FALSE,A,VIntersect(V0,V1)>'
+      outcome: 'succeeds; the keyholder of Ka exercises A through Ka2. Reduction sees keys, not keyholders, so it cannot tell that Ka and Ka2 share one, and a delegate-only restriction would be unenforceable.'
+
+  - id: SPKI-43-01
+    locator: "RFC 2693 Section 4.3"
+    kind: delegation-scenario
+    notation: tuple-notation
+    fidelity: constructed
+    input_lines:
+      - '<Self,Ksecdef,TRUE,(tag (*)),V0>'
+      - '<Ksecdef,Ksub,TRUE,(tag (*)),V1>'
+      - '<Ksub,Kenlisted,FALSE,(tag (telnet)),V2>'
+    bindings:
+      Ksecdef: 'a key belonging to the Secretary of Defense'
+      Ksub: 'a subordinate; the source says the process "would iterate", and one intermediate level stands for all of them'
+      Kenlisted: 'the enlisted man'
+      tags: '(tag (*)) stands for all access through the firewall and (tag (telnet)) for "some specific one protocol". The source prints neither tag; telnet is one of the two protocols the scenario names.'
+      validity: 'V0, V1 and V2 mutually intersect'
+    expected: 'This process would iterate, until some enlisted man would receive permission to penetrate that firewall for some specific one protocol, but not have permission to delegate that permission.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0062'
+      - 'rfc-2693#R-0136'
+      - 'rfc-2693#R-0139'
+      - 'rfc-2693#R-0150'
+    source_text:
+      - 'The firewall would have an ACL with one entry, granting a key belonging to the Secretary of Defense the right to delegate all access through the firewall.'
+      - 'The Secretary would, in turn, issue certificates delegating this permission to delegate to each of his or her subordinates.'
+    notes: 'The source''s case for delegation over ACLs: the firewall stores one ACL entry, and the organisation structure lives in the certificates. No depth limit exists to reach; the chain may be any length while every intermediate D is TRUE.'
+    derived:
+      in_source: false
+      rule: 'Section 6.3 reduction; AIntersect((tag (*)), (tag (telnet))) = (tag (telnet)) by the (*) rule of Section 6.3.1'
+      steps:
+        - '<Self,Ksecdef,TRUE,(tag (*)),V0> + <Ksecdef,Ksub,TRUE,(tag (*)),V1> -> <Self,Ksub,TRUE,(tag (*)),VIntersect(V0,V1)>'
+        - '<Self,Ksub,TRUE,(tag (*)),VIntersect(V0,V1)> + <Ksub,Kenlisted,FALSE,(tag (telnet)),V2> -> <Self,Kenlisted,FALSE,(tag (telnet)),VIntersect(V0,V1,V2)>'
+        - 'any further <Kenlisted,X,...> fails: D1 = FALSE'
+      result: '<Self,Kenlisted,FALSE,(tag (telnet)),VIntersect(V0,V1,V2)>'
+      outcome: 'Kenlisted may use telnet through the firewall and may not delegate it'
+
+  # ===================================================================
+  # Section 5 -- Validity conditions (constructed)
+  # ===================================================================
+  #
+  # Times are abstract monotonic integers; see TIME at the head of this file.
+
+  - id: SPKI-51-01
+    locator: "RFC 2693 Section 5.1"
+    kind: revocation-scenario
+    notation: prose
+    fidelity: constructed
+    input_lines:
+      - 'certificate C, revocable by CRL'
+      - 'CRL1: sequence number 1; does not list C; held by the verifier'
+      - 'CRL2: sequence number 2; lists C; its delivery is blocked by an adversary'
+    expected: 'That is, an adversary can prevent revocation of a given certificate by preventing the delivery of new CRLs.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0073'
+      - 'rfc-2693#R-0074'
+      - 'rfc-2693#R-0075'
+    source_text:
+      - 'SPKI has ruled out the use of wandering anti-matter CRLs for its certificates. Every authorization computation is deterministic, under SPKI rules.'
+      - 'It also had a sequence number, so that one could tell which of two CRLs was more recent.'
+    related:
+      - SPKI-52-02
+      - SPKI-52-03
+    notes: 'A NEGATIVE DESIGN VECTOR. The anti-matter model is described so that it can be rejected. A sequence number orders the CRLs a verifier has; it cannot tell the verifier that a newer one exists.'
+    derived:
+      in_source: false
+      outcome_anti_matter: 'the verifier accepts C on the strength of CRL1, and the revocation is silently defeated'
+      outcome_spki: 'SPKI forbids the model. Under Section 5.2 a CRL carries validity dates and CRLs may not overlap, so CRL2 cannot take effect while CRL1 is current; once CRL1 expires, C cannot be processed until a valid CRL is in hand (SPKI-52-02).'
+
+  - id: SPKI-52-01
+    locator: "RFC 2693 Section 5.2"
+    kind: crl-validity
+    notation: prose
+    fidelity: constructed
+    input_lines:
+      - 'certificate C: validity [0, 1000]; lists Kcrl as the key that signs its CRL'
+      - 'CRL1: signed by Kcrl; validity [100, 200]; does not list C'
+      - 'verification time: 150'
+    expected: '1. The certificate must list the key (or its hash) that will sign the CRL and may give one or more locations where that CRL might be fetched. 2. The CRL must carry validity dates. 3. CRL validity date ranges must not intersect.'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0076'
+      - 'rfc-2693#R-0077'
+      - 'rfc-2693#R-0078'
+      - 'rfc-2693#R-0079'
+      - 'rfc-2693#R-0080'
+      - 'rfc-2693#R-0085'
+      - 'rfc-2693#R-0087'
+      - 'rfc-2693#R-0115'
+    source_text:
+      - 'The CRL in this case is a completion of the certificate, rather than a message to the world announcing a change of mind.'
+      - 'That sequence of instruments is then treated as a current CRL and the combined CRL must follow the conditions listed above.'
+    notes: 'The positive baseline for Section 5.2. The second quote extends the conditions to a full CRL followed by delta-CRLs.'
+    derived:
+      in_source: false
+      rule: 'Section 6, stage 1: the validity dates of on-line test results are intersected by VIntersect() with the validity dates of the certificate to yield the dates in the certificate''s tuple'
+      tuple_validity: '[100, 200]'
+      outcome: 'succeeds; C is processed, and its tuple carries validity [100, 200], not [0, 1000]'
+
+  - id: SPKI-52-02
+    locator: "RFC 2693 Section 5.2"
+    kind: crl-validity
+    notation: prose
+    fidelity: constructed
+    input_lines:
+      - 'certificate C: validity [0, 1000]; lists Kcrl as the key that signs its CRL'
+      - 'CRL1: signed by Kcrl; validity [100, 200]; does not list C'
+      - 'verification time: 250; no CRL valid at 250 is available'
+    expected: 'Under these rules, no certificate that might use a CRL can be processed without a valid CRL and no CRL can be issued to show up as a surprise at the verifier.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0082'
+      - 'rfc-2693#R-0083'
+    outcome: fails
+    notes: 'FAIL CLOSED. CRL1 has expired and nothing has replaced it, so C cannot be processed -- even though C itself is in date and was never listed. The opposite of the anti-matter model (SPKI-51-01), where absence of news is good news.'
+    related:
+      - SPKI-51-01
+
+  - id: SPKI-52-03
+    locator: "RFC 2693 Section 5.2"
+    kind: crl-validity
+    notation: prose
+    fidelity: constructed
+    input_lines:
+      - 'CRL1: signed by Kcrl; validity [100, 200]; currently deployed'
+      - 'CRL2: signed by Kcrl; validity [150, 250]'
+    expected: '3. CRL validity date ranges must not intersect. That is, one may not issue a new CRL to take effect before the expiration of the CRL currently deployed.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0080'
+      - 'rfc-2693#R-0081'
+    outcome: fails
+    notes: 'CRL2 takes effect at 150, before CRL1 expires at 200: the case the condition forbids, on both of its sentences. The source binds the issuer ("one may not issue"); it does not say what a verifier holding both CRLs must do, so a harness can assert the violation but not the verifier''s reaction.'
+    derived:
+      in_source: false
+      overlap: 'VIntersect([100, 200], [150, 250]) = [150, 200]'
+
+  - id: SPKI-52-04
+    locator: "RFC 2693 Section 5.2"
+    kind: crl-validity
+    notation: prose
+    fidelity: constructed
+    input_lines:
+      - 'CRL1: signed by Kcrl; validity [100, 200]; currently deployed'
+      - 'CRL2: signed by Kcrl; validity [200, 300]'
+    expected: '3. CRL validity date ranges must not intersect. That is, one may not issue a new CRL to take effect before the expiration of the CRL currently deployed.'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0080'
+      - 'rfc-2693#R-0081'
+      - 'rfc-2693#R-0158'
+    source_issue: boundary-ambiguity
+    notes: 'THE BOUNDARY VECTOR FOR CRL SUCCESSION. The two sentences of condition 3 disagree at a shared endpoint. Section 6.3.2 fails an intersection only "if Vmin > Vmax", so its intervals are closed, and under it these two ranges DO intersect, at the single instant 200: the first sentence is violated. CRL2 takes effect AT the expiration of CRL1, not before it: the second sentence is met. Section 5.4 leans to the strict reading ("The next available time slot starts after this validity interval ends"), but no section says whether validity intervals are closed or half-open. Recorded, not resolved.'
+    derived:
+      in_source: false
+      vintersect: 'VIntersect([100, 200], [200, 300]) = [200, 200], which succeeds'
+      first_sentence_reading: 'the ranges intersect, so condition 3 is violated'
+      second_sentence_reading: 'CRL2 does not take effect before CRL1 expires, so condition 3 is met'
+      outcome: 'not determined by the source'
+
+  - id: SPKI-52-05
+    locator: "RFC 2693 Section 5.2"
+    kind: crl-validity
+    notation: prose
+    fidelity: constructed
+    input_lines:
+      - 'certificate C: validity [0, 1000]; lists Kcrl as the key that signs its CRL'
+      - 'CRL1: signed by Kother; validity [100, 200]; does not list C'
+      - 'verification time: 150'
+    expected: '1. The certificate must list the key (or its hash) that will sign the CRL and may give one or more locations where that CRL might be fetched.'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0077'
+      - 'rfc-2693#R-0082'
+    related:
+      - SPKI-52-02
+    derived:
+      in_source: false
+      rule: 'Section 5.2 condition 1, then the Section 5.2 consequence quoted in SPKI-52-02'
+      why: 'CRL1 is not signed by the key C lists, so it is not a CRL for C; no valid CRL is in hand'
+      outcome: fails
+
+  - id: SPKI-52-06
+    locator: "RFC 2693 Section 5.2"
+    kind: crl-validity
+    notation: prose
+    fidelity: constructed
+    input_lines:
+      - 'certificate C: validity [0, 1000]; lists Kcrl as the key that signs its CRL'
+      - 'CRL1: signed by Kcrl; carries no validity dates; does not list C'
+      - 'verification time: 150'
+    expected: '2. The CRL must carry validity dates.'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0079'
+      - 'rfc-2693#R-0082'
+    related:
+      - SPKI-52-02
+    notes: 'Note the contrast with Section 6.1, where a missing date in a credential is not an error but defaults to an infinity. That default applies to the dates of a 5-tuple; a CRL without dates breaks a Section 5.2 condition outright.'
+    derived:
+      in_source: false
+      rule: 'Section 5.2 condition 2, then the Section 5.2 consequence quoted in SPKI-52-02'
+      why: 'CRL1 breaks condition 2, so it is not a valid CRL; no valid CRL is in hand'
+      outcome: fails
+
+  - id: SPKI-53-01
+    locator: "RFC 2693 Section 5.3"
+    kind: revalidation
+    notation: prose
+    fidelity: constructed
+    input_lines:
+      - 'certificate C: validity [0, 1000]; names Kreval as the issuer of its revalidations'
+      - 'revalidation R: signed by Kreval; lists C; validity [400, 500]'
+      - 'verification time: 450'
+    expected: 'As with the CRL, SPKI demands that this process be deterministic and therefore that the revalidation follow the same rules listed above (in section 5.2).'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0072'
+      - 'rfc-2693#R-0088'
+      - 'rfc-2693#R-0090'
+      - 'rfc-2693#R-0115'
+    source_text:
+      - 'CRLs are negative statements. The positive version of a CRL is what we call a revalidation.'
+      - 'However, in SPKI, the certificate issuer must specify the issuer of validity confirmations.'
+    source_text_locator:
+      - "RFC 2693 Section 5.3"
+      - "RFC 2693 Section 5"
+    derived:
+      in_source: false
+      rule: 'Section 6, stage 1 VIntersect of the on-line test result with the certificate'
+      tuple_validity: 'VIntersect([0, 1000], [400, 500]) = [400, 500]'
+      outcome: 'succeeds at 450. At 550, with no newer revalidation in hand, C cannot be processed -- the Section 5.2 consequence, carried over by this section.'
+
+  - id: SPKI-54-01
+    locator: "RFC 2693 Section 5.4"
+    kind: validity-interval
+    notation: prose
+    fidelity: constructed
+    input_lines:
+      - 'CRL1: validity [100, 200]; signed and delivered to at least one consumer at time 100'
+      - 'at time 101 the issuer learns that certificate C must be revoked'
+    expected: 'That is, one must assume that the previous CRL or revalidation has just been signed and transmitted to at least one consumer, locking up a time slot. The next available time slot starts after this validity interval ends. That is the earliest one can revoke a certificate one learns to be false.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0092'
+      - 'rfc-2693#R-0093'
+      - 'rfc-2693#R-0094'
+    source_text:
+      - '"How long are you willing to let the world believe and act on a statement you know to be false?"'
+    related:
+      - SPKI-52-04
+    derived:
+      in_source: false
+      earliest_revocation: 'after 200; a CRL listing C can take effect only once CRL1''s interval has ended'
+      exposure_window: 'from 101 to 200, 99 time units, verifiers holding CRL1 still accept C. In the worst case, an issuer learning at 100 just after signing, the window is the whole CRL validity interval, 100 time units'
+
+  - id: SPKI-55-01
+    locator: "RFC 2693 Section 5.5"
+    kind: validity-interval
+    notation: prose
+    fidelity: constructed
+    input_lines:
+      - 'CRL1: validity [500, 500]; issued at time 500'
+      - 'CRL1 reaches the verifier at time 501'
+    expected: 'Validity intervals of length zero are not possible. Since transmission takes time, by the time a CRL was received by the verifier, it would be out of date and unusable.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0091'
+      - 'rfc-2693#R-0095'
+    outcome: fails
+    related:
+      - SPKI-55-02
+      - SPKI-632-04
+    notes: 'Contrast SPKI-55-02: a zero-length interval is unusable for a TIMED instrument but is exactly what a one-time revalidation represents.'
+
+  - id: SPKI-55-02
+    locator: "RFC 2693 Section 5.5"
+    kind: one-time-revalidation
+    notation: prose
+    fidelity: constructed
+    input_lines:
+      - 'certificate C: validity [0, 1000]; subject to one-time revalidation'
+      - 'the verifier''s request carries nonce n1'
+      - 'the signed one-time revalidation returns nonce n1'
+      - 'the authorization computation completes at time 500'
+    expected: 'This protocol takes the place of a validity date range and represents a validity interval of zero, starting and ending at the time the authorization computation completes.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0097'
+      - 'rfc-2693#R-0101'
+      - 'rfc-2693#R-0158'
+    related:
+      - SPKI-632-04
+    notes: 'WHY THE VINTERSECT BOUNDARY MATTERS. A VIntersect that failed on Vmin = Vmax would make every one-time revalidation fail. Section 6.3.2 fails only "if Vmin > Vmax" (SPKI-632-04).'
+    derived:
+      in_source: false
+      tuple_validity: 'VIntersect([0, 1000], [500, 500]) = [500, 500]'
+      outcome: 'succeeds, for this authorization computation only'
+
+  - id: SPKI-55-03
+    locator: "RFC 2693 Section 5.5"
+    kind: one-time-revalidation
+    notation: prose
+    fidelity: constructed
+    input_lines:
+      - 'certificate C: validity [0, 1000]; subject to one-time revalidation'
+      - 'the verifier''s request carries nonce n2'
+      - 'presented: a genuine signed one-time revalidation returning nonce n1, from an earlier computation'
+    expected: 'That nonce gets returned in the signed revalidation instrument, in order to prevent replay attacks.'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0098'
+      - 'rfc-2693#R-0099'
+      - 'rfc-2693#R-0100'
+    source_text:
+      - 'This form of revalidation has no lifetime beyond the current authorization computation.'
+    derived:
+      in_source: false
+      why: 'the instrument answers a different request: n1 is not n2'
+      outcome: fails
+
+  # ===================================================================
+  # Section 6.3 -- 5-tuple Reduction Rules
+  # ===================================================================
+
+  - id: SPKI-63-01
+    locator: "RFC 2693 Section 6.3"
+    kind: reduction-rule-5-tuple
+    notation: tuple-notation
+    fidelity: split
+    input: '<I1,S1,D1,A1,V1> + <I2,S2,D2,A2,V2>'
+    result: '<I1,S2,D2,AIntersect(A1,A2),VIntersect(V1,V2)>'
+    conditions:
+      - 'the two intersections succeed,'
+      - 'S1 = I2'
+      - 'D1 = TRUE'
+    expected: 'The two 5-tuples: <I1,S1,D1,A1,V1> + <I2,S2,D2,A2,V2> yield <I1,S2,D2,AIntersect(A1,A2),VIntersect(V1,V2)> provided the two intersections succeed, S1 = I2 and D1 = TRUE'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0136'
+      - 'rfc-2693#R-0137'
+      - 'rfc-2693#R-0138'
+      - 'rfc-2693#R-0139'
+      - 'rfc-2693#R-0140'
+    source_text:
+      - 'If S1 is a threshold subject, there is a slight modification to this rule, as described below in section 6.3.3.'
+    source_annotation: 'the display is interleaved with the connectives yield, provided and and, printed at the prose margin'
+    notes: 'THE RULE. The display lines are carried individually (fidelity: split); `expected` reads the whole display as one sentence. The result keeps the ISSUER of the first tuple and the SUBJECT and DELEGATION of the second: D1 is consumed as a guard and D2 passes through. SPKI-63-02 to SPKI-63-06 exercise each guard.'
+
+  - id: SPKI-63-02
+    locator: "RFC 2693 Section 6.3"
+    kind: tuple-reduction
+    notation: tuple-notation
+    fidelity: constructed
+    input: '<Self,K1,TRUE,A1,V1> + <K1,K2,FALSE,A2,V2>'
+    bindings:
+      A1: '(tag (ftp (host ftp.clark.net)))'
+      A2: '(tag (ftp (host ftp.clark.net) (dir /pub/cme)))'
+      V1: '[0, 1000]'
+      V2: '[100, 2000]'
+    expected: 'yield <I1,S2,D2,AIntersect(A1,A2),VIntersect(V1,V2)> provided the two intersections succeed, S1 = I2 and D1 = TRUE'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0121'
+      - 'rfc-2693#R-0136'
+    source_text:
+      - '1. Issuer: a public key (or its hash), or the reserved word "Self".'
+    source_text_locator:
+      - "RFC 2693 Section 6.1"
+    notes: 'The success case, with the authorizations of the Section 6.3.1 ftp example (SPKI-631-03) wrapped in (tag ...): a 5-tuple Authorization is the (tag ...) form in schema authorization and messages.yaml 5-tuple, and the source prints these two bodies without it (schema README D-11, gap G-11).'
+    derived:
+      in_source: false
+      rule: 'Section 6.3'
+      result: '<Self,K2,FALSE,(tag (ftp (host ftp.clark.net) (dir /pub/cme))),[100, 1000]>'
+      outcome: succeeds
+
+  - id: SPKI-63-03
+    locator: "RFC 2693 Section 6.3"
+    kind: tuple-reduction
+    notation: tuple-notation
+    fidelity: constructed
+    input: '<Self,K1,TRUE,A1,V1> + <K3,K2,FALSE,A2,V2>'
+    bindings:
+      A1: '(tag (ftp (host ftp.clark.net)))'
+      A2: '(tag (ftp (host ftp.clark.net) (dir /pub/cme)))'
+      V1: '[0, 1000]'
+      V2: '[100, 2000]'
+    expected: 'yield <I1,S2,D2,AIntersect(A1,A2),VIntersect(V1,V2)> provided the two intersections succeed, S1 = I2 and D1 = TRUE'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0138'
+    derived:
+      in_source: false
+      why: 'S1 = K1 is not I2 = K3'
+      outcome: fails
+
+  - id: SPKI-63-04
+    locator: "RFC 2693 Section 6.3"
+    kind: tuple-reduction
+    notation: tuple-notation
+    fidelity: constructed
+    input: '<Self,K1,FALSE,A1,V1> + <K1,K2,FALSE,A2,V2>'
+    bindings:
+      A1: '(tag (ftp (host ftp.clark.net)))'
+      A2: '(tag (ftp (host ftp.clark.net) (dir /pub/cme)))'
+      V1: '[0, 1000]'
+      V2: '[100, 2000]'
+    expected: 'yield <I1,S2,D2,AIntersect(A1,A2),VIntersect(V1,V2)> provided the two intersections succeed, S1 = I2 and D1 = TRUE'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0139'
+    derived:
+      in_source: false
+      why: 'D1 is FALSE'
+      outcome: fails
+
+  - id: SPKI-63-05
+    locator: "RFC 2693 Section 6.3"
+    kind: tuple-reduction
+    notation: tuple-notation
+    fidelity: constructed
+    input: '<Self,K1,TRUE,A1,V1> + <K1,K2,FALSE,A2,V2>'
+    bindings:
+      A1: '(tag (* range numeric ge #30# le #39# ))'
+      A2: '(tag #26#)'
+      V1: '[0, 1000]'
+      V2: '[100, 2000]'
+    expected: 'yield <I1,S2,D2,AIntersect(A1,A2),VIntersect(V1,V2)> provided the two intersections succeed, S1 = I2 and D1 = TRUE'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0137'
+    related:
+      - SPKI-631-13
+    notes: 'The authorizations of the one failed intersection the source prints (SPKI-631-13).'
+    derived:
+      in_source: false
+      why: 'AIntersect(A1,A2) fails, as the source states for exactly these two tags'
+      outcome: fails
+
+  - id: SPKI-63-06
+    locator: "RFC 2693 Section 6.3"
+    kind: tuple-reduction
+    notation: tuple-notation
+    fidelity: constructed
+    input: '<Self,K1,TRUE,A1,V1> + <K1,K2,FALSE,A2,V2>'
+    bindings:
+      A1: '(tag (ftp (host ftp.clark.net)))'
+      A2: '(tag (ftp (host ftp.clark.net) (dir /pub/cme)))'
+      V1: '[0, 100]'
+      V2: '[200, 300]'
+    expected: 'yield <I1,S2,D2,AIntersect(A1,A2),VIntersect(V1,V2)> provided the two intersections succeed, S1 = I2 and D1 = TRUE'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0137'
+      - 'rfc-2693#R-0158'
+    related:
+      - SPKI-632-03
+    derived:
+      in_source: false
+      why: 'VIntersect(V1,V2) fails: Vmin = 200 > Vmax = 100'
+      outcome: fails
+
+  # ===================================================================
+  # Section 6.3.1 -- AIntersect
+  # ===================================================================
+
+  - id: SPKI-631-01
+    locator: "RFC 2693 Section 6.3.1"
+    kind: authorization-sexp
+    notation: sexp
+    fidelity: verbatim
+    input: '(ftp (host ftp.clark.net))'
+    expected: '(ftp (host ftp.clark.net)) might imply that the keyholder would be allowed ftp access to all directories on ftp.clark.net, with all kinds of access (read, write, delete, ...).'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0141'
+    related:
+      - SPKI-631-03
+    notes: 'A bare authorization, as the source prints it. It validates against schema tag-list (a tag body) and not against authorization, which takes the (tag ...) form the source uses from the first AIntersect example on and never defines (schema README D-11, gap G-11).'
+
+  - id: SPKI-631-02
+    locator: "RFC 2693 Section 6.3.1"
+    kind: authorization-sexp
+    notation: sexp
+    fidelity: verbatim
+    input: '(ftp (host ftp.clark.net) (dir /pub/cme))'
+    expected: 'This is more general (allows more access) than (ftp (host ftp.clark.net) (dir /pub/cme)) which would allow all kinds of access but only in the directory specified.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0141'
+      - 'rfc-2693#R-0144'
+    related:
+      - SPKI-631-03
+    notes: 'A bare authorization, as the source prints it. It validates against schema tag-list (a tag body) and not against authorization, which takes the (tag ...) form the source uses from the first AIntersect example on and never defines (schema README D-11, gap G-11).'
+
+  - id: SPKI-631-03
+    locator: "RFC 2693 Section 6.3.1"
+    kind: aintersect
+    notation: sexp
+    fidelity: split
+    input_lines:
+      - '(ftp (host ftp.clark.net))'
+      - '(ftp (host ftp.clark.net) (dir /pub/cme))'
+    operands:
+      - '(ftp (host ftp.clark.net))'
+      - '(ftp (host ftp.clark.net) (dir /pub/cme))'
+    result: '(ftp (host ftp.clark.net) (dir /pub/cme))'
+    outcome: succeeds
+    expected: 'The intersection of the two would be the second.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0142'
+      - 'rfc-2693#R-0143'
+      - 'rfc-2693#R-0144'
+    source_text:
+      - 'If one list is longer than the other but match at all elements where both lists have elements, then the longer list is the result of the intersection. This means that additional elements of a list must restrict the permission granted.'
+    related:
+      - SPKI-631-01
+      - SPKI-631-02
+    notes: 'The longer-list rule. Elements 1 and 2 match, and the extra element (dir /pub/cme) survives. The operands are two separate displays (SPKI-631-01, SPKI-631-02) and the source states their intersection in prose, hence fidelity split. These are bare authorization bodies: the five AIntersect calls below wrap theirs in (tag ...). Operands and result validate against schema tag-list, not authorization (schema README D-11).'
+
+  - id: SPKI-631-04
+    locator: "RFC 2693 Section 6.3.1"
+    kind: authorization-sexp
+    notation: sexp
+    fidelity: verbatim
+    input: '(ftp ftp.clark.net /pub/cme)'
+    expected: 'Since the AIntersect rules imply position dependency, one could also define the previous authorization string as: (ftp ftp.clark.net /pub/cme) to keep the form compact.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0142'
+      - 'rfc-2693#R-0147'
+    related:
+      - SPKI-631-02
+      - SPKI-631-09
+    notes: 'An alternative DESIGN, not an equivalent VALUE. The source offers it as another way an application could define the string; it does not say the two forms intersect. They do not (derived), so a certificate written in one design never matches an ACL written in the other. Like SPKI-631-01, it validates against schema tag-list, not authorization (schema README D-11).'
+    derived:
+      in_source: false
+      rule: 'Section 6.3.1: "Two authorizations intersect by matching, element for element"; a byte string never matches a list'
+      cases:
+        - operands:
+            - '(ftp ftp.clark.net /pub/cme)'
+            - '(ftp (host ftp.clark.net) (dir /pub/cme))'
+          outcome: fails
+          why: 'element 2 is the byte string ftp.clark.net in one and the list (host ftp.clark.net) in the other'
+        - operands:
+            - '(ftp ftp.clark.net /pub/cme)'
+            - '(ftp ftp.clark.net cme (* set read write))'
+          outcome: fails
+          why: 'element 3: /pub/cme is not cme. Byte strings match exactly; the algebra has no notion of a path.'
+
+  - id: SPKI-631-05
+    locator: "RFC 2693 Section 6.3.1"
+    kind: star-form
+    notation: sexp
+    fidelity: verbatim
+    input: '(*)'
+    expected: '(*) stands for the set of all S-expressions and byte-strings. In other words, it will match anything. When intersected with anything, the result is that other thing. [The AIntersect rule about lists of different length treats a list as if it had enough (*) entries implicitly appended to it to match the length of another list with which it was being intersected.]'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0149'
+      - 'rfc-2693#R-0150'
+      - 'rfc-2693#R-0151'
+    notes: 'The bracketed sentence is the padding rule: lists of unequal length are compared as if the shorter carried trailing (*) elements. It is what makes SPKI-657-04 and SPKI-657-05 equivalent.'
+    derived:
+      in_source: false
+      rule: 'the (*) rule and the padding rule, as quoted'
+      cases:
+        - operands:
+            - '(*)'
+            - 'read'
+          result: 'read'
+        - operands:
+            - '(*)'
+            - '(ftp (host ftp.clark.net))'
+          result: '(ftp (host ftp.clark.net))'
+        - operands:
+            - '(ftp (host ftp.clark.net))'
+            - '(ftp (host ftp.clark.net) (*))'
+          result: '(ftp (host ftp.clark.net) (*))'
+          note: 'padding: the shorter list is read as (ftp (host ftp.clark.net) (*))'
+
+  - id: SPKI-631-06
+    locator: "RFC 2693 Section 6.3.1"
+    kind: star-form
+    notation: sexp-template
+    fidelity: verbatim
+    input: '(* set <tag-expr>*)'
+    expected: '(* set <tag-expr>*) stands for the set of elements listed in the *-form.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0152'
+    notes: 'The trailing * after <tag-expr> is a repetition marker, presumably zero or more; the source does not define its template notation. One character, two roles on one line: the * that names the form and the * that repeats the placeholder.'
+
+  - id: SPKI-631-07
+    locator: "RFC 2693 Section 6.3.1"
+    kind: star-form
+    notation: sexp-template
+    fidelity: verbatim
+    input: '(* prefix <byte-string>)'
+    expected: '(* prefix <byte-string>) stands for the set of all byte strings that start with the one given in the *-form.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0153'
+    derived:
+      in_source: false
+      rule: 'prefix membership, as quoted'
+      cases:
+        - operands:
+            - '(* prefix http://www.clark.net/pub/)'
+            - 'http://www.clark.net/pub/cme/html/index.html'
+          result: 'http://www.clark.net/pub/cme/html/index.html'
+        - operands:
+            - '(* prefix http://www.clark.net/pub/)'
+            - 'http://www.clark.net/private/'
+          outcome: fails
+        - operands:
+            - '(* prefix http://www.clark.net/pub/)'
+            - '(* prefix http://www.clark.net/priv/)'
+          outcome: fails
+          why: 'neither prefix starts with the other, so the two sets are disjoint'
+      note: 'The two byte strings index.html and private/ are constructed probes.'
+
+  - id: SPKI-631-08
+    locator: "RFC 2693 Section 6.3.1"
+    kind: star-form
+    notation: sexp-template
+    fidelity: verbatim
+    input: '(* range <ordering> <lower-limit>? <upper-limit>?)'
+    expected: '(* range <ordering> <lower-limit>? <upper-limit>?) stands for the set of all byte strings lexically (or numerically) between the two limits. The ordering parameter (alpha, numeric, time, binary, date) specifies the kind of strings allowed.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0154'
+      - 'rfc-2693#R-0155'
+    source_issue: template-example-mismatch
+    related:
+      - SPKI-631-13
+    notes: 'The only range example (SPKI-631-13) writes each limit as an operator and a value (ge #30#, le #39#). The template shows a bare <lower-limit> and <upper-limit> and defines no operator. Also undefined: whether "between" includes the limits, how numeric ordering values a byte string, and how time differs from date.'
+
+  - id: SPKI-631-09
+    locator: "RFC 2693 Section 6.3.1"
+    kind: aintersect
+    notation: function-call
+    fidelity: verbatim
+    input_lines:
+      - 'AIntersect( (tag (ftp ftp.clark.net cme (* set read write))),'
+      - '            (tag (*)) )'
+    operands:
+      - '(tag (ftp ftp.clark.net cme (* set read write)))'
+      - '(tag (*))'
+    result: '(tag (ftp ftp.clark.net cme (* set read write)))'
+    outcome: succeeds
+    expected: 'evaluates to (tag (ftp ftp.clark.net cme (* set read write)))'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0150'
+      - 'rfc-2693#R-0156'
+    source_text:
+      - 'The following examples should give a more concrete explanation for those who prefer an explanation without reference to set operations.'
+    notes: 'The (*) rule at element 2 of the tag. The first operand uses the compact positional design of SPKI-631-04 but with cme, not /pub/cme, in position 3.'
+
+  - id: SPKI-631-10
+    locator: "RFC 2693 Section 6.3.1"
+    kind: aintersect
+    notation: function-call
+    fidelity: verbatim
+    input_lines:
+      - 'AIntersect( (tag (* set read write (foo bla) delete)),'
+      - '            (tag (* set write read) ) )'
+    operands:
+      - '(tag (* set read write (foo bla) delete))'
+      - '(tag (* set write read) )'
+    result: '(tag (* set read write))'
+    outcome: succeeds
+    expected: 'evaluates to (tag (* set read write))'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0152'
+      - 'rfc-2693#R-0156'
+    source_text:
+      - 'AIntersect() is normal set intersection, when *-forms are defined as they are above and a normal list is taken to mean all lists that start with those elements.'
+    notes: 'Set intersection: {read, write, (foo bla), delete} and {write, read} share {read, write}. The printed result lists them in the FIRST operand''s order. The second operand has a space before its closing parenthesis, which a reader must accept.'
+    derived:
+      in_source: false
+      reversed_operands_result: '(tag (* set write read))'
+      note: 'Swapping the operands gives the same set in the other order. A harness must compare *-set results as sets, not as sequences.'
+
+  - id: SPKI-631-11
+    locator: "RFC 2693 Section 6.3.1"
+    kind: aintersect
+    notation: function-call
+    fidelity: verbatim
+    input_lines:
+      - 'AIntersect( (tag (* set read write (foo bla) delete)),'
+      - '            (tag read ) )'
+    operands:
+      - '(tag (* set read write (foo bla) delete))'
+      - '(tag read )'
+    result: '(tag read)'
+    outcome: succeeds
+    expected: 'evaluates to (tag read)'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0152'
+      - 'rfc-2693#R-0156'
+    notes: 'A singleton set collapses to its element: the result is the bare byte string read, not (* set read). An implementation that returns (tag (* set read)) has the right set and the wrong representation.'
+
+  - id: SPKI-631-12
+    locator: "RFC 2693 Section 6.3.1"
+    kind: aintersect
+    notation: function-call
+    fidelity: verbatim
+    input_lines:
+      - 'AIntersect( (tag (* prefix http://www.clark.net/pub/)),'
+      - '            (tag (* prefix http://www.clark.net/pub/cme/html/)) )'
+    operands:
+      - '(tag (* prefix http://www.clark.net/pub/))'
+      - '(tag (* prefix http://www.clark.net/pub/cme/html/))'
+    result: '(tag (* prefix http://www.clark.net/pub/cme/html/))'
+    outcome: succeeds
+    expected: 'evaluates to (tag (* prefix http://www.clark.net/pub/cme/html/))'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0153'
+      - 'rfc-2693#R-0156'
+    notes: 'Two prefix sets, one inside the other: the longer prefix is the intersection. Checked: http://www.clark.net/pub/cme/html/ starts with http://www.clark.net/pub/.'
+
+  - id: SPKI-631-13
+    locator: "RFC 2693 Section 6.3.1"
+    kind: aintersect
+    notation: function-call
+    fidelity: verbatim
+    input: 'AIntersect( (tag (* range numeric ge #30# le #39# )), (tag #26#) )'
+    operands:
+      - '(tag (* range numeric ge #30# le #39# ))'
+      - '(tag #26#)'
+    outcome: fails
+    expected: 'fails to intersect.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0154'
+      - 'rfc-2693#R-0155'
+      - 'rfc-2693#R-0156'
+    related:
+      - SPKI-631-08
+      - SPKI-63-05
+    notes: 'The only failed intersection in the document and the only use of (* range ...). Space before the closing parentheses (#39# )) as printed. The stated failure holds under every reading of numeric ordering (derived), so a harness can assert it without settling what the source leaves open.'
+    derived:
+      in_source: false
+      octets: '#30# is the octet 0x30, the character 0; #39# is 0x39, the character 9; #26# is 0x26, the character &'
+      readings:
+        - reading: 'octets as an unsigned integer'
+          range: '48 to 57'
+          probe: '38'
+          outcome: fails
+        - reading: 'octets as ASCII decimal digits'
+          range: '0 to 9'
+          probe: '& is not a numeral'
+          outcome: fails
+        - reading: 'octets compared lexically'
+          range: '0x30 to 0x39'
+          probe: '0x26'
+          outcome: fails
+      boundary_probes: 'if ge and le are read as >= and <=, then under all three readings #30# and #39# are inside the range and #3a# is outside. That reading is an assumption, not a result: the source never defines ge and le (SPKI-631-08), so the probes cannot show whether the bounds are inclusive'
+
+  # ===================================================================
+  # Section 6.3.2 -- VIntersect
+  # ===================================================================
+
+  - id: SPKI-632-01
+    locator: "RFC 2693 Section 6.3.2"
+    kind: vintersect-rule
+    notation: function-call
+    fidelity: split
+    input_lines:
+      - 'V = VIntersect( X, Y )'
+      - 'Vmin = max( Xmin, Ymin )'
+      - 'Vmax = min( Xmax, Ymax )'
+    expected: 'V = VIntersect( X, Y ) is defined as Vmin = max( Xmin, Ymin ) Vmax = min( Xmax, Ymax ) and if Vmin > Vmax, then the intersection failed.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0157'
+      - 'rfc-2693#R-0158'
+      - 'rfc-2693#R-0159'
+    source_text:
+      - 'These rules assume that daytimes are expressed in a monotonic form, as they are in SPKI.'
+      - 'If the not-before date is missing from the source credential then minus infinity is assumed. If the not-after date is missing then plus infinity is assumed.'
+    source_text_locator:
+      - "RFC 2693 Section 6.3.2"
+      - "RFC 2693 Sections 6.1 and 6.2"
+    notes: 'Three display lines separated by the prose connectives "is defined as" and "and if ...", carried as split lines. The failure test is strict (Vmin > Vmax), so intervals are closed and a single-instant intersection succeeds; SPKI-632-04 pins that.'
+
+  - id: SPKI-632-02
+    locator: "RFC 2693 Section 6.3.2"
+    kind: vintersect
+    notation: function-call
+    fidelity: constructed
+    input: 'V = VIntersect( X, Y )'
+    bindings:
+      Xmin: '0'
+      Xmax: '1000'
+      Ymin: '100'
+      Ymax: '2000'
+    expected: 'Vmin = max( Xmin, Ymin ) Vmax = min( Xmax, Ymax ) and if Vmin > Vmax, then the intersection failed.'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0157'
+    derived:
+      in_source: false
+      Vmin: '100'
+      Vmax: '1000'
+      outcome: succeeds
+
+  - id: SPKI-632-03
+    locator: "RFC 2693 Section 6.3.2"
+    kind: vintersect
+    notation: function-call
+    fidelity: constructed
+    input: 'V = VIntersect( X, Y )'
+    bindings:
+      Xmin: '0'
+      Xmax: '100'
+      Ymin: '200'
+      Ymax: '300'
+    expected: 'Vmin = max( Xmin, Ymin ) Vmax = min( Xmax, Ymax ) and if Vmin > Vmax, then the intersection failed.'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0157'
+      - 'rfc-2693#R-0158'
+    derived:
+      in_source: false
+      Vmin: '200'
+      Vmax: '100'
+      outcome: fails
+
+  - id: SPKI-632-04
+    locator: "RFC 2693 Section 6.3.2"
+    kind: vintersect
+    notation: function-call
+    fidelity: constructed
+    input: 'V = VIntersect( X, Y )'
+    bindings:
+      Xmin: '100'
+      Xmax: '200'
+      Ymin: '200'
+      Ymax: '300'
+    expected: 'Vmin = max( Xmin, Ymin ) Vmax = min( Xmax, Ymax ) and if Vmin > Vmax, then the intersection failed.'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0157'
+      - 'rfc-2693#R-0158'
+    related:
+      - SPKI-55-02
+      - SPKI-52-04
+    notes: 'THE BOUNDARY VECTOR. Vmin = Vmax is not a failure. A one-time revalidation is a zero-length interval (SPKI-55-02) and depends on this; the same closed-interval reading is what makes condition 3 of Section 5.2 ambiguous at a shared endpoint (SPKI-52-04).'
+    derived:
+      in_source: false
+      Vmin: '200'
+      Vmax: '200'
+      outcome: succeeds
+
+  - id: SPKI-632-05
+    locator: "RFC 2693 Section 6.3.2"
+    kind: vintersect
+    notation: function-call
+    fidelity: constructed
+    input: 'V = VIntersect( X, Y )'
+    bindings:
+      Xmin: 'missing, so -inf'
+      Xmax: '500'
+      Ymin: '300'
+      Ymax: 'missing, so +inf'
+    expected: 'If the not-before date is missing from the source credential then minus infinity is assumed. If the not-after date is missing then plus infinity is assumed.'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0127'
+      - 'rfc-2693#R-0128'
+      - 'rfc-2693#R-0134'
+      - 'rfc-2693#R-0135'
+      - 'rfc-2693#R-0157'
+    expected_locator: "RFC 2693 Sections 6.1 and 6.2"
+    source_text:
+      - 'Vmin = max( Xmin, Ymin ) Vmax = min( Xmax, Ymax ) and if Vmin > Vmax, then the intersection failed.'
+    derived:
+      in_source: false
+      Vmin: '300'
+      Vmax: '500'
+      outcome: succeeds
+
+  # ===================================================================
+  # Section 6.3.3 -- Threshold Subjects
+  # ===================================================================
+
+  - id: SPKI-633-01
+    locator: "RFC 2693 Section 6.3.3"
+    kind: threshold-null-marker
+    notation: sexp
+    fidelity: split
+    input: '(null)'
+    expected: 'The (N-K) unselected subordinate subjects are set to (null).'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0167'
+    notes: 'Printed only inline, here and in the next paragraph. The source gives (null) no other meaning and uses it only in the intermediate form of a threshold reduction.'
+
+  - id: SPKI-633-02
+    locator: "RFC 2693 Section 6.3.3"
+    kind: threshold-reduction
+    notation: tuple-notation
+    fidelity: constructed
+    input_lines:
+      - '<Self,(k-of-n #03# #07# K1 K2 K3 K4 K5 K6 K7),TRUE,(tag (*)),V0>'
+      - '<K1,Kx,FALSE,(tag (* set (ssl) (dns))),V1>'
+      - '<K2,Kx,FALSE,(tag (ssl)),V2>'
+      - '<K3,Kx,FALSE,(tag (*)),V3>'
+    bindings:
+      subject: 'the threshold subject of SPKI-77-02, printed in Section 7.7'
+      V0: '[0, 1000]'
+      V1: '[100, 900]'
+      V2: '[200, 800]'
+      V3: '[300, 700]'
+    expected: 'Those subordinate tuples are reduced individually until the list of subordinate tuples has (N-K) (null) entries and K entries with the same subject. At that point, those K tuples are validity-, authorization- and delegation- intersected to yield the single tuple that will replace the list of tuples.'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0165'
+      - 'rfc-2693#R-0166'
+      - 'rfc-2693#R-0167'
+      - 'rfc-2693#R-0168'
+      - 'rfc-2693#R-0169'
+      - 'rfc-2693#R-0170'
+    source_text:
+      - 'A threshold subject is reduced to a single subject by selecting K of the N subjects and reducing each of those K to the same subject, through a sequence of certificates.'
+      - 'The intermediate form for a threshold subject is a copy of the tuple in which the threshold subject appears, but with only one of the subordinate subjects.'
+    related:
+      - SPKI-77-02
+    notes: '"delegation- intersected" is not defined. All three D here are FALSE, so the result does not depend on how it is read; the natural reading is logical AND.'
+    derived:
+      in_source: false
+      intermediate_form:
+        - '<Self,K1,TRUE,(tag (*)),V0>'
+        - '<Self,K2,TRUE,(tag (*)),V0>'
+        - '<Self,K3,TRUE,(tag (*)),V0>'
+        - '<Self,K4,TRUE,(tag (*)),V0>'
+        - '<Self,K5,TRUE,(tag (*)),V0>'
+        - '<Self,K6,TRUE,(tag (*)),V0>'
+        - '<Self,K7,TRUE,(tag (*)),V0>'
+      steps:
+        - 'copy 1 + <K1,Kx,FALSE,(tag (* set (ssl) (dns))),V1> -> <Self,Kx,FALSE,(tag (* set (ssl) (dns))),[100, 900]>'
+        - 'copy 2 + <K2,Kx,FALSE,(tag (ssl)),V2> -> <Self,Kx,FALSE,(tag (ssl)),[200, 800]>'
+        - 'copy 3 + <K3,Kx,FALSE,(tag (*)),V3> -> <Self,Kx,FALSE,(tag (*)),[300, 700]>'
+        - 'copies 4 to 7 are unselected and set to (null): N-K = 4'
+        - 'intersect the three: A = (tag (ssl)); V = [300, 700]; D = FALSE'
+      result: '<Self,Kx,FALSE,(tag (ssl)),[300, 700]>'
+      outcome: succeeds
+
+  - id: SPKI-633-03
+    locator: "RFC 2693 Section 6.3.3"
+    kind: threshold-reduction
+    notation: tuple-notation
+    fidelity: constructed
+    input_lines:
+      - '<Self,(k-of-n #03# #07# K1 K2 K3 K4 K5 K6 K7),TRUE,(tag (*)),V0>'
+      - '<K1,Kx,FALSE,(tag (ssl)),V0>'
+      - '<K2,Kx,FALSE,(tag (ssl)),V0>'
+    bindings:
+      V0: '[0, 1000]'
+    expected: 'Those subordinate tuples are reduced individually until the list of subordinate tuples has (N-K) (null) entries and K entries with the same subject. At that point, those K tuples are validity-, authorization- and delegation- intersected to yield the single tuple that will replace the list of tuples.'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0166'
+      - 'rfc-2693#R-0169'
+    derived:
+      in_source: false
+      why: 'only two subordinate tuples reach Kx and K is three; the list never holds K entries with the same subject'
+      outcome: fails
+
+  - id: SPKI-633-04
+    locator: "RFC 2693 Section 6.3.3"
+    kind: threshold-reduction
+    notation: tuple-notation
+    fidelity: constructed
+    input_lines:
+      - '<Self,(k-of-n #03# #07# K1 K2 K3 K4 K5 K6 K7),TRUE,(tag (*)),V0>'
+      - '<K1,Kx,FALSE,(tag (ssl)),V0>'
+      - '<K2,Kx,FALSE,(tag (ssl)),V0>'
+      - '<K3,Ky,FALSE,(tag (ssl)),V0>'
+    bindings:
+      V0: '[0, 1000]'
+    expected: 'Those subordinate tuples are reduced individually until the list of subordinate tuples has (N-K) (null) entries and K entries with the same subject. At that point, those K tuples are validity-, authorization- and delegation- intersected to yield the single tuple that will replace the list of tuples.'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0019'
+      - 'rfc-2693#R-0166'
+      - 'rfc-2693#R-0169'
+    notes: 'Three subordinates agree to delegate, but not to the same key. "K entries with the same subject" is the condition, not merely K reductions.'
+    derived:
+      in_source: false
+      why: 'three subordinate tuples reduce, but to Kx, Kx and Ky; only two share a subject'
+      outcome: fails
+
+  # ===================================================================
+  # Section 6.3.4 -- Certificate Path Discovery
+  # ===================================================================
+
+  - id: SPKI-634-01
+    locator: "RFC 2693 Section 6.3.4"
+    kind: path-order
+    notation: tuple-notation
+    fidelity: constructed
+    input_lines:
+      - '<Self,K1,TRUE,A,V0>'
+      - '<K2,K3,FALSE,A,V2>'
+      - '<K1,K2,TRUE,A,V1>'
+    bindings:
+      order: 'the order the prover supplied'
+      A: 'any authorization'
+      validity: 'V0, V1 and V2 mutually intersect'
+    expected: 'All reduction operations are in the order provided by the prover. That simplifies the job of the verifier, but leaves the job of finding the correct list of reductions to the prover.'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0171'
+      - 'rfc-2693#R-0172'
+      - 'rfc-2693#R-0181'
+    notes: 'The source does not forbid a verifier from searching: general path discovery "has been solved[ELIEN], but might be used only rarely". This vector tests the plan as written, in which the verifier reduces in the order supplied.'
+    source_text:
+      - 'If the prover is providing certificates in order, then the verifier need only do as it is told.'
+    source_text_locator:
+      - "RFC 2693 Section 6.4"
+    derived:
+      in_source: false
+      steps:
+        - '<Self,K1,TRUE,A,V0> + <K2,K3,FALSE,A,V2> -> fails: S1 = K1 is not I2 = K2'
+      outcome: 'fails in the order given'
+      reordered: 'supplied as <Self,K1,...>, <K1,K2,...>, <K2,K3,...> the chain reduces to <Self,K3,FALSE,A,VIntersect(V0,V1,V2)>'
+
+  # ===================================================================
+  # Section 6.4 -- 4-tuple Reduction
+  # ===================================================================
+
+  - id: SPKI-64-01
+    locator: "RFC 2693 Section 6.4"
+    kind: name-tuple-class
+    notation: tuple-notation
+    fidelity: split
+    input: '[(name K1 N) -> K2]'
+    expected: 'There will be name 4-tuples in two different classes, those that define the name as a key and those that define the name as another name.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0175'
+    related:
+      - SPKI-651-01
+    notes: 'Class 1: a name defined as a key. Printed as item "1." of a list; the list number is left out (fidelity: split). The 4-tuple folds its issuer into the defined name (name K1 N) and elides its validity. Section 6.5 writes the same structure as [issuer, name, subject, validity] (SPKI-651-01): two notations for one structure.'
+
+  - id: SPKI-64-02
+    locator: "RFC 2693 Section 6.4"
+    kind: name-tuple-class
+    notation: tuple-notation
+    fidelity: split
+    input: '[(name K1 N) -> (name K2 N1 N2 ... Nk)]'
+    expected: 'There will be name 4-tuples in two different classes, those that define the name as a key and those that define the name as another name.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0175'
+    notes: 'Class 2: a name defined as another name. Printed as list item "2.". The ... is metasyntax for N3 to Nk-1.'
+
+  - id: SPKI-64-03
+    locator: "RFC 2693 Section 6.4"
+    kind: name-reduction
+    notation: tuple-notation
+    fidelity: verbatim
+    input: '(name K1 N N1 N2 N3) + [(name K1 N) -> K2]'
+    operands:
+      - '(name K1 N N1 N2 N3)'
+      - '[(name K1 N) -> K2]'
+    result: '(name K2 N1 N2 N3)'
+    outcome: succeeds
+    expected: 'In that case, the rule for name reduction is to replace the name just defined by its definition. For example, (name K1 N N1 N2 N3) + [(name K1 N) -> K2] -> (name K2 N1 N2 N3)'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0177'
+      - 'rfc-2693#R-0178'
+    source_annotation: '-> printed on its own line below the input, introducing the result'
+    related:
+      - SPKI-64-01
+      - SPKI-262-02
+    notes: 'Prefix replacement: (name K1 N) is replaced by K2, and the remaining names N1 N2 N3 are re-anchored on K2.'
+
+  - id: SPKI-64-04
+    locator: "RFC 2693 Section 6.4"
+    kind: name-reduction
+    notation: tuple-notation
+    fidelity: verbatim
+    input: '(name K1 N Na Nb Nc) + [(name K1 N) -> (name K2 N1 N2 ... Nk)]'
+    operands:
+      - '(name K1 N Na Nb Nc)'
+      - '[(name K1 N) -> (name K2 N1 N2 ... Nk)]'
+    result: '(name K2 N1 N2 ... Nk Na Nb Nc)'
+    outcome: succeeds
+    expected: 'or, in case 2 above, (name K1 N Na Nb Nc) + [(name K1 N) -> (name K2 N1 N2 ... Nk)] -> (name K2 N1 N2 ... Nk Na Nb Nc)'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0179'
+      - 'rfc-2693#R-0180'
+    source_text:
+      - 'With the second form of name definition, one might have names that temporarily grow.'
+    source_annotation: '-> printed on its own line below the input, introducing the result'
+    related:
+      - SPKI-64-02
+    notes: 'The definition''s names come first and the original remainder Na Nb Nc follows. The name grows from three trailing names to k + 3.'
+
+  - id: SPKI-64-05
+    locator: "RFC 2693 Section 6.4"
+    kind: name-reduction-loop
+    notation: tuple-notation
+    fidelity: constructed
+    input_lines:
+      - '[(name K1 Na) -> (name K2 Nb)]'
+      - '[(name K2 Nb) -> (name K1 Na)]'
+    query: 'reduce (name K1 Na) to a key, the two 4-tuples arriving as an unordered pool'
+    expected: 'If the verifier is operating from an unordered pool of tuples, then a safe rule for name reduction is to apply only those 4-tuples that define a name as a key. Such applications should bring 4-tuples that started out in class (2) into class (1), and eventually reduce all names to keys. Any naming loops are avoided by this process.'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0182'
+      - 'rfc-2693#R-0183'
+      - 'rfc-2693#R-0184'
+    notes: 'A two-tuple naming loop, each name defined as the other. Both tuples are class 2.'
+    derived:
+      in_source: false
+      naive: '(name K1 Na) -> (name K2 Nb) -> (name K1 Na) -> ... applying class-2 tuples freely never terminates'
+      safe_rule: 'neither tuple is class 1, so neither is applied and (name K1 Na) stays unreduced'
+      outcome: 'fails to reach a key, and terminates'
+
+  - id: SPKI-641-01
+    locator: "RFC 2693 Section 6.4.1"
+    kind: threshold-name-reduction
+    notation: tuple-notation
+    fidelity: constructed
+    input_lines:
+      - '<Self,(k-of-n #02# #03# (name K4 N) K2 K3),TRUE,(tag (*)),V0>'
+      - '[(name K4 N) -> K1]'
+    bindings:
+      V0: '[0, 1000]'
+      Vn: '[100, 900], the validity of the 4-tuple'
+    expected: 'One can reduce individual named subjects in a threshold subject and leave the subject in threshold form, if one desires. There is no delegation- or authorization-intersection involved, only a validity-intersection during name reduction.'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0185'
+      - 'rfc-2693#R-0186'
+      - 'rfc-2693#R-0187'
+      - 'rfc-2693#R-0188'
+    source_text:
+      - 'Some of a threshold subject''s subordinate subjects might be names. Those names must be reduced by application of 4-tuples.'
+    notes: 'The k-of-n form follows Section 7.7, with K = 2 and N = 3 written as one-octet hex as there.'
+    derived:
+      in_source: false
+      result: '<Self,(k-of-n #02# #03# K1 K2 K3),TRUE,(tag (*)),[100, 900]>'
+      outcome: 'succeeds; the subject stays in threshold form, D and A are unchanged, and the validity is intersected'
+
+  - id: SPKI-642-01
+    locator: "RFC 2693 Section 6.4.2"
+    kind: name-validity-intersection
+    notation: tuple-notation
+    fidelity: constructed
+    input_lines:
+      - '<K0,(name K1 N),FALSE,(tag (ssl)),V1>'
+      - '[(name K1 N) -> K2]'
+    bindings:
+      V1: '[0, 1000]'
+      V2: '[500, 1500], the validity of the 4-tuple'
+    expected: 'Whenever a 4-tuple is used to reduce the subject (or part of the subject) of another tuple, its validity interval is intersected with that of the tuple holding the subject being reduced and the intersection is used in the resulting tuple. Since a 4-tuple contains no delegation or authorization fields, the delegation permission and authorization of the tuple being acted upon does not change.'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0190'
+      - 'rfc-2693#R-0191'
+    related:
+      - SPKI-75-01
+    notes: 'D = FALSE does not stop the substitution. Name reduction is not 5-tuple reduction and has no delegation guard. This is the mechanism behind SPKI-75-01.'
+    derived:
+      in_source: false
+      result: '<K0,K2,FALSE,(tag (ssl)),[500, 1000]>'
+      outcome: succeeds
+
+  # ===================================================================
+  # Section 6.5 -- Certificate Translation
+  # ===================================================================
+
+  - id: SPKI-651-01
+    locator: "RFC 2693 Section 6.5.1"
+    kind: name-tuple-translation
+    notation: tuple-notation
+    fidelity: verbatim
+    input: '[Kroot, (name <leaf-name>), K1, validity]'
+    expected: 'The original X.509 certificate is a <name,key> certificate. It translates directly to a name tuple. The form [Kroot, (name <leaf-name>), K1, validity] is used if the rules for that particular X.509 hierarchy is that all leaf names are unique, under that root.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0131'
+      - 'rfc-2693#R-0193'
+      - 'rfc-2693#R-0194'
+    source_issue: definition-example-mismatch
+    related:
+      - SPKI-29-01
+      - SPKI-64-01
+    notes: 'The four fields in Section 6.2 order: issuer, name, subject, validity. Section 6.4 would write it [(name Kroot <leaf-name>) -> K1]. The grammatical slip "the rules ... is" is the source''s. Read literally, the Name slot (name <leaf-name>) is an S-expression, not the byte string Section 6.2 defines (source_text of SPKI-651-02), so the tuple fails schema four-tuple (schema README D-02). It fits only if (name <leaf-name>) is read as notation for its one name, the way Section 6.5.2 writes a bare name; SPKI-651-02 cannot be read that way.'
+
+  - id: SPKI-651-02
+    locator: "RFC 2693 Section 6.5.1"
+    kind: name-tuple-translation
+    notation: tuple-notation
+    fidelity: verbatim
+    input: '[Kroot, (name CA1 CA2 ... CAk <leaf-name>), K1, validity]'
+    expected: 'If uniqueness of names applies only to individual CAs in the X.509 hierarchy, then one must generate [Kroot, (name CA1 CA2 ... CAk <leaf-name>), K1, validity] after verifying the certificate chain by the rules appropriate to that particular chain.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0131'
+      - 'rfc-2693#R-0195'
+    source_issue: definition-example-mismatch
+    source_text:
+      - '2. Name: a byte string'
+    source_text_locator:
+      - "RFC 2693 Section 6.2"
+    related:
+      - SPKI-29-02
+    notes: 'SOURCE INCONSISTENCY. Section 6.2 defines the Name element of a name 4-tuple as "a byte string" (quoted in source_text). This form puts a chain of k + 1 names in that slot. Every 4-tuple of Section 6.4 defines a single name N relative to its issuer; written in that notation this tuple would be [(name Kroot CA1 CA2 ... CAk <leaf-name>) -> K1], whose left side fits neither class. Prefix replacement still works on it mechanically, but the tuple is not one Section 6.2 permits. Recorded, not repaired.'
+
+  - id: SPKI-652-01
+    locator: "RFC 2693 Section 6.5.2"
+    kind: name-tuple-translation
+    notation: tuple-notation
+    fidelity: verbatim
+    input: '[Ki, name, K1, validity]'
+    expected: 'Once verified, it yields name tuples of the form [Ki, name, K1, validity] where Ki is a key that signed that PGP (UserID,key) pair. There would be one tuple produced for each signature on the key, K1.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0197'
+      - 'rfc-2693#R-0198'
+    notes: 'Here the Name slot is a bare name, as Section 6.2 defines it, where Section 6.5.1 writes (name <leaf-name>). Two spellings of one slot within Section 6.5.'
+    derived:
+      in_source: false
+      example: 'a PGP key K1 bearing signatures by Ka, Kb and Kc yields three tuples: [Ka, name, K1, validity], [Kb, name, K1, validity] and [Kc, name, K1, validity]'
+      note: 'Each tuple defines the name in its signer''s name space, so one PGP UserID becomes three different fully qualified names.'
+
+  - id: SPKI-653-01
+    locator: "RFC 2693 Section 6.5.3"
+    kind: implicit-authorization
+    notation: sexp
+    fidelity: split
+    input: '(tag (*))'
+    expected: 'It might also declare an implicit authorization of the form (tag (*)).'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0199'
+    same_as:
+      - SPKI-657-07
+      - SPKI-657-11
+    notes: 'Printed inline. (tag (*)) is the universal authorization: whatever the ACL and the earlier certificates permit passes through it unchanged, because AIntersect with (*) returns the other operand.'
+
+  # ===================================================================
+  # Section 6.5.7 -- SSL
+  # ===================================================================
+
+  - id: SPKI-657-01
+    locator: "RFC 2693 Section 6.5.7"
+    kind: ssl-tag
+    notation: sexp
+    fidelity: verbatim
+    input: '(tag (ssl))'
+    expected: 'An SSL certificate carries a number of authorizations, some implicitly. The authorization: (tag (ssl)) is implicit.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0208'
+
+  - id: SPKI-657-02
+    locator: "RFC 2693 Section 6.5.7"
+    kind: ssl-tag
+    notation: sexp-template
+    fidelity: verbatim
+    input: '(tag (dns <domain-name>))'
+    expected: 'In addition, the server certificate carries a DNS name parameter to be matched against the DNS name of the web page to which the connection is being made. That might be encoded as: (tag (dns <domain-name>))'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0209'
+    notes: 'SPKI-657-08 instantiates the placeholder with www.datafellows.com.'
+
+  - id: SPKI-657-03
+    locator: "RFC 2693 Section 6.5.7"
+    kind: ssl-tag
+    notation: sexp
+    fidelity: verbatim
+    input: '(tag (us-crypto))'
+    expected: 'Meanwhile, there is the "global cert" permission -- the permission for a US-supplied browser to connect using full strength symmetric cryptography even though the server is outside the USA. This might be encoded as: (tag (us-crypto))'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0210'
+
+  - id: SPKI-657-04
+    locator: "RFC 2693 Section 6.5.7"
+    kind: ssl-tag
+    notation: sexp
+    fidelity: verbatim
+    input: '(tag (* set (ssl) (dns (*))))'
+    expected: 'An ACL entry for an SSL root key would have the tag: (tag (* set (ssl) (dns (*))))'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0211'
+    equivalent_to:
+      - SPKI-657-05
+    related:
+      - SPKI-631-05
+
+  - id: SPKI-657-05
+    locator: "RFC 2693 Section 6.5.7"
+    kind: ssl-tag
+    notation: sexp
+    fidelity: verbatim
+    input: '(tag (* set (ssl) (dns)))'
+    expected: 'which by the rules of intersection is equivalent to: (tag (* set (ssl) (dns)))'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0151'
+      - 'rfc-2693#R-0211'
+    equivalent_to:
+      - SPKI-657-04
+    notes: 'The equivalence rests on the padding rule of SPKI-631-05: (dns) is intersected as if it were (dns (*)). On a strict reading of "all lists that start with those elements", (dns) also contains the one-element list (dns) and (dns (*)) does not; only the padding rule closes that gap.'
+    derived:
+      in_source: false
+      rule: 'Section 6.3.1 AIntersect, both tags intersected with the same probe'
+      probes_identical:
+        - '(tag (ssl))'
+        - '(tag (dns www.datafellows.com))'
+        - '(tag (us-crypto))'
+        - '(tag (* set (ssl) (dns www.datafellows.com)))'
+        - '(tag (ssl www.datafellows.com))'
+        - '(tag (dns (*)))'
+        - '(tag (ssl (*)))'
+      probes_differing_only_by_the_padding_identity:
+        - '(tag (*))'
+        - '(tag (dns))'
+      outcome: 'equivalent: every probe gives the same result, or results that differ only by (dns) against (dns (*))'
+
+  - id: SPKI-657-06
+    locator: "RFC 2693 Section 6.5.7"
+    kind: ssl-tag
+    notation: sexp
+    fidelity: verbatim
+    input: '(tag (* set (ssl) (dns) (us-crypto)))'
+    expected: 'unless that root key also had the permission from the US Commerce Department to grant us-crypto permission, in which case the root key would have: (tag (* set (ssl) (dns) (us-crypto)))'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0211'
+    derived:
+      in_source: false
+      with_ca_and_leaf: 'AIntersect with the CA tag (tag (*)) and then the leaf tag of SPKI-657-08 gives (tag (* set (ssl) (dns www.datafellows.com))): the root may grant us-crypto, but this leaf was not given it'
+
+  - id: SPKI-657-07
+    locator: "RFC 2693 Section 6.5.7"
+    kind: ssl-tag
+    notation: sexp
+    fidelity: verbatim
+    input: '(tag (*))'
+    expected: 'A CA certificate, used for SSL, would then need only to communicate down its certificate chain those permissions allocated in the ACL. Its tag might then translate to: (tag (*))'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0212'
+    same_as:
+      - SPKI-653-01
+      - SPKI-657-11
+
+  - id: SPKI-657-08
+    locator: "RFC 2693 Section 6.5.7"
+    kind: ssl-tag
+    notation: sexp
+    fidelity: verbatim
+    input: '(tag (* set (ssl) (dns www.datafellows.com)))'
+    expected: 'showing that it was empowered to do SSL and to operate from the given domain name, but not to use US crypto with a US browser.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0208'
+      - 'rfc-2693#R-0209'
+    source_text:
+      - 'A leaf server certificate for the Datafellows server might, for example, have a tag field of the form:'
+    related:
+      - SPKI-657-12
+
+  - id: SPKI-657-09
+    locator: "RFC 2693 Section 6.5.7"
+    kind: ssl-tag
+    notation: sexp
+    fidelity: verbatim
+    input: '(tag (ssl www.datafellows.com))'
+    expected: 'The use of (* set) for the two attributes in this example could have been abbreviated as: (tag (ssl www.datafellows.com))'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0142'
+      - 'rfc-2693#R-0143'
+    notes: 'An abbreviated DESIGN, not an AIntersect identity: (ssl www.datafellows.com) is one list, where SPKI-657-08 is a set of two. Mixing the two designs in one chain changes the answer (derived).'
+    derived:
+      in_source: false
+      rule: 'Section 6.3.1 AIntersect'
+      against_separated_leaf: 'AIntersect with (tag (* set (ssl) (dns www.datafellows.com))) gives (tag (ssl www.datafellows.com)): the (ssl) element is extended by the longer-list rule and (dns www.datafellows.com) fails against it'
+      mixed_chain: 'the separated ACL (tag (* set (ssl) (dns))), the CA (tag (*)) and this abbreviated leaf reduce to (tag (ssl www.datafellows.com)); a later query (tag (dns www.datafellows.com)) then fails, because the dns permission is not carried as (dns ...)'
+
+  - id: SPKI-657-10
+    locator: "RFC 2693 Section 6.5.7"
+    kind: ssl-tag
+    notation: sexp
+    fidelity: split
+    input: '(tag (ssl (*)))'
+    expected: 'while CA certificates might carry: (tag (ssl (*))) or just (tag (*))'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0151'
+    related:
+      - SPKI-657-11
+    notes: 'The first of two S-expressions on one printed line. The CA tag for the abbreviated design of SPKI-657-09; by the padding rule it intersects as (tag (ssl)) does, up to the padding identity: against (tag (*)) or (tag (ssl)) it gives (tag (ssl (*))) where (tag (ssl)) gives (tag (ssl)), the same difference as between SPKI-657-04 and SPKI-657-05.'
+
+  - id: SPKI-657-11
+    locator: "RFC 2693 Section 6.5.7"
+    kind: ssl-tag
+    notation: sexp
+    fidelity: split
+    input: '(tag (*))'
+    expected: 'while CA certificates might carry: (tag (ssl (*))) or just (tag (*))'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0212'
+    same_as:
+      - SPKI-653-01
+      - SPKI-657-07
+    related:
+      - SPKI-657-10
+    notes: 'The second S-expression on the same line as SPKI-657-10.'
+
+  - id: SPKI-657-12
+    locator: "RFC 2693 Section 6.5.7"
+    kind: authorization-chain
+    notation: tuple-notation
+    fidelity: constructed
+    input_lines:
+      - '<Self,Kroot,TRUE,(tag (* set (ssl) (dns))),V0>'
+      - '<Kroot,Kca,TRUE,(tag (*)),V1>'
+      - '<Kca,Kdatafellows,FALSE,(tag (* set (ssl) (dns www.datafellows.com))),V2>'
+    bindings:
+      tags: 'the ACL tag of SPKI-657-05, the CA tag of SPKI-657-07 and the leaf tag of SPKI-657-08, all printed in the source'
+      validity: 'V0, V1 and V2 mutually intersect'
+    query: 'three requests: (tag (ssl)), (tag (dns www.datafellows.com)) and (tag (us-crypto))'
+    expected: 'showing that it was empowered to do SSL and to operate from the given domain name, but not to use US crypto with a US browser.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0136'
+      - 'rfc-2693#R-0213'
+      - 'rfc-2693#R-0214'
+    source_text:
+      - 'The three separate tests in the verifying code (e.g., the browser) would then involve separate 5-tuple reductions from separate root key ACL entries.'
+      - 'The fact that these three kinds of permission are treated as if ANDed is derived from the logic of the code that interprets the permissions and is not expressed in the certificate.'
+    related:
+      - SPKI-657-05
+      - SPKI-657-07
+      - SPKI-657-08
+    notes: 'The whole SSL example run end to end. The source states the leaf''s capabilities; the reduction that yields them is derived. The final decision rule is not stated: grant when AIntersect(request, result) succeeds, or only when it equals the request. All three requests here give the same answer under both readings.'
+    derived:
+      in_source: false
+      rule: 'Section 6.3 reduction, then AIntersect of each request with the reduced authorization'
+      steps:
+        - '<Self,Kroot,TRUE,(tag (* set (ssl) (dns))),V0> + <Kroot,Kca,TRUE,(tag (*)),V1> -> <Self,Kca,TRUE,(tag (* set (ssl) (dns))),VIntersect(V0,V1)>'
+        - '<Self,Kca,TRUE,(tag (* set (ssl) (dns))),VIntersect(V0,V1)> + <Kca,Kdatafellows,FALSE,(tag (* set (ssl) (dns www.datafellows.com))),V2> -> <Self,Kdatafellows,FALSE,(tag (* set (ssl) (dns www.datafellows.com))),VIntersect(V0,V1,V2)>'
+      result: '<Self,Kdatafellows,FALSE,(tag (* set (ssl) (dns www.datafellows.com))),VIntersect(V0,V1,V2)>'
+      query_results:
+        - query: '(tag (ssl))'
+          aintersect: '(tag (ssl))'
+          outcome: succeeds
+        - query: '(tag (dns www.datafellows.com))'
+          aintersect: '(tag (dns www.datafellows.com))'
+          outcome: succeeds
+        - query: '(tag (us-crypto))'
+          aintersect: 'fails'
+          outcome: fails
+
+  # ===================================================================
+  # Section 7.3 -- Through <name,key> Certificates
+  # ===================================================================
+
+  - id: SPKI-73-01
+    locator: "RFC 2693 Section 7.3"
+    kind: fully-qualified-name
+    notation: sexp
+    fidelity: verbatim
+    input: '(name (hash sha1 |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|) jim)'
+    expected: 'Therefore, in the construct: (name (hash sha1 |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|) jim) the name is not "jim" but rather "(name (hash sha1 |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|) jim)"'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0224'
+    related:
+      - SPKI-28-01
+      - SPKI-73-02
+      - SPKI-73-03
+    notes: 'One name after the key, so a fully qualified name but not a name chain (contrast SPKI-28-01, same key hash).'
+
+  - id: SPKI-73-02
+    locator: "RFC 2693 Section 7.3"
+    kind: name-identity
+    notation: quoted-text
+    fidelity: verbatim
+    input: '"jim"'
+    expected: 'Therefore, in the construct: (name (hash sha1 |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|) jim) the name is not "jim" but rather "(name (hash sha1 |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|) jim)"'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0224'
+    outcome: fails
+    related:
+      - SPKI-73-01
+    notes: 'A NEGATIVE: what the name is NOT. The quotation marks are prose quotation. A test of name identity must not compare the local part alone.'
+
+  - id: SPKI-73-03
+    locator: "RFC 2693 Section 7.3"
+    kind: name-identity
+    notation: quoted-text
+    fidelity: verbatim
+    input: '"(name (hash sha1 |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|) jim)"'
+    sexp: '(name (hash sha1 |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|) jim)'
+    expected: 'Therefore, in the construct: (name (hash sha1 |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|) jim) the name is not "jim" but rather "(name (hash sha1 |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|) jim)"'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0224'
+    outcome: succeeds
+    related:
+      - SPKI-73-01
+    notes: 'The quotation marks are prose quotation, not S-expression syntax. Read as an RFC 9804 quoted string the input would be a single 53-octet byte string, a different value from SPKI-73-01. The identity of a name is its whole fully qualified form, key included.'
+
+  # ===================================================================
+  # Section 7.5 -- One Root Per Individual
+  # ===================================================================
+
+  - id: SPKI-75-01
+    locator: "RFC 2693 Section 7.5"
+    kind: delegation-via-name
+    notation: sexp
+    fidelity: verbatim
+    input: '(name (hash sha1 |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|) carl)'
+    expected: 'If one delegates some authorization to (name (hash sha1 |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|) carl) and a different authorization to (hash sha1 |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|) directly, both without granting the permission to delegate, that key can delegate at will through <name,key> certificates in the former case and not delegate at all in the latter case.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0191'
+      - 'rfc-2693#R-0234'
+      - 'rfc-2693#R-0235'
+    related:
+      - SPKI-75-02
+      - SPKI-642-01
+    notes: 'SECURITY-RELEVANT. A name subject gives the name''s definer a power to re-bind that the delegation bit does not control. The source presents this as the key-management feature: "the former mechanism (through a SDSI name) gives more freedom". A harness should pin it as expected behaviour, so no implementation removes it by accident; a design that needs the delegation bit to bind must not grant to name subjects.'
+    source_text:
+      - 'In the case of key management, we desire the ability to delegate from a long lived, rarely used key to a shorter lived, often used key -- so in this case, the former mechanism (through a SDSI name) gives more freedom.'
+    derived:
+      in_source: false
+      rule: 'Section 6.4.2: a 4-tuple has no delegation field, so name reduction never consults D'
+      bindings:
+        H: 'the key whose SHA-1 hash is the base-64 value printed'
+        Kgrantor: 'whoever delegates the authorization'
+        Klaptop: 'a shorter-lived key of the same keyholder'
+        Vn: 'the validity of the 4-tuple'
+      tuples:
+        - '<Kgrantor,(name H carl),FALSE,A1,V1>'
+        - '[(name H carl) -> Klaptop], issued by H'
+      steps:
+        - 'name reduction: <Kgrantor,Klaptop,FALSE,A1,VIntersect(V1,Vn)>'
+      outcome: 'succeeds; Klaptop holds A1 though no tuple in the chain has delegation TRUE'
+
+  - id: SPKI-75-02
+    locator: "RFC 2693 Section 7.5"
+    kind: key-hash-subject
+    notation: sexp
+    fidelity: verbatim
+    input: '(hash sha1 |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|)'
+    expected: 'If one delegates some authorization to (name (hash sha1 |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|) carl) and a different authorization to (hash sha1 |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|) directly, both without granting the permission to delegate, that key can delegate at will through <name,key> certificates in the former case and not delegate at all in the latter case.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0139'
+      - 'rfc-2693#R-0234'
+    related:
+      - SPKI-75-01
+      - SPKI-28-01
+    notes: 'Section 7.6 then refers to this key as "key |TLCgPLFlGTzgUbcaYLW8kGTEnUk=|", by the base-64 of its hash alone. Its "second model", an authorization certificate "delegating all rights through to the more temporary key", presupposes that this grant carried delegation TRUE -- the permission this vector withholds.'
+    derived:
+      in_source: false
+      rule: 'Section 6.3: reduction requires D1 = TRUE'
+      tuples:
+        - '<Kgrantor,H,FALSE,A2,V1>'
+        - '<H,Klaptop,FALSE,A2,V2>'
+      steps:
+        - '<Kgrantor,H,FALSE,A2,V1> + <H,Klaptop,FALSE,A2,V2> -> fails: D1 = FALSE'
+      outcome: fails
+
+  # ===================================================================
+  # Section 7.7 -- Threshold ACL Subjects
+  # ===================================================================
+
+  - id: SPKI-77-01
+    locator: "RFC 2693 Section 7.7"
+    kind: authorization-sexp
+    notation: sexp
+    fidelity: verbatim
+    input: '(tag (acl-edit))'
+    expected: 'An ACL needs to be access-controlled itself. Assume that the ACL includes an entry with authorization (tag (acl-edit))'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0242'
+    related:
+      - SPKI-77-03
+
+  - id: SPKI-77-02
+    locator: "RFC 2693 Section 7.7"
+    kind: threshold-subject
+    notation: sexp-schematic
+    fidelity: verbatim
+    input: '(k-of-n #03# #07# K1 K2 K3 K4 K5 K6 K7)'
+    expected: 'Assume also that what might have been a single root authorization key, K1, is actually a threshold subject (k-of-n #03# #07# K1 K2 K3 K4 K5 K6 K7) used in any ACL entry granting a normal authorization.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0017'
+      - 'rfc-2693#R-0165'
+    related:
+      - SPKI-633-02
+      - SPKI-77-03
+    notes: 'K and N are one-octet hex byte strings: #03# is the octet 0x03, binary 3, not the ASCII digit 3 (that would be #33#). The source never defines how K and N are encoded; Section 6.3.3 says only "two numbers". K1 to K7 are metavariables for keys.'
+    derived:
+      in_source: false
+      K: 3
+      N: 7
+      subordinate_count: 7
+      checks: 'subordinate count equals N, and 0 < K <= N as Section 6.3.3 requires'
+
+  - id: SPKI-77-03
+    locator: "RFC 2693 Section 7.7"
+    kind: threshold-subject
+    notation: sexp-schematic
+    fidelity: verbatim
+    input: '(k-of-n #05# #07# K1 K2 K3 K4 K5 K6 K7)'
+    expected: 'That same ACL could have the subject of an (acl-edit) entry be (k-of-n #05# #07# K1 K2 K3 K4 K5 K6 K7)'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0165'
+      - 'rfc-2693#R-0243'
+    source_text:
+      - 'This use of threshold subject would allow the set of root keys to elect new members to that set and retire old members.'
+    related:
+      - SPKI-77-01
+      - SPKI-77-04
+    derived:
+      in_source: false
+      K: 5
+      N: 7
+      subordinate_count: 7
+      checks: 'subordinate count equals N, and 0 < K <= N'
+
+  - id: SPKI-77-04
+    locator: "RFC 2693 Section 7.7"
+    kind: threshold-reduction
+    notation: tuple-notation
+    fidelity: constructed
+    input_lines:
+      - '<Self,(k-of-n #03# #07# K1 K2 K3 K4 K5 K6 K7),TRUE,Anormal,V0>'
+      - '<Self,(k-of-n #05# #07# K1 K2 K3 K4 K5 K6 K7),TRUE,(tag (acl-edit)),V0>'
+      - '<K1,Kop,FALSE,(tag (*)),V0>'
+      - '<K2,Kop,FALSE,(tag (*)),V0>'
+      - '<K3,Kop,FALSE,(tag (*)),V0>'
+      - '<K4,Kop,FALSE,(tag (*)),V0>'
+    bindings:
+      Anormal: 'the "normal authorization" of the first ACL entry'
+      Kop: 'the key four of the seven root keys agree to empower'
+      V0: 'any validity interval'
+    query: 'does Kop hold Anormal, and does it hold (tag (acl-edit))?'
+    expected: 'A threshold subject is reduced to a single subject by selecting K of the N subjects and reducing each of those K to the same subject, through a sequence of certificates.'
+    expected_basis: rule-quoted
+    constrains:
+      - 'rfc-2693#R-0166'
+      - 'rfc-2693#R-0169'
+      - 'rfc-2693#R-0243'
+    expected_locator: "RFC 2693 Section 6.3.3"
+    related:
+      - SPKI-77-02
+      - SPKI-77-03
+    notes: 'The same four keys, two thresholds: enough to use the ACL, not enough to edit it. This is the asymmetry the two Section 7.7 subjects are printed to show.'
+    derived:
+      in_source: false
+      normal_entry: 'K = 3 is met by four agreeing keys; select any three and set the fourth and K5 to K7 to (null). Result <Self,Kop,FALSE,Anormal,V0>; succeeds.'
+      acl_edit_entry: 'K = 5 is not met by four; fails.'
+
+  # ===================================================================
+  # Section 8 -- Security Considerations
+  # ===================================================================
+
+  - id: SPKI-8-01
+    locator: "RFC 2693 Section 8"
+    kind: mapping-chain
+    notation: mapping-notation
+    fidelity: verbatim
+    input: '(authorization->key)'
+    expected: 'Each certificate has an issuer. If that issuer is subverted, then the attacker can gain access. In the former case, there is only one issuer to trust. In the latter case, there are two.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0245'
+      - 'rfc-2693#R-0246'
+      - 'rfc-2693#R-0247'
+    issuers_trusted: 1
+    source_text:
+      - 'One can use a straight authorization certificate:'
+    related:
+      - SPKI-33-01
+      - SPKI-8-02
+    notes: 'Parenthesised but not an S-expression: the > of -> is not a token character. The same mapping as SPKI-33-01 in a different notation.'
+
+  - id: SPKI-8-02
+    locator: "RFC 2693 Section 8"
+    kind: mapping-chain
+    notation: mapping-notation
+    fidelity: verbatim
+    input: '(authorization->name) + (name->key)'
+    expected: 'Each certificate has an issuer. If that issuer is subverted, then the attacker can gain access. In the former case, there is only one issuer to trust. In the latter case, there are two.'
+    expected_basis: stated
+    constrains:
+      - 'rfc-2693#R-0245'
+      - 'rfc-2693#R-0247'
+      - 'rfc-2693#R-0250'
+    issuers_trusted: 2
+    source_text:
+      - 'or one can use an attribute certificate and an ID certificate:'
+      - 'This is not to say that one must never use the second construct. If the two certificates come from the same issuer, and therefore with the same name space, then both of the security differentiators above are canceled.'
+    related:
+      - SPKI-31-01
+      - SPKI-8-01
+    notes: 'The same chain as SPKI-31-01. The second quote is the exception: with one issuer, and so one name space, the two-issuer weakness disappears.'
