@@ -27,18 +27,19 @@ class VCon:
     dialog: list[dict] | None = None  # §4.1.11 none
     analysis: list[dict] | None = None  # §4.1.12 none
     attachments: list[dict] | None = None  # §4.1.13 none
+    group: object | None = None  # §6.3.2 none
 
 @dataclass
 class Party:
-    did: str  # §4.2.6 MUST
-    civicaddress: Any  # §4.2.9 MUST
     tel: str | None = None  # §4.2.1 SHOULD
     sip: str | None = None  # §4.2.2 none
     stir: str | None = None  # §4.2.3 none
     mailto: str | None = None  # §4.2.4 MAY
     name: str | None = None  # §4.2.5 SHOULD
+    did: str | None = None  # §4.2.6 MUST
     validation: str | None = None  # §4.2.7 SHOULD NOT
     gmlpos: str | None = None  # §4.2.8 none
+    civicaddress: dict | None = None  # §4.2.9 MUST
     uuid: str | None = None  # §4.2.10 MAY
     type: str | None = None  # §4.2.11 SHOULD
     org: str | None = None  # §4.2.12 none
@@ -46,37 +47,118 @@ class Party:
 
 @dataclass
 class Dialog:
-    type: str  # §4.3.1 MUST
-    duration: Any  # §4.3.3 MUST
-    disposition: str  # §4.3.11 MUST
+    type: str  # §4.3 / §4.3.1 MUST
     start: str | None = None  # §4.3.2 SHOULD
-    parties: Any | None = None  # §4.3.4 MUST NOT
+    duration: object | None = None  # §4.3.3 MUST
+    parties: object | None = None  # §4.3.4 MUST NOT
     originator: Any | None = None  # §4.3.5 MUST NOT
-    recordings: Any | None = None  # §4.3.6 MUST NOT
+    recordings: object | None = None  # §4.3.6 MUST
     recording_set: Any | None = None  # §4.3.7 MUST NOT
     mediatype: Any | None = None  # §4.3.8 MUST NOT
     filename: str | None = None  # §4.3.9 MUST NOT
-    session_id: Any | None = None  # §4.3.12 MUST NOT
-    application: object | None = None  # §4.3.15 none
+    body: object | None = None  # §4.3.10 / §2.3 / §2.3.1 MUST NOT
+    encoding: str | None = None  # §4.3.10 / §4.3.1.6 / §2.3.2 MUST
+    url: str | None = None  # §4.3.10 / §4.3.1.6 / §2.4.1 MUST NOT
+    content_hash: object | None = None  # §4.3.10 / §4.3.1.6 / §2.4 / §2.4.2 MUST
+    disposition: str | None = None  # §4.3.11 MUST
+    session_id: object | None = None  # §4.3.12 MUST NOT
+    party_history: list[dict] | None = None  # §4.3.13 MUST NOT
+    transferee: Any | None = None  # §4.3.14 MUST NOT
+    transferor: Any | None = None  # §4.3.14 MUST NOT
+    transfer_target: Any | None = None  # §4.3.14 MUST NOT
+    original: Any | None = None  # §4.3.14 MUST NOT
+    consultation: Any | None = None  # §4.3.14 MUST NOT
+    target_dialog: Any | None = None  # §4.3.14 MUST NOT
+    application: str | None = None  # §4.3.15 none
     message_id: str | None = None  # §4.3.16 MUST NOT
-    party_history_objects_array: object | None = None  # §4.3.13 MUST NOT
+
+@dataclass
+class PartyHistory:
+    party: Any  # §4.3.13.1 none
+    time: str  # §4.3.13.1 none
+    event: str  # §4.3.13.1 MUST
+    button: str | None = None  # §4.3.13.1 none
 
 @dataclass
 class Attachment:
+    start: str  # §4.4.2 none
     party: Any  # §4.4.3 MUST
-    mediatype: Any  # §4.4.5 MUST
+    dialog: Any  # §4.4.4 none
     purpose: str | None = None  # §4.4.1 none
-    start: str | None = None  # §4.4.2 none
-    dialog: Any | None = None  # §4.4.4 none
+    mediatype: Any | None = None  # §4.4.5 MUST
     filename: str | None = None  # §4.4.6 none
+    body: object | None = None  # §4.4.7 / §2.3 / §2.3.1 SHOULD
+    encoding: str | None = None  # §4.4.7 / §2.3.2 MUST
+    url: str | None = None  # §4.4.7 / §2.4.1 SHOULD
+    content_hash: object | None = None  # §4.4.7 / §2.4 / §2.4.2 MUST
 
 @dataclass
 class Analysis:
-    type: str | None = None  # §4.5.1 SHOULD
-    dialog: Any | None = None  # §4.5.2 none
-    attachment: Any | None = None  # §4.5.3 none
-    mediatype: Any | None = None  # §4.5.4 SHOULD
+    type: str  # §4.5.1 SHOULD
+    vendor: str  # §4.5 / §4.5.6 SHOULD
+    dialog: object | None = None  # §4.5.2 none
+    attachment: object | None = None  # §4.5.3 none
+    mediatype: Any | None = None  # §4.5 / §4.5.4 SHOULD
     filename: str | None = None  # §4.5.5 none
-    vendor: str | None = None  # §4.5.6 none
     product: str | None = None  # §4.5.7 none
-    schema: str | None = None  # §4.5.8 none
+    schema: str | None = None  # §4.5 / §4.5.8 SHOULD
+    body: object | None = None  # §4.5.9 / §2.3 / §2.3.1 SHOULD
+    encoding: str | None = None  # §4.5.9 / §2.3.2 MUST
+    url: str | None = None  # §4.5.9 / §2.4.1 SHOULD
+    content_hash: object | None = None  # §4.5.9 / §2.4 / §2.4.2 MUST
+
+@dataclass
+class Redacted:
+    type: str  # §4.1.8.1 none
+    uuid: str | None = None  # §4.1.8 / §4.1.8.1 SHOULD
+    url: str | None = None  # §4.1.8 / §4.1.8.1 / §2.4.1 MAY
+    content_hash: object | None = None  # §4.1.8.1 / §2.4.2 MUST
+
+@dataclass
+class Amended:
+    uuid: str | None = None  # §4.1.9 / §4.1.9.1 SHOULD
+    url: str | None = None  # §4.1.9.1 / §2.4.1 MAY
+    content_hash: object | None = None  # §4.1.9.1 / §2.4.2 MUST
+
+@dataclass
+class VConSignedForm:
+    payload: str  # §5.2 / §5.4 none
+    signatures: list[dict]  # §5.2 / §5.2.1 MUST
+
+@dataclass
+class Signature:
+    header: dict  # §5.2.1 MUST
+    protected: str  # §5.2.1 MUST
+    signature: str  # §5.2.1 MUST
+
+@dataclass
+class HeaderJWS:
+    alg: str  # §5.2.2 MUST
+    x5c: list[str] | None = None  # §5.2.2 MUST
+    x5u: str | None = None  # §5.2.2 MUST
+    uuid: str | None = None  # §5.2.2 / §6.5 SHOULD
+
+@dataclass
+class VConEncryptedForm:
+    unprotected: dict  # §5.3 / §5.3.1 none
+    recipients: list[dict]  # §5.3 / §5.4 none
+    iv: str  # §5.3 none
+    ciphertext: str  # §5.3 / §5.4 MUST
+    tag: str  # §5.3 none
+    protected: str | None = None  # §5.3 (omitted from its member list) / [JWE] RFC 7516 §7.2.1 / Appendix A.7 MUST
+    aad: str | None = None  # §5.3 (omitted from its member list) / [JWE] RFC 7516 §7.2.1 MUST
+
+@dataclass
+class Unprotected:
+    cty: str  # §5.3.1 SHOULD
+    enc: str  # §5.3.1 SHOULD
+    uuid: str | None = None  # §5.3.1 / §6.5 SHOULD
+
+@dataclass
+class Recipient:
+    header: dict  # §5.3.2 / §5.3.3 none
+    encrypted_key: str  # §5.3.2 none
+
+@dataclass
+class HeaderJWE:
+    alg: str  # §5.3.3 SHOULD
