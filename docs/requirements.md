@@ -4,8 +4,8 @@ id: requirements
 title: "What is a requirement"
 type: policy
 status: draft
-version: "0.2.0"
-updated: "2026-10-10"
+version: "0.3.0"
+updated: "2026-10-16"
 needs_review: true
 reviewed: false
 source: "sponsor question 2026-09-22: what is a requirement?"
@@ -128,12 +128,39 @@ across sources, and the first thing anyone asks of an extracted requirement is
 
 Do not renumber. If a requirement is withdrawn, mark it, keep the id.
 
-## 5. Open questions
+## 5. When requirements are extracted
 
-1. Should requirements be extracted for every summarised record, or only where
-   we intend to conform or map? Extraction is expensive; most records will
-   never need it.
-2. Do we track requirement **satisfaction** — which of ours discharges which of
+**Resolved 2026-10-16 (#67).** This was §5 question 1 — *should requirements be
+extracted for every summarised record, or only where we intend to conform or
+map?* Five record summaries already cited `§5.1` as governing policy, and a
+reader who followed the citation found a question mark. The answer those
+records assert is the right one, and `docs/extraction.md` had already
+implemented it. The numbering is kept deliberately: **`§5.1` is clause 1
+below**, the rule those summaries always meant.
+
+1. **Requirements are extracted only where we intend to conform or map** —
+   never as a consequence of having read a document. Summarising a record does
+   not owe a `requirements.yaml`. A record with no `distilled/` is a resting
+   state we are entitled to leave it in, not an unpaid debt.
+2. **`docs/extraction.md` — *What triggers FX-1* — is the operative rule**, and
+   the only place the trigger is written down. It turns on what a record says
+   it was measured against, not on `status` and not on contact with the record.
+   It is not restated here: two copies of a trigger rule is how the last drift
+   started (#63).
+3. **This document is silent on owing a `requirements.yaml`.** §1–§4 govern the
+   file when it exists. Nothing in them pulls a record into extraction.
+
+The cost argument that made it a question stands as the reason for the answer:
+extraction is expensive, most records will never need it, and spending it on a
+document nothing depends on is how a library turns into a reading list
+(`README.md`).
+
+## 6. Open questions
+
+Question 1 was resolved into §5 above (#67); the two that remain are
+renumbered, and neither is cited anywhere as settled.
+
+1. Do we track requirement **satisfaction** — which of ours discharges which of
    theirs? That is a conformance matrix and a much larger commitment.
-3. Should `verb` normalise SHALL → MUST? They are synonymous in RFC 2119, but
+2. Should `verb` normalise SHALL → MUST? They are synonymous in RFC 2119, but
    normalising loses the source's own wording.
