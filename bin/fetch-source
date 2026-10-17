@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+"""fetch-source — cache the bytes of a record whose directory already exists.
+
+    bin/fetch-source <id-or-dir> [<id-or-dir> ...] [--force] [--no-verify]
+
+`bin/ingest --fetch` only fetches on CREATION: it dies at "record already
+exists" before the fetch branch is reached, so there was no supported way to
+populate `.cache/` for one of the 400+ records already on disk. That is what
+the `extract` skill means by its precondition "the source is fetched and
+hashed"; this is the command for it (library#39, library#45).
+
+Reads `content.url` and `content.sha256` from the record, fetches, and VERIFIES
+the bytes against the recorded digest before writing. A mismatch is an error,
+never a silent overwrite: the digest is the record's claim about what it cites,
+and a source that no longer matches is a finding for the record, not for the
+cache. Writes `.cache/<id>.txt` for text, `.bin` otherwise. `.cache/` is
+gitignored — we never commit a third-party document.
+"""
+import argparse, hashlib, pathlib, sys, urllib.request
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "bin"))
+from _record_yaml import load_yaml  # noqa: E402
+
+RECORDS = ROOT / "records"
+CACHE = ROOT / ".cache"
+TEXTUAL = (".txt", ".md", ".json", ".xml", ".html", ".xhtml", ".cddl", ".abnf")
+
+
+def resolve(token):
+    p = pathlib.Path(token)
+    if (p / "record.yaml").exists():
+        return p / "record.yaml"
+    hits = list(RECORDS.glob(f"*/{token}/record.yaml"))
+    if not hits:
+        sys.exit(f"fetch-source: no record '{token}'")
+    return hits[0]
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("records", nargs="+")
+    ap.add_argument("--force", action="store_true", help="refetch even if cached")
+    ap.add_argument("--no-verify", action="store_true",
+                    help="write even if the digest differs (prints LOUDLY)")
+    a = ap.parse_args()
+    CACHE.mkdir(exist_ok=True)
+    rc = 0
+    for token in a.records:
+        path = resolve(token)
+        rec = load_yaml(path)
+        rid = rec.get("id") or path.parent.name
+        content = rec.get("content") or {}
+        url, want = content.get("url"), content.get("sha256")
+        if not url:
+            print(f"  ! {rid}: no content.url")
+            rc = 1
+            continue
+        ext = ".txt" if any(url.endswith(e) for e in TEXTUAL) else ".bin"
+        dest = CACHE / f"{rid}{ext}"
+        if dest.exists() and not a.force:
+            print(f"  = {rid}: already cached ({dest.stat().st_size} bytes)")
+            continue
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "mofn-library/0.1"})
+            with urllib.request.urlopen(req, timeout=60) as r:
+                data = r.read()
+        except Exception as e:
+            print(f"  ! {rid}: fetch failed ({e})")
+            rc = 1
+            continue
+        got = hashlib.sha256(data).hexdigest()
+        if want and got != want:
+            msg = (f"  ! {rid}: DIGEST MISMATCH\n"
+                   f"      recorded {want}\n      fetched  {got}\n"
+                   f"      the source at {url} is not the bytes this record cites")
+            if not a.no_verify:
+                print(msg + "\n      (not written; --no-verify to override)")
+                rc = 1
+                continue
+            print(msg + "\n      (written anyway: --no-verify)")
+        dest.write_bytes(data)
+        if not want:
+            tick, note = "?", "NO recorded digest to verify against"
+        elif got == want:
+            tick, note = "+", "verified"
+        else:
+            tick, note = "!", f"DIGEST OVERRIDDEN; actual bytes are sha256:{got}"
+        print(f"  {tick} {rid}: {len(data)} bytes -> {dest.relative_to(ROOT)}  ({note})")
+    return rc
+
+
+if __name__ == "__main__":
+    sys.exit(main())

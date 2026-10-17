@@ -30,7 +30,12 @@ def _strip_comment(s: str) -> str:
         elif c in "\"'":
             q = c
             out.append(c)
-        elif c == "#":
+        elif c == "#" and (i == 0 or s[i - 1] in " \t"):
+            # YAML opens a comment at `#` only when it begins the scalar or
+            # follows whitespace. An inline `#` is part of the value: that is
+            # what a requirement or vector id looks like (`rfc-8949#V-0001`),
+            # and breaking there silently collapsed every id in an artifact to
+            # the bare record name. bin/_yaml.py already had this right.
             break
         else:
             out.append(c)
