@@ -1,0 +1,205 @@
+; =====================================================================
+; dcbor-profile.derived.cddl
+;
+; DERIVED - not verbatim.  draft-mcnally-deterministic-cbor-18 ships no
+; CDDL profile of dCBOR.  The one CDDL rule it contains is a quotation of
+; the RFC 8610 Standard Prelude, held in cddl-prelude-number.cddl; every
+; rule below was written for this record from the source's prose and
+; tables, and must never be quoted as the source's own grammar.
+;
+; Derived from draft-mcnally-deterministic-cbor-18:
+;   Section 2      the recursion rule: a data item conforms only if every
+;                  item nested within it conforms, "including array
+;                  elements, map keys and values, and the contents of
+;                  tagged data items"
+;   Section 2.5    DCBOR_INT = [-2^63, 2^64-1]; Numeric Reduction; the
+;                  dCBOR numeric model (untagged major types 0, 1, 7
+;                  only; tagged items are outside it)
+;   Section 2.6    simple values: only false, true, null, and floats
+;   Section 3      tag 201, and the .dcbor / .dcborseq control operators
+;   Section 6      Table 1 (tag 201 registration), Table 2 (operators)
+;   Section 7.2    Table 4, rows 3 and 4: a 65-bit negative integer MUST
+;                  be rejected -- the only statement anywhere in the
+;                  document that bounds *integers* by DCBOR_INT
+;   Section 8.5    (non-normative) the tag escape hatch: bignums, and
+;                  tags 80/81/82 for nontrivial NaNs
+;
+; The language is CDDL (RFC 8610).  No prelude name is defined or
+; redefined here: every rule carries a `dcbor-` prefix, so this file can
+; be compiled against the prelude (which cddl-prelude-number.cddl cannot).
+;
+; ---------------------------------------------------------------------
+; SCOPE, and why this file is weak on purpose.
+;
+; CDDL describes instances of the CBOR *generic data model*.  dCBOR is
+; almost entirely a narrowing of the *encoding*: definite length only,
+; preferred serialization, bytewise map key order, one NaN, NFC.  None of
+; those are properties of a data model instance, so no CDDL can state
+; them.  This is not a limitation of this file's drafting -- it is why
+; Section 3 of the source adds the control operators .dcbor and .dcborseq
+; instead of publishing a CDDL profile: the operators delegate the check
+; to a dCBOR implementation precisely because CDDL cannot perform it.
+;
+; What this file DOES decide, and nothing else in CDDL can:
+;   * major type 7 is restricted to false, true, null and the floats,
+;     so `undefined` and simple values 0-19 and 32-255 are excluded
+;     (Section 2.6) -- the one dCBOR rule that is purely data-model level;
+;   * integers are bounded to DCBOR_INT, narrowing the prelude's `nint`,
+;     whose lower bound is -2^64 (from Table 4; see note below);
+;   * the recursion of Section 2: tag content, array elements, and both
+;     halves of every map entry are themselves dcbor-data-item.
+;
+; What it does NOT decide is listed in full at the foot of this file and
+; in README.md.  A fixture can satisfy every rule below and still not be
+; dCBOR.  A green result here is NOT a conformance result.  The decision
+; procedure is dcbor-validate.derived.pseudocode.txt, which works on
+; encoded bytes; use this file for the shape of application data, and
+; that one to decide conformance.
+;
+; ROOT.  RFC 8610 takes the first rule as the root, so `dcbor-data-item`
+; is the default: any dCBOR-conforming data item, with any tag number.
+; =====================================================================
+
+dcbor-data-item = dcbor-number
+                / dcbor-bstr
+                / dcbor-tstr
+                / dcbor-array
+                / dcbor-map
+                / dcbor-tagged
+                / dcbor-simple
+
+; --- numbers ---------------------------------------------------------
+; Section 2.5.  The dCBOR numeric model is untagged major types 0, 1 and
+; 7 only.  `dcbor-number` is this record's narrowing of the prelude's
+; `number` (= int / float), which Section 3 recommends dCBOR applications
+; use for numeric fields; it is a separate name because redefining a
+; prelude rule is an error.
+
+dcbor-number = dcbor-int / dcbor-float
+
+; DCBOR_INT, exactly as Section 2.5 writes it: [-2^63, 2^64-1].  The
+; prelude's `int` is wider on the negative side (`nint` reaches -2^64),
+; and Table 4 rejects 3b8000000000000000 (-2^63 - 1) and
+; 3bffffffffffffffff (-2^64) as "65-bit negative integer value".
+dcbor-int = -9223372036854775808..18446744073709551615
+
+; GAP (see item 1 below): this admits integral float values, which
+; Numeric Reduction forbids.  It cannot be narrowed in CDDL.
+dcbor-float = float
+
+; --- strings ---------------------------------------------------------
+; GAP: `tstr` cannot require NFC (Section 2.7), and neither string rule
+; can require definite length (Section 2.1) -- Section 2 of RFC 8949
+; makes the serialization variant invisible at this level.
+dcbor-bstr = bstr
+dcbor-tstr = tstr
+
+; --- containers ------------------------------------------------------
+; Section 2: elements, keys and values are themselves dCBOR items.
+dcbor-array = [* dcbor-data-item]
+
+; GAP: CDDL maps are unordered and CDDL cannot require distinct keys, so
+; neither Section 2.3 (bytewise lexicographic order) nor Section 2.4 (no
+; duplicate keys) is expressible -- and Section 2.5's warning that
+; Numeric Reduction can *create* duplicate keys (Figures 1 and 2) is
+; therefore invisible here too.
+dcbor-map = {* dcbor-data-item => dcbor-data-item}
+
+; --- tags ------------------------------------------------------------
+; Section 2 requires the tag *content* to conform; the source places no
+; restriction on which tag numbers may appear, and Section 8.5 is
+; explicit that tags are the escape hatch for data items dCBOR does not
+; cover.  So any tag number, with conforming content.
+dcbor-tagged = #6(dcbor-data-item)
+
+; Tag 201 (Section 3, Section 6 Table 1): "enclosed dCBOR", data item
+; "(any)".  Subsumed by dcbor-tagged above; named here so a fixture that
+; is specifically a tag-201 item can be validated against this rule as a
+; root.  Note Section 2.5: a tagged item is never numerically equal to an
+; untagged one, so wrapping in 201 changes the item's identity.
+dcbor-tag-201 = #6.201(dcbor-data-item)
+
+; --- simple values ----------------------------------------------------
+; Section 2.6, the only dCBOR rule that CDDL fully enforces: `undefined`
+; (Section 8.2) and every other simple value (Section 8.4) are excluded
+; by leaving them out.
+dcbor-simple = false / true / null
+
+; =====================================================================
+; INFORMATIVE -- from Section 8.5, which the source marks non-normative.
+; These rules are not dCBOR requirements.  They record the escape hatch
+; Section 8.5 names: dCBOR "places no restrictions beyond those that
+; apply to all byte strings (definite length only)" on bignum content,
+; and an application needing a nontrivial NaN is directed to tags 80, 81
+; and 82 rather than to a float.  Both are already admitted by
+; dcbor-tagged; they are spelled out so a reviewer can see that dCBOR's
+; single-NaN rule (Section 2.5) has a documented bypass at the tag level.
+dcbor-bignum-positive = #6.2(dcbor-bstr)
+dcbor-bignum-negative = #6.3(dcbor-bstr)
+dcbor-float-array-tags = #6.80(dcbor-bstr) / #6.81(dcbor-bstr)
+                       / #6.82(dcbor-bstr)
+
+; =====================================================================
+; THE CONTROL OPERATORS of Section 3 are given in prose only: ".dcbor and
+; .dcborseq are exactly like .cbor and .cborseq as defined in [RFC8610]
+; except that they also require the encoded data item(s) to conform to
+; dCBOR."  RFC 8610 Section 3.8.4 defines `.cbor` on a byte string, so
+; the usage below follows; it is commented out because no CDDL tool
+; implements an operator that Section 6 only requests IANA register, and
+; an unknown control operator is a parse error.
+;
+;   dcbor-embedded     = bstr .dcbor    dcbor-data-item
+;   dcbor-embedded-seq = bstr .dcborseq [* dcbor-data-item]
+;
+; Where a tool does implement them, `.dcbor` is strictly stronger than
+; anything in this file: it reaches the encoded bytes, and therefore the
+; nine gaps below.
+;
+; =====================================================================
+; WHAT THIS CDDL CANNOT EXPRESS.  Stated gaps, not omissions; each is a
+; real dCBOR requirement, each lives in ../requirements.yaml, and each is
+; decided by dcbor-validate.derived.pseudocode.txt instead.
+;
+;  1. NUMERIC REDUCTION (Section 2.5, rule 1) - the largest gap, and the
+;     heart of dCBOR.  `dcbor-float` above admits 42.0, -0.0 and 12.0,
+;     every one of which a dCBOR encoder MUST emit as an integer and a
+;     dCBOR decoder MUST reject as a float (Table 4 rejects f94a00 for
+;     exactly this).  CDDL has no operator for "has a non-zero fractional
+;     part": `.ne` compares values, and a float and the integer it
+;     reduces to are *numerically equal*, so no `.ne` formulation
+;     excludes them.  See numeric-reduction.derived.pseudocode.txt.
+;  2. THE SINGLE NaN (Section 2.5, rule 2).  All NaNs MUST reduce to
+;     0xf97e00.  IEEE 754 makes every NaN compare unequal to every value
+;     including itself (the source's own observation, Section 8.3), so no
+;     CDDL value comparison can pin one NaN and exclude the rest.
+;  3. PREFERRED SERIALIZATION (Section 2.2).  "Shortest encoding that
+;     preserves the value" is a predicate over the encoding, which the
+;     generic data model deliberately hides.  Table 4 rejects
+;     fb3ff8000000000000 for 1.5 and fa7f800000 for Infinity; nothing
+;     here can tell them from f93e00 and f97c00.
+;  4. DEFINITE LENGTH ONLY (Section 2.1).  Same reason: `[1, 2]` encoded
+;     0x820102 and the same item encoded 0x9f0102ff are one instance of
+;     the data model.  dcbor-head.derived.abnf decides this one.
+;  5. BYTEWISE LEXICOGRAPHIC MAP KEY ORDER (Section 2.3).  CDDL maps are
+;     unordered.
+;  6. NO DUPLICATE MAP KEYS (Section 2.4).  CDDL cannot require
+;     distinctness across a `* keytype => valuetype` entry -- and under
+;     Numeric Reduction the duplicate may not even be visible in the
+;     application's own data (Section 2.5, Figures 1 and 2: the keys 10
+;     and 10.0 are distinct before encoding and identical after).
+;  7. NFC (Section 2.7).  `tstr` constrains the major type only.  No
+;     CDDL operator applies a Unicode normalization form.
+;  8. "A dCBOR DECODER MUST REJECT ..." (Sections 2.1-2.7, decoder rules
+;     throughout).  Non-derivability is not rejection: an implementation
+;     that silently repairs a violation produces data this schema
+;     accepts while failing the MUST.  Only a differential test sees it.
+;  9. THE DECLARATIVE FORCE OF TAG 201 (Section 3).  `dcbor-tag-201`
+;     above checks the shape of the content; the tag's meaning is an
+;     assertion that the content conforms at "the encoded data item
+;     level" too, which is gaps 1-8 again.
+;
+; Consequence, worth stating plainly: of dCBOR's seven narrowing rules,
+; this CDDL enforces one and a half -- Section 2.6 in full and the
+; DCBOR_INT bound of Section 2.5 -- and cannot see the other five and a
+; half.  Any harness built on this directory should report it that way.
+; =====================================================================

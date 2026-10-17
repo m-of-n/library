@@ -1,0 +1,553 @@
+record: draft-mcnally-deterministic-cbor
+reviewed_by: ""
+vectors:
+  # ==================================================================
+  # 2.5 Numeric Reduction -- prose examples
+  # ==================================================================
+  - id: "draft-mcnally-deterministic-cbor#V-0001"
+    locator: "§2.5"
+    diagnostic: "2"
+    hex: "02"
+    decoded: "the unsigned integer 2"
+    expect: valid
+    notes: "Source line 289-290: 'Numeric Reduction ensures that semantically equal numeric values (e.g. 2 and 2.0) are encoded into identical byte streams (e.g. 0x02)'. The source prints 0x02. The integer half of that pair."
+  - id: "draft-mcnally-deterministic-cbor#V-0002"
+    locator: "§2.5"
+    diagnostic: "2.0"
+    hex: "02"
+    decoded: "the unsigned integer 2 -- the float 2.0 reduced to its numerically equal integer"
+    expect: valid
+    notes: "The floating-point half of the same pair. The source prints 0x02 for it. Its preferred CBOR serialization as a float would be f94000; dCBOR forbids that encoding (same pattern as V-0053, the source's own 12.0 / f94a00 row)."
+  - id: "draft-mcnally-deterministic-cbor#V-0003"
+    locator: "§2.5 rule 1"
+    diagnostic: "0"
+    hex: "00"
+    decoded: "the unsigned integer 0"
+    expect: valid
+    notes: "Source line 306-308: 'the three representations of a zero number in CBOR (0, 0.0, -0.0 in diagnostic notation) are all reduced to the basic integer 0 (with preferred encoding 0x00)'. The source prints 0x00. Table 3 repeats this value as V-0012."
+  - id: "draft-mcnally-deterministic-cbor#V-0004"
+    locator: "§2.5 rule 1"
+    diagnostic: "0.0"
+    hex: "00"
+    decoded: "the unsigned integer 0 -- the float 0.0 reduced"
+    expect: valid
+    notes: "Second of the three zero representations. The source prints 0x00 for all three. This one appears only here, not in Table 3."
+  - id: "draft-mcnally-deterministic-cbor#V-0005"
+    locator: "§2.5 rule 1"
+    diagnostic: "-0.0"
+    hex: "00"
+    decoded: "the unsigned integer 0 -- the float negative zero reduced, sign discarded"
+    expect: valid
+    notes: "Third of the three zero representations. The source prints 0x00. Table 3 repeats this value as V-0035 ('Reduced.')."
+  - id: "draft-mcnally-deterministic-cbor#V-0006"
+    locator: "§2.5, Figure 1"
+    diagnostic: "{10: \"ten\", 10.0: \"floating ten\"}"
+    hex: "a20a6374656ef949006c666c6f6174696e672074656e"
+    decoded: "a two-entry map: key 10 -> \"ten\", key 10.0 (half-precision) -> \"floating ten\""
+    expect: invalid
+    violates: "§2.5 rule 1 (Numeric Reduction) read with §2.4 rule 2 (decoders MUST reject encoded maps with duplicate keys). 10.0 is an integral floating point value inside DCBOR_INT, so it MUST be reduced to the integer 10, which then collides with the first key."
+    notes: "The source calls this 'Figure 1: Valid CBOR data item with numeric map keys' -- it is valid CBOR and NOT valid dCBOR. The source states the consequence directly: 'Numeric Reduction means that some maps that are valid CBOR cannot be reduced to valid dCBOR maps'. OUR COMPUTATION: the source prints diagnostic notation only, no bytes. The hex assumes RFC 8949 preferred serialization of 10.0 (half-precision f94900); any float width would make the same point. Key order as written is already bytewise lexicographic (0a < f94900), so map ordering (§2.3) is not the violation here."
+  - id: "draft-mcnally-deterministic-cbor#V-0007"
+    locator: "§2.5, Figure 2"
+    diagnostic: "{10: \"ten\", 10: \"floating ten\"}"
+    hex: "a20a6374656e0a6c666c6f6174696e672074656e"
+    decoded: "a two-entry map with the integer key 10 appearing twice"
+    expect: invalid
+    violates: "§2.4 rule 1 and rule 2 -- dCBOR encoders MUST NOT emit, and decoders MUST reject, maps that contain duplicate keys."
+    notes: "The source's 'Figure 2: Numeric Reduction turns valid CBOR invalid' -- what V-0006 becomes after Numeric Reduction. The source's own inline comment is '/ invalid: multiple entries with the same key /'. OUR COMPUTATION: the source prints diagnostic notation only, no bytes. Its closing advice: 'dCBOR applications need to avoid maps that have entries with keys that are semantically equivalent in dCBOR's numeric model'."
+  - id: "draft-mcnally-deterministic-cbor#V-0008"
+    locator: "§2.5 rule 2"
+    diagnostic: "NaN"
+    hex: "f97e00"
+    decoded: "the single canonical quiet NaN, half-precision"
+    expect: valid
+    notes: "Source line 345-346: implementations 'MUST reduce all encoded NaN values to the quiet NaN value having the half-width CBOR representation 0xf97e00'. The source prints the bytes. First of three places the source prints this byte string; see also V-0052 (Table 3) and V-0069 (§8.3)."
+
+  # ==================================================================
+  # 2.6 Simple Values
+  # ==================================================================
+  - id: "draft-mcnally-deterministic-cbor#V-0009"
+    locator: "§2.6"
+    diagnostic: "false"
+    hex: "f4"
+    decoded: "the simple value false (major type 7, code point 20)"
+    expect: valid
+    notes: "Source line 367-369: 'Only the three \"simple\" (major type 7) values false (0xf4), true (0xf5), and null (0xf6) and the floating point values are valid in dCBOR.' The source prints the bytes. §8.4 restates the code point as 20."
+  - id: "draft-mcnally-deterministic-cbor#V-0010"
+    locator: "§2.6"
+    diagnostic: "true"
+    hex: "f5"
+    decoded: "the simple value true (major type 7, code point 21)"
+    expect: valid
+    notes: "Same sentence as V-0009; the source prints the bytes. §8.4 restates the code point as 21."
+  - id: "draft-mcnally-deterministic-cbor#V-0011"
+    locator: "§2.6"
+    diagnostic: "null"
+    hex: "f6"
+    decoded: "the simple value null (major type 7, code point 22)"
+    expect: valid
+    notes: "Same sentence as V-0009; the source prints the bytes. §8.4 restates the code point as 22, and §8.2 is the rationale for choosing null as dCBOR's sole placeholder for an absent value."
+
+  # ==================================================================
+  # 7.1 Table 3 -- dCBOR Numeric Encodings (all valid; 41 rows,
+  # in table order). Every hex in this block is the source's own.
+  # ==================================================================
+  - id: "draft-mcnally-deterministic-cbor#V-0012"
+    locator: "§7.1 Table 3 row 1"
+    diagnostic: "0"
+    hex: "00"
+    decoded: "the unsigned integer 0"
+    expect: valid
+    notes: "No note column. Repeats V-0003."
+  - id: "draft-mcnally-deterministic-cbor#V-0013"
+    locator: "§7.1 Table 3 row 2"
+    diagnostic: "1"
+    hex: "01"
+    decoded: "the unsigned integer 1"
+    expect: valid
+    notes: "No note column."
+  - id: "draft-mcnally-deterministic-cbor#V-0014"
+    locator: "§7.1 Table 3 row 3"
+    diagnostic: "23"
+    hex: "17"
+    decoded: "the unsigned integer 23 -- the largest value carried in the initial byte's additional information"
+    expect: valid
+    notes: "No note column. Upper edge of the one-byte head."
+  - id: "draft-mcnally-deterministic-cbor#V-0015"
+    locator: "§7.1 Table 3 row 4"
+    diagnostic: "24"
+    hex: "1818"
+    decoded: "the unsigned integer 24, one-byte argument"
+    expect: valid
+    notes: "No note column. Lower edge of the one-byte argument; the companion to V-0014."
+  - id: "draft-mcnally-deterministic-cbor#V-0016"
+    locator: "§7.1 Table 3 row 5"
+    diagnostic: "255"
+    hex: "18ff"
+    decoded: "the unsigned integer 255, one-byte argument"
+    expect: valid
+    notes: "Value column reads '255 (2^8 - 1)'. Checked: 2^8-1 = 255."
+  - id: "draft-mcnally-deterministic-cbor#V-0017"
+    locator: "§7.1 Table 3 row 6"
+    diagnostic: "65535"
+    hex: "19ffff"
+    decoded: "the unsigned integer 65535, two-byte argument"
+    expect: valid
+    notes: "Value column reads '65535 (2^16 - 1)'. Checked: 2^16-1 = 65535."
+  - id: "draft-mcnally-deterministic-cbor#V-0018"
+    locator: "§7.1 Table 3 row 7"
+    diagnostic: "65536"
+    hex: "1a00010000"
+    decoded: "the unsigned integer 65536, four-byte argument"
+    expect: valid
+    notes: "Value column reads '65536 (2^16)'. Checked. First value that needs a four-byte argument, so it pins the preferred-serialization boundary (§2.2)."
+  - id: "draft-mcnally-deterministic-cbor#V-0019"
+    locator: "§7.1 Table 3 row 8"
+    diagnostic: "4294967295"
+    hex: "1affffffff"
+    decoded: "the unsigned integer 4294967295, four-byte argument"
+    expect: valid
+    notes: "Value column reads '4294967295 (2^32 - 1)'. Checked."
+  - id: "draft-mcnally-deterministic-cbor#V-0020"
+    locator: "§7.1 Table 3 row 9"
+    diagnostic: "4294967296"
+    hex: "1b0000000100000000"
+    decoded: "the unsigned integer 4294967296, eight-byte argument"
+    expect: valid
+    notes: "Value column reads '4294967296 (2^32)'. Checked. First value that needs an eight-byte argument."
+  - id: "draft-mcnally-deterministic-cbor#V-0021"
+    locator: "§7.1 Table 3 row 10"
+    diagnostic: "18446744073709551615"
+    hex: "1bffffffffffffffff"
+    decoded: "the unsigned integer 18446744073709551615"
+    expect: valid
+    notes: "Value column reads '18446744073709551615 (2^64 - 1)'. Checked. The upper bound of DCBOR_INT = [-2^63, 2^64-1] (§2.5 rule 1)."
+  - id: "draft-mcnally-deterministic-cbor#V-0022"
+    locator: "§7.1 Table 3 row 11"
+    diagnostic: "-1"
+    hex: "20"
+    decoded: "the negative integer -1"
+    expect: valid
+    notes: "No note column."
+  - id: "draft-mcnally-deterministic-cbor#V-0023"
+    locator: "§7.1 Table 3 row 12"
+    diagnostic: "-2"
+    hex: "21"
+    decoded: "the negative integer -2"
+    expect: valid
+    notes: "No note column."
+  - id: "draft-mcnally-deterministic-cbor#V-0024"
+    locator: "§7.1 Table 3 row 13"
+    diagnostic: "-127"
+    hex: "387e"
+    decoded: "the negative integer -127, one-byte argument 0x7e"
+    expect: valid
+    notes: "SOURCE INCONSISTENCY (reported, not repaired): the value column reads '-127 (-2^8 - 1)', but -2^8-1 = -257, not -127. The decimal and the hex agree with each other (387e decodes to -(0x7e+1) = -127); only the parenthetical is wrong. -127 is -(2^7 - 1)."
+  - id: "draft-mcnally-deterministic-cbor#V-0025"
+    locator: "§7.1 Table 3 row 14"
+    diagnostic: "-128"
+    hex: "387f"
+    decoded: "the negative integer -128, one-byte argument 0x7f"
+    expect: valid
+    notes: "Value column reads '-128 (-2^7)'. Checked: -2^7 = -128."
+  - id: "draft-mcnally-deterministic-cbor#V-0026"
+    locator: "§7.1 Table 3 row 15"
+    diagnostic: "-32768"
+    hex: "397fff"
+    decoded: "the negative integer -32768, two-byte argument 0x7fff"
+    expect: valid
+    notes: "SOURCE INCONSISTENCY (reported, not repaired): the value column reads '-32768 (-2^16)', but -2^16 = -65536, not -32768. The decimal and the hex agree (397fff decodes to -(0x7fff+1) = -32768); the parenthetical should be -2^15."
+  - id: "draft-mcnally-deterministic-cbor#V-0027"
+    locator: "§7.1 Table 3 row 16"
+    diagnostic: "-2147483648"
+    hex: "3a7fffffff"
+    decoded: "the negative integer -2147483648, four-byte argument"
+    expect: valid
+    notes: "Value column reads '-2147483648 (-2^31)'. Checked."
+  - id: "draft-mcnally-deterministic-cbor#V-0028"
+    locator: "§7.1 Table 3 row 17"
+    diagnostic: "-9223372036854775808"
+    hex: "3b7fffffffffffffff"
+    decoded: "the negative integer -9223372036854775808, eight-byte argument"
+    expect: valid
+    notes: "Value column reads '-9223372036854775808 (-2^63)'. Checked. The lower bound of DCBOR_INT (§2.5 rule 1). One step further down is V-0055, which the source rejects."
+  - id: "draft-mcnally-deterministic-cbor#V-0029"
+    locator: "§7.1 Table 3 row 18"
+    diagnostic: "1.5"
+    hex: "f93e00"
+    decoded: "the half-precision float 1.5"
+    expect: valid
+    notes: "No note column. A non-integral float, so Numeric Reduction leaves it alone. Its double-precision spelling is rejected as V-0054."
+  - id: "draft-mcnally-deterministic-cbor#V-0030"
+    locator: "§7.1 Table 3 row 19"
+    diagnostic: "2345678.25"
+    hex: "fa4a0f2b39"
+    decoded: "the single-precision float 2345678.25"
+    expect: valid
+    notes: "No note column. Non-zero fractional part, exactly representable as a single; preferred serialization is therefore the single, not the double."
+  - id: "draft-mcnally-deterministic-cbor#V-0031"
+    locator: "§7.1 Table 3 row 20"
+    diagnostic: "1.2"
+    hex: "fb3ff3333333333333"
+    decoded: "the double-precision float 1.2"
+    expect: valid
+    notes: "No note column. Not exactly representable in half or single, so the double is the preferred serialization."
+  - id: "draft-mcnally-deterministic-cbor#V-0032"
+    locator: "§7.1 Table 3 row 21"
+    diagnostic: "42.0"
+    hex: "182a"
+    decoded: "the unsigned integer 42 -- the float 42.0 reduced"
+    expect: valid
+    notes: "Source note column: 'Reduced.'"
+  - id: "draft-mcnally-deterministic-cbor#V-0033"
+    locator: "§7.1 Table 3 row 22"
+    diagnostic: "2345678.0"
+    hex: "1a0023cace"
+    decoded: "the unsigned integer 2345678 -- the float reduced"
+    expect: valid
+    notes: "Source note column: 'Reduced.' Pairs with V-0030: the same magnitude with and without a fractional part."
+  - id: "draft-mcnally-deterministic-cbor#V-0034"
+    locator: "§7.1 Table 3 row 23"
+    diagnostic: "-2345678.0"
+    hex: "3a0023cacd"
+    decoded: "the negative integer -2345678 -- the float reduced"
+    expect: valid
+    notes: "Source note column: 'Reduced.' Argument is 0x0023cacd = 2345677, one less than the magnitude, as major type 1 requires."
+  - id: "draft-mcnally-deterministic-cbor#V-0035"
+    locator: "§7.1 Table 3 row 24"
+    diagnostic: "-0.0"
+    hex: "00"
+    decoded: "the unsigned integer 0 -- negative zero reduced, sign discarded"
+    expect: valid
+    notes: "Source note column: 'Reduced.' Repeats V-0005."
+  - id: "draft-mcnally-deterministic-cbor#V-0036"
+    locator: "§7.1 Table 3 row 25"
+    diagnostic: "5.960464477539063e-08"
+    hex: "f90001"
+    decoded: "the smallest positive half-precision subnormal"
+    expect: valid
+    notes: "Source note column: 'Smallest half-precision subnormal.' Non-integral, so no reduction."
+  - id: "draft-mcnally-deterministic-cbor#V-0037"
+    locator: "§7.1 Table 3 row 26"
+    diagnostic: "1.401298464324817e-45"
+    hex: "fa00000001"
+    decoded: "the smallest positive single-precision subnormal"
+    expect: valid
+    notes: "Source note column: 'Smallest single subnormal.'"
+  - id: "draft-mcnally-deterministic-cbor#V-0038"
+    locator: "§7.1 Table 3 row 27"
+    diagnostic: "5e-324"
+    hex: "fb0000000000000001"
+    decoded: "the smallest positive double-precision subnormal"
+    expect: valid
+    notes: "Source note column: 'Smallest double subnormal.'"
+  - id: "draft-mcnally-deterministic-cbor#V-0039"
+    locator: "§7.1 Table 3 row 28"
+    diagnostic: "2.2250738585072014e-308"
+    hex: "fb0010000000000000"
+    decoded: "the smallest positive double-precision normal"
+    expect: valid
+    notes: "Source note column: 'Smallest double normal.'"
+  - id: "draft-mcnally-deterministic-cbor#V-0040"
+    locator: "§7.1 Table 3 row 29"
+    diagnostic: "6.103515625e-05"
+    hex: "f90400"
+    decoded: "the smallest positive half-precision normal"
+    expect: valid
+    notes: "Source note column: 'Smallest half-precision normal.'"
+  - id: "draft-mcnally-deterministic-cbor#V-0041"
+    locator: "§7.1 Table 3 row 30"
+    diagnostic: "65504.0"
+    hex: "19ffe0"
+    decoded: "the unsigned integer 65504 -- the float reduced; the argument happens to be two bytes"
+    expect: valid
+    notes: "Source note column: 'Reduced.  Largest possible half-precision.' The integer encoding (19ffe0) is shorter than the half-precision float (f97bff) it came from."
+  - id: "draft-mcnally-deterministic-cbor#V-0042"
+    locator: "§7.1 Table 3 row 31"
+    diagnostic: "33554430.0"
+    hex: "1a01fffffe"
+    decoded: "the unsigned integer 33554430 -- the float reduced"
+    expect: valid
+    notes: "Source note column: 'Reduced.  Exponent 24 to test single exponent boundary.'"
+  - id: "draft-mcnally-deterministic-cbor#V-0043"
+    locator: "§7.1 Table 3 row 32"
+    diagnostic: "-9223372036854774784.0"
+    hex: "3b7ffffffffffffbff"
+    decoded: "the negative integer -9223372036854774784 -- the float reduced"
+    expect: valid
+    notes: "Source note column: 'Reduced.  Most negative double that converts to int64.' Checked: the double is exactly -9223372036854774784, and 0x7ffffffffffffbff + 1 = 9223372036854774784."
+  - id: "draft-mcnally-deterministic-cbor#V-0044"
+    locator: "§7.1 Table 3 row 33"
+    diagnostic: "18446744073709550000.0"
+    hex: "1bfffffffffffff800"
+    decoded: "the unsigned integer 18446744073709549568 -- the float reduced"
+    expect: valid
+    notes: "Source note column: 'Reduced.  Largest double that can convert to uint64, almost UINT64_MAX.' The value column prints the shortest round-trip decimal; the exact double is 18446744073709549568, which is what 0xfffffffffffff800 encodes. Not an inconsistency, but the decimal in the table is not the exact value."
+  - id: "draft-mcnally-deterministic-cbor#V-0045"
+    locator: "§7.1 Table 3 row 34"
+    diagnostic: "18446744073709552000.0"
+    hex: "fa5f800000"
+    decoded: "the single-precision float 2^64 = 18446744073709551616 -- NOT reduced"
+    expect: valid
+    notes: "Source note column: 'Just too large to convert to uint64, but converts to a single, just over UINT64_MAX.' The exact value is 2^64, one above the DCBOR_INT ceiling of 2^64-1, so §2.5 rule 1 leaves it as a float. The companion to V-0044 on the other side of the boundary. Shows that a float outside DCBOR_INT is never promoted to a bignum (§2.5 rule 1, '(Specifically, conversion to a CBOR bignum is never considered.)')."
+  - id: "draft-mcnally-deterministic-cbor#V-0046"
+    locator: "§7.1 Table 3 row 35"
+    diagnostic: "-18446742974197924000.0"
+    hex: "fadf7fffff"
+    decoded: "the single-precision float -18446742974197923840 -- NOT reduced"
+    expect: valid
+    notes: "Source note column: 'Large negative that converts to float, but too large for int64.' The exact value is -18446742974197923840; the value column prints the shortest round-trip decimal. Below the DCBOR_INT floor of -2^63, so it stays a float."
+  - id: "draft-mcnally-deterministic-cbor#V-0047"
+    locator: "§7.1 Table 3 row 36"
+    diagnostic: "3.4028234663852886e+38"
+    hex: "fa7f7fffff"
+    decoded: "the largest finite single-precision float"
+    expect: valid
+    notes: "Source note column: 'Largest possible single.'"
+  - id: "draft-mcnally-deterministic-cbor#V-0048"
+    locator: "§7.1 Table 3 row 37"
+    diagnostic: "3.402823466385289e+38"
+    hex: "fb47efffffe0000001"
+    decoded: "a double-precision float just above the largest single"
+    expect: valid
+    notes: "Source note column: 'Slightly larger than largest possible single.' The companion to V-0047: one ulp up forces the double, so this is the preferred-serialization boundary between fa and fb at the top of the single range."
+  - id: "draft-mcnally-deterministic-cbor#V-0049"
+    locator: "§7.1 Table 3 row 38"
+    diagnostic: "1.7976931348623157e+308"
+    hex: "fb7fefffffffffffff"
+    decoded: "the largest finite double-precision float"
+    expect: valid
+    notes: "Source note column: 'Largest double.'"
+  - id: "draft-mcnally-deterministic-cbor#V-0050"
+    locator: "§7.1 Table 3 row 39"
+    diagnostic: "Infinity (any size)"
+    hex: "f97c00"
+    decoded: "positive infinity, half-precision"
+    expect: valid
+    notes: "Source note column: 'Canonicalized.' The value column says 'any size', so every width of positive infinity encodes to these three bytes. The fa and fb spellings are rejected as V-0058 and V-0057."
+  - id: "draft-mcnally-deterministic-cbor#V-0051"
+    locator: "§7.1 Table 3 row 40"
+    diagnostic: "-Infinity (any size)"
+    hex: "f9fc00"
+    decoded: "negative infinity, half-precision"
+    expect: valid
+    notes: "Source note column: 'Canonicalized.' The fa and fb spellings are rejected as V-0060 and V-0059."
+  - id: "draft-mcnally-deterministic-cbor#V-0052"
+    locator: "§7.1 Table 3 row 41"
+    diagnostic: "NaN (any size, any payload)"
+    hex: "f97e00"
+    decoded: "the single canonical quiet NaN, half-precision"
+    expect: valid
+    notes: "Source note column: 'Canonicalized.' The value column's 'any size, any payload' is the whole of §2.5 rule 2 restated: sign, signaling bit and payload are all discarded. Repeats V-0008; see also V-0069."
+
+  # ==================================================================
+  # 7.2 Table 4 -- Invalid dCBOR Encodings (11 rows, in table order).
+  # The source's framing: "These are valid CBOR encodings that MUST be
+  # rejected as invalid by a dCBOR-compliant decoder." Every hex in
+  # this block is the source's own.
+  # ==================================================================
+  - id: "draft-mcnally-deterministic-cbor#V-0053"
+    locator: "§7.2 Table 4 row 1"
+    diagnostic: "12.0"
+    hex: "f94a00"
+    decoded: "the half-precision float 12.0"
+    expect: invalid
+    violates: "§2.5 rule 1 (Numeric Reduction) -- an integral floating point value numerically equal to a value in DCBOR_INT MUST be converted to that integer before encoding, so 12.0 must be encoded as 0c; §2.5 rule 3 makes a decoder reject any float not encoded by those rules."
+    notes: "Source reason column: 'Can be reduced to 12.' This is the archetype of the whole profile: a perfectly preferred-serialization CBOR float that dCBOR still forbids."
+  - id: "draft-mcnally-deterministic-cbor#V-0054"
+    locator: "§7.2 Table 4 row 2"
+    diagnostic: "1.5"
+    hex: "fb3ff8000000000000"
+    decoded: "the double-precision float 1.5"
+    expect: invalid
+    violates: "§2.2 rule 2 (Preferred Serialization) -- a decoder MUST reject encoded CBOR that is not in preferred serialization; the preferred encoding of 1.5 is the half-precision f93e00 (V-0029). §2.5 rule 3 applies as well."
+    notes: "Source reason column: 'Not preferred encoding.'"
+  - id: "draft-mcnally-deterministic-cbor#V-0055"
+    locator: "§7.2 Table 4 row 3"
+    diagnostic: "-9223372036854775809"
+    hex: "3b8000000000000000"
+    decoded: "the negative integer -(2^63 + 1)"
+    expect: invalid
+    violates: "§7.2 Table 4, reason column '65-bit negative integer value', read against the dCBOR numeric range DCBOR_INT = [-2^63, 2^64-1] declared in §2.5 rule 1. Checked: -2^63-1 = -9223372036854775809, one step below the floor."
+    notes: "GAP (reported, not repaired): §2 never states a narrowing rule that forbids a 65-bit negative *integer*. §2.5 rule 1 defines DCBOR_INT only as the range inside which floats are reduced; rule 3 constrains floats, not major type 1. These bytes are well-formed, preferred-serialization CBOR for a value RFC 8949 §3.1 permits, so §2.2 does not reach them either. The only normative statement that rejects them is §7.2's own 'MUST be rejected as invalid by a dCBOR-compliant decoder', in an appendix the document calls test vectors. Value column reads '-9223372036854775809 (-2^63 - 1)'; checked, the parenthetical is correct here."
+  - id: "draft-mcnally-deterministic-cbor#V-0056"
+    locator: "§7.2 Table 4 row 4"
+    diagnostic: "-18446744073709551616"
+    hex: "3bffffffffffffffff"
+    decoded: "the negative integer -2^64, the largest-magnitude 65-bit negative CBOR permits"
+    expect: invalid
+    violates: "Same as V-0055: §7.2 Table 4, '65-bit negative integer value', against DCBOR_INT = [-2^63, 2^64-1] (§2.5 rule 1)."
+    notes: "Value column reads '-18446744073709551616 (-2^64)'; checked. The same gap as V-0055 applies. Note the hex is the mirror of V-0021 (1bffffffffffffffff, valid) under a change of major type: the same eight-byte argument is legal as an unsigned and illegal as a negative."
+  - id: "draft-mcnally-deterministic-cbor#V-0057"
+    locator: "§7.2 Table 4 row 5"
+    diagnostic: "Infinity"
+    hex: "fb7ff0000000000000"
+    decoded: "positive infinity, double-precision"
+    expect: invalid
+    violates: "§2.2 rule 2 (Preferred Serialization) -- the preferred encoding of positive infinity is the half-precision f97c00 (V-0050). §2.5 rule 3 applies as well."
+    notes: "Source reason column: 'Not preferred encoding.'"
+  - id: "draft-mcnally-deterministic-cbor#V-0058"
+    locator: "§7.2 Table 4 row 6"
+    diagnostic: "Infinity"
+    hex: "fa7f800000"
+    decoded: "positive infinity, single-precision"
+    expect: invalid
+    violates: "§2.2 rule 2 (Preferred Serialization) -- the preferred encoding of positive infinity is the half-precision f97c00 (V-0050). §2.5 rule 3 applies as well."
+    notes: "Source reason column: 'Not preferred encoding.'"
+  - id: "draft-mcnally-deterministic-cbor#V-0059"
+    locator: "§7.2 Table 4 row 7"
+    diagnostic: "-Infinity"
+    hex: "fbfff0000000000000"
+    decoded: "negative infinity, double-precision"
+    expect: invalid
+    violates: "§2.2 rule 2 (Preferred Serialization) -- the preferred encoding of negative infinity is the half-precision f9fc00 (V-0051). §2.5 rule 3 applies as well."
+    notes: "Source reason column: 'Not preferred encoding.'"
+  - id: "draft-mcnally-deterministic-cbor#V-0060"
+    locator: "§7.2 Table 4 row 8"
+    diagnostic: "-Infinity"
+    hex: "faff800000"
+    decoded: "negative infinity, single-precision"
+    expect: invalid
+    violates: "§2.2 rule 2 (Preferred Serialization) -- the preferred encoding of negative infinity is the half-precision f9fc00 (V-0051). §2.5 rule 3 applies as well."
+    notes: "Source reason column: 'Not preferred encoding.'"
+  - id: "draft-mcnally-deterministic-cbor#V-0061"
+    locator: "§7.2 Table 4 row 9"
+    diagnostic: "NaN"
+    hex: "fb7ff9100000000001"
+    decoded: "a double-precision quiet NaN carrying a non-zero payload"
+    expect: invalid
+    violates: "§2.5 rule 2 -- all NaN values MUST be reduced to the quiet NaN having the half-width representation 0xf97e00; §2.5 rule 3 makes a decoder reject any other NaN encoding."
+    notes: "Source reason column: 'Not canonical NaN.' A payload-bearing NaN -- the exfiltration case §8.3 warns about."
+  - id: "draft-mcnally-deterministic-cbor#V-0062"
+    locator: "§7.2 Table 4 row 10"
+    diagnostic: "NaN"
+    hex: "faffc00001"
+    decoded: "a single-precision quiet NaN, sign bit set, non-zero payload"
+    expect: invalid
+    violates: "§2.5 rule 2 -- all NaN values MUST be reduced to 0xf97e00; §2.5 rule 3 makes a decoder reject any other NaN encoding."
+    notes: "Source reason column: 'Not canonical NaN.' Exercises the sign bit as well as the payload."
+  - id: "draft-mcnally-deterministic-cbor#V-0063"
+    locator: "§7.2 Table 4 row 11"
+    diagnostic: "NaN"
+    hex: "f97e01"
+    decoded: "a half-precision quiet NaN with payload 1"
+    expect: invalid
+    violates: "§2.5 rule 2 -- all NaN values MUST be reduced to 0xf97e00; §2.5 rule 3 makes a decoder reject any other NaN encoding."
+    notes: "Source reason column: 'Not canonical NaN.' The hardest of the three to catch: already half-precision, already quiet, already positive, and one bit away from the canonical form (V-0052). A decoder that only checks the float width passes this."
+
+  # ==================================================================
+  # 8.1 Why Numeric Reduction? -- the Tag 1 example
+  # ==================================================================
+  - id: "draft-mcnally-deterministic-cbor#V-0064"
+    locator: "§8.1"
+    diagnostic: "1(<an integral number of seconds since the epoch>)"
+    decoded: "CBOR tag 1 (epoch-based date/time) whose content is an integer"
+    expect: valid
+    notes: "NO BYTES AND NO VALUE IN THE SOURCE. §8.1's prose example: 'An inhabitant of Tag 1, as long as it represents an integral number of seconds since the epoch, could therefore be encoded as an integer _or_ the equivalent floating point number. dCBOR's Numeric Reduction rule ensures that such values are always encoded as integers'. This vector is the integer arm. The section quotes RFC 8949 §3.4.2, which permits major types 0, 1 and 7 (additional information 25, 26, 27) as tag 1 content; dCBOR narrows that to the integer forms for integral seconds. `hex` is deliberately absent: the source names no concrete timestamp, so our suite must pick one."
+  - id: "draft-mcnally-deterministic-cbor#V-0065"
+    locator: "§8.1"
+    diagnostic: "1(<the equivalent floating point number>)"
+    decoded: "CBOR tag 1 whose content is a float numerically equal to an integral number of seconds"
+    expect: invalid
+    violates: "§2.5 rule 1 (Numeric Reduction) -- the tag content is an integral floating point value inside DCBOR_INT, so it MUST be converted to the numerically equal integer before encoding; §2.5 rule 3 makes a decoder reject it. §2's recursion clause ('A CBOR data item is considered to conform to dCBOR only if every CBOR data item nested within it, recursively (including ... the contents of tagged data items), also conforms') is what carries the rule inside the tag."
+    notes: "NO BYTES AND NO VALUE IN THE SOURCE. The float arm of the same §8.1 example -- the variability the rule exists to remove. `hex` is deliberately absent for the same reason as V-0064. Note the boundary this example sits on: §2.5's last paragraph says tagged data items are not themselves part of the dCBOR numeric model, but their *contents* are, because of the recursion clause."
+
+  # ==================================================================
+  # 8.3 Why only a single NaN?
+  # ==================================================================
+  - id: "draft-mcnally-deterministic-cbor#V-0066"
+    locator: "§8.3"
+    diagnostic: "1.0 / 0.0"
+    decoded: "the source presents this computation as producing NaN"
+    expect: valid
+    notes: "SOURCE INCONSISTENCY (reported, not repaired). Source line 999-1002: 'How to represent the result of a computation like 1.0 / 0.0 is another perennial question in data modeling.  The [IEEE754] floating point standard answers this question with the concept of \"Not a Number\" (NaN)'. Under IEEE 754, 1.0 / 0.0 is +Infinity, not NaN; the NaN-producing division is 0.0 / 0.0. The illustration is wrong, the rule it illustrates is not. `hex` is absent because the two readings encode differently and neither is printed: as the source means it the value is NaN (f97e00, V-0069); as written it is +Infinity (f97c00, V-0050). Both are valid dCBOR, so nothing normative turns on this."
+  - id: "draft-mcnally-deterministic-cbor#V-0067"
+    locator: "§8.3"
+    diagnostic: "[1, NaN, 3]"
+    hex: "8301f97e0003"
+    decoded: "a three-element array: 1, the canonical quiet NaN, 3"
+    expect: valid
+    notes: "OUR COMPUTATION: the source prints the array in diagnostic notation only, no bytes. Source line 1027-1029: 'the array [1, NaN, 3] could be encoded in multiple ways depending on the NaN representation used'. This is the one dCBOR form of it, with the NaN canonicalized per §2.5 rule 2. The source's point is the existence of the alternatives, one of which is V-0068."
+  - id: "draft-mcnally-deterministic-cbor#V-0068"
+    locator: "§8.3"
+    diagnostic: "[1, NaN, 3]"
+    hex: "8301f97e0103"
+    decoded: "the same array with a half-precision NaN carrying payload 1 in place of the canonical NaN"
+    expect: invalid
+    violates: "§2.5 rule 2 -- all NaN values MUST be reduced to 0xf97e00; §2.5 rule 3 makes a decoder reject any other NaN encoding. §2's recursion clause carries the rule into the array element."
+    notes: "OUR COMPUTATION, and the array framing is ours: the source prints no encoding of this array. It names the class ('could be encoded in multiple ways depending on the NaN representation used') and warns that 'an attacker could use different NaN representations to exfiltrate data or hide malicious payloads, knowing that any comparison of NaN values will fail'. The non-canonical NaN used here, f97e01, is the source's own (V-0063); only its placement in the array is ours. Many other members of this class exist (fb7ff9100000000001, faffc00001, and every other NaN bit pattern)."
+  - id: "draft-mcnally-deterministic-cbor#V-0069"
+    locator: "§8.3"
+    diagnostic: "NaN"
+    hex: "f97e00"
+    decoded: "the single canonical quiet NaN, half-precision"
+    expect: valid
+    notes: "Source line 1035-1038, restating §2.5 rule 2 as the conclusion of the rationale: 'dCBOR chooses to simplify the situation by requiring that all NaN values be encoded as the single quiet NaN value having the half-width CBOR representation 0xf97e00'. The source prints the bytes. Third of three places; see V-0008 (§2.5 rule 2) and V-0052 (Table 3)."
+
+  # ==================================================================
+  # 8.4 Why not other simple values?
+  # ==================================================================
+  - id: "draft-mcnally-deterministic-cbor#V-0070"
+    locator: "§8.4"
+    diagnostic: "undefined"
+    hex: "f7"
+    decoded: "the simple value undefined (major type 7, code point 23)"
+    expect: invalid
+    violates: "§2.6 rule 1 and rule 2 -- dCBOR encoders MUST NOT encode, and decoders MUST reject, major type 7 values other than false, true, null, and the floating point values."
+    notes: "OUR COMPUTATION of the bytes: §8.4 gives the code point, not the encoding -- '[RFC8949] Major Type 7 defines a space of 256 code points for \"simple values\", and §3.3 defines four simple values and assigns them code points in the Major Type 7 space: false (20), true (21), null (22), and undefined (23)'. f7 is major type 7 with additional information 23. The other three code points are V-0009 to V-0011, whose bytes the source does print at §2.6. §8.2 ('Why Not undefined?') is the rationale: dCBOR picks null as the sole placeholder for an absent value. The source makes no example of the unassigned and reserved code points it also mentions, so none is recorded here; our own suite should cover e0 through f3 and f8xx."
+
+  # ==================================================================
+  # 8.5 Limiting Principles -- what dCBOR deliberately still permits
+  # ==================================================================
+  - id: "draft-mcnally-deterministic-cbor#V-0071"
+    locator: "§8.5"
+    diagnostic: "2(<byte string>) / 3(<byte string>)"
+    decoded: "a bignum: CBOR tag 2 (unsigned) or tag 3 (negative) wrapping a byte string"
+    expect: valid
+    notes: "NO BYTES AND NO VALUE IN THE SOURCE. §8.5: 'dCBOR applications can freely use Tag 2 or Tag 3 to encode bignums, which contain byte strings, and on which dCBOR places no restrictions beyond those that apply to all byte strings (definite length only).' A permission, recorded as a vector because it is the escape hatch for the range DCBOR_INT excludes (V-0055, V-0056) -- but note that it is an *application's* choice: §2.5 rule 1 forbids an encoder from reaching a bignum by reduction ('Specifically, conversion to a CBOR bignum is never considered'). `hex` absent: the source names no bignum. Our suite must also check that the enclosed byte string is definite-length (§2.1)."
+  - id: "draft-mcnally-deterministic-cbor#V-0072"
+    locator: "§8.5"
+    diagnostic: "80(<byte string>) / 81(<byte string>) / 82(<byte string>)"
+    decoded: "an array of fixed-length IEEE 754 floats in big-endian order, carried as a byte string under tag 80, 81 or 82"
+    expect: valid
+    notes: "NO BYTES AND NO VALUE IN THE SOURCE. §8.5: 'the rare applications that need to convey nontrivial NaN values can use Tag 80, 81, or 82 as defined in the IANA CBOR Tags Registery [IANACBORTAGS].  These tags use byte strings to encode arrays of fixed-length IEEE 754 floating point values in big-endian byte order.' The escape hatch for the NaN payloads §2.5 rule 2 destroys (V-0061 to V-0063): inside a byte string the bit patterns are opaque to dCBOR. `hex` absent: the source names no instance, and the tag definitions are in the IANA registry, not in this source."

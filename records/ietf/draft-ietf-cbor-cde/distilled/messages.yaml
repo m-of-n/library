@@ -1,0 +1,1318 @@
+record: draft-ietf-cbor-cde
+reviewed_by: ""
+# Every structure draft-ietf-cbor-cde-13 defines or constrains.
+#
+# CDE is an encoding profile, not a protocol: the structures here are the
+# encoded forms themselves — the data item head, each major type's encoded
+# layout as this profile narrows it, the preferred-serialization forms, the
+# map-key ordering and the comparison it specifies, float shortening, the tag
+# and application-extension structures CDE admits, and the two CDDL control
+# operators it registers.
+#
+# `constrained_by` is deliberately absent throughout. The requirement ids
+# (draft-ietf-cbor-cde#R-NNNN) are assigned by the requirements artifact,
+# written in parallel with this file; no id is derivable from the source's own
+# section numbering, so none is asserted here rather than guessed. Each
+# structure and field instead carries the exact source locator (section, item,
+# bullet, table row) of the text that constrains it, so the cross-check pass
+# can wire the links mechanically.
+#
+# Byte values: where the source itself exhibits a byte (Tables 4, 5, 6, 7,
+# Appendix E, Figure 1) it is cited. Where the initial-byte arithmetic
+# (major_type << 5 | ai) or an IEEE 754 field width is inherited from
+# Section 3 of RFC 8949 or from [IEEE754] rather than restated by CDE, the
+# note says so. Bytes computed here and not shown by the source are marked
+# "derived".
+messages:
+  - name: data-item-head
+    locator: "§C.1 (defines 'ai'); §2, §3.1 (shortest-head); §3 of RFC 8949 (inherited)"
+    encoding: CBOR
+    fields:
+      - name: major_type
+        type: uint3
+        required: true
+        layout: |
+          Bits 7-5 of the initial byte — the 3-bit field that the 5-bit ai
+          field "follows" (§C.1). Values 0-7 select, in order: unsigned
+          integer, negative integer, byte string, text string, array, map,
+          tag, simple value / floating point (§C.1.1 item 1 names major
+          type 7 as "floating-point and simple values"). CDE changes no
+          major type assignment; it only removes encoding choices within
+          each.
+      - name: additional_information
+        type: uint5
+        required: true
+        layout: |
+          Bits 4-0 of the initial byte; the source abbreviates this field
+          "ai" (§C.1). CDE constrains which ai value may be used for a
+          given argument (§C.1.1 item 1, the shortest-head constraint):
+            ai = 0..23       the argument IS ai; no bytes follow
+            ai = 24  (0x18)  one argument byte follows
+            ai = 25  (0x19)  two argument bytes follow
+            ai = 26  (0x1a)  four argument bytes follow
+            ai = 27  (0x1b)  eight argument bytes follow
+            ai = 31  (0x1f)  indefinite length — MUST NOT be used under
+                             definite-length-only (§3.2, §C.2)
+          For major type 7, ai 25/26/27 instead select binary16, binary32
+          and binary64 (§C.1.1 item 2), and ai 24 (initial byte 0xf8)
+          carries a one-byte simple value.
+      - name: argument
+        type: uint64
+        required: false
+        layout: |
+          0, 1, 2, 4 or 8 bytes immediately following the initial byte,
+          big-endian, unsigned; the count is fixed by ai alone. Present
+          only when ai >= 24. Its meaning depends on the major type: the
+          value itself (mt 0/1), a length in bytes (mt 2/3), an element
+          count (mt 4), a key/value pair count (mt 5), a tag number
+          (mt 6), a simple value or the IEEE 754 interchange bits (mt 7).
+    layout: |
+      initial byte = (major_type << 5) | ai
+      [argument: 0, 1, 2, 4 or 8 bytes, big-endian, per ai]
+      [content: for mt 2/3 exactly `argument` raw bytes; for mt 4
+       `argument` data items; for mt 5 2 * `argument` data items in
+       key, value, key, value order; for mt 6 exactly one data item]
+      Head = initial byte + argument. Under CDE every head in a data item
+      — including string lengths, array element counts and map pair
+      counts, not just numeric values — carries the shortest ai that
+      represents its argument (§C.1.1 item 1). Failing example `98020405`
+      (Table 6): an array of two elements that used ai = 0x18 with a
+      one-byte count instead of ai = 2, i.e. `820405` (derived).
+    notes: |
+      §C.1.1 writes ai values in hexadecimal (ai = 0x18, 0x19, 0x1a) where
+      RFC 8949's own tables are decimal (24, 25, 26); a reader cross-reading
+      the two must translate. The initial-byte composition
+      (major_type << 5 | ai) and the ai 28-30 "not well-formed" reservation
+      are inherited from Section 3 of RFC 8949 and are never restated by
+      this document. CDE adds nothing to the head beyond (a) shortest ai
+      and (b) the exclusion of ai = 31.
+  - name: shortest-head-argument
+    locator: "§C.1.1 item 1 (bullets 1-4); Table 4 (§D.1); Table 7 (§E)"
+    encoding: CBOR
+    fields:
+      - name: ai_0_to_23_immediate
+        type: uint5
+        required: false
+        layout: |
+          Arguments 0..23 MUST be encoded in the same byte as the major
+          type (§C.1.1 item 1 bullet 1): ai = argument, no bytes follow.
+          The bullet states it in value terms for the integer major types:
+          "0 to 23 and -1 to -24 MUST be encoded in the same byte as the
+          major type". Evidence: `00` (0), `17` (23), `20` (-1), `37`
+          (-24) in Table 4.
+      - name: ai_0x18_uint8
+        type: uint8
+        required: false
+        layout: |
+          One additional byte (§C.1.1 item 1 bullet 2): arguments 24..255,
+          i.e. integers 24 to 255 and -25 to -256. Evidence: `1818` (24),
+          `18ff` (255), `3818` (-25), `38ff` (-256) in Table 4.
+      - name: ai_0x19_uint16
+        type: uint16
+        required: false
+        layout: |
+          Two additional bytes, big-endian (§C.1.1 item 1 bullet 3):
+          arguments 256..65535, i.e. integers 256 to 65535 and -257 to
+          -65536. Evidence: `190100` (256), `19ffff` (65535), `390100`
+          (-257), `39ffff` (-65536) in Table 4.
+      - name: ai_0x1a_uint32
+        type: uint32
+        required: false
+        layout: |
+          Four additional bytes, big-endian (§C.1.1 item 1 bullet 4):
+          arguments 65536..4294967295, i.e. integers 65536 to 4294967295
+          and -65537 to -4294967296. Evidence: `1a00010000`,
+          `1affffffff`, `3a00010000`, `3affffffff` in Table 4.
+      - name: ai_0x1b_uint64
+        type: uint64
+        required: false
+        layout: |
+          Eight additional bytes, big-endian: arguments
+          4294967296..18446744073709551615, i.e. integers 4294967296 to
+          18446744073709551615 and -4294967297 to -18446744073709551616.
+          Evidence: `1b0000000100000000`, `1bffffffffffffffff`,
+          `3b0000000100000000`, `3bffffffffffffffff` in Table 4; ai = 0x1b
+          is named for binary64 in §C.1.1 item 2.
+    layout: |
+      One of five forms, selected solely by the magnitude of the argument:
+        (mt<<5 | n)                        n = 0..23
+        (mt<<5 | 0x18) nn                  24..255
+        (mt<<5 | 0x19) nn nn               256..65535
+        (mt<<5 | 0x1a) nn nn nn nn         65536..4294967295
+        (mt<<5 | 0x1b) nn nn nn nn nn nn nn nn   4294967296..2^64-1
+      All argument bytes are big-endian. No leading-zero argument byte may
+      be spent to reach a longer form: `1900ff` for 255 is listed as not
+      CDE (Table 6), as are `1801`, `190001`, `1a00000001` and
+      `1b0000000000000001` for the integer 1 (Table 7).
+    notes: |
+      Source gap: the bullet list in §C.1.1 item 1 enumerates ai only up to
+      0x1a (four additional bytes) and never states the 0x1b case for
+      non-float arguments. The 8-byte form is established only by Table 4
+      and by the float rule in item 2, so an implementer working from the
+      checklist alone has no written rule for arguments above 4294967295.
+      The checklist also frames the bullets as integer VALUE ranges while
+      the rule it restates is about the ARGUMENT: for major type 1 the
+      argument is -1 minus the value, and for major types 2-6 it is a
+      length, count or tag number whose range is the plain unsigned one.
+  - name: major-type-0-unsigned-integer
+    locator: "§3.1.1; §C.1.1 items 1 and 3; Table 4 (§D.1); Table 7 (§E)"
+    encoding: CBOR
+    fields:
+      - name: major_type
+        type: uint3
+        required: true
+        layout: "Bits 7-5 of the initial byte = 0b000."
+      - name: ai
+        type: uint5
+        required: true
+        layout: |
+          Bits 4-0. Shortest form per shortest-head-argument: initial byte
+          0x00-0x17 for values 0..23, else 0x18, 0x19, 0x1a or 0x1b.
+      - name: argument
+        type: uint64
+        required: false
+        layout: |
+          0/1/2/4/8 big-endian bytes; the value of the data item IS the
+          argument. Full range 0..18446744073709551615 (2^64 - 1).
+    layout: |
+      00..17                                0..23
+      18 nn                                 24..255
+      19 nn nn                              256..65535
+      1a nn nn nn nn                        65536..4294967295
+      1b nn nn nn nn nn nn nn nn            4294967296..18446744073709551615
+      CDE mandate (§3.1.1): "Integers that can be represented by basic
+      major type 0 and 1 MUST be encoded using the (shortest-head)
+      deterministic encoding defined for them" — every integer in
+      0..2^64-1 is major type 0, never tag 2. Restated as §C.1.1 item 3
+      bullet 1: "Positive integers from 0 to 2^64 - 1 MUST be encoded as a
+      type 0 integer." Table 6 rejects `c243010000` (65536 as a bignum):
+      "Integer value too small for bignum".
+    notes: |
+      Two independent constraints bite here: shortest ai within major type
+      0 (so `1900ff` for 255 fails) and the choice of major type 0 over tag
+      2 across the whole basic range (so `c24101` for 1 fails, Table 7).
+      Note the scope difference between body and checklist: §C.1.1 item 3
+      is guarded by "If tags 2 and 3 are supported", while §3.1.1's mandate
+      in the normative body is unconditional.
+  - name: major-type-1-negative-integer
+    locator: "§3.1.1; §C.1.1 items 1 and 3; Table 4 (§D.1)"
+    encoding: CBOR
+    fields:
+      - name: major_type
+        type: uint3
+        required: true
+        layout: "Bits 7-5 of the initial byte = 0b001."
+      - name: ai
+        type: uint5
+        required: true
+        layout: |
+          Bits 4-0, shortest form; initial byte 0x20-0x37 for -1..-24,
+          else 0x38, 0x39, 0x3a or 0x3b.
+      - name: argument
+        type: uint64
+        required: false
+        layout: |
+          0/1/2/4/8 big-endian bytes holding n, where the value of the data
+          item is -1 - n. The shortest-head decision is made on n, not on
+          the negative value; §C.1.1 item 1 expresses the same boundaries
+          as "-1 to -24", "-25 to -256", "-257 to -65536", "-65537 to
+          -4294967296".
+    layout: |
+      20..37                                -1..-24
+      38 nn                                 -25..-256
+      39 nn nn                              -257..-65536
+      3a nn nn nn nn                        -65537..-4294967296
+      3b nn nn nn nn nn nn nn nn            -4294967297..-18446744073709551616
+      §C.1.1 item 3 bullet 2: "Negative integers from -(2^64) to -1 MUST be
+      encoded as a type 1 integer", i.e. never tag 3 within that range.
+    notes: |
+      Table 4's endpoints fix the boundary exactly: -18446744073709551616
+      (-(2^64)) is `3bffffffffffffffff`, and the next value down,
+      -18446744073709551617, is the smallest negative bignum
+      `c349010000000000000000`.
+  - name: major-type-2-byte-string
+    locator: "§3.2; §C.2; §C.1.1 item 1; Table 4, Table 6, §E"
+    encoding: CBOR
+    fields:
+      - name: major_type
+        type: uint3
+        required: true
+        layout: "Bits 7-5 of the initial byte = 0b010."
+      - name: ai
+        type: uint5
+        required: true
+        layout: |
+          Bits 4-0 = the length of the content in bytes, in shortest form:
+          initial byte 0x40-0x57 for lengths 0..23, then 0x58 (one length
+          byte), 0x59 (two), 0x5a (four), 0x5b (eight). ai = 31 (initial
+          byte 0x5f, indefinite length) MUST NOT be used under
+          definite-length-only. Evidence: `41` (1 byte), `42` (2), `43`
+          (3), `49` (9), `4a` (10) appear in Tables 4 and 6 and in §E.
+      - name: content
+        type: bstr
+        required: true
+        layout: |
+          Exactly `argument` raw bytes, uninterpreted. CDE places no
+          constraint on the bytes themselves — only on the head and on the
+          prohibition of chunking.
+    layout: |
+      40..57 <content>                      lengths 0..23
+      58 nn <content>                       24..255
+      59 nn nn <content>                    256..65535
+      5a nn nn nn nn <content>              65536..4294967295
+      5b nn*8 <content>                     above that
+      Definite length only: the indefinite form `5f <chunks> ff` is not
+      CDE. Table 6 rejects `5f4101420203ff` (EDN `(_ h'01', h'0203')`) for
+      "Indefinite length encoding".
+    notes: |
+      The byte string is also the content type of tags 2 and 3, where CDE
+      adds the no-leading-zeros rule; see tag-2-positive-bignum. §E notes
+      explicitly that preferred-serialization alone does NOT exclude an
+      indefinite-length byte string as tag 2 content
+      (`0xc25f41004101ff`) — it is definite-length-only that rules it out,
+      which is why both constituents are needed for a unique encoding.
+  - name: major-type-3-text-string
+    locator: "§3.2; §C.2; §C.3.1 item 3 and its note; §C.3.2 item 3; Table 6"
+    encoding: CBOR
+    fields:
+      - name: major_type
+        type: uint3
+        required: true
+        layout: "Bits 7-5 of the initial byte = 0b011."
+      - name: ai
+        type: uint5
+        required: true
+        layout: |
+          Bits 4-0 = the length of the content in BYTES (not characters),
+          shortest form: initial byte 0x60-0x77 for 0..23, then 0x78,
+          0x79, 0x7a, 0x7b. ai = 31 (0x7f) MUST NOT be used. Evidence:
+          `61` (1 byte) and `62` (2 bytes) in Table 6's map example.
+      - name: content
+        type: tstr
+        required: true
+        layout: |
+          Exactly `argument` bytes of UTF-8. CDE encoders MUST emit "only
+          valid UTF-8 in major type 3 text strings" (§C.3.1 item 3, part of
+          basic validity), and CDE-checking decoders MUST check that
+          validity (§C.3.2 item 3). No Unicode normalization is required:
+          "CDE does NOT include a requirement for Unicode normalization"
+          (§C.3.1 note).
+    layout: |
+      60..77 <utf8>                         lengths 0..23
+      78 nn <utf8>                          24..255
+      79 nn nn <utf8>                       256..65535
+      7a nn nn nn nn <utf8>                 65536..4294967295
+      7b nn*8 <utf8>                        above that
+      Text strings are the common map key, so their encoded bytes — head
+      byte(s) first, then UTF-8 — are what the lexicographic comparison
+      walks; see lexicographic-map-key-sorting.
+    notes: |
+      UTF-8 validity is the one data-content constraint CDE carries, and it
+      arrives through basic validity (Section 5.3.1 of RFC 8949) rather
+      than through any encoding constraint. Normalization sits at the ALDR
+      level instead: §B cites dCBOR's NFC requirement
+      ([I-D.mcnally-deterministic-cbor]) as an example of an
+      application-level exclusion, explicitly not part of CDE. §C.3.1's
+      note points at Appendix C of
+      [I-D.bormann-dispatch-modern-network-unicode] for the rationale.
+  - name: major-type-4-array
+    locator: "§3.2; §C.2; §C.1.1 item 1; Table 6"
+    encoding: CBOR
+    fields:
+      - name: major_type
+        type: uint3
+        required: true
+        layout: "Bits 7-5 of the initial byte = 0b100."
+      - name: ai
+        type: uint5
+        required: true
+        layout: |
+          Bits 4-0 = the number of elements, shortest form: initial byte
+          0x80-0x97 for 0..23 elements, then 0x98, 0x99, 0x9a, 0x9b.
+          ai = 31 (0x9f) MUST NOT be used. Evidence: Table 6 rejects
+          `98020405` ("Array length not in preferred serialization") for a
+          two-element array, which must be `820405` (derived).
+      - name: elements
+        type: "data item *"
+        required: true
+        layout: |
+          Exactly `argument` data items follow the head, each itself fully
+          CDE-encoded. Element ORDER is semantic in an array and CDE does
+          not touch it — only map entries are reordered.
+    layout: |
+      80..97 <element>*                     0..23 elements
+      98 nn <element>*                      24..255
+      99 nn nn <element>*                   256..65535
+      9a nn nn nn nn <element>*             65536..4294967295
+      9b nn*8 <element>*                    above that
+    notes: |
+      The §C.2 aside warns about exactly this head: some encoders switch to
+      indefinite length for arrays and maps "with 256 or more
+      elements/entries, to use the slightly smaller serialization size"
+      (derived: 1 head byte + 1 break byte against a 3-byte definite head),
+      and "such behavior needs to be turned off for CDE".
+  - name: major-type-5-map
+    locator: "§3.3; §2; §C.3.1 items 2-3; §C.3.2 items 2-3; Table 6"
+    encoding: CBOR
+    fields:
+      - name: major_type
+        type: uint3
+        required: true
+        layout: "Bits 7-5 of the initial byte = 0b101."
+      - name: ai
+        type: uint5
+        required: true
+        layout: |
+          Bits 4-0 = the number of key/value PAIRS (not of data items),
+          shortest form: initial byte 0xa0-0xb7 for 0..23 pairs, then
+          0xb8, 0xb9, 0xba, 0xbb. ai = 31 (0xbf) MUST NOT be used.
+          Evidence: `a2` for the two-entry map in Table 6.
+      - name: entries
+        type: "(key, value) *"
+        required: true
+        layout: |
+          2 * `argument` data items follow the head, in the order
+          key_0, value_0, key_1, value_1, ... key_(n-1), value_(n-1).
+          A key is an arbitrary CDE-encoded data item of any major type,
+          not only a text string.
+      - name: key
+        type: "data item"
+        required: true
+        layout: |
+          The first item of each pair. Its complete CDE encoding — initial
+          byte, argument bytes, content bytes, and the encodings of any
+          nested items — is the byte string the ordering constraint
+          compares (§3.3: "the (CDE-encoded) map key of a map entry").
+      - name: value
+        type: "data item"
+        required: true
+        layout: |
+          The second item of each pair, itself fully CDE-encoded. Values
+          take no part in the ordering.
+    layout: |
+      a0..b7 <key value>*                   0..23 pairs
+      b8 nn <key value>*                    24..255 pairs
+      b9 nn nn <key value>*                 256..65535 pairs
+      ba nn nn nn nn <key value>*           65536..4294967295 pairs
+      bb nn*8 <key value>*                  above that
+      Ordering invariant (§3.3): for every i in 1..n-1, the encoded byte
+      string of key_i MUST be bytewise lexicographically STRICTLY GREATER
+      than that of key_(i-1) — see lexicographic-map-key-sorting for the
+      comparison itself. The constraint is stated pairwise over
+      immediately adjacent entries, which given a total order makes the
+      whole map ascending; strictness is what also excludes duplicate
+      keys. It is "trivially satisfied by data items that do not contain
+      maps or only contain maps that have zero or one map entry" (§3.3).
+      Table 6 rejects `a2616200616101` (EDN `{"b":0,"a":1}`) for
+      "Incorrect map key ordering": key_0 = `6162` ("b"), key_1 = `6161`
+      ("a"), and `6161` is not greater than `6162`. The CDE form is
+      `a2616101616200` (derived).
+    notes: |
+      Three separate obligations land on a map: shortest-ai pair count,
+      definite length, and strict key ordering. A fourth — no duplicate
+      keys — is a VALIDITY requirement (Sections 5.3.1 and 5.6 of RFC
+      8949), not an encoding constraint, and CDE encoders MUST meet it
+      (§C.3.1 item 3) while CDE-checking decoders MUST reject it (§C.3.2
+      item 2, "including rejecting duplicate map keys"). The §3.3 aside
+      explains why this is cheap under CDE: entries with the same key have
+      the same deterministic key serialization and therefore sort
+      adjacent, so strict-increase checking catches them. The aside also
+      flags the one case strict-increase does NOT catch: Section 5.6.1 of
+      RFC 8949 treats -0.0 and 0.0 as equal keys, yet their encodings
+      `f90000` and `f98000` differ and sort apart, so a map containing
+      both passes lexicographic-map-sorting while being invalid CBOR;
+      "this needs to be checked with extra code for a full validity
+      checker".
+  - name: lexicographic-map-key-sorting
+    locator: "§3.3; §C.3.1 item 2; §C.3.2 item 2"
+    encoding: CBOR
+    fields:
+      - name: preceding_encoded_key
+        type: bstr
+        required: true
+        layout: |
+          The complete CDE encoding of the key of the map entry
+          "immediately preceding" the current one in the encoding of the
+          map (§3.3). Call it A, indexed A[0], A[1], ... Bytes, not
+          characters, and not the decoded value.
+      - name: current_encoded_key
+        type: bstr
+        required: true
+        layout: |
+          The complete CDE encoding of the current entry's key. Call it B.
+          B MUST compare strictly greater than A.
+      - name: compared_byte
+        type: uint8
+        required: true
+        layout: |
+          At each step j, the pair A[j] and B[j], each taken as "the
+          unsigned integer value of" that byte (§3.3), i.e. 0..255 —
+          never as a signed char, which is the classic C implementation
+          error here.
+    layout: |
+      Comparison procedure, verbatim in structure from §3.3 ("The bytewise
+      lexicographic comparison steps in parallel through the bytes of the
+      two encoded map keys, comparing the (unsigned integer values of the)
+      bytes. If the bytes differ, the difference determines the outcome of
+      the comparison. If the bytes are the same, the next pair of bytes
+      are examined. If there is no such next pair, the comparison and thus
+      CDE serialization fails entirely"):
+
+        j = 0
+        loop:
+          if j < len(A) and j < len(B):
+            a = A[j] as unsigned 8-bit (0..255)
+            b = B[j] as unsigned 8-bit (0..255)
+            if a != b:            B > A iff b > a   -> decided, done
+            j = j + 1             bytes equal, continue
+          else:
+            no next pair exists -> FAIL the whole CDE serialization
+
+      The failure branch is not an ordering outcome but an abort. §3.3
+      gives both reasons: either the two keys are byte-identical ("the map
+      keys of the two map entries are the same, which is not valid in a
+      CBOR map"), or one would be an extension of the other, "which is not
+      possible in the self-delimiting CBOR encoding". So under CDE the
+      only reachable failure is the duplicate-key case, and a conforming
+      encoder never emits a map whose keys do not strictly increase.
+
+      What is compared is the ENCODED key including its head, so the
+      ordering falls out of the byte layout: first by the initial byte
+      (hence by major type, since that is its top 3 bits, then by ai),
+      then by the argument bytes, then by content. Worked example from
+      Table 6: "a" encodes `6161` and "b" encodes `6162`; j = 0 compares
+      0x61 to 0x61 (equal), j = 1 compares 0x61 to 0x62, so "a" sorts
+      first and `{"b":0,"a":1}` is rejected.
+    notes: |
+      Three traps an implementer must get from this section and nowhere
+      else. (1) The keys are compared after CDE encoding, so the ordering
+      of a numeric key depends on its preferred serialization — change the
+      head and you change the sort position. (2) The comparison includes
+      the head bytes, so for short text strings the length byte dominates
+      the first comparison and shorter strings can sort before longer ones
+      that would precede them in a content-only comparison (derived from
+      the stated rule: "b" is `6162` and "ab" is `626162`, so "b" sorts
+      first). (3) CDE does NOT use the alternative, length-first
+      deterministic ordering: §3 points at Section 4.2.3 of RFC 8949 as a
+      distinct variant of deterministic encoding "now being phased out",
+      but never restates its rule, so a reader who has to recognise legacy
+      data must go to RFC 8949 for it. §3.3's own aside notes the
+      pragmatic side: lexicographic-map-sorting already requires the
+      encoder to hold all map keys at once, unlike plain validity
+      checking, which "may be particularly difficult to implement for
+      streaming encoders".
+  - name: major-type-6-tagged-data-item
+    locator: "§1.2; §2; §3.1 and §3.1.1 aside; §3.1.2 item 5; Table 4"
+    encoding: CBOR
+    fields:
+      - name: major_type
+        type: uint3
+        required: true
+        layout: "Bits 7-5 of the initial byte = 0b110."
+      - name: ai
+        type: uint5
+        required: true
+        layout: |
+          Bits 4-0 encode the tag number as the argument, shortest form:
+          initial byte 0xc0-0xd7 for tags 0..23, then 0xd8 (one byte),
+          0xd9 (two), 0xda (four), 0xdb (eight). Evidence: `c2` and `c3`
+          for tags 2 and 3 in Table 4. The source never exhibits the
+          multi-byte forms, though it names tags 24 (as the CDDL head
+          `#6.24` in §4) and 1001 (§B), which need 0xd8 and 0xd9.
+      - name: tag_number
+        type: uint64
+        required: false
+        layout: "0/1/2/4/8 big-endian argument bytes when ai >= 24."
+      - name: tag_content
+        type: "data item"
+        required: true
+        layout: |
+          Exactly one data item follows the tag head and is itself fully
+          CDE-encoded; CDE recurses through tag content without
+          exception. In addition, a tag's own Preferred Serialization —
+          "Tag specifications can also define the Preferred Serialization
+          of the specific tag that are defining" (§1.2) — is part of the
+          preferred-serialization constraint: §2 states that "the
+          shortest-head encoding constraint together with the preferred
+          serializations of tags constitute the preferred-serialization
+          encoding constraint".
+    layout: |
+      c0..d7 <content>                      tags 0..23
+      d8 nn <content>                       24..255
+      d9 nn nn <content>                    256..65535
+      da nn nn nn nn <content>              65536..4294967295
+      db nn*8 <content>                     above that
+      This is the extension point CDE admits: a tag defines its own
+      preferred serialization for its content, and that definition is
+      pulled into preferred-serialization and therefore into cde. The
+      only tags whose encoding CDE itself pins down are 2 and 3.
+    notes: |
+      §3.1.1's aside is the live warning for extension authors: most tags
+      "capture more specific application semantics than tag 2/3 and
+      therefore may be harder to define a deterministic encoding for",
+      the mapping of platform types onto tag content may need extra
+      attention, and "not in all cases the tag's deterministic encoding
+      constraints will be confined to its definition of Preferred
+      Serialization". The document therefore "recommends that new tag
+      registrations address deterministic encoding in the context of
+      CDE". §3.1.2 item 5 draws the boundary for numeric tags: CDE "does
+      not presume equivalence of basic floating point values with floating
+      point values using other representations (e.g., tag 4/5)", and a new
+      tag "might define Preferred Serializations that are basic major-type
+      7 floating point values; this is unproblematic as long as the tag
+      definition does not attempt to redefine the Preferred Serialization
+      for basic floating point values". Tags named but never defined here:
+      0, 1, 4, 5, 24, 1001.
+  - name: tag-2-positive-bignum
+    locator: "§3.1.1; §C.1.1 item 3; §C.1.2 item 5; Table 4; Table 6; §E"
+    encoding: CBOR
+    fields:
+      - name: tag_head
+        type: uint8
+        required: true
+        layout: "The single byte 0xc2: major type 6 with ai = 2."
+      - name: content_head
+        type: uint5
+        required: true
+        layout: |
+          A major type 2 definite-length byte string head giving the
+          length of the magnitude in bytes, shortest form (0x40-0x57,
+          0x58 nn, ...). Indefinite length is excluded by
+          definite-length-only; §E shows `0xc25f41004101ff` as a
+          serialization that preferred-serialization alone would still
+          permit.
+      - name: magnitude
+        type: bstr
+        required: true
+        layout: |
+          The unsigned magnitude, big-endian. "Leading zeros MUST NOT be
+          present in the byte string content of tag 2 and 3" (§C.1.1 item
+          3 bullet 3), so the first content byte is never 0x00. Because
+          every value up to 2^64-1 must instead be major type 0 (§3.1.1),
+          a CDE tag 2 content is at least 9 bytes long (derived from the
+          two rules; Table 4's smallest bignum
+          `c249010000000000000000` is exactly that: `49` = byte string of
+          9, content 01 followed by eight 00 = 2^64).
+    layout: |
+      c2 <bstr-head> <magnitude>
+      value = the big-endian unsigned integer in `magnitude`
+      Admissible range under CDE: 18446744073709551616 (2^64) and up.
+      Rejected by Table 6: `c243010000` (65536, "Integer value too small
+      for bignum"). Rejected by Table 7: `c24101`, `c2420001`,
+      `c243000001`, `c25f41004101ff` for the integer 1. §E's worked
+      example for 10^20 is the only full three-line byte breakdown the
+      document gives:
+        C2                       # tag(2)
+           49                    # bytes(9)
+              056BC75E2D63100000 #
+    notes: |
+      §C.1.1 item 3's parenthetical extends both rules inward: "(This also
+      applies to the use of tags 2 and 3 within other tags, such as 4 or
+      5.)" — a bignum mantissa inside a decimal fraction or bigfloat is
+      held to the same no-leading-zeros and range rules. Apparent
+      conflict between two informative checklists: §C.1.2 item 5 tells a
+      preferred-serialization-accepting decoder that "Leading zero bytes
+      in the tag content of a tag 2 or 3 MUST be ignored", while a
+      CDE-checking decoder MUST reject exactly those bytes (§C.3.2 item 1,
+      via preferred-serialization; Table 6 lists
+      `c34a00010000000000000000` as not CDE). The two apply to different
+      roles, but the document never says so in either place.
+  - name: tag-3-negative-bignum
+    locator: "§3.1.1; §C.1.1 item 3; Table 4; Table 6"
+    encoding: CBOR
+    fields:
+      - name: tag_head
+        type: uint8
+        required: true
+        layout: "The single byte 0xc3: major type 6 with ai = 3."
+      - name: content_head
+        type: uint5
+        required: true
+        layout: |
+          Major type 2 definite-length byte string head, shortest form, as
+          for tag 2.
+      - name: magnitude
+        type: bstr
+        required: true
+        layout: |
+          Big-endian unsigned n with no leading zero bytes (§C.1.1 item 3
+          bullet 3); the value of the data item is -1 - n. Admissible
+          under CDE only below -(2^64), since -(2^64)..-1 must be major
+          type 1, so the content is at least 9 bytes (derived; Table 4's
+          `c349010000000000000000` is -18446744073709551617 = -1 - 2^64).
+    layout: |
+      c3 <bstr-head> <magnitude>
+      value = -1 - (big-endian unsigned integer in `magnitude`)
+      Table 6 rejects `c34a00010000000000000000` for the same value as
+      "Bignum with leading zero bytes": `4a` is a 10-byte string whose
+      first byte is 0x00, where CDE requires `49` and 9 bytes.
+    notes: |
+      The -1 - n mapping means the magnitude of a negative bignum is one
+      LESS than the absolute value, exactly as for major type 1; the
+      transition at the basic-range boundary is therefore seamless, which
+      is the point §3.1.1 makes about tags 2/3 extending major types 0/1
+      "in a seamless way".
+  - name: major-type-7-simple-value
+    locator: "§C.1.1 item 1; §A (names Booleans and null); §3.2"
+    encoding: CBOR
+    fields:
+      - name: major_type
+        type: uint3
+        required: true
+        layout: "Bits 7-5 of the initial byte = 0b111."
+      - name: ai
+        type: uint5
+        required: true
+        layout: |
+          Bits 4-0. For a simple value, ai is the value itself when it is
+          0..23 (initial byte 0xe0-0xf7) and 24 (initial byte 0xf8) when
+          one additional byte carries it — the generic shortest-head rule
+          of §C.1.1 item 1, which the source states for "any argument that
+          is not a floating point value". ai 25/26/27 (0xf9/0xfa/0xfb) are
+          the three float forms; ai 31 (0xff) is the break stop code,
+          excluded with the rest of indefinite-length encoding.
+      - name: simple_value
+        type: uint8
+        required: false
+        layout: |
+          One byte when ai = 24. Per the generic rule the one-byte form
+          covers arguments 24..255; RFC 8949's narrower restriction (that
+          one-byte simple values below 32 are not well-formed) is inherited
+          as well-formedness and is never restated here.
+    layout: |
+      e0..f7                                simple values 0..23
+      f8 nn                                 one-byte simple value
+      (f9/fa/fb are floats; ff is the break stop code, not a value)
+    notes: |
+      The source never enumerates the simple-value assignments: §A mentions
+      only "certain special 'simple values' such as Booleans and null",
+      and no section gives their ai numbers. CDE adds no constraint beyond
+      shortest head, and read literally §C.1.1 item 1 would admit
+      `f818`..`f81f`; only inherited well-formedness (Section 3 of RFC
+      8949) excludes those. Nothing in CDE restricts which simple values an
+      application may use — that is an ALDR-level choice (§B).
+  - name: preferred-float-size-selection
+    locator: "§3.1.2 (items 1-5); §C.1.1 item 2; Table 5; Table 6"
+    encoding: CBOR
+    fields:
+      - name: half_binary16
+        type: float16
+        required: false
+        layout: |
+          ai = 0x19, initial byte 0xf9, two argument bytes. "Positive and
+          negative infinity and zero MUST be represented in half-precision
+          floating point" (§C.1.1 item 2), and encoders "MUST support
+          half-precision and single-precision floating point".
+      - name: single_binary32
+        type: float32
+        required: false
+        layout: "ai = 0x1a, initial byte 0xfa, four argument bytes."
+      - name: double_binary64
+        type: float64
+        required: false
+        layout: "ai = 0x1b, initial byte 0xfb, eight argument bytes."
+    layout: |
+      Selection rule (§C.1.1 item 2): "If multiple of these encodings
+      preserve the precision of the value to be encoded, only the shortest
+      form of these MUST be emitted." The test is exact value
+      preservation, evaluated binary16 first, then binary32, then
+      binary64 — not a magnitude range test. §3.1.2 adds that CDE itself
+      defines no further float constraint beyond shortest-head, and
+      spells out five consequences, in the order of the bullet list at
+      the end of Section 4.2.2 of RFC 8949:
+        1. The two zeros get no special action: -0.0 encodes as `f98000`.
+        2. No mixing of integers and floating point numbers — an integral
+           float stays a float, so 2.0 is `f94000`, never `02`.
+        3. NaNs follow the same preferred-serialization rules (see
+           nan-encoding).
+        4. "There is no special handling of subnormal values": they
+           shorten exactly when the shorter form preserves the value, so
+           `fa00000001` (the smallest positive binary32 subnormal) stays
+           binary32 while `f90001` is a binary16 subnormal in its own
+           right.
+        5. No presumed equivalence with tag 4/5 representations.
+      Consequence stated in §3.1.2: "the application has no control over
+      the representation size, e.g., the number 1.0 will always be
+      serialized as a binary16 floating point number (0xf93c00)".
+      Rejected by Table 6: `fa41280000` for 10.5, which fits binary16
+      (derived: `f94940`), and `fa7fc00000` for a zero-payload quiet NaN,
+      which must be `f97e00`.
+    notes: |
+      Two shortening boundaries are worth having as test cases from Table
+      5: 10.559998512268066 is `fa4128f5c1` (binary32 is exact) while the
+      next value up, 10.559998512268068, needs `fb40251eb820000001`; and
+      2^68 is `fa61800000`, i.e. a large magnitude can still be
+      binary32-exact. Table 5's "adjacent to" rows exist precisely to pin
+      the boundaries: a value one ulp away from the largest binary16
+      cannot shorten (65503.99999999999 is `fb40effbffffffffff`). Note
+      also what §3.1.2 declines to do: the float/integer choice, the
+      choice between tag 4/5 and basic floats, and any NaN canonicalisation
+      are all pushed to ALDR rules (§B), so two CDE encoders handed
+      different data-model inputs for "the same" number legitimately
+      produce different bytes.
+  - name: float16-binary16
+    locator: "§3.1.2; §C.1.1 item 2; Table 5"
+    encoding: CBOR
+    fields:
+      - name: initial_byte
+        type: uint8
+        required: true
+        layout: "0xf9 — major type 7, ai = 25 (0x19)."
+      - name: sign
+        type: bits(1)
+        required: true
+        layout: |
+          Bit 15 of the two argument bytes (bit 7 of the first argument
+          byte). 0 positive, 1 negative. Preserved by shortening, including
+          for NaNs (§C.1.1 item 2: "the value to be preserved includes the
+          sign bit").
+      - name: exponent
+        type: bits(5)
+        required: true
+        layout: |
+          Bits 14-10, i.e. bits 6-2 of the first argument byte. All zeros
+          means zero or subnormal; all ones (0b11111) means infinity or
+          NaN. Width is the [IEEE754] binary16 interchange width, which
+          the source names but never tabulates.
+      - name: trailing_significand
+        type: bits(10)
+        required: true
+        layout: |
+          Bits 9-0: the low 2 bits of the first argument byte followed by
+          all 8 bits of the second. For a NaN this splits into the Q-bit
+          (bit 9) and a 9-bit payload (bits 8-0); see nan-encoding.
+    layout: |
+      f9 B1 B0
+        B1 bit 7     sign
+        B1 bits 6-2  exponent (5 bits)
+        B1 bits 1-0  trailing significand bits 9-8
+        B0 bits 7-0  trailing significand bits 7-0
+      Source-exhibited values (Table 5): `f90000` 0.0, `f98000` -0.0,
+      `f97c00` Infinity, `f9fc00` -Infinity, `f97e00` NaN with zero
+      payload, `f90001` smallest positive subnormal
+      (5.960464477539063e-8), `f903ff` largest positive subnormal
+      (0.00006097555160522461), `f90400` smallest non-subnormal positive
+      (0.00006103515625), `f97bff` largest positive binary16 (65504.0),
+      `f98001` largest negative subnormal, `f94000` 2.0, `f97dff` a
+      signaling NaN with a 9-bit payload, `f97fff` a quiet NaN with a
+      9-bit payload, `f9fe00` a negative NaN with zero payload. §3.1.2
+      adds `f93c00` for 1.0.
+    notes: |
+      Every CDE encoder that emits floats at all must be able to produce
+      this form (§C.1.1 item 2: encoders "MUST support half-precision and
+      single-precision floating point"), and every decoder that accepts
+      floats must accept it (§C.1.2 item 4: "Half-precision values MUST be
+      accepted"). Appendix F exists because of this asymmetry with RFC
+      8949, which published only decoding code; see
+      half-precision-encode-result.
+  - name: float32-binary32
+    locator: "§3.1.2; §C.1.1 item 2; Table 5"
+    encoding: CBOR
+    fields:
+      - name: initial_byte
+        type: uint8
+        required: true
+        layout: "0xfa — major type 7, ai = 26 (0x1a)."
+      - name: sign
+        type: bits(1)
+        required: true
+        layout: "Bit 31 of the four argument bytes."
+      - name: exponent
+        type: bits(8)
+        required: true
+        layout: |
+          Bits 30-23: the low 7 bits of argument byte 3 plus the top bit
+          of argument byte 2. All ones means infinity or NaN. Width is the
+          [IEEE754] binary32 interchange width.
+      - name: trailing_significand
+        type: bits(23)
+        required: true
+        layout: |
+          Bits 22-0. For a NaN: Q-bit at bit 22, 22-bit payload at bits
+          21-0.
+      - name: payload_trim_width
+        type: uint8
+        required: false
+        layout: |
+          13 — the number of significand bits between binary32 and
+          binary16 (23 - 10), i.e. the N of §C.1.1 item 2 when shortening
+          a binary32 NaN to binary16. Derived from the stated rule; the
+          source gives the rule, not the number.
+    layout: |
+      fa B3 B2 B1 B0   (big-endian)
+        B3 bit 7     sign
+        B3 bits 6-0  exponent bits 7-1
+        B2 bit 7     exponent bit 0
+        B2 bits 6-0  trailing significand bits 22-16
+        B1, B0       trailing significand bits 15-0
+      Source-exhibited values (Table 5): `fa00000001` smallest positive
+      binary32 (subnormal), `fa007fffff` largest positive subnormal,
+      `fa00800000` smallest non-subnormal positive, `fa7f7fffff` largest
+      positive binary32, `fa4128f5c1` 10.559998512268066, `fa61800000`
+      2^68, `fa387fc001`, `fa38800001`, `fa477fe001`, `fab3800001` for
+      values adjacent to binary16 boundaries, and the NaN rows
+      `fa7f800001`, `fa7fbff000`, `fa7ffff000`, `fa7fa1ebe2`,
+      `fa7fffffff`, `faffffffff`.
+    notes: |
+      §C.1.2 item 4 makes the decoder side conditional and ordered: double-
+      and single-precision "SHOULD be accepted; leaving these out is only
+      foreseen for decoders that need to work in exceptionally constrained
+      environments", but "If double-precision values are accepted,
+      single-precision values MUST be accepted" — a partial decoder may
+      not skip binary32 while supporting binary64.
+  - name: float64-binary64
+    locator: "§3.1.2; §C.1.1 item 2; Table 5; Figure 1 (§F)"
+    encoding: CBOR
+    fields:
+      - name: initial_byte
+        type: uint8
+        required: true
+        layout: "0xfb — major type 7, ai = 27 (0x1b)."
+      - name: sign
+        type: bits(1)
+        required: true
+        layout: |
+          Bit 63 of the eight argument bytes. Figure 1 extracts it as
+          `b64 >> 48 & 0x8000`, i.e. straight into the binary16 sign
+          position.
+      - name: exponent
+        type: bits(11)
+        required: true
+        layout: |
+          Bits 62-52, extracted by Figure 1 as `b64 >> 52 & 0x7ff`. The
+          code's constants fix the bias arithmetic without stating it:
+          exponent 2047 is infinity/NaN, 1009..1038 maps to a normal
+          binary16 via `(exp - 1008) << 10`, and 999..1008 maps to a
+          binary16 subnormal.
+      - name: trailing_significand
+        type: bits(52)
+        required: true
+        layout: |
+          Bits 51-0, extracted by Figure 1 as `b64 & 0xfffffffffffff`
+          (13 hex digits = 52 bits). For a NaN: Q-bit at bit 51, 51-bit
+          payload at bits 50-0.
+      - name: payload_trim_width
+        type: uint8
+        required: false
+        layout: |
+          29 to binary32 (52 - 23) and 42 to binary16 (52 - 10) — the N of
+          §C.1.1 item 2. The 42 appears in Figure 1 as the mask
+          `0x3ffffffffff` and the shift `mant >> 42` (derived
+          correspondence; the source does not connect the code to the
+          rule).
+    layout: |
+      fb B7 B6 B5 B4 B3 B2 B1 B0   (big-endian)
+        B7 bit 7     sign
+        B7 bits 6-0  exponent bits 10-4
+        B6 bits 7-4  exponent bits 3-0
+        B6 bits 3-0  trailing significand bits 51-48
+        B5..B0       trailing significand bits 47-0
+      Source-exhibited values (Table 5): `fb0000000000000001` smallest
+      positive binary64 (subnormal), `fb000fffffffffffff` largest positive
+      subnormal, `fb0010000000000000` smallest non-subnormal positive,
+      `fb7fefffffffffffff` largest positive binary64,
+      `fbbecbf647612f3696` for -0.0000033333333333333333,
+      `fb40251eb820000001`, and the boundary-adjacency rows
+      `fbbe6fffffffffffff`, `fbbe70000000000001`, `fb3f0ff7ffffffffff`,
+      `fb3f0ff80000000001`, `fb3f0fffffffffffff`, `fb3f10000000000001`,
+      `fb40effbffffffffff`, `fb40effc0000000001`, `fb369fffffffffffff`,
+      `fb36a0000000000001`, `fb380fffffbfffffff`, `fb380fffffc0000001`,
+      `fb380fffffffffffff`, `fb3810000000000001`, `fb47efffffdfffffff`,
+      `fb47efffffe0000001`, plus NaN rows `fb7ff0000000000001`,
+      `fb7ff00000000003ff`, `fb7ff7fffff0000000`, `fb7fffffffffffffff`,
+      `fbfff0000000000001`.
+    notes: |
+      §3.1.2 notes the decode-side reality this creates: "generic decoders
+      often will expand floating point numbers to a single size that is
+      convenient on the platform (such as binary64)", so a round trip
+      through a decoder loses the information about which of the three
+      forms arrived — which is exactly why re-encoding under CDE and
+      comparing bytes (§C) is a valid conformance check.
+  - name: nan-encoding
+    locator: "§1.2 (NaN payload, Trivial NaN); §3.1.2 item 3; §C.1.1 item 2; Table 5"
+    encoding: CBOR
+    fields:
+      - name: sign_bit
+        type: bits(1)
+        required: true
+        layout: |
+          The top bit of the interchange form. Part of "the value to be
+          preserved" (§C.1.1 item 2), so a negative NaN stays negative
+          through shortening: `fff8000000000000` shortens to `f9fe00`,
+          not to `f97e00`.
+      - name: exponent
+        type: bits(5)
+        required: true
+        layout: |
+          All ones in every format (5 bits for binary16, 8 for binary32,
+          11 for binary64). The informative aside in §3.1.2 describes
+          widening as successively adding "the necessary one bits to the
+          exponent and trailing zero bits to the payload to build the next
+          longer form".
+      - name: q_bit
+        type: bits(1)
+        required: true
+        layout: |
+          "the first bit (Q-bit) of the trailing significand component"
+          (§1.2), i.e. the most significant bit of the trailing
+          significand: bit 9 in binary16, bit 22 in binary32, bit 51 in
+          binary64. §3.1.2 item 3 pins it: "the CBOR encoding always uses
+          a leading bit of 1 in the significand to encode a quiet NaN; the
+          use of signaling NaNs by application protocols is NOT RECOMMENDED
+          but when presented by an application these are encoded by using a
+          leading significand bit of 0." Preserved by shortening.
+      - name: nan_payload
+        type: bits(51)
+        required: true
+        layout: |
+          "All but the first bit (Q-bit) of the trailing significand
+          component of the [IEEE754] value for a NaN. Separate from sign
+          bit and Q-bit" (§1.2). Widths: 9 bits (binary16), 22 (binary32),
+          51 (binary64). Preserved by shortening, zero or non-zero
+          (§C.1.1 item 2).
+    layout: |
+      A NaN is encoded as the shortest of binary64, binary32 and binary16
+      that preserves sign bit, Q-bit and payload (§C.1.1 item 2). The
+      shortening is purely a bit operation on the payload:
+
+        N = (significand bits of the source format)
+            - (significand bits of the target format)
+          = 13   binary32 -> binary16   (23 - 10)
+          = 29   binary64 -> binary32   (52 - 23)
+          = 42   binary64 -> binary16   (52 - 10)
+        Shorten only if the rightmost N bits of the payload are all zero;
+        then drop them, keeping sign and Q-bit in their new positions.
+
+      §C.1.1 item 2 states it as removing "the rightmost N bits of the
+      payload, where N is the difference in the number of bits in the
+      significand (mantissa representation) between the original format
+      and the shortest format. This trimming is performed only (preserves
+      the value only) if all the rightmost bits removed are zero", with
+      the corollary "(This means that a double or single quiet NaN that
+      has a zero NaN payload will always be represented in a
+      half-precision quiet NaN.)" §3.1.2 item 3 says the same from the
+      other side: "shorter forms of encodings for a NaN are used when that
+      can be achieved by only removing trailing zeros in the NaN payload".
+
+      Trivial NaN (§1.2): "A NaN with a zero sign bit, and a payload
+      composed of zero bits only. Note that in [IEEE754], all-zero payload
+      implies that the Q-bit is set to one. Represented in CDE as the
+      three bytes 0xf97e00." §3.1.2 item 3 adds that most applications use
+      only this value.
+
+      Worked rows from Table 5 (source hex, with the arithmetic derived):
+        float'7fbfe000' -> `f97dff`   binary32 sNaN, 9-bit payload, low 13
+                                      payload bits zero, so it trims
+        float'7fbff000' -> `fa7fbff000`  10-bit payload: a 1 falls inside
+                                      the 13 bits, no shorter encoding
+        float'7fc00000' -> `f97e00`   quiet, zero payload
+        float'7fffe000' -> `f97fff`   quiet, 9-bit payload
+        float'7ffff000' -> `fa7ffff000`  10-bit payload, stays binary32
+        float'7f800001' -> `fa7f800001`  rightmost payload bit set, stays
+        float'7ff0000020000000' -> `fa7f800001`  binary64 sNaN whose only
+                                      set payload bit is bit 29, so the
+                                      low 29 bits are zero and it trims
+        float'7ff43d7c40000000' -> `fa7fa1ebe2`  arbitrary pattern, trims
+        float'7ff7fffff0000000' -> `fb7ff7fffff0000000`  23 leftmost
+                                      payload bits set, no shorter form
+        float'7ff8000000000000' -> `f97e00`
+        float'7ffffc0000000000' -> `f97fff`
+        float'7fffffffe0000000' -> `fa7fffffff`
+        float'7fffffffffffffff' -> `fb7fffffffffffffff`
+        float'fe00'             -> `f9fe00`   negative, zero payload
+        float'fff0000000000001' -> `fbfff0000000000001`
+        float'fff8000000000000' -> `f9fe00`
+        float'ffffffffe0000000' -> `faffffffff`
+    notes: |
+      Why item 2's corollary names only QUIET NaNs: an all-ones exponent
+      with an all-zero significand is Infinity, not a NaN, so a
+      zero-payload signaling NaN does not exist and the case needs no rule
+      (derived). Practical traps the source does flag: [IEEE754] "leaves
+      several details about handling NaNs implementation-defined", and the
+      getpayload/setpayload interface of Section 9.7 of [IEEE754] (and
+      [C23]) is size-specific, so "The representation size for interchange
+      will be chosen by Preferred Serialization for each value, which may
+      not always be the size that was intended" — the recommended handling
+      is to widen every decoded NaN to a common size (usually binary64)
+      before using those functions. Notation gap: "there is no established
+      EDN for notating NaNs with non-zero payloads at the time of
+      writing", so Table 5 falls back to float'hex' and the test vectors
+      must be read as raw interchange hex. Cross-reference for more
+      serialisations: Appendix A.1.2 of [I-D.bormann-cbor-numbers]
+      (referenced, not reproduced).
+  - name: half-precision-encode-result
+    locator: "§F (Figure 1, try_float16_encode)"
+    encoding: CBOR
+    fields:
+      - name: s16
+        type: bits(16)
+        required: true
+        layout: |
+          `b64 >> 48 & 0x8000UL` — the binary64 sign bit moved into the
+          binary16 sign position (bit 15). Every successful return path
+          adds to it.
+      - name: mant
+        type: bits(52)
+        required: true
+        layout: "`b64 & 0xfffffffffffffUL` — the 52-bit trailing significand."
+      - name: exp
+        type: bits(11)
+        required: true
+        layout: "`b64 >> 52 & 0x7ffUL` — the 11-bit biased exponent."
+      - name: return_value
+        type: int32
+        required: true
+        layout: |
+          -1 when no binary16 form preserves the value; otherwise
+          0x0000..0xFFFF, the two bytes that, "prefixed with 0xF9, is
+          suitable to encode the value" (§F). The caller emits
+          f9 <hi> <lo>, big-endian.
+    layout: |
+      Decision order, exactly as Figure 1 runs (the only executable
+      statement of the shortening rule in the document):
+
+        if exp == 0 and mant == 0:        return s16
+            zero only; binary64 subnormals "are out of range" for
+            binary16, so they fall through to -1 later
+        if 999 <= exp <= 1008:            binary16 subnormal, exp16 = 0
+            if mant & ((1 << (1051 - exp)) - 1): return -1   bits lost
+            return s16 + ((mant + 0x10000000000000) >> (1051 - exp))
+            the added 0x10000000000000 restores the binary64 implicit
+            leading 1 before the shift
+        if mant & 0x3ffffffffff:          return -1
+            the low 42 bits must be zero — 42 = 52 - 10, the same N the
+            NaN rule uses, so this single test covers finite values,
+            infinities and NaN payloads alike (derived correspondence)
+        if 1009 <= exp <= 1038:           normalized binary16
+            return s16 + ((exp - 1008) << 10) + (mant >> 42)
+        if exp == 2047:                   Infinity or NaN
+            return s16 + 0x7c00 + (mant >> 42)
+            mant >> 42 carries the Q-bit and the 9 surviving payload bits
+            into the binary16 trailing significand
+        return -1
+
+      Checks against the tables (derived): 0.0 returns 0x0000 and -0.0
+      returns 0x8000, giving `f90000` and `f98000`; Infinity returns
+      0x7c00, giving `f97c00`; a quiet NaN with zero payload returns
+      0x7e00, giving `f97e00`; exp = 999 with mant = 0 returns 0x0001,
+      the smallest binary16 subnormal `f90001`.
+    notes: |
+      Portability defect in the published code: `b64` is typed
+      `unsigned long` and the code shifts it by 48 and masks with
+      `0xfffffffffffffUL`. C guarantees `unsigned long` only 32 bits, so
+      the function is silently wrong on any ILP32 target; `uint64_t` is
+      what the algorithm needs. Scope note: the function takes a binary64
+      input, so an encoder holding a binary32 value must widen it first,
+      and nothing in §F covers the binary32 -> binary16 step directly.
+      §F explains why the code is here at all: Appendix D of RFC 8949
+      published only half-precision DECODING code, and "CDE
+      implementations that support floating point Numbers not only need to
+      decode, but also to encode their 16-bit format".
+  - name: indefinite-length-encoding
+    locator: "§2; §3.2; §A.1; §C.2; Table 6; §E"
+    encoding: CBOR
+    fields:
+      - name: head_with_ai_31
+        type: uint5
+        required: true
+        layout: |
+          ai = 31 on major types 2, 3, 4 and 5 — the form that "does not
+          express the length of a string, an array, or a map in its head"
+          (§2). The source exhibits only the byte string case, `5f`
+          (Table 6 `5f4101420203ff`, and §E `0xc25f41004101ff`); the other
+          three initial bytes (0x7f, 0x9f, 0xbf) are inherited from
+          Section 3.2 of RFC 8949 and never written down here.
+      - name: chunks_or_items
+        type: "data item *"
+        required: false
+        layout: |
+          For major types 2 and 3, definite-length chunks of the same
+          major type — Table 6's example carries `4101` (h'01') and
+          `420203` (h'0203'). For major types 4 and 5, the elements or
+          entries themselves.
+      - name: break_stop_code
+        type: uint8
+        required: true
+        layout: |
+          The terminating byte, exhibited as the trailing `ff` of
+          `5f4101420203ff` and of `c25f41004101ff`; the document never
+          names it or gives its encoding (ai = 31 on major type 7).
+    layout: |
+      (mt<<5 | 0x1f) <chunks or items> ff
+      This structure is what CDE forbids: "The definite-length-only
+      encoding constraint means that indefinite length encoding MUST NOT
+      be used" (§3.2), excluding it "both for (binary/text) strings and
+      for arrays and maps" (§C.2). Table 6 lists `5f4101420203ff` as not
+      CDE for "Indefinite length encoding".
+    notes: |
+      This is the one constituent of CDE that is an INTEROPERABILITY
+      constraint in its own right rather than an encoder guideline (§2,
+      Table 1): it exists so that partial decoders can omit the code path
+      entirely, since "Indefinite length strings require non-trivial
+      implementation effort when a with zero allocation/zero copy approach
+      is in use" (§3.2 aside; the sentence is garbled in -13). Two
+      encoder behaviours must be switched off for CDE: streaming without a
+      known length, and the size optimisation for arrays/maps "with 256 or
+      more elements/entries" (§C.2 aside). §E is the sharpest statement of
+      why definite-length-only is needed alongside
+      preferred-serialization: for 10^20 "there are multiple
+      serializations that would also count as _preferred_ serializations,
+      as the preferred serialization constraint by itself does not exclude
+      indefinite length encoding of the byte string that is the content of
+      tag 2."
+  - name: cde-encoding-constraint-set
+    locator: "§1.2 (definitions); §2 and Table 1; §3; §C.3"
+    encoding: CBOR
+    fields:
+      - name: preferred_serialization
+        type: "encoding constraint"
+        required: true
+        layout: |
+          "the shortest-head encoding constraint together with the
+          preferred serializations of tags" (§2; §3.1: "a combination of
+          the shortest-head constraint and tag-specific encoding
+          constraints defined to be part of preferred-serialization").
+          Defined for the basic data model in Section 4.1 of RFC 8949.
+      - name: definite_length_only
+        type: "encoding constraint"
+        required: true
+        layout: "Indefinite length encoding MUST NOT be used (§3.2)."
+      - name: lexicographic_map_sorting
+        type: "encoding constraint"
+        required: true
+        layout: |
+          Map entries sorted bytewise lexicographically by their
+          CDE-encoded map keys, strictly increasing (§3.3).
+    layout: |
+      Not a byte layout: an encoding constraint SET. §1.2 defines the
+      composition — "Several encoding constraints can be combined into an
+      encoding constraint set, which is itself an encoding constraint that
+      requires that all encoding constraints in the set are met" — and §3
+      instantiates it: "Formally, Common Deterministic Encoding (CDE) is
+      an encoding constraint (named cde for short), built from multiple
+      constituent encoding constraints ... CDE combines the constraints of
+      preferred-serialization with definite-length-only and the
+      lexicographic-map-sorting constraint." All three hold
+      simultaneously and recursively, at every nesting level of a data
+      item. §C.3.1 restates them as three encoder obligations and adds
+      basic validity (Section 5.3.1 of RFC 8949); §C.3.2 restates them as
+      three decoder checks plus the rule that a CDE-checking decoder "MUST
+      NOT present to the application a decoded data item that fails one of
+      these checks (except maybe via special diagnostic channels with no
+      potential for confusion with a correctly CDE-decoded data item)".
+    notes: |
+      Naming defect in -13: Table 1 and the §2 text that introduces it
+      call the second constituent `definite-length-encoding`, while §3,
+      §3.2, §A.1 and §C.2 call it `definite-length-only`. Table 1's own
+      `cde` row spells the combination with the former name. §1.2 fixes
+      the naming convention ("lower-case words separated by hyphens,
+      rendered in a typewriter font"), which makes the two spellings two
+      different constraint names on the page. Status: CDE "is RECOMMENDED
+      for implementation and specification where deterministic encoding is
+      required or desired" (§1.2). Conformance shortcut for a decoder that
+      does not support CDE natively (§C): "re-encode the decoded data with
+      CDE and check for bit-to-bit equality with the original input".
+      Layering: ALDR rules sit above CDE and are out of scope (§1.1, §B) —
+      CDE touches serialization only and "do[es] not place any
+      requirements, exclusions, mappings or such on the data model level"
+      (§C note 3).
+  - name: cddl-control-operator-cde
+    locator: "§4; Table 2 (§6)"
+    encoding: CDDL
+    fields:
+      - name: target
+        type: "CDDL type"
+        required: true
+        layout: |
+          The left-hand side: the byte string type whose content carries
+          the embedded data item, written `bytes` in the document's
+          example. Same position as the target of `.cbor` (Section 2.2.1
+          of RFC 8610, referenced not restated).
+      - name: controller
+        type: "CDDL type"
+        required: true
+        layout: |
+          The right-hand side: the CDDL type the embedded data item must
+          match. §4 notes that using the general type `any` is the weak
+          case — "if the encoded data item also needs to have a specific
+          structure, this can be expressed by the right-hand side".
+    layout: |
+      <byte-string-type> .cde <cddl-type>
+      Semantics (§4): "The control operators .cde and .cdeseq are exactly
+      like .cbor and .cborseq except that they also require the encoded
+      data item(s) to be encoded according to CDE." The document's one
+      example wraps it in tag 24:
+        leaf = #6.24(bytes .cde any)
+      Registered in Table 2 as `.cde`, reference [RFCXXXX], in the "CDDL
+      Control Operators" registry of the [IANA.cddl] registry group.
+    notes: |
+      CDDL constrains the data model, not the encoding — "It does not
+      specify encoding; CBOR protocols can specify the use of CDE (or
+      simply definite-length-only encoding) independent of the CDDL data
+      model" (§4) — so these two operators are the only place where an
+      encoding constraint becomes expressible in CDDL, and only for CBOR
+      embedded in a byte string. Deliberate omission recorded in a draft
+      comment: "there is no .dlo or .dloseq for definite-length-only, as,
+      so far, a requirement for these hasn't been detected." §4 also notes
+      that CDE leaves CDDL otherwise untouched: there is "no effect on the
+      Concise Data Definition Language (CDDL) [RFC8610], except where the
+      data description is documenting specific encoding decisions for byte
+      strings that carry embedded CBOR" (§3.1.2), with the float16/float32
+      caveat that `float32` admits values that preferred serialization
+      will nonetheless emit as binary16.
+  - name: cddl-control-operator-cdeseq
+    locator: "§4; Table 2 (§6)"
+    encoding: CDDL
+    fields:
+      - name: target
+        type: "CDDL type"
+        required: true
+        layout: |
+          The byte string type whose content carries a CBOR SEQUENCE of
+          encoded data items, as for `.cborseq`.
+      - name: controller
+        type: "CDDL type"
+        required: true
+        layout: |
+          The CDDL type every element of the sequence must match — one
+          type for the whole sequence.
+    layout: |
+      <byte-string-type> .cdeseq <cddl-type>
+      As `.cborseq`, plus the requirement that the data items be
+      CDE-encoded. Registered in Table 2 as `.cdeseq`, reference
+      [RFCXXXX].
+    notes: |
+      Stated limitation (§4): ".cdeseq control operator does not enable
+      specifying different deterministic encoding requirements for the
+      elements of the sequence. If a use case for such a feature becomes
+      known, it could be added, or the CBOR sequence could be constructed
+      with .join (Section 3.1 of [RFC9741])." §4 also invites ALDR
+      ruleset documents to define their own analogous control operators.
+  - name: iana-cddl-control-operator-registration
+    locator: "§6, Table 2"
+    encoding: "IANA registry row"
+    fields:
+      - name: name
+        type: tstr
+        required: true
+        layout: |
+          The control operator name including its leading dot: `.cde` for
+          one row, `.cdeseq` for the other.
+      - name: reference
+        type: tstr
+        required: true
+        layout: |
+          `[RFCXXXX]` in both rows, with the draft note "RFC Editor:
+          please replace RFCXXXX with the RFC number of this RFC and
+          remove this note."
+    layout: |
+      Two rows, two columns (Name, Reference), to be registered in the
+      registry "CDDL Control Operators" of the [IANA.cddl] registry
+      group:
+        | .cde    | [RFCXXXX] |
+        | .cdeseq | [RFCXXXX] |
+    notes: |
+      The only IANA action in the document; no new CBOR tag, simple value
+      or media type is requested, and no registry is created. The
+      registration template's other columns, if the registry has any, are
+      not given here.

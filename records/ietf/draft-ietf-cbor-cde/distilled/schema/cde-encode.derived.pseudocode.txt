@@ -1,0 +1,299 @@
+draft-ietf-cbor-cde — the CDE encoding procedure
+===============================================
+
+DERIVED - not verbatim.  draft-ietf-cbor-cde-13 contains no encoding
+procedure.  It states CDE as three named encoding constraints in prose
+(Section 3 and its subsections), restates parts of them as a checklist in
+RFC 2119 language (Appendix C, which says of itself "It does not contain
+any normative mandates"), and illustrates the result with three tables of
+hex (Appendix D).  The procedure below was written for this record by
+reading those together.  It is a derivation and must never be quoted as
+the source's own algorithm.
+
+The source's own formal material is two artifacts, both held verbatim in
+this directory: one CDDL rule (cde-control-operator.cddl, Section 4) and
+one C function (try-float16-encode.c, Appendix F, Figure 1).  Nothing else.
+
+Source: .cache/draft-ietf-cbor-cde.txt, sha256
+bc554e3d2d37182f5f37c88aac2e61298089438068ccbc7c674d0940e675605c.
+Locators in [brackets] are sections of that document unless marked
+[RFC 8949 ...], which means the rule is INHERITED and is not restated by
+this draft.  Appendix C locators are to an appendix the document itself
+labels informative.
+
+Companions:  cde-check.derived.pseudocode.txt is the decoder side.
+             float-shortest-head.derived.pseudocode.txt is cde_encode_float.
+             shortest-head.derived.cddl is the value->head partition.
+
+
+NOTATION
+--------
+  ||          byte-string concatenation
+  [b]         a one-byte string with value b
+  u8/u16be/u32be/u64be(n)   n as 1/2/4/8 big-endian bytes
+  FAIL msg    the encoder stops; CDE serialization of this item is
+              impossible.  CDE is total over the CBOR generic data model
+              [Appendix A.1: the constraints "have been defined for all
+              possible data items"], so every FAIL below is an input that
+              is not a valid CBOR data item in the first place, or an
+              application-level collision the application must resolve.
+  mt          major type, 0..7
+  ai          the 5-bit additional information field [Appendix C.1, which
+              fixes this abbreviation]
+
+
+1.  HEAD EMISSION — the shortest-head constraint
+------------------------------------------------
+[Section 2; Appendix C.1.1 item 1; the per-range MUSTs are quoted in
+shortest-head.derived.cddl]
+
+  FUNCTION head(mt, arg) -> bytes
+      ib = mt << 5
+      IF arg <= 23:                    RETURN [ib | arg]         ; ai = arg
+      IF arg <= 255:                   RETURN [ib | 0x18] || u8(arg)
+      IF arg <= 65535:                 RETURN [ib | 0x19] || u16be(arg)
+      IF arg <= 4294967295:            RETURN [ib | 0x1a] || u32be(arg)
+      IF arg <= 18446744073709551615:  RETURN [ib | 0x1b] || u64be(arg)
+      FAIL "argument out of range"
+
+  Invariants, and where they come from:
+    - ai = 0x1f (indefinite length) is NEVER emitted, for any major type
+      [Section 3.2: "indefinite length encoding MUST NOT be used";
+      Appendix C.2: "both for (binary/text) strings and for arrays and
+      maps"].  There is no branch for it above and that is the point.
+    - ai = 28, 29, 30 are never emitted [RFC 8949 Section 3: reserved, not
+      well-formed].  Inherited; this document does not restate it.
+    - head() is used for EVERY major type, so the length of an array, the
+      length of a string, a tag number and a simple value are all subject
+      to the same five rows [Appendix C.1.1 item 1: "for all major types"].
+      Appendix D.3 row 2 is the array-length failure: [4, 5] as 98020405.
+    - Major type 7 is special-cased in 2.7 and 2.8 below: there, ai is a
+      type selector, not a length.
+
+
+2.  THE ENCODER
+---------------
+
+  PROCEDURE cde_encode(item) -> bytes
+      SWITCH kind(item):
+
+  2.1  INTEGER n   [Section 3.1.1; Appendix C.1.1 item 3; Appendix D.1]
+      IF 0 <= n <= 18446744073709551615:
+          RETURN head(0, n)
+          ; "Positive integers from 0 to 2^64 - 1 MUST be encoded as a
+          ;  type 0 integer." [C.1.1 item 3]
+      IF -18446744073709551616 <= n <= -1:
+          RETURN head(1, -1 - n)
+          ; "Negative integers from -(2^64) to -1 MUST be encoded as a
+          ;  type 1 integer." [C.1.1 item 3]
+      ; outside the basic range: preferred serialization of tag 2 / tag 3
+      ; "integers outside this range MUST be encoded using the Preferred
+      ;  Serialization [...] of tag 2 and 3 (i.e., no leading zero bytes)"
+      ;  [Section 3.1.1]
+      IF n > 0:  tag = 2;  magnitude = n
+      ELSE:      tag = 3;  magnitude = -1 - n     ; [RFC 8949 Section 3.4.3]
+      content = minimal_be_bytes(magnitude)       ; no leading 0x00
+      ASSERT content == "" OR content[0] != 0x00
+      RETURN head(6, tag) || head(2, len(content)) || content
+      ; The inner head(2, ...) matters: Appendix E notes that preferred
+      ; serialization ALONE "does not exclude indefinite length encoding of
+      ; the byte string that is the content of tag 2".  It is
+      ; definite-length-only that pins it.  Table 7's last row,
+      ; 0xc25f41004101ff, is the encoding this forbids.
+      ; NOT RESTATED BY THIS DOCUMENT: that tag 3 content is -1-n.  It is
+      ; RFC 8949 Section 3.4.3, and is confirmed by Table 4, where
+      ; 18446744073709551616 and -18446744073709551617 share the content
+      ; 010000000000000000.
+      ; "(This also applies to the use of tags 2 and 3 within other tags,
+      ;  such as 4 or 5.)" [C.1.1 item 3] -- so 2.6 below re-enters here.
+
+  2.2  BYTE STRING b   [Section 3.2; Appendix C.2]
+      RETURN head(2, len(b)) || b
+      ; One definite-length chunk.  No indefinite-length chunking, and
+      ; therefore no choice of chunk boundaries to be deterministic about.
+
+  2.3  TEXT STRING s   [Section 3.2; Appendix C.2; Appendix C.3.1 item 3]
+      octets = utf8(s)
+      IF NOT valid_utf8(octets):  FAIL "invalid UTF-8"
+      ; "CDE encoders MUST generate CBOR that fulfills basic validity
+      ;  (Section 5.3.1 of RFC 8949 [STD94]).  Note that this includes not
+      ;  emitting duplicate keys in a major type 5 map as well as emitting
+      ;  only valid UTF-8 in major type 3 text strings." [C.3.1 item 3]
+      RETURN head(3, len(octets)) || octets
+      ; NO NORMALIZATION.  "Note also that CDE does NOT include a
+      ; requirement for Unicode normalization [UAX-15]" [C.3.1 item 3].
+      ; NFC is an ALDR-level rule, e.g. dCBOR's [Appendix B].  An encoder
+      ; that normalizes here is implementing an ALDR ruleset, not CDE.
+
+  2.4  ARRAY a   [Section 3.2; Appendix C.2]
+      RETURN head(4, len(a)) || concat( cde_encode(x) FOR x IN a )
+      ; Element order is application data and is preserved; CDE never
+      ; reorders an array.  Only map ENTRIES are sorted (2.5).
+
+  2.5  MAP m   [Section 3.3; Appendix C.3.1 item 2]
+      pairs = [ (cde_encode(k), cde_encode(v)) FOR (k, v) IN entries(m) ]
+      sort pairs ascending by their first component, comparing encoded key
+          byte strings with lex_compare (section 3 below)
+      FOR i IN 1 .. len(pairs) - 1:
+          IF NOT lex_strictly_greater(pairs[i].key, pairs[i-1].key):
+              FAIL "map keys not strictly increasing"
+      RETURN head(5, len(pairs))
+             || concat( k || v FOR (k, v) IN pairs )
+      ; "sort maps by the CBOR representation of the map key.  The sorting
+      ;  is byte-wise lexicographic order of the encoded map key data
+      ;  items." [C.3.1 item 2]
+      ; "the (CDE-encoded) map key of a map entry MUST be lexicographically
+      ;  strictly greater than that of the map entry immediately preceding
+      ;  it in the encoding of the map, if any." [Section 3.3]
+      ; Sorting is on the ENCODED key, so it is length-then-value in
+      ; practice: the head sorts first.  Appendix D.3 row 1 is the
+      ; violation: {"b":0,"a":1} as a2616200616101.
+      ; "(Note that this constraint is trivially satisfied by data items
+      ;  that do not contain maps or only contain maps that have zero or
+      ;  one map entry.)" [Section 3.3]
+      ; Keys must be encoded BEFORE sorting, and recursively: a map key may
+      ; itself be a map, whose own entries must already be CDE-sorted for
+      ; its encoding to be defined.
+
+  2.6  TAG t WITH CONTENT c   [Section 3.1; Section 3.1.1]
+      RETURN head(6, t) || cde_encode_tag_content(t, c)
+      ; cde_encode_tag_content defaults to cde_encode(c), EXCEPT where the
+      ; tag's own definition fixes a preferred serialization that differs.
+      ; "The preferred-serialization encoding constraint is a combination
+      ;  of the shortest-head constraint and tag-specific encoding
+      ;  constraints defined to be part of preferred-serialization."
+      ;  [Section 3.1]
+      ; THIS BRANCH IS OPEN-ENDED AND THE DOCUMENT KNOWS IT.  Tags 2 and 3
+      ; are the only ones it pins (2.1 above).  For everything else:
+      ; "the mapping of diverging platform application data types onto the
+      ;  tag contents may require additional attention to perform it in a
+      ;  deterministic way", and "As CDE would continually need to address
+      ;  additional issues raised by the registration of new tags, this
+      ;  specification recommends that new tag registrations address
+      ;  deterministic encoding in the context of CDE.  Note that not in
+      ;  all cases the tag's deterministic encoding constraints will be
+      ;  confined to its definition of Preferred Serialization."
+      ;  [Section 3.1.1, aside]
+      ; A CDE encoder is therefore NOT closed over the tag registry.  Two
+      ; conforming encoders can disagree on a tag neither was built for.
+
+  2.7  SIMPLE VALUE v   [Appendix C.1.1 item 1, "for all major types"]
+      RETURN head(7, v)
+      ; false = 20, true = 21, null = 22, undefined = 23 encode in the
+      ; initial byte; 32..255 take ai = 0x18.
+      ; NOT STATED BY THIS DOCUMENT: that ai = 0x18 with an argument below
+      ; 32 is not well-formed [RFC 8949 Section 3.3].  Inherited.  The
+      ; shortest-head rule of C.1.1 item 1 would by itself have forbidden
+      ; that encoding anyway, so the two agree.
+
+  2.8  FLOATING-POINT VALUE f   [Section 3.1.2; Appendix C.1.1 item 2]
+      RETURN cde_encode_float(f)
+      ; See float-shortest-head.derived.pseudocode.txt.  Summary: emit the
+      ; shortest of binary16 / binary32 / binary64 that preserves the
+      ; value, where for NaN "the value to be preserved includes the sign
+      ; bit, the quiet bit, and the NaN payload".
+      ; NO INTEGER/FLOAT MIXING.  "all floating point values are encoded
+      ; as the preferred floating-point representation that accurately
+      ; represents the value, independent of whether the floating point
+      ; value is, mathematically, an integral value" [Section 3.1.2 item 2].
+      ; So 2.0 encodes as f94000, never as 02 [Appendix D.2].
+
+
+3.  BYTEWISE LEXICOGRAPHIC COMPARISON
+-------------------------------------
+[Section 3.3, cached source lines 827-837, rendered step for step]
+
+  FUNCTION lex_strictly_greater(x, y) -> true | false | FAIL
+      i = 0
+      LOOP:
+          IF i >= len(x) AND i >= len(y):
+              FAIL "equal map keys"
+              ; "If there is no such next pair, the comparison and thus
+              ;  CDE serialization fails entirely (the map keys of the two
+              ;  map entries are the same, which is not valid in a CBOR
+              ;  map, ...)"
+          IF i >= len(x) OR i >= len(y):
+              UNREACHABLE
+              ; "... or one is an extension of the other, which is not
+              ;  possible in the self-delimiting CBOR encoding)"
+          IF x[i] != y[i]:
+              RETURN x[i] > y[i]      ; unsigned byte values
+              ; "If the bytes differ, the difference determines the outcome
+              ;  of the comparison."
+          i = i + 1
+              ; "If the bytes are the same, the next pair of bytes are
+              ;  examined."
+
+  Note the two FAIL/UNREACHABLE arms are one sentence in the source; the
+  split above is this record's reading of its parenthesis, not the
+  document's own structure.  No length comparison appears anywhere: CBOR's
+  self-delimiting encoding makes "one key is a prefix of another"
+  impossible, which is why there is no shorter-string-sorts-first rule
+  here.  Sorting plain byte strings with a generic library comparator is
+  therefore correct for CBOR keys but for the wrong reason, and the
+  difference bites on any input that is not a valid encoded key.
+
+
+4.  VALIDITY CHECKS THE CONSTRAINTS DO NOT GIVE YOU
+---------------------------------------------------
+[Appendix C.3.1 item 3; Section 3.3 aside, cached source lines 831-849]
+
+  4.1  Duplicate keys, mostly for free.
+       "multiple entries with the same map key would have the same
+        (deterministic) map key serialization and would therefore be
+        consecutive when sorted.  Given this opportunity, the
+        lexicographic-map-sorting encoding constraint therefore is
+        deliberately phrased to require consecutive entries to have
+        strictly increasing map keys; with the other CDE encoding
+        constraints, this prevents encoding multiple entries that have the
+        same key." [Section 3.3 aside]
+       The strictness in 2.5 is therefore load-bearing, not cosmetic.
+
+  4.2  THE ONE DUPLICATE THE ORDERING RULE MISSES.
+       RFC 8949 Section 5.6.1 treats two distinct data items as EQUAL map
+       keys in one case, which the document calls out:
+       "Note that Section 5.6.1 of RFC 8949 [STD94] lists one specific case
+        "(specifically, -0.0 is equal to 0.0)" where two different keys are
+        considered equivalent for the purpose of duplicate map keys; this
+        needs to be checked with extra code for a full validity checker."
+       (the inner quotation marks are the source's own)
+       Their CDE encodings are f90000 and f98000 -- different byte strings,
+       correctly ordered, both accepted by 2.5.  So:
+
+       IF entries(m) contains a key equal to 0.0 AND a key equal to -0.0:
+           FAIL "equivalent map keys (RFC 8949 5.6.1)"
+
+       This is the only place in the whole encoder where CDE's byte-level
+       machinery is provably insufficient and the document says so.
+
+  4.3  Basic validity generally.
+       "CDE encoders MUST generate CBOR that fulfills basic validity
+        (Section 5.3.1 of RFC 8949 [STD94])." [C.3.1 item 3]
+       In this procedure that is 2.3 (UTF-8), 2.5 (ordering) and 4.2.
+       Appendix C's own preamble is blunter about why it matters:
+       "detecting duplicates and handling them as an error instead of
+        passing invalid data to the application is the most robust one;
+        achieving this level of robustness is a mark of quality of
+        implementation."
+
+
+5.  WHAT THIS PROCEDURE DELIBERATELY DOES NOT DO
+------------------------------------------------
+
+  - It does not normalize text [C.3.1 item 3].
+  - It does not choose between semantically equivalent application
+    representations -- integer vs. float for a timestamp, tag 0 vs. tag 1
+    vs. tag 1001 for a date, compressed vs. uncompressed EC points.  Those
+    are Application-level Deterministic Representation (ALDR) rules and
+    are "separate from CDE itself (Appendix B) and therefore out of scope
+    for this document" [Section 1.1].  CDE is not sufficient for
+    deterministic REPRESENTATION, only for deterministic ENCODING:
+    "the objective to have a deterministic serialization for a specific
+     application data item can only be fulfilled if the application itself
+     does not generate multiple different CBOR data items that represent
+     that same (equivalent) application data item" [Section 2].
+  - It does not presume float/tag-4/tag-5 equivalence [Section 3.1.2
+    item 5].
+  - It does not treat subnormals specially [Section 3.1.2 item 4].
+  - It says nothing about CBOR sequences beyond what .cdeseq implies
+    [Section 4].
