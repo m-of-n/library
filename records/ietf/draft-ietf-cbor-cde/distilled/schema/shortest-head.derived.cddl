@@ -1,0 +1,153 @@
+; =====================================================================
+; shortest-head.derived.cddl
+;
+; DERIVED - not verbatim.  draft-ietf-cbor-cde-13 states the shortest-head
+; constraint entirely in prose and in two example tables; it ships no
+; grammar for it.  Every rule below was written for this record and must
+; never be quoted as the source's own.
+;
+; Rendered from draft-ietf-cbor-cde-13
+; (.cache/draft-ietf-cbor-cde.txt, sha256
+; bc554e3d2d37182f5f37c88aac2e61298089438068ccbc7c674d0940e675605c):
+;   Section 2      "Its main constraint is to choose the shortest _head_
+;                  [...] that preserves the value of a data item
+;                  (shortest-head encoding constraint)."
+;   Section 3.1.1  "Integers that can be represented by basic major type 0
+;                  and 1 MUST be encoded using the (shortest-head)
+;                  deterministic encoding defined for them, and integers
+;                  outside this range MUST be encoded using the Preferred
+;                  Serialization [...] of tag 2 and 3 (i.e., no leading
+;                  zero bytes)."
+;   Appendix C.1.1 items 1 and 3 -- the per-range MUSTs, quoted inline below
+;   Appendix D.1   Table 4, "CDE: Integer Value Examples" -- the boundary
+;                  examples that pin the eight-byte row C.1.1 omits
+;   Appendix D.3   Table 6 -- the failing cases
+;   Appendix E     Table 7, "Serializations of integer number 1"
+;
+; WHAT THIS FILE CANNOT DO.  CDDL constrains values, not heads.  These
+; rules therefore partition the INTEGER VALUE SPACE by the head each value
+; must be given; they cannot themselves reject an over-long head.  The
+; value -> head map is in the comments and, executably, in
+; cde-encode.derived.pseudocode.txt; the rejection side is in
+; cde-check.derived.pseudocode.txt.  Use this file to generate and classify
+; test values, not to validate encodings.
+; =====================================================================
+
+
+; ---------------------------------------------------------------------
+; 1.  Argument ranges for the basic integers  (Appendix C.1.1 item 1)
+;
+; "Shortest-form encoding of the argument MUST be used for all major types
+; (shortest-head constraint)."  The four bullets of item 1 are rules 1.1
+; to 1.4 below, in the source's own words.  Rule 1.5 has no bullet in
+; C.1.1 -- see the DEFECT note after it.
+;
+; The same ranges govern the ARGUMENT of every major type, not just 0 and
+; 1: a map with 24 entries, a byte string of 256 bytes and tag 65536 all
+; take the head their count/length/number falls under here.  Appendix D.3
+; row 2 is the array case -- [4, 5] encoded 98020405 is "Array length not
+; in preferred serialization", because the length 2 belongs in rule 1.1.
+; ---------------------------------------------------------------------
+
+; 1.1  ai = the value itself (0x00..0x17); head is one byte
+;      "0 to 23 and -1 to -24 MUST be encoded in the same byte as the
+;       major type."
+head-immediate = 0..23 / -24..-1
+
+; 1.2  ai = 0x18; head is two bytes
+;      "24 to 255 and -25 to -256 MUST be encoded only with one additional
+;       byte (ai = 0x18)."
+head-ai-18 = 24..255 / -256..-25
+
+; 1.3  ai = 0x19; head is three bytes
+;      "256 to 65535 and -257 to -65536 MUST be encoded only with an
+;       additional two bytes (ai = 0x19)."
+head-ai-19 = 256..65535 / -65536..-257
+
+; 1.4  ai = 0x1a; head is five bytes
+;      "65536 to 4294967295 and -65537 to -4294967296 MUST be encoded only
+;       with an additional four bytes (ai = 0x1a)."
+head-ai-1a = 65536..4294967295 / -4294967296..-65537
+
+; 1.5  ai = 0x1b; head is nine bytes.
+;      DEFECT RECORDED, not resolved.  Appendix C.1.1 item 1 stops at
+;      ai = 0x1a and never states the eight-byte row, although the general
+;      shortest-head rule plainly implies it and Table 4 (Appendix D.1)
+;      supplies all four of its boundary examples:
+;        4294967296            -> 1b0000000100000000
+;        18446744073709551615  -> 1bffffffffffffffff
+;        -4294967297           -> 3b0000000100000000
+;        -18446744073709551616 -> 3bffffffffffffffff
+;      The range below is reconstructed from those examples.  An
+;      implementer working the checklist alone would find no MUST for it.
+head-ai-1b = 4294967296..18446744073709551615
+           / -18446744073709551616..-4294967297
+
+basic-integer = head-immediate / head-ai-18 / head-ai-19
+              / head-ai-1a / head-ai-1b
+
+; The basic-integer range is exactly CDDL's prelude `int`
+; (-2^64 .. 2^64-1).  It is spelled out above only so that each subrange
+; names the head it requires.
+
+
+; ---------------------------------------------------------------------
+; 2.  Beyond the basic range: bignums  (Section 3.1.1, Appendix C.1.1 item 3)
+;
+; Section 3.1.1: "tags 2/3 extend the range of basic major types 0/1 in a
+; seamless way", and CDE "turns this recommendation into a mandate".
+; Appendix C.1.1 item 3 states the mandate from the bignum side:
+;   "Positive integers from 0 to 2^64 - 1 MUST be encoded as a type 0
+;    integer."
+;   "Negative integers from -(2^64) to -1 MUST be encoded as a type 1
+;    integer."
+;   "Leading zeros MUST NOT be present in the byte string content of tag 2
+;    and 3."
+;   "(This also applies to the use of tags 2 and 3 within other tags, such
+;    as 4 or 5.)"
+; ---------------------------------------------------------------------
+
+bignum-positive = #6.2(bignum-content)
+bignum-negative = #6.3(bignum-content)
+
+; UNDER-CONSTRAINED, and it cannot be otherwise.  "no leading zero bytes"
+; is a predicate on the first byte of the content; RFC 8610 has no control
+; operator that can express it (.size and .bits constrain length and bit
+; positions, not byte values).  Nor can CDDL require that the magnitude be
+; >= 2^64, which is the other half of item 3.  Both checks are in
+; cde-encode.derived.pseudocode.txt and cde-check.derived.pseudocode.txt.
+; The two failing rows of Table 6 (Appendix D.3) are exactly these:
+;   c34a00010000000000000000  "Bignum with leading zero bytes"
+;   c243010000                "Integer value too small for bignum"
+; Both satisfy the rule below.
+bignum-content = bytes
+
+cde-integer = basic-integer / bignum-positive / bignum-negative
+
+; Which arm applies is fixed by magnitude, not by choice:
+;   value in -2^64 .. 2^64-1   -> basic-integer   (MUST, C.1.1 item 3)
+;   value >= 2^64              -> bignum-positive, content = value
+;   value <= -2^64 - 1         -> bignum-negative, content = -1 - value
+; The -1-n content convention is RFC 8949's (Section 3.4.3), NOT restated
+; by this document; it is confirmed here by Table 4's two bignum rows,
+; where 18446744073709551616 and -18446744073709551617 both encode a
+; nine-byte content of 010000000000000000.
+
+
+; ---------------------------------------------------------------------
+; 3.  Indefinite lengths are out of the data model's reach too
+;     (Section 3.2, Appendix C.2)
+;
+; "The definite-length-only encoding constraint means that indefinite
+; length encoding MUST NOT be used" (Section 3.2), "both for (binary/text)
+; strings and for arrays and maps" (Appendix C.2).  ai = 0x1f is simply
+; never emitted.  CDDL has nothing to say about this: a definite-length
+; and an indefinite-length encoding of the same array are the SAME
+; data-model value, and `[* any]` admits both.  Table 6's last row,
+; 5f4101420203ff for (_ h'01', h'0203'), is a well-formed value of type
+; `bytes` that is not CDE.
+; ---------------------------------------------------------------------
+
+; Kept as a name only, so a rule can document the intent even though no
+; tool can enforce it.  Do not mistake this for a constraint.
+definite-length-only-note = any

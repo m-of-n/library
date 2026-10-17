@@ -1,0 +1,795 @@
+record: draft-mcnally-deterministic-cbor
+reviewed_by: ""
+# Every structure this document defines or constrains.
+#
+# Scope: dCBOR is an encoding profile, not a protocol. It defines no message,
+# frame or envelope of its own. The structures below are CBOR's own encoded
+# forms as this document narrows them (Section 2), plus the two constructs it
+# does define: CBOR tag 201 (Section 3, Section 6) and the CDDL control
+# operators .dcbor / .dcborseq (Section 3). Byte-level layouts are given for
+# the forms that survive the narrowing; forms the profile excludes are
+# enumerated byte-for-byte in the notes of the structure that would carry them.
+#
+# Derived material is marked inline. The document never restates the CBOR head
+# layout, the preferred-serialization table, the bytewise-lexicographic
+# comparison or the IEEE 754 bit layouts -- all four are incorporated by
+# reference (RFC 8949 Section 3, Section 4.1, Section 4.2.1; IEEE 754). Where a
+# layout below spells one of those out, the spelling is ours, cross-checked
+# against this document's own test vectors in Table 3 and Table 4, which
+# exercise every argument-width and reduction boundary.
+#
+# constrained_by: NOT POPULATED ANYWHERE. requirements.yaml was written in a
+# parallel pass; its R-NNNN ids are sequential and could not be predicted from
+# the source, and a wrong id is worse than a missing one. Each constraint is
+# instead named by section and rule number in constrained_by_note, which the
+# cross-check pass can resolve mechanically. The document numbers its rules per
+# subsection (dCBOR encoders: 1. then dCBOR decoders: 2.), except Section 2.7,
+# which numbers both of its rules 1. -- see text-string notes.
+messages:
+  - name: dcbor-data-item
+    locator: "§2"
+    encoding: CBOR
+    constrained_by_note: "§2 paragraph 4 (recursive conformance); §2.1 through §2.7 supply the per-form rules"
+    fields:
+      - name: head
+        type: data-item-head
+        required: true
+        layout: >
+          1, 2, 3, 5 or 9 bytes: initial byte carrying major type and
+          additional information, then 0, 1, 2, 4 or 8 argument bytes
+      - name: content
+        type: bytes / nested data items
+        required: false
+        layout: |
+          Present for major types 2 and 3 (exactly argument bytes verbatim), 4
+          (exactly argument nested data items), 5 (exactly 2 * argument nested
+          data items) and 6 (exactly one nested data item). Absent for major
+          types 0, 1 and 7, whose entire value lives in the head.
+    layout: |
+      One CBOR data item with no framing of its own: head immediately followed
+      by its content, if any. No prefix, no outer length, no terminator -- and
+      no break byte (0xff) anywhere, because §2.1 removes every construct that
+      uses one. Conformance is recursive: every nested item (array element, map
+      key, map value, tag content) is itself a dcbor-data-item, so validity
+      cannot be decided from the outermost head alone.
+    notes: |
+      The initial byte of a conforming item is drawn from exactly these
+      families: 0x00-0x1b (unsigned int), 0x20-0x3b (negative int), 0x40-0x5b
+      (byte string), 0x60-0x7b (text string), 0x80-0x9b (array), 0xa0-0xbb
+      (map), 0xc0-0xdb (tag), 0xf4/0xf5/0xf6 (false/true/null) and
+      0xf9/0xfa/0xfb (float). Every other initial byte is either excluded by
+      §2.1/§2.6 or not well-formed CBOR.
+      dCBOR does not fork CBOR (§2 paragraph 2): the output is well-formed,
+      deterministically encoded CBOR per RFC 8949, so stock CBOR decoders read
+      it. The profile's teeth are on the decode side -- every subsection pairs
+      an encoder MUST with a decoder MUST-reject, which is what distinguishes
+      dCBOR from RFC 8949 Section 4.2 (encoder-side guidance only).
+      §2 paragraph 5 declines to require any particular subset: an
+      implementation need not support floats at all, and dCBOR places no direct
+      requirement on which subset of CBOR is implemented. Requirements attach
+      only to implementations that do support 64-bit integers and floats of 64
+      bits or less. This leaves a hole: see numeric-reduction notes.
+  - name: data-item-head
+    locator: "§2.1, §2.2 (narrowing RFC 8949 §3 and §4.1)"
+    encoding: CBOR
+    constrained_by_note: >
+      §2.1 rules 1 and 2 (no additional information 31 for major types 2-5);
+      §2.2 rules 1 and 2 (shortest argument form only)
+    fields:
+      - name: major_type
+        type: uint3
+        required: true
+        layout: >
+          Bits 7-5 of byte 0, i.e. byte0 >> 5. Values 0-7. dCBOR admits all
+          eight, but narrows 7 to three simple values plus floats.
+      - name: additional_information
+        type: uint5
+        required: true
+        layout: |
+          Bits 4-0 of byte 0, i.e. byte0 AND 0x1f. In dCBOR only values 0-27
+          occur. 28, 29 and 30 are not well-formed CBOR in the first place. 31
+          means indefinite length for major types 2-5 (rejected by §2.1) and
+          the break stop code for major type 7 (0xff), which is therefore
+          unreachable.
+      - name: argument
+        type: uint8 / uint16 / uint32 / uint64, big-endian
+        required: false
+        layout: |
+          0 bytes when additional_information is 0-23 (the value IS the
+          additional information); 1 byte for 24; 2 bytes for 25; 4 bytes for
+          26; 8 bytes for 27. Always most-significant byte first. Meaning
+          depends on major type: the numeric value (0, 1), a byte count (2, 3),
+          an element count (4), a pair count (5), a tag number (6), or -- for
+          major type 7 additional information 25/26/27 only -- an IEEE 754 bit
+          pattern rather than an integer.
+    layout: |
+      Byte 0 is (major_type << 5) OR additional_information; the argument
+      bytes, if any, follow immediately. §2.2 leaves exactly one legal head per
+      value: the shortest form whose argument field can hold it.
+        value 0-23              -> additional information 0-23, head 1 byte
+        24-255                  -> additional information 24, head 2 bytes
+        256-65535               -> additional information 25, head 3 bytes
+        65536-4294967295        -> additional information 26, head 5 bytes
+        4294967296-(2^64 - 1)   -> additional information 27, head 9 bytes
+      Table 3 exercises every boundary of this ladder on major type 0: 23 ->
+      0x17, 24 -> 0x1818, 255 -> 0x18ff, 65535 -> 0x19ffff, 65536 ->
+      0x1a00010000, 4294967295 -> 0x1affffffff, 4294967296 ->
+      0x1b0000000100000000, 2^64 - 1 -> 0x1bffffffffffffffff.
+    notes: |
+      The ladder is ours, derived from RFC 8949 Section 4.1 and confirmed
+      against Table 3; this document states only MUST only emit preferred
+      serialization and never reproduces the rule. An implementer cannot build
+      a dCBOR codec from this document alone -- RFC 8949 Section 3, Section
+      4.1, Section 4.2.1, RFC 8610 and the Unicode normalization report are all
+      load-bearing by reference.
+      The same ladder governs tag numbers (major type 6), string lengths,
+      element counts and pair counts, not just integer values -- which is what
+      pins tag 201 to the two bytes 0xd8 0xc9.
+      For major type 7 the ladder does not apply as an integer rule: the three
+      float widths are selected by exact representability, not by magnitude
+      (see floating-point-value).
+  - name: unsigned-integer
+    locator: "§2.2, §2.5, Table 3"
+    encoding: CBOR
+    constrained_by_note: "§2.2 rules 1 and 2 (preferred serialization); §2.5 rule 1 (reduction target)"
+    fields:
+      - name: value
+        type: uint64
+        required: true
+        layout: >
+          Carried entirely in the head argument; value = argument, range 0
+          to 18446744073709551615 (2^64 - 1), the upper half of DCBOR_INT.
+    layout: |
+      Major type 0. Byte 0 is 0x00 OR additional_information:
+        0x00-0x17            values 0-23, one byte total
+        0x18 nn              24-255
+        0x19 nn nn           256-65535
+        0x1a nn nn nn nn     65536-4294967295
+        0x1b nn * 8          4294967296-18446744073709551615
+      Argument bytes are big-endian. Exactly one of these forms is legal for a
+      given value (§2.2).
+    notes: |
+      This is where numeric reduction lands non-negative integral floats, so
+      the byte stream carries no trace of the application-level type: 42.0
+      arrives as 0x182a, 2345678.0 as 0x1a0023cace, 65504.0 as 0x19ffe0,
+      33554430.0 as 0x1a01fffffe, 18446744073709550000.0 as
+      0x1bfffffffffffff800. All three CBOR spellings of zero (0, 0.0, -0.0)
+      collapse to the single byte 0x00 (§2.5 rule 1, final paragraph).
+      Untagged only: a tagged integer is a tagged-data-item and is never
+      numerically equal to this (§2.5, final paragraph).
+  - name: negative-integer
+    locator: "§2.2, Table 3, Table 4"
+    encoding: CBOR
+    constrained_by_note: >
+      §2.2 rules 1 and 2 (preferred serialization); the 65-bit exclusion is
+      asserted only by Table 4, see notes
+    fields:
+      - name: n
+        type: uint64
+        required: true
+        layout: >
+          The head argument. The encoded value is -1 - n. In dCBOR practice
+          n is bounded to 2^63 - 1, so the argument's most significant bit
+          is never set.
+    layout: |
+      Major type 1. Byte 0 is 0x20 OR additional_information, same five
+      argument widths as major type 0:
+        0x20-0x37            n = 0-23, values -1 to -24
+        0x38 nn              n = 24-255
+        0x39 nn nn           n = 256-65535
+        0x3a nn nn nn nn     n = 65536-4294967295
+        0x3b nn * 8          n above that
+      Worked from Table 3: 0x20 is -1, 0x21 is -2, 0x387e is -127 (n = 126),
+      0x387f is -128, 0x397fff is -32768 (n = 32767), 0x3a7fffffff is
+      -2147483648, 0x3b7fffffffffffffff is -9223372036854775808 = -(2^63), the
+      floor of DCBOR_INT.
+    notes: |
+      NORMATIVE GAP. Table 4 requires a decoder to reject
+      0x3b8000000000000000 (-(2^63) - 1) and 0x3bffffffffffffffff (-(2^64))
+      with the reason 65-bit negative integer value, which caps the major type
+      1 argument at 2^63 - 1. No rule in §2 says this. DCBOR_INT =
+      [-(2^63), 2^64 - 1] appears only in §2.5 rule 1, which governs converting
+      a FLOAT to an integer, not the validity of an integer that arrives as
+      major type 1. A decoder implementing §2 literally accepts both encodings
+      Table 4 says it must reject, and Appendix A introduces itself as test
+      vectors intended to exercise the requirements of this specification --
+      not as a source of requirements. The asymmetry is also unexplained in
+      normative text: the positive ceiling is 2^64 - 1 but the negative floor
+      is only -(2^63), so dCBOR's integer range is the union of the int64 and
+      uint64 ranges rather than a symmetric interval.
+      TABLE DEFECTS (encodings correct, annotations wrong): Table 3 labels -127
+      as (-2^8 - 1), which is -257; -127 is -(2^7 - 1). It labels -32768 as
+      (-2^16), which is -65536; -32768 is -(2^15). The rows for -128 (-2^7),
+      -2147483648 (-2^31) and -9223372036854775808 (-2^63) are correctly
+      annotated.
+  - name: byte-string
+    locator: "§2.1, §8.5"
+    encoding: CBOR
+    constrained_by_note: >
+      §2.1 rule 1 (definite length only) and rule 2 (reject indefinite
+      length); §2.2 rules 1 and 2 (shortest length head)
+    fields:
+      - name: length
+        type: uint64
+        required: true
+        layout: >
+          Head argument = the content length in bytes, encoded in the
+          shortest argument form that holds it.
+      - name: content
+        type: bstr
+        required: true
+        layout: >
+          Exactly length bytes immediately after the head, copied verbatim.
+          Zero-length is legal (0x40). No internal structure, no
+          normalization, no padding.
+    layout: |
+      Major type 2. Byte 0 is 0x40 OR additional_information:
+        0x40                 empty byte string
+        0x41-0x57            1-23 content bytes
+        0x58 ll              24-255 content bytes
+        0x59 ll ll           up to 65535
+        0x5a ll ll ll ll     up to 4294967295
+        0x5b ll * 8          longer
+      followed by exactly that many content bytes. 0x5f (additional
+      information 31, the indefinite-length chunked form) MUST NOT be emitted
+      and MUST be rejected, so a 0xff break never appears inside a byte string
+      and the item's total length is known from its head.
+    notes: |
+      dCBOR places no constraint whatsoever on byte-string content -- §8.5
+      (non-normative) calls this the escape hatch, naming tag 2/3 bignums and
+      tag 80/81/82 float arrays as uses. Contrast text-string, where NFC is
+      mandatory: text smuggled inside a byte string is not normalized, so an
+      application that puts strings in bstr fields opts out of §2.7 silently.
+  - name: text-string
+    locator: "§2.1, §2.7"
+    encoding: CBOR
+    constrained_by_note: >
+      §2.1 rules 1 and 2 (definite length only); §2.7 encoder rule 1 (emit
+      NFC only) and decoder rule 1 (reject non-NFC) -- the document numbers
+      both of them 1.
+    fields:
+      - name: length
+        type: uint64
+        required: true
+        layout: >
+          Head argument = the length in BYTES of the UTF-8 encoding -- not
+          characters, not code points, not grapheme clusters. Measured after
+          normalization, since NFC composition changes the byte count and
+          therefore the head itself.
+      - name: content
+        type: tstr
+        required: true
+        layout: >
+          Exactly length bytes of UTF-8 immediately after the head, which
+          MUST already be in Unicode Normalization Form C. Zero-length is
+          legal (0x60).
+    layout: |
+      Major type 3. Byte 0 is 0x60 OR additional_information:
+        0x60                 empty text string
+        0x61-0x77            1-23 UTF-8 bytes
+        0x78 ll              24-255 bytes
+        0x79 ll ll           up to 65535
+        0x7a ll ll ll ll     up to 4294967295
+        0x7b ll * 8          longer
+      followed by exactly that many UTF-8 bytes. 0x7f (indefinite-length
+      chunked text) MUST NOT be emitted and MUST be rejected.
+    notes: |
+      §2.7's two rules are both numbered 1. -- every other subsection numbers
+      its encoder rule 1 and its decoder rule 2 -- so there is no §2.7 item 2
+      in the document's own numbering, and any requirement id keyed to one will
+      not match the source. Worth fixing upstream.
+      The rule is NFC, cited to the Unicode Normalization Forms report, with no
+      profile of its own: the document does not say which Unicode version
+      governs (NFC is stability-guaranteed, but the set of assigned characters
+      is not), does not say whether a decoder may use a quick-check NO/MAYBE
+      result instead of full normalization, and does not say what a decoder
+      does with well-formed UTF-8 that is not NFC other than reject it. Nothing
+      is said about unpaired surrogates, noncharacters or BOM beyond what UTF-8
+      well-formedness already excludes.
+      Map key ordering compares these encoded bytes (head included), so NFC
+      also decides key order, not just key identity.
+  - name: array
+    locator: "§2.1, §2"
+    encoding: CBOR
+    constrained_by_note: >
+      §2.1 rules 1 and 2 (definite length only); §2.2 rules 1 and 2
+      (shortest count head); §2 paragraph 4 (each element conforms
+      recursively)
+    fields:
+      - name: count
+        type: uint64
+        required: true
+        layout: >
+          Head argument = number of ELEMENTS, not bytes. The array's byte
+          length is not recoverable from the head; it is known only after
+          parsing every element.
+      - name: elements
+        type: array of data-item
+        required: false
+        layout: >
+          Exactly count complete dcbor-data-items concatenated immediately
+          after the head, with no separators, no per-element length prefix
+          and no terminator. Absent when count is 0.
+    layout: |
+      Major type 4. Byte 0 is 0x80 OR additional_information:
+        0x80                 empty array
+        0x81-0x97            1-23 elements
+        0x98 nn              24-255 elements
+        0x99 nn nn           up to 65535
+        0x9a nn nn nn nn     up to 4294967295
+        0x9b nn * 8          longer
+      0x9f (indefinite-length array, terminated by a 0xff break) MUST NOT be
+      emitted and MUST be rejected.
+    notes: |
+      dCBOR imposes no ordering, uniqueness or homogeneity requirement on array
+      elements -- order is meaningful and preserved, and only maps constrain
+      order and duplication. §8.3's example [1, NaN, 3] is the document's own
+      illustration that element-level encoding variability (here, NaN payloads)
+      is what the canonical NaN removes; nothing about the array head changes.
+  - name: map
+    locator: "§2.1, §2.3, §2.4, §2.5"
+    encoding: CBOR
+    constrained_by_note: >
+      §2.1 rules 1 and 2 (definite length); §2.3 rules 1 and 2 (bytewise
+      lexicographic key order); §2.4 rules 1 and 2 (no duplicate keys); §2.5
+      rule 1 note (reduction can create duplicates)
+    fields:
+      - name: count
+        type: uint64
+        required: true
+        layout: >
+          Head argument = number of key/value PAIRS, so 2 * count data items
+          follow. A map of 23 pairs still has a one-byte head (0xb7) because
+          the ladder applies to the pair count, not the item count.
+      - name: key
+        type: data-item
+        required: false
+        layout: >
+          A complete dcbor-data-item of any major type -- not restricted to
+          text strings or integers. Its full encoded byte string is the sort
+          key and the duplicate-detection key.
+      - name: value
+        type: data-item
+        required: false
+        layout: >
+          A complete dcbor-data-item following its key with no separator.
+          Unconstrained by this profile beyond recursive dCBOR conformance.
+    layout: |
+      Major type 5. Byte 0 is 0xa0 OR additional_information:
+        0xa0                 empty map
+        0xa1-0xb7            1-23 pairs
+        0xb8 nn              24-255 pairs
+        0xb9 nn nn           up to 65535 pairs
+        0xba nn nn nn nn     up to 4294967295 pairs
+        0xbb nn * 8          longer
+      followed by strictly interleaved key, value, key, value ... for exactly
+      count pairs. 0xbf (indefinite-length map) MUST NOT be emitted and MUST
+      be rejected. Across the pairs, the encoded key byte strings MUST appear
+      in ascending bytewise lexicographic order (see map-key-ordering) and no
+      two may be equal.
+    notes: |
+      §2.4 upgrades RFC 8949's invalid, handling left to the implementor to a
+      flat MUST NOT emit / MUST reject, so duplicate keys are a hard decode
+      failure, not a last-wins or first-wins merge.
+      ORDER AND DUPLICATION ARE DECIDED AFTER NUMERIC REDUCTION. §2.5's
+      indented note is explicit that this makes some valid CBOR maps
+      unrepresentable: the map with keys 10 and 10.0 (Figure 1) reduces to a
+      map with the key 0x0a twice (Figure 2), which is invalid dCBOR.
+      Applications must avoid keys that are semantically equivalent in dCBOR's
+      numeric model. §2.5's final paragraph bounds the damage: the numeric
+      model covers only untagged major types 0, 1 and 7, so 1(10) and 10 are
+      distinct keys and never collide.
+      The document says nothing about what a decoder reports for a map whose
+      keys are sorted by RFC 8949 Section 4.2.3 length-first order instead:
+      such a map is simply in the wrong order and is rejected under §2.3 rule
+      2, with no distinguishable error.
+      No bound is placed on map size, key size or nesting depth anywhere in the
+      document -- the memory-exhaustion surface of a definite-length head with
+      a 2^64 - 1 count is inherited from RFC 8949 and is not discussed in §5.
+  - name: map-key-ordering
+    locator: "§2.3 (citing RFC 8949 §4.2.1, final bullet)"
+    encoding: CBOR
+    constrained_by_note: >
+      §2.3 rule 1 (encoders emit sorted keys) and rule 2 (decoders validate
+      order and reject)
+    fields:
+      - name: key_encoding
+        type: bstr (complete encoded key bytes)
+        required: true
+        layout: |
+          The operand is the whole encoded key as it appears in the map -- head
+          bytes and content together, after numeric reduction and NFC
+          normalization -- not the key's data-model value and not its content
+          bytes alone.
+    layout: |
+      Compare two key encodings as sequences of unsigned 8-bit values, left to
+      right from byte 0. At the first index where they differ, the key with the
+      smaller byte value sorts first. If no index differs and one sequence is a
+      prefix of the other, the shorter sorts first. Keys must appear in
+      ascending order under this relation, and equality under it is the
+      duplicate condition of §2.4. This is RFC 8949 Section 4.2.1's final
+      bullet (plain bytewise lexicographic), NOT the length-first order of
+      Section 4.2.3.
+    notes: |
+      The comparison itself is cited, never restated in this document; the
+      statement above is ours, from RFC 8949.
+      DERIVED CONSEQUENCES (not stated in the source, but forced by it, and the
+      part implementers get wrong). Because the major type sits in the top
+      three bits of byte 0, keys sort by major type first: all unsigned
+      integers (0x00-0x1b) < all negative integers (0x20-0x3b) < byte strings
+      (0x40-0x5b) < text strings (0x60-0x7b) < arrays (0x80-0x9b) < maps
+      (0xa0-0xbb) < tags (0xc0-0xdb) < false/true/null/floats (0xf4-0xfb).
+      Within major type 0, preferred serialization makes byte order agree with
+      numeric order. Within major type 1 it does NOT: the argument is -1 - n,
+      so -1 (0x20) precedes -2 (0x21) and negative integers sort in DESCENDING
+      numeric value, all of them after every non-negative integer.
+      Within text strings, the length-class head byte is compared before any
+      content, so the key z (0x61 0x7a) sorts before the key aa (0x62 0x61
+      0x61) -- this is not lexicographic on the strings themselves.
+      Reduction interacts with order: a key given as 10.0 sorts as 0x0a, in the
+      integer region, not among the floats.
+  - name: tagged-data-item
+    locator: "§2.5 (final paragraph), §8.5"
+    encoding: CBOR
+    constrained_by_note: >
+      §2.2 rules 1 and 2 (shortest tag-number head); §2 paragraph 4 (tag
+      content conforms recursively); §2.5 final paragraph (tag equality and
+      exclusion from the numeric model)
+    fields:
+      - name: tag_number
+        type: uint64
+        required: true
+        layout: >
+          The head argument, under the same shortest-form ladder as every
+          other argument: 0xc0-0xd7 for tags 0-23, 0xd8 nn for 24-255, 0xd9
+          nn nn for 256-65535, 0xda nn*4 up to 2^32 - 1, 0xdb nn*8 up to
+          2^64 - 1.
+      - name: content
+        type: data-item
+        required: true
+        layout: >
+          Exactly one complete dcbor-data-item immediately after the head.
+          Never zero, never more than one, no length prefix of its own.
+    layout: |
+      Major type 6: head carrying the tag number, then exactly one enclosed
+      data item. Nothing else. The tag contributes 1, 2, 3, 5 or 9 bytes of
+      prefix and no suffix.
+    notes: |
+      EQUALITY. §2.5's final paragraph: two tagged data items are equal in
+      dCBOR only if both their tag numbers and their enclosed data items are
+      equal, and no tagged data item is ever numerically equal to an untagged
+      one. Tag content is therefore not reduced relative to its tag: 1(1700000)
+      and 1700000 are distinct map keys that may coexist.
+      TENSION, UNRESOLVED BY THE DOCUMENT. §8.5 (explicitly non-normative) says
+      dCBOR places no restrictions on tags beyond those that apply to all byte
+      strings (definite length only), and invites free use of tag 2/3 bignums.
+      But §2.2 requires preferred serialization of every data item, and RFC
+      8949 Section 3.4.3 gives bignums preferred-serialization rules of their
+      own (leading zeroes, and the basic-integer form where the value fits).
+      A §2.2-conforming encoder therefore cannot in fact emit tag 2 as freely
+      as §8.5 suggests. The document does not say which reading wins.
+      §2.5 rule 1 is explicit in the other direction: when reducing a float,
+      conversion to a CBOR bignum is never considered, so a float outside
+      DCBOR_INT stays a float rather than becoming tag 2/3.
+      Tags 80, 81 and 82 are named in §8.5 as the route for nontrivial NaN
+      payloads, described only as byte strings holding arrays of fixed-length
+      big-endian IEEE 754 values; the layouts are left to the IANA CBOR Tags
+      registry and are not defined here.
+  - name: tag-201-enclosed-dcbor
+    locator: "§3, §6 Table 1"
+    encoding: CBOR
+    constrained_by_note: >
+      §3 final paragraph (declares content conformance at data model and
+      encoded level); §6 Table 1 (registration, data item (any)); §2.2 rules
+      1 and 2 force the two-byte head
+    fields:
+      - name: tag_head
+        type: uint16 (fixed)
+        required: true
+        layout: >
+          Exactly the two bytes 0xd8 0xc9: major type 6 with additional
+          information 24 (0xc0 OR 24 = 0xd8), then the one-byte argument 201
+          = 0xc9.
+      - name: content
+        type: data-item
+        required: true
+        layout: >
+          Exactly one enclosed data item, registered as (any) in Table 1,
+          which the tag declares to conform to dCBOR both at the data model
+          level and at the encoded data item level.
+    layout: |
+      0xd8 0xc9 followed by one complete dCBOR data item. 201 is greater than
+      23 and at most 255, so §2.2 admits only the one-byte argument form:
+      0xd8c9 is the ONLY legal encoding of this tag. 0xd900c9, 0xda000000c9
+      and 0xdb00000000000000c9 are all well-formed CBOR, all non-preferred, and
+      all MUST be rejected.
+    notes: |
+      IANA has registered tag 201, enclosed dCBOR, data item (any) (Table 1).
+      This is the one construct in the document with a wire footprint of its
+      own, and it carries no requirement: nothing obliges a dCBOR item to be
+      wrapped in it, nothing forbids 201(201(x)), nothing says whether the tag
+      may appear inside non-dCBOR CBOR, and nothing says what a decoder does
+      when the content turns out not to conform -- reject the item, or reject
+      only the claim.
+      Note the near-redundancy inside a dCBOR stream: §2's recursion already
+      requires the content of any tag to conform, so 201 asserts nothing new
+      there. It is load-bearing only at a boundary -- an otherwise
+      unconstrained CBOR structure pointing into a dCBOR region -- which is
+      exactly the boundary marker use §3 describes, citing Gordian Envelope
+      Section 3. §3 does not say whether the declaration is checkable (a
+      decoder validating the content) or merely declarative.
+  - name: floating-point-value
+    locator: "§2.2, §2.5, Table 3, Table 4"
+    encoding: CBOR
+    constrained_by_note: >
+      §2.2 rules 1 and 2 (shortest exactly-representing width); §2.5 rule 1
+      (reduce integral values in DCBOR_INT), rule 2 (canonical NaN), rule 3
+      (decoders reject anything else)
+    fields:
+      - name: initial_byte
+        type: uint8
+        required: true
+        layout: >
+          0xf9 for binary16 (major type 7, additional information 25), 0xfa
+          for binary32 (26), 0xfb for binary64 (27). No other width exists
+          in CBOR and none is added here.
+      - name: sign
+        type: uint1
+        required: true
+        layout: >
+          Bit 7 of byte 1 (the first payload byte) in all three widths. 0
+          positive, 1 negative. -0.0 cannot survive encoding: §2.5 reduces
+          it to integer 0 (0x00).
+      - name: exponent
+        type: uint5 / uint8 / uint11
+        required: true
+        layout: >
+          binary16: bits 6-2 of byte 1 (5 bits, bias 15). binary32: bits 6-0
+          of byte 1 plus bit 7 of byte 2 (8 bits, bias 127). binary64: bits
+          6-0 of byte 1 plus bits 7-4 of byte 2 (11 bits, bias 1023). All
+          ones means Inf or NaN; all zeros means zero or subnormal.
+      - name: fraction
+        type: uint10 / uint23 / uint52
+        required: true
+        layout: >
+          binary16: bits 1-0 of byte 1 plus all of byte 2 (10 bits).
+          binary32: bits 6-0 of byte 2 plus bytes 3-4 (23 bits). binary64:
+          bits 3-0 of byte 2 plus bytes 3-8 (52 bits).
+    layout: |
+      Head byte then the IEEE 754 bit pattern in big-endian order, most
+      significant byte first: 0xf9 + 2 bytes, 0xfa + 4 bytes, 0xfb + 8 bytes.
+      Total item size 3, 5 or 9 bytes. Width is not chosen by magnitude but by
+      exact representability: §2.2 admits only the narrowest of binary16,
+      binary32, binary64 that reproduces the value bit-for-bit on round trip,
+      SUBNORMALS INCLUDED -- Table 3 requires 0xf90001 for 2^-24 (smallest half
+      subnormal) and 0xfa00000001 for the smallest single subnormal, and Table
+      4 rejects 0xfb3ff8000000000000 for 1.5 because 0xf93e00 represents it
+      exactly. §2.5 then removes from the float space every finite value whose
+      exact value is an integer inside DCBOR_INT.
+    notes: |
+      The bit layouts are ours, from IEEE 754; the document states neither them
+      nor the round-trip test, and cross-checks only through Table 3.
+      COMBINED EFFECT. The legal dCBOR floats are exactly: finite values with a
+      non-zero fractional part; finite integral values outside DCBOR_INT;
+      positive and negative infinity (half only); and one NaN. Every finite
+      integral value in [-(2^63), 2^64 - 1] is unreachable as a float. The
+      boundary vectors in Table 3 pin this: 18446744073709550000.0 (the largest
+      double below 2^64) reduces to 0x1bfffffffffffff800, but
+      18446744073709552000.0 (exactly 2^64, one past the ceiling) stays a float
+      as 0xfa5f800000; -9223372036854774784.0 reduces to 0x3b7ffffffffffffbff,
+      but -18446742974197924000.0 is past the -(2^63) floor and stays a float
+      as 0xfadf7fffff. Single width is chosen for both survivors because
+      binary32 represents them exactly.
+      Four more Table 3 anchors for the width rule: 1.5 -> 0xf93e00 (half),
+      2345678.25 -> 0xfa4a0f2b39 (single), 1.2 -> 0xfb3ff3333333333333 (double,
+      inexact in every narrower width), 3.4028234663852886e+38 ->
+      0xfa7f7fffff (largest single) but 3.402823466385289e+38 ->
+      0xfb47efffffe0000001 (just past it).
+      Decode-side rule 3 is conditioned on dCBOR decoders that support floating
+      point numbers -- see numeric-reduction notes for the hole this leaves.
+  - name: numeric-reduction
+    locator: "§2.5"
+    encoding: CBOR
+    constrained_by_note: >
+      §2.5 rule 1 (convert integral floats in range), rule 2 (canonical
+      NaN), rule 3 (decoders reject non-conforming floats); §3 paragraph 4
+      (CDDL number)
+    fields:
+      - name: DCBOR_INT
+        type: integer interval
+        required: true
+        layout: >
+          Defined by §2.5 rule 1 as [-2^63, 2^64-1], i.e.
+          -9223372036854775808 to 18446744073709551615. Not symmetric: it is
+          the union of the int64 and uint64 ranges, so the encoded floor is
+          0x3b7fffffffffffffff and the ceiling 0x1bffffffffffffffff.
+      - name: integral_floating_point_value
+        type: float16 / float32 / float64
+        required: true
+        layout: >
+          The source's term for a floating point value with a zero
+          fractional part. If such a value is numerically equal to an
+          integer in DCBOR_INT it MUST be converted to that integer before
+          encoding; preferred serialization then picks the shortest integer
+          head. If it has a non-zero fractional part, or an exponent that
+          takes it out of DCBOR_INT, the original float is encoded instead.
+      - name: nan
+        type: float16 (fixed)
+        required: true
+        layout: >
+          All NaN values, of any width and any payload, MUST be reduced to
+          the quiet NaN with the half-width representation 0xf97e00 (§2.5
+          rule 2). See canonical-nan.
+    layout: |
+      Not a wire structure: the transformation that decides which wire
+      structure a number gets. Scope is untagged major type 0, untagged major
+      type 1 and untagged major type 7 floats only (§2.5, final paragraph) --
+      the dCBOR numeric model. On encode: test the float's exact value for
+      equality with an integer in DCBOR_INT; if equal, emit unsigned-integer
+      (value >= 0) or negative-integer (value < 0) under preferred
+      serialization; else emit floating-point-value. A CBOR bignum is never
+      considered as a conversion target. On decode: reject any float that could
+      have been reduced (Table 4: 0xf94a00 for 12.0), any float that is not the
+      preferred width, and any non-canonical NaN.
+    notes: |
+      Reduction is value-based, not width-based. A double 42.0 does not become
+      a 9-byte integer; it becomes the two bytes 0x182a. The three spellings of
+      zero (0, 0.0, -0.0) all become 0x00.
+      CONDITIONAL-APPLICABILITY HOLE. §2.5 addresses rules 1 and 2 to dCBOR
+      implementations that support floating point numbers, and rule 3 to dCBOR
+      decoders that support floating point numbers. §2 paragraph 5 says
+      implementations need not support floats at all. Read together, an
+      implementation with no float support has no stated obligation to reject a
+      reducible float, a non-preferred float or a non-canonical NaN on decode
+      -- yet a decoder that silently accepts 0xf94a00 breaks the hash-equality
+      property the whole profile exists for. The document does not say whether
+      such a decoder must instead reject all major type 7 floats outright.
+      §3 ties the model to CDDL: the Standard Prelude's number = int / float
+      spans exactly major types 0, 1 and 7, so dCBOR applications can specify
+      numeric fields as number and let reduction make the width and signedness
+      choice. This is the profile's main ergonomic claim (§8.1): the
+      serialization stays typed, but protocol designers stop choosing types.
+      §8.1 gives the worked motivation -- RFC 8949 tag 1 (epoch date/time)
+      admits both an integer and an equivalent float for an integral number of
+      seconds, and reduction removes that choice.
+  - name: canonical-nan
+    locator: "§2.5 rule 2, §8.3, Table 3, Table 4"
+    encoding: CBOR
+    constrained_by_note: >
+      §2.5 rule 2 (encoders reduce all NaN to this), rule 3 (decoders reject
+      any other NaN)
+    fields:
+      - name: bytes
+        type: uint24 (fixed)
+        required: true
+        layout: >
+          Exactly 0xf9 0x7e 0x00, three bytes, no variants. Byte 0 is major
+          type 7 additional information 25 (half precision). Payload 0x7e00
+          is sign 0, all five exponent bits set, the most significant
+          fraction bit set (quiet), and the remaining nine fraction bits
+          clear (payload zero).
+    layout: |
+      The entire item is the 3-byte sequence 0xf9 0x7e 0x00. It is the only NaN
+      in dCBOR regardless of the width or payload of the value being encoded.
+    notes: |
+      Table 4 pins the three ways to get it wrong: 0xfb7ff9100000000001 (double
+      NaN with payload), 0xfaffc00001 (single, sign and payload set) and
+      0xf97e01 (right width, fraction bit 0 set).
+      §8.3's argument, non-normative but load-bearing for §5: IEEE 754 makes
+      every NaN compare unequal to every value including itself, so two
+      documents differing only in a NaN sign, quiet/signaling bit or payload
+      are indistinguishable to any comparison-based check while differing
+      byte-wise -- a channel for hiding payloads or exfiltrating data that no
+      comparison can detect. Collapsing to one NaN closes it. Applications that
+      genuinely need NaN payloads are pushed to tags 80/81/82 (§8.5).
+      The reduction is one-way and lossy by design: a decoder cannot tell
+      whether the original value was a signaling NaN.
+  - name: canonical-infinity
+    locator: "Table 3 (effect of §2.2), Table 4"
+    encoding: CBOR
+    constrained_by_note: >
+      §2.2 rules 1 and 2 only -- §2.5 rule 2 names NaN alone, so infinity is
+      canonicalized by preferred serialization, not by a dedicated rule
+    fields:
+      - name: bytes
+        type: uint24 (fixed)
+        required: true
+        layout: >
+          0xf9 0x7c 0x00 for positive infinity, 0xf9 0xfc 0x00 for negative.
+          Half precision, sign bit 0 or 1, all five exponent bits set, all
+          ten fraction bits clear.
+    layout: |
+      Three bytes, as above, for infinity of any source width. Table 3 marks
+      both rows Canonicalized.
+    notes: |
+      The mechanism differs from NaN and the distinction matters for error
+      reporting: infinity is exactly representable at half width, so §2.2 alone
+      forces 0xf97c00 / 0xf9fc00, and Table 4 rejects the wider spellings
+      (0xfb7ff0000000000000, 0xfa7f800000, 0xfbfff0000000000000,
+      0xfaff800000) with the reason Not preferred encoding -- not Not canonical
+      NaN. No rule in §2 mentions infinity at all.
+      Infinity passes through numeric reduction untouched: no integer is
+      numerically equal to it, and §2.5's out-of-range branch keeps the
+      original float.
+  - name: simple-value
+    locator: "§2.6, §8.2, §8.4"
+    encoding: CBOR
+    constrained_by_note: >
+      §2.6 rule 1 (encoders emit no other major type 7 value) and rule 2
+      (decoders reject any other major type 7 value)
+    fields:
+      - name: initial_byte
+        type: uint8
+        required: true
+        layout: >
+          One byte, no argument and no content: 0xf4 = false (major type 7,
+          additional information 20), 0xf5 = true (21), 0xf6 = null (22).
+          These three plus the three float widths are the whole of major
+          type 7 in dCBOR.
+    layout: |
+      A single byte. Nothing follows it.
+    notes: |
+      EXCLUDED MAJOR TYPE 7 FORMS, byte for byte (the enumeration is ours; §2.6
+      states only values other than false, true, null, and the floating point
+      values): 0xe0-0xf3 (additional information 0-19, unassigned simple
+      values); 0xf7 (23, undefined); 0xf8 followed by one byte (24, the
+      one-byte simple value form -- the document never names this form, but
+      §2.6 covers it); 0xfc, 0xfd, 0xfe (28-30, not well-formed CBOR at all);
+      0xff (31, the break stop code, already unreachable once §2.1 bans
+      indefinite lengths).
+      Rationale, non-normative: §8.2 chooses null as the single representation
+      of an absent value over undefined, noting dCBOR cannot address the other
+      notions of absence (missing key, void return) by narrowing. §8.4 observes
+      that major type 7 is a 256-code-point space in which RFC 8949 assigns
+      only four values (false 20, true 21, null 22, undefined 23) and the IANA
+      CBOR Simple Values registry assigns no others, so the remaining points
+      have officially undefined semantics and cannot be used as
+      application-defined values without interoperability risk.
+      Absence is not expressible by omission anywhere in this profile: maps
+      carry explicit keys, and a key bound to null is the intended idiom.
+  - name: cddl-control-operator-dcbor
+    locator: "§3, §6 Table 2"
+    encoding: CDDL
+    constrained_by_note: >
+      §3 paragraph 3 (identical to .cbor/.cborseq except that the encoded
+      data items must also conform to dCBOR); §6 Table 2 (IANA registration
+      of .dcbor and .dcborseq)
+    fields:
+      - name: target
+        type: bstr
+        required: true
+        layout: >
+          The left operand of the control. On the wire it is an ordinary
+          major type 2 item: head 0x40-0x5b plus length, then the content
+          bytes. The control constrains the bytes INSIDE that byte string,
+          so the embedded dCBOR is length-delimited by the bstr head rather
+          than by its own parse.
+      - name: controller
+        type: CDDL type
+        required: true
+        layout: >
+          The right operand: the CDDL type the embedded data items must
+          match. For .dcbor a single data item; for .dcborseq a sequence of
+          items, per RFC 8610's .cborseq.
+    layout: |
+      Specification-time construct, written target .dcbor controller or target
+      .dcborseq controller in a CDDL rule; not a wire structure of its own. The
+      only bytes it implies are the enclosing byte string's: the head, then
+      content bytes that parse as exactly one encoded data item (.dcbor) or as
+      the concatenation of zero or more encoded data items forming a CBOR
+      sequence (.dcborseq), each item additionally conforming to dCBOR.
+    notes: |
+      The document defines these by delta only -- exactly like .cbor and
+      .cborseq as defined in RFC 8610 except that they also require the encoded
+      data items to conform to dCBOR -- and restates neither operator, nor the
+      CBOR sequence format, nor what matching means when the byte string is
+      empty.
+      Note the asymmetry with tag 201: the tag declares conformance inside the
+      encoding at runtime, the control operator declares it in the
+      specification at design time, and the document does not say whether a
+      .dcbor-constrained byte string should also be tagged 201, or whether a
+      tag-201 item in a CDDL model should be written with .dcbor inside it.
+      Because the embedded item sits inside a byte string, it is opaque to the
+      enclosing data model: the enclosing item's map key ordering and numeric
+      reduction do not reach into it, and its bytes are compared as byte-string
+      content.

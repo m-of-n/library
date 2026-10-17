@@ -1,0 +1,204 @@
+; =====================================================================
+; cde-constraints.derived.cddl
+;
+; DERIVED - not verbatim.  Every rule below was written for this record
+; from the PROSE of draft-ietf-cbor-cde-13; none of it appears in the
+; document.  It must never be quoted as the source's own grammar.
+;
+; The source's own CDDL is one line and is held, byte-for-byte, in
+; cde-control-operator.cddl.  The source's own code is Figure 1 of
+; Appendix F, held in try-float16-encode.c.  That is all of it.
+;
+; Rendered from draft-ietf-cbor-cde-13
+; (.cache/draft-ietf-cbor-cde.txt, sha256
+; bc554e3d2d37182f5f37c88aac2e61298089438068ccbc7c674d0940e675605c):
+;   Section 1.2   "Encoding constraint", "Preferred serialization",
+;                 "Common Deterministic Encoding", "Partial Implementation"
+;   Section 2     the named sets of encoding choices; Table 1
+;   Section 3     "Formally, Common Deterministic Encoding (CDE) is an
+;                 encoding constraint (named cde for short), built from
+;                 multiple constituent encoding constraints"
+;   Section 3.1   preferred-serialization = shortest-head + tag-specific
+;   Section 3.2   definite-length-only
+;   Section 3.3   lexicographic-map-sorting
+;   Section 4     the .cde / .cdeseq control operators; Table 2 (Section 6)
+;   Appendix A.1  constraints are orthogonal to CDDL data definitions
+;
+; WHAT THIS FILE IS FOR, AND WHAT IT CANNOT BE.  CDE is a constraint on
+; BYTES; CDDL constrains DATA-MODEL VALUES.  The source is explicit that
+; the two do not meet: "CDDL defines the structure of CBOR data items at
+; the data model level [...] It does not specify encoding" (Section 4) and
+; "Encoding constraints (unconstrained well-formed, preferred-
+; serialization, definite-length-only, cde) are orthogonal to data-model-
+; level data definitions as provided by [RFC8610]" (Appendix A.1).  So no
+; CDDL file, ours or anyone's, can reject a non-CDE encoding.  What the
+; rules below DO give is (a) a checkable vocabulary for the constraint
+; names this library uses in its own metadata, (b) a checkable rendering
+; of the constraint-set algebra of Section 3 and Table 1, and (c) the
+; generalisation of the source's one rule into reusable embedded-CBOR
+; patterns.  The byte-level rules live in the pseudocode files:
+; cde-encode.derived.pseudocode.txt, cde-check.derived.pseudocode.txt and
+; float-shortest-head.derived.pseudocode.txt.
+;
+; TOOLING NOTE.  The `.cde` and `.cdeseq` control operators are only
+; REQUESTED from IANA by this document (Section 6, Table 2); a CDDL tool
+; that predates the registration will reject rules 4.1-4.3 as unknown
+; control operators.  That is a property of the operators, not an error
+; in this file.
+; =====================================================================
+
+
+; ---------------------------------------------------------------------
+; 1.  The encoding-constraint vocabulary  (Section 1.2, Section 2, Table 1)
+;
+; Section 1.2: "When giving encoding constraints names, this document uses
+; lower-case words separated by hyphens, rendered in a typewriter font, as
+; in lexicographic-map-sorting."  The seven names the document actually
+; uses are enumerated here so that our own records and configuration can
+; be validated against the document's spelling rather than against memory.
+; ---------------------------------------------------------------------
+
+encoding-constraint-name =
+    "well-formed"                  ; Section 2: "a good name for the empty
+                                   ; set of encoding constraints"
+  / "shortest-head"                ; Section 2, Section 3.1
+  / "preferred-serialization"      ; Section 1.2, Section 3.1
+  / "definite-length-encoding"     ; Section 2 and Table 1 spelling
+  / "definite-length-only"         ; Section 3, 3.2, A.1, C.2 spelling
+  / "lexicographic-map-sorting"    ; Section 3.3
+  / "cde"                          ; Section 3, Table 1
+
+; DEFECT RECORDED, not resolved.  Both spellings above name the same
+; constraint and the document uses them interchangeably: Section 2 and
+; Table 1 (including Table 1's own `cde` row, cached source lines 548-556)
+; say definite-length-encoding, while the heading of Section 3.2, the
+; definition in Section 3, Appendix A.1 and Appendix C.2 say
+; definite-length-only.  Neither is marked as an alias of the other.  A
+; consumer that matches on the name must accept both.  See README.md.
+
+encoding-constraint-set = [ * encoding-constraint-name ]
+
+
+; ---------------------------------------------------------------------
+; 2.  The constraint-set algebra  (Section 3, Section 3.1, Table 1)
+;
+; Section 1.2: "Several encoding constraints can be combined into an
+; encoding constraint set, which is itself an encoding constraint that
+; requires that all encoding constraints in the set are met."
+; Section 3: "CDE combines the constraints of preferred-serialization with
+; definite-length-only and the lexicographic-map-sorting constraint."
+; ---------------------------------------------------------------------
+
+cde-constituents = [
+  "preferred-serialization",
+  "definite-length-only",
+  "lexicographic-map-sorting",
+]
+
+; Section 3.1: "The preferred-serialization encoding constraint is a
+; combination of the shortest-head constraint and tag-specific encoding
+; constraints defined to be part of preferred-serialization."  The
+; tag-specific half is OPEN-ENDED by construction -- Section 3.1.1 notes
+; that CDE "would continually need to address additional issues raised by
+; the registration of new tags" -- so it is a list, not a closed choice.
+; The only tag-specific preferred serializations the document itself names
+; are those of tags 2 and 3 (Section 3.1.1, Appendix C.1.1 item 3).
+
+preferred-serialization-constituents = [
+  "shortest-head",
+  * tag-specific-preferred-serialization,
+]
+
+tag-specific-preferred-serialization = {
+  tag: uint,                       ; the CBOR tag number
+  ? defined-in: tstr,              ; e.g. "RFC 8949 Section 3.4.3"
+}
+
+; Table 1 as data, including its "interoperability constraint?" column.
+; The column is a judgement the document states in prose, not a boolean it
+; defines, so the values are kept as the document's own words.
+
+serialization-constraint-row = {
+  constraint: encoding-constraint-name,
+  interoperability-constraint: tstr / null,
+  applications: "most" / "many" / "specific" / null,
+}
+
+
+; ---------------------------------------------------------------------
+; 3.  Roles  (Section 1.2, Appendix C)
+;
+; Named so that a conformance statement can say which thing it is claiming
+; to be.  Appendix C.3.2: "The term 'CDE-checking Decoder' is a shorthand
+; for a CBOR decoder that advertises _supporting_ CDE."  Section 1.2 warns
+; that "just speaking of 'checking decoders' without further qualification
+; can therefore be imprecise."
+; ---------------------------------------------------------------------
+
+cbor-role =
+    "generic-encoder"              ; Section 1.2, RFC 8949 Section 5.2
+  / "generic-decoder"
+  / "partial-implementation"       ; Section 1.2 (CDE term)
+  / "preferred-serialization-encoder"   ; Appendix C.1.1
+  / "cde-encoder"                  ; Appendix C.3.1
+  / "cde-checking-decoder"         ; Section 1.2, Appendix C.3.2
+
+
+; ---------------------------------------------------------------------
+; 4.  Embedded CBOR under CDE  (Section 4)
+;
+; Rule 4.1 is the GENERALISATION of the source's one CDDL rule.  The rule
+; itself -- `leaf = #6.24(bytes .cde any)` -- is in
+; cde-control-operator.cddl and is not repeated here.  Section 4: "More
+; importantly, if the encoded data item also needs to have a specific
+; structure, this can be expressed by the right-hand side (instead of
+; using the most general CDDL type any here)."  That sentence is what
+; licenses the type parameter.
+; ---------------------------------------------------------------------
+
+; 4.1  a byte string carrying one CDE-encoded data item of type Structure
+cde-embedded<Structure> = bytes .cde Structure
+
+; 4.2  a byte string carrying a CDE-encoded CBOR sequence.  Section 4:
+; "the .cdeseq control operator does not enable specifying different
+; deterministic encoding requirements for the elements of the sequence."
+cde-embedded-seq<Structure> = bytes .cdeseq Structure
+
+; 4.3  the source's own shape, with the Section 4 generalisation applied:
+; tag 24 (encoded CBOR data item) wrapping a CDE-encoded structure.
+cde-encoded-cbor<Structure> = #6.24(cde-embedded<Structure>)
+
+; NOT DEFINED, DELIBERATELY.  There is no `.dlo` / `.dloseq` for
+; definite-length-only.  Section 4, editorial note at cached source lines
+; 910-911: "Note that there is no .dlo or .dloseq for definite-length-only,
+; as, so far, a requirement for these hasn't been detected."  Do not invent
+; one here; a CDDL rule naming it would not be checkable by any tool.
+
+
+; ---------------------------------------------------------------------
+; 5.  Data model vs. encoding for floats  (Section 4)
+;
+; Section 4 is the one place the document tells CDDL authors something
+; actionable, and it is a trap worth having in machine-readable form:
+; "CDDL allows the specification of a floating point data item as
+; 'float16'; this means the application data model only foresees data that
+; can be encoded as [IEEE754] binary16.  Note that specifying 'float32'
+; for a floating point data item enables all floating point values that
+; can be represented as binary32; this includes values that can also be
+; represented as binary16 and that will be so represented in Preferred
+; Serialization."
+;
+; So `float32` in a CDDL rule does NOT mean "four-byte head on the wire".
+; Under CDE the head length is a function of the VALUE, never of the CDDL
+; type.  Use `cde-float` when the intent is "any float, encoded per CDE".
+; ---------------------------------------------------------------------
+
+cde-float = float16 / float32 / float64
+
+; Spelling out the trap: both of these admit 1.0, and under CDE both
+; encode it as 0xf93c00 (Section 3.1.2: "the number 1.0 will always be
+; serialized as a binary16 floating point number (0xf93c00) as that is the
+; shortest representation that preserves the value").
+
+cde-float-narrow = float16       ; data model restricted to f16-exact values
+cde-float-wide   = float64       ; data model unrestricted; head still varies
