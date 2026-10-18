@@ -1,13 +1,2312 @@
 record: rfc-2692
 reviewed_by: ""
-# Every message, structure, header or envelope the document defines.
+
+# ---------------------------------------------------------------------------
+applicability:
+  summary: >-
+    ABSTRACT, and that is a finding about the source, not a gap in this extraction. RFC 2692 is a
+    requirements memo. It defines no wire format: no octet layout, no field order, no field tags,
+    no grammar, no ASN.1, no S-expression, no media type, no transport and no IANA action, for the
+    certificate or for any other instrument it names. Its Abstract says what it is: the WG
+    "summarized that list of desires into requirements" and "This document presents that summary
+    of requirements." What it does say about encoding is a set of constraints on a certificate
+    format that it does not itself give, all in Implementation of Certificates: no library code for
+    packing or parsing, and ASN.1 "is not to be used"; signed exactly as transmitted, with no
+    reformatting before signature checking, although white space may be canonicalized on input if
+    the format is text; an LR(0) grammar "if possible"; packing and parsing without recursion "if
+    possible"; described as the structures a C or PASCAL programmer would write; a bare minimum of
+    fields and an absolute minimum of optional fields. The quotes are below and in entry
+    certificate-encoding-profile. For CRLs the source states outright that "Its method of
+    transmission is not specified." POINTERS ONLY, no content imported from them: the charter
+    deliverables ("public key certificate format, associated signature and other formats, and key
+    acquisition protocols") are not in this memo. The certificate theory is RFC 2693 (library record
+    rfc-2693). The concrete certificate, name, CRL and revalidation structures are in
+    draft-ietf-spki-cert-structure (library record draft-ietf-spki-cert-structure), whose
+    S-expression representation is RFC 9804 (library record rfc-9804). The SDSI name construct the
+    memo asks SPKI to support is SDSI (library record sdsi-1-1). Whether those later documents meet
+    the constraints captured here is a question for design-notes and for the cross-check pass; this
+    file does not judge it. What this file captures: (a) the abstract SPKI certificate and the
+    parts General Requirements and Validity and CRLs name (spki-certificate, keyholder-identifier,
+    name-binding-certificate, sdsi-name); (b) the encoding and layout constraints, as one profile
+    entry (certificate-encoding-profile); (c) the exchanges the memo names: keyholder to verifier
+    (certificate-presentation) and the optional repository (repository-publication); (d) the
+    validity instruments (crl, crl-sequence, revalidation-instrument, one-use-instrument,
+    one-use-challenge); (e) every certificate kind or instrument the List of Certificate Uses and
+    Open Questions name, at the level they name it, with the long card list as one catalogue
+    entry; (f) two historical structures from Background.
+  quotes:
+    - locator: "Abstract ¶2, p.1"
+      text: 'The SPKI Working Group first established a list of things one might want to do with certificates (attached at the end of this document), and then summarized that list of desires into requirements.  This document presents that summary of requirements.'
+    - locator: "Abstract ¶1, p.1"
+      text: 'The IETF Simple Public Key Infrastructure [SPKI] Working Group is tasked with producing a certificate structure and operating procedure to meet the needs of the Internet community for trust management in as easy, simple and extensible a way as possible.'
+    - locator: "§Charter of the SPKI working group ¶2, p.2"
+      text: 'The task of the working group will be to develop Internet standards for an IETF sponsored public key certificate format, associated signature and other formats, and key acquisition protocols.  The key certificate format and associated protocols are to be simple to understand, implement, and use.'
+    - locator: "§Implementation of Certificates ¶4, p.5"
+      text: 'No library code should be required for the packing or parsing of SPKI certificates.  In particular, ASN.1 is not to be used.'
+    - locator: "§Implementation of Certificates ¶5, p.5"
+      text: 'A certificate should be signed exactly as it is transmitted.  There should be no reformatting called for in the process of checking a certificate''s signature (although one might canonicalize white space during certificate input, for example, if the format is text).'
+    - locator: "§Implementation of Certificates ¶6, p.5"
+      text: 'For efficiency, if possible, an SPKI certificate should be encoded in an LR(0) grammar.'
+    - locator: "§Implementation of Certificates ¶7, p.5"
+      text: 'For efficiency, if possible, an SPKI certificate should be packed and parsed without any recursion.'
+    - locator: "§Implementation of Certificates ¶3, p.5"
+      text: 'An SPKI certificate should be described in as simple a method as possible, relating directly to the kind of structures a C or PASCAL programmer would normally write.'
+    - locator: "§Validity and CRLs ¶2, p.4"
+      text: 'Its method of transmission is not specified.'
+
+# ---------------------------------------------------------------------------
+note: >-
+  Conventions. (1) BCP 14. RFC 2692 contains no BCP 14 keyword; the uppercase count is 0. Its
+  prescriptive sentences use lowercase verbs: must, should, should not, may, "is not to be", "is
+  necessary", "we assume", "will need". No field here is therefore constrained by a BCP 14
+  requirement. Each entry's normative_status, and each field's strength, records the force the
+  source actually gives, using the source's own verb. (2) constrained_by is an empty list on every
+  field, deliberately. Requirement ids are wired in pass 3 by a different agent; this pass-1 agent
+  did not read requirements.yaml. (3) Names. Every entry name and field name is this library's,
+  in kebab-case, so that distilled/protocol.yaml and distilled/state-machine.yaml can refer to
+  them. The source names almost nothing: its only coined structure names are KEYHOLDER, CRL,
+  "revalidation instrument", "reputation voucher", "traditional certificate", "direct
+  certificate", "personal binding", "delegation-allowed" bit, "audit identity" and "certification
+  right expiration" certificate. aliases lists other names a sibling artifact may use. (4) Quotes.
+  Every quote, quotes and values item is one contiguous run of source characters with the RFC
+  line wrapping undone (a line break and the next line's indent become one space; the hyphenated
+  compound split as "collision-" / "free" rejoins with no space). In-line spacing is kept,
+  including two spaces after a full stop. No quote splices two non-adjacent passages; several
+  separate quotes are given as a list. A quote that runs across a page break carries
+  crosses_page_break: true, and the page footer and header lines inside it are left out. Prose
+  in layout and notes is ours; short phrases in double quotes there are verbatim too. (5) source:
+  is the locator, "§<section title> ¶<paragraph>" (sections are unnumbered), or "§List of
+  Certificate Uses, item '<opening words>'", with the page. (6) inferred. A field or entry that the
+  source does not literally state carries inferred: true and an inferred_reason naming what it
+  follows from. A field the source states carries inferred: false. (7) required is true, false or
+  unspecified, never guessed. unspecified always carries required_reason. In a use-case-only
+  entry the brainstorm item names an element but the source defines no structure for it, so most
+  fields there are unspecified for that reason. A requirement that applies only in some case
+  carries condition:. For a field of type constraint, required: true means the rule applies to
+  every instance of the entry. (8) Types, at the abstraction the source gives. keyholder: "the
+  person or other entity that controls the corresponding private key" (§General Requirements ¶1),
+  appearing in a certificate as a keyholder-identifier where it appears at all.
+  keyholder-identifier: the entry of that name (public key, hash of the key, name, or blinded
+  signature key). public-key: a public key, representation not defined here. name: a name
+  "later to be resolved into a key", syntax not defined here; sdsi-name where the SDSI
+  construct is meant. authorization-or-attribute: application-defined content, "up to the author
+  of code which uses the certificate"; no syntax. date-interval: "dates within which it is valid";
+  date syntax not defined here. lifetime: an instrument's own validity, a date-interval or the
+  value one use. signature: a digital signature, format not defined here. certificate-identifier:
+  how a CRL names a certificate ("identified uniquely"), not defined here. location: "where to
+  find the CRL", syntax not defined here. sequence-number: an ordering value, representation not
+  defined here. boolean: a "bit". object: a non-key thing a certificate is about (downloaded
+  software). text: a statement whose words the source gives. constraint: a rule on the entry,
+  not a stored value. literal: a fixed value, given in value:. list-of-X. unspecified: named, type
+  not given. A type equal to another entry's name refers to that entry. (9) normative_status
+  vocabulary. requirement: the entry is required by a lowercase must, "is necessary" or "is not to
+  be". should: required by should only. may: offered as a possibility ("may", "one can
+  consider"). assumption: stated as "we assume". out-of-scope: named and left to others.
+  descriptive: described, not required. use-case-only: an item in the List of Certificate Uses,
+  "a brainstorming list"; the Abstract says the WG "summarized that list of desires into
+  requirements", which are the earlier sections. The items are inputs to those requirements, not
+  requirements themselves; the one exception here is trusted-root-set, whose item says "must"
+  and which this file marks requirement. open-question: from Open
+  Questions, or posed as a question in the list. historical: described as history (Background).
+  mentioned-only: named with no structure. (10) layout. Every entry's layout says what structure
+  the source gives. No entry has an octet layout, because the source defines none. (11) The
+  source's lowercase "may" in "It may also be necessary" (§Validity and CRLs ¶1) and "some
+  indirection (delayed binding) may be employed" (§General Requirements ¶3) is kept as strength
+  may. 47 entries.
+
+# ---------------------------------------------------------------------------
 messages:
-  - name: TODO
-    locator: "§TODO"
-    encoding: TODO            # CBOR / JSON / COSE_Sign1 / HTTP / ...
+
+# --- The SPKI certificate (General Requirements, Validity and CRLs, Implementation) -----------
+
+  - name: spki-certificate
+    aliases:
+      - certificate
+      - authorization-certificate
+      - attribute-certificate
+    locator: "§General Requirements ¶2-¶9, pp.3-4; §Validity and CRLs ¶1-¶2, p.4; §Implementation of Certificates ¶1-¶7, pp.4-5"
+    encoding: 'abstract; no format given in this document. Encoding constraints: certificate-encoding-profile. Concrete form: draft-ietf-spki-cert-structure (pointer only)'
+    normative_status: requirement
+    source: "§General Requirements ¶2, p.3"
+    quote:
+      - 'The main purpose of an SPKI certificate is to authorize some action, give permission, grant a capability, etc. to or for a keyholder.'
+      - locator: "§Background ¶2, p.2"
+        text: 'A user of a certificate needs to know whether a given keyholder has been granted some specific authorization.'
     fields:
-      - name: TODO
-        type: TODO
+      - name: issuer
+        type: keyholder
+        required: unspecified
+        required_reason: >-
+          The source says who generates a certificate, not whether the generating keyholder is a
+          field of it or is known only through the signature.
+        constrained_by: []
+        source: "§Implementation of Certificates ¶1, p.4"
+        strength: should
+        quote: 'The authorization certificates that are envisioned for SPKI (and needed to meet the demands of the list given at the end of this document) should be generated by any keyholder empowered to grant or delegate the authorization in question.'
+        inferred: true
+        inferred_reason: >-
+          The source names an issuing role ("any keyholder empowered to grant or delegate the
+          authorization in question") but no issuer field. The field is ours.
+      - name: subject
+        type: keyholder-identifier
         required: true
-        constrained_by: [rfc-2692#R-0001]
-    layout: "TODO byte-level / structural layout"
+        constrained_by: []
+        source: "§General Requirements ¶2-¶3, p.3"
+        quote:
+          - 'The main purpose of an SPKI certificate is to authorize some action, give permission, grant a capability, etc. to or for a keyholder.'
+          - 'The keyholder is most directly identified by the public key itself, although for convenience or other purposes some indirection (delayed binding) may be employed.  That indirection can be via a collision-free hash of the public key or via a name, later to be resolved into a key.'
+        inferred: true
+        inferred_reason: >-
+          A certificate that authorizes "to or for a keyholder" must identify that keyholder, and
+          ¶3 says how a keyholder is identified. The source does not call it a field or name it
+          subject; the name is ours. The software-certificate use case has a non-key subject; see
+          that entry.
+      - name: authorization-or-attribute
+        type: authorization-or-attribute
+        required: true
+        constrained_by: []
+        source: "§General Requirements ¶2, ¶4, ¶9, p.3; §Background ¶2, p.2"
+        strength: should
+        quote:
+          - 'The definition of attributes or authorizations in a certificate is up to the author of code which uses the certificate.  The creation of new authorizations should not require interaction with any other person or organization but rather be under the total control of the author of the code using the certificate.'
+          - 'One attribute of a keyholder is a name.'
+          - locator: "§Background ¶2, p.2"
+            text: 'A keyholder''s name is one attribute of the keyholder, but as can be seen in the list of needs in this document, a person''s name is rarely of security interest.'
+        inferred: true
+        inferred_reason: >-
+          "The definition of attributes or authorizations in a certificate" places them in the
+          certificate; required: true follows from ¶2 ("The main purpose of an SPKI certificate is to authorize some action").
+          Treating a name as one value of this field follows from "One attribute of a keyholder is
+          a name"; the source does not say whether a name binding uses this field or a separate
+          one (see name-binding-certificate).
+        layout: >-
+          Content is application-defined and needs no registry: the second sentence of the first
+          quote rules out any external authority over new authorization values. Every value the
+          List of Certificate Uses suggests is in the use-case entries below and in
+          wallet-card-catalogue.
+      - name: validity-period
+        type: date-interval
+        required: false
+        constrained_by: []
+        source: "§Validity and CRLs ¶1, p.4"
+        strength: should
+        quote: 'An SPKI certificate, like any other, should be able to carry a validity period: dates within which it is valid.'
+        inferred: false
+        layout: >-
+          "should be able to carry" makes the field available, not mandatory; hence required:
+          false. Date syntax, time zone and the inclusive or exclusive ends are not defined here.
+      - name: crl-location
+        type: location
+        required: true
+        condition: only when the certificate uses a CRL
+        constrained_by: []
+        source: "§Validity and CRLs ¶2, p.4"
+        strength: must
+        quote: 'Therefore, we take as a requirement that if SPKI uses CRLs, then the certificate that uses it must explicitly tell the verifier where to find the CRL, the CRL must carry explicit validity dates and the dates of a sequence of CRLs must not overlap.'
+        inferred: true
+        inferred_reason: >-
+          The source requires the certificate to "explicitly tell the verifier where to find the
+          CRL". That this is carried as a field of the certificate, and that it is a location, is
+          the natural reading; the source names no field and no location syntax. It does not say
+          whether the certificate also names the key that signs the CRL.
+      - name: signature
+        type: signature
+        required: true
+        constrained_by: []
+        source: "§Implementation of Certificates ¶5, p.5"
+        strength: should
+        quote: 'A certificate should be signed exactly as it is transmitted.  There should be no reformatting called for in the process of checking a certificate''s signature (although one might canonicalize white space during certificate input, for example, if the format is text).'
+        inferred: true
+        inferred_reason: >-
+          The "should" governs how a certificate is signed (exactly as transmitted). That a
+          certificate is signed at all is presupposed here and by "is a signed certificate" in the
+          personal-binding item; the source never states it as a requirement. Signer: the issuer.
+          Signature algorithm and format: not defined here.
+      - name: delegation-allowed
+        type: boolean
+        required: false
+        constrained_by: []
+        source: "§List of Certificate Uses, item '\"This signed-key should be considered equivalent ...', p.10"
+        strength: open ("Maybe we need")
+        quote: 'I''ll note here that this flies in the face of attempts to prevent delegation of certain rights.  Maybe we need a "delegation-allowed" bit -- but there''s nothing to stop someone who wishes to delegate against the rules from also loaning out their private key.].'
+        inferred: true
+        inferred_reason: >-
+          The source floats the bit inside the delegation-certificate item and does not say which
+          certificate would carry it. Placing it on the certificate that grants a right (so that
+          the right's holder may or may not delegate it) is our reading. The source itself doubts
+          the bit's force (key loaning defeats it). The trailing "]." closes a bracket opened on
+          p.9; the quote keeps it because it is contiguous.
+      - name: minimum-information
+        type: constraint
+        required: true
+        constrained_by: []
+        source: "§General Requirements ¶6, p.3"
+        strength: should
+        quote: 'Because SPKI certificates will carry information that, taken together over all certificates, might constitute a dossier and therefore a privacy violation, each SPKI certificate should carry the minimum information necessary to get a job done.  The SPKI certificate is then to be like a single key rather than a key ring or a single credit card rather than a whole wallet.'
+        inferred: false
+      - name: anonymity
+        type: constraint
+        required: false
+        constrained_by: []
+        source: "§General Requirements ¶7, p.3"
+        strength: '"It is necessary" (for some certificates)'
+        quote: 'It is necessary for at least some certificates to be anonymous.'
+        inferred: false
+        layout: >-
+          Applies to "at least some certificates", not every one; hence required: false. The source
+          does not define anonymous. Derived (inferred): a certificate whose subject is a public key
+          or key-hash and which carries no name of the keyholder meets the purchasing-agent case
+          ("I don't want the suppliers to know my name"); the source does not say so.
+    layout: >-
+      No layout, no field order and no encoding are given. The fields above are the parts the
+      source names or presupposes; every one except validity-period, minimum-information and
+      anonymity is our reading of prose. Encoding constraints: certificate-encoding-profile. The
+      number of fields is itself constrained ("a bare minimum of fields", "an absolute minimum of
+      optional fields", §Implementation of Certificates ¶2).
+    notes: >-
+      Distribution of a certificate is certificate-presentation; its CRL is crl. A certificate may
+      be about a name (name-binding-certificate, three use-case forms). A certificate subject may be
+      a blinded signature key (keyholder-identifier variant blinded-signature-key). Open Questions
+      sets limits on what any certificate can do: "certificate format, contents or issuing
+      machinery can not ensure the protection of a user's private key or prove whether or not a
+      private key has been stolen or misused" (see signed-e-mail-message); and a certificate cannot
+      by itself prove an absence (see negative-fact-attribute-certificate). Generators are many and
+      small: "The code to generate certificates should be written by many different developers,
+      frequently persons acting alone, operating out of garages or dorm rooms." (§Implementation of
+      Certificates ¶1)
+
+  - name: keyholder-identifier
+    aliases:
+      - keyholder-reference
+    locator: "§General Requirements ¶1, ¶3, ¶8, p.3"
+    encoding: 'abstract; none of the four representations is defined in this document'
+    normative_status: requirement
+    source: "§General Requirements ¶1, p.3"
+    quote: 'We define the term KEYHOLDER of a public key to refer to the person or other entity that controls the corresponding private key.'
+    fields_note: >-
+      A union, not a record: one of the variants below fills a keyholder position (the subject of
+      spki-certificate, and the key of name-binding-certificate).
+    fields: []
+    variants:
+      - name: public-key
+        type: public-key
+        constrained_by: []
+        source: "§General Requirements ¶3, p.3"
+        strength: none (descriptive; the default)
+        quote: 'The keyholder is most directly identified by the public key itself, although for convenience or other purposes some indirection (delayed binding) may be employed.'
+        inferred: false
+      - name: key-hash
+        type: unspecified
+        constrained_by: []
+        source: "§General Requirements ¶3, p.3"
+        strength: may (delayed binding)
+        quote: 'That indirection can be via a collision-free hash of the public key or via a name, later to be resolved into a key.'
+        inferred: false
+        layout: >-
+          The only property stated is "collision-free". Algorithm, encoding and which octets of the
+          key are hashed are not stated. The direct-certificate item uses the same alternative: "from
+          the key itself or a cryptographic hash of the key".
+      - name: name
+        type: name
+        constrained_by: []
+        source: "§General Requirements ¶3, p.3"
+        strength: may (delayed binding)
+        quote: 'That indirection can be via a collision-free hash of the public key or via a name, later to be resolved into a key.'
+        inferred: false
+        layout: >-
+          A name is resolved into a key later. How it is resolved is not stated. Inferred: by
+          name-binding certificates (name-binding-certificate), since the source requires that a
+          certificate "must be able to bind a key to such names"; the source does not connect the
+          two paragraphs.
+      - name: blinded-signature-key
+        type: unspecified
+        constrained_by: []
+        source: "§General Requirements ¶8, p.3"
+        strength: must
+        quote: 'Because one use of SPKI certificates is in secret balloting and similar applications, an SPKI certificate must be able to assign an attribute to a blinded signature key.'
+        inferred: true
+        inferred_reason: >-
+          The source requires that an attribute can be assigned to a blinded signature key; that
+          the blinded key therefore fills the subject position is our reading. The blinding scheme
+          and the key's representation are not stated.
+    layout: >-
+      No representation of any variant is given. The source does not say how a verifier tells the
+      variants apart.
+    notes: >-
+      "delayed binding" is the source's own term for the hash and name variants. The source's
+      definition of KEYHOLDER is by control of the private key, so a keyholder is whoever controls
+      it; the delegation-certificate item and Open Questions both note that a key can be loaned.
+
+  - name: certificate-encoding-profile
+    aliases:
+      - encoding-constraints
+    locator: "§Implementation of Certificates ¶1-¶7, pp.4-5"
+    encoding: 'constraints on an encoding this document does not give'
+    normative_status: requirement
+    source: "§Implementation of Certificates ¶1, p.4"
+    quote: 'This leads to a number of constraints on the structure and encoding of certificates.'
+    fields:
+      - name: small-footprint
+        type: constraint
+        required: true
+        constrained_by: []
+        source: "§Implementation of Certificates ¶1, pp.4-5"
+        strength: should
+        quote:
+          - text: 'In addition, SPKI certificates should be usable in very constrained environments, such as smart cards or small embedded systems.  The code to process them and the memory to store them should both be as small as possible.'
+            crosses_page_break: true
+        inferred: false
+      - name: simplicity
+        type: constraint
+        required: true
+        constrained_by: []
+        source: "§Implementation of Certificates ¶2, p.5"
+        strength: should
+        quote: 'An SPKI certificate should be as simple as possible.'
+        inferred: false
+      - name: field-minimality
+        type: constraint
+        required: true
+        constrained_by: []
+        source: "§Implementation of Certificates ¶2, p.5"
+        strength: should
+        quote: 'There should be a bare minimum of fields necessary to get the job done and there should be an absolute minimum of optional fields.'
+        inferred: false
+      - name: optional-field-minimality
+        type: constraint
+        required: true
+        constrained_by: []
+        source: "§Implementation of Certificates ¶2, p.5"
+        strength: should
+        quote: 'there should be an absolute minimum of optional fields'
+        inferred: false
+        layout: >-
+          The second clause of the field-minimality sentence, given separately because it bears on
+          every required: false field in this file.
+      - name: structure-specificity
+        type: constraint
+        required: true
+        constrained_by: []
+        source: "§Implementation of Certificates ¶2, p.5"
+        strength: should
+        quote: 'In particular, the structure should be specific enough that the creator of a certificate is constrained by the structure definition, not by complaints (or error messages) from the reader of a certificate.'
+        inferred: false
+      - name: c-pascal-description
+        type: constraint
+        required: true
+        constrained_by: []
+        source: "§Implementation of Certificates ¶3, p.5"
+        strength: should
+        quote: 'An SPKI certificate should be described in as simple a method as possible, relating directly to the kind of structures a C or PASCAL programmer would normally write.'
+        inferred: false
+      - name: no-library-code
+        type: constraint
+        required: true
+        constrained_by: []
+        source: "§Implementation of Certificates ¶4, p.5"
+        strength: should
+        quote: 'No library code should be required for the packing or parsing of SPKI certificates.'
+        inferred: false
+      - name: no-asn1
+        type: constraint
+        required: true
+        constrained_by: []
+        source: "§Implementation of Certificates ¶4, p.5"
+        strength: is not to be
+        quote: 'In particular, ASN.1 is not to be used.'
+        inferred: false
+        layout: >-
+          The one categorical encoding rule in the memo: "is not to be", not "should". The source
+          gives it as a particular case of no-library-code.
+      - name: signed-as-transmitted
+        type: constraint
+        required: true
+        constrained_by: []
+        source: "§Implementation of Certificates ¶5, p.5"
+        strength: should
+        quote: 'A certificate should be signed exactly as it is transmitted.'
+        inferred: false
+      - name: no-reformatting-before-verification
+        type: constraint
+        required: true
+        constrained_by: []
+        source: "§Implementation of Certificates ¶5, p.5"
+        strength: should (no reformatting); may (white space)
+        quote: 'There should be no reformatting called for in the process of checking a certificate''s signature (although one might canonicalize white space during certificate input, for example, if the format is text).'
+        inferred: false
+        layout: >-
+          The one permitted transformation is white-space canonicalization at input, offered as an
+          example for a text format. The source does not define the canonical white space, nor say
+          whether the signature then covers the canonicalized or the received bytes.
+      - name: lr0-grammar
+        type: constraint
+        required: true
+        condition: if possible
+        constrained_by: []
+        source: "§Implementation of Certificates ¶6, p.5"
+        strength: should, "if possible"
+        quote: 'For efficiency, if possible, an SPKI certificate should be encoded in an LR(0) grammar.  That is, neither packing nor parsing of the structure should require a scan of the data.'
+        inferred: false
+      - name: single-pass-read
+        type: constraint
+        required: true
+        condition: if possible
+        constrained_by: []
+        source: "§Implementation of Certificates ¶6, p.5"
+        strength: should
+        quote: 'Data should be read into the kind of structure a programmer would want to use without touching the incoming bytes more than once.'
+        inferred: false
+      - name: no-recursion
+        type: constraint
+        required: true
+        condition: if possible
+        constrained_by: []
+        source: "§Implementation of Certificates ¶7, p.5"
+        strength: should, "if possible"
+        quote: 'For efficiency, if possible, an SPKI certificate should be packed and parsed without any recursion.'
+        inferred: false
+    layout: >-
+      No layout. These rules constrain a layout defined elsewhere. Inferred, our reading only: taken
+      together they point to a flat, fixed-shape, self-delimiting record (C or PASCAL structures,
+      one pass, no lookahead, no recursion) whose signed bytes are its transmitted bytes. The source
+      does not say self-delimiting, length-prefixed or fixed-shape.
+    notes: >-
+      Ambiguity: "LR(0) grammar" names a parser class, but the source's own gloss ("neither packing
+      nor parsing of the structure should require a scan of the data"; "without touching the
+      incoming bytes more than once") describes something else, single-pass reading with no
+      lookahead. The two are not the same property; this file takes the gloss as what the source
+      means, and records the mismatch. Tension (inferred): any nested structure needs recursion or
+      an explicit stack to parse, so no-recursion constrains nesting depth or shape; the source does
+      not say which. Whether the later SPKI encoding meets lr0-grammar, no-recursion and
+      no-library-code is not settled here (pointer: draft-ietf-spki-cert-structure, rfc-9804).
+
+  - name: name-binding-certificate
+    aliases:
+      - name-certificate
+    locator: "§General Requirements ¶9, pp.3-4; §List of Certificate Uses, item 'I need certificates to bind names to public keys:', pp.6-7"
+    encoding: 'abstract; not defined in this document'
+    normative_status: requirement
+    source: "§General Requirements ¶9, p.3"
+    quote: 'One attribute of a keyholder is a name.  There are names the keyholder prefers to be called and there are names by which the keyholder is known to various other keyholders.  An SPKI certificate must be able to bind a key to such names.'
+    fields:
+      - name: key
+        type: keyholder-identifier
+        required: true
+        constrained_by: []
+        source: "§General Requirements ¶9, p.3"
+        strength: must
+        quote: 'An SPKI certificate must be able to bind a key to such names.'
+        inferred: false
+      - name: name
+        type: name
+        required: true
+        constrained_by: []
+        source: "§General Requirements ¶9, p.3"
+        strength: must
+        quote: 'There are names the keyholder prefers to be called and there are names by which the keyholder is known to various other keyholders.'
+        inferred: false
+        layout: >-
+          Two kinds of name: one the keyholder chooses for itself, one another keyholder knows it
+          by. The source does not say whether a field distinguishes them. Inferred: the kind follows
+          from who issues the certificate (self, for the first kind: direct-certificate; another
+          keyholder, for the second: personal-binding-certificate).
+      - name: issuer
+        type: keyholder
+        required: unspecified
+        required_reason: The source names no issuer for a name binding in General Requirements.
+        constrained_by: []
+        source: "§List of Certificate Uses, items '[traditional certificate]', '[direct certificate]', '[personal binding]', pp.6-7"
+        quote: 'The binding is done by the key itself -- in a self-signed certificate.'
+        inferred: true
+        inferred_reason: >-
+          The three list variants differ in who binds: "someone trustworthy" (traditional), the key
+          itself (direct, quoted), "me" (personal binding). The field is ours.
+      - name: name-space
+        type: sdsi-name
+        required: false
+        condition: if possible
+        constrained_by: []
+        source: "§General Requirements ¶9, pp.3-4"
+        strength: should, "if possible"
+        quote:
+          - text: 'The SDSI work of Rivest and Lampson has done an especially good job of defining and using local name spaces, therefore if possible SPKI should support the SDSI name construct.'
+            crosses_page_break: true
+        inferred: true
+        inferred_reason: >-
+          The source asks SPKI to support the SDSI name construct and its local name spaces; that a
+          name-binding certificate carries a name space is our reading.
+    variants:
+      - name: traditional
+        type: traditional-certificate
+        source: "§List of Certificate Uses, item '[traditional certificate]', p.6"
+      - name: direct
+        type: direct-certificate
+        source: "§List of Certificate Uses, item '[direct certificate]', p.6"
+      - name: personal-binding
+        type: personal-binding-certificate
+        source: "§List of Certificate Uses, items '[personal binding]', pp.6-7"
+    layout: >-
+      No layout. A pair (key, name) plus whoever binds them. The source gives the binding's
+      direction differently in the three items: "binding a key to a name" (traditional), "binding
+      a name to a key" (direct), "binding a key to a nickname" (personal binding), and the
+      direction carries meaning there (attributes flow name-to-key in the traditional model).
+    notes: >-
+      Background downgrades the classic name certificate: "The SPKI team directly addressed the
+      issue of <name,key> bindings and realized that such certificates are of extremely limited
+      use for trust management." The requirement nevertheless stands. The use-list heading is "I
+      need certificates to bind names to public keys:".
+
+  - name: sdsi-name
+    aliases:
+      - sdsi-name-construct
+      - local-name
+    locator: "§General Requirements ¶9, pp.3-4"
+    encoding: 'none given; SDSI (library record sdsi-1-1) and RFC 2693 §2 hold the construct (pointer only)'
+    normative_status: should
+    source: "§General Requirements ¶9, pp.3-4"
+    quote:
+      - text: 'The SDSI work of Rivest and Lampson has done an especially good job of defining and using local name spaces, therefore if possible SPKI should support the SDSI name construct.  [Note: SPKI and SDSI have merged.]'
+        crosses_page_break: true
+    fields_note: >-
+      No fields. The source names the construct and its property (local name spaces) and nothing
+      of its structure.
+    fields: []
+    layout: >-
+      None given. The bracketed note records that the request was overtaken: SPKI and SDSI merged.
+    notes: >-
+      Listed so that the name variant of keyholder-identifier and the name-space field of
+      name-binding-certificate have a type to point at.
+
+# --- Distribution (General Requirements ¶5-¶6) --------------------------------------------------
+
+  - name: certificate-presentation
+    aliases:
+      - certificate-distribution
+    locator: "§General Requirements ¶5-¶6, p.3"
+    encoding: 'none; transport not specified'
+    normative_status: assumption
+    source: "§General Requirements ¶5, p.3"
+    quote: 'Because SPKI certificates might carry information that the keyholder might not want to publish, we assume that certificates will be distributed directly by the keyholder to the verifier.'
+    fields:
+      - name: sender
+        type: keyholder
+        required: true
+        constrained_by: []
+        source: "§General Requirements ¶5, p.3"
+        strength: we assume
+        quote: 'we assume that certificates will be distributed directly by the keyholder to the verifier'
+        inferred: false
+      - name: receiver
+        type: unspecified
+        required: true
+        constrained_by: []
+        source: "§General Requirements ¶5, p.3"
+        strength: we assume
+        quote: 'we assume that certificates will be distributed directly by the keyholder to the verifier'
+        inferred: false
+        layout: >-
+          The verifier. The source uses "verifier" here and "A user of a certificate" in
+          Background; it does not define either.
+      - name: certificates
+        type: list-of-spki-certificate
+        required: true
+        constrained_by: []
+        source: "§General Requirements ¶5-¶6, p.3"
+        strength: should (minimum release)
+        quote:
+          - 'The keyholder should be able to release a minimum of information in order to prove his or her permission to act.'
+        inferred: true
+        inferred_reason: >-
+          "certificates will be distributed" gives the content; that it may be several
+          certificates (for example a chain, as in bank-certificate-chain) is our reading. The
+          minimum-release sentence constrains which certificates are sent, not their format.
+    layout: >-
+      No message format, framing or transport. Named only as a direction: keyholder to verifier.
+    notes: >-
+      Exceptions in the source: a personal-binding certificate is "never given out", so it is
+      never presented. Tension (inferred): key revocations need "Reliable distribution" (key-revocation),
+      which a keyholder-to-verifier channel does not give; the source does not reconcile the two.
+      Whether a request from verifier to keyholder precedes the presentation is not stated.
+
+  - name: repository-publication
+    aliases:
+      - global-repository
+    locator: "§General Requirements ¶5, p.3"
+    encoding: 'none; left to the keyholder'
+    normative_status: out-of-scope
+    source: "§General Requirements ¶5, p.3"
+    quote: 'If the keyholder wishes to use a global repository, such as LDAP, the global PGP key server or the DNS database, that is up to the keyholder and not for the SPKI WG to specify.'
+    fields:
+      - name: publisher
+        type: keyholder
+        required: true
+        constrained_by: []
+        source: "§General Requirements ¶5, p.3"
+        strength: optional ("If the keyholder wishes")
+        quote: 'If the keyholder wishes to use a global repository'
+        inferred: false
+      - name: repository
+        type: unspecified
+        required: true
+        constrained_by: []
+        source: "§General Requirements ¶5, p.3"
+        quote: 'such as LDAP, the global PGP key server or the DNS database'
+        values:
+          - 'LDAP'
+          - 'the global PGP key server'
+          - 'the DNS database'
+        inferred: false
+        layout: Examples, not a closed list ("such as").
+    layout: >-
+      None. Optional, keyholder's choice, and explicitly unspecified by the WG.
+    notes: >-
+      Contrast the keys-cached-locally item (local-key-cache), which compares the key
+      infrastructure with name servers.
+
+# --- Validity and CRLs ---------------------------------------------------------------------------
+
+  - name: crl
+    aliases:
+      - certificate-revocation-list
+      - minimal-crl
+      - negative-online-validation
+    locator: "§Validity and CRLs ¶1-¶5, p.4"
+    encoding: 'abstract; "Its method of transmission is not specified."'
+    normative_status: requirement
+    source: "§Validity and CRLs ¶2, p.4"
+    quote:
+      - 'A minimal CRL contains a list of revoked certificates, identified uniquely, a sequence number and a signature.  Its method of transmission is not specified.'
+      - locator: "§Validity and CRLs ¶1, p.4"
+        text: 'It may also be necessary to have on-line refinement of validity.  This is frequently achieved via a Certificate Revocation List (CRL) in previous certificate designs.'
+      - locator: "§Validity and CRLs ¶3, p.4"
+        text: 'A CRL is a negative statement.'
+    fields:
+      - name: revoked-certificates
+        type: list-of-certificate-identifier
+        required: true
+        constrained_by: []
+        source: "§Validity and CRLs ¶2, p.4"
+        quote: 'A minimal CRL contains a list of revoked certificates, identified uniquely, a sequence number and a signature.'
+        inferred: false
+        layout: How a certificate is "identified uniquely" is not stated. Whether the list may be empty is not stated.
+      - name: sequence-number
+        type: sequence-number
+        required: true
+        constrained_by: []
+        source: "§Validity and CRLs ¶2, p.4"
+        quote:
+          - 'A minimal CRL contains a list of revoked certificates, identified uniquely, a sequence number and a signature.'
+          - 'If it encounters a previous CRL, as indicated by sequence number, then it annihilates that previous CRL.'
+        inferred: false
+        layout: Orders CRLs within a crl-sequence; a lower number is "previous". Representation and starting value not stated.
+      - name: signature
+        type: signature
+        required: true
+        constrained_by: []
+        source: "§Validity and CRLs ¶2, p.4"
+        quote: 'A minimal CRL contains a list of revoked certificates, identified uniquely, a sequence number and a signature.'
+        inferred: false
+        layout: >-
+          Who signs the CRL is not stated, nor whether the certificate names the CRL signer (it must
+          name where to find the CRL; see spki-certificate.crl-location).
+      - name: validity-dates
+        type: date-interval
+        required: true
+        condition: SPKI CRL (variant spki); absent from the minimal CRL
+        constrained_by: []
+        source: "§Validity and CRLs ¶2, ¶5, p.4"
+        strength: must
+        quote:
+          - 'the CRL must carry explicit validity dates'
+          - 'Any CRL or revalidation instrument must have its own lifetime.  A lifetime of 0 is not possible because of communication delays and clock skews'
+        inferred: true
+        inferred_reason: >-
+          The source states both "explicit validity dates" (¶2) and "its own lifetime" (¶5) for a
+          CRL; that they are the same field is our reading. Non-zero length follows from "A
+          lifetime of 0 is not possible".
+    variants:
+      - name: minimal
+        fields: [revoked-certificates, sequence-number, signature]
+        normative_status: descriptive
+        source: "§Validity and CRLs ¶2, p.4"
+        quote: 'Such a CRL leads to non-deterministic program behavior.'
+        inferred: false
+        layout: >-
+          The CRL as first described. The source rejects it as it stands because its processing is
+          non-deterministic.
+      - name: spki
+        fields: [revoked-certificates, sequence-number, signature, validity-dates]
+        normative_status: requirement
+        condition: if SPKI uses CRLs
+        source: "§Validity and CRLs ¶2, p.4"
+        quote: 'Under this set of requirements, behavior of certificate validation is deterministic (aside from the question of clock skew).'
+        inferred: true
+        inferred_reason: >-
+          That the SPKI CRL keeps the three minimal fields and adds validity dates is our reading of
+          "Therefore, we take as a requirement that" following the minimal-CRL description. The
+          same requirement adds two rules outside the CRL itself: the certificate names where to
+          find it (spki-certificate.crl-location) and successive CRLs do not overlap (crl-sequence).
+    layout: >-
+      No layout and no transmission method. A signed list of revoked certificate identifiers with a
+      sequence number, and in SPKI explicit validity dates.
+    notes: >-
+      Processing, quoted for protocol.yaml and state-machine.yaml: "If it encounters some
+      certificate that it lists, then it annihilates that certificate.  If it encounters a previous
+      CRL, as indicated by sequence number, then it annihilates that previous CRL." Ambiguity: "it"
+      has no clear antecedent; the sentences read as if the CRL were the actor. Read as: a verifier
+      holding the CRL treats a listed certificate as invalid, and a higher-numbered CRL supersedes
+      a lower one (inferred). The memo calls the CRL "a negative statement" and SPKI "should
+      support both positive and negative on-line validations" (¶4); this file takes the CRL as the
+      negative on-line validation (alias negative-online-validation), which the source does not
+      state in one sentence. "SPKI uses CRLs" is conditional: the memo does not require CRLs.
+
+  - name: crl-sequence
+    locator: "§Validity and CRLs ¶2, p.4"
+    encoding: 'abstract'
+    normative_status: requirement
+    source: "§Validity and CRLs ¶2, p.4"
+    quote: 'the dates of a sequence of CRLs must not overlap'
+    fields:
+      - name: crls
+        type: list-of-crl
+        required: true
+        constrained_by: []
+        source: "§Validity and CRLs ¶2, p.4"
+        quote: 'If it encounters a previous CRL, as indicated by sequence number, then it annihilates that previous CRL.'
+        inferred: true
+        inferred_reason: >-
+          The source speaks of "a sequence of CRLs" and of a "previous CRL, as indicated by
+          sequence number"; ordering the list by sequence-number is our reading.
+      - name: non-overlap
+        type: constraint
+        required: true
+        constrained_by: []
+        source: "§Validity and CRLs ¶2, p.4"
+        strength: must
+        quote: 'the dates of a sequence of CRLs must not overlap'
+        inferred: false
+    layout: >-
+      Not a transmitted structure: the series of CRLs one issuer produces for one certificate's CRL
+      location (inferred scope; the source does not say whose sequence).
+    notes: >-
+      Not stated: whether the sequence may have gaps between one CRL's end and the next CRL's start,
+      and what validity a certificate has during such a gap. Not stated: whether sequence-number
+      order must agree with date order. Determinism is the stated aim: "Under this set of
+      requirements, behavior of certificate validation is deterministic (aside from the question of
+      clock skew)."
+
+  - name: revalidation-instrument
+    aliases:
+      - positive-online-validation
+      - revalidation
+    locator: "§Validity and CRLs ¶3-¶5, p.4"
+    encoding: 'abstract; not defined in this document'
+    normative_status: should
+    source: "§Validity and CRLs ¶4, p.4"
+    quote:
+      - 'SPKI should support both positive and negative on-line validations.'
+      - locator: "§Validity and CRLs ¶3, p.4"
+        text: 'These have been replaced in the retail world by positive statements -- on-line validation of a single check, ATM card or credit card.'
+      - locator: "§Validity and CRLs ¶5, p.4"
+        text: 'Any CRL or revalidation instrument must have its own lifetime.'
+    fields:
+      - name: validated-certificate
+        type: certificate-identifier
+        required: unspecified
+        required_reason: The source gives no fields for a revalidation instrument.
+        constrained_by: []
+        source: "§Validity and CRLs ¶3, p.4"
+        quote: 'on-line validation of a single check, ATM card or credit card'
+        inferred: true
+        inferred_reason: >-
+          The retail analogy validates "a single" instrument; that an SPKI revalidation names the
+          one certificate it validates is our reading.
+      - name: lifetime
+        type: lifetime
+        required: true
+        constrained_by: []
+        source: "§Validity and CRLs ¶5, p.4"
+        strength: must
+        quote: 'Any CRL or revalidation instrument must have its own lifetime.  A lifetime of 0 is not possible because of communication delays and clock skews, although one can consider an instrument whose lifetime is "one use" and which is delivered only as part of a challenge/response protocol.'
+        inferred: false
+        layout: Non-zero; or "one use" (one-use-instrument).
+      - name: signature
+        type: signature
+        required: unspecified
+        required_reason: The source does not say a revalidation instrument is signed.
+        constrained_by: []
+        source: "§Validity and CRLs ¶5, p.4"
+        quote: 'Any CRL or revalidation instrument must have its own lifetime.'
+        inferred: true
+        inferred_reason: >-
+          An "instrument" a verifier relies on, by analogy with the CRL's signature; not stated.
+    layout: >-
+      None given. A positive statement that a certificate is currently valid, with its own lifetime.
+    notes: >-
+      Not stated: who issues it, how the verifier obtains it, whether the certificate names the
+      revalidation service (the source requires a location only for CRLs), and whether the
+      verifier or the keyholder fetches it.
+
+  - name: one-use-instrument
+    locator: "§Validity and CRLs ¶5, p.4"
+    encoding: 'abstract; delivered inside a challenge/response protocol the source does not define'
+    normative_status: may
+    source: "§Validity and CRLs ¶5, p.4"
+    quote: 'A lifetime of 0 is not possible because of communication delays and clock skews, although one can consider an instrument whose lifetime is "one use" and which is delivered only as part of a challenge/response protocol.'
+    fields:
+      - name: lifetime
+        type: literal
+        value: one use
+        required: true
+        constrained_by: []
+        source: "§Validity and CRLs ¶5, p.4"
+        quote: 'one can consider an instrument whose lifetime is "one use"'
+        inferred: false
+      - name: delivery
+        type: constraint
+        required: true
+        constrained_by: []
+        source: "§Validity and CRLs ¶5, p.4"
+        quote: 'which is delivered only as part of a challenge/response protocol'
+        inferred: false
+      - name: challenge-binding
+        type: unspecified
+        required: unspecified
+        required_reason: The source does not say how the instrument relates to the challenge.
+        constrained_by: []
+        source: "§Validity and CRLs ¶5, p.4"
+        quote: 'which is delivered only as part of a challenge/response protocol'
+        inferred: true
+        inferred_reason: >-
+          A response in a challenge/response protocol answers a specific challenge; that the
+          instrument carries or covers the challenge is our reading.
+    layout: None given.
+    notes: >-
+      Ambiguity: "an instrument" follows "Any CRL or revalidation instrument", so the source does
+      not say whether a one-use instrument is a CRL, a revalidation, or either. Inferred: a
+      revalidation (a CRL answering one challenge would be a single-use negative statement, which
+      the memo nowhere suggests). Tension: "A lifetime of 0 is not possible", yet "one use" is a
+      lifetime with no duration; the source resolves this by tying it to delivery inside a
+      challenge/response exchange.
+
+  - name: one-use-challenge
+    locator: "§Validity and CRLs ¶5, p.4"
+    encoding: 'none given'
+    normative_status: mentioned-only
+    source: "§Validity and CRLs ¶5, p.4"
+    quote: 'which is delivered only as part of a challenge/response protocol'
+    inferred: true
+    inferred_reason: >-
+      The source names a challenge/response protocol, so a challenge exists; it names no challenge
+      message, sender or content.
+    fields_note: No fields. Listed so protocol.yaml can name the request that one-use-instrument answers.
+    fields: []
+    layout: None given.
+
+# --- Background (historical) ----------------------------------------------------------------------
+
+  - name: public-key-directory
+    aliases:
+      - modified-telephone-book
+    locator: "§Background ¶1, p.2"
+    encoding: 'none'
+    normative_status: historical
+    source: "§Background ¶1, p.2"
+    quote: 'Instead, they suggested, one can publish a modified telephone book -- one with public keys in place of telephone numbers. One could then look up his or her desired communication partner in the directory, find that person''s public key and open a secure channel to that person.'
+    fields:
+      - name: entry-name
+        type: name
+        required: unspecified
+        required_reason: Historical description; no structure given.
+        constrained_by: []
+        source: "§Background ¶1, p.2"
+        quote: 'One could then look up his or her desired communication partner in the directory'
+        inferred: true
+        inferred_reason: A telephone book is looked up by name; the source says "look up his or her desired communication partner", not name.
+      - name: public-key
+        type: public-key
+        required: unspecified
+        required_reason: Historical description; no structure given.
+        constrained_by: []
+        source: "§Background ¶1, p.2"
+        quote: 'one with public keys in place of telephone numbers'
+        inferred: false
+    layout: None. An on-line directory, which Kohnfelder replaced.
+    notes: >-
+      Diffie and Hellman's proposal [DH]. "Kohnfelder took that suggestion and noted that an
+      on-line service has the disadvantage of being a performance bottleneck."
+
+  - name: kohnfelder-certificate
+    aliases:
+      - name-key-binding
+      - signed-directory-entry
+    locator: "§Background ¶1-¶2, p.2"
+    encoding: 'none'
+    normative_status: historical
+    source: "§Background ¶1, p.2"
+    quote:
+      - 'To replace it, he proposed creation of digitally signed directory entries which he called certificates.  In the time since 1978, the term certificate has frequently been assumed to mean a binding between name and key.'
+      - locator: "§Background ¶2, p.2"
+        text: 'The SPKI team directly addressed the issue of <name,key> bindings and realized that such certificates are of extremely limited use for trust management.'
+    fields:
+      - name: name
+        type: name
+        required: unspecified
+        required_reason: Historical description; no structure given.
+        constrained_by: []
+        source: "§Background ¶2, p.2"
+        quote: '<name,key> bindings'
+        inferred: false
+      - name: key
+        type: public-key
+        required: unspecified
+        required_reason: Historical description; no structure given.
+        constrained_by: []
+        source: "§Background ¶2, p.2"
+        quote: '<name,key> bindings'
+        inferred: false
+      - name: signature
+        type: signature
+        required: unspecified
+        required_reason: Historical description; no structure given.
+        constrained_by: []
+        source: "§Background ¶1, p.2"
+        quote: 'digitally signed directory entries'
+        inferred: false
+    layout: The tuple <name,key>, signed. Order as the source writes it; no encoding.
+    notes: >-
+      Described in order to be moved away from: SPKI centres on authorization, not names. Same
+      shape as the traditional-certificate use case.
+
+# --- List of Certificate Uses (brainstorm; use-case-only) ---------------------------------------
+
+  - name: electronic-check-permission-certificate
+    locator: "§List of Certificate Uses, item 'I need a certificate to give me permission to write electronic checks.', p.5"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.5"
+    quote: 'I need a certificate to give me permission to write electronic checks.'
+    fields:
+      - name: subject
+        type: keyholder-identifier
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.5"
+        quote: 'give me permission'
+        inferred: true
+        inferred_reason: '"me" is the keyholder the permission goes to; the field is ours.'
+      - name: authorization
+        type: authorization-or-attribute
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.5"
+        quote: 'permission to write electronic checks'
+        inferred: false
+      - name: issuer
+        type: keyholder
+        required: unspecified
+        required_reason: The item names no issuer.
+        constrained_by: []
+        source: "§List of Certificate Uses, item 'My bank would need a certificate ...', p.5"
+        quote: 'permitted to give permission to people to write electronic checks'
+        inferred: true
+        inferred_reason: The next item makes "My bank" the party permitted to grant this permission.
+    layout: None given.
+
+  - name: bank-capability-certificate
+    locator: "§List of Certificate Uses, item 'My bank would need a certificate, proving to others ...', p.5"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.5"
+    quote: 'My bank would need a certificate, proving to others that it is a bank capable of cashing electronic checks and permitted to give permission to people to write electronic checks.'
+    fields:
+      - name: subject
+        type: keyholder-identifier
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.5"
+        quote: 'My bank would need a certificate'
+        inferred: true
+        inferred_reason: The bank is the holder; the field is ours.
+      - name: attribute
+        type: authorization-or-attribute
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.5"
+        quote: 'it is a bank capable of cashing electronic checks'
+        inferred: false
+      - name: delegation-right
+        type: authorization-or-attribute
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.5"
+        quote: 'permitted to give permission to people to write electronic checks'
+        inferred: false
+        layout: A right to grant electronic-check-permission-certificate to others.
+      - name: audience
+        type: unspecified
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.5"
+        quote: 'proving to others'
+        inferred: false
+        layout: Relying parties at large; not a field the source asks for.
+      - name: issuer
+        type: keyholder
+        required: unspecified
+        required_reason: The item names no issuer.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.5"
+        quote: 'My bank would need a certificate'
+        inferred: true
+        inferred_reason: Every certificate has an issuer (spki-certificate); this item does not name one.
+    layout: None given.
+
+  - name: bank-certifier-certificate
+    aliases:
+      - nacha-certificate
+    locator: "§List of Certificate Uses, item 'My bank would issue a certificate signing the key of a master bank certifier ...', p.6"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.6"
+    quote: 'My bank would issue a certificate signing the key of a master bank certifier -- perhaps NACHA -- so that I could follow a certificate chain from a key I know (my bank''s) to the key of any other bank in the US and, similarly, to any other bank in the world.'
+    fields:
+      - name: issuer
+        type: keyholder
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'My bank would issue a certificate'
+        inferred: false
+      - name: subject
+        type: public-key
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'signing the key of a master bank certifier -- perhaps NACHA --'
+        inferred: false
+      - name: authorization
+        type: authorization-or-attribute
+        required: unspecified
+        required_reason: The item states the purpose, not what the certificate grants.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'so that I could follow a certificate chain'
+        inferred: true
+        inferred_reason: >-
+          For the chain to reach "any other bank", the certificate must empower the master
+          certifier to vouch for banks; not stated.
+    layout: None given. One link of bank-certificate-chain.
+    notes: >-
+      Direction: the customer's own bank signs the master certifier's key, not the reverse. The
+      chain is rooted at the key the customer already knows.
+
+  - name: bank-certificate-chain
+    aliases:
+      - certificate-chain
+    locator: "§List of Certificate Uses, item 'My bank would issue a certificate signing the key of a master bank certifier ...', p.6"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.6"
+    quote: 'so that I could follow a certificate chain from a key I know (my bank''s) to the key of any other bank in the US and, similarly, to any other bank in the world.'
+    fields:
+      - name: start-key
+        type: public-key
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'a key I know (my bank''s)'
+        inferred: false
+      - name: certificates
+        type: list-of-spki-certificate
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'follow a certificate chain'
+        inferred: true
+        inferred_reason: A chain is an ordered list of certificates; the links after bank-certifier-certificate are not described.
+      - name: end-key
+        type: public-key
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'the key of any other bank in the US and, similarly, to any other bank in the world'
+        inferred: false
+    layout: None given. Ordered from start-key to end-key.
+
+  - name: reputation-voucher
+    locator: "§List of Certificate Uses, item 'I might generate a certificate (a \"reputation voucher\") ...', p.6"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.6"
+    quote: 'I might generate a certificate (a "reputation voucher") for a friend to introduce him to another friend -- in which certificate I could testify to my friend''s political opinion (e.g., libertarian cypherpunk) or physical characteristics or anything else of interest.'
+    fields:
+      - name: issuer
+        type: keyholder
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'I might generate a certificate'
+        inferred: false
+      - name: subject
+        type: keyholder-identifier
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'for a friend'
+        inferred: false
+      - name: audience
+        type: unspecified
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'to introduce him to another friend'
+        inferred: false
+      - name: testimony
+        type: authorization-or-attribute
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'I could testify to my friend''s political opinion (e.g., libertarian cypherpunk) or physical characteristics or anything else of interest'
+        values:
+          - 'political opinion (e.g., libertarian cypherpunk)'
+          - 'physical characteristics'
+          - 'anything else of interest'
+        inferred: false
+    layout: None given.
+
+  - name: security-clearance-certificate
+    locator: "§List of Certificate Uses, item 'I might have a certificate giving my security clearance ...', p.6"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.6"
+    quote: 'I might have a certificate giving my security clearance, signed by a governmental issuing authority.'
+    fields:
+      - name: issuer
+        type: keyholder
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'signed by a governmental issuing authority'
+        inferred: false
+      - name: subject
+        type: keyholder-identifier
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'I might have a certificate'
+        inferred: true
+        inferred_reason: '"I" holds it; the field is ours.'
+      - name: attribute
+        type: authorization-or-attribute
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'my security clearance'
+        inferred: false
+    layout: None given.
+
+  - name: software-certificate
+    locator: "§List of Certificate Uses, item 'I want a certificate for some software I have downloaded ...', p.6"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.6"
+    quote: 'I want a certificate for some software I have downloaded and am considering running on my computer -- to make sure it hasn''t changed and that some reputable company or person stands behind it.'
+    fields:
+      - name: subject
+        type: object
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'some software I have downloaded'
+        inferred: false
+        layout: >-
+          Not a key. How the software is identified is not stated; "to make sure it hasn't changed"
+          implies an identifier that changes when the software does (inferred).
+      - name: integrity
+        type: constraint
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'to make sure it hasn''t changed'
+        inferred: false
+      - name: endorser
+        type: keyholder
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'some reputable company or person stands behind it'
+        inferred: true
+        inferred_reason: The party that "stands behind it" is read as the issuer.
+    layout: None given.
+    notes: >-
+      Tension with General Requirements, which defines a certificate's purpose "to or for a
+      keyholder"; this item's subject is a piece of software, not a keyholder. The memo does not
+      address it.
+
+  - name: traditional-certificate
+    locator: "§List of Certificate Uses, item '[traditional certificate]', p.6"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.6"
+    quote: '[traditional certificate] binding a key to a name, implying "all the attributes of the real person having this name are transferred to this key by this certificate".  This requires unique identification of a person (which is difficult in non-digital space, as it is) and someone trustworthy binding that unique name to the key in question.  In this model, a key starts out naked and acquires attributes, permissions and authority from the person bound to it.'
+    fields:
+      - name: issuer
+        type: keyholder
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'someone trustworthy binding that unique name to the key in question'
+        inferred: false
+      - name: name
+        type: name
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'This requires unique identification of a person (which is difficult in non-digital space, as it is)'
+        inferred: false
+        layout: A name that uniquely identifies a real person.
+      - name: key
+        type: public-key
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'binding a key to a name'
+        inferred: false
+      - name: meaning
+        type: text
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: '"all the attributes of the real person having this name are transferred to this key by this certificate"'
+        inferred: false
+        layout: Implied by the certificate, not carried in it (the source says "implying").
+    layout: None given.
+    notes: Same shape as kohnfelder-certificate. Variant traditional of name-binding-certificate.
+
+  - name: direct-certificate
+    aliases:
+      - self-signed-name-certificate
+    locator: "§List of Certificate Uses, item '[direct certificate]', p.6"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.6"
+    quote: '[direct certificate] binding a name to a key, implying "I (the person who is able to use the associated private key to make this signature) declare that I go by the name of XXXXXXX."  The unique identification of the key is automatic -- from the key itself or a cryptographic hash of the key. The binding is done by the key itself -- in a self-signed certificate.  In this model, a key is loaded with attributes, permissions and authority directly by other certificates, not indirectly through some person''s name, and this certificate declares only a name or nickname by which the key''s owner likes to be addressed.'
+    fields:
+      - name: issuer
+        type: keyholder-identifier
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'The binding is done by the key itself -- in a self-signed certificate.'
+        inferred: false
+        layout: Equal to key (self-signed).
+      - name: key
+        type: keyholder-identifier
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'The unique identification of the key is automatic -- from the key itself or a cryptographic hash of the key.'
+        inferred: false
+        layout: Variant public-key or key-hash of keyholder-identifier.
+      - name: name
+        type: name
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'this certificate declares only a name or nickname by which the key''s owner likes to be addressed'
+        inferred: false
+        layout: The example value is the placeholder XXXXXXX.
+      - name: meaning
+        type: text
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: '"I (the person who is able to use the associated private key to make this signature) declare that I go by the name of XXXXXXX."'
+        inferred: false
+    layout: None given.
+    notes: >-
+      Variant direct of name-binding-certificate; the self-chosen-name kind of General Requirements
+      ¶9 (inferred). Carries no authority: authority comes "directly by other certificates".
+
+  - name: personal-binding-certificate
+    aliases:
+      - nickname-certificate
+    locator: "§List of Certificate Uses, item '[personal binding]', pp.6-7"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, pp.6-7"
+    quote:
+      - text: '[personal binding] binding a key to a nickname.  This kind of certificate is signed by me, singing someone else''s key and binding it to a nickname by which I know that person. It is for my use only -- never given out -- and is a signed certificate to prevent tampering with my own private directory of keys.  It says nothing about how I certified the binding to my own satisfaction between the key and my friend.'
+        crosses_page_break: true
+    fields:
+      - name: issuer
+        type: keyholder
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'This kind of certificate is signed by me'
+        inferred: false
+      - name: key
+        type: public-key
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'singing someone else''s key'
+        inferred: false
+        layout: Source typo "singing" for signing (inferred correction; the quote keeps the source).
+      - name: nickname
+        type: name
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'binding it to a nickname by which I know that person'
+        inferred: false
+      - name: distribution
+        type: constraint
+        required: true
+        constrained_by: []
+        source: "§List of Certificate Uses, p.6"
+        quote: 'It is for my use only -- never given out --'
+        inferred: false
+        layout: Never sent in certificate-presentation.
+    layout: None given. Held in the issuer's own directory of keys.
+    notes: >-
+      Variant personal-binding of name-binding-certificate; the known-by-others kind of General
+      Requirements ¶9 (inferred). Signed only for tamper protection of a private store; it records
+      no evidence for the binding.
+
+  - name: genealogy-fact-card
+    locator: "§List of Certificate Uses, item 'I might be doing genealogy ...', p.7"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.7"
+    quote: 'I might be doing genealogy and be collecting what amounts to 3x5 cards with facts to be linked together.  Some of these links would be from one content to another reference [e.g., indexing and cross-referencing].  Others might be links to the researcher who collected the fact.  By rights, the fact should be signed by that researcher.  Viewing only the signature on the fact and the link to the researcher, this electronic 3x5 card becomes a certificate.'
+    fields:
+      - name: fact
+        type: text
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.7"
+        quote: '3x5 cards with facts to be linked together'
+        inferred: false
+      - name: content-links
+        type: list-of-unspecified
+        required: unspecified
+        required_reason: '"Some of these links"; optional by the source''s wording.'
+        constrained_by: []
+        source: "§List of Certificate Uses, p.7"
+        quote: 'Some of these links would be from one content to another reference [e.g., indexing and cross-referencing].'
+        inferred: false
+      - name: researcher-link
+        type: keyholder-identifier
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.7"
+        quote: 'Others might be links to the researcher who collected the fact.'
+        inferred: true
+        inferred_reason: A link to the researcher as signer is read as identifying the researcher's key; the source says only "links to the researcher".
+      - name: signature
+        type: signature
+        required: unspecified
+        required_reason: Brainstorm item; "should" in a brainstorm item.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.7"
+        strength: should
+        quote: 'By rights, the fact should be signed by that researcher.'
+        inferred: false
+    layout: None given.
+    notes: >-
+      The source's point is what makes a record a certificate: the signature plus the link to the
+      signer ("Viewing only the signature on the fact and the link to the researcher, this
+      electronic 3x5 card becomes a certificate."). The subject is a fact, not a keyholder.
+
+  - name: house-purchase-certificate
+    locator: "§List of Certificate Uses, item 'I want to sign a contract to buy a house.', p.7; §Open Questions, item 'Can certificates help do a title scan ...', p.11"
+    encoding: 'none given'
+    normative_status: open-question
+    source: "§List of Certificate Uses, p.7"
+    quote:
+      - 'I want to sign a contract to buy a house.  What kind of certificate do I need?'
+      - locator: "§Open Questions, p.11"
+        text: 'Can certificates help do a title scan for purchase of a house?'
+      - locator: "§Open Questions, p.11"
+        text: 'Certificates might be employed to carry information in a tamper-proof way, but building the database necessary to record all house titles and all liens is a project not related to certificate structure.'
+    fields_note: >-
+      No fields. Both are questions; the source answers neither with a structure, and puts the
+      title database outside certificate structure.
+    fields: []
+    layout: None given.
+
+  - name: correspondent-attribute-certificate
+    locator: "§List of Certificate Uses, items 'I have found someone on the net ...' and 'I have met someone on the net ...', p.7"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.7"
+    quote:
+      - 'I have met someone on the net and would like a picture of her and her height, weight and other measurements from a trustworthy source.'
+      - 'I have found someone on the net and she sounds really nice. Things are leading up to cybersex.  How do I make sure she''s not really some 80-year-old man in a nursing home?'
+    fields:
+      - name: subject
+        type: keyholder-identifier
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.7"
+        quote: 'I have met someone on the net'
+        inferred: true
+        inferred_reason: The person met on the net is identified by her key; not stated.
+      - name: attributes
+        type: authorization-or-attribute
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.7"
+        quote: 'a picture of her and her height, weight and other measurements'
+        values:
+          - 'a picture of her'
+          - 'her height, weight and other measurements'
+        inferred: false
+      - name: issuer
+        type: keyholder
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.7"
+        quote: 'from a trustworthy source'
+        inferred: false
+    layout: None given.
+    notes: >-
+      The cybersex item asks a question and names no certificate. Grouping it here, as an
+      attribute (age, sex) certificate about an on-line correspondent, is our reading (inferred).
+
+  - name: digital-marriage-license
+    locator: "§List of Certificate Uses, item 'Can I have a digital marriage license?', p.7; §Open Questions, item 'Can a certificate be issued to guarantee that I am not already married ...', p.12"
+    encoding: 'none given'
+    normative_status: open-question
+    source: "§List of Certificate Uses, p.7"
+    quote:
+      - 'Can I have a digital marriage license?'
+      - locator: "§Open Questions, p.12"
+        text: 'Can a certificate be issued to guarantee that I am not already married, so that I can then get a digital marriage license?'
+    fields_note: No fields. Named as a question only.
+    fields: []
+    layout: None given.
+    notes: >-
+      Its precondition in Open Questions is negative-fact-attribute-certificate ("not already
+      married"). Inferred dependency: the not-married certificate is presented to obtain the
+      licence.
+
+  - name: other-certificate-uses
+    locator: "§List of Certificate Uses, items 'Can I have a digital divorce decree?', '..a digital Voter Registration Card?', p.7; items 'Encryption keys for E-mail and file encryption' to 'Service authentication', p.10"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, pp.7, 10"
+    quote: 'The list below is a brainstorming list, accumulated on the SPKI mailing list, of uses of such certificates.'
+    fields:
+      - name: use
+        type: authorization-or-attribute
+        required: unspecified
+        required_reason: Catalogue of brainstorm items with no structure.
+        constrained_by: []
+        source: "§List of Certificate Uses, pp.7, 10"
+        quote: 'Can I have a digital divorce decree?'
+        values:
+          - 'Can I have a digital divorce decree?'
+          - '..a digital Voter Registration Card?'
+          - 'Encryption keys for E-mail and file encryption'
+          - 'Authentication of people or other entities'
+          - 'Digital signatures (unforgeability)'
+          - 'Timestamping / notary services'
+          - 'Host authentication'
+          - 'Service authentication'
+        inferred: false
+    layout: None given. Items each named in a few words, verbatim above.
+    notes: >-
+      Catalogue of the list items that name a use but no further structure, other than the wallet
+      cards (wallet-card-catalogue). The six function items (p.10) are followed by "Other
+      requirements:", whose items are requirements rather than structures, except the three this
+      file gives entries (trusted-root-set, certification-right-expiration-certificate,
+      local-key-cache) and the revocation item (key-revocation, certification-right-cessation). The
+      two remaining Other requirements name no structure: "Some applications (e.g., notary
+      services) require highly trusted keys; generation complexity is not an issue here." and "Some
+      applications (e.g., host authentication) require extremely light (or no) bureaucracy.  Even
+      communication with the central administrator may be a problem." Ambiguity: "Other
+      requirements:" is indented as if under the "Service authentication" item; read here as a
+      new sub-list.
+
+  - name: wallet-card-catalogue
+    locator: "§List of Certificate Uses, item 'There are a number of cards one carries in a typical wallet ...' and the items after it to 'permission to issue nuclear launch codes', pp.7-9"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.7"
+    quote: 'There are a number of cards one carries in a typical wallet which could become certificates attached to a public key:'
+    fields:
+      - name: card-type
+        type: authorization-or-attribute
+        required: unspecified
+        required_reason: Catalogue of brainstorm items with no structure.
+        constrained_by: []
+        source: "§List of Certificate Uses, pp.7-9"
+        quote: 'which could become certificates attached to a public key'
+        values:
+          - 'health insurance card'
+          - 'prescription drug card'
+          - 'driver''s license (for permission to drive)'
+          - 'driver''s license (for permission to buy alcohol)'
+          - 'supermarket discount card'
+          - 'supermarket check-cashing card [I know -- anachronism]'
+          - 'Blockbuster Video rental card'
+          - 'ATM card'
+          - 'Credit card'
+          - 'membership card in the ACLU, NRA, Republican party, Operation Rescue, NARAL, ACM, IEEE, ICAR....'
+          - 'Red Cross blood donor card'
+          - 'Starbuck''s Coffee buy-10-get-1-free card'
+          - 'DC Metro fare card'
+          - 'Phone calling card'
+          - 'Alumni Association card'
+          - 'REI Membership card'
+          - 'Car insurance card'
+          - 'claim check for a suitcase'
+          - 'claim check for a pawned radio'
+          - 'authorization for followup visits to a doctor, after surgery'
+          - 'Better Business Bureau [BBB] style reputation certificates [testimonies from satisfied customers]'
+          - 'BBB-style certificate that no complaints exist against a business or doctor or dentist, etc.'
+          - 'LDS Temple Recommend'
+          - 'Stock certificate'
+          - 'Stock option'
+          - 'Car title'
+          - 'deed to land'
+          - 'proof of ownership of electronic equipment with an ID number'
+          - 'time card certificate [activating a digital time clock]'
+          - 'proof of degree earned [PhD, LLD, MD, ...]'
+          - 'permission to write digitally signed prescriptions for drugs'
+          - 'permission to spend up to $X of a company''s money'
+          - 'permission to issue nuclear launch codes'
+        inferred: false
+      - name: subject
+        type: public-key
+        required: unspecified
+        required_reason: Catalogue of brainstorm items with no structure.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.7"
+        quote: 'attached to a public key'
+        inferred: false
+    layout: >-
+      None given. 33 items, verbatim, in source order. Each is one value of card-type: a certificate
+      whose authorization-or-attribute is that card's meaning, attached to the holder's public key.
+    notes: >-
+      Ambiguity in extent: the source sets the wallet sentence and every following item at the same
+      indent, so it does not mark where the wallet list ends. This file takes it to run to
+      "permission to issue nuclear launch codes", the last item before the list returns to
+      first-person needs ("I'm a sysadmin, I want to carry a certificate"). Several items are not wallet cards (stock option,
+      deed to land, permission to issue nuclear launch codes); they are kept here because nothing in
+      the layout separates them. Two items (permission to buy alcohol, prescribing) reappear in
+      monetary-value-certificate. One item (BBB-style no-complaints certificate) is a negative-fact
+      attestation of the kind negative-fact-attribute-certificate discusses. The membership-card
+      item ends with the source's four dots.
+
+  - name: sysadmin-competence-certificate
+    locator: "§List of Certificate Uses, item 'I'm a sysadmin, I want to carry a certificate, signed by SAGE ...', p.9"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.9"
+    quote: 'I''m a sysadmin, I want to carry a certificate, signed by SAGE, that says I''m good at the things sysadmins are good at.'
+    fields:
+      - name: issuer
+        type: keyholder
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: 'signed by SAGE'
+        inferred: false
+      - name: subject
+        type: keyholder-identifier
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: 'I want to carry a certificate'
+        inferred: true
+        inferred_reason: The sysadmin carrying it is the subject; the field is ours.
+      - name: attribute
+        type: authorization-or-attribute
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: 'that says I''m good at the things sysadmins are good at'
+        inferred: false
+    layout: None given.
+
+  - name: ephemeral-root-access-certificate
+    locator: "§List of Certificate Uses, item 'I'm that same sysadmin, I want an ephemeral certificate ...', p.9"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.9"
+    quote: 'I''m that same sysadmin, I want an ephemeral certificate that grants me root access to certain systems for the day, or the week, or...'
+    fields:
+      - name: subject
+        type: keyholder-identifier
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: 'grants me root access'
+        inferred: true
+        inferred_reason: '"me" is the subject; the field is ours.'
+      - name: authorization
+        type: authorization-or-attribute
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: 'root access to certain systems'
+        inferred: false
+      - name: validity-period
+        type: date-interval
+        required: unspecified
+        required_reason: Brainstorm item; "ephemeral" implies a short validity period but no field is named.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: 'for the day, or the week, or...'
+        inferred: true
+        inferred_reason: '"ephemeral" plus a day or a week read as spki-certificate.validity-period.'
+      - name: issuer
+        type: keyholder
+        required: unspecified
+        required_reason: The item names no issuer.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: 'I want an ephemeral certificate'
+        inferred: true
+        inferred_reason: Every certificate has an issuer; this item does not name one.
+    layout: None given.
+    notes: The audit-identity paragraph that follows this item is in host-administrator-certificate.
+
+  - name: host-administrator-certificate
+    locator: "§List of Certificate Uses, paragraph 'Certain applications *will* want some form of auditing ...', p.9"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.9"
+    quote: 'Certain applications *will* want some form of auditing, but the audit identity should be in the domain of the particular application...  For instance an "is a system administrator of this host" certificate would probably want to include an audit identity, so you can figure out which of your multiple admins screwed something up.'
+    fields:
+      - name: attribute
+        type: authorization-or-attribute
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: '"is a system administrator of this host"'
+        inferred: false
+      - name: audit-identity
+        type: unspecified
+        required: unspecified
+        required_reason: '"would probably want to include"; not required.'
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        strength: should (domain); "would probably want" (presence)
+        quote: 'the audit identity should be in the domain of the particular application'
+        inferred: false
+        layout: >-
+          Identifies which administrator acted. Its name space is the application's, not a global
+          one. Format not given.
+      - name: subject
+        type: keyholder-identifier
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: 'which of your multiple admins'
+        inferred: true
+        inferred_reason: The administrator the certificate is about; the field is ours.
+    layout: None given.
+    notes: >-
+      The paragraph is indented as a continuation of the ephemeral-root-access item, so the audit
+      identity may be meant for ephemeral root-access certificates too; the source's example is the
+      host-administrator certificate. The paragraph's first sentence ends with the source's "...".
+
+  - name: amateur-radio-license-certificate
+    locator: "§List of Certificate Uses, item 'I'm an amateur radio operator.', p.9"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.9"
+    quote: 'I''m an amateur radio operator.  I want a signed certificate that says I''m allowed to engage in amateur radio, issued by the DOC.  [I currently have a paper version of one].  This would be useful in enforcing access policies to the amateur spectrum; and in tracking abuse of that same spectrum.  Heck!  extend this concept to all licensed spectrum users.'
+    fields:
+      - name: issuer
+        type: keyholder
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: 'issued by the DOC'
+        inferred: false
+      - name: subject
+        type: keyholder-identifier
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: 'I''m an amateur radio operator.'
+        inferred: true
+        inferred_reason: The operator is the subject; the field is ours.
+      - name: authorization
+        type: authorization-or-attribute
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: 'I''m allowed to engage in amateur radio'
+        inferred: false
+    layout: None given.
+    notes: >-
+      Uses: access-policy enforcement and abuse tracking. Generalised by the source to "all licensed
+      spectrum users".
+
+  - name: purchasing-authority-certificate
+    locator: "§List of Certificate Uses, item 'I'm the a purchasing agent for a large corporation.', p.9"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.9"
+    quote: 'I''m the a purchasing agent for a large corporation.  I want to posses a certificate that tells our suppliers that I''m authorized to make purchases up to $15,000.  I don''t want the suppliers to know my name, lest their sales people bug me too much.  I don''t want to have to share a single "Megacorp Purchasing Department Certificate" with others doing the same job [the private key would need to be shared--yuck!].'
+    fields:
+      - name: subject
+        type: keyholder-identifier
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: 'I don''t want the suppliers to know my name, lest their sales people bug me too much.'
+        inferred: true
+        inferred_reason: >-
+          The agent's own key, carrying no name (the anonymity of spki-certificate), and not a
+          department key shared with others. Read from the two "I don't want" sentences.
+      - name: authorization
+        type: authorization-or-attribute
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: 'I''m authorized to make purchases up to $15,000'
+        inferred: false
+        layout: A bounded authorization (a monetary limit).
+      - name: audience
+        type: unspecified
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: 'a certificate that tells our suppliers'
+        inferred: false
+      - name: issuer
+        type: keyholder
+        required: unspecified
+        required_reason: The item names no issuer.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: 'a purchasing agent for a large corporation'
+        inferred: true
+        inferred_reason: The corporation, as employer, is read as the issuer; not stated.
+    variants:
+      - name: shared-department-certificate
+        normative_status: rejected in the source
+        source: "§List of Certificate Uses, p.9"
+        quote: 'I don''t want to have to share a single "Megacorp Purchasing Department Certificate" with others doing the same job [the private key would need to be shared--yuck!].'
+        inferred: false
+        layout: One certificate for a department's key; rejected because the private key would be shared.
+    layout: None given.
+    notes: >-
+      The source's worked case for General Requirements ¶7 (anonymity) and ¶6 (minimum
+      information). Source typos kept in the quote: "the a" and "posses".
+
+  - name: delegation-certificate
+    aliases:
+      - short-term-key-certificate
+      - login-certificate
+    locator: "§List of Certificate Uses, item 'This signed-key should be considered equivalent to the certifying-key', pp.9-10"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.9"
+    quote:
+      - '"This signed-key should be considered equivalent to the certifying-key until this certificate expires for the following purposes ..."'
+      - '[This is desirable when you wish to reduce the exposure of long-term keys.  One way to do this is to use smart cards, but those typically have slow processors and are connected through low-bandwidth links; however, if you only use the smart card at "login" time to certify a short-term key pair, you get high performance and low exposure of the long term key.'
+      - locator: "§List of Certificate Uses, p.10"
+        text: 'I''ll note here that this flies in the face of attempts to prevent delegation of certain rights.  Maybe we need a "delegation-allowed" bit -- but there''s nothing to stop someone who wishes to delegate against the rules from also loaning out their private key.].'
+    fields:
+      - name: statement
+        type: text
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: '"This signed-key should be considered equivalent to the certifying-key until this certificate expires for the following purposes ..."'
+        inferred: false
+        layout: >-
+          The whole item is this sentence; the "..." is the source's, standing for the list of
+          purposes.
+      - name: certifying-key
+        type: public-key
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: 'the certifying-key'
+        inferred: false
+        layout: The issuer; in the source's example, the long-term key held on a smart card.
+      - name: signed-key
+        type: public-key
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: 'to certify a short-term key pair'
+        inferred: false
+        layout: The subject; in the source's example, a short-term key certified at "login" time.
+      - name: expiry
+        type: date-interval
+        required: unspecified
+        required_reason: Brainstorm item; "until this certificate expires" presupposes an end date but no field is named.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: 'until this certificate expires'
+        inferred: true
+        inferred_reason: Read as spki-certificate.validity-period.
+      - name: purposes
+        type: authorization-or-attribute
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.9"
+        quote: 'for the following purposes ...'
+        inferred: false
+        layout: The subset of the certifying key's rights passed to the signed key. Not enumerated in the source.
+      - name: delegation-allowed
+        type: boolean
+        required: false
+        constrained_by: []
+        source: "§List of Certificate Uses, p.10"
+        strength: open ("Maybe we need")
+        quote: 'Maybe we need a "delegation-allowed" bit'
+        inferred: true
+        inferred_reason: >-
+          See spki-certificate.delegation-allowed. The bit would control whether a right may be
+          delegated by a certificate like this one; which certificate carries it is not stated.
+    layout: None given.
+    notes: >-
+      The bracketed note spans the page break p.9/p.10 and is quoted as two separate passages; the
+      blank lines between them may be a paragraph break or page padding. Delegation is defeasible in
+      the source's own view: key loaning cannot be stopped (also monetary-value-certificate).
+
+  - name: address-space-ownership-certificate
+    locator: "§List of Certificate Uses, item '\"I am the current legitimate owner of a particular chunk of Internet address space.\"', p.10"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.10"
+    quote:
+      - '"I am the current legitimate owner of a particular chunk of Internet address space."'
+      - '[I''d like to see IPSEC eventually become usable, at least for privacy, without need for prior arrangement between sites, but I think there''s a need for a "I own this address"/"I own this address range" certificate in order for IPSEC to coexist with existing ip-address-based firewalls.]'
+    fields:
+      - name: statement
+        type: text
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.10"
+        quote: '"I am the current legitimate owner of a particular chunk of Internet address space."'
+        inferred: false
+      - name: address-or-range
+        type: unspecified
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.10"
+        quote: 'a "I own this address"/"I own this address range" certificate'
+        inferred: false
+        layout: A single address or an address range. Syntax not given.
+      - name: subject
+        type: keyholder-identifier
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.10"
+        quote: '"I am the current legitimate owner'
+        inferred: true
+        inferred_reason: '"I" is the owner''s key; the field is ours.'
+      - name: issuer
+        type: keyholder
+        required: unspecified
+        required_reason: The item names no issuer.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.10"
+        quote: '"I am the current legitimate owner'
+        inferred: true
+        inferred_reason: >-
+          First-person wording could mean self-assertion or a third-party attestation; the source
+          does not say who signs.
+    variants:
+      - name: single-address
+        source: "§List of Certificate Uses, p.10"
+        quote: '"I own this address"'
+      - name: address-range
+        source: "§List of Certificate Uses, p.10"
+        quote: '"I own this address range"'
+    layout: None given.
+    notes: >-
+      Purpose given in the source's note: IPSEC alongside address-based firewalls.
+
+  - name: dns-name-ownership-certificate
+    aliases:
+      - dns-name-owner-certificate
+    locator: "§List of Certificate Uses, item '\"I am the current legitimate owner of a this DNS name or subtree.\"', p.10"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.10"
+    quote: '"I am the current legitimate owner of a this DNS name or subtree."'
+    fields:
+      - name: statement
+        type: text
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.10"
+        quote: '"I am the current legitimate owner of a this DNS name or subtree."'
+        inferred: false
+      - name: dns-name-or-subtree
+        type: unspecified
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.10"
+        quote: 'this DNS name or subtree'
+        inferred: false
+      - name: subject
+        type: keyholder-identifier
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.10"
+        quote: '"I am the current legitimate owner'
+        inferred: true
+        inferred_reason: '"I" is the owner''s key; the field is ours.'
+    layout: None given.
+    notes: >-
+      Alias dns-name-owner-certificate: the rfc822 item refers to an "appropriate "DNS name owner"
+      certificate"; that it is this certificate is our reading (inferred). Source typo "a this".
+
+  - name: email-receiver-certificate
+    aliases:
+      - rfc822-address-certificate
+    locator: "§List of Certificate Uses, item '\"I am the legitimate receiver of mail sent to this rfc822 email address.', p.10"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.10"
+    quote:
+      - '"I am the legitimate receiver of mail sent to this rfc822 email address.  [this might need to be signed by a key which itself had been certified by the appropriate "DNS name owner" certificate]."'
+      - '[This is in case I know someone owns a particular e-mail address but I don''t know their key.]'
+    fields:
+      - name: statement
+        type: text
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.10"
+        quote: 'I am the legitimate receiver of mail sent to this rfc822 email address.'
+        inferred: false
+      - name: email-address
+        type: unspecified
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.10"
+        quote: 'this rfc822 email address'
+        inferred: false
+      - name: issuer
+        type: keyholder
+        required: unspecified
+        required_reason: '"might need to be"; not required.'
+        constrained_by: []
+        source: "§List of Certificate Uses, p.10"
+        quote: 'this might need to be signed by a key which itself had been certified by the appropriate "DNS name owner" certificate'
+        inferred: false
+        layout: Possibly a key certified by dns-name-ownership-certificate for the address's domain (domain link inferred).
+      - name: subject
+        type: keyholder-identifier
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.10"
+        quote: 'I know someone owns a particular e-mail address but I don''t know their key'
+        inferred: true
+        inferred_reason: The certificate's job is to give the key for the address; the field is ours.
+    layout: None given. A two-link chain at most (DNS name owner, then address).
+    notes: >-
+      Source defect: the opening double quote before "I am" closes only after the bracketed note,
+      so the bracket and the inner "DNS name owner" quote fall inside the quoted statement. Read
+      here as statement plus note (inferred).
+
+  - name: trusted-root-set
+    locator: "§List of Certificate Uses, Other requirements, item 'Trust model must be a web ...', p.10"
+    encoding: 'none; local to each relying party'
+    normative_status: requirement
+    source: "§List of Certificate Uses, p.10"
+    quote: 'Trust model must be a web (people want to choose whom they trust).  People must be able to choose whom they trust or consider reliable roots (maybe with varying reliabilities).'
+    fields:
+      - name: roots
+        type: list-of-keyholder
+        required: true
+        constrained_by: []
+        source: "§List of Certificate Uses, p.10"
+        strength: must
+        quote: 'People must be able to choose whom they trust or consider reliable roots'
+        inferred: true
+        inferred_reason: A chosen set of roots, held per person; the source names the choice, not a stored structure.
+      - name: reliability
+        type: unspecified
+        required: false
+        constrained_by: []
+        source: "§List of Certificate Uses, p.10"
+        strength: maybe
+        quote: '(maybe with varying reliabilities)'
+        inferred: false
+    layout: None given. Not exchanged.
+    notes: >-
+      A brainstorm "Other requirements" item that uses "must" (lowercase). Listed because
+      bank-certificate-chain starts from "a key I know" and a chain needs a root. Ties to the
+      charter: "It is intended that the Simple Public Key Infrastructure will support a range of
+      trust models."
+
+  - name: certification-right-expiration-certificate
+    locator: "§List of Certificate Uses, Other requirements, item 'Especially in lower-end applications ...', p.11"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.11"
+    quote: 'Especially in lower-end applications (e.g. host authentication) the people generating the keys (e.g., administrators) will change, and you will no longer want them to be able to certify.  On the other hand, you will usually also not want all keys they have generated to expire.  This may imply a "certification right expiration" certificate requirement, probably to be implemented together with notary services.'
+    fields:
+      - name: subject
+        type: keyholder-identifier
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.11"
+        quote: 'the people generating the keys (e.g., administrators) will change, and you will no longer want them to be able to certify'
+        inferred: true
+        inferred_reason: The departing certifier's key is what the certificate is about; the field is ours.
+      - name: effect
+        type: constraint
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.11"
+        quote: 'On the other hand, you will usually also not want all keys they have generated to expire.'
+        inferred: false
+        layout: Ends the right to certify from now on, without invalidating what was certified before.
+      - name: notary-timestamp
+        type: unspecified
+        required: unspecified
+        required_reason: '"probably to be implemented together with notary services"; not required.'
+        constrained_by: []
+        source: "§List of Certificate Uses, p.11"
+        quote: 'probably to be implemented together with notary services'
+        inferred: true
+        inferred_reason: >-
+          A notary service would let a verifier tell certificates made before the expiration from
+          those made after; the source does not say how notary services are involved.
+    layout: None given.
+    notes: Related to certification-right-cessation; the source does not say they are the same instrument.
+
+  - name: local-key-cache
+    locator: "§List of Certificate Uses, Other requirements, item 'Keys will need to be cached locally ...', p.11"
+    encoding: 'none; local'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.11"
+    quote: 'Keys will need to be cached locally to avoid long delays fetching frequently used keys.  Cf. current name servers. The key infrastructure may in future get used almost as often as the name server.  The caching and performance requirements are similar.'
+    fields:
+      - name: cached-keys
+        type: list-of-public-key
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.11"
+        quote: 'Keys will need to be cached locally'
+        inferred: false
+    layout: None given. Not exchanged.
+    notes: >-
+      "This interacts with caching" in the revocation item (key-revocation): a cached key may be
+      stale after a revocation. Tension (inferred): keys are said to be fetched, while General
+      Requirements assumes certificates come directly from the keyholder; the source does not say
+      from where keys are fetched.
+
+  - name: key-revocation
+    locator: "§List of Certificate Uses, Other requirements, item 'Reliable distribution of key revocations and other certificates ...', p.11"
+    encoding: 'none given'
+    normative_status: use-case-only
+    source: "§List of Certificate Uses, p.11"
+    quote: 'Reliable distribution of key revocations and other certificates (e.g., the ceasing of the right to make new certificates).  May involve goals like "will have spread everywhere in 24 hours" or something like that.  This interacts with caching.'
+    fields:
+      - name: revoked-key
+        type: public-key
+        required: unspecified
+        required_reason: Brainstorm item; no structure given.
+        constrained_by: []
+        source: "§List of Certificate Uses, p.11"
+        quote: 'key revocations'
+        inferred: true
+        inferred_reason: A key revocation names the key it revokes; not stated.
+      - name: propagation-goal
+        type: unspecified
+        required: unspecified
+        required_reason: '"May involve"; not required.'
+        constrained_by: []
+        source: "§List of Certificate Uses, p.11"
+        strength: may
+        quote: 'May involve goals like "will have spread everywhere in 24 hours" or something like that.'
+        inferred: false
+        layout: A delivery goal for the distribution system, not a field of the revocation (inferred).
+    layout: None given.
+    notes: >-
+      Distinct from crl, which revokes certificates; this revokes keys. The memo defines no
+      key-revocation structure elsewhere. Tension (inferred): "Reliable distribution" everywhere
+      within a deadline is a broadcast model, against the keyholder-to-verifier assumption of
+      certificate-presentation, and against the deterministic, located CRL of §Validity and CRLs.
+      The source does not reconcile them.
+
+  - name: certification-right-cessation
+    locator: "§List of Certificate Uses, Other requirements, item 'Reliable distribution of key revocations and other certificates ...', p.11"
+    encoding: 'none given'
+    normative_status: mentioned-only
+    source: "§List of Certificate Uses, p.11"
+    quote: 'Reliable distribution of key revocations and other certificates (e.g., the ceasing of the right to make new certificates).'
+    fields_note: >-
+      No fields. Named as an example of "other certificates" to be distributed reliably.
+    fields: []
+    layout: None given.
+    notes: >-
+      Inferred: the same need as certification-right-expiration-certificate (an end to a key's
+      right to certify, without invalidating its earlier certificates). The source does not connect
+      the two items.
+
+# --- Open Questions --------------------------------------------------------------------------------
+
+  - name: signed-e-mail-message
+    locator: "§Open Questions, item 'Someone digitally signs a threatening e-mail message with my private key ...', p.11"
+    encoding: 'none given; not an SPKI structure'
+    normative_status: open-question
+    source: "§Open Questions, p.11"
+    quote:
+      - 'Someone digitally signs a threatening e-mail message with my private key and sends it to president@whitehouse.gov.  How do I prove that I didn''t compose and send the message?  What kind of certificate characteristic might help me in this?'
+      - 'This is an issue of (non-)repudiation and therefore a matter of private key protection.  Although this is of interest to the user of certificates, certificate format, contents or issuing machinery can not ensure the protection of a user''s private key or prove whether or not a private key has been stolen or misused.'
+    fields_note: >-
+      No fields. A signed message, not a certificate; the source answers that no certificate
+      characteristic helps.
+    fields: []
+    layout: None given.
+    notes: >-
+      Listed because it is an exchanged item the source names, and because its answer is a limit on
+      every certificate: no certificate field can attest to key compromise.
+
+  - name: negative-fact-attribute-certificate
+    aliases:
+      - not-married-certificate
+    locator: "§Open Questions, item 'Can a certificate be issued to guarantee that I am not already married ...', p.12"
+    encoding: 'none given'
+    normative_status: open-question
+    source: "§Open Questions, p.12"
+    quote:
+      - 'Can a certificate be issued to guarantee that I am not already married, so that I can then get a digital marriage license?'
+      - 'The absence of attributes can be determined only if all relevant records are digitized and all parties have inescapable IDs.  The former is not likely to happen in our lifetimes and the latter receives political resistance.'
+      - 'A certificate can communicate the ''positive'' attribute "not already married" or "not registered as a voter in any other district".  That assumes that some organization is capable of determining that fact for a given keyholder.  The method of determining such a negative fact is not part of the certificate definition.'
+    fields:
+      - name: attribute
+        type: authorization-or-attribute
+        required: unspecified
+        required_reason: Open question; no structure given.
+        constrained_by: []
+        source: "§Open Questions, p.12"
+        quote: 'A certificate can communicate the ''positive'' attribute "not already married" or "not registered as a voter in any other district".'
+        values:
+          - 'not already married'
+          - 'not registered as a voter in any other district'
+        inferred: false
+        layout: A negative fact stated as an ordinary ("positive") attribute.
+      - name: issuer
+        type: keyholder
+        required: unspecified
+        required_reason: Open question; no structure given.
+        constrained_by: []
+        source: "§Open Questions, p.12"
+        quote: 'That assumes that some organization is capable of determining that fact for a given keyholder.'
+        inferred: false
+      - name: subject
+        type: keyholder-identifier
+        required: unspecified
+        required_reason: Open question; no structure given.
+        constrained_by: []
+        source: "§Open Questions, p.12"
+        quote: 'for a given keyholder'
+        inferred: false
+    layout: None given.
+    notes: >-
+      How the issuer determines the fact is outside the certificate ("not part of the certificate
+      definition"). Leads to digital-marriage-license; the voter value connects to the voter
+      registration card in other-certificate-uses (inferred).
+
+  - name: monetary-value-certificate
+    locator: "§Open Questions, item 'The assumption in most certificates is that the proper user will protect his private key ...', p.12"
+    encoding: 'none given'
+    normative_status: open-question
+    source: "§Open Questions, p.12"
+    quote:
+      - 'The assumption in most certificates is that the proper user will protect his private key very well, to prevent anyone else from accessing his funds.  However, in some cases the certificate itself might have monetary value [permission to prescribe drugs, permission to buy alcohol, ...].  What is to prevent the holder of such a certificate from loaning out his private key?'
+      - 'This is a potential flaw in any system providing authorization and an interesting topic for study.  What prevents a doctor or dentist from selling prescriptions for controlled substances to drug abusers?'
+    fields:
+      - name: authorization
+        type: authorization-or-attribute
+        required: unspecified
+        required_reason: Open question; no structure given.
+        constrained_by: []
+        source: "§Open Questions, p.12"
+        quote: '[permission to prescribe drugs, permission to buy alcohol, ...]'
+        values:
+          - 'permission to prescribe drugs'
+          - 'permission to buy alcohol'
+        inferred: false
+    layout: None given.
+    notes: >-
+      Not a new kind of certificate: a property (the certificate is worth something to others) that
+      gives the holder a reason to loan the private key. Left open by the source. Same point as the
+      delegation-allowed note in delegation-certificate.
