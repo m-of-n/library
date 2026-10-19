@@ -100,7 +100,8 @@ opaque too.
 
 **Traceability.** Every `$defs` entry except `NOT-EXPRESSIBLE`, and every
 property (26), carries the following. `NOT-EXPRESSIBLE` has `x-status` and a
-`description`, and each of its items carries its own `basis` and `status`.
+`description`, and each of its items carries its own `basis`, `status` and
+`constrained_by`.
 
 - `x-status`: `derived` (encodes a stated requirement; 24 entries plus the
   findings entry, and 25 properties), `opaque` (named, no form given; 8
@@ -108,7 +109,7 @@ property (26), carries the following. `NOT-EXPRESSIBLE` has `x-status` and a
   property, `delegation-allowed`);
 - `x-inferred` (boolean), and `x-inferred-reason` whenever anything in the
   node is not literally stated. Such a node's `description` also begins
-  `INFERRED`. There are 11 inferred entries and 13 inferred properties, listed
+  `INFERRED`. There are 11 inferred entries and 14 inferred properties, listed
   below;
 - `x-quotes`: locator, source line range and verbatim text;
 - `description`: the prose followed by `SOURCE:` and the same quotes.
@@ -123,9 +124,18 @@ the Implementation of Certificates ¶1 *"such as smart cards or small"* /
 private"* / *"directory of keys."* sentence (p.6 → p.7). Locators name the section by its title, since RFC 2692's sections
 are unnumbered, then the paragraph or list item, then the page.
 
-**`constrained_by` is empty throughout, by design.** Each `NOT-EXPRESSIBLE`
-item has a `constrained_by: []`. The pass-3 cross-check wires these to
-`rfc-2692#R-NNNN`. This pass-1 agent did not read `requirements.yaml`.
+**`constrained_by` is wired (pass 3).** Each `NOT-EXPRESSIBLE` item lists the
+`rfc-2692#R-NNNN` requirements it renders or bears on: 64 links to 47 distinct
+requirements, every one resolving in `requirements.yaml`. The matching rule is
+the one `messages.yaml` uses: first the requirements whose text the item's
+`basis` quotes, then the requirement whose object the item is about. Two items
+have none, and say why in `constrained_by_reason`: RC-04 and G-10, whose only
+basis is the minimal-CRL sentence (*"A minimal CRL contains a list of revoked
+certificates, identified uniquely, a sequence number and a signature."*,
+§Validity and CRLs ¶2, p.4), which `requirements.yaml` excludes as describing
+the design the section rules out. Schema members carry no `constrained_by`.
+Their requirement ids are on the matching `messages.yaml` fields (see
+*Correspondence with messages.yaml* below).
 
 ## Index of `$defs`
 
@@ -187,11 +197,11 @@ Entries (`x-inferred: true`):
 - `personal-binding-certificate`: hash admitted as subject, and exactly one
   name.
 - `anonymous-certificate`: "anonymous" read as "carries no name".
-- `key-equivalence-certificate`: purposes as authorizations.
+- `key-equivalence-certificate`: purposes as authorizations, and `not-after` required for "until this certificate expires".
 
 Properties:
 
-- `validity-period.not-before` and `.not-after`: both bounds required.
+- `validity-period.not-before` and `.not-after`: either bound may stand alone on a certificate (minProperties 1, relaxed in pass 3); `crl.validity` and a dated `instrument-lifetime` require both.
 - `crl-pointer.kind` and `revalidation-pointer.kind`: the discriminator.
 - `revalidation-pointer.location`.
 - `certificate.issuer`: the source never says the certificate names its
@@ -200,6 +210,7 @@ Properties:
 - `certificate.online-validation`: grouping, and more than one pointer.
 - `certificate.signature`: modelled as a member rather than a wrapper.
 - `crl.revoked`: the empty list is admitted.
+- `crl.validity`: "explicit validity dates" read as both bounds (pass 3).
 - `revalidation-instrument.validates`, `.challenge` and `.signature`.
 
 Findings: RC-01 (certificate date order) is inferred, along with the inferred
@@ -217,56 +228,111 @@ pseudo-code `check` where one can be written.
 validity period whose not-before is later than its not-after, and a CRL whose
 dates overlap its predecessor's, both validate. That was checked.
 
-| id | applies to | rule | basis |
-|---|---|---|---|
-| RC-01 | `certificate` | not-before ≤ not-after | inferred, VC ¶1 |
-| RC-02 | `crl`, `revalidation-instrument` | dated lifetime is non-zero, i.e. not-before < not-after (strict order inferred) | stated, VC ¶5 |
-| RC-03 | `crl` | the dates of a sequence of CRLs do not overlap: a cross-instance rule | stated, VC ¶2 |
-| RC-04 | `crl` | each listed identifier identifies exactly one certificate | stated, VC ¶2 |
-| RC-05 | `certificate`, `crl` | a certificate that uses a CRL says where to find it (half-expressed: `location` is required in a `crl-pointer`) | stated, VC ¶2; converse inferred |
-| RC-06 | `crl` | explicit validity dates: expressed (`validity` required); listed for visibility | stated, VC ¶2 |
-| RC-07 | `revalidation-instrument` | a one-use instrument is delivered only inside challenge/response | stated, VC ¶5 |
-| RC-08 | `certificate` | signed exactly as transmitted; no reformatting to check; white space may be canonicalised for text | stated, IC ¶5 |
-| RC-09 | `certificate` | LR(0) encoding if possible; no scan; bytes touched once | stated, IC ¶6 |
-| RC-10 | `certificate` | packed and parsed without recursion if possible (this schema has no `$ref` cycle) | stated, IC ¶7 |
-| RC-11 | `certificate` | no library code to pack or parse; no ASN.1 | stated, IC ¶4 |
-| RC-12 | `certificate` | simple, C/PASCAL-like structures; small code and memory | stated, IC ¶1–¶3 |
-| RC-13 | `certificate` | minimum information per certificate; minimum release by the keyholder | stated, GR ¶6 |
-| RC-14 | `authorization` | defined by the code author; creating one needs no other party | stated, GR ¶4 |
-| RC-15 | `public-key-hash` | the hash is collision-free | stated, GR ¶3 |
-| RC-16 | `subject-name` | a subject name is later resolved into a key | stated, GR ¶3 |
-| RC-17 | `direct-certificate` | self-signed: issuer and subject are the same key | stated, Uses |
-| RC-18 | `personal-binding-certificate` | issuer and subject differ; never given out | stated, Uses |
-| RC-19 | `traditional-certificate` | trustworthy issuer; unique person name; third-party issuer (inferred) | stated, Uses |
-| RC-20 | `certificate` | can assign an attribute to a blinded signature key (a capability; nothing to check) | stated, GR ¶8 |
-| RC-21 | `certificate` | generated by a keyholder empowered to grant or delegate (needs a chain) | stated, IC ¶1 |
+| id | applies to | rule | basis | constrained_by (R-) |
+|---|---|---|---|---|
+| RC-01 | `certificate` | not-before ≤ not-after | inferred, VC ¶1 | 0022 |
+| RC-02 | `crl`, `revalidation-instrument` | dated lifetime is non-zero, i.e. not-before < not-after (strict order inferred) | stated, VC ¶5 | 0031, 0032 |
+| RC-03 | `crl` | the dates of a sequence of CRLs do not overlap: a cross-instance rule | stated, VC ¶2 | 0027, 0028 |
+| RC-04 | `crl` | each listed identifier identifies exactly one certificate | stated, VC ¶2 | none (reason given) |
+| RC-05 | `certificate`, `crl` | a certificate that uses a CRL says where to find it (half-expressed: `location` is required in a `crl-pointer`) | stated, VC ¶2; converse inferred | 0024, 0025, 0028 |
+| RC-06 | `crl` | explicit validity dates: expressed (`validity` required); listed for visibility | stated, VC ¶2 | 0026 |
+| RC-07 | `revalidation-instrument` | a one-use instrument is delivered only inside challenge/response | stated, VC ¶5 | 0032 |
+| RC-08 | `certificate` | signed exactly as transmitted; no reformatting to check; white space may be canonicalised for text | stated, IC ¶5 | 0044, 0045 |
+| RC-09 | `certificate` | LR(0) encoding if possible; no scan; bytes touched once | stated, IC ¶6 | 0046, 0047, 0048 |
+| RC-10 | `certificate` | packed and parsed without recursion if possible (this schema has no `$ref` cycle) | stated, IC ¶7 | 0049 |
+| RC-11 | `certificate` | no library code to pack or parse; no ASN.1 | stated, IC ¶4 | 0042, 0043 |
+| RC-12 | `certificate` | simple, C/PASCAL-like structures; small code and memory | stated, IC ¶1–¶3 | 0035, 0036, 0037, 0041 |
+| RC-13 | `certificate` | minimum information per certificate; minimum release by the keyholder | stated, GR ¶6 | 0014, 0015, 0016 |
+| RC-14 | `authorization` | defined by the code author; creating one needs no other party | stated, GR ¶4 | 0010, 0011 |
+| RC-15 | `public-key-hash` | the hash is collision-free | stated, GR ¶3 | 0009 |
+| RC-16 | `subject-name` | a subject name is later resolved into a key | stated, GR ¶3 | 0009 |
+| RC-17 | `direct-certificate` | self-signed: issuer and subject are the same key | stated, Uses | 0062 |
+| RC-18 | `personal-binding-certificate` | issuer and subject differ; never given out | stated, Uses | 0066, 0067 |
+| RC-19 | `traditional-certificate` | trustworthy issuer; unique person name; third-party issuer (inferred) | stated, Uses | 0058 |
+| RC-20 | `certificate` | can assign an attribute to a blinded signature key (a capability; nothing to check) | stated, GR ¶8 | 0018 |
+| RC-21 | `certificate` | generated by a keyholder empowered to grant or delegate (needs a chain) | stated, IC ¶1 | 0033, 0052, 0130 |
 
 ## Gaps: where the source is silent and a schema needs an answer
 
-In `$defs/NOT-EXPRESSIBLE.x-gaps`, each with its basis:
+In `$defs/NOT-EXPRESSIBLE.x-gaps`, each with its basis and, in brackets, its
+`constrained_by`:
 
 - **G-01** the concrete form of every leaf (key, hash, name, date, signature,
-  location, identifier, authorization);
+  location, identifier, authorization) [R-0001, R-0043];
 - **G-02** whether `delegation-allowed` exists at all, and what its absence
-  means;
-- **G-03** whether a blinded signature key is marked or differs in form;
-- **G-04** whether a certificate must point to its positive validation;
-- **G-05** what a positive revalidation instrument contains, and who signs it;
+  means [R-0125];
+- **G-03** whether a blinded signature key is marked or differs in form
+  [R-0018];
+- **G-04** whether a certificate must point to its positive validation
+  [R-0025, R-0030];
+- **G-05** what a positive revalidation instrument contains, and who signs it
+  [R-0030, R-0031];
 - **G-06** which way sequence numbers run, and what they do once CRL dates may
-  not overlap;
-- **G-07** whether a one-use instrument carries its challenge;
-- **G-08** whether CRLs that share only an endpoint overlap;
-- **G-09** how many attributes one certificate may carry;
-- **G-10** whether an empty CRL is valid;
+  not overlap [R-0024];
+- **G-07** whether a one-use instrument carries its challenge [R-0032];
+- **G-08** whether CRLs that share only an endpoint overlap [R-0027];
+- **G-09** how many attributes one certificate may carry [R-0014, R-0015,
+  R-0074];
+- **G-10** whether an empty CRL is valid [none; reason given];
 - **G-11** who signs a CRL, what makes CRLs "a sequence", and how a CRL is tied
-  to its certificates;
+  to its certificates [R-0025, R-0026, R-0027];
 - **G-12** whether a certificate states its kind (the three name-binding kinds
-  share one shape);
+  share one shape) [R-0056];
 - **G-13** certificates whose subject is an object, not a keyholder (the
-  software and genealogy items);
-- **G-14** the content of a "certification right expiration" certificate;
+  software and genealogy items) [R-0007, R-0055, R-0070, R-0071];
+- **G-14** the content of a "certification right expiration" certificate
+  [R-0143, R-0144, R-0145];
 - **G-15** how a certificate's validity combines with an on-line instrument's
-  lifetime.
+  lifetime [R-0023, R-0031].
+
+## Correspondence with messages.yaml
+
+Checked member by member in pass 3. The two files use different names for the
+same things, because the schema is shaped for validation and `messages.yaml`
+for the source's prose. `messages.yaml` records `required: unspecified` where
+the source is silent. The schema cannot say "unspecified", so it renders that
+as optional unless its `x-inferred-reason` gives a reason to require the
+member. Four places do that, marked **differs** below. Each is recorded on both
+sides (`x-inferred-reason` here, `required_reason` there), so neither file
+silently disagrees with the other. In the `messages.yaml` column, the word
+after the colon is the field's `required` value (`true`, `false` or
+`unspecified`).
+
+| schema | messages.yaml | agreement |
+|---|---|---|
+| `certificate` | `spki-certificate` | entry |
+| `certificate.issuer`: required; key or key hash | `spki-certificate.issuer`: unspecified; any keyholder | **differs.** The source is silent. The schema requires a key to check the signature with, and excludes a name issuer |
+| `certificate.subject`: required | `spki-certificate.subject`: true | agree |
+| `keyholder-identifier`: `subject-public-key`, `subject-public-key-hash`, `subject-name`; `blinded-signature-key` is an alias of `public-key` | `keyholder-identifier` variants `public-key`, `key-hash`, `name`, `blinded-signature-key` | agree. The schema does not mark a blinded key (G-03) |
+| `certificate.attributes`: required, 1 or more `attribute` (name or authorization) | `spki-certificate.authorization-or-attribute`: true | agree on presence. The schema admits several (G-09) |
+| `certificate.validity`: optional | `spki-certificate.validity-period`: false | agree |
+| `certificate.online-validation[]` → `crl-pointer.location`: required within the pointer | `spki-certificate.crl-location`: true, when the certificate uses a CRL | agree. The condition is RC-05 |
+| `certificate.online-validation[]` → `revalidation-pointer.location`: optional, inferred | `spki-certificate.revalidation-location`: unspecified, inferred | agree. Pass 3 added the `messages.yaml` field |
+| `crl-pointer.kind`, `revalidation-pointer.kind` | none | schema-only discriminators (inferred) |
+| `certificate.delegation-allowed`: optional boolean, tentative | `spki-certificate.delegation-allowed`, `delegation-certificate.delegation-allowed`: false, boolean | agree |
+| `certificate.signature`: required | `spki-certificate.signature`: true | agree |
+| RC-13; profile `anonymous-certificate` | `spki-certificate.minimum-information`, `.anonymity` (constraints) | agree |
+| RC-08 to RC-12 | the 13 constraints of `certificate-encoding-profile` | agree |
+| `name-attribute` and the three name profiles | `name-binding-certificate.key`, `.name`, `.issuer` | agree |
+| none: SDSI stays inside opaque `name` (G-01) | `name-binding-certificate.name-space`: false, inferred | schema-only omission, deliberate (*Deliberately not modelled*) |
+| `crl.revoked`: required, may be empty (G-10) | `crl.revoked-certificates`: true | agree |
+| `crl.sequence-number`: required, integer (inferred) | `crl.sequence-number`: true; representation not stated | agree. The integer type is the schema's |
+| `crl.validity`: required | `crl.validity-dates`: true, in variant `spki` | agree. The schema renders the `spki` variant only. `minimal` is rejected by the source (R-0024) |
+| `crl.signature`: required | `crl.signature`: true | agree |
+| RC-03 | `crl-sequence.non-overlap` | agree (cross-instance) |
+| `revalidation-instrument.validates`: required, inferred | `revalidation-instrument.validated-certificate`: unspecified, inferred | **differs** (G-05) |
+| `revalidation-instrument.lifetime`: required, a period or `"one-use"` | `revalidation-instrument.lifetime`; `one-use-instrument.lifetime` | agree. The schema folds `one-use-instrument` into a lifetime value |
+| `revalidation-instrument.challenge`: optional, rejected with a dated lifetime | `one-use-instrument.challenge-binding`: unspecified, inferred | agree (G-07) |
+| `revalidation-instrument.signature`: required, inferred | `revalidation-instrument.signature`: unspecified, inferred | **differs** (G-05) |
+| RC-07 | `one-use-instrument.delivery` | agree |
+| `traditional-certificate`, `direct-certificate`, `personal-binding-certificate` | entries of the same names | agree. RC-17 is direct `.issuer`, RC-18 is personal `.distribution`, and personal `.no-binding-evidence` (added in pass 3, R-0068) is enforced by the closed certificate holding exactly one name |
+| `key-equivalence-certificate`: `validity` required | `delegation-certificate` (alias `key-equivalence-certificate`): `expiry` unspecified | **differs.** The schema reads *"until this certificate expires"* as requiring the period |
+
+The remaining `messages.yaml` entries have no schema counterpart, by design:
+the exchanges (`certificate-presentation`, `repository-publication`), local
+state (`trusted-root-set`, `local-key-cache`), `crl-sequence` as a series,
+`key-revocation`, the historical and open-question entries, and the use-case
+entries, whose content is `authorization` (see *Deliberately not modelled*).
 
 ## Deliberately not modelled
 
@@ -364,6 +430,26 @@ of the record, and pass 2 should re-derive the checks rather than trust them.
 5. **Header.** The first marker in the first 12 lines is `derived` (in
    `$id`), the name carries `.derived.`, and `$id` is
    `urn:library:rfc-2692:spki-requirements.derived`.
+6. **Pass 3 (cross-check).** Pass 3 changed only `constrained_by`, the two
+   `constrained_by_reason` strings, the `$comment` and the `NOT-EXPRESSIBLE`
+   description. No keyword that validates an instance changed, so an instance
+   validates exactly as it did before. After those edits, the 2020-12
+   metaschema again reports 0 errors (`jsonschema` 4.10.3), there are no
+   duplicate keys, every `$ref` resolves, and there is no cycle. Every cited id
+   resolves in `requirements.yaml`, and all 200 quote uses are still verbatim.
+   The tallies above (33 entries, 26 properties, 11 and 13 inferred, 21
+   constraints, 15 gaps) were recounted and were unchanged by the wiring.
+   The examples check then found four schema defects, applied afterwards in
+   the same pass: `validity-period` takes either bound alone
+   (`minProperties: 1`), while `crl.validity` (now inferred, making 14
+   inferred properties) and a dated `instrument-lifetime` require both, and
+   `key-equivalence-certificate` requires `not-after`; RC-01's check skips a
+   missing bound; RC-03's check returns undetermined on a shared endpoint
+   (G-08); `same_key` compares the keys two identifiers denote, so a key and
+   its hash match (RC-17 to RC-19); and `NOT-EXPRESSIBLE` says a verifier's
+   check-time decisions live in `state-machine.yaml`. The metaschema check
+   passes after them, and `examples/` re-validated: 127 of 127 valid
+   instances validate, 8 of 8 invalid ones are rejected.
 
 ## Source defects and ambiguities — recorded, never repaired
 

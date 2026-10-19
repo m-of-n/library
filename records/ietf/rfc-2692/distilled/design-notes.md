@@ -1202,6 +1202,69 @@ Nothing here decides DEC-002.
     custom validating decoder and RFC 2692 asks that no library be needed (§4,
     DEC-002 subsection). Resolved by the DEC-002 ADR (DECISIONS-0001 item 4b).
 
+Questions 18 to 22 were added by the pass-3 cross-check. Each is a place where
+RFC 2692 itself is silent or inconsistent and the artifacts had to read it one
+way; none is ours to decide, and each names the readings the artifacts took.
+
+18. **What does a conforming CRL contain, and what is its sequence number
+    for?** The source gives contents only for the CRL it rules out: *"A minimal
+    CRL contains a list of revoked certificates, identified uniquely, a sequence
+    number and a signature."* (Validity and CRLs ¶2, description, not an
+    R-entry), whose supersession rule is *"If it encounters a previous CRL, as
+    indicated by sequence number, then it annihilates that previous CRL."* (same
+    paragraph). Its replacement, R-0025 to R-0027, requires a location,
+    *"explicit validity dates"* and that *"the dates of a sequence of CRLs must
+    not overlap"*, and says nothing of the list, the number or the signature.
+    So no requirement covers a conforming CRL's list, sequence number or
+    signature (`messages.yaml` `crl.signature` cites none; protocol
+    `crl-validation` step 4 cites none). And the artifacts choose the current
+    CRL differently: protocol `crl-validation` step 6 lets a higher sequence
+    number replace an earlier CRL (inferred), while `state-machine.yaml` M03
+    selects by date; the two disagree when a higher-numbered CRL starts after
+    the check time (state-machine OQ-09).
+
+19. **Is a negative on-line validation the CRL, or a separate answer about one
+    certificate?** *"SPKI should support both positive and negative on-line
+    validations."* (R-0030), just after *"A CRL is a negative statement."*
+    (R-0029). The source defines neither. `messages.yaml` makes it an alias of
+    `crl`; `protocol.yaml` follows that and flags it inferred;
+    `state-machine.yaml` M08 read it as a per-certificate answer in pass 1, and
+    now leaves an on-line CRL that does not list the certificate unspecified
+    (state-machine OQ-16).
+
+20. **What is a revalidation instrument?** The only thing said of it is *"Any
+    CRL or revalidation instrument must have its own lifetime."* (R-0031): no
+    contents, no signer, no named certificate, and no form for the lifetime.
+    Nor is there a location rule for it, though the CRL has one (*"the
+    certificate that uses it must explicitly tell the verifier where to find
+    the CRL"*, R-0025). The schema's `revalidation-instrument.validates`,
+    `.signature` and `revalidation-pointer`, and `messages.yaml`
+    `spki-certificate.revalidation-location`, are all inferred; the schema
+    requires `validates` and `signature` where `messages.yaml` leaves them
+    unspecified (state-machine OQ-17 for the lifetime's start).
+
+21. **Is "the ceasing of the right to make new certificates" the "certification
+    right expiration" certificate?** Other requirements item 4: *"This may imply
+    a "certification right expiration" certificate requirement, probably to be
+    implemented together with notary services."* (R-0145); item 6: *"Reliable
+    distribution of key revocations and other certificates (e.g., the ceasing of
+    the right to make new certificates)."* (R-0148). The source never connects
+    them. `messages.yaml` keeps two entries
+    (`certification-right-expiration-certificate`,
+    `certification-right-cessation`); protocol flow `revocation-distribution`
+    and state-machine M15-T02 use the second, and both mark identifying it
+    with the first as inferred. Adapt 3 depends on the answer.
+
+22. **Can a certificate's subject be something other than a keyholder?** The
+    General Requirements say a certificate acts *"to or for a keyholder"*
+    (R-0007), but item 6 certifies a thing: *"I want a certificate for some
+    software I have downloaded"* (R-0055), and item 8 a note: *"this electronic
+    3x5 card becomes a certificate."* (R-0071). The artifacts split:
+    `messages.yaml` gives `software-certificate` a `subject` of type `object`
+    and `genealogy-fact-card` a `fact` with an inferred `researcher-link`,
+    while the schema's `subject` admits only keyholder identifiers and records
+    the mismatch as gap G-13.
+
 **Source defects, recorded and not repaired.** *"singing"* for signing in item
 7.3 (R-0066), *"I'm the a"* and *"posses"* in item 52 (R-0119), and *"a this"*
 in item 55 (R-0128). Transcription-level, with no effect on meaning. They are

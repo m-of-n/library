@@ -82,8 +82,8 @@ conforming SPKI certificate design must be able to express for the example.
 RFC 2692 has no BCP 14 keywords. Every "must" and "should" is lower case and
 carries its ordinary meaning.
 
-**Requirement links.** `constrained_by` is empty on every vector. Pass 3
-(cross-check) wires the `rfc-2692#R-NNNN` ids.
+**Requirement links.** `constrained_by` lists the `rfc-2692#R-NNNN` ids each
+vector bears on. Pass 3 wired them; the rule is under *Pass 3* below.
 
 ## Coverage
 
@@ -358,3 +358,202 @@ are contiguous runs of the source under the quoting rule. That covers inputs,
 annotations, stated answers, outcome quotes, `source_text`, `body_rules` and
 `rests_on`. No quote spans a paragraph break. Every `related` id and every
 `exercises` key resolves.
+
+## Pass 3: cross-check
+
+Run on 2026-10-18 by scripts kept outside the repository, against the
+schema, `requirements.yaml`, `messages.yaml` and `state-machine.yaml` as they
+stood at the end of the pass.
+
+### Requirement links
+
+Every vector now has `constrained_by`: 323 links to 153 of the 158
+requirement ids, and every id resolves in `requirements.yaml`. A vector cites
+two kinds of entry, and no others:
+
+- **Its own text.** These are the entries whose text the vector itself
+  carries, in `input`, `source_annotation_lines`, a `stated` `expected`,
+  `outcome_quote` or `source_text`. So each List vector cites its own item's
+  entries (R-0050 to R-0150). Each Open Questions vector cites R-0151 and its
+  answer's entries (R-0152 to R-0158).
+- **Its rules.** These are the entries for every key in `exercises` or
+  `rests_on`. A `rests_on` quote narrower than its `body_rules` entry cites
+  only the entries it quotes. `SR-VAL-C01` quotes only "the dates of a
+  sequence of CRLs must not overlap.", so it cites R-0027 and not R-0025 or
+  R-0026.
+
+`body_rules` now carry `requirement_ids`, the same match made once per rule.
+Three rules have none, because `requirements.yaml` leaves them out on purpose:
+`BG-2a` and `BG-2b` (Background's argument) and `VAL-2a` (the description of
+the minimal CRL that the section rules out). So `SR-BG-01`, `SR-USE-08` and
+`SR-VAL-C06` cite only their other rules. It matters for `SR-VAL-C06`: its
+`reject` rests on `VAL-2a`, the only sentence that says what being listed in a
+CRL does to a certificate.
+
+Five ids are cited by no vector: R-0001 (the charter's deliverables), R-0002
+(`CH-2`), R-0038 and R-0039 (`IMP-2b`), and R-0040 (`IMP-2c`). The last four
+have no criterion to test, as above.
+
+### Schema check
+
+Every vector that carries or implies a structured instance was rendered as
+JSON. Each instance was validated against
+`schema/spki-requirements.derived.schema.json` with `jsonschema` 4.10.3
+(Draft 2020-12), by reference to one `$defs` entry. The rendering rule is in
+`vectors.yaml` under `schema_check.rendering`. In short:
+
+- a key label becomes `{public-key: …}`;
+- a grant becomes an authorization attribute;
+- `uses_crl` becomes a CRL pointer;
+- a signature label is added.
+
+Members the schema has no place for are left out, each for a reason given
+there. They are `id`, `subject_form`, `resolves_to` and `issued`, and a CRL's
+`signer` and `location`.
+
+- **135 instances over 101 vectors**: 72 source, 29 constructed.
+- **127 must validate, and 123 do.** The other 4 are schema finding 1, below.
+- **8 must not validate, and none does.** Each is rejected for its stated
+  reason.
+- **39 vectors have no instance.** They are listed, with reasons, in
+  `schema_check.without_instance`. None was forced.
+
+| entry | vectors | result |
+|---|---|---|
+| `certificate` | SR-BG-01; SR-GEN-01, -03, -04; SR-USE-01 … -05, -07, -13 … -55, -59 … -64; SR-OQ-03 … -05; SR-VAL-C01 … -C09; SR-GEN-C03, -C04, -C06 … -C10; SR-IMP-C08; SR-USE-C04 … -C07 | valid. SR-VAL-C04's certificate is rejected, as it must be: its CRL pointer has no location |
+| `crl` | SR-VAL-01, -02; SR-VAL-C01 … -C03, -C05 … -C07 | valid. Two are rejected because `validity` is required: SR-VAL-01's minimal CRL and SR-VAL-C05's CRL |
+| `revalidation-instrument` | SR-VAL-03, -04; SR-VAL-C10 … -C14 | valid. SR-VAL-C11 (no lifetime) is rejected |
+| `instrument-lifetime` | SR-VAL-04 | valid (`one-use`) |
+| `blinded-signature-key` | SR-GEN-04, SR-GEN-C07 | valid |
+| `traditional-certificate` | SR-USE-08 | valid |
+| `direct-certificate` | SR-USE-09 (subject the key, and its hash); SR-GEN-C10 (`cert-n1`) | valid. A probe with two names is rejected |
+| `personal-binding-certificate` | SR-USE-10; SR-GEN-C10 (`cert-n2`) | valid |
+| `anonymous-certificate` | SR-USE-56; SR-GEN-C06; SR-USE-C06, -C07 | valid. Two probes that carry a name are rejected: SR-USE-56 with the agent's name, and SR-GEN-C03's certificate |
+| `key-equivalence-certificate` | SR-USE-57, -58; SR-USE-C01 … -C03 | valid, including SR-USE-57 and SR-USE-C01 … -C03 as written with an expiry alone (schema finding 1, applied). A probe with no validity is rejected |
+
+The List uses validate trivially. `authorization` is opaque (G-01), so the
+check shows only that the certificate shape carries each use.
+
+### What decides a negative outcome
+
+28 constructed vectors have outcome `reject`, `violation` or `undetermined`.
+`schema_check.decided_by` names what decides each one:
+
+- **The schema (3).** SR-VAL-C04 fails because `crl-pointer` requires a
+  location; with the pointer left out, only RC-05 catches it. SR-VAL-C05
+  fails because `crl` requires `validity`, and SR-VAL-C11 because a
+  revalidation instrument requires `lifetime`. The source's own
+  counter-example, SR-VAL-01, fails like SR-VAL-C05.
+- **A NOT-EXPRESSIBLE constraint (13).** These are:
+  - RC-03: SR-VAL-C01, and SR-VAL-C03 with G-08;
+  - RC-02: SR-VAL-C10;
+  - RC-07: SR-VAL-C12, -C14;
+  - RC-14: SR-GEN-C01;
+  - RC-13: SR-GEN-C03;
+  - RC-08: SR-IMP-C01;
+  - RC-11: SR-IMP-C03, -C04;
+  - RC-09: SR-IMP-C05;
+  - RC-10: SR-IMP-C06;
+  - RC-21: SR-IMP-C09.
+
+  RC-02 and RC-03 have a `check`, and both were run in code. Each gives the
+  vector's outcome. On SR-VAL-C03 RC-03's check now returns undetermined, as
+  the source leaves the shared endpoint open (schema finding 2, applied).
+- **The derived schema, read as the design under test (5).** These are
+  SR-VAL-C15, -C16, -C17 and SR-GEN-C05, -C11. The schema passes each one. It
+  has a negative and a positive instrument and a validity member. It requires
+  no name and has no repository member.
+- **None of these (7).** These are:
+  - SR-VAL-C06: listed in the current CRL;
+  - SR-VAL-C08 and -C09: the check time is outside the validity period;
+  - SR-USE-C02: used after expiry;
+  - SR-USE-C03 and -C07: purpose and amount, which are authorization content
+    under RC-14;
+  - SR-USE-C04: gap G-14 (soft).
+
+  Every instance in these vectors is schema-valid. The decision is the
+  verifier's at check time, and it lives in `state-machine.yaml` (M02, M03,
+  M11, M14), not in the schema. `NOT-EXPRESSIBLE` now says so (schema
+  finding 4, applied).
+
+### Schema findings, applied in pass 3
+
+The examples check found these four; each was then applied to the schema as
+proposed (finding 4 by the second option), and the vectors re-validated.
+
+1. **`validity-period` requires `not-before`, but the source's delegation
+   template has only an expiry.** The template's "until this certificate
+   expires" (item 53, p. 9) is the only validity the source gives this
+   certificate. `key-equivalence-certificate` requires `validity` because of
+   it. But `validity-period` requires both bounds, which the schema marks as
+   its own inference. So SR-USE-57 and SR-USE-C01 … -C03 fail as written.
+   Proposed fix:
+   - let `validity-period` carry either bound alone (`minProperties: 1`);
+   - keep both bounds where an instrument needs them: `crl.validity`, and the
+     period branch of `instrument-lifetime`, for RC-02 and RC-03;
+   - require `not-after` in `key-equivalence-certificate`;
+   - make RC-01's check skip a missing bound.
+2. **RC-03's check decides gap G-08.** The check uses `date_le`, so two CRLs
+   that share an endpoint pass. The rule text and G-08 say the source leaves
+   that case open. SR-VAL-C03 (`undetermined`) is that case. Proposed fix:
+   either the check returns undetermined when one CRL's `not-after` equals the
+   next CRL's `not-before`, or it says that it takes the exclusive-end reading.
+3. **`same_key` does not treat a key and its hash as the same key.** A direct
+   certificate identifies its key "from the key itself or a cryptographic hash
+   of the key" (R-0061). Take the key as issuer and its hash as subject: RC-17's
+   `same_key(c.issuer, c.subject)` is then false, and a self-signed direct
+   certificate fails RC-17. RC-18 and RC-19 have the converse problem. Proposed
+   fix: `same_key` compares the keys the identifiers denote, hashing where one
+   side is a hash.
+4. **No constraint covers a verifier's decision at check time.** The 7
+   vectors above are rejected by no schema keyword and no RC. Proposed: either
+   add two inferred constraints, or say in `NOT-EXPRESSIBLE` that these
+   decisions belong to `state-machine.yaml`. The two constraints would be:
+   - a certificate is accepted only within its validity period (VAL-1a;
+     SR-VAL-C08, -C09, SR-USE-C02);
+   - a certificate listed by the current CRL it names is not accepted
+     (VAL-2a; SR-VAL-C06).
+
+### Outcomes against their rules
+
+Each of the 45 constructed vectors was read against the rules it cites. None
+is stronger than its rule:
+
+- `modal` keeps the source's word, so a `should` rule stays `should`;
+- every qualified rule carries `soft: true`;
+- every outcome the source does not state carries `inferred: true` (the 18
+  above).
+
+One source vector was stronger than its rule, and is fixed. `SR-GEN-03`'s
+`expected` said "One certificate carries one authorization". The source says
+each certificate "should carry the minimum information necessary to get a job
+done" and sets no number (schema gap G-09). `expected` now says so.
+
+### Structures in `messages.yaml`
+
+Every structure a vector names exists in `messages.yaml`:
+
+- `spki-certificate`, with its fields, and `keyholder-identifier`;
+- `crl`, `crl-sequence`, `revalidation-instrument`, `one-use-instrument` and
+  `one-use-challenge`;
+- `name-binding-certificate`, `direct-certificate` and
+  `personal-binding-certificate`;
+- `delegation-certificate`, `certification-right-expiration-certificate` and
+  `purchasing-authority-certificate`;
+- `certificate-encoding-profile`, `certificate-presentation` and
+  `repository-publication`.
+
+One abstract member has no field: a certificate's issue time (`issued`, in
+SR-USE-C04 and -C05). The source never mentions one, as both vectors'
+`inference` says. State machine M14 needs it (`checking-issuance-time`), and
+the nearest field is `certification-right-expiration-certificate`'s
+`notary-timestamp`.
+
+### Also checked
+
+- PyYAML and `bin/_yaml.py` give the same tree, except for four `null`
+  scalars. `_yaml.py` reads those as the string `null`, as it did before this
+  pass.
+- `vector_count`, `source_vector_count`, `constructed_vector_count` and every
+  tally in this README match the file.
+- `examples/` has no unfinished-work marker.

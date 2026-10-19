@@ -7,6 +7,8 @@ source_digest: "6a88c1563590e8094bb37cda5c5d29ef70f8384e5a3a0528bce29c501826976d
 source_file: ".cache/rfc-2692.txt (787 lines)"
 extracted: "2026-10-18"
 pass: 1
+cross_checked: "2026-10-18"
+cross_checked_by: "claude, FX-1 pass 3 (cross-check), examples quarter: instances validated against the derived schema, constructed outcomes checked against their rules, constrained_by wired"
 reviewed_by: ""
 vector_count: 140
 source_vector_count: 95
@@ -45,7 +47,10 @@ count_reconciliation: "140 = 95 source examples + 45 constructed vectors. The 95
 # IMP-2c: no criterion or threshold), kept so the gap is visible. Key: <section>-<paragraph>[letter]. LIST-* entries
 # are statements from the List of Certificate Uses (body: false) that
 # constructed vectors rest on; the List is "a brainstorming list" and is not
-# a body requirement.
+# a body requirement. requirement_ids lists the requirements.yaml entries
+# whose text the rule quotes. It is empty for BG-2a, BG-2b and VAL-2a, which
+# requirements.yaml leaves out on purpose (its reconciliation: Background's
+# argument, and the description of the minimal CRL the section rules out).
 #
 # Every vector carries:
 #   id, locator, source_lines (source examples only), kind
@@ -87,8 +92,9 @@ count_reconciliation: "140 = 95 source examples + 45 constructed vectors. The 95
 #                                  invented for it
 #   exercises       body_rules keys the example exercises (source examples)
 #   rests_on        (constructed) the rules the vector rests on, each with
-#                   key, locator and a verbatim quote, which may be a
-#                   narrower run of the body_rules entry
+#                   rule (its body_rules key), locator and text (a verbatim
+#                   quote, which may be a narrower run of the body_rules
+#                   entry)
 #   outcome         (constructed) accept | reject | conforms | violation |
 #                   permitted | expressible | undetermined
 #                     accept/reject  -- a verifier's decision on the input
@@ -117,8 +123,18 @@ count_reconciliation: "140 = 95 source examples + 45 constructed vectors. The 95
 #   source_issue    a defect or ambiguity in the SOURCE, recorded and not
 #                   repaired
 #   related, notes  cross-links and commentary; never consumed as values
-#   constrained_by  requirement ids (rfc-2692#R-NNNN). EMPTY IN THIS PASS:
-#                   requirement ids are wired by pass 3 (cross-check).
+#   constrained_by  requirement ids (rfc-2692#R-NNNN), in id order, wired by
+#                   pass 3. Two sources, and nothing else: (1) the entries
+#                   whose text the vector itself carries, in input,
+#                   source_annotation_lines, a stated expected, outcome_quote
+#                   or source_text (a List vector's own item, an Open
+#                   Question's answer, a body sentence used as input); (2) the
+#                   entries for every rule in exercises or rests_on, as
+#                   matched to requirement texts, sentence by sentence (a
+#                   narrower rests_on quote cites only the entries it
+#                   quotes). Every vector has at least one. BG-2a, BG-2b and
+#                   VAL-2a have no entry (see body_rules), so SR-BG-01,
+#                   SR-USE-08 and SR-VAL-C06 cite only their other rules.
 #
 # QUOTING. Every verbatim string is one contiguous run of source characters
 # with RFC line wrapping undone: a line break and the next line's margin read
@@ -146,10 +162,138 @@ count_reconciliation: "140 = 95 source examples + 45 constructed vectors. The 95
 #                           tests exactly that ambiguity
 #   certificate fields      id, issuer, subject, grants, validity, uses_crl,
 #                           crl_location (null = absent); optional attributes,
-#                           names, subject_form, resolves_to, issued
+#                           names, binds_name, subject_form, resolves_to,
+#                           issued
 #   crl fields              id, signer, location, sequence, validity (null =
 #                           absent), lists (certificate ids)
+#   revalidation_instrument fields  id, kind, certificate, validity (null =
+#                           absent) or lifetime ('one-use'), lifetime_seconds,
+#                           delivered_in (null = absent)
+#   delegation template     id, certifying_key, signed_key, purposes, expires
+#   certification_right     holder, expires
 #   design                  properties of a certificate design under test
+
+# ====================================================================
+# Schema check (pass 3)
+# ====================================================================
+#
+# Every vector that carries or implies a structured instance was rendered
+# as JSON (rendering, below) and validated, by reference to one $defs
+# entry, against schema/spki-requirements.derived.schema.json. README.md,
+# "Schema check", gives each vector's entry and result. without_instance
+# lists the vectors that carry no instance, and none is forced on them.
+# decided_by says what decides every constructed reject, violation or
+# undetermined outcome: the schema, a NOT-EXPRESSIBLE constraint (RC-nn),
+# the derived schema read as the design under test, or none of these.
+
+schema_check:
+  date: '2026-10-18'
+  schema: 'schema/spki-requirements.derived.schema.json'
+  validator: 'python jsonschema 4.10.3, Draft 2020-12. Each instance is validated by {"$ref": "urn:library:rfc-2692:spki-requirements.derived#/$defs/<entry>"}.'
+  rendering: 'abstract-model to JSON. A key label becomes {public-key: label}, hash(key-X) becomes {public-key-hash: hash(key-X)}, and a name label becomes {name: label}. grants, attributes, names and binds_name become attributes: an authorization becomes {authorization: label} and a name becomes {name: label}. validity {not_before, not_after} becomes validity {not-before, not-after}. uses_crl true becomes online-validation [{kind: crl, location: crl_location}], with location left out when crl_location is null. A signature label is added, since the notation leaves signing implicit. A CRL: lists becomes revoked, sequence becomes sequence-number, validity becomes validity; id, signer and location are not CRL members (who signs, and how a CRL is tied to its certificates, is gap G-11). A revalidation instrument: certificate becomes validates, validity or lifetime one-use becomes lifetime, delivered_in becomes challenge; id, kind and lifetime_seconds are labels. A delegation template becomes a key-equivalence-certificate: certifying_key is the issuer, signed_key the subject, each purpose an authorization, expires the not-after. A certificate''s id, subject_form, resolves_to and issued are not certificate members: id is how a CRL names the certificate (certificate-identifier), subject_form is carried by the subject''s form, resolves_to is resolution (RC-16), and an issue time has no member (gap G-14). Source examples that imply an instance are rendered the same way from their own words, with labels for keys and authorizations. Context (check_time, uses, request, use, job) stays outside the instance.'
+  vectors_with_instances: 101
+  instances: 135
+  result: '135 instances over 101 vectors (72 source, 29 constructed). 8 must not validate and none does: SR-VAL-01 (the minimal CRL has no validity dates), SR-VAL-C04 (a CRL pointer with no location), SR-VAL-C05 (a CRL with no validity dates), SR-VAL-C11 (an instrument with no lifetime), and four probes built from a vector''s own words (SR-GEN-C03''s certificate is not anonymous; a direct certificate with two names, SR-USE-09; the purchasing agent''s certificate with a name, SR-USE-56; a key-equivalence certificate with no validity, SR-USE-57). 127 must validate, and all do. SR-USE-57 and SR-USE-C01 to -C03 rendered as written (the template gives only an expiry, "until this certificate expires") failed at first, because validity-period required not-before; pass 3 relaxed validity-period to either bound (schema finding 1, applied), and they now validate as written. The List uses validate trivially, because authorization is opaque (G-01): they show that the certificate shape carries each use, and nothing more.'
+  without_instance_reason: 'No instance is forced on these. Source: scope (SR-CH-01); distribution (SR-GEN-02); implementation and encoding constraints that no JSON instance can show (SR-IMP-01 to -04, RC-08 to RC-12); List items that are uncovered (SR-USE-06, -11, -12, -66, -67, -71, -74, -75), that name a service or a policy rather than a structure (SR-USE-65, -68, -69, -70, -72), or that the schema does not model (SR-USE-73, gap G-14; its certificate is exercised by SR-USE-C04 and -C05); and the Open Questions whose answer is a limit, not a structure (SR-OQ-01, -02, -06). Constructed: design properties, wire-level rules and processes (SR-VAL-C15 to -C17, SR-GEN-C01, -C02, -C05, -C11, SR-IMP-C01 to -C07, -C09, -C10). Where a design-level vector can be put to the derived schema itself, the schema passes it (decided_by).'
+  without_instance:
+    - 'SR-CH-01'
+    - 'SR-GEN-02'
+    - 'SR-IMP-01'
+    - 'SR-IMP-02'
+    - 'SR-IMP-03'
+    - 'SR-IMP-04'
+    - 'SR-USE-06'
+    - 'SR-USE-11'
+    - 'SR-USE-12'
+    - 'SR-USE-65'
+    - 'SR-USE-66'
+    - 'SR-USE-67'
+    - 'SR-USE-68'
+    - 'SR-USE-69'
+    - 'SR-USE-70'
+    - 'SR-USE-71'
+    - 'SR-USE-72'
+    - 'SR-USE-73'
+    - 'SR-USE-74'
+    - 'SR-USE-75'
+    - 'SR-OQ-01'
+    - 'SR-OQ-02'
+    - 'SR-OQ-06'
+    - 'SR-VAL-C15'
+    - 'SR-VAL-C16'
+    - 'SR-VAL-C17'
+    - 'SR-GEN-C01'
+    - 'SR-GEN-C02'
+    - 'SR-GEN-C05'
+    - 'SR-GEN-C11'
+    - 'SR-IMP-C01'
+    - 'SR-IMP-C02'
+    - 'SR-IMP-C03'
+    - 'SR-IMP-C04'
+    - 'SR-IMP-C05'
+    - 'SR-IMP-C06'
+    - 'SR-IMP-C07'
+    - 'SR-IMP-C09'
+    - 'SR-IMP-C10'
+  decided_by:
+    - vector: 'SR-VAL-01'
+      by: 'schema: crl requires validity; the minimal CRL as described has no dates (RC-06 lists the rule)'
+    - vector: 'SR-VAL-C01'
+      by: 'RC-03: the dates overlap under either end-date reading; every instance is schema-valid'
+    - vector: 'SR-VAL-C03'
+      by: 'RC-03 with gap G-08: overlap if end dates are inclusive, none if exclusive; the RC-03 check returns undetermined on a shared endpoint (schema finding 2, applied)'
+    - vector: 'SR-VAL-C04'
+      by: 'schema: crl-pointer requires location, so the pointer fails online-validation; with the pointer left out the certificate is schema-valid and only RC-05 catches it'
+    - vector: 'SR-VAL-C05'
+      by: 'schema: crl requires validity (RC-06)'
+    - vector: 'SR-VAL-C06'
+      by: 'no RC: the effect of being listed (VAL-2a) is not a NOT-EXPRESSIBLE constraint; instances are schema-valid; state-machine M03 revoked'
+    - vector: 'SR-VAL-C08'
+      by: 'no RC: a check time outside the validity period; instance is schema-valid; state-machine M02 expired, M03 outside-validity-period'
+    - vector: 'SR-VAL-C09'
+      by: 'no RC: as SR-VAL-C08, before not-before; state-machine M02 not-yet-valid'
+    - vector: 'SR-VAL-C10'
+      by: 'RC-02: date_lt(not-before, not-after) is false; instance is schema-valid'
+    - vector: 'SR-VAL-C11'
+      by: 'schema: revalidation-instrument requires lifetime'
+    - vector: 'SR-VAL-C12'
+      by: 'RC-07 (used once); instance is schema-valid'
+    - vector: 'SR-VAL-C14'
+      by: 'RC-07 (delivered only inside challenge/response); challenge is optional (G-07), so the instance is schema-valid'
+    - vector: 'SR-VAL-C15'
+      by: 'design-level, no instance; the derived schema itself defines both a negative and a positive instrument'
+    - vector: 'SR-VAL-C16'
+      by: 'design-level, no instance; as SR-VAL-C15'
+    - vector: 'SR-VAL-C17'
+      by: 'design-level, no instance; the derived schema itself lets a certificate carry validity'
+    - vector: 'SR-GEN-C01'
+      by: 'RC-14 (no registry or other party for a new authorization); no instance'
+    - vector: 'SR-GEN-C03'
+      by: 'RC-13 (minimum information); the over-informative certificate is schema-valid'
+    - vector: 'SR-GEN-C05'
+      by: 'design-level, no instance; the derived schema itself requires no name, and anonymous-certificate exists'
+    - vector: 'SR-GEN-C11'
+      by: 'design-level, no instance; distribution is deliberately not modelled (schema README)'
+    - vector: 'SR-IMP-C01'
+      by: 'RC-08 (signed exactly as transmitted); wire-level, no instance'
+    - vector: 'SR-IMP-C03'
+      by: 'RC-11 (no ASN.1); wire-level, no instance'
+    - vector: 'SR-IMP-C04'
+      by: 'RC-11 (no library code); no instance'
+    - vector: 'SR-IMP-C05'
+      by: 'RC-09 (LR(0), no scan); wire-level, no instance'
+    - vector: 'SR-IMP-C06'
+      by: 'RC-10 (no recursion); wire-level, no instance'
+    - vector: 'SR-IMP-C09'
+      by: 'RC-21 (any empowered keyholder generates); design-level, no instance'
+    - vector: 'SR-USE-C02'
+      by: 'no RC: a use after expiry; state-machine M11 expired'
+    - vector: 'SR-USE-C03'
+      by: 'no RC states it: purpose matching is authorization content, which RC-14 leaves to the code author; state-machine M11'
+    - vector: 'SR-USE-C04'
+      by: 'no RC: gap G-14 (certification right expiration is not modelled, and the certificate has no issue-time member); state-machine M14 rejected-issued-after; soft'
+    - vector: 'SR-USE-C07'
+      by: 'no RC states it: the amount comparison is authorization content (RC-14)'
 
 body_rules:
   - key: 'CH-2'
@@ -158,276 +302,373 @@ body_rules:
     source_lines: '71-73'
     text: 'The key certificate format and associated protocols are to be simple to understand, implement, and use.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0002'
   - key: 'CH-3a'
     body: true
     locator: 'RFC 2692 §Charter of the SPKI working group ¶3, p. 2'
     source_lines: '77-81'
     text: 'The SPKI is intended to provide mechanisms to support security in a wide range of Internet applications, including IPSEC protocols, encrypted electronic mail and WWW documents, payment protocols, and any other application which will require the use of public key certificates and the ability to access them.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0003'
   - key: 'CH-3b'
     body: true
     locator: 'RFC 2692 §Charter of the SPKI working group ¶3, p. 2'
     source_lines: '81-83'
     text: 'It is intended that the Simple Public Key Infrastructure will support a range of trust models.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0004'
   - key: 'BG-2a'
     body: true
     locator: 'RFC 2692 §Background ¶2, p. 2'
     source_lines: '103-105'
     text: 'The SPKI team directly addressed the issue of <name,key> bindings and realized that such certificates are of extremely limited use for trust management.'
     crosses_page_break: false
+    requirement_ids: []
   - key: 'BG-2b'
     body: true
     locator: 'RFC 2692 §Background ¶2, p. 2'
     source_lines: '105-107'
     text: 'A keyholder''s name is one attribute of the keyholder, but as can be seen in the list of needs in this document, a person''s name is rarely of security interest.'
     crosses_page_break: false
+    requirement_ids: []
   - key: 'BG-2c'
     body: true
     locator: 'RFC 2692 §Background ¶2, p. 2'
     source_lines: '107-109'
     text: 'A user of a certificate needs to know whether a given keyholder has been granted some specific authorization.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0005'
   - key: 'GEN-1'
     body: true
     locator: 'RFC 2692 §General Requirements ¶1, p. 3'
     source_lines: '121-122'
     text: 'We define the term KEYHOLDER of a public key to refer to the person or other entity that controls the corresponding private key.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0006'
   - key: 'GEN-2'
     body: true
     locator: 'RFC 2692 §General Requirements ¶2, p. 3'
     source_lines: '124-125'
     text: 'The main purpose of an SPKI certificate is to authorize some action, give permission, grant a capability, etc. to or for a keyholder.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0007'
   - key: 'GEN-3'
     body: true
     locator: 'RFC 2692 §General Requirements ¶3, p. 3'
     source_lines: '127-131'
     text: 'The keyholder is most directly identified by the public key itself, although for convenience or other purposes some indirection (delayed binding) may be employed.  That indirection can be via a collision-free hash of the public key or via a name, later to be resolved into a key.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0008'
+      - 'rfc-2692#R-0009'
   - key: 'GEN-4a'
     body: true
     locator: 'RFC 2692 §General Requirements ¶4, p. 3'
     source_lines: '133-134'
     text: 'The definition of attributes or authorizations in a certificate is up to the author of code which uses the certificate.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0010'
   - key: 'GEN-4b'
     body: true
     locator: 'RFC 2692 §General Requirements ¶4, p. 3'
     source_lines: '134-137'
     text: 'The creation of new authorizations should not require interaction with any other person or organization but rather be under the total control of the author of the code using the certificate.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0011'
   - key: 'GEN-5a'
     body: true
     locator: 'RFC 2692 §General Requirements ¶5, p. 3'
     source_lines: '139-141'
     text: 'Because SPKI certificates might carry information that the keyholder might not want to publish, we assume that certificates will be distributed directly by the keyholder to the verifier.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0012'
   - key: 'GEN-5b'
     body: true
     locator: 'RFC 2692 §General Requirements ¶5, p. 3'
     source_lines: '141-144'
     text: 'If the keyholder wishes to use a global repository, such as LDAP, the global PGP key server or the DNS database, that is up to the keyholder and not for the SPKI WG to specify.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0013'
   - key: 'GEN-6a'
     body: true
     locator: 'RFC 2692 §General Requirements ¶6, p. 3'
     source_lines: '146-149'
     text: 'Because SPKI certificates will carry information that, taken together over all certificates, might constitute a dossier and therefore a privacy violation, each SPKI certificate should carry the minimum information necessary to get a job done.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0014'
   - key: 'GEN-6b'
     body: true
     locator: 'RFC 2692 §General Requirements ¶6, p. 3'
     source_lines: '151-153'
     text: 'The keyholder should be able to release a minimum of information in order to prove his or her permission to act.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0016'
   - key: 'GEN-7'
     body: true
     locator: 'RFC 2692 §General Requirements ¶7, p. 3'
     source_lines: '155-155'
     text: 'It is necessary for at least some certificates to be anonymous.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0017'
   - key: 'GEN-8'
     body: true
     locator: 'RFC 2692 §General Requirements ¶8, p. 3'
     source_lines: '157-159'
     text: 'Because one use of SPKI certificates is in secret balloting and similar applications, an SPKI certificate must be able to assign an attribute to a blinded signature key.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0018'
   - key: 'GEN-9a'
     body: true
     locator: 'RFC 2692 §General Requirements ¶9, p. 3'
     source_lines: '161-164'
     text: 'There are names the keyholder prefers to be called and there are names by which the keyholder is known to various other keyholders.  An SPKI certificate must be able to bind a key to such names.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0019'
+      - 'rfc-2692#R-0020'
   - key: 'GEN-9b'
     body: true
     locator: 'RFC 2692 §General Requirements ¶9, pp. 3-4'
     source_lines: '164-175'
     text: 'The SDSI work of Rivest and Lampson has done an especially good job of defining and using local name spaces, therefore if possible SPKI should support the SDSI name construct.'
     crosses_page_break: true
+    requirement_ids:
+      - 'rfc-2692#R-0021'
   - key: 'VAL-1a'
     body: true
     locator: 'RFC 2692 §Validity and CRLs ¶1, p. 4'
     source_lines: '179-180'
     text: 'An SPKI certificate, like any other, should be able to carry a validity period: dates within which it is valid.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0022'
   - key: 'VAL-1b'
     body: true
     locator: 'RFC 2692 §Validity and CRLs ¶1, p. 4'
     source_lines: '180-181'
     text: 'It may also be necessary to have on-line refinement of validity.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0023'
   - key: 'VAL-2a'
     body: true
     locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
     source_lines: '185-190'
     text: 'A minimal CRL contains a list of revoked certificates, identified uniquely, a sequence number and a signature.  Its method of transmission is not specified.  If it encounters some certificate that it lists, then it annihilates that certificate.  If it encounters a previous CRL, as indicated by sequence number, then it annihilates that previous CRL.'
     crosses_page_break: false
+    requirement_ids: []
   - key: 'VAL-2b'
     body: true
     locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
     source_lines: '190-191'
     text: 'Such a CRL leads to non-deterministic program behavior.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0024'
   - key: 'VAL-2c'
     body: true
     locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
     source_lines: '191-194'
     text: 'Therefore, we take as a requirement that if SPKI uses CRLs, then the certificate that uses it must explicitly tell the verifier where to find the CRL, the CRL must carry explicit validity dates and the dates of a sequence of CRLs must not overlap.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0025'
+      - 'rfc-2692#R-0026'
+      - 'rfc-2692#R-0027'
   - key: 'VAL-2d'
     body: true
     locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
     source_lines: '194-196'
     text: 'Under this set of requirements, behavior of certificate validation is deterministic (aside from the question of clock skew).'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0028'
   - key: 'VAL-4'
     body: true
     locator: 'RFC 2692 §Validity and CRLs ¶4, p. 4'
     source_lines: '204-204'
     text: 'SPKI should support both positive and negative on-line validations.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0030'
   - key: 'VAL-5a'
     body: true
     locator: 'RFC 2692 §Validity and CRLs ¶5, p. 4'
     source_lines: '206-206'
     text: 'Any CRL or revalidation instrument must have its own lifetime.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0031'
   - key: 'VAL-5b'
     body: true
     locator: 'RFC 2692 §Validity and CRLs ¶5, p. 4'
     source_lines: '206-210'
     text: 'A lifetime of 0 is not possible because of communication delays and clock skews, although one can consider an instrument whose lifetime is "one use" and which is delivered only as part of a challenge/response protocol.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0032'
   - key: 'IMP-1a'
     body: true
     locator: 'RFC 2692 §Implementation of Certificates ¶1, p. 4'
     source_lines: '214-217'
     text: 'The authorization certificates that are envisioned for SPKI (and needed to meet the demands of the list given at the end of this document) should be generated by any keyholder empowered to grant or delegate the authorization in question.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0033'
   - key: 'IMP-1b'
     body: true
     locator: 'RFC 2692 §Implementation of Certificates ¶1, pp. 4-5'
     source_lines: '221-231'
     text: 'In addition, SPKI certificates should be usable in very constrained environments, such as smart cards or small embedded systems.'
     crosses_page_break: true
+    requirement_ids:
+      - 'rfc-2692#R-0035'
   - key: 'IMP-1c'
     body: true
     locator: 'RFC 2692 §Implementation of Certificates ¶1, p. 5'
     source_lines: '231-232'
     text: 'The code to process them and the memory to store them should both be as small as possible.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0036'
   - key: 'IMP-2a'
     body: true
     locator: 'RFC 2692 §Implementation of Certificates ¶2, p. 5'
     source_lines: '234-234'
     text: 'An SPKI certificate should be as simple as possible.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0037'
   - key: 'IMP-2b'
     body: true
     locator: 'RFC 2692 §Implementation of Certificates ¶2, p. 5'
     source_lines: '234-236'
     text: 'There should be a bare minimum of fields necessary to get the job done and there should be an absolute minimum of optional fields.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0038'
+      - 'rfc-2692#R-0039'
   - key: 'IMP-2c'
     body: true
     locator: 'RFC 2692 §Implementation of Certificates ¶2, p. 5'
     source_lines: '236-239'
     text: 'In particular, the structure should be specific enough that the creator of a certificate is constrained by the structure definition, not by complaints (or error messages) from the reader of a certificate.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0040'
   - key: 'IMP-3'
     body: true
     locator: 'RFC 2692 §Implementation of Certificates ¶3, p. 5'
     source_lines: '241-243'
     text: 'An SPKI certificate should be described in as simple a method as possible, relating directly to the kind of structures a C or PASCAL programmer would normally write.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0041'
   - key: 'IMP-4a'
     body: true
     locator: 'RFC 2692 §Implementation of Certificates ¶4, p. 5'
     source_lines: '245-246'
     text: 'No library code should be required for the packing or parsing of SPKI certificates.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0042'
   - key: 'IMP-4b'
     body: true
     locator: 'RFC 2692 §Implementation of Certificates ¶4, p. 5'
     source_lines: '246-246'
     text: 'In particular, ASN.1 is not to be used.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0043'
   - key: 'IMP-5a'
     body: true
     locator: 'RFC 2692 §Implementation of Certificates ¶5, p. 5'
     source_lines: '248-248'
     text: 'A certificate should be signed exactly as it is transmitted.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0044'
   - key: 'IMP-5b'
     body: true
     locator: 'RFC 2692 §Implementation of Certificates ¶5, p. 5'
     source_lines: '248-251'
     text: 'There should be no reformatting called for in the process of checking a certificate''s signature (although one might canonicalize white space during certificate input, for example, if the format is text).'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0045'
   - key: 'IMP-6'
     body: true
     locator: 'RFC 2692 §Implementation of Certificates ¶6, p. 5'
     source_lines: '253-257'
     text: 'For efficiency, if possible, an SPKI certificate should be encoded in an LR(0) grammar.  That is, neither packing nor parsing of the structure should require a scan of the data.  Data should be read into the kind of structure a programmer would want to use without touching the incoming bytes more than once.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0046'
+      - 'rfc-2692#R-0047'
+      - 'rfc-2692#R-0048'
   - key: 'IMP-7'
     body: true
     locator: 'RFC 2692 §Implementation of Certificates ¶7, p. 5'
     source_lines: '259-260'
     text: 'For efficiency, if possible, an SPKI certificate should be packed and parsed without any recursion.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0049'
   - key: 'OQ-0'
     body: true
     locator: 'RFC 2692 §Open Questions ¶1 (intro), p. 11'
     source_lines: '592-593'
     text: 'These do not have answers provided by certificate definition or issuing alone.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0151'
   - key: 'LIST-DELEG'
     body: false
     locator: 'RFC 2692 §List of Certificate Uses, item ''"This signed-key should be considered equivalent'', p. 9'
     source_lines: '488-490'
     text: '"This signed-key should be considered equivalent to the certifying-key until this certificate expires for the following purposes ..."'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0122'
   - key: 'LIST-OR4a'
     body: false
     locator: 'RFC 2692 §List of Certificate Uses, ''Other requirements'', item ''Especially in lower-end applications'', p. 11'
     source_lines: '568-572'
     text: 'the people generating the keys (e.g., administrators) will change, and you will no longer want them to be able to certify.  On the other hand, you will usually also not want all keys they have generated to expire.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0143'
+      - 'rfc-2692#R-0144'
   - key: 'LIST-OR4b'
     body: false
     locator: 'RFC 2692 §List of Certificate Uses, ''Other requirements'', item ''Especially in lower-end applications'', p. 11'
     source_lines: '572-574'
     text: 'This may imply a "certification right expiration" certificate requirement, probably to be implemented together with notary services.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0145'
   - key: 'LIST-PURCH'
     body: false
     locator: 'RFC 2692 §List of Certificate Uses, item ''I''m the a purchasing agent'', p. 9'
     source_lines: '480-482'
     text: 'I want to posses a certificate that tells our suppliers that I''m authorized to make purchases up to $15,000.'
     crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0119'
 
 vectors:
 
@@ -447,7 +688,8 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'CH-3a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0003'
     related:
       - 'SR-USE-60'
       - 'SR-USE-64'
@@ -470,7 +712,10 @@ vectors:
       - 'BG-2a'
       - 'BG-2c'
       - 'GEN-9a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0005'
+      - 'rfc-2692#R-0019'
+      - 'rfc-2692#R-0020'
     related:
       - 'SR-USE-08'
     notes: 'The telephone book with public keys in place of numbers (Diffie and Hellman) and the digitally signed directory entry (Kohnfelder) are the origin of the <name,key> certificate the document argues against.'
@@ -490,7 +735,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-3'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0008'
+      - 'rfc-2692#R-0009'
     related:
       - 'SR-GEN-C08'
       - 'SR-GEN-C09'
@@ -508,7 +755,9 @@ vectors:
     exercises:
       - 'GEN-5a'
       - 'GEN-5b'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0012'
+      - 'rfc-2692#R-0013'
     related:
       - 'SR-GEN-C11'
       - 'SR-USE-74'
@@ -520,12 +769,15 @@ vectors:
     notation: 'prose'
     fidelity: 'split'
     input: 'The SPKI certificate is then to be like a single key rather than a key ring or a single credit card rather than a whole wallet.'
-    expected: 'One certificate carries one authorization, like one key or one credit card, so the keyholder can release only what one act needs.'
+    expected: 'Each certificate should carry only the minimum information a job needs, like a single key rather than a key ring, or a single credit card rather than a whole wallet, so that the keyholder can release only what one act needs. The source sets no number of authorizations per certificate.'
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-6a'
       - 'GEN-6b'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0014'
+      - 'rfc-2692#R-0015'
+      - 'rfc-2692#R-0016'
     related:
       - 'SR-USE-18'
       - 'SR-USE-27'
@@ -543,7 +795,8 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-8'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0018'
     related:
       - 'SR-GEN-C07'
       - 'SR-USE-17'
@@ -566,7 +819,12 @@ vectors:
       - 'VAL-2b'
       - 'VAL-2c'
       - 'VAL-2d'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0024'
+      - 'rfc-2692#R-0025'
+      - 'rfc-2692#R-0026'
+      - 'rfc-2692#R-0027'
+      - 'rfc-2692#R-0028'
     related:
       - 'SR-VAL-C01'
       - 'SR-VAL-C06'
@@ -583,7 +841,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'VAL-4'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0029'
+      - 'rfc-2692#R-0030'
     related:
       - 'SR-VAL-03'
       - 'SR-VAL-C15'
@@ -599,7 +859,8 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'VAL-4'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0030'
     related:
       - 'SR-VAL-02'
       - 'SR-VAL-C16'
@@ -619,7 +880,9 @@ vectors:
     exercises:
       - 'VAL-5a'
       - 'VAL-5b'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0031'
+      - 'rfc-2692#R-0032'
     related:
       - 'SR-VAL-C10'
       - 'SR-VAL-C12'
@@ -645,7 +908,12 @@ vectors:
       - 'IMP-3'
       - 'IMP-4a'
       - 'IMP-4b'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0034'
+      - 'rfc-2692#R-0037'
+      - 'rfc-2692#R-0041'
+      - 'rfc-2692#R-0042'
+      - 'rfc-2692#R-0043'
     notes: 'The source says only that the scenario "leads to a number of constraints"; it does not tie each later constraint to it one by one. The mapping in `exercises` is this extraction''s reading.'
 
   - id: 'SR-IMP-02'
@@ -661,7 +929,9 @@ vectors:
     exercises:
       - 'IMP-1b'
       - 'IMP-1c'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0035'
+      - 'rfc-2692#R-0036'
     related:
       - 'SR-USE-58'
     notes: 'Crosses the page 4 / page 5 break between "small" and "embedded systems".'
@@ -677,7 +947,8 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'IMP-3'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0041'
     notes: 'Not mechanically testable: there is no criterion for "relating directly".'
 
   - id: 'SR-IMP-04'
@@ -692,7 +963,9 @@ vectors:
     exercises:
       - 'IMP-5a'
       - 'IMP-5b'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0044'
+      - 'rfc-2692#R-0045'
     related:
       - 'SR-IMP-C01'
       - 'SR-IMP-C02'
@@ -712,7 +985,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-2'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0050'
     related:
       - 'SR-USE-02'
 
@@ -729,7 +1004,11 @@ vectors:
       - 'GEN-2'
       - 'GEN-4a'
       - 'IMP-1a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0033'
+      - 'rfc-2692#R-0051'
     related:
       - 'SR-USE-01'
       - 'SR-USE-03'
@@ -746,7 +1025,10 @@ vectors:
     exercises:
       - 'IMP-1a'
       - 'CH-3b'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0004'
+      - 'rfc-2692#R-0033'
+      - 'rfc-2692#R-0052'
     related:
       - 'SR-USE-02'
       - 'SR-USE-70'
@@ -764,7 +1046,10 @@ vectors:
     exercises:
       - 'GEN-4a'
       - 'GEN-5a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0012'
+      - 'rfc-2692#R-0053'
     notes: 'The source names the certificate in quotes: "reputation voucher".'
 
   - id: 'SR-USE-05'
@@ -778,7 +1063,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0054'
 
   - id: 'SR-USE-06'
     locator: 'RFC 2692 §List of Certificate Uses, item "I want a certificate for some", p. 6'
@@ -790,7 +1077,8 @@ vectors:
     expected: 'No body requirement covers this use. The certificate''s subject is a piece of software, and every body requirement speaks of a keyholder: GEN-2 makes the main purpose to authorize "to or for a keyholder". Covering it would need a subject that is the software itself (for example a hash of it), which the body does not mention.'
     expected_basis: 'uncovered'
     exercises: []
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0055'
     notes: 'The two properties asked for are integrity ("hasn''t changed") and endorsement ("some reputable company or person stands behind it").'
 
   - id: 'SR-USE-07'
@@ -805,7 +1093,10 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-9a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0019'
+      - 'rfc-2692#R-0020'
+      - 'rfc-2692#R-0056'
     related:
       - 'SR-USE-08'
       - 'SR-USE-09'
@@ -826,7 +1117,12 @@ vectors:
       - 'GEN-9a'
       - 'BG-2a'
       - 'BG-2b'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0019'
+      - 'rfc-2692#R-0020'
+      - 'rfc-2692#R-0057'
+      - 'rfc-2692#R-0058'
+      - 'rfc-2692#R-0059'
     related:
       - 'SR-BG-01'
       - 'SR-USE-09'
@@ -844,7 +1140,16 @@ vectors:
     exercises:
       - 'GEN-9a'
       - 'GEN-3'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0008'
+      - 'rfc-2692#R-0009'
+      - 'rfc-2692#R-0019'
+      - 'rfc-2692#R-0020'
+      - 'rfc-2692#R-0060'
+      - 'rfc-2692#R-0061'
+      - 'rfc-2692#R-0062'
+      - 'rfc-2692#R-0063'
+      - 'rfc-2692#R-0064'
     related:
       - 'SR-USE-08'
       - 'SR-USE-10'
@@ -864,7 +1169,14 @@ vectors:
     exercises:
       - 'GEN-9a'
       - 'GEN-9b'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0019'
+      - 'rfc-2692#R-0020'
+      - 'rfc-2692#R-0021'
+      - 'rfc-2692#R-0065'
+      - 'rfc-2692#R-0066'
+      - 'rfc-2692#R-0067'
+      - 'rfc-2692#R-0068'
     related:
       - 'SR-USE-09'
     source_issue:
@@ -882,7 +1194,10 @@ vectors:
     expected: 'No body requirement covers this use. The signed object is a fact or a link between facts, not an authorization or attribute of a keyholder (GEN-2). The item itself says the card becomes a certificate only when one views just the researcher''s signature and the link to the researcher.'
     expected_basis: 'uncovered'
     exercises: []
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0069'
+      - 'rfc-2692#R-0070'
+      - 'rfc-2692#R-0071'
 
   - id: 'SR-USE-12'
     locator: 'RFC 2692 §List of Certificate Uses, item "I want to sign a contract", p. 7'
@@ -894,7 +1209,8 @@ vectors:
     expected: 'No body requirement covers this use, and the source does not answer its own question. Signing a contract is a signature by the buyer''s key, not a certificate about it. The related Open Question on a house title scan is answered as outside certificate structure (SR-OQ-02).'
     expected_basis: 'uncovered'
     exercises: []
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0072'
     related:
       - 'SR-OQ-02'
 
@@ -910,7 +1226,10 @@ vectors:
     exercises:
       - 'GEN-4a'
       - 'GEN-6b'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0016'
+      - 'rfc-2692#R-0073'
     related:
       - 'SR-USE-14'
 
@@ -925,7 +1244,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0074'
     related:
       - 'SR-USE-13'
 
@@ -940,7 +1261,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0075'
     related:
       - 'SR-OQ-03'
       - 'SR-OQ-04'
@@ -957,7 +1280,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0076'
     related:
       - 'SR-USE-15'
 
@@ -972,7 +1297,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-2'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0077'
     related:
       - 'SR-GEN-04'
       - 'SR-OQ-05'
@@ -994,7 +1321,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-6a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0014'
+      - 'rfc-2692#R-0078'
     related:
       - 'SR-GEN-03'
     source_issue:
@@ -1013,7 +1342,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0079'
 
   - id: 'SR-USE-20'
     locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "prescription drug card", p. 7'
@@ -1027,7 +1358,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0080'
 
   - id: 'SR-USE-21'
     locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "driver''s license (for permission to drive)", p. 7'
@@ -1042,7 +1375,10 @@ vectors:
     exercises:
       - 'GEN-2'
       - 'GEN-6a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0014'
+      - 'rfc-2692#R-0081'
     related:
       - 'SR-USE-22'
 
@@ -1059,7 +1395,10 @@ vectors:
     exercises:
       - 'GEN-2'
       - 'GEN-6b'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0016'
+      - 'rfc-2692#R-0082'
     related:
       - 'SR-USE-21'
       - 'SR-OQ-06'
@@ -1076,7 +1415,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-2'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0083'
 
   - id: 'SR-USE-24'
     locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "supermarket check-cashing card [I know --", p. 7'
@@ -1090,7 +1431,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-2'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0084'
     related:
       - 'SR-VAL-03'
     notes: 'The bracketed "[I know -- anachronism]" is the author''s aside and is part of the printed item.'
@@ -1107,7 +1450,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-2'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0085'
 
   - id: 'SR-USE-26'
     locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "ATM card", p. 7'
@@ -1122,7 +1467,10 @@ vectors:
     exercises:
       - 'GEN-2'
       - 'VAL-4'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0030'
+      - 'rfc-2692#R-0086'
     related:
       - 'SR-VAL-03'
 
@@ -1140,7 +1488,11 @@ vectors:
       - 'GEN-2'
       - 'GEN-6a'
       - 'VAL-4'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0014'
+      - 'rfc-2692#R-0030'
+      - 'rfc-2692#R-0087'
     related:
       - 'SR-GEN-03'
       - 'SR-VAL-02'
@@ -1159,7 +1511,10 @@ vectors:
     exercises:
       - 'GEN-4a'
       - 'GEN-6a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0014'
+      - 'rfc-2692#R-0088'
     notes: 'The trailing "...." (four full stops) is printed.'
 
   - id: 'SR-USE-29'
@@ -1174,7 +1529,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0089'
 
   - id: 'SR-USE-30'
     locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "Starbuck''s Coffee buy-10-get-1-free card", p. 8'
@@ -1188,7 +1545,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-2'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0090'
 
   - id: 'SR-USE-31'
     locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "DC Metro fare card", p. 8'
@@ -1202,7 +1561,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-2'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0091'
 
   - id: 'SR-USE-32'
     locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "Phone calling card", p. 8'
@@ -1216,7 +1577,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-2'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0092'
 
   - id: 'SR-USE-33'
     locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "Alumni Association card", p. 8'
@@ -1230,7 +1593,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0093'
 
   - id: 'SR-USE-34'
     locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "REI Membership card", p. 8'
@@ -1244,7 +1609,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0094'
 
   - id: 'SR-USE-35'
     locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "Car insurance card", p. 8'
@@ -1258,7 +1625,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0095'
 
   - id: 'SR-USE-36'
     locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "claim check for a suitcase", p. 8'
@@ -1272,7 +1641,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-2'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0096'
     related:
       - 'SR-USE-37'
 
@@ -1288,7 +1659,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-2'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0097'
     related:
       - 'SR-USE-36'
 
@@ -1304,7 +1677,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-2'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0098'
 
   - id: 'SR-USE-39'
     locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "Better Business Bureau [BBB] style reputation", p. 8'
@@ -1318,7 +1693,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0099'
     related:
       - 'SR-USE-40'
       - 'SR-USE-04'
@@ -1335,7 +1712,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0100'
     related:
       - 'SR-OQ-03'
       - 'SR-USE-39'
@@ -1352,7 +1731,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0101'
 
   - id: 'SR-USE-42'
     locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "Stock certificate", p. 8'
@@ -1366,7 +1747,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0102'
 
   - id: 'SR-USE-43'
     locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "Stock option", p. 8'
@@ -1380,7 +1763,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-2'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0103'
 
   - id: 'SR-USE-44'
     locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "Car title", p. 8'
@@ -1394,7 +1779,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0104'
 
   - id: 'SR-USE-45'
     locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "deed to land", p. 8'
@@ -1408,7 +1795,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0105'
 
   - id: 'SR-USE-46'
     locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "proof of ownership of electronic equipment", p. 8'
@@ -1422,7 +1811,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0106'
 
   - id: 'SR-USE-47'
     locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "time card certificate [activating a digital", p. 8'
@@ -1436,7 +1827,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-2'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0107'
 
   - id: 'SR-USE-48'
     locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "proof of degree earned [PhD, LLD,", p. 8'
@@ -1450,7 +1843,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0108'
 
   - id: 'SR-USE-49'
     locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "permission to write digitally signed prescriptions", p. 8'
@@ -1464,7 +1859,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-2'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0109'
     related:
       - 'SR-OQ-06'
 
@@ -1481,7 +1878,10 @@ vectors:
     exercises:
       - 'GEN-2'
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0110'
     related:
       - 'SR-USE-56'
 
@@ -1497,7 +1897,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-2'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0111'
 
   # ====================================================================
   # List of Certificate Uses: first-person items and templates
@@ -1514,7 +1916,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0112'
 
   - id: 'SR-USE-53'
     locator: 'RFC 2692 §List of Certificate Uses, item "I''m that same sysadmin, I want", p. 9'
@@ -1528,7 +1932,10 @@ vectors:
     exercises:
       - 'GEN-2'
       - 'VAL-1a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0022'
+      - 'rfc-2692#R-0113'
     related:
       - 'SR-USE-54'
     notes: 'The trailing "or..." is printed.'
@@ -1544,7 +1951,10 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0114'
+      - 'rfc-2692#R-0115'
     related:
       - 'SR-USE-53'
     notes: 'Not a bullet: an indented paragraph under the ephemeral-root item, carried as its own vector because it prints its own example certificate. The source does not reconcile an audit identity with GEN-7 (some certificates anonymous); there is no conflict as written, since GEN-7 says only "at least some". The "..." after "application" is printed.'
@@ -1560,7 +1970,11 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-2'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0116'
+      - 'rfc-2692#R-0117'
+      - 'rfc-2692#R-0118'
     notes: 'The item wants the certificate for enforcing access and for tracking abuse; tracking abuse implies a traceable holder, which the source does not set against GEN-6a or GEN-7.'
 
   - id: 'SR-USE-56'
@@ -1578,7 +1992,15 @@ vectors:
       - 'GEN-6b'
       - 'GEN-7'
       - 'GEN-1'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0006'
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0014'
+      - 'rfc-2692#R-0016'
+      - 'rfc-2692#R-0017'
+      - 'rfc-2692#R-0119'
+      - 'rfc-2692#R-0120'
+      - 'rfc-2692#R-0121'
     related:
       - 'SR-USE-50'
       - 'SR-USE-C06'
@@ -1610,7 +2032,14 @@ vectors:
       - 'IMP-1a'
       - 'GEN-2'
       - 'VAL-1a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0022'
+      - 'rfc-2692#R-0033'
+      - 'rfc-2692#R-0122'
+      - 'rfc-2692#R-0123'
+      - 'rfc-2692#R-0124'
+      - 'rfc-2692#R-0125'
     related:
       - 'SR-USE-58'
       - 'SR-USE-59'
@@ -1631,7 +2060,10 @@ vectors:
     exercises:
       - 'IMP-1b'
       - 'VAL-1a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0022'
+      - 'rfc-2692#R-0035'
+      - 'rfc-2692#R-0123'
     related:
       - 'SR-USE-57'
       - 'SR-IMP-02'
@@ -1647,7 +2079,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'IMP-1a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0033'
+      - 'rfc-2692#R-0125'
     related:
       - 'SR-USE-57'
       - 'SR-OQ-06'
@@ -1670,7 +2104,11 @@ vectors:
     exercises:
       - 'GEN-4a'
       - 'CH-3a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0003'
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0126'
+      - 'rfc-2692#R-0127'
     related:
       - 'SR-USE-61'
       - 'SR-USE-62'
@@ -1688,7 +2126,10 @@ vectors:
     exercises:
       - 'GEN-4a'
       - 'CH-3a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0003'
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0127'
     related:
       - 'SR-USE-60'
     notes: 'Split from the bracket; the input begins at the article "a" so that both quoted names and the word "certificate" are carried as one run.'
@@ -1704,7 +2145,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-4a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0128'
     related:
       - 'SR-USE-60'
       - 'SR-USE-63'
@@ -1729,7 +2172,12 @@ vectors:
     exercises:
       - 'GEN-4a'
       - 'IMP-1a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0033'
+      - 'rfc-2692#R-0129'
+      - 'rfc-2692#R-0130'
+      - 'rfc-2692#R-0131'
     related:
       - 'SR-USE-62'
     source_issue:
@@ -1751,7 +2199,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'CH-3a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0003'
+      - 'rfc-2692#R-0132'
     related:
       - 'SR-CH-01'
 
@@ -1767,7 +2217,11 @@ vectors:
     exercises:
       - 'GEN-1'
       - 'GEN-3'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0006'
+      - 'rfc-2692#R-0008'
+      - 'rfc-2692#R-0009'
+      - 'rfc-2692#R-0133'
     related:
       - 'SR-USE-68'
       - 'SR-USE-69'
@@ -1782,7 +2236,8 @@ vectors:
     expected: 'No body requirement covers this use. The item names a service (digital signatures, unforgeability), not a kind of certificate; the body''s only signature rules (IMP-5a, IMP-5b) are about how a certificate is signed and its signature checked.'
     expected_basis: 'uncovered'
     exercises: []
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0134'
 
   - id: 'SR-USE-67'
     locator: 'RFC 2692 §List of Certificate Uses, item "Timestamping / notary services", p. 10'
@@ -1794,7 +2249,8 @@ vectors:
     expected: 'No body requirement covers this use. Notary services appear again only in the Other requirements (SR-USE-71, SR-USE-73); timestamping does not appear again.'
     expected_basis: 'uncovered'
     exercises: []
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0135'
     related:
       - 'SR-USE-71'
       - 'SR-USE-73'
@@ -1810,7 +2266,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-1'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0006'
+      - 'rfc-2692#R-0136'
     related:
       - 'SR-USE-72'
       - 'SR-USE-73'
@@ -1826,7 +2284,9 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'GEN-1'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0006'
+      - 'rfc-2692#R-0137'
     notes: 'The "Other requirements:" label (line 547) is printed indented under this item, as if it belonged to it; its six sub-items are general and are carried as SR-USE-70 to SR-USE-75.'
 
   # ====================================================================
@@ -1845,7 +2305,10 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'CH-3b'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0004'
+      - 'rfc-2692#R-0138'
+      - 'rfc-2692#R-0139'
     related:
       - 'SR-USE-03'
     notes: '"must" here is lower case in a brainstorming list; RFC 2692 has no BCP 14 keywords.'
@@ -1861,7 +2324,8 @@ vectors:
     expected: 'No body requirement covers this use: key generation and key assurance levels are outside every body section.'
     expected_basis: 'uncovered'
     exercises: []
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0140'
     related:
       - 'SR-USE-67'
 
@@ -1878,7 +2342,11 @@ vectors:
     exercises:
       - 'GEN-4b'
       - 'IMP-1a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0011'
+      - 'rfc-2692#R-0033'
+      - 'rfc-2692#R-0141'
+      - 'rfc-2692#R-0142'
     related:
       - 'SR-USE-68'
       - 'SR-GEN-C01'
@@ -1895,7 +2363,11 @@ vectors:
     expected_basis: 'rule-quoted'
     exercises:
       - 'VAL-1a'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0022'
+      - 'rfc-2692#R-0143'
+      - 'rfc-2692#R-0144'
+      - 'rfc-2692#R-0145'
     related:
       - 'SR-USE-C04'
       - 'SR-USE-C05'
@@ -1913,7 +2385,9 @@ vectors:
     expected: 'No body requirement covers caching. The body assumes certificates go directly from keyholder to verifier (GEN-5a), which this item''s name-server model of fetching keys does not match; the source does not reconcile the two.'
     expected_basis: 'uncovered'
     exercises: []
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0146'
+      - 'rfc-2692#R-0147'
     related:
       - 'SR-GEN-02'
       - 'SR-USE-75'
@@ -1929,7 +2403,10 @@ vectors:
     expected: 'No body requirement covers distribution. Validity ¶1 says on-line refinement of validity may also be necessary (VAL-1b) and Validity ¶2 says of the minimal CRL that "Its method of transmission is not specified"; the item''s "24 hours" goal is not taken up.'
     expected_basis: 'uncovered'
     exercises: []
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0148'
+      - 'rfc-2692#R-0149'
+      - 'rfc-2692#R-0150'
     related:
       - 'SR-USE-73'
       - 'SR-USE-74'
@@ -1950,7 +2427,9 @@ vectors:
     expected_basis: 'stated'
     exercises:
       - 'OQ-0'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0151'
+      - 'rfc-2692#R-0152'
     outcome_quote: 'certificate format, contents or issuing machinery can not ensure the protection of a user''s private key or prove whether or not a private key has been stolen or misused.'
     related:
       - 'SR-OQ-06'
@@ -1968,7 +2447,9 @@ vectors:
     expected_basis: 'stated'
     exercises:
       - 'OQ-0'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0151'
+      - 'rfc-2692#R-0153'
     outcome_quote: 'building the database necessary to record all house titles and all liens is a project not related to certificate structure.'
     related:
       - 'SR-USE-12'
@@ -1988,7 +2469,12 @@ vectors:
     expected_basis: 'stated'
     exercises:
       - 'OQ-0'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0151'
+      - 'rfc-2692#R-0154'
+      - 'rfc-2692#R-0155'
+      - 'rfc-2692#R-0156'
+      - 'rfc-2692#R-0157'
     outcome_quote: 'The method of determining such a negative fact is not part of the certificate definition.'
     related:
       - 'SR-OQ-04'
@@ -2010,7 +2496,10 @@ vectors:
     expected_basis: 'stated'
     exercises:
       - 'OQ-0'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0151'
+      - 'rfc-2692#R-0155'
+      - 'rfc-2692#R-0156'
     related:
       - 'SR-OQ-03'
       - 'SR-OQ-05'
@@ -2029,7 +2518,10 @@ vectors:
     expected_basis: 'stated'
     exercises:
       - 'OQ-0'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0151'
+      - 'rfc-2692#R-0155'
+      - 'rfc-2692#R-0156'
     related:
       - 'SR-OQ-03'
       - 'SR-OQ-04'
@@ -2048,7 +2540,9 @@ vectors:
     expected_basis: 'stated'
     exercises:
       - 'OQ-0'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0151'
+      - 'rfc-2692#R-0158'
     outcome_quote: 'This is a potential flaw in any system providing authorization and an interesting topic for study.'
     related:
       - 'SR-OQ-01'
@@ -2111,7 +2605,9 @@ vectors:
     modal: 'must not'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0027'
+      - 'rfc-2692#R-0028'
     related:
       - 'SR-VAL-01'
       - 'SR-VAL-C02'
@@ -2163,7 +2659,9 @@ vectors:
     modal: 'must not'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0027'
+      - 'rfc-2692#R-0028'
     related:
       - 'SR-VAL-C01'
       - 'SR-VAL-C03'
@@ -2216,7 +2714,9 @@ vectors:
     soft: false
     inferred: true
     inference: 'Both possible outcomes are derived; the source states neither.'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0022'
+      - 'rfc-2692#R-0027'
     source_issue:
       type: 'ambiguity'
       text: '"dates within which it is valid" and "must not overlap" leave open whether a validity period includes its end date, so two CRLs that meet at one instant cannot be classified.'
@@ -2249,7 +2749,8 @@ vectors:
     modal: 'must'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0025'
     notes: 'crl_location: null with uses_crl: true is the case under test.'
 
   - id: 'SR-VAL-C05'
@@ -2287,7 +2788,9 @@ vectors:
     modal: 'must'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0026'
+      - 'rfc-2692#R-0031'
     notes: 'VAL-5a ("must have its own lifetime") reaches the same result for any CRL or revalidation instrument.'
 
   - id: 'SR-VAL-C06'
@@ -2330,7 +2833,8 @@ vectors:
     soft: false
     inferred: true
     inference: 'The source says a listed certificate is annihilated only in its description of a minimal CRL (VAL-2a); the requirements that follow keep that function and add conditions, but do not restate it. Rejection is the reading of "annihilates".'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0023'
     related:
       - 'SR-VAL-01'
       - 'SR-VAL-C07'
@@ -2375,7 +2879,9 @@ vectors:
     soft: false
     inferred: true
     inference: 'The source never states an acceptance rule; this is the baseline the other CRL vectors vary. It tests only validity, not whether the certificate grants what is asked.'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0022'
+      - 'rfc-2692#R-0028'
     related:
       - 'SR-VAL-C06'
 
@@ -2405,7 +2911,8 @@ vectors:
     soft: false
     inferred: true
     inference: 'VAL-1a defines a validity period as "dates within which it is valid"; that a certificate is invalid outside them, and is rejected, is the reading, not a sentence of the source.'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0022'
     related:
       - 'SR-VAL-C09'
 
@@ -2435,7 +2942,8 @@ vectors:
     soft: false
     inferred: true
     inference: 'As SR-VAL-C08, for the start of the period.'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0022'
     related:
       - 'SR-VAL-C08'
 
@@ -2463,7 +2971,8 @@ vectors:
     soft: false
     inferred: true
     inference: 'The source says a lifetime of 0 "is not possible because of communication delays and clock skews": a statement of fact, not a prohibition. Treating such an instrument as non-conforming is the reading.'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0032'
     related:
       - 'SR-VAL-04'
       - 'SR-VAL-C12'
@@ -2488,7 +2997,8 @@ vectors:
     modal: 'must'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0031'
     related:
       - 'SR-VAL-C05'
 
@@ -2519,7 +3029,8 @@ vectors:
     soft: false
     inferred: true
     inference: 'The source describes an instrument whose lifetime is "one use"; it does not say that a second use is rejected. Rejection is what an expired lifetime means elsewhere (SR-VAL-C08).'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0032'
     related:
       - 'SR-VAL-04'
       - 'SR-VAL-C13'
@@ -2550,7 +3061,8 @@ vectors:
     soft: false
     inferred: true
     inference: 'The source allows the instrument ("one can consider"); acceptance of its one use is the reading.'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0032'
     related:
       - 'SR-VAL-C12'
       - 'SR-VAL-C14'
@@ -2577,7 +3089,8 @@ vectors:
     soft: false
     inferred: true
     inference: 'The source names the condition ("delivered only as part of a challenge/response protocol") but not the consequence of breaking it.'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0032'
     related:
       - 'SR-VAL-C12'
       - 'SR-VAL-C13'
@@ -2600,7 +3113,8 @@ vectors:
     modal: 'should'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0030'
     related:
       - 'SR-VAL-02'
       - 'SR-VAL-C16'
@@ -2623,7 +3137,8 @@ vectors:
     modal: 'should'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0030'
     related:
       - 'SR-VAL-03'
       - 'SR-VAL-C15'
@@ -2649,7 +3164,8 @@ vectors:
     modal: 'should be able to'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0022'
     related:
       - 'SR-VAL-C08'
 
@@ -2676,7 +3192,8 @@ vectors:
     modal: 'should not'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0011'
     related:
       - 'SR-GEN-C02'
       - 'SR-USE-72'
@@ -2702,7 +3219,9 @@ vectors:
     modal: 'should not'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0011'
     related:
       - 'SR-GEN-C01'
 
@@ -2738,7 +3257,9 @@ vectors:
     modal: 'should'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0014'
+      - 'rfc-2692#R-0016'
     related:
       - 'SR-GEN-C04'
       - 'SR-GEN-03'
@@ -2770,7 +3291,8 @@ vectors:
     modal: 'should'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0014'
     related:
       - 'SR-GEN-C03'
 
@@ -2796,7 +3318,8 @@ vectors:
     soft: false
     inferred: true
     inference: 'The source does not define "anonymous"; this vector reads it as a certificate that identifies the holder by key alone, with no name.'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0017'
     related:
       - 'SR-GEN-C06'
       - 'SR-USE-56'
@@ -2830,7 +3353,9 @@ vectors:
     soft: false
     inferred: true
     inference: 'As SR-GEN-C05: "anonymous" read as identified by key alone.'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0008'
+      - 'rfc-2692#R-0017'
     related:
       - 'SR-GEN-C05'
 
@@ -2858,7 +3383,8 @@ vectors:
     modal: 'must be able to'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0018'
     related:
       - 'SR-GEN-04'
     notes: 'key-blinded-1 stands for a blinded signature key; the source does not define the blinding scheme, so nothing about the key''s form is tested.'
@@ -2888,7 +3414,9 @@ vectors:
     modal: 'may'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0008'
+      - 'rfc-2692#R-0009'
     related:
       - 'SR-GEN-01'
       - 'SR-GEN-C09'
@@ -2919,7 +3447,9 @@ vectors:
     modal: 'may'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0008'
+      - 'rfc-2692#R-0009'
     related:
       - 'SR-GEN-01'
       - 'SR-GEN-C08'
@@ -2948,7 +3478,9 @@ vectors:
     modal: 'must be able to'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0019'
+      - 'rfc-2692#R-0020'
     related:
       - 'SR-USE-09'
       - 'SR-USE-10'
@@ -2974,7 +3506,9 @@ vectors:
     soft: true
     inferred: true
     inference: 'GEN-5a is stated as an assumption ("we assume"), and GEN-5b leaves repository use "up to the keyholder"; neither is phrased as a requirement on the design.'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0012'
+      - 'rfc-2692#R-0013'
     related:
       - 'SR-GEN-02'
 
@@ -3006,7 +3540,9 @@ vectors:
     modal: 'should'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0044'
+      - 'rfc-2692#R-0045'
     related:
       - 'SR-IMP-C02'
       - 'SR-IMP-C10'
@@ -3031,7 +3567,8 @@ vectors:
     modal: 'one might'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0045'
     related:
       - 'SR-IMP-04'
       - 'SR-IMP-C01'
@@ -3053,7 +3590,8 @@ vectors:
     modal: 'is not to be used'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0043'
     related:
       - 'SR-IMP-C04'
 
@@ -3075,7 +3613,8 @@ vectors:
     modal: 'should'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0042'
     related:
       - 'SR-IMP-C03'
     notes: 'library-1 stands for any library the implementer did not write; the source does not define "library code" more closely.'
@@ -3098,7 +3637,10 @@ vectors:
     modal: 'if possible, ... should'
     soft: true
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0046'
+      - 'rfc-2692#R-0047'
+      - 'rfc-2692#R-0048'
     related:
       - 'SR-IMP-C06'
       - 'SR-IMP-C07'
@@ -3122,7 +3664,8 @@ vectors:
     modal: 'if possible, ... should'
     soft: true
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0049'
     related:
       - 'SR-IMP-C05'
       - 'SR-IMP-C07'
@@ -3149,7 +3692,11 @@ vectors:
     modal: 'if possible, ... should'
     soft: true
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0046'
+      - 'rfc-2692#R-0047'
+      - 'rfc-2692#R-0048'
+      - 'rfc-2692#R-0049'
     related:
       - 'SR-IMP-C05'
       - 'SR-IMP-C06'
@@ -3180,7 +3727,8 @@ vectors:
     modal: 'should'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0033'
     related:
       - 'SR-IMP-C09'
 
@@ -3203,7 +3751,8 @@ vectors:
     modal: 'should'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0033'
     related:
       - 'SR-IMP-C08'
       - 'SR-GEN-C01'
@@ -3227,7 +3776,8 @@ vectors:
     modal: 'should'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0044'
     related:
       - 'SR-IMP-C01'
 
@@ -3262,7 +3812,8 @@ vectors:
     modal: 'should be considered'
     soft: false
     inferred: false
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0122'
     related:
       - 'SR-USE-57'
       - 'SR-USE-C02'
@@ -3300,7 +3851,9 @@ vectors:
     soft: false
     inferred: true
     inference: 'The template grants equivalence "until this certificate expires"; it does not say a later use is rejected, but nothing else grants it.'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0022'
+      - 'rfc-2692#R-0122'
     related:
       - 'SR-USE-57'
       - 'SR-USE-C01'
@@ -3333,7 +3886,8 @@ vectors:
     soft: false
     inferred: true
     inference: 'The template limits equivalence to listed purposes; rejection of an unlisted one is the reading.'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0122'
     related:
       - 'SR-USE-57'
       - 'SR-USE-C01'
@@ -3373,7 +3927,10 @@ vectors:
     soft: true
     inferred: true
     inference: 'The source states a want and says it "may imply" a certification-right-expiration certificate; it defines no such certificate and no rejection rule. The vector also needs an issue time on the certificate, which the source does not mention.'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0143'
+      - 'rfc-2692#R-0144'
+      - 'rfc-2692#R-0145'
     related:
       - 'SR-USE-73'
       - 'SR-USE-C05'
@@ -3413,7 +3970,10 @@ vectors:
     soft: true
     inferred: true
     inference: 'As SR-USE-C04; the source says only that one will "usually" not want earlier keys to expire.'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0143'
+      - 'rfc-2692#R-0144'
+      - 'rfc-2692#R-0145'
     related:
       - 'SR-USE-73'
       - 'SR-USE-C04'
@@ -3455,7 +4015,10 @@ vectors:
     soft: false
     inferred: true
     inference: 'The source states the authorization, not how a verifier compares amounts.'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0016'
+      - 'rfc-2692#R-0017'
+      - 'rfc-2692#R-0119'
     related:
       - 'SR-USE-56'
       - 'SR-USE-C07'
@@ -3492,7 +4055,8 @@ vectors:
     soft: false
     inferred: true
     inference: 'As SR-USE-C06.'
-    constrained_by: []
+    constrained_by:
+      - 'rfc-2692#R-0119'
     related:
       - 'SR-USE-56'
       - 'SR-USE-C06'

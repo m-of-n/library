@@ -46,7 +46,7 @@ draft-ietf-spki-cert-structure. Nothing here is taken from them.
 | `conventions` | quoting, locators, `inferred`, `on_error_basis`, `status`, `kind`, message names, `constrained_by` |
 | `framing` | 5 statements that govern every flow |
 | `roles` | 26 roles; `kind` is party, implementer, local-component, example-party, threat or historical |
-| `messages_referenced`, `message_notes` | the 30 message names used; `in_source` flags names with no source counterpart |
+| `messages_referenced`, `message_notes` | the 42 message names used, each reconciled with `messages.yaml`: `resolves_to` is entry (26), field (10), variant (5) or none (1); `renamed_from` gives the pass-1 name; `in_source` flags names with no source counterpart |
 | `flows` | 26 flows, 88 steps |
 | `use_cases` | every List of Certificate Uses item mapped to its flow |
 | `non_flows` | 7 things the source says certificates or the WG do not do |
@@ -71,11 +71,23 @@ draft-ietf-spki-cert-structure. Nothing here is taken from them.
   (blockquotes keep the source's marks). Where a source
   sentence runs over a page break the quote stops at the break and a
   `quote_notes` entry says so.
-- **constrained_by.** Every flow carries `constrained_by: []`. Requirement ids
-  are wired in pass 3 by a different agent.
-- **Message names** are kebab-case after the source's noun and have not been
-  reconciled with `messages.yaml`, which pass 1 does not see. Pass 3 reconciles
-  them against `messages_referenced`.
+- **constrained_by.** Wired in pass 3 with `rfc-2692#R-NNNN` ids from
+  `requirements.yaml`, every one of which resolves there. 80 of the 88 steps
+  and 24 of the 26 flows cite at least one requirement, 92 distinct ids in all
+  (table at the end). A flow cites the union of its steps and guards. An empty
+  list carries `constrained_by_note`. The eight steps and two flows with none
+  rest on text `requirements.yaml` leaves out: the minimal-CRL description of
+  §Validity and CRLs ¶2, and the Background history. Every requirement has
+  verb `none`, so a citation marks a lowercase statement, not a BCP 14
+  obligation.
+- **Message names** were reconciled with `messages.yaml` in pass 3. Each is an
+  entry name, `entry.field` or `entry.variant`. Where `messages.yaml` models
+  the hand-over itself (`certificate-presentation`, `repository-publication`),
+  the step's message is the exchange and `carries` names the certificate. One
+  name, `signed-request`, has no entry in `messages.yaml`; it stands for an
+  inferred step and is marked. `online-validation-request` resolves to the
+  inferred entry pass 3 added. Every diagram
+  arrow begins with its step's message. See *Message names used* at the end.
 
 ## Roles
 
@@ -133,15 +145,15 @@ sequenceDiagram
   autonumber
   participant K as keyholder
   participant V as verifier
-  K->>K: choose the minimum to release, one certificate
-  K->>V: spki-certificate, distributed directly
-  V->>V: check the signature over the bytes as transmitted
+  K->>K: spki-certificate, choose the minimum to release, one certificate
+  K->>V: certificate-presentation carrying spki-certificate, distributed directly
+  V->>V: spki-certificate, check the signature over the bytes as transmitted
   alt signature fails, or would need reformatting
     V--xV: not accepted (inferred outcome)
   end
-  V-->>V: validity-period covers now (inferred)
-  V->>V: on-line refinement of validity if used, see flows 9 to 13
-  V->>V: has the keyholder been granted the authorization
+  V-->>V: spki-certificate.validity-period covers now (inferred)
+  V->>V: crl, revalidation-instrument or one-use-instrument, on-line refinement of validity if used, see flows 9, 11, 12, 13
+  V->>V: spki-certificate.authorization-or-attribute, has the keyholder been granted it
 ```
 
 ### 2. `repository-publication`
@@ -157,7 +169,7 @@ sequenceDiagram
   participant K as keyholder
   participant R as global-repository
   participant V as verifier
-  K->>R: spki-certificate, at the keyholder's option, protocol not specified
+  K->>R: repository-publication carrying spki-certificate, at the keyholder's option, protocol not specified
   R-->>V: spki-certificate retrieved (inferred)
 ```
 
@@ -185,14 +197,14 @@ sequenceDiagram
   autonumber
   participant I as issuer
   participant K as keyholder
-  I->>I: empowered to grant or delegate the authorization
-  I->>I: identify subject by public-key, public-key-hash, name or blinded-signature-key
-  I->>I: compose minimum fields and information, optional validity-period
-  I->>I: encode without ASN.1 or library code, LR(0) and no recursion if possible
-  I->>I: sign exactly as it will be transmitted
+  I->>I: spki-certificate.authorization-or-attribute, empowered to grant or delegate it
+  I->>I: keyholder-identifier.public-key, keyholder-identifier.key-hash, keyholder-identifier.name or keyholder-identifier.blinded-signature-key identifies the subject
+  I->>I: spki-certificate, compose minimum fields and information, optional validity-period
+  I->>I: spki-certificate, encode without ASN.1 or library code, LR(0) and no recursion if possible
+  I->>I: spki-certificate, sign exactly as it will be transmitted
   Note over I: structure, not reader error messages, constrains the creator
   I-->>K: spki-certificate (inferred)
-  K-->>K: if empowered to delegate, issue onward (inferred)
+  K-->>K: spki-certificate, if empowered to delegate, issue onward (inferred)
   Note over K: no delegation bit can stop a holder lending the private key
 ```
 
@@ -210,9 +222,9 @@ sequenceDiagram
   participant A as code-author
   participant I as issuer
   participant V as verifier
-  A->>A: define authorization, no interaction with anyone else
-  A-->>I: issuers use the authorization (inferred)
-  A-->>V: the author's code interprets it at the verifier (inferred)
+  A->>A: spki-certificate.authorization-or-attribute, defined with no interaction with anyone else
+  A-->>I: spki-certificate.authorization-or-attribute, used by issuers (inferred)
+  A-->>V: spki-certificate.authorization-or-attribute, interpreted by the author's code at the verifier (inferred)
 ```
 
 ### 5. `delayed-binding-resolution`
@@ -229,11 +241,11 @@ sequenceDiagram
   autonumber
   participant K as keyholder
   participant V as verifier
-  K-->>V: public-key, hashed and compared with the certificate (inferred)
+  K-->>V: keyholder-identifier.public-key, hashed and compared with the certificate (inferred)
   alt hash mismatch
     V--xV: key is not the subject (inferred)
   end
-  V->>V: resolve name into a key, method not given
+  V->>V: keyholder-identifier.name, resolved into a key, method not given
 ```
 
 ### 6. `traditional-certificate-issuance`
@@ -252,9 +264,9 @@ sequenceDiagram
   participant K as keyholder
   participant B as name-binder
   participant V as verifier
-  K-->>B: be uniquely identified (inferred)
+  K-->>B: traditional-certificate.name, be uniquely identified (inferred)
   B->>K: traditional-certificate binding the unique name to the key
-  V->>V: key acquires the attributes of the named person
+  V->>V: traditional-certificate, the key acquires the attributes of the named person
 ```
 
 ### 7. `direct-certificate-self-signing`
@@ -272,7 +284,7 @@ sequenceDiagram
   participant V as verifier
   participant I as issuer
   K->>K: direct-certificate, self-signed name declaration
-  K-->>V: direct-certificate (inferred)
+  K-->>V: certificate-presentation carrying direct-certificate (inferred)
   I->>K: spki-certificate loads the key with authority directly
 ```
 
@@ -291,9 +303,9 @@ no step. The tamper-detection outcome is inferred.
 sequenceDiagram
   autonumber
   participant K as keyholder
-  K->>K: sign personal-binding of another key to my nickname
+  K->>K: personal-binding-certificate, another key signed to my nickname
   Note over K: kept in my own directory, never given out
-  K->>K: on use, check the signature
+  K->>K: personal-binding-certificate, on use, check the signature
   alt signature fails
     K--xK: directory tampered with (inferred)
   end
@@ -321,21 +333,21 @@ sequenceDiagram
   participant I as issuer
   participant C as crl-issuer
   participant V as verifier
-  I->>V: crl-location inside the certificate, where to find the CRL
+  I->>V: spki-certificate.crl-location inside the certificate, where to find the CRL
   C->>C: crl with revoked list, sequence number, signature, validity dates
   Note over C: dates of successive CRLs must not overlap, lifetime never 0
   C-->>V: crl fetched from the stated location, transport not specified (inferred)
-  V-->>V: verify the CRL signature, signer not named (inferred)
-  V-->>V: now within the CRL validity dates (inferred)
+  V-->>V: crl, verify its signature, signer not named (inferred)
+  V-->>V: crl, now within its validity dates (inferred)
   alt expired, missing dates or overlap
     V--xV: no deterministic result
   end
-  V-->>V: a later CRL by sequence number annihilates the earlier (inferred for conforming CRL)
-  V-->>V: is the certificate listed in the current CRL (inferred for conforming CRL)
+  V-->>V: crl-sequence, a later CRL by sequence number annihilates the earlier (inferred for conforming CRL)
+  V-->>V: spki-certificate, is it listed in the current CRL (inferred for conforming CRL)
   alt certificate listed
     V--xV: certificate annihilated (stated for minimal CRL)
   end
-  V->>V: result deterministic aside from clock skew
+  V->>V: spki-certificate, result deterministic aside from clock skew
 ```
 
 ### 10. `minimal-crl-propagation`
@@ -352,8 +364,8 @@ sequenceDiagram
   autonumber
   participant C as crl-issuer
   participant V as verifier
-  C->>V: minimal crl, by an unspecified method
-  V->>V: annihilate each listed certificate and any previous CRL by sequence number
+  C->>V: crl.minimal, by an unspecified method
+  V->>V: crl.minimal, annihilate each listed certificate and any previous CRL by sequence number
   V--xV: non-deterministic program behavior
 ```
 
@@ -374,9 +386,9 @@ sequenceDiagram
   participant V as verifier
   participant O as online-validator
   V-->>O: online-validation-request for one certificate (inferred)
-  O->>V: positive-online-validation, a revalidation-instrument with its own lifetime
+  O->>V: revalidation-instrument, the positive on-line validation, with its own lifetime
   Note over O: lifetime 0 is not possible
-  V-->>V: use only within its lifetime to refine validity (inferred)
+  V-->>V: revalidation-instrument, use only within its lifetime to refine validity (inferred)
   alt lifetime over
     V--xV: not usable (inferred)
   end
@@ -396,7 +408,7 @@ sequenceDiagram
   participant V as verifier
   participant O as online-validator
   V-->>O: online-validation-request, is it revoked (inferred)
-  O-->>V: negative-online-validation, CRL-like, with its own lifetime (inferred)
+  O-->>V: crl, the negative on-line validation, CRL-like, with its own lifetime (inferred)
   alt listed
     V--xV: certificate annihilated (inferred)
   end
@@ -415,9 +427,9 @@ sequenceDiagram
   autonumber
   participant V as verifier
   participant O as online-validator
-  V-->>O: challenge (inferred sender and content)
-  O->>V: response carrying one-use-instrument
-  V->>V: use it once
+  V-->>O: one-use-challenge (inferred sender and content)
+  O->>V: one-use-instrument, delivered as the response
+  V->>V: one-use-instrument, use it once
   alt reused, or delivered outside challenge/response
     V--xV: not valid (inferred)
   end
@@ -439,10 +451,10 @@ sequenceDiagram
   autonumber
   participant K as keyholder
   participant V as verifier
-  K->>K: choose the single certificate for this permission
-  K->>V: spki-certificate, anonymous where needed
-  K-->>V: signed-request proving control of the private key (inferred)
-  V->>V: decide on the authorization, not the name
+  K->>K: spki-certificate, choose the single certificate for this permission
+  K->>V: certificate-presentation carrying spki-certificate, anonymous where needed
+  K-->>V: signed-request proving control of the private key (inferred, not in messages.yaml)
+  V->>V: spki-certificate.authorization-or-attribute, decide on it, not on the name
 ```
 
 ### 15. `certificate-chain-following`
@@ -465,11 +477,11 @@ sequenceDiagram
   participant M as master-bank-certifier
   participant O as other-bank
   participant V as verifier
-  B-->>K: spki-certificate, permission to write electronic checks (inferred)
-  B->>V: spki-certificate proving it is a bank, issuer not named
-  B->>M: spki-certificate signing the master certifier key
+  B-->>K: electronic-check-permission-certificate (inferred)
+  B->>V: bank-capability-certificate proving it is a bank, issuer not named
+  B->>M: bank-certifier-certificate signing the master certifier key
   M-->>O: spki-certificate on each other bank key (inferred)
-  V->>V: follow certificate-chain from my bank key, a root I chose, to the other bank
+  V->>V: bank-certificate-chain from my bank key, a root I chose, to the other bank
   alt link missing or root not chosen
     V--xV: unspecified, or not trusted (inferred)
   end
@@ -493,11 +505,11 @@ sequenceDiagram
   participant K as keyholder
   participant S as smart-card
   participant V as verifier
-  K-->>K: generate short-term key pair (inferred)
-  K-->>S: short-term public-key at login (inferred)
-  S->>K: short-term-key-certificate signed by the long-term certifying key
-  K-->>V: use the short-term key with its certificate (inferred)
-  V->>V: treat as the certifying key for the listed purposes until expiry
+  K-->>K: delegation-certificate.signed-key, generate the short-term key pair (inferred)
+  K-->>S: delegation-certificate.signed-key at login (inferred)
+  S->>K: delegation-certificate signed by the long-term certifying key
+  K-->>V: certificate-presentation carrying delegation-certificate (inferred)
+  V->>V: delegation-certificate, treat as the certifying key for the listed purposes until expiry
   alt expired or purpose not listed
     V--xV: not equivalent
   end
@@ -518,11 +530,11 @@ sequenceDiagram
   participant V as verifier
   participant C as key-cache
   participant R as global-repository
-  V-->>C: look up public-key (inferred)
+  V-->>C: local-key-cache.cached-keys, look up the key (inferred)
   opt miss
-    R-->>C: fetch public-key, the long delay to avoid (inferred)
+    R-->>C: local-key-cache.cached-keys, fetch the key, the long delay to avoid (inferred)
   end
-  C->>V: public-key served locally, as a name server would
+  C->>V: local-key-cache.cached-keys, key served locally, as a name server would
   Note over C: interacts with revocation distribution, flow 18
 ```
 
@@ -541,9 +553,9 @@ sequenceDiagram
   participant X as revoker
   participant C as key-cache
   participant V as verifier
-  X-->>X: issue key-revocation or certification-right-expiration-certificate (inferred issuer)
-  X->>V: reliable distribution, goal of the order of 24 hours
-  X-->>C: caches account for it (inferred)
+  X-->>X: key-revocation or certification-right-cessation issued (inferred issuer)
+  X->>V: key-revocation or certification-right-cessation, reliable distribution, goal of the order of 24 hours
+  X-->>C: key-revocation, caches account for it (inferred)
   alt not yet arrived, or cache stale
     V--xV: revoked key or ceased right accepted (inferred)
   end
@@ -569,9 +581,9 @@ sequenceDiagram
   participant X as revoker
   participant V as verifier
   A->>V: spki-certificate on keys generated while in role
-  N-->>A: timestamp each certification (inferred)
-  X-->>V: certification-right-expiration-certificate when the administrator changes (inferred issuer)
-  V-->>V: keep keys certified before, reject certifications after (inferred)
+  N-->>A: certification-right-expiration-certificate.notary-timestamp on each certification (inferred)
+  X-->>V: certification-right-expiration-certificate or certification-right-cessation when the administrator changes (inferred issuer)
+  V-->>V: spki-certificate, keep keys certified before, reject certifications after (inferred)
 ```
 
 ### 20. `reputation-voucher-introduction`
@@ -588,7 +600,7 @@ sequenceDiagram
   participant K as keyholder
   participant V as verifier
   I->>K: reputation-voucher testifying to the friend
-  K-->>V: reputation-voucher, introduction to another friend (inferred)
+  K-->>V: certificate-presentation carrying reputation-voucher, introduction to another friend (inferred)
 ```
 
 ### 21. `mail-receiver-certification-chain`
@@ -609,10 +621,10 @@ sequenceDiagram
   participant I as issuer
   participant K as keyholder
   participant V as verifier
-  D->>D: dns-name-owner-certificate, owner of the DNS name or subtree
-  D->>I: dns-name-owner-certificate certifies this key
-  I->>K: mail-receiver-certificate, legitimate receiver of mail at the address
-  V->>V: from a known address to the unknown key via the certificate-chain
+  D->>D: dns-name-ownership-certificate, owner of the DNS name or subtree
+  D->>I: dns-name-ownership-certificate certifies this key
+  I->>K: email-receiver-certificate, legitimate receiver of mail at the address
+  V->>V: email-receiver-certificate, from a known address to the unknown key via the chain
 ```
 
 ### 22. `software-certification`
@@ -627,8 +639,8 @@ sequenceDiagram
   autonumber
   participant S as software-vouchee
   participant V as verifier
-  S-->>V: spki-certificate for the software (inferred)
-  V->>V: before running, check the software has not changed
+  S-->>V: software-certificate (inferred)
+  V->>V: software-certificate, before running, check the software has not changed
   alt changed
     V--xV: do not run (inferred)
   end
@@ -653,12 +665,12 @@ sequenceDiagram
   participant G as negative-fact-organization
   participant K as keyholder
   participant V as verifier
-  G->>G: determine the negative fact, method outside the certificate definition
+  G->>G: negative-fact-attribute-certificate.attribute, determine the negative fact, method outside the certificate definition
   alt records not all digitized or IDs escapable
     G--xG: absence cannot be determined
   end
-  G->>K: spki-certificate with the positive attribute not already married
-  K-->>V: present it for a digital marriage license (inferred)
+  G->>K: negative-fact-attribute-certificate with the positive attribute not already married
+  K-->>V: certificate-presentation carrying negative-fact-attribute-certificate, for a digital marriage license (inferred)
 ```
 
 ### 24. `blinded-key-attribute`
@@ -673,7 +685,7 @@ sequenceDiagram
   autonumber
   participant K as keyholder
   participant I as issuer
-  K-->>I: blinded-signature-key (inferred)
+  K-->>I: keyholder-identifier.blinded-signature-key (inferred)
   I->>K: spki-certificate assigning an attribute to the blinded key
 ```
 
@@ -690,9 +702,9 @@ sequenceDiagram
   autonumber
   participant P as communicant
   participant D as online-directory
-  P->>D: directory-lookup for the partner
-  D->>P: public-key
-  P->>P: open a secure channel, no prior secret channel needed
+  P->>D: public-key-directory.entry-name, look up the partner
+  D->>P: public-key-directory.public-key
+  P->>P: public-key-directory.public-key, open a secure channel, no prior secret channel needed
   Note over D: an on-line service is a performance bottleneck
 ```
 
@@ -709,8 +721,8 @@ sequenceDiagram
   autonumber
   participant D as online-directory
   participant P as communicant
-  D->>P: signed-directory-entry, the first certificates
-  P-->>P: verify and use without the on-line service (inferred)
+  D->>P: kohnfelder-certificate, a signed directory entry, the first certificates
+  P-->>P: kohnfelder-certificate, verify and use without the on-line service (inferred)
 ```
 
 ## What certificates cannot do: non-flows
@@ -857,19 +869,102 @@ The full entries, with quotes, are in `source_defects_and_ambiguities`.
 
 ## Message names used
 
-These are kebab-case names after the source's own nouns, listed in
-`messages_referenced`, to be reconciled with `messages.yaml` in pass 3. Names
-marked † have no counterpart in RFC 2692 and stand for inferred steps. Names
-marked ‡ are partly in the source (the noun is there, the object is not
-described).
+Pass 3 reconciled every message name with `messages.yaml`. A name is an entry
+(`messages[].name`), `entry.field` or `entry.variant`, the dotted form
+`messages.yaml` itself uses. `message_notes` gives each of the 42 names its
+resolution and the pass-1 name it replaced.
 
-`spki-certificate`, `authorization`, `validity-period`, `public-key`,
-`public-key-hash`, `name`, `crl`, `crl-location`, `online-validation-request` †,
-`positive-online-validation`, `negative-online-validation`,
-`revalidation-instrument`, `challenge`, `response`, `one-use-instrument`,
-`signed-request` †, `traditional-certificate`, `direct-certificate`,
-`personal-binding`, `reputation-voucher`, `certificate-chain`,
-`short-term-key-certificate`, `key-revocation`,
-`certification-right-expiration-certificate`, `timestamp` ‡,
-`dns-name-owner-certificate`, `mail-receiver-certificate` ‡,
-`blinded-signature-key`, `signed-directory-entry`, `directory-lookup` ‡.
+Of the 30 names pass 1 used, 9 matched an entry exactly: `spki-certificate`,
+`crl`, `revalidation-instrument`, `one-use-instrument`,
+`traditional-certificate`, `direct-certificate`, `reputation-voucher`,
+`key-revocation` and `certification-right-expiration-certificate`. 19 were
+renamed:
+
+| pass-1 name | name now | resolves as |
+|---|---|---|
+| `authorization` | `spki-certificate.authorization-or-attribute`; in flow 23, `negative-fact-attribute-certificate.attribute` | field |
+| `validity-period` | `spki-certificate.validity-period` | field |
+| `crl-location` | `spki-certificate.crl-location` | field |
+| `public-key` | `keyholder-identifier.public-key` (flows 3, 5); `delegation-certificate.signed-key` (16); `local-key-cache.cached-keys` (17); `public-key-directory.public-key` (25) | variant; fields |
+| `public-key-hash` | `keyholder-identifier.key-hash` | variant |
+| `name` | `keyholder-identifier.name` (flows 3, 5); `traditional-certificate.name` (6) | variant; field |
+| `blinded-signature-key` | `keyholder-identifier.blinded-signature-key` | variant |
+| `positive-online-validation` | `revalidation-instrument` | entry; the old name is its alias |
+| `negative-online-validation` | `crl` | entry; the old name is its alias |
+| `challenge` | `one-use-challenge` | entry |
+| `response` | `one-use-instrument` | entry; no response entry exists, and the instrument is what the response delivers |
+| `personal-binding` | `personal-binding-certificate` | entry |
+| `certificate-chain` | `bank-certificate-chain` (flow 15); `email-receiver-certificate` (21) | entry; the old name is an alias of the first only |
+| `short-term-key-certificate` | `delegation-certificate` | entry; the old name is its alias |
+| `timestamp` | `certification-right-expiration-certificate.notary-timestamp` | field |
+| `dns-name-owner-certificate` | `dns-name-ownership-certificate` | entry; the old name is its alias |
+| `mail-receiver-certificate` | `email-receiver-certificate` | entry |
+| `signed-directory-entry` | `kohnfelder-certificate` | entry; the old name is its alias |
+| `directory-lookup` | `public-key-directory.entry-name` | field; no lookup request exists |
+
+Steps that already named a valid entry were pointed at a more specific one
+where `messages.yaml` has an entry for exactly that thing:
+
+- The six keyholder-to-verifier hand-overs (flows 1, 7, 14, 16, 20, 23) are
+  `certificate-presentation`, carrying the certificate. Publication in flow 2
+  is `repository-publication`, carrying `spki-certificate`.
+- Flow 15 steps 1 to 3 are `electronic-check-permission-certificate`,
+  `bank-capability-certificate` and `bank-certifier-certificate`. Flow 22 is
+  `software-certificate`, and flow 23 step 2 is
+  `negative-fact-attribute-certificate`.
+- Flow 10 is `crl.minimal`, and flow 9 step 6 is `crl-sequence`.
+- The alternative in flows 18 and 19 for "the ceasing of the right to make new
+  certificates" is `certification-right-cessation`. `messages.yaml` keeps it
+  apart from `certification-right-expiration-certificate`, because the source
+  never connects the two.
+- Flow 1 step 5 gains the alternatives `revalidation-instrument` and
+  `one-use-instrument`, the instruments of the flows its action names.
+
+One name is **not in `messages.yaml`**, and its `message_notes` entry says
+so. A second, `online-validation-request` (flows 11 and 12, step 1), has no
+source counterpart either; pass 3 added it to `messages.yaml` as an inferred
+entry, on the same footing as `one-use-challenge`.
+
+- `signed-request` (flow 14, step 3) has no source counterpart. It is not
+  proposed: no source text names a proof of possession.
+
+## Requirements wired to each flow
+
+Each flow's `constrained_by`, as `rfc-2692#R-NNNN` ids from
+`requirements.yaml`. Steps carry their own subsets in `protocol.yaml`.
+
+| flow | requirements |
+|---|---|
+| 1. `direct-certificate-distribution` | R-0005, R-0006, R-0010, R-0012, R-0014, R-0015, R-0016, R-0022, R-0023, R-0030, R-0044, R-0045 |
+| 2. `repository-publication` | R-0012, R-0013 |
+| 3. `certificate-issuance` | R-0008, R-0009, R-0014, R-0017, R-0018, R-0022, R-0033, R-0035, R-0036, R-0037, R-0038, R-0039, R-0040, R-0042, R-0043, R-0044, R-0045, R-0046, R-0047, R-0048, R-0049, R-0121, R-0125, R-0140, R-0141, R-0142 |
+| 4. `authorization-definition` | R-0010, R-0011 |
+| 5. `delayed-binding-resolution` | R-0008, R-0009, R-0021 |
+| 6. `traditional-certificate-issuance` | R-0020, R-0056, R-0057, R-0058, R-0059 |
+| 7. `direct-certificate-self-signing` | R-0012, R-0020, R-0056, R-0060, R-0061, R-0062, R-0063, R-0064 |
+| 8. `personal-binding` | R-0019, R-0020, R-0056, R-0065, R-0066, R-0067, R-0068 |
+| 9. `crl-validation` | R-0023, R-0024, R-0025, R-0026, R-0027, R-0028, R-0029, R-0031, R-0032 |
+| 10. `minimal-crl-propagation` | R-0024 |
+| 11. `positive-online-validation` | R-0023, R-0030, R-0031, R-0032 |
+| 12. `negative-online-validation` | R-0029, R-0030, R-0031, R-0032 |
+| 13. `one-use-instrument-challenge-response` | R-0031, R-0032 |
+| 14. `minimal-information-proof` | R-0005, R-0006, R-0007, R-0012, R-0014, R-0015, R-0016, R-0017, R-0119, R-0120, R-0121 |
+| 15. `certificate-chain-following` | R-0050, R-0051, R-0052, R-0138, R-0139 |
+| 16. `smart-card-short-term-key` | R-0012, R-0035, R-0122, R-0123, R-0124, R-0125 |
+| 17. `key-caching` | R-0146, R-0147, R-0150 |
+| 18. `revocation-distribution` | R-0148, R-0149, R-0150 |
+| 19. `certification-right-expiration` | R-0135, R-0143, R-0144, R-0145, R-0148 |
+| 20. `reputation-voucher-introduction` | R-0012, R-0053 |
+| 21. `mail-receiver-certification-chain` | R-0128, R-0129, R-0130, R-0131 |
+| 22. `software-certification` | R-0055 |
+| 23. `negative-fact-as-positive-attribute` | R-0012, R-0075, R-0077, R-0154, R-0155, R-0156, R-0157 |
+| 24. `blinded-key-attribute` | R-0018 |
+| 25. `online-directory-lookup` | none: §Background history, which `requirements.yaml` leaves out |
+| 26. `signed-directory-entry` | none: §Background history, which `requirements.yaml` leaves out |
+
+Eight steps cite nothing, and each says why in `constrained_by_note`. They
+are flow 3 step 6 (issuer-to-keyholder delivery, which no requirement covers),
+flow 9 step 4 (the CRL signature check), flow 10 step 1 (the minimal CRL
+itself), and the five steps of flows 25 and 26. In flow 9, steps 2, 3, 6 and 7
+also rest partly on the minimal-CRL description, which `requirements.yaml`
+leaves out as text the section rules out. Their notes say so.
