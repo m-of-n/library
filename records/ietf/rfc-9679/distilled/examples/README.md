@@ -176,6 +176,60 @@ Each one covers a rule RFC 9679 states and does not demonstrate.
 - **Parsed under both readers** — `bin/_record_yaml.load_yaml` and
   `bin/_yaml.parse` return 13 vectors each.
 
+## Validated against the derived schemas — the cross-check pass
+
+Every vector was run through a checker **transcribed from the three files in
+`../schema/`**, not from anyone's memory of them: a CBOR decoder and an RFC 8949
+§4.2.1 determinism check; a parser for the 6-rule
+`cose-key-thumbprint-input.derived.cddl` that validates a decoded map against
+its rules; enough of JSON Schema 2020-12 to run
+`thumbprint-input.derived.schema.json` as written; and an executor that runs the
+three §3 steps out of `thumbprint-computation.derived.json`'s own procedure and
+§4 label table. No CBOR, COSE or `jsonschema` library was used.
+
+| | |
+|---|---|
+| vectors with a thumbprint input of their own | 12 of 13 (`V-0008` is a CWT claims set — it *carries* a thumbprint rather than being one) |
+| accepted by one CDDL rule **and** exactly one `oneOf` branch | **8** — `V-0002`, `V-0003`, `V-0007`, `V-0009`, `V-0010`, `V-0011`, `V-0012`, `V-0013` |
+| correctly **rejected** | **1** — `V-0001`, the negative fixture, on `entry -3: expected bstr, got bool` |
+| correctly **outside** the five branches | **3** — `V-0004`–`V-0006`, `kty` 7, because §4.6 delegates and the CDDL says in terms that no rule for it can be written here |
+| §3 procedure re-executed from `key_hex` | 7 exact, plus 2 hash-only (`V-0009`, `V-0010`) and the 3 AKP vectors exact under the RFC 9964 §6 set |
+| every thumbprint input §4.2.1-deterministic and round-tripping | 12 of 12 |
+
+**The checker discriminates.** Verified against fixtures built for the purpose:
+
+- **A missing required parameter is rejected** — EC2 without `y`, without `crv`,
+  without `kty`; RSA without `e`; Symmetric without `k`. Five for five, each
+  naming the missing label.
+- **An extra optional parameter is *excluded*, not rejected** — `kid` (2), `alg`
+  (3), `key_ops` (4), `Base IV` (5) and `d` (−4) each added to the §6 key. Step 1
+  drops each one, the digest stays `496bd8af…` in all five cases, and the reduced
+  form validates. The **unreduced** map is rejected by the same closed CDDL map,
+  so `R-0007` and `R-0011` are enforced from both sides at once.
+- **A wrong `kty` is rejected** — an EC2 parameter set labelled `kty` 1, an OKP
+  set labelled `kty` 2, an unallocated `kty` 9, and the `tstr` `kty` that
+  `R-0010` removes.
+- **A non-minimal RSA `n` is accepted**, and that is the correct verdict: both
+  spellings satisfy everything RFC 9679 states, which is precisely the §4.3 gap.
+  The two digests reproduce `V-0002` and `V-0003` exactly. Applied separately,
+  the RFC 8230 §4 minimal-octet rule rejects the padded spelling and accepts the
+  other — the gap is the citation, not the rule.
+
+The §6 **full** example key (`V-0011`'s `key_hex`) was confirmed
+non-deterministic mechanically, decoding with map keys in the order
+`01 20 21 22 02`, which is not bytewise sorted. That corroborates the defect
+recorded above rather than repairing it.
+
+## Links to requirements
+
+Each vector carries `constrains` (the rules it exercises) or, for the one
+deliberately non-conforming fixture, `violates` (the rules it breaks), plus a
+`link_rationale` saying why those ids and what the schema check returned.
+**48 links over 37 distinct requirements**, every id resolving in
+`../requirements.yaml`. The distinction is load-bearing: `V-0003` carries
+`constrains`, not `violates`, because it breaks no requirement of this
+document — exposing a gap is not the same as failing a rule.
+
 Not checked, because the document supports no such check: no COSE or CBOR
 library was run against these vectors, deliberately — the point of hand-encoding
 was to be independent of one. No RSA, EC or ML-DSA key in a constructed vector

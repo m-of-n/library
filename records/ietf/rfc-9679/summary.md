@@ -13,10 +13,10 @@ updated: "2026-10-19"
 | **Type** | rfc |
 | **Maturity** | standard — Proposed Standard |
 | **Authors** | K. Isobe, H. Tschofenig, O. Steele |
-| **Published** | September 2024 |
+| **Published** | December 2024 |
 | **Identifier** | RFC 9679 · DOI 10.17487/RFC9679 |
 | **Source** | https://www.rfc-editor.org/rfc/rfc9679.txt |
-| **Digest** | `ea9db2b5f0a6…` (sha-256 of the .txt, retrieved 2026-09-22) |
+| **Digest** | `f6b460e38ba1…` (sha-256 of the .txt, retrieved 2026-09-22) |
 
 ## Overview
 
@@ -127,6 +127,7 @@ encoder and no CBOR or COSE library, and all of it reproduces.
   §7 (which is "Key Objects" and never mentions `ckt`, a member *this* document
   defines) and the `jkt` to RFC 7517 §4 (which lists JWK parameters; `jkt` does
   not occur anywhere in RFC 7517, and lives in RFC 9449 §6.1).
-- The extraction is at **passes 1 and 2 of 3**; cross-check has not run and no
-  human has signed anything off, so these artifacts are readable but not
-  buildable-on.
+- The extraction is **complete to FX-1 `profile: full`** — extract, verify and
+  cross-check have all run at effort max. No human has signed anything off:
+  every `reviewed_by` is empty, so these artifacts are machine-checked, not
+  reviewed.

@@ -11,11 +11,14 @@ reviewed_by: ""
 FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what
 it does not.
 
-**State: passes 1 and 2 of 3 complete.** The extract pass ran at effort max,
-agents in parallel, each reading only `.cache/rfc-9679.txt`; the verify pass
-then re-derived every count, quotation, locator and fixture from the source
-independently. **The cross-check pass has NOT run**, so this record carries no
-`profile`. Readable; nothing may be built on it. library#39 owns finishing it.
+**State: all three passes complete — `profile: full`.** The extract pass ran at
+effort max, agents in parallel, each reading only `.cache/rfc-9679.txt`; the
+verify pass then re-derived every count, quotation, locator and fixture from the
+source independently; the cross-check pass then checked artifact against
+artifact — all 68 requirements walked for field coverage, both `not_applicable`
+reasons re-tested against every artifact, and all 13 vectors run through a
+checker transcribed from the three derived schema files. **No human has reviewed
+any of it**: every `reviewed_by` is empty. Machine-checked, not signed off.
 
 Source: RFC 9679, *COSE Key Thumbprint*.
 
@@ -25,7 +28,7 @@ Source: RFC 9679, *COSE Key Thumbprint*.
 | requirements | `requirements.yaml` | 68 entries, `R-0001`–`R-0068`, source order, no gaps: 66 `stated`, 2 `inferred`. Only 13 carry a BCP 14 verb; 55 are `verb: none` because the binding content — the three procedure steps, all five required-parameter lists, the exclusion rule, the ordering statements, the registration values — is stated in lowercase. 5 entries are `testable: no` (`R-0021`, `R-0035`, `R-0039`, `R-0059`, `R-0064`), each with a reason |
 | schema | `schema/` | 3 derived, 0 verbatim: a CDDL of the thumbprint input (6 rules), the §3 procedure and §4 label table as JSON data, and a JSON Schema 2020-12 with five `oneOf` branches for §4.1–§4.5. **The source ships no formal grammar at all**, so every formal artifact here is ours and is named `.derived.` |
 | messages | `messages.yaml` | 9 structures, 29 fields, every field carrying a non-empty `constrained_by`; 47 of the 68 requirements are wired. The 21 unwired are enumerated with a reason each, so an adversarial reader can falsify the claim cheaply |
-| examples | `examples/` | 13 vectors. **Every printed value in the document reproduces** — recomputed with a hand-written RFC 8949 §4.2.1 encoder plus `hashlib`, no CBOR or COSE library. 5 of 13 are the source's (`V-0008`–`V-0012`); 8 are `source: constructed`, each with a `constructed_why`, because RFC 9679 prints exactly one complete computation and every other printed value descends from it |
+| examples | `examples/` | 13 vectors. **Every printed value in the document reproduces** — recomputed with a hand-written RFC 8949 §4.2.1 encoder plus `hashlib`, no CBOR or COSE library. 5 of 13 are the source's (`V-0008`–`V-0012`); 8 are `source: constructed`, each with a `constructed_why`, because RFC 9679 prints exactly one complete computation and every other printed value descends from it. Each vector now carries `constrains` or `violates` R-ids and a `link_rationale`: 48 links over 37 distinct requirements, added by the cross-check pass |
 | design-notes | `design-notes.md` | the per-key-type hashed set; an ADAPT verdict on RFC 9679 as `KeyId` with three blockers, two of them ours; the `alg` hazard adjudicated; and nine named cuts against MD-3 |
 
 ## Not applicable
@@ -40,12 +43,26 @@ Source: RFC 9679, *COSE Key Thumbprint*.
   member." Modelling it here would be extracting a different document. The only
   other multi-party sentence is a precondition, not an exchange: "it is crucial
   that they know and use the same hash function to ensure consistent results."
+  The document's one and only error path is in **§5.7**, not §5.6 — unregistered
+  hash identifiers "are not considered valid, and applications MUST detect and
+  handle this error, should it occur" (`R-0051`). That is a local accept/reject
+  predicate on a string one party already holds: no peer, no message, no
+  response, no recovery, no retry. It is carried as a validation rule on the
+  `cose-key-thumbprint-uri` structure in `messages.yaml`, and it does not make a
+  protocol.
 - **state-machine** — no lifecycle. A thumbprint is a pure function of a key:
   "Including only the required parameters ensures that the COSE Key Thumbprint
   remains consistent for a given key, regardless of any additional attributes."
-  No registration, issuance, rotation, revocation or expiry appears anywhere.
-  The nearest thing is a one-shot validity predicate on the URI form, which is
-  an accept/reject test rather than a lifecycle.
+  No issuance, rotation, revocation or expiry *of a thumbprint* appears
+  anywhere, and there is no state a thumbprint can be in. The nearest thing is a
+  one-shot validity predicate on the URI form, which is an accept/reject test
+  rather than a lifecycle. §8 *does* contain registrations, but they are IANA
+  registry entries made once by this document for the `ckt` member and the
+  `urn:ietf:params:oauth:ckt` URN — not a registration step in the life of any
+  thumbprint. *(Narrowed by the cross-check pass, which found this bullet still
+  reading "No registration … appears anywhere" — the wording the verify pass had
+  already removed from `record.yaml` as contradicted by §8 on its face. The two
+  artifacts now agree.)*
 
 ## What actually enters the digest
 

@@ -65,9 +65,11 @@ tags:
   - normative
 distillation:
   standard: "FX-1"
-  # NO `profile` YET. Pass 1 (extract) is complete across the artifact set;
-  # verify and cross-check have NOT run, and an unfinished extraction is
-  # neither `full` nor `partial` (docs/extraction.md).
+  # `full` set 2026-10-19 by the cross-check pass, the third and last. All six
+  # artifact kinds are present and both not_applicable kinds carry a reason
+  # re-tested against every artifact; all four cross-checks pass. No human has
+  # reviewed any of it - every `reviewed_by` below is empty, deliberately.
+  profile: full
   artifacts:
     - kind: normative
       path: distilled/normative.md
@@ -87,7 +89,7 @@ distillation:
       reviewed_by: ""
     - kind: examples
       path: distilled/examples/vectors.yaml
-      coverage: "13 vectors V-0001 to V-0013. EVERY printed value in the document reproduces, recomputed with a CBOR encoder written by hand against RFC 8949 §4.2.1 plus hashlib and no CBOR or COSE library: both §6 encodings, the SHA-256 thumbprint, the §6 kid, the §5.6 ckt, the §5.7 base64url form and the full URN. 8 of the 13 are marked source: constructed with a constructed_why - V-0001 to V-0007 and V-0013 - and the remaining 5, V-0008 to V-0012, are the source's own and carry six printed values between them, because RFC 9679 prints exactly one complete computation and every other printed value descends from it. All 13 were recomputed independently in the verify pass with a second hand-written RFC 8949 §4.2.1 encoder: 13 of 13 reproduce, the §6 input is 75 octets, and the pass-1 split of 7 constructed / 6 printed was a miscount of vectors against printed values"
+      coverage: "13 vectors V-0001 to V-0013. EVERY printed value in the document reproduces, recomputed with a CBOR encoder written by hand against RFC 8949 §4.2.1 plus hashlib and no CBOR or COSE library: both §6 encodings, the SHA-256 thumbprint, the §6 kid, the §5.6 ckt, the §5.7 base64url form and the full URN. 8 of the 13 are marked source: constructed with a constructed_why - V-0001 to V-0007 and V-0013 - and the remaining 5, V-0008 to V-0012, are the source's own and carry six printed values between them, because RFC 9679 prints exactly one complete computation and every other printed value descends from it. All 13 were recomputed independently in the verify pass with a second hand-written RFC 8949 §4.2.1 encoder: 13 of 13 reproduce, the §6 input is 75 octets, and the pass-1 split of 7 constructed / 6 printed was a miscount of vectors against printed values. The cross-check pass then ran every vector against the three derived schema files through a checker transcribed from them - 8 accepted by one CDDL rule and exactly one oneOf branch, V-0001 correctly rejected, V-0004 to V-0006 correctly outside the five branches because §4.6 delegates, V-0008 carrying a thumbprint rather than being one - and wired 48 constrains/violates links over 37 distinct requirements, one link_rationale each, 0 dangling"
       reviewed_by: ""
     - kind: design-notes
       path: distilled/design-notes.md
@@ -140,7 +142,79 @@ distillation:
         bin/fetch-source and verified against its recorded digest; RFC 7517 and
         RFC 9449 were read outside the repo for cross-reference checking only.
         No profile is claimed: cross-check has NOT run.
-status: fetched
+    - pass: cross-check
+      by: "claude-opus-5 (single agent, artifact against artifact)"
+      effort: max
+      date: "2026-10-19"
+      note: >-
+        Artifact against artifact, not artifact against source: the source was
+        opened only to adjudicate a disagreement between two artifacts. All
+        four cross-checks pass. (1) FIELD COVERAGE - all 68 requirements
+        walked; 64 constrained_by links resolve with 0 dangling across 29
+        fields; the computed wired set is exactly 47 and the computed unwired
+        set exactly 21, matching the enumeration in messages.yaml id for id
+        once its "R-0001 to R-0003" range is expanded. Every unwired reason
+        re-tested and still holding, each against the artifact that does carry
+        it: R-0001 to R-0003 in thumbprint-computation.procedure, R-0006 in
+        hash_function.may_support, R-0039 in chosen_by, R-0035 on the §4.6
+        key type, R-0065 on confirmation_method, and R-0056 in entry_order
+        plus the layout of all five thumbprint-input structures. The reverse
+        check also holds - every COSE_Key parameter any requirement names is
+        modelled in messages.yaml or the schema, `cnf` as the field cnf_claim.
+        (2) PROTOCOL - swept every artifact for exchange vocabulary; 15 hits,
+        every one either the Acknowledgements section name, the ckt
+        "indistinguishable on the wire" defect, or the denial itself. No
+        artifact implies an exchange. The document's one error path was
+        re-located by line (L352-353, §5.7, exactly one occurrence of "detect
+        and handle") and confirmed wired on cose-key-thumbprint-uri, not
+        modelled as a message. (3) STATE MACHINE - swept for lifecycle
+        vocabulary; 29 hits, all the verb "states", the literal kind name, the
+        README state line, or our own R-O-02 revocation question. FOUND AND
+        FIXED one real cross-artifact contradiction - distilled/README.md
+        still read "No registration, issuance, rotation, revocation or expiry
+        appears anywhere", the exact wording the verify pass had removed from
+        this file as falsified by §8, which registers `ckt` and the URN. The
+        two artifacts now agree. (4) EXAMPLES AGAINST SCHEMA, the main job - a
+        checker was transcribed from the three derived schema files (a CDDL
+        parser over the 6 rules, enough JSON Schema 2020-12 to run the five
+        oneOf branches as written, and an executor for the §3 procedure and §4
+        label table) with no CBOR, COSE or jsonschema library. 12 of the 13
+        vectors have a thumbprint input; 8 are accepted by one CDDL rule and
+        exactly one oneOf branch; V-0001 is correctly REJECTED (entry -3:
+        expected bstr, got bool); V-0004 to V-0006 are correctly outside the
+        five branches because §4.6 delegates; V-0008 carries a thumbprint
+        rather than being one. The §3 steps re-executed from key_hex reproduce
+        7 inputs and digests exactly, plus 2 hash-only and the 3 AKP vectors
+        under the RFC 9964 §6 set - 13 of 13 accounted for. All 12 inputs are
+        §4.2.1-deterministic and round-trip, while the §6 FULL key decodes as
+        01 20 21 22 02 and is confirmed non-deterministic, corroborating
+        defect 2 rather than repairing it. DISCRIMINATION PROVEN - 5 missing
+        required parameters rejected; 5 extra optional parameters (kid, alg,
+        key_ops, Base IV, d) EXCLUDED rather than rejected, digest unchanged at
+        496bd8af in every case, with the unreduced map rejected by the same
+        closed CDDL map so R-0007 and R-0011 are enforced from both sides; 4
+        wrong-kty cases rejected including the tstr form R-0010 removes; and a
+        non-minimal RSA `n` correctly ACCEPTED, reproducing V-0002 and V-0003
+        exactly, with the RFC 8230 §4 predicate applied separately rejecting
+        only the padded spelling. ALSO DONE - 48 constrains/violates links over
+        37 distinct requirements added to the vectors with a link_rationale
+        each, 0 dangling; the see_also rfc-8230 edge confirmed to resolve, with
+        bin/reindex reporting 0 dangling library-wide and the crosswalk
+        symmetrising it to rfc-8230; the BCP 14 arithmetic independently
+        recounted (24 total, 11 in the §2 boilerplate at L109-111, 13 in the
+        body as 10 MUST / 2 MUST NOT / 1 MAY, matching bin/bcp14-count and the
+        recorded bijection line for line). FALSIFIED IN summary.md, written by
+        the orchestrator on 2026-10-19 and corrected here - its digest read
+        ea9db2b5f0a6, where the retrieved .txt hashes to f6b460e38ba1, and it
+        dated the RFC September 2024 where the masthead and this file both say
+        December 2024. Every other number pass 2 moved was re-derived from the
+        files and agrees across all six artifacts: 5 testable: no, two doubled
+        sentences, 75 octets, 8 constructed / 5 printed, and the `alg` claim
+        in its parameter form with the string falsification recorded. Three
+        source defects left untouched as instructed - the §6 non-deterministic
+        example, the SHA-256-pinned ckt, §5.5's two misattributions and the
+        §4.3 missing citation.
+status: distilled
 usefulness:
   verdict: useful
   reason: "DEC-003 lists 'COSE key thumbprint' as an option and requires canonical key bytes before hashing. This is that specification."
