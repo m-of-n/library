@@ -317,6 +317,32 @@ def main():
                     f"{where}: summary.md declares 'No `distilled/`' but distilled/ "
                     f"exists \u2014 state the artifact set instead"
                 )
+        # A digest quoted in summary.md must be the one record.yaml records.
+        # The summary's metadata table is written by hand, and a hand-written
+        # digest is a hand-invented digest: library#39 shipped two wrong ones
+        # (rfc-9679, draft-ietf-cbor-serialization), each caught only because a
+        # later extraction pass happened to recompute it. In a library that
+        # holds digests and URLs INSTEAD of documents, this is the one field
+        # whose wrongness defeats the whole arrangement \u2014 a reader cannot tell
+        # a typo from a substituted source. Prefixes are allowed because the
+        # table elides (`f6b460e38ba1\u2026`); a prefix that does not match the
+        # recorded digest is an error, not a warning.
+        # Scoped to the metadata table's Digest row ONLY. Prose may legitimately
+        # quote a superseded digest \u2014 the IANA registry summaries do exactly
+        # that when explaining that a live registry moved under its pinned hash
+        # \u2014 so checking every backticked hex string in the file reports those
+        # as errors. The table row is the one place that must state the digest
+        # this record currently cites.
+        recorded = str((d.get("content") or {}).get("sha256") or "")
+        if recorded and sm.exists():
+            row = re.search(r"^\|\s*\*\*Digest\*\*\s*\|([^|]*)\|", sm.read_text(), re.M)
+            if row:
+                m = re.search(r"`(?:sha-?256:)?([0-9a-f]{8,64})[\u2026.]*`", row.group(1))
+                if m and not recorded.startswith(m.group(1)):
+                    errs.append(
+                        f"{where}: summary.md's Digest row says {m.group(1)[:16]}\u2026 but "
+                        f"content.sha256 is {recorded[:16]}\u2026 \u2014 copy it, never retype it"
+                    )
         for f in rec.parent.rglob("*"):
             if f.suffix.lower() in {".pdf", ".xlsx", ".epub", ".docx", ".zip"}:
                 errs.append(f"{where}: third-party file committed ({f.name}) — record the digest, not the bytes")
