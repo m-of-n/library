@@ -1,0 +1,129 @@
+record: rfc-9053
+reviewed_by: ""
+note: >
+  RFC 9053 defines NO message lifecycle — see distillation.not_applicable for
+  protocol, and §6.3.1's own "COSE is not an online protocol by itself". What it
+  does define is a KEY-USAGE lifecycle: counter-driven limits that oblige a
+  rekey, plus one trust transition. That is why this artifact exists rather
+  than being declared not applicable, and it is the only record in library#39's
+  Tier 1 set for which that is true.
+
+  Every state and transition below is drawn from a statement captured in
+  normative.md and requirements.yaml. Nothing here is a state the document
+  names as such: RFC 9053 states obligations about counters and thresholds, and
+  this rendering of them as a machine is OURS. Treat it as derived.
+
+machines:
+  - name: key-usage-lifecycle
+    scope: "a single symmetric key, or a single key-wrapping/derivation key"
+    locator: "§4.1.1, §4.2.1, §4.3.1, §6.1.1.1, §6.1.2.1, §6.2.1.1, §11"
+    derived: true
+    derivation_note: >
+      RFC 9053 never draws this machine. It states per-algorithm ceilings and
+      thresholds as obligations on an implementation; the states, the ordering
+      between them and the names are this extraction's rendering.
+    states:
+      - name: fresh
+        meaning: "key established, usage counters at zero"
+      - name: in-use
+        meaning: "below every advisory threshold and every hard ceiling"
+      - name: threshold-exceeded
+        meaning: >
+          an advisory threshold is crossed. The document recommends rekeying
+          but does not forbid continued use, so this state is distinct from
+          ceiling-exceeded.
+      - name: ceiling-exceeded
+        meaning: >
+          a hard BCP 14 limit is crossed. Encryption under this key is
+          forbidden from here on, so a conforming implementation cannot
+          remain in this state and keep encrypting.
+      - name: retired
+        meaning: "key withdrawn from use; successor established out of band"
+    transitions:
+      - from: fresh
+        to: in-use
+        trigger: "first protected message"
+        guard: none
+      - from: in-use
+        to: threshold-exceeded
+        trigger: "message or failed-decryption counter crosses an advisory threshold"
+        guard: >
+          AES-GCM: 2^24.5 and 2^36 failed decryptions. AES-CCM: 2^23 / 2^23.5,
+          and rekeying as often as every 2^7 messages at a 64-bit tag.
+          ChaCha20/Poly1305: 2^36 / 2^64.
+        locator: "§4.1.1, §4.2.1, §4.3.1"
+        constrained_by: []
+        note: "advisory in the source's own lowercase prose, not BCP 14"
+      - from: in-use
+        to: ceiling-exceeded
+        trigger: "message or operation counter crosses a hard limit"
+        guard: >
+          §4.1.1 — the total number of messages encrypted for a single key
+          MUST NOT exceed 2^32. §4.2.1 — MUST NOT exceed 2^61 block-cipher
+          operations.
+        locator: "§4.1.1, §4.2.1"
+        constrained_by:
+          - "rfc-9053#R-0066"
+          - "rfc-9053#R-0079"
+        note: >
+          These are the only two BCP 14 statements in the machine. Everything
+          else here is lowercase prose.
+      - from: threshold-exceeded
+        to: retired
+        trigger: "rekey"
+        guard: "recommended, not required"
+        locator: "§6.1.1.1, §6.1.2.1, §6.2.1.1"
+      - from: ceiling-exceeded
+        to: retired
+        trigger: "rekey"
+        guard: "required — further encryption under this key is forbidden"
+        locator: "§4.1.1, §4.2.1"
+    error_states:
+      - name: unrekeyable
+        meaning: >
+          A ceiling is crossed and no party can trigger the rekey. §11: "it may
+          be that no one single entity will see all of the messages that are
+          encrypted, and therefore no single entity can trigger the rekey
+          operation." The document names this hazard for group keys and offers
+          no mechanism, so it is a terminal error state of the source's own
+          making, not of this rendering.
+        locator: "§11"
+
+  - name: key-trust-promotion
+    scope: "a key moving between trust levels"
+    locator: "§6.3.1.1"
+    derived: true
+    derivation_note: >
+      One sentence in the source, rendered as a two-state transition. The
+      document defines no trust model, no actor and no verification procedure
+      for this — only that proof of possession is recommended at the boundary.
+    states:
+      - name: untrusted
+        meaning: "key held but not relied on"
+      - name: trusted
+        meaning: "key relied on"
+    transitions:
+      - from: untrusted
+        to: trusted
+        trigger: "proof of possession of the private key"
+        guard: "recommended"
+        locator: "§6.3.1.1"
+        note: >
+          Verbatim: a proof of possession of the private key is recommended
+          "when a key is moved from untrusted to trusted". This is the only
+          genuine state transition the document names in those words.
+
+gaps:
+  - note: "No state is named as a state anywhere in RFC 9053; both machines are ours."
+  - note: >
+      The rotation statements (§6.1.1.1, §6.1.2.1, §6.2.1.1) say keys and shared
+      secrets "need to have some method of being regularly updated over time"
+      and that an unused secret "should still be subject to scheduled rotation"
+      — without naming a period, a counter or a responsible party. So the
+      threshold-exceeded -> retired transition has no trigger the document
+      defines; only a duty it asserts.
+  - note: >
+      Nothing connects the counters to a carrier. COSE messages carry no
+      sequence number and no key-usage counter, so an implementation obliged
+      not to exceed 2^32 messages has no field in which to track it. That is
+      the mechanism gap behind the `unrekeyable` error state.

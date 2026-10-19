@@ -40,6 +40,22 @@ CASES = [
                        {"id": "rfc-8949#R-0002", "verb": "MAY"}]}),
     ("nested maps survive", "relations:\n  see_also:\n    - x\n    - y\n",
      {"relations": {"see_also": ["x", "y"]}}),
+    # library#39: a block scalar on the FIRST key of a sequence item raised
+    # "unexpected indent". _map_into handled it for every LATER key, so
+    # `- name: a` + `note: >` parsed while `- note: >` did not — the branch was
+    # simply missing from parse_list. bin/_yaml.py had it right.
+    ("block scalar as a sequence item's first key",
+     "gaps:\n  - note: >\n      one two\n      three\n",
+     {"gaps": [{"note": "one two three"}]}),
+    ("block scalar as a later key still works",
+     "items:\n  - name: a\n    note: >\n      x y\n",
+     {"items": [{"name": "a", "note": "x y"}]}),
+    ("literal block scalar as a first key",
+     "gaps:\n  - note: |-\n      line one\n      line two\n",
+     {"gaps": [{"note": "line one\nline two"}]}),
+    ("a plain value that merely starts with > is not a block scalar",
+     "gaps:\n  - note: >text\n",
+     {"gaps": [{"note": ">text"}]}),
 ]
 
 fail = 0
@@ -60,10 +76,27 @@ AGREE = [
     'n: "a # b"   # trailing\n',
     "u: https://x.org/a#frag\n",
     "t: ends in a word # then a comment\n",
+    # Both readers must also agree about where a block scalar may start.
+    "gaps:\n  - note: >\n      one two\n",
+    "items:\n  - name: a\n    note: >\n      x y\n",
 ]
+def _norm(v):
+    """Compare structure and text, not chomping or scalar typing.
+
+    The two readers differ on both by design: _yaml keeps a folded scalar's
+    trailing newline and returns every scalar as a string, _record_yaml strips
+    and coerces. Neither is what these cases test.
+    """
+    if isinstance(v, dict):
+        return {k: _norm(x) for k, x in v.items()}
+    if isinstance(v, list):
+        return [_norm(x) for x in v]
+    return str(v).strip()
+
+
 for src in AGREE:
-    a = {k: str(v) for k, v in parse(src).items()}
-    b = {k: str(v) for k, v in miniyaml(src).items()}
+    a = _norm(parse(src))
+    b = _norm(miniyaml(src))
     if a != b:
         fail += 1
         print(f"FAIL parsers disagree on {src!r}\n  _record_yaml {a!r}\n  _yaml        {b!r}")

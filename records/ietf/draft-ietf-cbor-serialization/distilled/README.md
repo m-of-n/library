@@ -11,11 +11,16 @@ reviewed_by: ""
 FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what
 it does not.
 
-**State: pass 1 of 3 complete.** The extract pass ran at effort max, agents in
-parallel, each reading only `.cache/draft-ietf-cbor-serialization.txt`. **The
-verify and cross-check passes have NOT run**, so this record carries no
-`profile` — an unfinished extraction is neither `full` nor `partial`. It is
-readable; nothing may be built on it. library#39 owns finishing it.
+**State: passes 1 and 2 of 3 complete.** The extract pass ran at effort max,
+agents in parallel, each reading only
+`.cache/draft-ietf-cbor-serialization.txt`. The **verify** pass (2026-10-19,
+effort max) re-derived the keyword reconciliation, every quotation and
+locator, every fenced and verbatim block, and all 105 vectors from the cached
+source alone, and corrected four pass-1 claims — see `record.yaml`'s
+`distillation.passes`. **The cross-check pass has NOT run**, so this record
+still carries no `profile` — an unfinished extraction is neither `full` nor
+`partial`. It is readable; nothing may be built on it. library#39 owns
+finishing it.
 
 Source: *CBOR Serialization and Determinism*, `draft-ietf-cbor-serialization-08`.
 This record's `usefulness.reason` calls it "the live WG determinism work and
@@ -24,8 +29,8 @@ repo* below.
 
 | kind | file | coverage |
 |---|---|---|
-| normative | `normative.md` | statements and verbatim blocks across the source's own section structure. Not yet re-derived by a verify pass |
-| requirements | `requirements.yaml` | 100 entries, `R-0001`–`R-0100`, source order: 65 `stated` carrying all 65 BCP 14 occurrences (41 MUST, 8 MAY, 7 RECOMMENDED, 4 SHOULD, 4 MUST NOT, 1 NOT RECOMMENDED), 35 `inferred` carrying none. Counts reconcile 65 = 65. Three sentences carry two occurrences each for two different actors and are quoted as two non-overlapping clauses rather than twice in full, which would have double-counted |
+| normative | `normative.md` | statements and verbatim blocks across the source's own section structure. Re-derived by the verify pass: 294 inline quotations all contiguous and correctly located, 36 fenced blocks each byte-exact and uniquely placed, no quotation crossing a page boundary and none spliced |
+| requirements | `requirements.yaml` | 100 entries, `R-0001`–`R-0100`, source order: 65 `stated` carrying all 65 BCP 14 occurrences (41 MUST, 8 MAY, 7 RECOMMENDED, 4 SHOULD, 4 MUST NOT, 1 NOT RECOMMENDED), 35 `inferred` carrying none. Counts reconcile 65 = 65, and the verify pass matched each of the 65 source occurrences, by line, to exactly one `stated` entry — none unclaimed, none claimed twice. Two sentences carry two occurrences each for two different actors and are quoted as two non-overlapping clauses rather than twice in full, which would have double-counted |
 | schema | `schema/` | 3 verbatim, 3 derived — see below |
 | messages | `messages.yaml` | 19 structures, 49 `constrained_by` links over 25 distinct requirement ids, every id verified to exist. Linked only where §4.1/§4.2/§5.1 item numbering maps one-to-one; omitted elsewhere. The map key comparison is spelled out byte by byte |
 | examples | `examples/` | 105 vectors, **every hex string the source's own, none computed by us**. 41 valid / 64 invalid under preferred-plus; `conformance` carries all three serializations. See `examples/README.md` |
@@ -67,13 +72,20 @@ Reported, never repaired. Two are substantive:
    `0xc24100`/`0xc240` as the encodings of 0. The bullet's point survives (−1
    is also major-type-representable) but the value as printed is wrong.
 2. **The conformance corpus cannot distinguish the required sort order from the
-   rejected one.** Measured, not guessed: of 16 map encodings, bytewise order
-   and RFC 7049 §3.9 length-first order disagree on exactly **one**, and that
-   one encoding is rejected by both serializations anyway for its indefinite
-   framing. All 12 preferred-plus-valid map encodings have equal-length keys.
-   **A library implementing the rejected length-first sort passes the entire
-   suite.** This is the single most useful thing in the extraction for anyone
-   relying on the corpus to prove an implementation correct.
+   rejected one.** Measured, not guessed: the document prints **16** map
+   encodings in all, and on the sort key §5.1 item 2 actually names — "their
+   deterministic encodings of the map keys" — bytewise order and RFC 7049 §3.9
+   length-first order agree on **all 16, zero disagreements**. Every key in the
+   document encodes to 1 byte (the integers 1, 2, 3 in `map.edn`) or 4 bytes
+   (the strings "abc", "def", "ghi" in `map_strings.edn`), and equal-length
+   keys collapse length-first sorting onto its bytewise tiebreak. **A library
+   implementing the rejected length-first sort passes the entire suite.** This
+   is the single most useful thing in the extraction for anyone relying on the
+   corpus to prove an implementation correct. (Pass 1 reported one
+   disagreement; the verify pass could reproduce that only by sorting key bytes
+   *as printed* instead of their deterministic encodings — see
+   `examples/README.md`, which keeps that encoding as the one place a naive
+   encoder would diverge. The correction strengthens the finding.)
 3. Appendix F's `bnbstr = bstr .size (8..bnmax)` is one byte too loose: no
    8-byte big-number content can occur in preferred-plus, so the floor is 9 —
    as the document's own `h'c349010000000000000000'` demonstrates.
@@ -102,10 +114,23 @@ Reported, never repaired. Two are substantive:
 ## One finding for the COSE export lane
 
 **The structure most often cited as the reason to implement deterministic
-serialization does not need it.** Appendix K.2: the `Sig_structure` is "also
-effectively equivalent to preferred-plus serialization as defined in Section 4,
-because the Sig_structure contains no maps." A preferred-plus encoder suffices
-there, and the deterministic mode buys nothing for it.
+serialization does not need it.** Appendix K.2, of COSE's own
+deterministic-encoding requirement (RFC 9052 §9) as it bears on the
+`Sig_structure`: "This COSE requirement is effectively equivalent to the
+deterministic serialization defined in Section 5, since no floating-point NaNs
+are involved. It is also effectively equivalent to preferred-plus serialization
+as defined in Section 4, because the Sig_structure contains no maps." A
+preferred-plus encoder suffices there, and the deterministic mode buys nothing
+for it. The verify pass confirmed the quotation and the reasoning: RFC 9052
+§4.4's `Sig_structure` is an array of a text string and byte strings — the
+protected headers enter it as `empty_or_serialized_map`, a **byte string**
+holding an encoded map, not a map — so the one rule deterministic adds over
+preferred-plus has nothing in it to bite on, and the document says as much two
+paragraphs later ("determinism requirements do not extend into CBOR inside of
+byte strings"). Note the subject of the quoted sentence is the COSE
+*requirement*, not the structure; a gloss that says "the `Sig_structure` is
+equivalent to preferred-plus serialization" compares a structure to a
+serialization and should not be repeated downstream.
 
 ## A contradiction in our own repo
 

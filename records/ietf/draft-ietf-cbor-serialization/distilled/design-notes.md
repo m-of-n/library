@@ -209,7 +209,7 @@ are fundamentally inadequate and represent a security risk."
 We adopt the *term*; we do not adopt its optionality (see *What we reject*).
 
 **§9.1's covert-channel analysis, as the security framing for conditions (5) and
-(6).** "CBOR's serialization variants can be used as a covert channel [LAM73] to
+(6).** "CBOR’s serialization variants can be used as a covert channel [LAM73] to
 steganographically exfiltrate data." Its list includes "Manipulating the
 ordering of map entries" and "Varying the Unicode representation of text
 strings". This is the first document we hold that prices non-canonical variance
@@ -477,7 +477,13 @@ as `draft-ietf-cbor-cde`'s recommendation with a different second part.**
 > 3. **It is the live document, and the one with running test vectors.**
 >    Appendix L is 25 example files with `general` / `preferred-plus` /
 >    `deterministic` encodings for each, published at `[Examples-Repo]`. CDE
->    expired; dCBOR is excluded by `ADR-0001`.
+>    expired; dCBOR is excluded by `ADR-0001`. **But the corpus does not prove
+>    the one rule we are buying.** Every map key in all 25 files encodes to the
+>    same length within its map, so the required bytewise sort and the RFC 7049
+>    length-first sort this draft rules out by name agree on all 16 map
+>    encodings — an implementation of the *wrong* order passes the whole suite
+>    (`examples/README.md`). Condition (1) still needs a fixture of our own with
+>    keys of differing encoded length.
 > 4. **It is better placed than dCBOR on the DEC-002 "library availability"
 >    driver, at the profile layer where it is actually paid.** §2.2.1: "It is
 >    also RECOMMENDED that CBOR libraries support deterministic serialization

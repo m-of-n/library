@@ -44,7 +44,7 @@ So a bare valid/invalid verdict would be meaningless. Each vector carries:
 | `conformance.preferred_plus` | same as `expect` |
 | `conformance.deterministic` | preferred-plus **plus** map key ordering |
 | `violates` | why `expect` is `invalid`, cited by section. Present on every `invalid` |
-| `violates_deterministic` | present only where deterministic rejects what preferred-plus accepts — which can be for exactly one reason, §5.1 item 2 |
+| `violates_deterministic` | present wherever deterministic serialization rejects for §5.1 item 2, the one rule it adds. On the **10** vectors preferred-plus accepts it is the sole reason for rejection; on V-0052 and V-0053 it is an *additional* reason alongside `violates`, because those two maps are unsorted as well as ill-framed. 12 vectors carry the field, 10 of them the preferred-plus/deterministic delta |
 
 The split:
 
@@ -145,20 +145,38 @@ general CBOR test coverage" (Appendix L.1). Specifically absent:
   precision-irreducible float lives in §4.1 prose and is V-0010 here. The
   Appendix L.2 double vector (`1.7976931348623157e+308`) is irreducible for
   *range* instead, which exercises a different branch of Appendix D's code.
-- **No conforming map with keys of differing encoded length — so the corpus
-  cannot tell the right sort order from the wrong one.** This is the sharpest
-  gap in the set, and it was measured rather than guessed. §5.1 item 2 goes out
-  of its way to say which sort it is *not* ("not the same as Section 3.9 of
-  [RFC7049] / Section 4.2.3 of [STD94]", the length-first order), yet of the 16
-  map encodings in the document the two orders disagree on exactly **one** —
+- **No map anywhere in the document has keys of differing encoded length — so
+  the corpus cannot tell the right sort order from the wrong one.** This is the
+  sharpest gap in the set, and it was measured rather than guessed, twice.
+  §5.1 item 2 goes out of its way to say which sort it is *not* ("not the same
+  as Section 3.9 of [RFC7049] / Section 4.2.3 of [STD94]", the length-first
+  order), and the sort key it names is "their deterministic encodings of the
+  map keys". Taking it at its word: the document prints **16** map encodings in
+  all, every one of them in Appendix L.2, and their keys are the integers 1, 2,
+  3 (deterministic encodings `01`, `02`, `03` — 1 byte each) and the strings
+  "abc", "def", "ghi" (`63616263`, `63646566`, `63676869` — 4 bytes each). Keys
+  of equal length make length-first sorting degenerate to its bytewise
+  tiebreak, so bytewise order and RFC 7049 length-first order agree on **all
+  16, with zero disagreements**, and both pick the same single deterministic
+  encoding for map.edn and for map_strings.edn. All 12 preferred-plus-valid map
+  encodings have equal-length keys (1 byte in map.edn, 4 in map_strings.edn);
+  so do the 4 that preferred-plus rejects. **A library that implements the
+  RFC 7049 length-first sort passes this entire test suite.**
+
+  Pass 1 reported *one* disagreement here. The verify pass could reproduce that
+  number only by sorting each key's bytes **as printed** rather than its
+  deterministic encoding, which is not what §5.1 item 2 says and not what
+  RFC 7049 §3.9 means either — §3.9 is part of Canonical CBOR, which already
+  requires the shortest form of every key. Under that other reading the one
+  encoding on which the orders differ is
   `bf7f6161626263ff017f6264656166ff027f63676869ff03ff` (map_strings.edn), whose
-  keys are indefinite-length text strings of 7, 7 and 6 bytes. And that
-  encoding is rejected by both preferred-plus and deterministic serialization
-  anyway, for its indefinite framing (§4.1 items 2 and 3), so no conformance
-  test built from these fixtures ever reaches the distinction. All 12
-  preferred-plus-valid map encodings have keys of equal length (1 byte in
-  map.edn, 4 in map_strings.edn). **A library that implements the RFC 7049
-  length-first sort passes this entire test suite.**
+  keys are printed as indefinite-length text strings of 7, 7 and 6 bytes; it is
+  rejected by both preferred-plus and deterministic serialization anyway, for
+  its indefinite framing (§4.1 items 2 and 3). Worth keeping as the one place
+  where a naive encoder sorting raw key bytes would diverge, but it is not a
+  counterexample under the rule as written — and the corrected count makes the
+  finding stronger, not weaker: there is no map encoding in the document, valid
+  or invalid, on which the required order and the rejected order differ.
 - **No duplicate-key vector**, because the document states no duplicate-key
   rule (see the schema README).
 - **No Unicode vector.** §9.1 lists "Varying the Unicode representation of text

@@ -1,0 +1,1713 @@
+# =====================================================================
+# rfc-9053 structures and algorithms.
+#
+# RFC 9053 defines no messages. Its messages are RFC 9052's. What it
+# defines is (a) a handful of CBOR structures and (b) 43 algorithm code
+# points with the key type, curve, sizes and header parameters each one
+# requires. Both are captured here: the twelve structures first, in
+# source order, then every algorithm, in source order.
+#
+# An algorithm is treated as a structure whose `fields` are the things
+# an implementation must get right to use it: the `alg` value itself,
+# the key type and curve it demands, key / nonce / tag sizes, and the
+# header parameters it uses. `required` is read against the document's
+# own "When using a COSE key for this algorithm, the following checks
+# are made" bullets, which differ between algorithms in ways the
+# summary tables hide -- EdDSA requires `crv`, ECDSA does not.
+#
+# CBOR head bytes marked (OURS) are computed by this library under
+# RFC 8949 section 3.1. RFC 9053 prints decimal code points only and
+# prints no byte encoding of any algorithm identifier anywhere.
+#
+# QUOTATION RULE. Text inside double quotes is contiguous in the source
+# and copied exactly; an ellipsis (...) marks elided text between two
+# contiguous spans. Table DESCRIPTION-column text is NOT quoted: those
+# cells wrap down three or four physical lines, so reassembling one
+# reads as a quotation while being a splice. Such text is marked
+# "glossed not quoted" and given in lower case.
+#
+# `constrained_by` is omitted throughout. The requirement ids live in
+# requirements.yaml, written in parallel by another agent in this same
+# pass; this extraction cannot know which R-NNNN a given bullet took
+# without inventing it, and docs/extraction.md pass 3 is where
+# requirements <-> messages are cross-checked. Section locators are
+# exact and are the join key until then.
+#
+# Boundary: labels 1 (alg), 2 (crit), 3 (content type), 4 (kid),
+# 5 (IV), 6 (Partial IV) and the generic COSE_Key common parameters are
+# RFC 9052 section 3.1 and section 7, NOT RFC 9053. Where an algorithm
+# needs one, it is named as RFC 9052's.
+#
+# Source: RFC 9053, cached source sha256
+#   3d470615875620375f8453ba25b8dce7e4d0271e76b0b79a46df34ccb2d56ab0
+# =====================================================================
+record: rfc-9053
+reviewed_by: ""
+messages:
+
+  # ===================================================================
+  # Part 1 -- structures
+  # ===================================================================
+
+  - name: ecdsa-signature-value
+    locator: "§2.1"
+    encoding: CBOR
+    fields:
+      - name: r
+        type: 'byte string (unsigned integer, big-endian)'
+        required: true
+        layout: 'I2OSP(R, n) where n = ceiling(key_length / 8). "The length is rounded up to the nearest byte and is left padded with zero bits to get to the correct length."'
+      - name: s
+        type: 'byte string (unsigned integer, big-endian)'
+        required: true
+        layout: 'I2OSP(S, n), same n as r.'
+    layout: 'A single CBOR bstr holding r || s, no separator, no ASN.1, no DER. The RFC prints the formula "Signature = I2OSP(R, n) | I2OSP(S, n)" / "where n = ceiling(key_length / 8)" and prints NO sizes. Applying the formula to the three curves the section admits gives n = 32 / 48 / 66 and total signature lengths of 64 / 96 / 132 bytes for P-256 / P-384 / P-521 (OURS -- arithmetic, not printed by the document).'
+    notes: 'The 132-byte P-521 case is the one implementations get wrong: ceiling(521/8) = 66, not 64 and not 65. The document does not warn about it. Nothing here is a CBOR tag or an ASN.1 SEQUENCE -- an exporter that hands COSE a DER-encoded ECDSA signature from a general-purpose crypto library produces an invalid COSE signature that most verifiers will reject with no diagnostic.'
+
+  - name: eddsa-signature-value
+    locator: "§2.2"
+    encoding: CBOR
+    fields:
+      - name: signature
+        type: 'byte string'
+        required: true
+        layout: 'Per RFC 8032. RFC 9053 states no length and no internal layout.'
+    layout: 'A single CBOR bstr. The whole of what RFC 9053 says is: "[RFC8032] describes the method of encoding the signature value."'
+    notes: 'DEFECT for an extraction that wants self-contained fixtures: unlike ECDSA, where section 2.1 gives the encoding in full, the EdDSA signature encoding is entirely by reference. Any byte length stated for Ed25519 or Ed448 is quoted from RFC 8032 and must not be attributed to RFC 9053. Also from section 2.2: "For EdDSA, the content to be signed (either the message or the prehash value) is processed twice inside of the signature algorithm" -- two passes over the payload, which matters for large payloads.'
+
+  - name: party-info
+    locator: "§5.2"
+    encoding: CBOR
+    fields:
+      - name: identity
+        type: 'bstr / nil'
+        required: true
+        layout: 'Position 0. "The identity information does not need to be specified and is set to nil in that case." Carried in the message, if at all, by the PartyU/PartyV identity header parameters (-21 / -24).'
+      - name: nonce
+        type: 'bstr / int / nil'
+        required: true
+        layout: 'Position 1. "This option does not need to be specified; if not needed, it is set to nil." Carried by the PartyU/PartyV nonce header parameters (-22 / -25).'
+      - name: other
+        type: 'bstr / nil'
+        required: true
+        layout: 'Position 2. "This contains other information that is defined by the protocol. This option does not need to be specified; if not needed, it is set to nil."'
+    layout: 'A CDDL group of three positional entries, spliced into COSE_KDF_Context inside its own array: "PartyUInfo : [ PartyInfo ]". All three are PRESENT ALWAYS -- unused elements are nil, not absent. The document is explicit that order is fixed: "The elements of PartyUInfo are encoded in the order presented below."'
+    notes: 'The only structure in RFC 9053 that ships as CDDL (schema/kdf-context.cddl, verbatim). Note that the CDDL alone does not say the unused elements are nil rather than omitted; that is the section 5.2 prose, and a CDDL-only reading admits a shorter array.'
+
+  - name: cose-kdf-context
+    locator: "§5.2"
+    encoding: CBOR
+    fields:
+      - name: algorithm_id
+        type: 'int / tstr'
+        required: true
+        layout: 'Position 0. "The values are from the "COSE Algorithms" registry. This field is required to be present." Normally a key wrap or content encryption algorithm identifier; also 34 (IV-GENERATION) when the KDF is generating an IV (§6.1.2).'
+      - name: party_u_info
+        type: '[ PartyInfo ]'
+        required: true
+        layout: 'Position 1. A 3-element array. "Unless the application protocol defines differently, we assign PartyU to the entity that is creating the message".'
+      - name: party_v_info
+        type: '[ PartyInfo ]'
+        required: true
+        layout: 'Position 2. A 3-element array. PartyV is "the entity that is receiving the message". "By defining this association, different keys will be derived for each direction".'
+      - name: supp_pub_info
+        type: '[ keyDataLength: uint, protected: empty_or_serialized_map, ? other: bstr ]'
+        required: true
+        layout: 'Position 3. keyDataLength "is set to the number of bits of the desired output value". protected "contains the protected parameter field. If there are no elements in the "protected" field, then use a zero-length bstr." other is "free-form data defined by the application", optional.'
+      - name: supp_priv_info
+        type: 'bstr'
+        required: false
+        layout: 'Position 4, optional. "mutually known private information. An example of this information would be a pre-existing shared secret."'
+    layout: 'CBOR array of 4 or 5 elements. This is the ONE structure in COSE that RFC 9053 §9 requires to be deterministically encoded: "The restriction applies to the encoding of the COSE_KDF_Context." It is never transmitted -- it is the input to HKDF, built independently by both parties, which is why byte agreement is load-bearing here and nowhere else in this document.'
+    notes: 'Based on SP 800-56A. §5.2 argues the CBOR advantage over JOSE explicitly: "By using CBOR for the encoding of the context information structure, we automatically get the same type and length separation of fields that is obtained by the use of ASN.1. This means that there is no need to encode the lengths for the base elements, as it is done by the encoding used in JSON Object Signing and Encryption (JOSE) (Section 4.6.2 of [RFC7518])." AMBIGUITY: `empty_or_serialized_map` is used and never defined in RFC 9053; it is RFC 9052 §3.'
+
+  - name: cose-key-ec2
+    locator: "§7.1.1 (Table 19)"
+    encoding: CBOR
+    fields:
+      - name: kty
+        type: 'int / tstr'
+        required: true
+        layout: 'Label 1 (RFC 9052 §7). Value 2 for EC2 (§7 Table 17). CBOR 0x01 => 0x02 (OURS).'
+      - name: crv
+        type: 'int / tstr'
+        required: true
+        layout: 'Label -1 (CBOR 0x20, OURS). Table 19 Description column, glossed not quoted (the cell wraps): EC identifier, taken from the "COSE Elliptic Curves" registry. P-256 = 1, P-384 = 2, P-521 = 3 (Table 18). REQUIRED in both the public and private forms.'
+      - name: x
+        type: 'bstr'
+        required: true
+        layout: 'Label -2 (CBOR 0x21, OURS). "This contains the x-coordinate for the EC point. The integer is converted to a byte string as defined in [SEC1]. Leading-zero octets MUST be preserved." REQUIRED for public keys; RECOMMENDED but omittable for private keys.'
+      - name: y
+        type: 'bstr / bool'
+        required: true
+        layout: 'Label -3 (CBOR 0x22, OURS). Two encodings in one label: the full y-coordinate as a SEC1 bstr with leading zeros preserved, OR point compression as a CBOR bool -- "If the sign bit is zero, then encode y as a CBOR false value; otherwise, encode y as a CBOR true value." "The encoding of the infinity point is not supported." REQUIRED for public keys; RECOMMENDED but omittable for private keys.'
+      - name: d
+        type: 'bstr'
+        required: false
+        layout: 'Label -4 (CBOR 0x23, OURS). "This contains the private key." REQUIRED for private keys, absent from public keys.'
+    layout: 'A COSE_Key map (RFC 9052 §7) with kty = 2. Public form: crv, x, y REQUIRED. Private form: crv, d REQUIRED, with x and y RECOMMENDED "but they can be recomputed from the required elements, and omitting them saves on space". A bool at label -3 is NOT a type error -- it is compressed point encoding, and a validator that types -3 as bstr alone rejects conforming keys.'
+    notes: '§7.1: "Applications MUST check that the curve and the key type are consistent and reject a key if they are not." §7.1.1 notes the IPR history behind compressed points: "The latter encoding has not been recommended by the IETF due to potential IPR issues. However, for operations in constrained environments, the ability to shrink a message by not sending the y-coordinate is potentially useful." Point validation IS possible for EC2 -- §6.3.1.1: "For the "EC2" key format, this can be done by checking that the x and y values form a point on the curve."'
+
+  - name: cose-key-okp
+    locator: "§7.2 (Table 20)"
+    encoding: CBOR
+    fields:
+      - name: kty
+        type: 'int / tstr'
+        required: true
+        layout: 'Label 1 (RFC 9052 §7). Value 1 for OKP (§7 Table 17). CBOR 0x01 => 0x01 (OURS).'
+      - name: crv
+        type: 'int / tstr'
+        required: true
+        layout: 'Label -1. X25519 = 4, X448 = 5, Ed25519 = 6, Ed448 = 7 (Table 18). REQUIRED in both forms.'
+      - name: x
+        type: 'bstr'
+        required: true
+        layout: 'Label -2. "This contains the public key. The byte string contains the public key as defined by the algorithm. (For X25519, internally it is a little-endian integer.)" REQUIRED for public keys; RECOMMENDED but omittable for private keys. §10.3: IANA changed this row''s registry description to "Public Key".'
+      - name: d
+        type: 'bstr'
+        required: false
+        layout: 'Label -4. "This contains the private key." REQUIRED for private keys.'
+    layout: 'A COSE_Key map with kty = 1. THERE IS NO y AND NO LABEL -3. Public form: crv, x. Private form: crv, d (+ optional x). Label -3 in an OKP key is undefined by this document.'
+    notes: '§7.2 warns against reading the name: "Do not assume that keys using this type are elliptic curves. This key type could be used for other curve types (for example, mathematics based on hyper-elliptic surfaces)." Two hazards the document states and does not solve: (1) §6.3.1.1 -- "For the "OKP" format, there is no simple way to perform point validation." (2) §2.2.1 -- "Public values are computed differently in EdDSA and Elliptic Curve Diffie-Hellman (ECDH); for this reason, the public key from one should not be used with the other algorithm." Nothing in the key structure enforces (2) except `crv`: Table 18 binds 4/5 to ECDH and 6/7 to EdDSA, and `crv` is the only field that distinguishes an Ed25519 key from an X25519 key of the same length.'
+
+  - name: cose-key-symmetric
+    locator: "§7.3 (Table 21)"
+    encoding: CBOR
+    fields:
+      - name: kty
+        type: 'int / tstr'
+        required: true
+        layout: 'Label 1 (RFC 9052 §7). Value 4 for Symmetric (§7 Table 17). CBOR 0x01 => 0x04 (OURS).'
+      - name: k
+        type: 'bstr'
+        required: true
+        layout: 'Label -1 (CBOR 0x20, OURS). "This contains the value of the key." REQUIRED.'
+    layout: 'A COSE_Key map with kty = 4 and exactly one key-type member. Note the label collision: -1 is `k` here and `crv` in both other key types.'
+    notes: '§7.3: "This key structure does not have a form that contains only public members. As it is expected that this key structure is going to be transmitted, care must be taken that it is never transmitted accidentally or insecurely." No key length is constrained by the structure -- length is constrained per algorithm (Tables 4, 5, 6, 7, 13) and by §3.1''s rule that a derived HMAC key MUST match the hash output size.'
+
+  - name: hkdf-header-parameters
+    locator: "§5.1 (Table 9)"
+    encoding: CBOR
+    fields:
+      - name: salt
+        type: 'bstr'
+        required: false
+        layout: 'Label -20 (CBOR 0x33, OURS). "Random salt". Applies to exactly fourteen algorithms, which Table 9 lists: direct+HKDF-SHA-256, direct+HKDF-SHA-512, direct+HKDF-AES-128, direct+HKDF-AES-256, ECDH-ES+HKDF-256, ECDH-ES+HKDF-512, ECDH-SS+HKDF-256, ECDH-SS+HKDF-512, ECDH-ES+A128KW, ECDH-ES+A192KW, ECDH-ES+A256KW, ECDH-SS+A128KW, ECDH-SS+A192KW, ECDH-SS+A256KW.'
+    layout: 'One entry in a recipient structure header map. §5.1: "This parameter is protected by being included in the key computation and does not need to be separately authenticated. The salt value does not need to be unique for every message sent."'
+    notes: 'Optional in the table, but §6.1.2 and §6.3.1 both make it conditionally mandatory: "Either the "salt" parameter for HKDF (Table 9) or the "PartyU nonce" parameter for the context structure (Table 10) MUST be present (both can be present if desired)." §5.1 on length: "While [RFC5869] suggests that the length of the salt be the same as the length of the underlying hash value, any positive salt length will improve the security".'
+
+  - name: context-header-parameters
+    locator: "§5.2 (Table 10)"
+    encoding: CBOR
+    fields:
+      - name: partyu_identity
+        type: 'bstr'
+        required: false
+        layout: 'Label -21 (CBOR 0x34, OURS). Table 10 Description column, glossed not quoted (the cell wraps): PartyU identity information.'
+      - name: partyu_nonce
+        type: 'bstr / int'
+        required: false
+        layout: 'Label -22 (CBOR 0x35, OURS). Table 10 Description column, glossed: PartyU provided nonce. The only parameter in this table with a two-type union.'
+      - name: partyu_other
+        type: 'bstr'
+        required: false
+        layout: 'Label -23 (CBOR 0x36, OURS). Table 10 Description column, glossed: PartyU other provided information.'
+      - name: partyv_identity
+        type: 'bstr'
+        required: false
+        layout: 'Label -24 (CBOR 0x37, OURS). Table 10 Description column, glossed: PartyV identity information.'
+      - name: partyv_nonce
+        type: 'bstr / int'
+        required: false
+        layout: 'Label -25 (CBOR 0x3818, OURS). Table 10 Description column, glossed: PartyV provided nonce. NOTE: -25 is also the `alg` VALUE ECDH-ES+HKDF-256 (Table 14).'
+      - name: partyv_other
+        type: 'bstr'
+        required: false
+        layout: 'Label -26 (CBOR 0x3819, OURS). Table 10 Description column, glossed: PartyV other provided information. NOTE: -26 is also the `alg` VALUE ECDH-ES+HKDF-512 (Table 14).'
+    layout: 'Six entries in a recipient structure header map; the same fourteen algorithms as Table 9. Each one feeds the corresponding positional slot of PartyUInfo / PartyVInfo in COSE_KDF_Context.'
+    notes: '§5.2 places them deliberately: "These header parameters are designed to be placed in the unprotected bucket of the recipient structure; they do not need to be in the protected bucket, since they are already included in the cryptographic computation by virtue of being included in the context structure." §5.2 also asks for validation the structure cannot enforce: "If identity information is carried in the message, applications SHOULD have a way of validating the supplied identity information."'
+
+  - name: ecdh-header-parameters
+    locator: "§6.3.1 (Table 15)"
+    encoding: CBOR
+    fields:
+      - name: ephemeral_key
+        type: 'COSE_Key'
+        required: true
+        layout: 'Label -1 (CBOR 0x20, OURS). Table 15 Description column, glossed not quoted (the cell wraps): ephemeral public key for the sender. Table 15 scopes it to ECDH-ES+HKDF-256, ECDH-ES+HKDF-512, ECDH-ES+A128KW, ECDH-ES+A192KW, ECDH-ES+A256KW. §6.3.1: it "MUST be present for all algorithm identifiers that use ephemeral keys". NOTE: -1 is also `crv` / `k` in a COSE_Key map.'
+      - name: static_key
+        type: 'COSE_Key'
+        required: false
+        layout: 'Label -2 (CBOR 0x21, OURS). Table 15 Description column, glossed: static public key for the sender. Scoped to the five ECDH-SS identifiers. NOTE: -2 is also `x` in a COSE_Key map.'
+      - name: static_key_id
+        type: 'bstr'
+        required: false
+        layout: 'Label -3 (CBOR 0x22, OURS). Table 15 Description column, glossed: static public key identifier for the sender. Scoped to the five ECDH-SS identifiers. NOTE: -3 is also `y` in an EC2 COSE_Key map.'
+    layout: 'Up to three entries in a recipient structure header map. A nested COSE_Key as a header VALUE -- the only place in RFC 9053 where a header parameter carries a whole key structure.'
+    notes: '§6.3.1 on static keys: "the static key should be identified to the recipient. The static key can be identified by providing either the key ("static key") or a key identifier for the static key ("static key id")." Lowercase "should", and the document never says the identifier is RFC 9052''s `kid`, nor how it is computed. DEFECT: a `bstr` identifier with no stated derivation is unverifiable -- see rfc-9679 (COSE Key Thumbprint) in this lane for the mechanism COSE later gave it.'
+
+  - name: algorithm-capabilities
+    locator: "§8, §8.1, §10.2"
+    encoding: CBOR
+    fields:
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'Position 0, the only element for every algorithm registered at the time of writing. §8.1: "the capabilities list is an array with one element, the key type (from the "COSE Key Types" Registry)."'
+    layout: 'A CBOR array. §8.1 scopes the one-element form to "the current set of algorithms in the registry other than IV-GENERATION (those in this document as well as those in [RFC8230], [RFC8778], and [RFC9021])", and §10.2 confirms the registry column "has been populated with "[kty]" for all current, nonprovisional registrations". IV-GENERATION''s column "is to be empty". Future registrations "could have zero, one, or multiple elements".'
+    notes: '§8 excludes the algorithm identifier itself: "The algorithm identifier is not included in the capabilities data, as it should be encoded elsewhere in the message." And it excludes key-specific items: "the items that are specific to a key (for example, a curve) should not be included in the algorithm capabilities. This means that if one wishes to enumerate all of the capabilities for a device that implements ECDH, it requires that all of the combinations of algorithms and key pairs be specified."'
+
+  - name: key-type-capabilities
+    locator: "§8.2, §10.1 (Table 22)"
+    encoding: CBOR
+    fields:
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'Position 0 always. §8: "For a key, the first element should be the key type value. While this means that the key type value will be duplicated if both an algorithm and key capability are used, the key type is needed in order to understand the rest of the values."'
+      - name: crv
+        type: 'int'
+        required: false
+        layout: 'Position 1 for kty 1 (OKP) and 2 (EC2) only. §8.2: "One curve for that key type from the "COSE Elliptic Curves" registry." ONE curve, not a list -- enumerating a device''s curves means one capability array per curve.'
+      - name: hash_algorithm
+        type: 'int'
+        required: false
+        layout: 'Position 1 for kty 5 (HSS-LMS) only. §8.2: "Algorithm identifier for the underlying hash function from the "COSE Algorithms" registry."'
+      - name: n_value
+        type: 'uint'
+        required: false
+        layout: 'Position 1 for kty 6 (WalnutDSA) only. §8.2: "The N value (group and matrix size) for the key, a uint."'
+      - name: q_value
+        type: 'uint'
+        required: false
+        layout: 'Position 2 for kty 6 (WalnutDSA) only. §8.2: "The q value (finite field order) for the key, a uint."'
+    layout: 'Six shapes, per §10.1 Table 22 as printed: 1 OKP [kty(1), crv]; 2 EC2 [kty(2), crv]; 3 RSA [kty(3)]; 4 Symmetric [kty(4)]; 5 HSS-LMS [kty(5), hash algorithm]; 6 WalnutDSA [kty(6), N value, q value]. Positional, with no discriminator other than position 0.'
+    notes: '§8 makes the list immutable on registration: "Once defined by registration with IANA, the list of capabilities for an algorithm or key type is immutable. If it is later found that a new capability is needed for a key type or algorithm, it will require that a new code point be assigned to deal with that." Table 22 covers kty 3, 5 and 6, which RFC 9053 itself does not define -- they come from RFC 8230, RFC 8778 and RFC 9021. The S/MIME ancestor is named in §8: SMIMECapabilities, RFC 8551 §2.5.2.'
+
+  # ===================================================================
+  # Part 2 -- signature algorithms (§2)
+  #
+  # Shared key checks, §2.1, for all three ECDSA identifiers:
+  #   "The "kty" field MUST be present, and it MUST be "EC2"."
+  #   "If the "alg" field is present, it MUST match the ECDSA signature
+  #    algorithm being used."
+  #   "If the "key_ops" field is present, it MUST include "sign" when
+  #    creating an ECDSA signature."
+  #   "If the "key_ops" field is present, it MUST include "verify" when
+  #    verifying an ECDSA signature."
+  # Note what is NOT among them: no requirement that `crv` be present.
+  # ===================================================================
+
+  - name: alg-es256
+    locator: "§2.1 (Table 1)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -7. CBOR 0x26 (OURS). Carried in the `alg` header parameter, RFC 9052 §3.1 label 1. Protected bucket, per §2.1.1.'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 2 (EC2). "This document requires that the curves be encoded using the "EC2" (two coordinate elliptic curve) key type."'
+      - name: crv
+        type: 'int'
+        required: false
+        layout: 'One of 1 (P-256), 2 (P-384), 3 (P-521) -- the document "defines ECDSA as working only with the curves P-256, P-384, and P-521". P-256 is SUGGESTED, lowercase, not required: "In order to promote interoperability, it is suggested that SHA-256 be used only with curve P-256". §2.1''s key-check bullets do not require `crv` to be present at all; §7.1.1 does, for the key structure.'
+      - name: hash
+        type: 'fixed'
+        required: true
+        layout: 'SHA-256, fixed by the identifier. "In the event that the length of the hash function output is greater than the group of the key, the leftmost bytes of the hash output are used."'
+      - name: signature
+        type: 'bstr'
+        required: true
+        layout: 'I2OSP(R, n) | I2OSP(S, n). With P-256, n = 32 and the signature is 64 bytes (OURS -- from the §2.1 formula; no size is printed).'
+      - name: key_ops
+        type: '[+ int / tstr]'
+        required: false
+        layout: 'If present MUST include "sign" when signing, "verify" when verifying.'
+      - name: algorithm_header_parameters
+        type: 'none'
+        required: false
+        layout: 'NONE. RFC 9053 defines no algorithm-specific header parameter for any signature algorithm.'
+    layout: 'Protected header {1: -7} = 0xa10126, wrapped as the COSE_Sign1 protected bstr 0x43a10126 (OURS -- computed under RFC 8949 §3.1; RFC 9053 prints no bytes).'
+    notes: '§2.1: "Implementations SHOULD use a deterministic version of ECDSA such as the one defined in [RFC6979]" -- SHOULD, not MUST, so byte-reproducible ES256 fixtures are not guaranteed by conformance. §2.1.1 names the mitigation for hash substitution: "As the hash algorithm is part of the signature algorithm identifier, this attack is mitigated by including a signature algorithm identifier in the protected-header bucket." Curve substitution has no mitigation: "We currently do not have any way to deal with this version of the attack except to restrict the overall set of curves that can be used."'
+
+  - name: alg-es384
+    locator: "§2.1 (Table 1)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -35. CBOR 0x3822 (OURS) -- two bytes, because -25 is the first negative value needing a one-byte argument.'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 2 (EC2).'
+      - name: crv
+        type: 'int'
+        required: false
+        layout: 'P-384 (2) suggested; P-256 (1) and P-521 (3) are not forbidden.'
+      - name: hash
+        type: 'fixed'
+        required: true
+        layout: 'SHA-384.'
+      - name: signature
+        type: 'bstr'
+        required: true
+        layout: 'With P-384, n = 48 and the signature is 96 bytes (OURS).'
+      - name: key_ops
+        type: '[+ int / tstr]'
+        required: false
+        layout: 'sign / verify as for ES256.'
+      - name: algorithm_header_parameters
+        type: 'none'
+        required: false
+        layout: 'NONE.'
+    layout: 'Protected header {1: -35} = 0xa1013822, as a bstr 0x44a1013822 (OURS).'
+    notes: 'Same §2.1 and §2.1.1 considerations as ES256. The code point -35 is numerically distant from -7 because ES384 and ES512 were allocated after the first COSE algorithm block.'
+
+  - name: alg-es512
+    locator: "§2.1 (Table 1)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -36. CBOR 0x3823 (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 2 (EC2).'
+      - name: crv
+        type: 'int'
+        required: false
+        layout: 'P-521 (3) suggested.'
+      - name: hash
+        type: 'fixed'
+        required: true
+        layout: 'SHA-512. The §2.1 truncation rule bites here: P-521''s group is smaller than SHA-512''s output in bits, so "the leftmost bytes of the hash output are used".'
+      - name: signature
+        type: 'bstr'
+        required: true
+        layout: 'With P-521, n = ceiling(521/8) = 66 and the signature is 132 bytes (OURS). Not 128, not 130.'
+      - name: key_ops
+        type: '[+ int / tstr]'
+        required: false
+        layout: 'sign / verify as for ES256.'
+      - name: algorithm_header_parameters
+        type: 'none'
+        required: false
+        layout: 'NONE.'
+    layout: 'Protected header {1: -36} = 0xa1013823, as a bstr 0x44a1013823 (OURS).'
+    notes: 'The 521-bit curve with a 512-bit hash is the one place where §2.1''s "the leftmost bytes of the hash output are used" and its 132-byte signature both apply, and the document states neither consequence numerically.'
+
+  - name: alg-eddsa
+    locator: "§2.2 (Table 2)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -8. CBOR 0x27 (OURS). ONE identifier for all curves: "A single signature algorithm is defined, which can be used for multiple curves."'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 1 (OKP). "The "kty" field MUST be present, and it MUST be "OKP" (Octet Key Pair)."'
+      - name: crv
+        type: 'int'
+        required: true
+        layout: 'MUST BE PRESENT -- this is the asymmetry against ECDSA. "The "crv" field MUST be present, and it MUST be a curve defined for this signature algorithm." Table 18 defines Ed25519 (6) and Ed448 (7) as "for use w/ EdDSA only". Because one `alg` value covers every curve, `crv` is the ONLY thing that says which curve signed; it is not in the `alg` header, so a verifier must get it from the key.'
+      - name: variant
+        type: 'fixed'
+        required: true
+        layout: 'Pure EdDSA only. "For use with COSE, only the pure EdDSA version is used." HashEdDSA is excluded; there is no code point for it.'
+      - name: signature
+        type: 'bstr'
+        required: true
+        layout: 'Per RFC 8032; RFC 9053 states no length.'
+      - name: key_ops
+        type: '[+ int / tstr]'
+        required: false
+        layout: 'If present MUST include "sign" when signing, "verify" when verifying.'
+      - name: algorithm_header_parameters
+        type: 'none'
+        required: false
+        layout: 'NONE.'
+    layout: 'Protected header {1: -8} = 0xa10127, as a bstr 0x43a10127 (OURS). The smallest conforming protected bucket for a signed COSE object in this document: 3 bytes of map, 4 bytes wrapped.'
+    notes: 'The pre-hash refusal, in full: "For use with COSE, only the pure EdDSA version is used. This is because it is not expected that extremely large contents are going to be needed and, based on the arrangement of the message structure, the entire message is going to need to be held in memory in order to create or verify a signature. Therefore, there does not appear to be a need to be able to do block updates of the hash, followed by eliminating the message from memory. Applications can provide the same features by defining the content of the message as a hash value and transporting the COSE object (with the hash value) and the content as separate items." §2.2.1: batch verification needs a well-seeded RNG, "Signing and nonbatch signature verification are deterministic operations and do not need random numbers of any kind" -- so EdDSA fixtures are byte-reproducible with no extra machinery, unlike ES256.'
+
+  # ===================================================================
+  # Part 3 -- MAC algorithms (§3)
+  #
+  # Shared key checks, §3.1 (HMAC) and §3.2 (AES-MAC):
+  #   kty MUST be present and MUST be "Symmetric";
+  #   alg, if present, MUST match;
+  #   key_ops, if present, MUST include "MAC create" / "MAC verify".
+  # Both sections add: "Implementations creating and validating MAC
+  # values MUST validate that the key type, key length, and algorithm
+  # are correct and appropriate for the entities involved."
+  # No algorithm-specific header parameters are defined for any of them.
+  # ===================================================================
+
+  - name: alg-hmac-256-64
+    locator: "§3.1 (Table 3)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value 4. CBOR 0x04 (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: hash
+        type: 'fixed'
+        required: true
+        layout: 'SHA-256.'
+      - name: tag_length
+        type: 'fixed'
+        required: true
+        layout: '64 bits. TRUNCATED: "When truncating, the leftmost tag-length bits are kept and transmitted." "For use in constrained environments, we define one HMAC algorithm that is truncated."'
+      - name: key_length
+        type: 'conditional'
+        required: false
+        layout: 'Not in Table 3. §3.1: "For those algorithms that transport the key (such as AES Key Wrap), the size of the HMAC key SHOULD be the same size as the output of the underlying hash function. For those algorithms that derive the key (such as ECDH), the derived key MUST be the same size as the output of the underlying hash function." SHOULD when transported, MUST when derived -- 256 bits here.'
+    layout: 'The only truncated HMAC in the set. §3.1: "The length of the authentication tag corresponds to the difficulty of producing a forgery. ... There are currently no known issues with truncation; however, the security strength of the message tag is correspondingly reduced in strength."'
+    notes: '§3.1 fixes the padding: "For this specification, the inner and outer padding are fixed to the values set in [RFC2104]." §3.1.1: "The current best known attack is to brute force the key. This means that key size is going to be directly related to the security of an HMAC operation."'
+
+  - name: alg-hmac-256-256
+    locator: "§3.1 (Table 3)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value 5. CBOR 0x05 (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: hash
+        type: 'fixed'
+        required: true
+        layout: 'SHA-256.'
+      - name: tag_length
+        type: 'fixed'
+        required: true
+        layout: '256 bits, untruncated.'
+      - name: key_length
+        type: 'conditional'
+        required: false
+        layout: '256 bits -- SHOULD if transported, MUST if derived (§3.1).'
+    layout: 'Full-length HMAC-SHA-256.'
+    notes: 'See alg-hmac-256-64 for the shared §3.1 rules.'
+
+  - name: alg-hmac-384-384
+    locator: "§3.1 (Table 3)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value 6. CBOR 0x06 (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: hash
+        type: 'fixed'
+        required: true
+        layout: 'SHA-384.'
+      - name: tag_length
+        type: 'fixed'
+        required: true
+        layout: '384 bits.'
+      - name: key_length
+        type: 'conditional'
+        required: false
+        layout: '384 bits -- SHOULD if transported, MUST if derived (§3.1).'
+    layout: 'Full-length HMAC-SHA-384.'
+    notes: 'See alg-hmac-256-64 for the shared §3.1 rules.'
+
+  - name: alg-hmac-512-512
+    locator: "§3.1 (Table 3)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value 7. CBOR 0x07 (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: hash
+        type: 'fixed'
+        required: true
+        layout: 'SHA-512.'
+      - name: tag_length
+        type: 'fixed'
+        required: true
+        layout: '512 bits.'
+      - name: key_length
+        type: 'conditional'
+        required: false
+        layout: '512 bits -- SHOULD if transported, MUST if derived (§3.1).'
+    layout: 'Full-length HMAC-SHA-512.'
+    notes: 'See alg-hmac-256-64 for the shared §3.1 rules.'
+
+  - name: alg-aes-mac-128-64
+    locator: "§3.2 (Table 4)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value 14. CBOR 0x0e (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: key_length
+        type: 'fixed'
+        required: true
+        layout: '128 bits.'
+      - name: tag_length
+        type: 'fixed'
+        required: true
+        layout: '64 bits.'
+      - name: iv
+        type: 'fixed'
+        required: true
+        layout: 'ALL ZEROS. "AES-CBC-MAC is parameterized by the key length, the authentication tag length, and the Initialization Vector (IV) used. For all of these algorithms, the IV is fixed to all zeros." No IV header parameter is used; the fixed IV is why: §3.2.1 -- "If the IV can be modified, then messages can be forged. This is addressed by fixing the IV to all zeros."'
+    layout: 'CBC-MAC with AES, per the Handbook of Applied Cryptography. §3.2: "Note that this is not the same algorithm as AES Cipher-Based Message Authentication Code (AES-CMAC) [RFC4493]."'
+    notes: '§3.2.1 lists three CBC-MAC attacks. The first is structural: "A single key must only be used for messages of a fixed or known length. ... The current structure mitigates this problem, as a specific encoding structure that includes lengths is built and signed." The second forbids key reuse across modes: "if the same key is used for both encryption and authentication operations, an attacker can produce messages with a valid authentication code."'
+
+  - name: alg-aes-mac-256-64
+    locator: "§3.2 (Table 4)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value 15. CBOR 0x0f (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: key_length
+        type: 'fixed'
+        required: true
+        layout: '256 bits.'
+      - name: tag_length
+        type: 'fixed'
+        required: true
+        layout: '64 bits.'
+      - name: iv
+        type: 'fixed'
+        required: true
+        layout: 'All zeros.'
+    layout: 'As alg-aes-mac-128-64 with a 256-bit key.'
+    notes: 'See alg-aes-mac-128-64 for the shared §3.2 and §3.2.1 material.'
+
+  - name: alg-aes-mac-128-128
+    locator: "§3.2 (Table 4)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value 25. CBOR 0x1819 (OURS) -- two bytes, 25 being above the 24-value single-byte limit.'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: key_length
+        type: 'fixed'
+        required: true
+        layout: '128 bits.'
+      - name: tag_length
+        type: 'fixed'
+        required: true
+        layout: '128 bits.'
+      - name: iv
+        type: 'fixed'
+        required: true
+        layout: 'All zeros.'
+    layout: 'As alg-aes-mac-128-64 with a full-length tag.'
+    notes: 'See alg-aes-mac-128-64 for the shared §3.2 and §3.2.1 material.'
+
+  - name: alg-aes-mac-256-128
+    locator: "§3.2 (Table 4)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value 26. CBOR 0x181a (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: key_length
+        type: 'fixed'
+        required: true
+        layout: '256 bits.'
+      - name: tag_length
+        type: 'fixed'
+        required: true
+        layout: '128 bits.'
+      - name: iv
+        type: 'fixed'
+        required: true
+        layout: 'All zeros.'
+    layout: 'As alg-aes-mac-128-64 with a 256-bit key and a full-length tag.'
+    notes: 'See alg-aes-mac-128-64 for the shared §3.2 and §3.2.1 material.'
+
+  # ===================================================================
+  # Part 4 -- content encryption algorithms (§4)
+  #
+  # Shared key checks, §4.1, §4.2, §4.3, identical in all three:
+  #   kty MUST be present and MUST be "Symmetric";
+  #   alg, if present, MUST match;
+  #   key_ops, if present, MUST include "encrypt" or "wrap key" when
+  #   encrypting, "decrypt" or "unwrap key" when decrypting.
+  # All three also state: "Keys may be obtained from either a key
+  # structure or a recipient structure. Implementations that are
+  # encrypting or decrypting MUST validate that the key type, key
+  # length, and algorithm are correct and appropriate for the entities
+  # involved."
+  # The nonce travels in RFC 9052's IV (label 5) / Partial IV (label 6)
+  # header parameters; RFC 9053 defines no nonce parameter of its own.
+  # ===================================================================
+
+  - name: alg-a128gcm
+    locator: "§4.1 (Table 5)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value 1. CBOR 0x01 (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: key_length
+        type: 'fixed'
+        required: true
+        layout: '128 bits.'
+      - name: nonce
+        type: 'fixed length'
+        required: true
+        layout: '96 bits. "This document fixes the size of the nonce at 96 bits."'
+      - name: tag_length
+        type: 'fixed'
+        required: true
+        layout: '128 bits. "The size of the authentication tag is limited to a small set of values. For this document, however, the size of the authentication tag is fixed at 128 bits."'
+    layout: 'AEAD. Both GCM parameters are fixed by the document rather than by the code point, so all three AES-GCM identifiers differ only in key length.'
+    notes: '§4.1.1 MUSTs: "The key and nonce pair MUST be unique for every message encrypted" and "The total number of messages encrypted for a single key MUST NOT exceed 2^32 [SP800-38D]". Advisory limits: 2^24.5 messages per RFC 8446, 2^36 failed decryptions per RFC 9147 §4.5.3. §4.1.1 also records a rejected option: "Consideration was given to supporting smaller tag values; the constrained community would desire tag sizes in the 64-bit range. ... Given that Counter with CBC-MAC (CCM) is the usual mode for constrained environments, restricted modes are not supported."'
+
+  - name: alg-a192gcm
+    locator: "§4.1 (Table 5)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value 2. CBOR 0x02 (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: key_length
+        type: 'fixed'
+        required: true
+        layout: '192 bits.'
+      - name: nonce
+        type: 'fixed length'
+        required: true
+        layout: '96 bits.'
+      - name: tag_length
+        type: 'fixed'
+        required: true
+        layout: '128 bits.'
+    layout: 'As alg-a128gcm with a 192-bit key.'
+    notes: 'See alg-a128gcm for the shared §4.1 and §4.1.1 material.'
+
+  - name: alg-a256gcm
+    locator: "§4.1 (Table 5)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value 3. CBOR 0x03 (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: key_length
+        type: 'fixed'
+        required: true
+        layout: '256 bits.'
+      - name: nonce
+        type: 'fixed length'
+        required: true
+        layout: '96 bits.'
+      - name: tag_length
+        type: 'fixed'
+        required: true
+        layout: '128 bits.'
+    layout: 'As alg-a128gcm with a 256-bit key.'
+    notes: 'See alg-a128gcm for the shared §4.1 and §4.1.1 material.'
+
+  - name: alg-aes-ccm-16-64-128
+    locator: "§4.2 (Table 6)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value 10. CBOR 0x0a (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: l_length_field
+        type: 'fixed'
+        required: true
+        layout: '16 bits. "This limits messages to 2^16 bytes (64 KiB) in length. This is sufficiently long for messages in the constrained world."'
+      - name: m_tag
+        type: 'fixed'
+        required: true
+        layout: '64 bits. "This implies that there is a 1 in 2^64 chance that a modified message will authenticate."'
+      - name: key_length
+        type: 'fixed'
+        required: true
+        layout: '128 bits.'
+      - name: nonce
+        type: 'fixed length'
+        required: true
+        layout: '13 bytes, determined by L: "The nonce length is 13 bytes allowing for 2^104 possible values of the nonce without repeating."'
+    layout: 'AEAD. The identifier name encodes L-M-key in BITS: "This document will follow the convention of using bit counts so that it is easier to compare the different algorithms presented in this document."'
+    notes: '§4.2 flags the naming trap it is correcting: "It is unfortunate that the specification for CCM specified L and M as a count of bytes rather than a count of bits. This leads to possible misunderstandings where AES-CCM-8 is frequently used to refer to a version of CCM mode where the size of the authentication is 64 bits and not 8 bits." §4.2.1 MUSTs: nonce/key pair unique, and "The total number of times the AES block cipher is used MUST NOT exceed 2^61 operations." With a 64-bit tag, §4.2.1 warns, of the 64-bit tag: "It may be that, to keep the desired level of integrity, one needs to rekey as often as every 2^7 messages." §4.2.1 also records the RFC 3610 precomputation attack against predictable plaintext, which "reduces the security of the key size by half".'
+
+  - name: alg-aes-ccm-16-64-256
+    locator: "§4.2 (Table 6)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value 11. CBOR 0x0b (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: l_length_field
+        type: 'fixed'
+        required: true
+        layout: '16 bits.'
+      - name: m_tag
+        type: 'fixed'
+        required: true
+        layout: '64 bits.'
+      - name: key_length
+        type: 'fixed'
+        required: true
+        layout: '256 bits.'
+      - name: nonce
+        type: 'fixed length'
+        required: true
+        layout: '13 bytes.'
+    layout: 'As alg-aes-ccm-16-64-128 with a 256-bit key.'
+    notes: 'See alg-aes-ccm-16-64-128 for the shared §4.2 and §4.2.1 material.'
+
+  - name: alg-aes-ccm-64-64-128
+    locator: "§4.2 (Table 6)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value 12. CBOR 0x0c (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: l_length_field
+        type: 'fixed'
+        required: true
+        layout: '64 bits. "This limits messages to 2^64 bytes in length."'
+      - name: m_tag
+        type: 'fixed'
+        required: true
+        layout: '64 bits.'
+      - name: key_length
+        type: 'fixed'
+        required: true
+        layout: '128 bits.'
+      - name: nonce
+        type: 'fixed length'
+        required: true
+        layout: '7 bytes: "The nonce length is 7 bytes, allowing for 2^56 possible values of the nonce without repeating."'
+    layout: 'As alg-aes-ccm-16-64-128 with the large length field and the short nonce.'
+    notes: 'The L trade-off, in §4.2''s words: "Constrained devices are usually operating in situations where they use short messages and want to avoid doing recipient-specific cryptographic operations. This favors smaller values of both L and M. Less-constrained devices will want to be able to use larger messages and are more willing to generate new keys for every operation." §4.2.1: "Note that the value of L influences the number of unique nonces."'
+
+  - name: alg-aes-ccm-64-64-256
+    locator: "§4.2 (Table 6)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value 13. CBOR 0x0d (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: l_length_field
+        type: 'fixed'
+        required: true
+        layout: '64 bits.'
+      - name: m_tag
+        type: 'fixed'
+        required: true
+        layout: '64 bits.'
+      - name: key_length
+        type: 'fixed'
+        required: true
+        layout: '256 bits.'
+      - name: nonce
+        type: 'fixed length'
+        required: true
+        layout: '7 bytes.'
+    layout: 'As alg-aes-ccm-64-64-128 with a 256-bit key.'
+    notes: 'See alg-aes-ccm-16-64-128 and alg-aes-ccm-64-64-128.'
+
+  - name: alg-aes-ccm-16-128-128
+    locator: "§4.2 (Table 6)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value 30. CBOR 0x181e (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: l_length_field
+        type: 'fixed'
+        required: true
+        layout: '16 bits.'
+      - name: m_tag
+        type: 'fixed'
+        required: true
+        layout: '128 bits. "This implies that there is a 1 in 2^128 chance that a modified message will authenticate."'
+      - name: key_length
+        type: 'fixed'
+        required: true
+        layout: '128 bits.'
+      - name: nonce
+        type: 'fixed length'
+        required: true
+        layout: '13 bytes.'
+    layout: 'As alg-aes-ccm-16-64-128 with a full-length tag. Note the code point jump: the 128-bit-tag half of the matrix was allocated at 30-33, not adjacent to 10-13.'
+    notes: 'See alg-aes-ccm-16-64-128 for the shared §4.2 and §4.2.1 material.'
+
+  - name: alg-aes-ccm-16-128-256
+    locator: "§4.2 (Table 6)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value 31. CBOR 0x181f (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: l_length_field
+        type: 'fixed'
+        required: true
+        layout: '16 bits.'
+      - name: m_tag
+        type: 'fixed'
+        required: true
+        layout: '128 bits.'
+      - name: key_length
+        type: 'fixed'
+        required: true
+        layout: '256 bits.'
+      - name: nonce
+        type: 'fixed length'
+        required: true
+        layout: '13 bytes.'
+    layout: 'As alg-aes-ccm-16-128-128 with a 256-bit key.'
+    notes: 'See alg-aes-ccm-16-64-128 for the shared §4.2 and §4.2.1 material.'
+
+  - name: alg-aes-ccm-64-128-128
+    locator: "§4.2 (Table 6)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value 32. CBOR 0x1820 (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: l_length_field
+        type: 'fixed'
+        required: true
+        layout: '64 bits.'
+      - name: m_tag
+        type: 'fixed'
+        required: true
+        layout: '128 bits.'
+      - name: key_length
+        type: 'fixed'
+        required: true
+        layout: '128 bits.'
+      - name: nonce
+        type: 'fixed length'
+        required: true
+        layout: '7 bytes.'
+    layout: 'As alg-aes-ccm-64-64-128 with a full-length tag.'
+    notes: 'See alg-aes-ccm-16-64-128 and alg-aes-ccm-64-64-128.'
+
+  - name: alg-aes-ccm-64-128-256
+    locator: "§4.2 (Table 6)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value 33. CBOR 0x1821 (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: l_length_field
+        type: 'fixed'
+        required: true
+        layout: '64 bits.'
+      - name: m_tag
+        type: 'fixed'
+        required: true
+        layout: '128 bits.'
+      - name: key_length
+        type: 'fixed'
+        required: true
+        layout: '256 bits.'
+      - name: nonce
+        type: 'fixed length'
+        required: true
+        layout: '7 bytes.'
+    layout: 'The last cell of the 2x2x2 matrix.'
+    notes: 'See alg-aes-ccm-16-64-128 and alg-aes-ccm-64-64-128.'
+
+  - name: alg-chacha20-poly1305
+    locator: "§4.3 (Table 7)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value 24. CBOR 0x1818 (OURS) -- the first value needing the one-byte argument form.'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: key_length
+        type: 'fixed'
+        required: true
+        layout: '256 bits.'
+      - name: nonce
+        type: 'fixed length'
+        required: true
+        layout: '96 bits. "It takes as inputs a 256-bit key and a 96-bit nonce, as well as the plaintext and additional data, and produces the ciphertext as an output."'
+      - name: tag_length
+        type: 'fixed'
+        required: true
+        layout: '128 bits (Table 7 description).'
+    layout: 'AEAD with no parameters at all: "The ChaCha20/Poly1305 AEAD construction defined in [RFC8439] has no parameterization." One code point, nothing to choose.'
+    notes: 'The reason it is here: "This is an algorithm defined using a cipher that is not AES and thus would not suffer from any future weaknesses found in AES. These cryptographic functions are designed to be fast in software-only implementations." §4.3.1 MUST: "The key and nonce values MUST be a unique pair for every invocation of the algorithm. Nonce counters are considered to be an acceptable way of ensuring that they are unique." Advisory: 2^36 failed decryptions, and "COSE implementations should not send more than 2^64 messages encrypted using a single ChaCha20/Poly1305 key."'
+
+  # ===================================================================
+  # Part 5 -- key derivation (§5.1, Table 8)
+  # ===================================================================
+
+  - name: kdf-hkdf-family
+    locator: "§5.1 (Table 8)"
+    encoding: CBOR
+    fields:
+      - name: hkdf_sha_256
+        type: 'name only'
+        required: false
+        layout: 'PRF: HMAC with SHA-256. NO CODE POINT.'
+      - name: hkdf_sha_512
+        type: 'name only'
+        required: false
+        layout: 'PRF: HMAC with SHA-512. NO CODE POINT.'
+      - name: hkdf_aes_mac_128
+        type: 'name only'
+        required: false
+        layout: 'PRF: AES-CBC-MAC-128. NO CODE POINT. "For the AES algorithm versions, the extract step is always skipped."'
+      - name: hkdf_aes_mac_256
+        type: 'name only'
+        required: false
+        layout: 'PRF: AES-CBC-MAC-256. NO CODE POINT.'
+    layout: 'DEFECT, recorded as the structure itself: Table 8 is the only algorithm table in RFC 9053 with no Value column. Its four entries have Name, PRF and Description and no code point. They are not independently addressable; they reach the wire only inside the compound identifiers -10..-13 (Table 12) and -25..-34 (Tables 14, 16). §1.3 says the algorithm tables carry "The value used on the wire for the algorithm" -- Table 8 does not.'
+    notes: 'HKDF inputs, per §5.1: secret, salt, length, context information, PRF -- "The PRF is encoded into the HKDF algorithm selection." The AES/ECDH incompatibility is stated and is a real constraint on which compound identifiers can exist: "The extract step cannot be skipped if the secret is not uniformly random -- for example, if it is the result of an ECDH key agreement step. This implies that the AES HKDF version cannot be used with ECDH. If the extract step is skipped, the "salt" value is not used as part of the HKDF functionality." That is why Tables 14 and 16 contain only SHA-256/SHA-512 HKDF variants and no AES ones.'
+
+  # ===================================================================
+  # Part 6 -- content key distribution (§6)
+  # ===================================================================
+
+  - name: alg-direct
+    locator: "§6.1.1 (Table 11)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -6. CBOR 0x25 (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric). "The key type MUST be "Symmetric"."'
+      - name: protected
+        type: 'bstr'
+        required: true
+        layout: 'MUST BE ZERO LENGTH. "When this algorithm is used, the "protected" field MUST be zero length." A structural requirement on a bucket, not a header parameter.'
+      - name: algorithm_header_parameters
+        type: 'none'
+        required: false
+        layout: 'NONE. "There are no algorithm parameters defined for this algorithm."'
+    layout: '"This recipient algorithm is the simplest; the identified key is directly used as the key for the next layer down in the message."'
+    notes: '§6.1.1.1 lists three problems, all operational: keys "need to have some method of being regularly updated over time"; they "need to be dedicated to a single algorithm"; and "Breaking one message means all messages are broken." §11 adds the composition rule: "Use of "direct" as a recipient algorithm combined with a second recipient algorithm exposes the direct key to the second recipient; Section 8.5 of [RFC9052] forbids combining "direct" recipient algorithms with other modes."'
+
+  - name: alg-direct-hkdf-sha-256
+    locator: "§6.1.2 (Table 12)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -10. CBOR 0x29 (OURS).'
+      - name: kdf
+        type: 'fixed'
+        required: true
+        layout: 'HKDF SHA-256 (Table 8). The KDF is not separately addressable; it is named only here.'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: key_ops
+        type: '[+ int / tstr]'
+        required: false
+        layout: 'If present MUST include "derive key" or "derive bits".'
+      - name: protected
+        type: 'bstr'
+        required: false
+        layout: 'MAY be non-empty, unlike direct: "The "protected" field can be of nonzero length."'
+      - name: salt_or_partyu_nonce
+        type: 'bstr / int'
+        required: true
+        layout: 'DISJUNCTION, mandatory: "Either the "salt" parameter for HKDF (Table 9) or the "PartyU nonce" parameter for the context structure (Table 10) MUST be present (both can be present if desired)." salt = label -20; PartyU nonce = label -22. "The requirement is that it be a unique value for the shared secret in question."'
+      - name: algorithm_header_parameters
+        type: 'labels'
+        required: false
+        layout: 'Tables 9 and 10 in full: -20 salt, -21..-26 the six context parameters.'
+    layout: 'A recipient structure. "These recipient algorithms take a common shared secret between the two parties and apply the HKDF function (Section 5.1), using the context structure defined in Section 5.2 to transform the shared secret into the CEK."'
+    notes: 'Salt length guidance, §6.1.2: "If the salt/nonce value is generated randomly, then it is suggested that the length of the random value be the same length as the output of the hash function underlying HKDF. ... If the salt/nonce value is generated deterministically, it can be guaranteed to be unique, and thus there is no length requirement." The IV rule, same section: "A new IV must be used for each message if the same key is used. ... The IV used for a key can also be generated using the same HKDF functionality used to generate the key. If HKDF is used for generating the IV, the algorithm identifier is set to 34 ("IV-GENERATION")." §6.1.2.1: "These methods do not provide for perfect forward secrecy, as the same shared secret is used for all of the keys generated".'
+
+  - name: alg-direct-hkdf-sha-512
+    locator: "§6.1.2 (Table 12)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -11. CBOR 0x2a (OURS).'
+      - name: kdf
+        type: 'fixed'
+        required: true
+        layout: 'HKDF SHA-512 (Table 8).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: salt_or_partyu_nonce
+        type: 'bstr / int'
+        required: true
+        layout: 'Same mandatory disjunction as -10.'
+      - name: algorithm_header_parameters
+        type: 'labels'
+        required: false
+        layout: 'Tables 9 and 10.'
+    layout: 'As alg-direct-hkdf-sha-256 with SHA-512.'
+    notes: 'See alg-direct-hkdf-sha-256 for the shared §6.1.2 material.'
+
+  - name: alg-direct-hkdf-aes-128
+    locator: "§6.1.2 (Table 12)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -12. CBOR 0x2b (OURS).'
+      - name: kdf
+        type: 'fixed'
+        required: true
+        layout: 'HKDF AES-MAC-128 (Table 8). Table 12 Description column, glossed not quoted (the cell wraps): shared secret w/ AES-MAC 128-bit key.'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: extract_step
+        type: 'fixed'
+        required: true
+        layout: 'SKIPPED. "For the AES algorithm versions, the extract step is always skipped." Consequently "If the extract step is skipped, the "salt" value is not used as part of the HKDF functionality" -- so the mandatory disjunction of §6.1.2 is satisfiable here only by the PartyU nonce in practice, which the document does not spell out.'
+      - name: salt_or_partyu_nonce
+        type: 'bstr / int'
+        required: true
+        layout: 'Same mandatory disjunction as -10, with the tension noted above.'
+      - name: algorithm_header_parameters
+        type: 'labels'
+        required: false
+        layout: 'Tables 9 and 10.'
+    layout: 'As alg-direct-hkdf-sha-256 with AES-CBC-MAC-128 as the PRF and no extract step.'
+    notes: 'AMBIGUITY worth recording: §6.1.2 makes "salt or PartyU nonce" mandatory, while §5.1 says the salt is inert when the extract step is skipped, which it always is for the AES versions. The document never reconciles the two, so a conforming -12 recipient may carry a salt that does nothing. Also §5.1: AES-CBC-MAC may be used "as the PRF for the expand step, but not for the extract step."'
+
+  - name: alg-direct-hkdf-aes-256
+    locator: "§6.1.2 (Table 12)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -13. CBOR 0x2c (OURS).'
+      - name: kdf
+        type: 'fixed'
+        required: true
+        layout: 'HKDF AES-MAC-256 (Table 8).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: extract_step
+        type: 'fixed'
+        required: true
+        layout: 'Skipped, as for -12.'
+      - name: salt_or_partyu_nonce
+        type: 'bstr / int'
+        required: true
+        layout: 'Same mandatory disjunction as -10.'
+      - name: algorithm_header_parameters
+        type: 'labels'
+        required: false
+        layout: 'Tables 9 and 10.'
+    layout: 'As alg-direct-hkdf-aes-128 with a 256-bit key.'
+    notes: 'See alg-direct-hkdf-aes-128.'
+
+  - name: alg-a128kw
+    locator: "§6.2.1 (Table 13)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -3. CBOR 0x22 (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: key_size
+        type: 'fixed'
+        required: true
+        layout: '128 bits (Table 13 "Key Size" column) -- the size of the WRAPPING key.'
+      - name: wrapped_value
+        type: 'bstr'
+        required: true
+        layout: 'A multiple of 64 bits: "This algorithm uses an AES key to wrap a value that is a multiple of 64 bits. As such, it can be used to wrap a key for any of the content encryption algorithms defined in this document."'
+      - name: initial_value
+        type: 'fixed'
+        required: true
+        layout: 'Fixed to RFC 3394 §2.2.3.1''s value. "The algorithm requires a single fixed parameter, the initial value. ... There are no public key parameters that vary on a per-invocation basis."'
+      - name: protected
+        type: 'bstr'
+        required: true
+        layout: 'MUST BE EMPTY. "The protected header bucket MUST be empty."'
+      - name: key_ops
+        type: '[+ int / tstr]'
+        required: false
+        layout: 'If present MUST include "encrypt" or "wrap key" when encrypting, "decrypt" or "unwrap key" when decrypting.'
+      - name: algorithm_header_parameters
+        type: 'none'
+        required: false
+        layout: 'NONE.'
+    layout: 'AE, not AEAD -- §1.3 classes AES Key Wrap as an Authenticated Encryption algorithm and notes that for key encryption "Authenticated Encryption with Associated Data (AEAD) algorithms would be preferred".'
+    notes: '§6.2.1.1, in full: "The shared secret needs to have some method of being regularly updated over time. The shared secret is the basis of trust." §11 adds that key wrap restores a property ECDH and direct+KDF lack: "If the key wrap step is added, then no proof of origin is implied and this is not an issue."'
+
+  - name: alg-a192kw
+    locator: "§6.2.1 (Table 13)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -4. CBOR 0x23 (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: key_size
+        type: 'fixed'
+        required: true
+        layout: '192 bits.'
+      - name: protected
+        type: 'bstr'
+        required: true
+        layout: 'MUST be empty.'
+      - name: algorithm_header_parameters
+        type: 'none'
+        required: false
+        layout: 'NONE.'
+    layout: 'As alg-a128kw with a 192-bit wrapping key.'
+    notes: 'See alg-a128kw.'
+
+  - name: alg-a256kw
+    locator: "§6.2.1 (Table 13)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -5. CBOR 0x24 (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 4 (Symmetric).'
+      - name: key_size
+        type: 'fixed'
+        required: true
+        layout: '256 bits.'
+      - name: protected
+        type: 'bstr'
+        required: true
+        layout: 'MUST be empty.'
+      - name: algorithm_header_parameters
+        type: 'none'
+        required: false
+        layout: 'NONE.'
+    layout: 'As alg-a128kw with a 256-bit wrapping key.'
+    notes: 'See alg-a128kw.'
+
+  # -------------------------------------------------------------------
+  # Shared ECDH key checks, §6.3.1 and §6.4.1, identical in both:
+  #   kty MUST be present and MUST be "EC2" or "OKP";
+  #   alg, if present, MUST match the key agreement algorithm;
+  #   key_ops, if present, MUST include "derive key" or "derive bits"
+  #     for the private key;
+  #   key_ops, if present, MUST BE EMPTY for the public key.
+  # §6.3.1 also: "This document defines these algorithms to be used with
+  # the curves P-256, P-384, P-521, X25519, and X448. Implementations
+  # MUST verify that the key type and curve are correct. Different
+  # curves are restricted to different key types. Implementations MUST
+  # verify that the curve and algorithm are appropriate for the entities
+  # involved."
+  # -------------------------------------------------------------------
+
+  - name: alg-ecdh-es-hkdf-256
+    locator: "§6.3.1 (Table 14)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -25. CBOR 0x3818 (OURS). COLLISION NOTE: -25 is also the LABEL of the PartyV nonce header parameter (Table 10).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 2 (EC2) or 1 (OKP).'
+      - name: crv
+        type: 'int'
+        required: true
+        layout: 'One of P-256 (1), P-384 (2), P-521 (3) with EC2, or X25519 (4), X448 (5) with OKP. Ed25519 and Ed448 are "for use w/ EdDSA only" (Table 18) and §2.2.1 forbids reuse across the two.'
+      - name: kdf
+        type: 'fixed'
+        required: true
+        layout: 'HKDF -- SHA-256 (Table 14 "KDF" column).'
+      - name: ephemeral_static
+        type: 'fixed'
+        required: true
+        layout: 'yes (Ephemeral-Static). "When using ephemeral keys, the sender MUST generate a new ephemeral key for every key agreement operation."'
+      - name: key_wrap
+        type: 'fixed'
+        required: true
+        layout: 'none. "No key wrap algorithm is used. This is represented in Table 14 as "none". The key size for the context structure is the content layer encryption algorithm size."'
+      - name: ephemeral_key
+        type: 'COSE_Key'
+        required: true
+        layout: 'Label -1, MUST be present: "The ephemeral key is placed in the "ephemeral key" parameter and MUST be present for all algorithm identifiers that use ephemeral keys."'
+      - name: algorithm_header_parameters
+        type: 'labels'
+        required: false
+        layout: 'Table 15 (-1 ephemeral key, mandatory here) plus Tables 9 and 10.'
+    layout: 'Direct Key Agreement. The shared secret is converted to bytes before the KDF: "The x-coordinate is used for all of the curves defined in this document. For curves X25519 and X448, the resulting value is used directly, as it is a byte string of a known length. For the P-256, P-384, and P-521 curves, the x-coordinate is run through the Integer-to-Octet-String primitive (I2OSP) function defined in [RFC8017], using the same computation for n as is defined in Section 2.1."'
+    notes: 'Why the curve, not the algorithm, carries the mathematics: "The math used to obtain the computed secret is based on the curve selected and not on the ECDH algorithm. For this reason, a new algorithm does not need to be defined for each of the curves." Why a KDF is mandatory: "The result of an ECDH key agreement process does not provide a uniformly random secret. As such, it needs to be run through a KDF in order to produce a usable key." Why there is no Ephemeral-Ephemeral: "COSE is not an online protocol by itself and thus does not have a method of establishing ephemeral secrets on both sides." §6.3.1.1 records a deliberate omission: requiring both public keys in the derivation, per RFC 7748 §6.1, "was not done, because COSE is used in a store-and-forward format rather than in online key exchange."'
+
+  - name: alg-ecdh-es-hkdf-512
+    locator: "§6.3.1 (Table 14)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -26. CBOR 0x3819 (OURS). COLLISION NOTE: -26 is also the LABEL of the PartyV other header parameter (Table 10).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 2 (EC2) or 1 (OKP).'
+      - name: kdf
+        type: 'fixed'
+        required: true
+        layout: 'HKDF -- SHA-512.'
+      - name: ephemeral_static
+        type: 'fixed'
+        required: true
+        layout: 'yes.'
+      - name: key_wrap
+        type: 'fixed'
+        required: true
+        layout: 'none.'
+      - name: ephemeral_key
+        type: 'COSE_Key'
+        required: true
+        layout: 'Label -1, MUST be present.'
+      - name: algorithm_header_parameters
+        type: 'labels'
+        required: false
+        layout: 'Table 15 (-1) plus Tables 9 and 10.'
+    layout: 'As alg-ecdh-es-hkdf-256 with SHA-512.'
+    notes: 'See alg-ecdh-es-hkdf-256 for the shared §6.3.1 material.'
+
+  - name: alg-ecdh-ss-hkdf-256
+    locator: "§6.3.1 (Table 14)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -27. CBOR 0x381a (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 2 (EC2) or 1 (OKP).'
+      - name: kdf
+        type: 'fixed'
+        required: true
+        layout: 'HKDF -- SHA-256.'
+      - name: ephemeral_static
+        type: 'fixed'
+        required: true
+        layout: 'no (Static-Static).'
+      - name: key_wrap
+        type: 'fixed'
+        required: true
+        layout: 'none.'
+      - name: salt_or_partyu_nonce
+        type: 'bstr / int'
+        required: true
+        layout: 'MANDATORY DISJUNCTION for static keys: "When using static keys, the sender MUST either generate a new random value or create a unique value for use as a KDF input. For the KDFs used, this means that either the "salt" parameter for HKDF (Table 9) or the "PartyU nonce" parameter for the context structure (Table 10) MUST be present (both can be present if desired). The value in the parameter MUST be unique for the pair of keys being used."'
+      - name: static_key_or_id
+        type: 'COSE_Key / bstr'
+        required: false
+        layout: 'Label -2 (static key) or -3 (static key id). "When using static keys, the static key should be identified to the recipient." Lowercase should.'
+      - name: algorithm_header_parameters
+        type: 'labels'
+        required: false
+        layout: 'Table 15 (-2, -3) plus Tables 9 and 10.'
+    layout: 'As alg-ecdh-es-hkdf-256 but with a static sender key, so the uniqueness burden moves from the ephemeral key to the salt/nonce.'
+    notes: 'The counter advice and its hazard, §6.3.1: "It is acceptable to use a global counter that is incremented for every Static-Static operation and use the resulting value. Care must be taken that the counter is saved to permanent storage in a way that avoids reuse of that counter value." §11 records the proof-of-origin confusion that Static-Static and direct+KDF share: "The second recipient could create a message using the same CEK and send it to the first recipient; the first recipient would, for either Static-Static ECDH or direct plus KDF, make an assumption that the CEK could be used for proof of origin, even though it is from the wrong entity."'
+
+  - name: alg-ecdh-ss-hkdf-512
+    locator: "§6.3.1 (Table 14)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -28. CBOR 0x381b (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 2 (EC2) or 1 (OKP).'
+      - name: kdf
+        type: 'fixed'
+        required: true
+        layout: 'HKDF -- SHA-512.'
+      - name: ephemeral_static
+        type: 'fixed'
+        required: true
+        layout: 'no.'
+      - name: key_wrap
+        type: 'fixed'
+        required: true
+        layout: 'none.'
+      - name: salt_or_partyu_nonce
+        type: 'bstr / int'
+        required: true
+        layout: 'Same mandatory disjunction as -27.'
+      - name: algorithm_header_parameters
+        type: 'labels'
+        required: false
+        layout: 'Table 15 (-2, -3) plus Tables 9 and 10.'
+    layout: 'As alg-ecdh-ss-hkdf-256 with SHA-512.'
+    notes: 'See alg-ecdh-ss-hkdf-256.'
+
+  - name: alg-ecdh-es-a128kw
+    locator: "§6.4.1 (Table 16)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -29. CBOR 0x381c (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 2 (EC2) or 1 (OKP).'
+      - name: kdf
+        type: 'fixed'
+        required: true
+        layout: 'HKDF -- SHA-256 for ALL SIX Table 16 identifiers, including the 192- and 256-bit key wraps. The KDF does not scale with the wrap key size.'
+      - name: ephemeral_static
+        type: 'fixed'
+        required: true
+        layout: 'yes.'
+      - name: key_wrap
+        type: 'fixed'
+        required: true
+        layout: 'A128KW. "The size of the key used for the key wrap algorithm is fed into the KDF" -- i.e. keyDataLength in SuppPubInfo is 128 here, not the content encryption key size.'
+      - name: ephemeral_key
+        type: 'COSE_Key'
+        required: true
+        layout: 'Label -1, MUST be present.'
+      - name: algorithm_header_parameters
+        type: 'labels'
+        required: false
+        layout: '"ECDH with Key Agreement is parameterized by the same header parameters as for ECDH; see Section 6.3.1" -- Table 15 plus Tables 9 and 10.'
+    layout: 'Key Agreement with Key Wrap. The only modification §6.4.1 makes to §6.3.1 is the key wrap algorithm and the keyDataLength it feeds the KDF.'
+    notes: 'The uniform HKDF-SHA-256 across all six is worth flagging: an implementer reading only the names would expect ECDH-ES+A256KW to use SHA-512. Table 16''s KDF column says SHA-256 for every row.'
+
+  - name: alg-ecdh-es-a192kw
+    locator: "§6.4.1 (Table 16)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -30. CBOR 0x381d (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 2 (EC2) or 1 (OKP).'
+      - name: kdf
+        type: 'fixed'
+        required: true
+        layout: 'HKDF -- SHA-256.'
+      - name: ephemeral_static
+        type: 'fixed'
+        required: true
+        layout: 'yes.'
+      - name: key_wrap
+        type: 'fixed'
+        required: true
+        layout: 'A192KW; keyDataLength 192.'
+      - name: ephemeral_key
+        type: 'COSE_Key'
+        required: true
+        layout: 'Label -1, MUST be present.'
+      - name: algorithm_header_parameters
+        type: 'labels'
+        required: false
+        layout: 'Table 15 plus Tables 9 and 10.'
+    layout: 'As alg-ecdh-es-a128kw with A192KW.'
+    notes: 'See alg-ecdh-es-a128kw.'
+
+  - name: alg-ecdh-es-a256kw
+    locator: "§6.4.1 (Table 16)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -31. CBOR 0x381e (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 2 (EC2) or 1 (OKP).'
+      - name: kdf
+        type: 'fixed'
+        required: true
+        layout: 'HKDF -- SHA-256.'
+      - name: ephemeral_static
+        type: 'fixed'
+        required: true
+        layout: 'yes.'
+      - name: key_wrap
+        type: 'fixed'
+        required: true
+        layout: 'A256KW; keyDataLength 256.'
+      - name: ephemeral_key
+        type: 'COSE_Key'
+        required: true
+        layout: 'Label -1, MUST be present.'
+      - name: algorithm_header_parameters
+        type: 'labels'
+        required: false
+        layout: 'Table 15 plus Tables 9 and 10.'
+    layout: 'As alg-ecdh-es-a128kw with A256KW. This is the identifier §8.3''s third example advertises.'
+    notes: 'See alg-ecdh-es-a128kw. §8.3 uses it for the cross-product capability example, 0x8101820104.'
+
+  - name: alg-ecdh-ss-a128kw
+    locator: "§6.4.1 (Table 16)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -32. CBOR 0x381f (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 2 (EC2) or 1 (OKP).'
+      - name: kdf
+        type: 'fixed'
+        required: true
+        layout: 'HKDF -- SHA-256.'
+      - name: ephemeral_static
+        type: 'fixed'
+        required: true
+        layout: 'no (Static-Static).'
+      - name: key_wrap
+        type: 'fixed'
+        required: true
+        layout: 'A128KW; keyDataLength 128.'
+      - name: salt_or_partyu_nonce
+        type: 'bstr / int'
+        required: true
+        layout: 'Mandatory disjunction, per §6.3.1''s static-key rule.'
+      - name: static_key_or_id
+        type: 'COSE_Key / bstr'
+        required: false
+        layout: 'Label -2 or -3.'
+      - name: algorithm_header_parameters
+        type: 'labels'
+        required: false
+        layout: 'Table 15 plus Tables 9 and 10.'
+    layout: 'As alg-ecdh-ss-hkdf-256 with A128KW added.'
+    notes: 'See alg-ecdh-ss-hkdf-256 and alg-ecdh-es-a128kw.'
+
+  - name: alg-ecdh-ss-a192kw
+    locator: "§6.4.1 (Table 16)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -33. CBOR 0x3820 (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 2 (EC2) or 1 (OKP).'
+      - name: kdf
+        type: 'fixed'
+        required: true
+        layout: 'HKDF -- SHA-256.'
+      - name: ephemeral_static
+        type: 'fixed'
+        required: true
+        layout: 'no.'
+      - name: key_wrap
+        type: 'fixed'
+        required: true
+        layout: 'A192KW; keyDataLength 192.'
+      - name: salt_or_partyu_nonce
+        type: 'bstr / int'
+        required: true
+        layout: 'Mandatory disjunction.'
+      - name: algorithm_header_parameters
+        type: 'labels'
+        required: false
+        layout: 'Table 15 plus Tables 9 and 10.'
+    layout: 'As alg-ecdh-ss-a128kw with A192KW.'
+    notes: 'See alg-ecdh-ss-hkdf-256 and alg-ecdh-es-a128kw.'
+
+  - name: alg-ecdh-ss-a256kw
+    locator: "§6.4.1 (Table 16)"
+    encoding: CBOR
+    fields:
+      - name: alg
+        type: 'int'
+        required: true
+        layout: 'Value -34. CBOR 0x3821 (OURS).'
+      - name: kty
+        type: 'int'
+        required: true
+        layout: 'MUST be 2 (EC2) or 1 (OKP).'
+      - name: kdf
+        type: 'fixed'
+        required: true
+        layout: 'HKDF -- SHA-256.'
+      - name: ephemeral_static
+        type: 'fixed'
+        required: true
+        layout: 'no.'
+      - name: key_wrap
+        type: 'fixed'
+        required: true
+        layout: 'A256KW; keyDataLength 256.'
+      - name: salt_or_partyu_nonce
+        type: 'bstr / int'
+        required: true
+        layout: 'Mandatory disjunction.'
+      - name: algorithm_header_parameters
+        type: 'labels'
+        required: false
+        layout: 'Table 15 plus Tables 9 and 10.'
+    layout: 'The last Table 16 row; -34 is the most negative code point RFC 9053 assigns.'
+    notes: 'See alg-ecdh-ss-hkdf-256 and alg-ecdh-es-a128kw.'
+
+  # ===================================================================
+  # Part 7 -- the one new registration (§10.2)
+  # ===================================================================
+
+  - name: alg-iv-generation
+    locator: "§6.1.2, §10.2 (Table 23)"
+    encoding: CBOR
+    fields:
+      - name: value
+        type: 'int'
+        required: true
+        layout: 'Value 34. CBOR 0x1822 (OURS). NOT an `alg` header value: §6.1.2 says "If HKDF is used for generating the IV, the algorithm identifier is set to 34 ("IV-GENERATION")", meaning the AlgorithmID field of COSE_KDF_Context.'
+      - name: capabilities
+        type: 'array'
+        required: true
+        layout: 'EMPTY. §10.2: "The Capabilities column for this registration is to be empty." The only registration in the document with no capability list -- §8.1 explicitly carves it out of the one-element rule.'
+      - name: recommended
+        type: 'fixed'
+        required: true
+        layout: 'No (Table 23).'
+    layout: 'A "COSE Algorithms" registry row whose Description column reads, glossed not quoted (the cell wraps): for doing IV generation for symmetric algorithms; Reference RFC 9053. The only code point RFC 9053 newly allocates; §10 says every other registry change was IANA re-pointing existing rows from RFC 8152 to this document.'
+    notes: 'FINDING: the "COSE Algorithms" registry holds two different namespaces in one column. 34 can never appear in an `alg` header parameter, and nothing in the registry says so -- the constraint lives only in §6.1.2''s sentence. An implementation that treats the registry as the domain of `alg` will accept `{1: 34}`. The empty Capabilities column is the only machine-readable hint, and §8.1''s rule gives it a different stated reason.'

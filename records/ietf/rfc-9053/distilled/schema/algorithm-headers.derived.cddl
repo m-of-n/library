@@ -1,0 +1,126 @@
+; =====================================================================
+; algorithm-headers.derived.cddl
+;
+; DERIVED - not verbatim.  RFC 9053 defines its algorithm-specific
+; header parameters in three prose tables (9, 10, 15) and ships no
+; CDDL for any of them.  Every rule below is this library's rendering.
+; Cite RFC 9053 §5.1, §5.2, §6.3.1 and Tables 9, 10, 15.
+;
+; Locator: RFC 9053 Tables 9, 10, 15.
+; Extraction status: derived.
+;
+; THE FINDING THIS FILE EXISTS TO CARRY: RFC 9053 defines algorithm-
+; specific header parameters ONLY for the KDF and ECDH recipient
+; algorithms.  The signature algorithms of §2 (ES256, ES384, ES512,
+; EdDSA) define NONE, the MAC algorithms of §3 define none, the
+; content encryption algorithms of §4 define none, and AES Key Wrap
+; (§6.2.1) defines none.  A signing-only profile touches nothing in
+; this file.  See design-notes.md, "The export path".
+;
+; What it does NOT constrain: see README.md.
+; =====================================================================
+
+; --- Table 9, §5.1 - HKDF parameters ---------------------------------
+; One parameter.  Applies to all four direct+HKDF identifiers and all
+; ten ECDH identifiers - Table 9's Algorithm column lists exactly:
+; direct+HKDF-SHA-256, direct+HKDF-SHA-512, direct+HKDF-AES-128,
+; direct+HKDF-AES-256, ECDH-ES+HKDF-256, ECDH-ES+HKDF-512,
+; ECDH-SS+HKDF-256, ECDH-SS+HKDF-512, ECDH-ES+A128KW, ECDH-ES+A192KW,
+; ECDH-ES+A256KW, ECDH-SS+A128KW, ECDH-SS+A192KW, ECDH-SS+A256KW.
+HKDF_Headers = (
+    ? -20 => bstr          ; "salt" - Random salt
+)
+
+; --- Table 10, §5.2 - context structure parameters -------------------
+; Six parameters, same fourteen algorithms as Table 9.  §5.2: "These
+; header parameters are designed to be placed in the unprotected
+; bucket of the recipient structure; they do not need to be in the
+; protected bucket, since they are already included in the
+; cryptographic computation by virtue of being included in the context
+; structure."  The types are Table 10's own: identity and other are
+; bstr, the two nonces are "bstr / int".
+Context_Headers = (
+    ? -21 => bstr,         ; PartyU identity
+    ? -22 => bstr / int,   ; PartyU nonce
+    ? -23 => bstr,         ; PartyU other
+    ? -24 => bstr,         ; PartyV identity
+    ? -25 => bstr / int,   ; PartyV nonce
+    ? -26 => bstr          ; PartyV other
+)
+
+; --- Table 15, §6.3.1 - ECDH parameters ------------------------------
+; Three parameters.  Table 15's Algorithm column splits them: the
+; ephemeral key applies to the five ECDH-ES identifiers, and the two
+; static parameters to the five ECDH-SS identifiers.  The split below
+; is Table 15's own column, not an inference.
+ECDH_ES_Headers = (
+    -1 => COSE_Key_9053    ; "ephemeral key" - sender's ephemeral public key
+)
+ECDH_SS_Headers = (
+    ? -2 => COSE_Key_9053, ; "static key" - sender's static public key
+    ? -3 => bstr           ; "static key id"
+)
+
+; --- Label collisions across buckets, recorded deliberately ----------
+; -1, -2, -3 are `ephemeral key` / `static key` / `static key id` in a
+; recipient HEADER map (Table 15) and `crv` / `x` / `y` in a COSE_KEY
+; map (Table 19).  -25 and -26 are `PartyV nonce` / `PartyV other` in
+; a header map (Table 10) and the `alg` VALUES ECDH-ES+HKDF-256 /
+; ECDH-ES+HKDF-512 (Table 14).  Negative labels in COSE are scoped to
+; the map they appear in and to the key type or algorithm in force;
+; nothing in the encoding carries that scope.
+
+; --- Presence rules the tables cannot express ------------------------
+; §6.3.1: the ephemeral key "MUST be present for all algorithm
+; identifiers that use ephemeral keys" - hence the non-optional -1 in
+; ECDH_ES_Headers above.
+;
+; §6.1.2 and §6.3.1 both impose a disjunction CDDL cannot state across
+; two different maps: "Either the "salt" parameter for HKDF (Table 9)
+; or the "PartyU nonce" parameter for the context structure (Table 10)
+; MUST be present (both can be present if desired)."  `salt` (-20) and
+; `PartyU nonce` (-22) sit in the same recipient header map, so the
+; disjunction IS expressible there - written below - but the
+; requirement is on the static-static and direct+KDF cases only, which
+; the rule name records and the notation does not.
+Direct_KDF_salt_or_nonce = (
+    ( -20 => bstr, ? -22 => bstr / int ) //
+    ( -22 => bstr / int, ? -20 => bstr )
+)
+
+; --- Composite header groups per algorithm family --------------------
+; What an implementation actually assembles.  OURS: RFC 9053 gives the
+; parameters per table and never prints a per-algorithm header group.
+Headers_direct_HKDF = (          ; alg -10 .. -13, §6.1.2
+    Direct_KDF_salt_or_nonce,
+    ? -21 => bstr, ? -23 => bstr,
+    ? -24 => bstr, ? -25 => bstr / int, ? -26 => bstr
+)
+Headers_ECDH_ES = (              ; alg -25, -26, -29, -30, -31
+    ECDH_ES_Headers, HKDF_Headers, Context_Headers
+)
+Headers_ECDH_SS = (              ; alg -27, -28, -32, -33, -34
+    ECDH_SS_Headers, Direct_KDF_salt_or_nonce,
+    ? -21 => bstr, ? -23 => bstr,
+    ? -24 => bstr, ? -25 => bstr / int, ? -26 => bstr
+)
+
+; --- Empty header groups, stated so the absence is legible -----------
+; §2.1 ECDSA, §2.2 EdDSA, §3.1 HMAC, §3.2 AES-MAC, §4.1 AES-GCM,
+; §4.2 AES-CCM, §4.3 ChaCha20/Poly1305, §6.1.1 direct, §6.2.1 AES-KW:
+; no algorithm-specific header parameters are defined by RFC 9053.
+; §6.1.1 states a constraint on a bucket rather than a parameter:
+; "When this algorithm is used, the "protected" field MUST be zero
+; length."  §6.2.1 states the same for key wrap: "The protected header
+; bucket MUST be empty."
+Headers_ES256 = ()
+Headers_ES384 = ()
+Headers_ES512 = ()
+Headers_EdDSA = ()
+Headers_HMAC = ()
+Headers_AES_MAC = ()
+Headers_AES_GCM = ()
+Headers_AES_CCM = ()
+Headers_ChaCha20_Poly1305 = ()
+Headers_direct = ()              ; plus: protected field MUST be zero length
+Headers_AES_KW = ()              ; plus: protected header bucket MUST be empty

@@ -21,7 +21,7 @@ material of its own** — three pieces, all held here verbatim:
   Floating-Point Encoding".
 
 It ships **no ABNF**, no JSON Schema, no pseudocode, and no CDDL profile of
-either serialization it defines. The four derived files below are this
+either serialization it defines. The three derived files below are this
 library's and must never be cited as the document's own grammar.
 
 | file | claim | covers | deliberately does **not** constrain |

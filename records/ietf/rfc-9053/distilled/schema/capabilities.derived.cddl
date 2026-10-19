@@ -1,0 +1,98 @@
+; =====================================================================
+; capabilities.derived.cddl
+;
+; DERIVED - not verbatim.  RFC 9053 §8 defines COSE capabilities in
+; prose and in three worked examples, and ships no CDDL.  Table 22
+; (§10.1) prints the per-key-type capability lists in a bracket
+; notation of its own ("[kty(1), crv]") that is not CDDL and not CBOR
+; diagnostic notation.  Every rule below is this library's rendering.
+; Cite RFC 9053 §8, §8.1, §8.2, §10.1 Table 22.
+;
+; Locator: RFC 9053 §8-§8.3, §10.1 Table 22, §10.2.
+; Extraction status: derived.
+;
+; What it does NOT constrain: see README.md.  In one line - §8 says the
+; capability list for an algorithm or key type is fixed by its IANA
+; registration, so the real constraint is a registry lookup, and no
+; schema can perform one.
+; =====================================================================
+
+; --- §8 the general shape --------------------------------------------
+; "The capability structure is an array of values; the values included
+; in the structure are dependent on a specific algorithm or key type."
+COSE_Capability = [* any]
+
+; --- §8.1 algorithm capabilities --------------------------------------
+; "For the current set of algorithms in the registry other than
+; IV-GENERATION (those in this document as well as those in [RFC8230],
+; [RFC8778], and [RFC9021]), the capabilities list is an array with one
+; element, the key type (from the "COSE Key Types" Registry).  It is
+; expected that future registered algorithms could have zero, one, or
+; multiple elements."
+;
+; §10.2 adds that the "COSE Algorithms" registry's new Capabilities
+; column "has been populated with "[kty]" for all current,
+; nonprovisional registrations", and that for IV-GENERATION "The
+; Capabilities column for this registration is to be empty."
+Algorithm_Capability_current = [ kty: int ]       ; every RFC 9053 alg
+Algorithm_Capability_IV_GENERATION = []           ; alg 34, §10.2
+Algorithm_Capability_future = [* any]             ; "zero, one, or multiple"
+
+; §8: "For algorithm capabilities, the first element should always be a
+; key type value if applicable, but the items that are specific to a key
+; (for example, a curve) should not be included in the algorithm
+; capabilities."  Lowercase "should" - advice, not BCP 14.
+
+; --- §8.2 / §10.1 Table 22 key type capabilities ----------------------
+; §8: "For a key, the first element should be the key type value."
+; The six arms below are Table 22 as printed, in its own order.
+Key_Type_Capability =
+      Key_Type_Capability_OKP
+    / Key_Type_Capability_EC2
+    / Key_Type_Capability_RSA
+    / Key_Type_Capability_Symmetric
+    / Key_Type_Capability_HSS_LMS
+    / Key_Type_Capability_WalnutDSA
+
+Key_Type_Capability_OKP       = [ 1, crv: int ]   ; Table 22 [kty(1), crv]
+Key_Type_Capability_EC2       = [ 2, crv: int ]   ; Table 22 [kty(2), crv]
+Key_Type_Capability_RSA       = [ 3 ]             ; Table 22 [kty(3)]
+Key_Type_Capability_Symmetric = [ 4 ]             ; Table 22 [kty(4)]
+Key_Type_Capability_HSS_LMS   = [ 5, hash_alg: int ]
+                                                  ; Table 22 [kty(5), hash algorithm]
+Key_Type_Capability_WalnutDSA = [ 6, N: uint, q: uint ]
+                                                  ; Table 22 [kty(6), N value, q value]
+; §8.2 states the HSS-LMS element as "Algorithm identifier for the
+; underlying hash function from the "COSE Algorithms" registry" and the
+; WalnutDSA elements as "The N value (group and matrix size) for the
+; key, a uint" and "The q value (finite field order) for the key, a
+; uint".  `uint` is the source's own word; `int` for crv and hash_alg
+; is OURS, from the registries' integer labels.
+
+; --- §8.3 the cross-product form --------------------------------------
+; The third example is "ECDH-ES + A256KW with an X25519 curve:
+; 0x8101820104  / [1 \ OKP \],[1 \ OKP \, 4 \ X25519 \] /", which §8.3
+; describes as the case that "just concatenates the two capabilities
+; together".  Those five bytes are TWO CBOR data items, not one array:
+; 0x8101 is [1] and 0x820104 is [1, 4].  A decoder that reads one item
+; consumes two bytes and leaves three.  (Decoding OURS, from RFC 8949
+; §3.1; RFC 9053 prints the hex and the annotation only.)
+;
+; §8 describes the fourth example's shape as "Each array element
+; includes three fields: the algorithm identifier, one or more
+; algorithm capabilities, and one or more key type capabilities."  That
+; three-field element is what the rule below renders.  It is NOT a
+; registered structure: §8.3 calls it "one of many encodings that could
+; be used for that purpose."
+Capability_Advertisement = [* Capability_Advertisement_Entry]
+Capability_Advertisement_Entry = [
+    alg: int / tstr,
+    algorithm_capabilities: COSE_Capability / [+ COSE_Capability],
+    key_type_capabilities:  COSE_Capability / [+ COSE_Capability]
+]
+
+; --- §8 immutability, which no schema can express ---------------------
+; "Once defined by registration with IANA, the list of capabilities for
+; an algorithm or key type is immutable.  If it is later found that a
+; new capability is needed for a key type or algorithm, it will require
+; that a new code point be assigned to deal with that."

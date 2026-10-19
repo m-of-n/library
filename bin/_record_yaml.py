@@ -246,7 +246,16 @@ class YamlParser:
                 items.append(self._nested(ind))
             elif _is_map_item(rest):
                 key, _, val = rest.partition(":")
-                item = {key.strip(): _scalar(val.strip()) if val.strip() else self._nested(ind)}
+                val = val.strip()
+                if val in ("|", ">", "|-", ">-", "|+", ">+"):
+                    # A block scalar on the FIRST key of a sequence item.
+                    # _map_into already handled this for every later key, so
+                    # `- name: a` + `note: >` parsed while `- note: >` raised
+                    # "unexpected indent". bin/_yaml.py got it right; this
+                    # branch is the one that was missing.
+                    item = {key.strip(): self._block_scalar(ind, val)}
+                else:
+                    item = {key.strip(): _scalar(val) if val else self._nested(ind)}
                 self._map_into(item, ind + 1)
                 items.append(item)
             else:
