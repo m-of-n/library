@@ -21,6 +21,92 @@ reviewed_by: ""
 # Nothing else differs.  Section 5.3.2: "The only difference between
 # preferred-plus and deterministic serialization is that in deterministic
 # serialization, maps are required to be sorted by their keys."
+#
+# `constrained_by`: COMPLETED, cross-check pass, 2026-10-19.  All 48 fields of
+# the 19 structures below now carry the key.  40 of them hold 203 links to 68
+# of the 100 entries in ../requirements.yaml; the other 8 hold an explicit
+# empty list and a `constrained_by_note` saying why.  Pass 1 linked only where
+# the Section 4.1 / 4.2 / 5.1 item numbering mapped one-to-one onto an id - 49
+# links over 25 ids - and left every other field bare, which is why this was
+# the cross-check's main deliverable.
+#
+# THE LINKING RULE, stated so a reviewer can disagree with a specific link
+# rather than with the whole table.  A requirement R is linked to a field F iff
+# either
+#
+#   (i)  R DECIDES F'S BYTES - R determines which values or byte sequences F
+#        may take under preferred-plus or deterministic serialization; or
+#   (ii) R NAMES F'S SUBJECT - the encoded form F carries is the thing R's own
+#        text governs, including a duty to accept it, to reject it, or to
+#        specify it.
+#
+# Four corollaries decide the hard cases, and each is load-bearing somewhere:
+#
+#  (a) A SENTENCE MUST NAME THE FORM, not merely imply it.  This is what
+#      separates the three Section 2.1 sentences that are linked from the ten
+#      that are not.  R-0009 ("if a sender is permitted to use indefinite-
+#      length serialization, the protocol MUST require that receivers be
+#      capable of decoding indefinite-length items") and R-0012 ("because some
+#      serializations like indefinite-lengths are not widely supported") name
+#      the indefinite-length form and are linked to it; R-0010/R-0011 ("the
+#      sender MAY use any valid serialization and the receiver MUST be able to
+#      decode it") name no form and are not.  R-0003 is linked because the data
+#      it names - "data to be hashed or signed" that the parties "independently
+#      construct and serialize" - is the Sig_structure, and this file models it.
+#
+#  (b) TRANSITIVE CONSEQUENCES ARE NOT LINKED.  R-0054 ("All of preferred-plus
+#      serialization defined in Section 4.1 MUST be used") reaches every field
+#      in the file through inheritance and is therefore linked to none of them:
+#      it names a SECTION, not a structure.  R-0056 is the decoder-side twin and
+#      is treated the same way.  Linking either everywhere would have added 48
+#      links that say nothing.
+#
+#  (c) A RULE THAT CHOOSES AMONG WIDTHS DOES NOT CONSTRAIN THE BITS INSIDE A
+#      WIDTH.  R-0033 and the Appendix D procedure (R-0085) pick half, single or
+#      double, so they are linked to floating-point-value.width_marker; the
+#      `exponent` and `sign` fields carry no link, because no rule in the
+#      document says which exponents or which sign bits may appear.  The one
+#      exception is the NaN triple - R-0037's "sign bit clear, most significant
+#      significand bit set, all remaining significand bits clear" does name the
+#      bits, and is linked on canonical-nan.bytes and on
+#      floating-point-value.significand.
+#
+#  (d) AN EXEMPTION IS LINKED ONLY WHERE ITS OWN SUBJECT IS THE EMBEDDED CBOR.
+#      R-0066 (the .serial scope boundary) and R-0097 ("determinism
+#      requirements do not extend into CBOR inside of byte strings") are linked
+#      to byte-string-wrapped-cbor.wrapped_item, whose subject they name, and
+#      NOT to byte-string.content, whose subject - the bytes a byte string
+#      carries, CBOR or not - no requirement in this document touches at all.
+#
+# THIRTY-TWO REQUIREMENTS ARE LINKED TO NO FIELD, and that is a result about
+# this document, not a hole in this file.  Over half the draft is advice to
+# specification authors and library implementers, and advice constrains no
+# bytes.  They fall into five groups:
+#
+#   * Protocol-design policy, 10: R-0001, R-0002, R-0004 to R-0008, R-0010,
+#     R-0011, R-0024.  Every one binds a SPECIFICATION - whether it states
+#     serialization requirements, which it should pick, that it must spell a
+#     special serialization out.  Section 2.1 and Section 3.2.
+#   * Library policy, 9: R-0013 to R-0021.  Which serialization a CBOR library
+#     implements and defaults to.  Section 2.2.  None names an encoded form.
+#   * Profile-inheritance sentences, 2: R-0054 and R-0056 - see corollary (b).
+#   * Incorporation by reference and IANA, 3: R-0068 (RFC 8949 Section 10's
+#     security considerations apply), R-0069 and R-0070 (the two IANA actions,
+#     which bind a registry, not a field).
+#   * The seven non-binding occurrences, 7: R-0060, R-0061 and R-0062, an
+#     illustrative example of how a protocol WOULD word a special serialization
+#     (Section 6), and R-0072 to R-0075, two hypothetical application-layer
+#     specifications quoted in Appendix B to show what a non-deterministic
+#     application layer looks like.  ../requirements.yaml's reconciliation
+#     identifies exactly these seven; linking them would assert that this
+#     document imposes them, which it does not.
+#
+# EIGHT FIELDS CARRY NO LINK, each with its reason on the field, and three of
+# them are findings worth reading: text-string.content (no normalization rule
+# anywhere - the sharpest divergence from dCBOR), floating-point-value.sign
+# (negative zero is never mentioned and the corpus has no -0.0 vector), and
+# cose-sign1-message.unprotected (the one map in this file that no sorting rule
+# reaches).
 messages:
 
   - name: data-item-head
@@ -31,16 +117,23 @@ messages:
         type: uint3
         required: true
         constrained_by:
-          - "draft-ietf-cbor-serialization#R-0025"
-        layout: "Bits 7-5 of the initial byte. 0 unsigned int, 1 negative int, 2 byte string, 3 text string, 4 array, 5 map, 6 tag, 7 simple/float. Unchanged from RFC 8949 Section 3.1 Table 1; this document narrows nothing at this field."
+          - "draft-ietf-cbor-serialization#R-0040"
+          - "draft-ietf-cbor-serialization#R-0053"
+          - "draft-ietf-cbor-serialization#R-0088"
+          - "draft-ietf-cbor-serialization#R-0089"
+        layout: "Bits 7-5 of the initial byte. 0 unsigned int, 1 negative int, 2 byte string, 3 text string, 4 array, 5 map, 6 tag, 7 simple/float. The eight assignments are RFC 8949 Section 3.1 Table 1's and this document changes none of them - but it does decide WHICH of them carries a given value, in the one place where RFC 8949 leaves a choice: Section 4.1 item 5 forces major type 0 or 1 over tags 2 and 3 whenever the value fits (R-0040, restated for determinism at R-0053 and for a library's big-number API at R-0088/R-0089). That is the only narrowing this field has, and the cross-check pass moved R-0025 off it: the shortest-form rule says \"for all major types\" but constrains the ARGUMENT, so it is linked on additional_information and argument instead."
       - name: additional_information
         type: uint5
         required: true
         constrained_by:
+          - "draft-ietf-cbor-serialization#R-0025"
           - "draft-ietf-cbor-serialization#R-0026"
           - "draft-ietf-cbor-serialization#R-0027"
           - "draft-ietf-cbor-serialization#R-0028"
           - "draft-ietf-cbor-serialization#R-0029"
+          - "draft-ietf-cbor-serialization#R-0030"
+          - "draft-ietf-cbor-serialization#R-0031"
+          - "draft-ietf-cbor-serialization#R-0041"
         layout: "Bits 4-0 of the initial byte. 0-23 the argument itself; 24 one following byte; 25 two; 26 four; 27 eight; 28-30 reserved (not well-formed, RFC 8949); 31 indefinite length or break - which preferred-plus removes entirely for major types 2-5 and which is not well-formed for 0, 1 and 6."
       - name: argument
         type: "uint64 (0, 1, 2, 4 or 8 bytes, big-endian, unsigned)"
@@ -114,16 +207,29 @@ messages:
         type: uint8
         required: true
         constrained_by:
+          - "draft-ietf-cbor-serialization#R-0009"
+          - "draft-ietf-cbor-serialization#R-0012"
+          - "draft-ietf-cbor-serialization#R-0023"
           - "draft-ietf-cbor-serialization#R-0030"
           - "draft-ietf-cbor-serialization#R-0031"
+          - "draft-ietf-cbor-serialization#R-0051"
+          - "draft-ietf-cbor-serialization#R-0058"
+          - "draft-ietf-cbor-serialization#R-0091"
+          - "draft-ietf-cbor-serialization#R-0100"
         layout: "0x5f byte string, 0x7f text string, 0x9f array, 0xbf map - major type with ai = 31. No argument follows."
       - name: content
         type: "segments (strings) or items (array/map), zero or more"
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-serialization#R-0025"
         layout: "For strings: zero or more definite-length segments of the SAME major type, concatenated on decode. For arrays: items. For maps: alternating key and value items."
       - name: break
         type: uint8
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-serialization#R-0030"
+          - "draft-ietf-cbor-serialization#R-0031"
+          - "draft-ietf-cbor-serialization#R-0094"
         layout: "0xff, major type 7 with ai = 31. Terminates the item. Not a data item itself."
     layout: |
       0x5f/0x7f/0x9f/0xbf  1 byte     head, no argument
@@ -171,7 +277,15 @@ messages:
         required: true
         constrained_by:
           - "draft-ietf-cbor-serialization#R-0025"
+          - "draft-ietf-cbor-serialization#R-0026"
+          - "draft-ietf-cbor-serialization#R-0027"
+          - "draft-ietf-cbor-serialization#R-0028"
+          - "draft-ietf-cbor-serialization#R-0029"
           - "draft-ietf-cbor-serialization#R-0040"
+          - "draft-ietf-cbor-serialization#R-0041"
+          - "draft-ietf-cbor-serialization#R-0053"
+          - "draft-ietf-cbor-serialization#R-0088"
+          - "draft-ietf-cbor-serialization#R-0089"
         layout: "Major type 0. The argument IS the value, 0 to 18446744073709551615, in the shortest of the five widths."
     layout: "0x00-0x17 for 0..23; 0x18+1 byte; 0x19+2; 0x1a+4; 0x1b+8. Preferred-plus admits exactly one encoding per value."
     notes: "Major type 0 is also the required encoding for any value a big number could carry but that fits here - see big-number below. The document's zero.edn vector lists seven general encodings of 0 and exactly one preferred-plus encoding, h'00'."
@@ -185,7 +299,15 @@ messages:
         required: true
         constrained_by:
           - "draft-ietf-cbor-serialization#R-0025"
+          - "draft-ietf-cbor-serialization#R-0026"
+          - "draft-ietf-cbor-serialization#R-0027"
+          - "draft-ietf-cbor-serialization#R-0028"
+          - "draft-ietf-cbor-serialization#R-0029"
           - "draft-ietf-cbor-serialization#R-0040"
+          - "draft-ietf-cbor-serialization#R-0041"
+          - "draft-ietf-cbor-serialization#R-0053"
+          - "draft-ietf-cbor-serialization#R-0088"
+          - "draft-ietf-cbor-serialization#R-0089"
         layout: "Major type 1. The argument is n; the value is -1-n. So the encodable range is -1 down to -18446744073709551616 (-2^64), and the shortest-form bounds -25..-256 etc. in Section 4.1 item 1 are the value-space statement of the same argument bounds."
     layout: "0x20-0x37 for -1..-24; 0x38+1 byte; 0x39+2; 0x3a+4; 0x3b+8."
     notes: "The -2^64 boundary is the document's 65_bit_neg.edn vector: -18446744073709551616 is h'3bffffffffffffffff' in preferred-plus, and the same value as tag 3 (h'c348ffffffffffffffff') is general-only, because major type 1 can carry it. One below it, -18446744073709551617, is the smallest value that must be a big number - negative_bignum.edn."
@@ -199,11 +321,28 @@ messages:
         required: true
         constrained_by:
           - "draft-ietf-cbor-serialization#R-0025"
+          - "draft-ietf-cbor-serialization#R-0026"
+          - "draft-ietf-cbor-serialization#R-0027"
+          - "draft-ietf-cbor-serialization#R-0028"
+          - "draft-ietf-cbor-serialization#R-0029"
           - "draft-ietf-cbor-serialization#R-0031"
+          - "draft-ietf-cbor-serialization#R-0041"
+          - "draft-ietf-cbor-serialization#R-0043"
         layout: "Major type 2 argument: the content length in bytes, shortest form, ai never 31."
       - name: content
         type: bstr
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD. The document states nothing
+          about the bytes a byte string carries - no length bound, no
+          structure, no encoding. Where the content happens to BE encoded
+          CBOR the two exemption rules take over, and they are linked on
+          byte-string-wrapped-cbor.wrapped_item (R-0066, the .serial scope
+          boundary, and R-0097, "determinism requirements do not extend into
+          CBOR inside of byte strings"). They are deliberately NOT linked
+          here: their subject is embedded CBOR, not a byte string's content
+          in general.
         layout: "Exactly `length` bytes, immediately after the head. No terminator."
     layout: "0x40-0x57 (length 0..23) or 0x58/0x59/0x5a/0x5b + length + content. Definite length only."
     notes: "Byte-string wrapping of CBOR is discussed at length in Appendix I and Appendix J but adds no new structure - see byte-string-wrapped-cbor below. The serialization of the WRAPPED item is independent of the wrapper's (Section 8, Appendix K.2)."
@@ -217,11 +356,30 @@ messages:
         required: true
         constrained_by:
           - "draft-ietf-cbor-serialization#R-0025"
+          - "draft-ietf-cbor-serialization#R-0026"
+          - "draft-ietf-cbor-serialization#R-0027"
+          - "draft-ietf-cbor-serialization#R-0028"
+          - "draft-ietf-cbor-serialization#R-0029"
           - "draft-ietf-cbor-serialization#R-0031"
+          - "draft-ietf-cbor-serialization#R-0041"
+          - "draft-ietf-cbor-serialization#R-0043"
         layout: "Major type 3 argument: the content length in BYTES, not characters. Shortest form, ai never 31."
       - name: content
         type: tstr
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD, and that is the single
+          sharpest difference between this document and
+          draft-mcnally-deterministic-cbor, which requires NFC. There is no
+          normalization rule, no form restriction and no validity rule on
+          text content anywhere in the document. Appendix B raises Unicode
+          variability as advice to a protocol designer and carries no BCP 14
+          keyword, so it is no requirement entry; Section 9.1 lists "Varying
+          the Unicode representation of text strings" among the covert
+          channels BOTH serializations leave open. Two text strings a reader
+          would call the same string can therefore both be conforming
+          deterministic encodings.
         layout: "Exactly `length` bytes of UTF-8."
     layout: "0x60-0x77 (length 0..23) or 0x78/0x79/0x7a/0x7b + length + content. Definite length only."
     notes: |
@@ -245,11 +403,19 @@ messages:
         required: true
         constrained_by:
           - "draft-ietf-cbor-serialization#R-0025"
+          - "draft-ietf-cbor-serialization#R-0026"
+          - "draft-ietf-cbor-serialization#R-0027"
+          - "draft-ietf-cbor-serialization#R-0028"
+          - "draft-ietf-cbor-serialization#R-0029"
           - "draft-ietf-cbor-serialization#R-0030"
+          - "draft-ietf-cbor-serialization#R-0041"
+          - "draft-ietf-cbor-serialization#R-0042"
         layout: "Major type 4 argument: the number of enclosed data items, shortest form, ai never 31."
       - name: items
         type: "data item *"
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-serialization#R-0066"
         layout: "`count` encoded data items, concatenated, in the array's own order. Each may be of any type, including a nested array or map, and each is itself subject to the serialization in force."
     layout: "0x80-0x97 (count 0..23) or 0x98/0x99/0x9a/0x9b + count + items. Definite length only."
     notes: "Array order is semantic and is never sorted - only maps have ordering freedom to remove. The serialization recurses into the items: Section 8, \"The scope of .serial applies recursively through nested arrays and maps\" (draft-ietf-cbor-serialization#R-0066). It stops at a byte string."
@@ -263,13 +429,25 @@ messages:
         required: true
         constrained_by:
           - "draft-ietf-cbor-serialization#R-0025"
+          - "draft-ietf-cbor-serialization#R-0026"
+          - "draft-ietf-cbor-serialization#R-0027"
+          - "draft-ietf-cbor-serialization#R-0028"
+          - "draft-ietf-cbor-serialization#R-0029"
           - "draft-ietf-cbor-serialization#R-0030"
+          - "draft-ietf-cbor-serialization#R-0041"
+          - "draft-ietf-cbor-serialization#R-0042"
         layout: "Major type 5 argument: the number of key/value PAIRS - not the number of items. Shortest form, ai never 31."
       - name: entries
         type: "(key data item, value data item) *"
         required: true
         constrained_by:
+          - "draft-ietf-cbor-serialization#R-0050"
           - "draft-ietf-cbor-serialization#R-0055"
+          - "draft-ietf-cbor-serialization#R-0057"
+          - "draft-ietf-cbor-serialization#R-0059"
+          - "draft-ietf-cbor-serialization#R-0066"
+          - "draft-ietf-cbor-serialization#R-0079"
+          - "draft-ietf-cbor-serialization#R-0080"
         layout: "`count` pairs, key then value, concatenated. Under deterministic serialization the pairs are ordered by the key's encoded bytes; under preferred-plus the order is free."
     layout: |
       0xa0-0xb7 (count 0..23) or 0xb8/0xb9/0xba/0xbb + count
@@ -359,12 +537,20 @@ messages:
         required: true
         constrained_by:
           - "draft-ietf-cbor-serialization#R-0025"
+          - "draft-ietf-cbor-serialization#R-0026"
+          - "draft-ietf-cbor-serialization#R-0027"
+          - "draft-ietf-cbor-serialization#R-0028"
+          - "draft-ietf-cbor-serialization#R-0029"
+          - "draft-ietf-cbor-serialization#R-0041"
           - "draft-ietf-cbor-serialization#R-0063"
+          - "draft-ietf-cbor-serialization#R-0064"
         layout: "Major type 6 argument: the tag number, in shortest form like any other argument. Tag 1 is 0xc1, never 0xd801; tag 201 would be 0xd8 0xc9."
       - name: content
         type: "data item"
         required: true
-        layout: "Exactly one enclosed data item, immediately after the head, itself subject to the serialization in force."
+        constrained_by:
+          - "draft-ietf-cbor-serialization#R-0025"
+        layout: "Exactly one enclosed data item, immediately after the head, itself subject to the serialization in force. ONE LINK ONLY, and the reason is a gap: R-0025 reaches the content's own argument because the shortest-form rule is stated \"for all major types\", but NO requirement says a serialization recurses through a tag. Section 8's recursion clause (R-0066) enumerates \"nested arrays and maps\" and nothing else, and its exclusion names \"byte strings or other data items that happen to contain encoded CBOR\" - a tag's content is neither. The source's own behaviour contradicts the silence: date_epoch_tag.edn notes \"The tag content in this example does vary by serialization type\" and lists h'c11b0000000069e4fbd3' as general-only for a non-shortest CONTENT argument. So recursion through a tag is what the document does and not what it says; recorded as an omission rather than linked to R-0066, whose text does not cover it."
     layout: "0xc0-0xd7 (tag 0..23) or 0xd8/0xd9/0xda/0xdb + tag number + content item."
     notes: |
       The document places no restriction on WHICH tags appear - date_epoch_tag.edn
@@ -395,22 +581,42 @@ messages:
         type: uint8
         required: true
         constrained_by:
+          - "draft-ietf-cbor-serialization#R-0025"
           - "draft-ietf-cbor-serialization#R-0040"
+          - "draft-ietf-cbor-serialization#R-0047"
+          - "draft-ietf-cbor-serialization#R-0053"
+          - "draft-ietf-cbor-serialization#R-0086"
+          - "draft-ietf-cbor-serialization#R-0087"
+          - "draft-ietf-cbor-serialization#R-0088"
+          - "draft-ietf-cbor-serialization#R-0089"
+          - "draft-ietf-cbor-serialization#R-0090"
         layout: "0xc2 for tag 2 (positive, value = n) or 0xc3 for tag 3 (negative, value = -1-n). One byte: tags 2 and 3 are below 24, so the shortest-form rule fixes them."
       - name: content_length
         type: uint64
         required: true
         constrained_by:
+          - "draft-ietf-cbor-serialization#R-0025"
+          - "draft-ietf-cbor-serialization#R-0026"
+          - "draft-ietf-cbor-serialization#R-0027"
+          - "draft-ietf-cbor-serialization#R-0028"
+          - "draft-ietf-cbor-serialization#R-0029"
+          - "draft-ietf-cbor-serialization#R-0031"
           - "draft-ietf-cbor-serialization#R-0039"
           - "draft-ietf-cbor-serialization#R-0040"
+          - "draft-ietf-cbor-serialization#R-0049"
+          - "draft-ietf-cbor-serialization#R-0053"
         layout: "The enclosed byte string's length, shortest form, definite length. In preferred-plus it is never less than 9 - see layout."
       - name: content
         type: bstr
         required: true
         constrained_by:
           - "draft-ietf-cbor-serialization#R-0039"
+          - "draft-ietf-cbor-serialization#R-0040"
+          - "draft-ietf-cbor-serialization#R-0047"
           - "draft-ietf-cbor-serialization#R-0048"
           - "draft-ietf-cbor-serialization#R-0049"
+          - "draft-ietf-cbor-serialization#R-0053"
+          - "draft-ietf-cbor-serialization#R-0086"
         layout: "Big-endian unsigned magnitude n. First byte MUST NOT be 0x00 on encode (R-0039); leading zeros MUST be ignored on decode (R-0048); the empty byte string MUST be accepted as zero on decode (R-0049) although an encoder can never produce it."
     layout: |
       0xc2 | 0xc3        1 byte     tag 2 or tag 3
@@ -473,6 +679,8 @@ messages:
         required: true
         constrained_by:
           - "draft-ietf-cbor-serialization#R-0025"
+          - "draft-ietf-cbor-serialization#R-0026"
+          - "draft-ietf-cbor-serialization#R-0027"
         layout: "Major type 7. Values 0-23 in the initial byte (0xe0-0xf7); 32-255 as 0xf8 plus one byte. False is 0xf4, true 0xf5, null 0xf6, undefined 0xf7."
     layout: "0xe0-0xf7, or 0xf8 + one byte. Values 24-31 are not well-formed at all (RFC 8949 Section 3.3): an encoder \"MUST NOT issue two-byte sequences that start with 0xf8 and continue with a byte less than 0x20\"."
     notes: |
@@ -506,14 +714,45 @@ messages:
         constrained_by:
           - "draft-ietf-cbor-serialization#R-0032"
           - "draft-ietf-cbor-serialization#R-0033"
+          - "draft-ietf-cbor-serialization#R-0034"
+          - "draft-ietf-cbor-serialization#R-0035"
+          - "draft-ietf-cbor-serialization#R-0036"
+          - "draft-ietf-cbor-serialization#R-0044"
+          - "draft-ietf-cbor-serialization#R-0045"
+          - "draft-ietf-cbor-serialization#R-0046"
+          - "draft-ietf-cbor-serialization#R-0078"
+          - "draft-ietf-cbor-serialization#R-0081"
+          - "draft-ietf-cbor-serialization#R-0085"
+          - "draft-ietf-cbor-serialization#R-0099"
         layout: "0xf9 half (2 following bytes), 0xfa single (4), 0xfb double (8). Major type 7, ai 25/26/27."
       - name: sign
         type: uint1
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD. Nothing in the document
+          reads the sign bit of a finite float, and negative zero is never
+          mentioned: -0.0 is neither required, forbidden nor folded into
+          +0.0, and the corpus has no -0.0 vector (float_zero.edn is
+          positive zero only). The only rules that read a sign bit are the
+          NaN ones - R-0037 ("sign bit clear"), R-0038 and R-0076 ("a NaN
+          with the sign bit set") - and they are linked on canonical-nan and
+          nan-with-payload, where their subject actually lives.
         layout: "The top bit of the first value byte, at every width."
       - name: exponent
         type: "uint5 / uint8 / uint11"
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD. The exponent field is IEEE
+          754's and RFC 8949 Section 3.3's; this document changes no bit
+          position and states nothing about which exponents may appear. It
+          is READ by the width rule (R-0033) and by Appendix D's range
+          constants, but a rule that chooses among widths does not constrain
+          the bits inside a width - the link for that choice is on
+          width_marker. (Appendix D's own reading of this field is where the
+          defect recorded in ../design-notes.md lives: S2H_MIN_SUBNORM_EXP
+          is 102 where the half floor is 103.)
         layout: "Half: bits 14-10, bias 15. Single: bits 30-23, bias 127. Double: bits 62-52, bias 1023. All ones means infinity or NaN; all zeros means zero or subnormal."
       - name: significand
         type: "uint10 / uint23 / uint52"
@@ -521,6 +760,8 @@ messages:
         constrained_by:
           - "draft-ietf-cbor-serialization#R-0036"
           - "draft-ietf-cbor-serialization#R-0037"
+          - "draft-ietf-cbor-serialization#R-0038"
+          - "draft-ietf-cbor-serialization#R-0076"
         layout: "The remaining low bits. IEEE 754 binary16/32/64 as RFC 8949 Section 3.3 already defines them; this document changes no bit position, only which widths and which NaN patterns may be emitted."
     layout: |
       0xf9 + 2 bytes   half    s eeeee mmmmmmmmmm
@@ -587,6 +828,13 @@ messages:
         constrained_by:
           - "draft-ietf-cbor-serialization#R-0037"
           - "draft-ietf-cbor-serialization#R-0038"
+          - "draft-ietf-cbor-serialization#R-0052"
+          - "draft-ietf-cbor-serialization#R-0076"
+          - "draft-ietf-cbor-serialization#R-0077"
+          - "draft-ietf-cbor-serialization#R-0078"
+          - "draft-ietf-cbor-serialization#R-0081"
+          - "draft-ietf-cbor-serialization#R-0082"
+          - "draft-ietf-cbor-serialization#R-0083"
         layout: "0xf9 0x7e 0x00 exactly - half precision, \"sign bit clear, most significant significand bit set, all remaining significand bits clear\"."
     layout: |
       f9 7e 00     the ONLY NaN any preferred-plus or deterministic encoder
@@ -639,14 +887,29 @@ messages:
       - name: width_marker
         type: uint8
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-serialization#R-0037"
+          - "draft-ietf-cbor-serialization#R-0077"
+          - "draft-ietf-cbor-serialization#R-0078"
+          - "draft-ietf-cbor-serialization#R-0082"
+          - "draft-ietf-cbor-serialization#R-0084"
         layout: "0xf9, 0xfa or 0xfb. General serialization only."
       - name: sign
         type: uint1
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-serialization#R-0038"
+          - "draft-ietf-cbor-serialization#R-0076"
+          - "draft-ietf-cbor-serialization#R-0079"
         layout: "Part of the equivalence test: \"Their sign bits are identical\"."
       - name: significand
         type: "uint10 / uint23 / uint52"
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-serialization#R-0038"
+          - "draft-ietf-cbor-serialization#R-0076"
+          - "draft-ietf-cbor-serialization#R-0079"
+          - "draft-ietf-cbor-serialization#R-0080"
         layout: "Part of the equivalence test: \"Their significands are identical after both significands are zero-extended on the right to 64 bits\". So a half significand of 0x1ff, a single significand of 0x3fe000 and a double significand of 0x7fc0000000000 are the same NaN."
     layout: |
       THE EQUIVALENCE, Appendix C.4: NaNs at different widths "are considered
@@ -741,17 +1004,28 @@ messages:
       - name: tag_number
         type: uint16
         required: false
+        constrained_by:
+          - "draft-ietf-cbor-serialization#R-0025"
         layout: "0xd8 0x18 - tag 24, \"encoded CBOR data item\" - when the wrapping is tagged. Appendix J notes the tag is often left off: \"following the pattern of tag 24 (the tag number itself is typically unnecessary and omitted)\"."
       - name: wrapper
         type: bstr
         required: true
         constrained_by:
+          - "draft-ietf-cbor-serialization#R-0025"
+          - "draft-ietf-cbor-serialization#R-0031"
+          - "draft-ietf-cbor-serialization#R-0066"
           - "draft-ietf-cbor-serialization#R-0092"
+          - "draft-ietf-cbor-serialization#R-0093"
+          - "draft-ietf-cbor-serialization#R-0094"
           - "draft-ietf-cbor-serialization#R-0097"
         layout: "A definite-length byte string under preferred-plus/deterministic, whose content is a complete encoded CBOR data item (or a CBOR sequence, for .cborseq)."
       - name: wrapped_item
         type: "data item"
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-serialization#R-0066"
+          - "draft-ietf-cbor-serialization#R-0092"
+          - "draft-ietf-cbor-serialization#R-0097"
         layout: "Opaque to the enclosing serialization. Its own serialization is whatever the protocol that defines it says - possibly a different one, possibly none."
     layout: |
       [ d8 18 ]  optional tag 24
@@ -795,19 +1069,40 @@ messages:
         type: "bstr wrapping a header map"
         required: true
         constrained_by:
+          - "draft-ietf-cbor-serialization#R-0092"
           - "draft-ietf-cbor-serialization#R-0096"
+          - "draft-ietf-cbor-serialization#R-0097"
         layout: "A byte string whose content is the encoded protected header map. Transmitted in exactly the bytes that went into the Sig_structure, so it needs no deterministic encoding of its own."
       - name: unprotected
         type: "header map"
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD, and Appendix K.3 says so in
+          terms: "COSE places no serialization requirements on these
+          elements. ... Indefinite-length items may be used, and
+          non-shortest CBOR arguments are permitted." The unprotected bucket
+          is a bare map that never enters the Sig_structure, so not even
+          R-0095 reaches it. It is the one map in this file that no sorting
+          rule touches.
         layout: "A bare map, not wrapped. \"The two header parameter chunks are maps that hold the various header parameters.\""
       - name: payload
         type: "bstr / nil"
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-serialization#R-0092"
+          - "draft-ietf-cbor-serialization#R-0097"
         layout: "Byte-string wrapped, and the document is careful about why: \"This is not for determinism, armoring or canonicalization. It is so that the payload can be any data format, including not CBOR.\""
       - name: signature
         type: bstr
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD. The signature bytes are a
+          byte string produced by the algorithm RFC 9052 selects; this
+          document names neither the algorithm nor the encoding, and
+          Appendix K.3 places no serialization requirement on any element of
+          the encoded message.
         layout: "The signature bytes."
     layout: |
       [ protected: bstr, unprotected: map, payload: bstr/nil, signature: bstr ]
@@ -850,21 +1145,33 @@ messages:
       - name: context
         type: tstr
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-serialization#R-0003"
+          - "draft-ietf-cbor-serialization#R-0095"
         layout: "\"Signature1\" for COSE_Sign1. Named in RFC 9052 Section 4.4, not here."
       - name: body_protected
         type: bstr
         required: true
         constrained_by:
+          - "draft-ietf-cbor-serialization#R-0003"
+          - "draft-ietf-cbor-serialization#R-0095"
           - "draft-ietf-cbor-serialization#R-0096"
+          - "draft-ietf-cbor-serialization#R-0097"
         layout: "The protected header bucket as transmitted. Its INTERNAL encoding is not required to be deterministic: \"Deterministic encoding of the headers is unnecessary because they are transmitted in the exact encoded form in which they are included in the Sig_structure.\""
       - name: external_aad
         type: bstr
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-serialization#R-0003"
+          - "draft-ietf-cbor-serialization#R-0095"
         layout: "Externally supplied data. RFC 9052."
       - name: payload
         type: bstr
         required: true
         constrained_by:
+          - "draft-ietf-cbor-serialization#R-0003"
+          - "draft-ietf-cbor-serialization#R-0092"
+          - "draft-ietf-cbor-serialization#R-0095"
           - "draft-ietf-cbor-serialization#R-0097"
         layout: "The payload bytes, byte-string wrapped and therefore opaque: \"determinism requirements do not extend into CBOR inside of byte strings\"."
     layout: |
@@ -911,22 +1218,46 @@ messages:
       - name: description
         type: tstr
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD. Table 3 names it ("Text
+          describing the item") and nothing else in the document says
+          anything about it. It is documentation inside a fixture.
         layout: "\"Text describing the item\"."
       - name: edn-representations
         type: "[* tstr]"
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD. The encode test of Appendix
+          L.1.1 consumes it - "the encoder is supplied the EDN
+          representation" - but L.1.1 carries no BCP 14 keyword and no
+          lowercase obligation, so it is no requirement entry; L.1.3
+          (R-0098) and L.1.4 (R-0099) are the only two Appendix L.1
+          sentences that are. The field may be empty - float_nan_payload.edn
+          has no EDN form at all - which is exactly why no rule can require
+          one.
         layout: "\"Unencoded value(s) for the data item\", in EDN. May be empty: float_nan_payload.edn has none, \"there is no EDN representation for that\"."
       - name: general-serializations
         type: "[* bstr]"
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-serialization#R-0022"
+          - "draft-ietf-cbor-serialization#R-0098"
+          - "draft-ietf-cbor-serialization#R-0100"
         layout: "\"Encoded representation(s) for general serialization\", as EDN h'' literals."
       - name: preferred-plus-serializations
         type: "[* bstr]"
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-serialization#R-0098"
         layout: "\"Encoded representation(s) for preferred-plus serialization\". Plural: map.edn lists six, because key order is free under preferred-plus. May be empty - float_nan_payload.edn."
       - name: deterministic-serialization
         type: "[* bstr]"
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-serialization#R-0055"
+          - "draft-ietf-cbor-serialization#R-0098"
         layout: "\"Encoded representation for deterministic serialization\" - singular in Table 3 and in the key name, but an array in every file, holding one element or none."
     layout: |
       {

@@ -13,7 +13,21 @@ reviewed_by: ""
 #                 which Section 4.3 calls "the recommended default"
 #   conformance   the verdict under each of the three serializations
 #   violates      why `expect` is invalid, cited by section
+#   violates_requirements
+#                 the same reason as requirement ids, added by the cross-check
+#                 pass.  On all 64 vectors that carry `violates`; 109 links
+#                 over 13 ids, every one resolving in ../requirements.yaml.
+#                 DERIVED FROM THE BYTES, not from the prose: the pass walked
+#                 each encoding, collected every rule it breaks, and then
+#                 checked the id set against the prose clause by clause - 0
+#                 disagreements.  Where Section 4.1 item 1 is the rule, the set
+#                 names the BULLET the offending argument's value falls under
+#                 (R-0026 for 0..23, R-0027 for 24..255, R-0029 for
+#                 65536..2^32-1) beside the umbrella R-0025; an argument of
+#                 2^32 or more gets R-0025 alone, because the document states
+#                 no bullet for the eight-byte case.
 #   violates_deterministic
+#   violates_deterministic_requirements
 #                 present wherever deterministic serialization rejects for the
 #                 one rule it adds, map key order (Section 5.1 item 2).  On the
 #                 10 vectors that preferred-plus ACCEPTS this is the sole
@@ -21,7 +35,25 @@ reviewed_by: ""
 #                 between the two modes.  V-0052 and V-0053 also carry it as an
 #                 ADDITIONAL reason beside `violates`: both are unsorted maps
 #                 as well as ill-framed ones.  So 12 vectors carry the field
-#                 and 41 - 31 = 10 is still the delta.
+#                 and 41 - 31 = 10 is still the delta.  Its id form is always
+#                 R-0055, the sort rule, because Section 5.1 item 2 is the one
+#                 rule deterministic serialization adds.  It is kept as a
+#                 SEPARATE key from `violates_requirements` so that contract
+#                 stays exact: merging the two would make a deterministic-only
+#                 rejection indistinguishable from a preferred-plus one.
+#
+# THE CROSS-CHECK PASS RAN ALL 105 THROUGH THE SCHEMA.  Every verdict below -
+# `expect` and all three `conformance` entries, 420 in total - was re-derived
+# by a layered checker built from ../schema/: a grammar layer that PARSES
+# prefp-head.derived.abnf itself and matches `prefp-head` at every head, a
+# check layer from serialization-check.derived.pseudocode.txt for the two
+# value-dependent rules no grammar reaches, and an encode layer from
+# prefp-encode.derived.pseudocode.txt that decodes and re-encodes.  0
+# mismatches.  58 of the 64 preferred-plus rejections are decided by the
+# grammar alone; the other 6 need Appendix D's arithmetic; the 10 extra
+# deterministic rejections are all map order.  Which layer caught which, and
+# the 210 negative controls that prove the checker discriminates, are in
+# README.md.
 #
 # `expect: invalid` therefore means "a checking decoder configured for
 # preferred-plus must reject these bytes", which is exactly the test Appendix
@@ -68,6 +100,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0030"
     violates: '§4.1 item 2 - indefinite-length array or map'
     notes: 'Table 1 row 2, "Indefinite-length": "The array is terminated by the break byte (0xff)". PROVENANCE: as V-0001, wrapped inside the table cell - "0x9f 0x01" on source line 189, "0x02 0xff" on line 190, rejoined here. This is the document''s opening illustration of the problem it exists to solve - "CBOR intentionally allows multiple valid serializations of the same data item".'
 
@@ -95,6 +129,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Second form from the same bullet. The bullet''s "and so on" is open-ended; Appendix L.2''s zero.edn closes it with the four- and eight-byte forms and the two big-number forms.'
   - id: "draft-ietf-cbor-serialization#V-0005"
@@ -107,6 +144,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Third form from the same bullet.'
 
@@ -134,6 +174,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0033"
+      - "draft-ietf-cbor-serialization#R-0034"
     violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
     notes: 'Second form from the same bullet. Half precision represents positive zero exactly, so every wider encoding of it is a rule-4 violation.'
 
@@ -150,6 +193,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0039"
+      - "draft-ietf-cbor-serialization#R-0040"
     violates: '§4.1 item 5 - leading zeros encoded in a big number; §4.1 item 5 - a value major type 0 or 1 can carry, encoded as a big number'
     notes: 'DEFECT IN THE SOURCE, reported and not repaired. The bullet reads "Big number representation of values that are also representable using major types 0 and 1 (for example, 0 can be encoded as the big number 0xc34100)". It cannot: 0xc3 is tag 3, the NEGATIVE big number, whose value is -1-n, so with a content of 0x00 these bytes decode to -1, not 0. The positive big number 0 is 0xc2 0x41 0x00 or 0xc2 0x40, and Appendix L.2''s zero.edn lists exactly those two (h''c2420000'' and h''c240'') among its general encodings of 0 - never 0xc34100. The point the bullet is making survives the slip, because -1 is also representable with a major type (type 1, as 0x20), but the stated value is wrong. Verified by decoding: these bytes are the big number -1.'
 
@@ -222,6 +268,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Second of the five. The security argument: "This variability can be used to encode ~2 hidden bits per argument. Since every CBOR item carries an argument, even moderately complex protocols may accumulate sufficient bits to exfiltrate sensitive material (e.g., cryptographic keys) or to generate persistent identifiers for tracking users or devices."'
   - id: "draft-ietf-cbor-serialization#V-0014"
@@ -234,6 +283,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Third of the five.'
   - id: "draft-ietf-cbor-serialization#V-0015"
@@ -246,6 +298,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Fourth of the five.'
   - id: "draft-ietf-cbor-serialization#V-0016"
@@ -258,6 +313,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Fifth of the five - and the one encoding whose prohibition Section 4.1 item 1 never actually states, since its enumeration stops at the four-byte form. Section 9.1 counts five ways; Section 4.1 rules out three of them explicitly and the fourth only by implication.'
 
@@ -285,6 +343,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0019"
@@ -297,6 +358,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0020"
@@ -309,6 +373,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0021"
@@ -321,6 +388,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0022"
@@ -333,6 +403,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0039"
+      - "draft-ietf-cbor-serialization#R-0040"
     violates: '§4.1 item 5 - leading zeros encoded in a big number; §4.1 item 5 - a value major type 0 or 1 can carry, encoded as a big number'
     notes: 'Violates both bullets of rule 5 at once: the content has leading zeros, and the value fits in major type 0.'
   - id: "draft-ietf-cbor-serialization#V-0023"
@@ -345,6 +418,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0040"
     violates: '§4.1 item 5 - a value major type 0 or 1 can carry, encoded as a big number'
     notes: 'The empty big number byte string. An encoder may never produce it, but Section 4.2 item 5 requires a decoder to take it: "An empty byte string MUST be accepted and treated as the value zero" (draft-ietf-cbor-serialization#R-0049). No leading-zero violation, because there are no bytes to lead.'
 
@@ -372,6 +447,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0026"
@@ -384,6 +462,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0027"
@@ -396,6 +477,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0028"
@@ -408,6 +492,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0029"
@@ -420,6 +507,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0039"
+      - "draft-ietf-cbor-serialization#R-0040"
     violates: '§4.1 item 5 - leading zeros encoded in a big number; §4.1 item 5 - a value major type 0 or 1 can carry, encoded as a big number'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
 
@@ -447,6 +537,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0027"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0032"
@@ -459,6 +552,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0027"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0033"
@@ -471,6 +567,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0027"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0034"
@@ -483,6 +582,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0039"
+      - "draft-ietf-cbor-serialization#R-0040"
     violates: '§4.1 item 5 - leading zeros encoded in a big number; §4.1 item 5 - a value major type 0 or 1 can carry, encoded as a big number'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
 
@@ -510,6 +612,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0040"
     violates: '§4.1 item 5 - a value major type 0 or 1 can carry, encoded as a big number'
     notes: 'No leading zeros, so only the unification bullet is violated - and this is the vector that fixes the 9-byte floor for big numbers: an 8-byte content is always a value major type 1 can carry.'
 
@@ -537,6 +641,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0031"
     violates: '§4.1 item 3 - indefinite-length byte or text string'
     notes: 'Both segment lengths are themselves shortest-form here; only the indefinite framing violates the rules.'
   - id: "draft-ietf-cbor-serialization#V-0039"
@@ -549,6 +655,10 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
+      - "draft-ietf-cbor-serialization#R-0031"
     violates: '§4.1 item 1 - the argument is not in shortest form; §4.1 item 3 - indefinite-length byte or text string'
     notes: 'Three violations in one encoding: the indefinite framing, and the non-shortest length argument of each of the two segments. The segment-length case is the reason Section 4.1 item 1''s reach has to be understood as "every argument anywhere", not "every integer value".'
 
@@ -576,6 +686,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0031"
     violates: '§4.1 item 3 - indefinite-length byte or text string'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0042"
@@ -588,6 +700,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0031"
     violates: '§4.1 item 3 - indefinite-length byte or text string'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0043"
@@ -600,6 +714,10 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
+      - "draft-ietf-cbor-serialization#R-0031"
     violates: '§4.1 item 1 - the argument is not in shortest form; §4.1 item 3 - indefinite-length byte or text string'
     notes: 'The text-string counterpart of byte_string.edn''s third form: indefinite framing plus a non-shortest length on each segment.'
 
@@ -627,6 +745,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0030"
     violates: '§4.1 item 2 - indefinite-length array or map'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
 
@@ -654,6 +774,8 @@ vectors:
       general: valid
       preferred_plus: valid
       deterministic: invalid
+    violates_deterministic_requirements:
+      - "draft-ietf-cbor-serialization#R-0055"
     violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0048"
@@ -666,6 +788,8 @@ vectors:
       general: valid
       preferred_plus: valid
       deterministic: invalid
+    violates_deterministic_requirements:
+      - "draft-ietf-cbor-serialization#R-0055"
     violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0049"
@@ -678,6 +802,8 @@ vectors:
       general: valid
       preferred_plus: valid
       deterministic: invalid
+    violates_deterministic_requirements:
+      - "draft-ietf-cbor-serialization#R-0055"
     violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0050"
@@ -690,6 +816,8 @@ vectors:
       general: valid
       preferred_plus: valid
       deterministic: invalid
+    violates_deterministic_requirements:
+      - "draft-ietf-cbor-serialization#R-0055"
     violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0051"
@@ -702,6 +830,8 @@ vectors:
       general: valid
       preferred_plus: valid
       deterministic: invalid
+    violates_deterministic_requirements:
+      - "draft-ietf-cbor-serialization#R-0055"
     violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0052"
@@ -714,7 +844,11 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0030"
     violates: '§4.1 item 2 - indefinite-length array or map'
+    violates_deterministic_requirements:
+      - "draft-ietf-cbor-serialization#R-0055"
     violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0053"
@@ -727,7 +861,12 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
+    violates_deterministic_requirements:
+      - "draft-ietf-cbor-serialization#R-0055"
     violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
     notes: 'Three keys, three different non-shortest widths - and a second lesson: the map is unsorted under the comparison as written too, since h''1a00000003'' > h''190002'' bytewise. Had the keys been sorted, the sort would still have been over these non-canonical bytes, which is why rule 5.1 item 2 says "their DETERMINISTIC encodings of the map keys".'
 
@@ -755,6 +894,8 @@ vectors:
       general: valid
       preferred_plus: valid
       deterministic: invalid
+    violates_deterministic_requirements:
+      - "draft-ietf-cbor-serialization#R-0055"
     violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0056"
@@ -767,6 +908,8 @@ vectors:
       general: valid
       preferred_plus: valid
       deterministic: invalid
+    violates_deterministic_requirements:
+      - "draft-ietf-cbor-serialization#R-0055"
     violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0057"
@@ -779,6 +922,8 @@ vectors:
       general: valid
       preferred_plus: valid
       deterministic: invalid
+    violates_deterministic_requirements:
+      - "draft-ietf-cbor-serialization#R-0055"
     violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0058"
@@ -791,6 +936,8 @@ vectors:
       general: valid
       preferred_plus: valid
       deterministic: invalid
+    violates_deterministic_requirements:
+      - "draft-ietf-cbor-serialization#R-0055"
     violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0059"
@@ -803,6 +950,8 @@ vectors:
       general: valid
       preferred_plus: valid
       deterministic: invalid
+    violates_deterministic_requirements:
+      - "draft-ietf-cbor-serialization#R-0055"
     violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0060"
@@ -815,6 +964,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0030"
     violates: '§4.1 item 2 - indefinite-length array or map'
     notes: 'Sorted, so the only violation is the indefinite framing. Under the Section 6 special serialization - deterministic except that maps and arrays take indefinite lengths - this encoding would be the conforming one.'
   - id: "draft-ietf-cbor-serialization#V-0061"
@@ -827,8 +978,11 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0030"
+      - "draft-ietf-cbor-serialization#R-0031"
     violates: '§4.1 item 2 - indefinite-length array or map; §4.1 item 3 - indefinite-length byte or text string'
-    notes: 'The hardest encoding in the document: four nested indefinite-length items. It is also the ONLY encoding in the document on which the two candidate map sort orders disagree. Its keys encode to 7, 7 and 6 bytes; bytewise lexicographic order (Section 5.1 item 2) leaves them as they are, while the RFC 7049 Section 3.9 / RFC 8949 Section 4.2.3 length-first order that the rule explicitly rejects would put the 6-byte key first. Since this encoding is rejected by both preferred-plus and deterministic serialization for its indefinite framing, no conformance test built from these fixtures ever reaches the distinction - see the README.'
+    notes: 'The hardest encoding in the document: four nested indefinite-length items. CORRECTED BY THE CROSS-CHECK PASS, because this note is where the withdrawn "one disagreement" finding survived after the verify pass struck it everywhere else. Under the sort key Section 5.1 item 2 actually names - "their DETERMINISTIC encodings of the map keys" - these three keys encode to h''63616263'', h''63646566'' and h''63676869'', all four bytes, so bytewise order and the rejected RFC 7049 Section 3.9 / RFC 8949 Section 4.2.3 length-first order agree, as they do on all 16 map encodings in the corpus: ZERO disagreements. The one disagreement appears only under the reading that sorts the keys AS PRINTED - h''7f6161626263ff'', h''7f6264656166ff'' and h''7f63676869ff'', 7, 7 and 6 bytes, where length-first would put the 6-byte key first - and that is not the rule. Re-derived across all 16 by the cross-check pass: 0 under the stated sort key, 1 under the printed-bytes reading, and this encoding is the one. Since it is rejected by both preferred-plus and deterministic serialization for its indefinite framing anyway, no conformance test built from these fixtures ever reaches the distinction - see the README.'
 
   # ------------------------------------------------------------------
   # App. L.2 (positive_bignum.edn) - "A positive big num", with the source's note: "Note that big numbers are included in the test data because preferred-plus serialization requires their unification with integers."
@@ -854,6 +1008,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0039"
     violates: '§4.1 item 5 - leading zeros encoded in a big number'
     notes: 'The pure leading-zeros case: the value is too large for major type 0, so only rule 5''s first bullet is violated.'
 
@@ -881,6 +1037,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0039"
     violates: '§4.1 item 5 - leading zeros encoded in a big number'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0066"
@@ -893,6 +1051,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0031"
+      - "draft-ietf-cbor-serialization#R-0039"
     violates: '§4.1 item 3 - indefinite-length byte or text string; §4.1 item 5 - leading zeros encoded in a big number'
     notes: 'Two violations: the content byte string is indefinite-length, and once the segments are joined the magnitude carries four leading zero bytes. The only vector in the document where an indefinite-length string appears as tag content rather than at the top level.'
 
@@ -920,6 +1081,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'The tag NUMBER is non-shortest; the content is untouched. The first of four encodings in this file that violate rule 1 on a tag number alone - the clearest demonstration that the shortest-form rule reaches arguments that are not values.'
   - id: "draft-ietf-cbor-serialization#V-0069"
@@ -932,6 +1096,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0070"
@@ -944,6 +1111,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0071"
@@ -956,6 +1126,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0072"
@@ -968,6 +1141,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0029"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'The mirror image: a shortest-form tag number with a non-shortest content. Together with the four above, this file covers both halves of a tagged item independently.'
 
@@ -995,6 +1171,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0075"
@@ -1007,6 +1186,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0076"
@@ -1019,6 +1201,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0077"
@@ -1031,6 +1216,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0025"
+      - "draft-ietf-cbor-serialization#R-0026"
     violates: '§4.1 item 1 - the argument is not in shortest form'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0078"
@@ -1043,6 +1231,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0031"
     violates: '§4.1 item 3 - indefinite-length byte or text string'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0079"
@@ -1055,6 +1245,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0031"
     violates: '§4.1 item 3 - indefinite-length byte or text string'
     notes: 'Seven general encodings, the most of any file. Tag 0 is the one tag number that cannot be made non-shortest in the other direction - 0 is already in the initial byte.'
 
@@ -1112,6 +1304,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0033"
+      - "draft-ietf-cbor-serialization#R-0034"
     violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0084"
@@ -1124,6 +1319,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0033"
+      - "draft-ietf-cbor-serialization#R-0034"
     violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
     notes: 'Positive zero is exactly representable in half at every width, so both wider encodings are always violations - one of the few float cases a grammar can decide without arithmetic.'
 
@@ -1170,6 +1368,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0033"
     violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0088"
@@ -1197,6 +1397,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0033"
     violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0090"
@@ -1224,6 +1426,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0033"
     violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0092"
@@ -1236,6 +1440,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0033"
     violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
     notes: 'THE case that no grammar can decide. Nothing in these four bytes says the value is exactly representable in half; only the arithmetic of Appendix D does. Compare the zeros and infinities in this directory, which are fixed bit patterns.'
   - id: "draft-ietf-cbor-serialization#V-0093"
@@ -1263,6 +1469,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0033"
     violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0095"
@@ -1275,6 +1483,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0033"
     violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0096"
@@ -1313,6 +1523,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0033"
     violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0099"
@@ -1325,6 +1537,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0033"
     violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
     notes: 'Infinity is exactly representable in half at every width, so both wider encodings are always violations. Appendix D''s functions narrow it through the `mant == 0` branch under the all-ones exponent, with no special case needed.'
 
@@ -1352,6 +1566,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0037"
+      - "draft-ietf-cbor-serialization#R-0078"
     violates: '§4.1 item 4 - a NaN other than the half-precision quiet NaN 0xf97e00'
     notes: 'Rejected by rule 4 bullet 3 even though it is the canonical quiet NaN at its own width: "Encoders MUST NOT output any NaN other than the half-precision NaN 0xf9 0x7e 0x00". It is also the same VALUE as h''f97e00'' under Appendix C.4''s equivalence (sign bits identical, significands identical when zero-extended to 64 bits), so it is a shortening violation as well. Either reading rejects it.'
   - id: "draft-ietf-cbor-serialization#V-0102"
@@ -1364,6 +1581,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0037"
+      - "draft-ietf-cbor-serialization#R-0078"
     violates: '§4.1 item 4 - a NaN other than the half-precision quiet NaN 0xf97e00'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
 
@@ -1380,6 +1600,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0037"
+      - "draft-ietf-cbor-serialization#R-0082"
     violates: '§4.1 item 4 - a NaN other than the half-precision quiet NaN 0xf97e00'
     notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
   - id: "draft-ietf-cbor-serialization#V-0104"
@@ -1392,6 +1615,9 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0037"
+      - "draft-ietf-cbor-serialization#R-0082"
     violates: '§4.1 item 4 - a NaN other than the half-precision quiet NaN 0xf97e00'
     notes: 'Appendix C.4''s equivalence in action: this is the SAME VALUE as h''f97dff'', because the significands match once both are zero-extended on the right to 64 bits.'
   - id: "draft-ietf-cbor-serialization#V-0105"
@@ -1404,5 +1630,8 @@ vectors:
       general: valid
       preferred_plus: invalid
       deterministic: invalid
+    violates_requirements:
+      - "draft-ietf-cbor-serialization#R-0037"
+      - "draft-ietf-cbor-serialization#R-0082"
     violates: '§4.1 item 4 - a NaN other than the half-precision quiet NaN 0xf97e00'
     notes: 'The third equivalent width. Verified: 0x1ff << 42 = 0x7fc0000000000.'

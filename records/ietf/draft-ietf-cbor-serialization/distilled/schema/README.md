@@ -3,7 +3,7 @@ record: draft-ietf-cbor-serialization
 kind: schema
 title: "draft-ietf-cbor-serialization — schemas"
 extracted: "2026-10-18"
-pass: 1
+pass: 3
 reviewed_by: ""
 ---
 
@@ -151,6 +151,45 @@ and each carries the finding in its header.
    the big-number items are decoder-acceptance rules — but the document never
    does the reconciling, and a reader comparing this draft against CDE or dCBOR
    on the strength of C.5 alone will miss the big-number half.
+7. **Appendix D narrows ±2^-25 to half ±0.0, losing the value.**
+   `S2H_MIN_SUBNORM_EXP` is 102; the biased single exponent of 2^-24, the
+   smallest half subnormal, is 103. At `exp == 102, mant == 0` the subnormal
+   branch computes `(0 + 0x800000) >> 24`, which is 0, so
+   `pref_plus_single_to_half(0x33000000)` returns half `0x0000`. The code the
+   document ships as its implementation of "the shortest … **that preserves
+   precision**" therefore does not preserve precision, for exactly two inputs
+   out of the 63,493 it narrows. Found by the cross-check pass by exhaustive
+   exact enumeration; the parallel `D2S_MIN_SUBNORM_EXP 874` is correct and the
+   double → single direction has no such case, so this is an off-by-one in one
+   constant, not a design choice. Full evidence in `../design-notes.md`
+   item 17. `pref-plus-float.c` keeps the source's bytes; the derived files
+   call the function as the document instructs and inherit the behaviour, which
+   is why a checker built from them still reproduces all 105 vectors — none
+   exercises ±2^-25.
+
+## A defect found in OUR OWN derived material, and fixed
+
+Distinct from the list above, which is the source's. The cross-check pass
+transcribed all three derived files into a runnable checker and ran the 105
+vectors through it. **`serialization-check.derived.pseudocode.txt`'s
+`CHECK_ITEM` step 5 applied `CHECK_SHORTEST` to every major type, including
+major type 7.** Major type 7's "argument" is a float's bit pattern or a simple
+value, not a length or a count, and §4.1 item 1 enumerates argument *value*
+ranges; rule 4, not rule 1, chooses a float's width. As written the procedure
+therefore rejected `h'f90000'` — the encoding of 0.0 that §4.1 item 4 states as
+a MUST (`draft-ietf-cbor-serialization#R-0034`) and that `../examples/vectors.yaml`
+carries three times as valid in all three serializations — because the half
+pattern `0x0000` is below ai 25's threshold of 256. It would also have rejected
+all 256 half patterns below `0x0100`, 65,535 of the 65,536 single patterns
+below `0x00010000`, and every double pattern below 2^32, all legal
+preferred-plus.
+
+`prefp-head.derived.abnf` never had the bug: it reaches major type 7 through
+`simple-head` and `float-head`, which do not use `arg1`/`arg2`/`arg4`/`arg8` at
+all. So the two derived artifacts disagreed, and the ABNF was right. Step 5 now
+carries the guard and its reasoning. With the guard, the CHECK procedure
+implemented literally from this file reproduces all 210 preferred-plus and
+deterministic verdicts in the corpus with 0 disagreements.
 
 ## Tooling notes
 

@@ -11,16 +11,20 @@ reviewed_by: ""
 FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what
 it does not.
 
-**State: passes 1 and 2 of 3 complete.** The extract pass ran at effort max,
-agents in parallel, each reading only
+**State: passes 1, 2 and 3 of 3 complete — `profile: full`.** Human review
+(pass 4) is outstanding; every `reviewed_by` is empty. The **extract** pass ran
+at effort max, agents in parallel, each reading only
 `.cache/draft-ietf-cbor-serialization.txt`. The **verify** pass (2026-10-19,
-effort max) re-derived the keyword reconciliation, every quotation and
-locator, every fenced and verbatim block, and all 105 vectors from the cached
-source alone, and corrected four pass-1 claims — see `record.yaml`'s
-`distillation.passes`. **The cross-check pass has NOT run**, so this record
-still carries no `profile` — an unfinished extraction is neither `full` nor
-`partial`. It is readable; nothing may be built on it. library#39 owns
-finishing it.
+effort max) re-derived the keyword reconciliation, every quotation and locator,
+every fenced and verbatim block, and all 105 vectors from the cached source
+alone, and corrected four pass-1 claims. The **cross-check** pass (2026-10-19,
+effort max) worked artifact against artifact rather than against the source: it
+transcribed the derived ABNF and both pseudocode procedures into a runnable
+layered checker and ran every vector through it, completed `constrained_by`
+across all 48 fields, wired `violates_requirements` onto every invalid vector,
+and found three defects — two in the source (Appendix D's float narrowing, §8's
+recursion clause) and one in this library's own check procedure. See
+`record.yaml`'s `distillation.passes`.
 
 Source: *CBOR Serialization and Determinism*, `draft-ietf-cbor-serialization-08`.
 This record's `usefulness.reason` calls it "the live WG determinism work and
@@ -32,8 +36,8 @@ repo* below.
 | normative | `normative.md` | statements and verbatim blocks across the source's own section structure. Re-derived by the verify pass: 294 inline quotations all contiguous and correctly located, 36 fenced blocks each byte-exact and uniquely placed, no quotation crossing a page boundary and none spliced |
 | requirements | `requirements.yaml` | 100 entries, `R-0001`–`R-0100`, source order: 65 `stated` carrying all 65 BCP 14 occurrences (41 MUST, 8 MAY, 7 RECOMMENDED, 4 SHOULD, 4 MUST NOT, 1 NOT RECOMMENDED), 35 `inferred` carrying none. Counts reconcile 65 = 65, and the verify pass matched each of the 65 source occurrences, by line, to exactly one `stated` entry — none unclaimed, none claimed twice. Two sentences carry two occurrences each for two different actors and are quoted as two non-overlapping clauses rather than twice in full, which would have double-counted |
 | schema | `schema/` | 3 verbatim, 3 derived — see below |
-| messages | `messages.yaml` | 19 structures, 49 `constrained_by` links over 25 distinct requirement ids, every id verified to exist. Linked only where §4.1/§4.2/§5.1 item numbering maps one-to-one; omitted elsewhere. The map key comparison is spelled out byte by byte |
-| examples | `examples/` | 105 vectors, **every hex string the source's own, none computed by us**. 41 valid / 64 invalid under preferred-plus; `conformance` carries all three serializations. See `examples/README.md` |
+| messages | `messages.yaml` | 19 structures, **48 fields, all carrying `constrained_by`**: 40 hold 203 links to 68 of the 100 requirements, 8 hold an explicit `[]` with a note saying why. The two-part linking rule and the five groups of unlinked requirements are in the file header, so a reviewer can argue with a specific link. The map key comparison is spelled out byte by byte |
+| examples | `examples/` | 105 vectors, **every hex string the source's own, none computed by us**. 41 valid / 64 invalid under preferred-plus, 31 / 74 under deterministic, 105 / 0 under general; `conformance` carries all three serializations, and every invalid vector now carries `violates_requirements` (64 vectors, 109 links) or `violates_deterministic_requirements` (12, 12) beside its prose reason. All 420 verdicts were re-derived by a checker built from `schema/`. See `examples/README.md` |
 | design-notes | `design-notes.md` | this document against RFC 8949 §4.2, CDE and dCBOR; the convergence question its topic owns; the R-O-03 citation target; and where the source cuts against MD-3 |
 
 ## Not applicable
@@ -110,6 +114,22 @@ Reported, never repaired. Two are substantive:
 9. Referenced but never defined: `COSE_Sign1` and `Sig_structure`; and
    C.5's escape hatch — "A new CBOR tag can be defined in the future to
    explicitly support them" — with no tag number and no content model.
+10. **Appendix D's example code loses precision on ±2^-25.** Found by the
+    cross-check pass. `S2H_MIN_SUBNORM_EXP` is 102 where the biased single
+    exponent of the smallest half subnormal (2^-24) is 103, so
+    `pref_plus_single_to_half(0x33000000)` returns half `0x0000` — the code
+    the document ships as its implementation of "the shortest … **that
+    preserves precision**" does not preserve it. Exactly 2 of the 63,493
+    inputs it narrows change value, established by exhaustive exact
+    enumeration; the parallel `D2S_MIN_SUBNORM_EXP 874` is correct, so it is an
+    off-by-one in one constant. No vector exercises it — a corpus gap two
+    vectors would close. `design-notes.md` item 17.
+11. **§8's recursion clause never mentions tags.** It extends `.serial`
+    "recursively through nested arrays and maps" and excludes byte strings; a
+    tag's content is neither, so the sentence decides nothing about it — while
+    `date_epoch_tag.edn` plainly treats tag content as profile-dependent.
+    Recursion through a tag is what the document does, not what it says.
+    `design-notes.md` item 18.
 
 ## One finding for the COSE export lane
 

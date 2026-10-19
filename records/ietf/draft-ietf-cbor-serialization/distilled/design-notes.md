@@ -450,7 +450,7 @@ Oct 28 package cannot skip.
 | candidate | standing | what it gives | what it costs |
 |---|---|---|---|
 | **RFC 8949 §4.2.1** | STD 94. Published 2020-12. No expiry. Complete in itself | the three core constraints; the bytewise sort; stability | leaves fourteen decisions open (`rfc-8949`); permits non-trivial NaNs, which we and this draft forbid; reaches definite lengths *through* preferred serialization, whose decoder side technically requires accepting indefinite lengths (§4.4) — the opposite of our rule; states **no** decoder obligation at all |
-| **draft-ietf-cbor-cde-13** | expired **2026-04-17**; intended BCP; "Updates: 8949 (if approved)" | vocabulary (`preferred-serialization` / `definite-length-only` / `lexicographic-map-sorting`); the strictly-greater sort phrasing; an informative checking-decoder appendix | expired; its added normative content is three sentences (`draft-ietf-cbor-cde` design notes); **not cited by this draft at all**; its `.cde` operator competes with `.serial` in the same IANA registry; its NaN table contains rows this draft's §4.1 forbids |
+| **draft-ietf-cbor-cde-13** | expired **2026-04-17**; intended BCP; "Updates: 8949 (if approved)" | vocabulary (`preferred-serialization` / `definite-length-only` / `lexicographic-map-sorting`); the strictly-greater sort phrasing; an informative checking-decoder appendix | expired; its added normative content is three sentences (`draft-ietf-cbor-cde` design notes); **not cited by this draft at all**; its `.cde` operator competes with `.serial` in the same IANA registry; its NaN table contains rows this draft's §4.1 forbids — **three bytes prove it**: `draft-ietf-cbor-cde#V-0081` is `h'f97dff'` with `expect: valid`, and `draft-ietf-cbor-serialization#V-0103` is the same `h'f97dff'`, invalid under preferred-plus *and* deterministic (R-0037, R-0082). The cross-check pass confirmed this against CDE's own artifacts, which are at `profile: full`; CDE also ships `f97e01` and `fa7f800001` as conforming, both forbidden here |
 | **draft-mcnally-deterministic-cbor-18** | Internet-Draft; expires 11 February 2027 (per that record's extraction) | the only normative statement of condition (2) we hold | registers **CBOR tag 201**, which `ADR-0001` excludes from the native model; cited by this draft only informatively and only at the application layer (Appendix B); an Internet-Draft citation |
 | **this draft, -08** | Internet-Draft, **Standards Track**, WG document; date line 29 July 2026; **expires 30 January 2027** | §4.2.1 restated in BCP 14 language; definite lengths as a *requirement* (§4.4); the single-NaN rule; a two-value CDDL operator; test vectors (Appendix L); §6's licence for our restriction layer | "It is inappropriate to use Internet-Drafts as reference material or to cite them other than as "work in progress."" (Status of This Memo); `.serial` and the §7 tag rule are **requests** to IANA, not registrations (§10, "please replace RFCXXXX"); §7 carries the author's own note that it "may be out of place in this document"; §5.2 disclaims any checking decoder; **expires 94 days after the Oct 28 ADR** and 106 days after this extraction |
 
@@ -827,3 +827,63 @@ where two of its parts disagree. Recorded rather than papered over.
     It uses no BCP 14 keywords, so the reading is informative, but it is the
     only place the document describes checking decoders — the mechanism
     condition (2) needs. *Read as informative; raise upstream.*
+
+17. **Appendix D's example code violates the rule it implements, for exactly
+    two inputs.** `#define S2H_MIN_SUBNORM_EXP 102` is the lower bound of
+    `pref_plus_single_to_half()`'s subnormal branch. It is one too low. The
+    smallest half-precision subnormal is 2^-24, which in single precision has
+    biased exponent **103**, not 102; at `exp == 102` with `mant == 0` the
+    branch's guard `mant & ((1 << (S2H_SUBNORM_SHIFT - exp)) - 1)` is zero, so
+    the function returns `sign + ((0 + 0x800000) >> 24)` — and `2^23 >> 24` is
+    **0**. The single-precision values ±2^-25 (`0x33000000` and `0xb3000000`)
+    are therefore narrowed to half ±0.0, silently losing the value. That is a
+    direct violation of §4.1 item 4, "Values MUST be encoded in the shortest of
+    double, single or half-precision **that preserves precision**"
+    (`draft-ietf-cbor-serialization#R-0033`), committed by the code the
+    document ships as the implementation of that rule.
+
+    *Evidence.* The set of inputs the function narrows is enumerable in closed
+    form — each branch pins the mantissa to a multiple of a power of two — so
+    the cross-check pass enumerated **all 63,493** of them and compared the
+    claimed narrowing against exact rational arithmetic. Exactly **2** change
+    value, and they are the two above. The converse audit found 0 misses: every
+    one of the 65,536 half patterns, widened exactly to single, is narrowed back
+    to itself. The companion constant is right, which is what makes the
+    asymmetry an error rather than a choice: `D2S_MIN_SUBNORM_EXP 874` is
+    exactly the biased double exponent of 2^-149, single's smallest subnormal,
+    and the double → single direction has **no** value-changing narrowing at any
+    boundary tested. The off-by-one is in the single → half constant alone.
+
+    *Scope.* It is example code, labelled "Example C Code" and not normative
+    (`schema/pref-plus-float.c` records that), but it is the document's only
+    executable artifact and §4.1 item 4 is the hardest rule in the document to
+    implement from prose — so it is the code an implementer will copy. The
+    composed double → half path inherits the bug: a double of value 2^-25
+    narrows to single `0x33000000` and then to half `0x0000`.
+
+    *Corpus gap.* No vector in Appendix L.2 exercises ±2^-25, which is why all
+    105 vectors reproduce correctly against a checker that transcribes
+    Appendix D faithfully. `float_half_subnormal.edn` is 2^-15 and
+    `float_single_subnormal.edn` is 2^-127; neither comes near the half floor.
+    Two vectors would close it: `h'fa33000000'` (2^-25, which must stay single)
+    and `h'fa33800000'` (2^-24, which must narrow to `h'f90001'`).
+    *Raise upstream at `github.com/cbor-wg/draft-ietf-cbor-serialization`; our
+    profile must not copy Appendix D without the fix.*
+
+18. **§8's recursion clause names arrays and maps and never tags, yet the
+    document's own vectors recurse through a tag.** The clause reads: "The
+    scope of .serial applies recursively through nested arrays and maps, but
+    does not extend into byte strings or other data items that happen to
+    contain encoded CBOR" (`draft-ietf-cbor-serialization#R-0066`). A tag's
+    content is neither a nested array or map nor a data item that "happens to
+    contain encoded CBOR" — it *is* the enclosed data item — so the sentence
+    decides nothing about it in either direction. Appendix L.2's
+    `date_epoch_tag.edn` settles it the other way in practice: its note says
+    "The tag content in this example does vary by serialization type", and it
+    lists `h'c11b0000000069e4fbd3'` as general-only because the **content's**
+    argument is not in shortest form. So recursion through a tag is what the
+    document does and not what it says. Recorded in `messages.yaml`'s
+    `tag.content` as the reason that field carries one link (R-0025, which
+    reaches the content's own argument through "for all major types") and not
+    R-0066. *Editorial; raise upstream. Our profile should say "arrays, maps
+    and tag content".*

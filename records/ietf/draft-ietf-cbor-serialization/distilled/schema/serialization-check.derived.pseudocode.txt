@@ -132,7 +132,25 @@ PART 2 - CHECK: the conformance pass                   [Appendix H]
                                                     [Section 4.1 r2]
         otherwise:       not well-formed            ; RFC 8949 Section 3
    4  (argument, p) := READ_ARGUMENT(b, p)
-   5  CHECK_SHORTEST(ai, argument, p)                [Section 4.1 r1]
+   5  if mt != 7:  CHECK_SHORTEST(ai, argument, p)   [Section 4.1 r1]
+        ; THE GUARD IS LOAD-BEARING.  Major type 7's "argument" is not a
+        ; length, a count or a value in rule 1's sense: at ai 25/26/27 it is
+        ; the float's bit pattern and at ai 24 it is the simple value.  Rule
+        ; 1 enumerates argument VALUE ranges ("0 to 23 ... 24 to 255 ..."),
+        ; which is meaningful for major types 0-6 and meaningless for a
+        ; float payload; rule 4, not rule 1, chooses a float's width.
+        ; WITHOUT the guard this procedure rejects h'f90000' - the encoding
+        ; of 0.0 that Section 4.1 r4 states as a MUST
+        ; (draft-ietf-cbor-serialization#R-0034) and that appears three
+        ; times in ../examples/vectors.yaml as valid under all three
+        ; serializations - because the half pattern 0x0000 is below ai 25's
+        ; 256 threshold.  It would also reject all 256 half patterns below
+        ; 0x0100, 65535 of the 65536 single patterns below 0x00010000 and
+        ; every double pattern below 2^32, all of them legal preferred-plus.
+        ; Found by the cross-check pass by running this procedure as it
+        ; stood against all 105 vectors; prefp-head.derived.abnf never had
+        ; the bug, because it reaches major type 7 through `simple-head`
+        ; and `float-head`, which do not use arg1/arg2/arg4/arg8 at all.
    6  dispatch on mt:
         0, 1   -> done
         2, 3   -> p := p + argument                  ; skip the content

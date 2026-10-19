@@ -16,7 +16,7 @@ updated: "2026-10-19"
 | **Published** | 29 July 2026 (revision -08); expires 30 January 2027 |
 | **Identifier** | draft-ietf-cbor-serialization-08 |
 | **Source** | https://www.ietf.org/archive/id/draft-ietf-cbor-serialization-08.txt |
-| **Digest** | `5e5f2e9c0ec3…` (sha-256 of the .txt, retrieved 2026-09-22) |
+| **Digest** | `a612e6c4f674…` (sha-256 of the .txt, retrieved 2026-09-22) |
 
 ## Overview
 
@@ -78,7 +78,12 @@ encoding, held verbatim at `distilled/schema/pref-plus-float.c`. *Searched on
 2026-10-19; no named implementation in the document.* The extraction's own
 decoder reproduced all 105 vectors and independently agreed with the author's
 Appendix L.2 lists across all 25 files, 34 preferred-plus and 24 deterministic
-encodings, with zero mismatches.
+encodings, with zero mismatches. The cross-check pass then did it a third way,
+from the artifacts rather than the source: a layered checker transcribed from
+`distilled/schema/` — the grammar layer parsing the derived ABNF itself —
+reproduced all 420 verdicts with 0 mismatches, and was shown to discriminate
+on 210 cases the draft never prints. **Caveat for anyone building from
+Appendix D: it is wrong at one boundary — see Limits.**
 
 ## Limits
 
@@ -108,12 +113,31 @@ encodings, with zero mismatches.
   sole difference" from §4.2.1. They reconcile, but the document never does it,
   and anyone comparing this draft against CDE or dCBOR on C.5 alone misses the
   big-number half.
+- **Appendix D's example code violates the rule it implements.** Found by the
+  cross-check pass, and the most consequential defect here for an implementer.
+  `S2H_MIN_SUBNORM_EXP` is defined as 102; the smallest half-precision
+  subnormal is 2^-24, whose biased *single* exponent is **103**. At the
+  off-by-one exponent the narrowing branch computes `2^23 >> 24`, which is 0,
+  so `pref_plus_single_to_half()` turns ±2^-25 into half **±0.0** — losing the
+  value, in the function the draft ships as its implementation of "the
+  shortest … *that preserves precision*". Exactly 2 of the 63,493 inputs it
+  narrows change value, established by enumerating all of them against exact
+  rational arithmetic; the parallel `D2S_MIN_SUBNORM_EXP 874` is correct and
+  the double→single direction has no such case, so this is one wrong constant,
+  not a design choice. **No vector in Appendix L.2 goes near the half
+  subnormal floor**, so an implementation that copies Appendix D passes the
+  entire corpus. `distilled/design-notes.md` item 17.
+- **§8's recursion clause never mentions tags.** `.serial` applies
+  "recursively through nested arrays and maps" and stops at byte strings; a
+  tag's content is neither, so the sentence decides nothing — while
+  `date_epoch_tag.edn` plainly treats tag content as profile-dependent.
+  Recursion through a tag is what the document does, not what it says.
 - `COSE_Sign1` and `Sig_structure` are referenced but never defined, and
   Appendix C.5's escape hatch ("A new CBOR tag can be defined in the future")
   names no tag number and no content model.
-- The extraction is at **passes 1 and 2 of 3**; cross-check has not run and no
-  human has signed anything off, so these artifacts are readable but not
-  buildable-on.
+- The extraction is at **`profile: full`** — all three machine passes done,
+  cross-check included — but **no human has signed any `reviewed_by`**, so
+  pass 4 is outstanding.
 
 ## A contradiction in our own repo
 

@@ -3,7 +3,7 @@ record: draft-ietf-cbor-serialization
 kind: examples
 title: "draft-ietf-cbor-serialization — examples and test vectors"
 extracted: "2026-10-18"
-pass: 1
+pass: 3
 reviewed_by: ""
 ---
 
@@ -45,6 +45,8 @@ So a bare valid/invalid verdict would be meaningless. Each vector carries:
 | `conformance.deterministic` | preferred-plus **plus** map key ordering |
 | `violates` | why `expect` is `invalid`, cited by section. Present on every `invalid` |
 | `violates_deterministic` | present wherever deterministic serialization rejects for §5.1 item 2, the one rule it adds. On the **10** vectors preferred-plus accepts it is the sole reason for rejection; on V-0052 and V-0053 it is an *additional* reason alongside `violates`, because those two maps are unsorted as well as ill-framed. 12 vectors carry the field, 10 of them the preferred-plus/deterministic delta |
+| `violates_requirements` | the same reason as **requirement ids** rather than prose. Added by the cross-check pass on all **64** vectors that carry `violates`, 109 links over 13 distinct ids, each id derived from the bytes and then checked clause-by-clause against the prose it sits beside (0 disagreements). Where §4.1 item 1 is the rule, the id set names the *bullet* the argument's value falls under — R-0026 for an argument of 0..23, R-0027 for 24..255, and so on — beside the umbrella R-0025 |
+| `violates_deterministic_requirements` | the same for `violates_deterministic`, on all **12** vectors that carry it. Always `R-0055`, the sort rule, because §5.1 item 2 is the only rule deterministic serialization adds. Kept as a separate key rather than merged into `violates_requirements` so the 12-field / 10-delta contract above stays exact: merging would make a deterministic-only rejection indistinguishable from a preferred-plus one |
 
 The split:
 
@@ -74,6 +76,87 @@ L.1.4 expects it to: "It is common for preferred-plus and deterministic
 decoders to accept non-shortest-length arguments." Nothing in §4.2 requires a
 decoder to reject anything. The negative vectors therefore test the *checking*
 mode, and that is why there are more of them than positive ones.
+
+## Every vector was run against the schema, and which layer caught it
+
+The cross-check pass (2026-10-19) transcribed `../schema/` into a runnable
+checker and put all 105 vectors through it, checking **all four verdicts on
+each** — `expect` and all three `conformance` entries, 420 in total. The
+grammar is not retyped: the ABNF layer **parses
+`../schema/prefp-head.derived.abnf` itself** and matches `prefp-head` at every
+head position, so the checker cannot drift from the artifact it is checking.
+
+| layer | source | decides |
+|---|---|---|
+| **0 · well-formed** | RFC 8949 §3, the precondition both pseudocode files make non-negotiable | the `general` verdict — general serialization is "the complete set of all encodings standardized in Section 3 of [STD94]" |
+| **A · head grammar** | `prefp-head.derived.abnf`, parsed from the file | indefinite framing, non-shortest arguments at every width, both big-number bullets, and the float patterns that are wrong at every value |
+| **B · check** | `serialization-check.derived.pseudocode.txt`, PART 2 | only what no grammar reaches: float width by Appendix D's arithmetic, and map key order under `dtrm` |
+| **C · encode** | `prefp-encode.derived.pseudocode.txt` | decode → `ENCODE` → compare bytes. A whole-artifact cross-check on A and B |
+
+**Result: 420 of 420 verdicts reproduced, 0 mismatches.** The census of the 64
+preferred-plus rejections, and of the 74 deterministic ones:
+
+| layer | reason | prefp | dtrm |
+|---|---|---|---|
+| A | argument not in shortest form | 27 | 27 |
+| A | indefinite-length head or break | 12 | 12 |
+| A | big number: leading zero or content < 9 bytes | 9 | 9 |
+| A | float pattern wrong at every value (non-canonical NaN; infinity or zero at single/double) | 10 | 10 |
+| B | float not in the shortest width that preserves precision | 6 | 6 |
+| B | map keys not in bytewise lexicographic order | — | 10 |
+| C | — | 0 | 0 |
+| | **total** | **64** | **74** |
+
+**Layer C caught nothing the earlier layers had not,** which is the result
+worth having: the head grammar plus two value-dependent predicates are
+*complete* for this corpus. C is not vacuous — with layer B disabled it catches
+the same six float-width and ten map-order cases by re-encoding (`a302617903617a016178`
+→ `a301617802617903617a`), so the agreement is a real cross-check and not an
+unreachable branch. The one place C and B disagree is byte-identical duplicate
+map keys, which B rejects and C accepts; that is the divergence
+`serialization-check.derived.pseudocode.txt` already flags, since its
+`not BYTEWISE_LT(prev, key)` is a stricter reading than the draft states, and
+**no vector in the corpus exercises it**.
+
+**Every invalid vector failed for its stated reason.** The checker's finding
+category was matched against the prose `violates` clause by clause across all
+64: 0 disagreements. That mapping is what `violates_requirements` was derived
+from.
+
+### The checker discriminates — 210 cases the source never prints
+
+105 vectors prove nothing about a checker that accepts everything, so the pass
+also ran a negative-control suite of **210 cases, 181 of which appear nowhere
+in the corpus**, each with its expected verdict asserted: **0 failures.**
+
+| family | n | what it probes |
+|---|---|---|
+| indefinite heads | 10 + 6 partners | all four heads, the bare break, an indefinite string nested in an array and an indefinite map inside a tag — against the definite partners that must be accepted |
+| non-preferred widths | 85 + 18 partners | every major type that carries an argument × each of the four wider forms × the boundary arguments, plus the shortest-form encoding at each of the eight boundaries (23/24, 255/256, 65535/65536, 2^32−1/2^32, 2^64−1) which must be accepted |
+| maps | 9 | misordered integer, equal-length text and unequal-length text keys; keys spanning the 0x80 boundary, where a signed-char comparison mis-sorts; an unsorted map nested in a map and in an array; and a byte-identical duplicate key |
+| big-number edges | 14 | the 9-byte floor accepted and the 8-byte content rejected for both tags; leading zeros at 9 and 10 bytes; empty and 1-byte content; the 23/24-byte head boundary; a non-shortest length on the big number's own byte string; indefinite content; tag 2 whose content is not a byte string |
+| reserved `ai` | 36 + 1 | `ai` 28–30 on all eight major types, `ai` 31 on major types 0, 1 and 6, the bare break, and simple values 24–31 in the two-byte form — against `f820`, which must be accepted |
+| floats | 29 + 2 | every non-canonical half NaN; half infinities and zeros, which are legal; single and double zeros, infinities and NaNs, which are not; and the value-dependent pairs — 65504 (half) against 65536 (single only), the smallest half subnormal against 2^-26 |
+
+The ABNF's own census claim was re-derived from the grammar **as parsed**:
+224 of RFC 8949's 229 well-formed initial bytes admitted, 28 per major type,
+excluding exactly `5f 7f 9f bf ff`. The alternation was asserted unambiguous at
+every head matched — no input in the corpus or the control suite produced two
+match lengths.
+
+### What it found
+
+One defect in this library's own material, now fixed:
+`serialization-check.derived.pseudocode.txt` applied `CHECK_SHORTEST` to major
+type 7, so as written it rejected `h'f90000'` — V-0006, V-0009 and V-0082, the
+encoding of 0.0 that §4.1 item 4 states as a MUST. `../schema/README.md`
+records it. The ABNF never had the bug, so the two derived artifacts disagreed
+and the ABNF was right.
+
+One defect in the source, which the corpus does **not** catch: Appendix D's
+`S2H_MIN_SUBNORM_EXP 102` narrows ±2^-25 to half ±0.0. Exhaustive exact
+enumeration of all 63,493 inputs the function narrows found exactly 2 that
+change value. No vector exercises them — see *What the vectors do not cover*.
 
 ## Provenance: every byte is the document's
 
@@ -187,6 +270,18 @@ general CBOR test coverage" (Appendix L.1). Specifically absent:
 - **No tag-2 boundary vector.** negative_bignum.edn pins the tag 3 floor at
   nine content bytes; there is no tag 2 equivalent (the smallest positive big
   number, 2^64, as `c249010000000000000000`).
+- **No vector anywhere near the half-precision subnormal floor — which is
+  where Appendix D is wrong.** Added by the cross-check pass. The float
+  subnormal vectors are 2^-15 (`float_half_subnormal.edn`), 2^-127
+  (`float_single_subnormal.edn`) and 2^-1074 (`float_double_subnormal.edn`);
+  none comes near 2^-24, the smallest half subnormal, which is the boundary
+  `pref_plus_single_to_half()` gets off by one (`../design-notes.md` item 17).
+  That is why every one of the 105 vectors reproduces correctly against a
+  checker that transcribes Appendix D faithfully, bug included. Two vectors
+  would close it: `h'fa33000000'` (2^-25 — must stay single, because half
+  cannot represent it) and `h'fa33800000'` (2^-24 — must narrow to
+  `h'f90001'`). An implementation that copies Appendix D passes the whole
+  corpus and silently encodes 2^-25 as zero.
 
 ## Three examples in the source are not data items, and so are not vectors here
 
