@@ -26,11 +26,18 @@ indentation inside fenced blocks.
   and it is not cosmetic: where the RFC breaks an already-hyphenated word
   across lines ("low-" / "entropy", §7) the halves are rejoined with **no**
   space, because "low- entropy" is not a word the source contains.
-- The delimiters of a quoted run are its **first and last** `"` on the line:
-  the RFC writes parameter names in double quotes of its own, so a quoted run
-  routinely contains `"` characters. Nothing inside the run is escaped, and
-  nothing is added. Any `_[...]_` annotation or editorial note follows the
-  closing `"`.
+- A quoted run opens at the **first** `"` on the line and closes at the **last
+  `"` before the first annotation marker** — ` _[` or ` — ` — or, where no
+  annotation follows, at the last `"` on the line. The RFC writes parameter
+  names in double quotes of its own, so a quoted run routinely contains `"`
+  characters; nothing inside the run is escaped, and nothing is added. Any
+  `_[...]_` annotation or editorial note follows the closing `"`, **and may
+  itself quote a word** — six lines here do exactly that (§3 "may", §4.6
+  "should", §5.2 "must" and "may", §6 "link breaks", §7 "should").
+  *(Corrected by the verify pass: this rule previously read "its first and last
+  `"` on the line", which those six lines falsify — a mechanical reader
+  following it swallowed the annotation into the run. The quoted runs
+  themselves were all correct; only the rule for finding them was wrong.)*
 - A **fenced block** reproduces source lines byte-exactly, three-space RFC
   left margin and all. Every bullet list, structure, example and registration
   template is fenced, so nothing whitespace-significant is rewrapped.

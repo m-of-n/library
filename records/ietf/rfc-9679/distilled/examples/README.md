@@ -9,8 +9,14 @@ reviewed_by: ""
 # RFC 9679 — examples and test vectors
 
 `vectors.yaml` holds **13 vectors**, in source-locator order with no gaps.
-**Six are the source's own printed examples; seven are constructed by this
-extraction** for sections that state a rule and print nothing. Every vector
+**Five are the source's own printed examples (`V-0008`–`V-0012`); eight are
+constructed by this extraction** (`V-0001`–`V-0007` and `V-0013`) for sections
+that state a rule and print nothing. Those five printed vectors carry **six**
+printed values between them, which is the count in the reproduction table
+below — `V-0012` alone carries the reduced encoding, the digest and the
+base64url form. *(Corrected by the verify pass: pass 1 wrote "six … seven",
+conflating printed values with printed vectors. The enumerated list further
+down was always right — it describes eight constructed vectors.)* Every vector
 carries `source: printed` or `source: constructed`, and a constructed vector
 also carries `constructed_why`. Nothing this pass computed is presented as a
 value RFC 9679 printed.
@@ -20,7 +26,7 @@ P-256 key — and every other printed value in the document descends from it. Th
 `kid` in §6's own full example, the `ckt` in §5.6's CWT claims set, the
 base64url string in §5.7 and the URI in §5.7 are all the same 32 octets. That
 makes the source's test surface very thin for a document whose entire purpose
-is a digest, and it is why seven vectors here are ours.
+is a digest, and it is why eight vectors here are ours.
 
 ## Reproduction — all six printed values reproduce exactly
 
@@ -33,7 +39,7 @@ COSE library was used**, so a shared library bug cannot hide behind a match.
 |---|---|---|
 | full example COSE_Key, CBOR encoding | §6 | **yes** — byte-for-byte from the diagnostic notation |
 | reduced COSE_Key (required parameters only), CBOR encoding | §6 | **yes** — byte-for-byte, and §4.2.1 sorting gives the same bytes |
-| SHA-256 thumbprint | §6 | **yes** — `496bd8af…9da253ec` over those 102 octets |
+| SHA-256 thumbprint | §6 | **yes** — `496bd8af…9da253ec` over those 75 octets |
 | `kid` in the §6 full example | §6 | **yes** — equals the thumbprint |
 | `ckt` in the §5.6 CWT confirmation claim | §5.6 | **yes** — equals the thumbprint |
 | base64url of the thumbprint, and the full `urn:ietf:params:oauth:ckt:` URI | §5.7 | **yes** — 43 characters, unpadded, exact |
@@ -92,7 +98,7 @@ and nothing warns an implementer.
 Consequence recorded for the D5 fixture package: **DEC-003 adds no rows to the
 determinism table.** See `design-notes.md`.
 
-## The seven constructed vectors, and why each exists
+## The eight constructed vectors, and why each exists
 
 Each one covers a rule RFC 9679 states and does not demonstrate.
 
@@ -113,7 +119,13 @@ Each one covers a rule RFC 9679 states and does not demonstrate.
    7.1 of [RFC9053]" while **§4.3, §4.4 and §4.5 cite no defining specification
    at all** — so for RSA, Symmetric and HSS-LMS keys, §7's precondition that "a
    single unambiguous COSE Key representation for that key is defined" is not
-   met by anything this document names.
+   met by anything this document names. **[verify pass]** It *is* met by a
+   document RFC 9679 does not name: RFC 8230 §4 requires that numeric RSA key
+   parameters be unsigned big-endian and that "The octet sequence MUST utilize
+   the minimum number of octets needed to represent the value", which makes
+   `V-0003`'s spelling non-conforming under RFC 8230 even though it conforms to
+   everything RFC 9679 says. `expect: ambiguous` is therefore scoped to RFC 9679
+   and is not a claim about COSE as a whole.
 3. **`V-0004` / `V-0005` / `V-0006` — the `alg`-inside-the-digest hazard, as
    hex.** §4.6 delegates the required-parameter set to each key type's defining
    specification. RFC 9964 §6 is the one concrete exercise of that clause, and

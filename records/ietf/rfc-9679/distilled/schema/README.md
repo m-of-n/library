@@ -77,9 +77,22 @@ collision check rather than a parse.
    without a leading `0x00`. §7 makes "a single unambiguous COSE Key
    representation for that key is defined and used" the precondition for a
    thumbprint identifying a key at all (R-0057) — and for RSA, §4 does not
-   supply one. RFC 8230 §4 does not close this either: it requires only that
-   the fields be encoded as byte strings. **An implementation that uses this
-   as a key identifier must pin a normalisation of its own and say so.**
+   supply one, nor does it cite anything that does: §4.1 and §4.2 both end
+   "Further details are described in Section 7.1 of [RFC9053]", while §4.3,
+   §4.4 and §4.5 cite nothing.
+
+   **[corrected by the verify pass]** This entry previously said "RFC 8230 §4
+   does not close this either: it requires only that the fields be encoded as
+   byte strings." That is **false**. RFC 8230 §4 requires: "All numeric key
+   parameters are encoded in an unsigned big-endian representation as an octet
+   sequence using the CBOR byte string type (major type 2). The octet sequence
+   MUST utilize the minimum number of octets needed to represent the value."
+   That is precisely the missing rule, and under it `h'00010001'` is
+   non-conforming. What remains a defect is the citation, not the semantics:
+   **RFC 9679 never mentions RFC 8230 anywhere**, and §4.6's "consult the
+   defining specification" clause addresses key types other than the five
+   §4.1–§4.5 enumerate. **An implementation that uses this as a key identifier
+   must pin a normalisation and cite it — and RFC 8230 §4 is the citation.**
 
 3. **The §6 full example key is not in deterministic-encoding order.** Its
    printed encoding is `A5 01 02 | 20 01 | 21 5820 … | 22 5820 … | 02 5820 …`

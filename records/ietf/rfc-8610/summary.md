@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-8610
 record: rfc-8610
 type: summary
-updated: "2026-10-18"
+updated: "2026-10-19"
 ---
 
 # Concise Data Definition Language (CDDL)
@@ -129,7 +129,11 @@ available locally.*
 - Surrogates are admitted though §3.1 mandates UTF-8; no horizontal tab exists
   anywhere in the language, which no sentence states; Table 1 disagrees with the
   grammar three times; and Appendix H's own generated instance does not satisfy
-  its own schema on a strict reading.
-- The extraction is at **pass 1 of 3** — verify and cross-check have not run,
-  and no human has signed anything off, so these artifacts are readable but not
+  its own schema on a strict reading — not in one place but in all six of the
+  floating-point values it carries against three `float16` members, none of
+  which is representable in binary16.
+- The extraction is at **passes 1 and 2 of 3** — the verify pass re-derived every
+  mechanical claim from the cached source and corrected two (a block-scalar
+  census and a vector's missing instance), but **cross-check has not run** and no
+  human has signed anything off, so these artifacts are readable but not
   buildable-on.

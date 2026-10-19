@@ -119,8 +119,19 @@ file. Full detail and locators in `grammar-gaps.derived.txt`.
   both describe the number after the dot as additional information, which is
   right for `#7.25` and wrong for `#6.55799`, where it is a tag number.
 - **Appendix H's generated instance does not satisfy its own schema** on a
-  strict reading: `rating: float16` against `"rating": 0.34133473256800795`,
-  which is not representable in binary16. Recorded as `rfc-8610#V-0098`.
+  strict reading, and not in one place but in **every one of them**. Both the
+  verbose and the compact form type three members as `float16`
+  (`rating-value = ( rating: float16 )`, `conf-value = ( confidence: float16 )`,
+  `normal-value = ( normal-rating: float16 )`), and the instance the tool
+  generated carries **six** floating-point values across those three members —
+  `0.34133473256800795`, `0.9481983064298332`, `0.5724646875815566`,
+  `0.19164006323936977`, `0.6065252103391268`, `0.5187773690879303`. Pass 2
+  round-tripped all six through binary16: **none is representable** (the first
+  rounds to `0.34130859375`), and in fact none is representable in binary32
+  either. Appendix E is what makes this a mismatch rather than a quibble —
+  specifying a float precision is "only to restrict the set of permissible
+  values to those expressible with binary16/binary32/binary64". Recorded as
+  `rfc-8610#V-0098`.
 
 ## Not held here
 
@@ -133,9 +144,44 @@ ever created, the verbatim table belongs there, not here.
 
 ## State
 
-**Pass 1 (extract) only.** Every verbatim region in this directory was verified
-byte-for-byte against the cached source by line range, by script, twice — once
-by the generator and once by an independent `sed`-based re-extraction and
-`diff`. The four derived files have **not** been adversarially re-derived, and
-nothing here has been run through a real RFC 8610 parser; none is installed in
-this environment.
+**Passes 1 and 2 of 3 complete.** Every verbatim region in this directory was
+verified byte-for-byte against the cached source by line range, by script,
+three times — once by the generator, once by an independent `sed`-based
+re-extraction and `diff`, and once in pass 2 by a checker written from scratch
+against the cache.
+
+What pass 2 established, beyond byte-equality:
+
+- **All 12 declared regions carry a per-region `sha256`, and all 12 verify**
+  (digest convention: the region's source lines joined by `\n`, with no trailing
+  newline). For all 12, that digest equals the digest of the same lines with
+  every line `rstrip`ped, which independently proves **no line in any region
+  carries trailing whitespace**.
+- **Completeness, not just fidelity.** Every source line in each capture's
+  surrounding span that falls *outside* a claimed region was enumerated and
+  classified: 0 of them is schema content. For Appendix B, 92 lines are captured
+  and the 41 outside are 1 heading, 7 lines of prose (the "This appendix is
+  normative." sentence, the ABNF preamble, and the closing note about prefixed
+  byte strings), 6 lines of page furniture, 1 figure caption and 26 blanks. For
+  Appendix D, 44 captured and the 32 outside are 1 heading, 11 prose, 3
+  furniture, 1 caption, 16 blanks. **Nothing was dropped at either page frame.**
+- **Closure.** `cddl.abnf` holds exactly **47 productions, no duplicates**; 46
+  distinct nonterminals are referenced and **every one is defined**, with no
+  production left unreferenced. `prelude.cddl` holds exactly **40 rules, no
+  duplicates**, `any` … `undefined`, and **every RHS type name resolves inside
+  the prelude** (`e10`, `m` and `e2` are bareword member keys in `decfrac` and
+  `bigfloat`, not type references). Closure holds *across* the page frames in
+  both files, which is a second, independent proof that no rule went missing
+  there.
+- **`cddl-dedented.derived.abnf` round-trips exactly, in both directions.**
+  Stripping the five-column margin from the three source regions and joining
+  them with one blank line per page frame reproduces the file line-for-line; and
+  re-indenting the file by five columns reproduces the source regions
+  line-for-line. It is the margin-stripped original and nothing else, with all
+  47 productions intact.
+
+`control-operators.derived.yaml` and `grammar-gaps.derived.txt` — the other two
+derived files — have **not** been adversarially re-derived. Nothing here has
+been run through a real RFC 8610 or ABNF parser; none is installed in this
+environment, so the checks performed are closure, collision, completeness and
+byte-exactness, not a parse.

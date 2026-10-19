@@ -11,10 +11,13 @@ reviewed_by: ""
 FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what
 it does not.
 
-**State: pass 1 of 3 complete.** Two agents in parallel at effort max, each
-reading only `.cache/rfc-8610.txt`. **The verify and cross-check passes have
-NOT run**, so this record carries no `profile`. Readable; nothing may be built
-on it. library#39 owns finishing it.
+**State: passes 1 and 2 of 3 complete.** Pass 1: two agents in parallel at
+effort max, each reading only `.cache/rfc-8610.txt`. Pass 2 (verify, effort max,
+2026-10-19): an independent agent that did not extract, re-deriving every
+mechanical claim from the cache with checkers written from scratch. **The
+cross-check pass has NOT run** and no `reviewed_by` is signed, so this record
+carries no `profile`. Readable; nothing may be built on it. library#39 owns
+finishing it.
 
 Source: RFC 8610, *Concise Data Definition Language (CDDL)*.
 
@@ -35,7 +38,7 @@ that carries the force.
 | requirements | `requirements.yaml` | 139 entries, `R-0001`–`R-0139`, source order, no gaps: **2 stated, 137 inferred**. `source_keyword_count` and `extracted_keyword_count` both 2, with a 2560-character `reconciliation` stating what was counted instead — every type- and group-matching rule, every occurrence semantic, every control-operator definition, socket/plug, the prelude's fixity, every explicit *disclaimer of capability*, and the lower-case force words the document actually uses (`must`, `needs to`, `ought not`, `urged`, `strongly encouraged`). §1.1's boilerplate is deliberately never quoted: `bin/validate` counts texts with stripping off, so quoting it would add 11 phantom keywords |
 | schema | `schema/` | **8 verbatim, 3 derived.** The two that matter most are Appendix B's complete ABNF (47 productions, three regions spanning two page breaks) and Appendix D's standard prelude (40 rules) — both byte-identical to the cache with the RFC's margin intact, independently re-verified. See `schema/README.md` |
 | messages | `messages.yaml` | 39 constructs, 142 fields (33 CDDL-text, 6 EDN-text from the normative Appendix G). **`constrained_by` is omitted throughout, deliberately and stated in the file header**: with two keyword occurrences there is no honest way to tie a construct to a requirement id, and inventing one is the failure FX-1 exists to prevent |
-| examples | `examples/` | 98 vectors covering every example the document prints: 92 valid, 5 invalid, **1 `indeterminate`**. All five negatives are the source's own, none invented. 103 block scalars verified by script as dedented contiguous source slices |
+| examples | `examples/` | 98 vectors covering every example the document prints: 92 valid, 5 invalid, **1 `indeterminate`**. All five negatives are the source's own, none invented. **109 block scalars verified against the cache: 103 a single unbroken source run, 1 spanning a page frame, 5 joining two non-adjacent ranges across an omitted line and declaring it in their own `notes`** — so 104 are dedented contiguous slices and 5 are the declared compositions. 9 further `instance` values are one-line prose-quoted scalars, each confirmed present in the source. (Pass 1 reported the single-range count as the total; corrected in pass 2.) |
 | design-notes | `design-notes.md` | a verdict on CDDL for D4's encoding-neutral types; six things we need that CDDL cannot express, each with the source's own statement of the absence; and five named cuts against MD-3 |
 
 ## Not applicable
@@ -128,7 +131,11 @@ Reported, never repaired. The first is concrete for our test vectors:
 9. Table 1 disagrees with the grammar three times, including omitting the cut
    `^` that §3.5.4 makes load-bearing.
 10. Appendix H's own generated instance does not satisfy its own schema on a
-    strict reading: `rating: float16` against `0.34133473256800795`.
+    strict reading — and in **every** place it could fail, not one. Three members
+    are typed `float16` (`rating`, `confidence`, `normal-rating`) and the
+    instance carries six floating-point values across them; pass 2 round-tripped
+    all six through binary16 and **none is representable** (`0.34133473256800795`
+    rounds to `0.34130859375`), nor is any representable in binary32.
 
 ## This record is not the current state of CDDL
 

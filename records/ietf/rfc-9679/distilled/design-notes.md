@@ -91,7 +91,7 @@ the key itself, not to a key with additional attributes." §7 adds that "Key
 identifiers are not included in the thumbprint calculation (similarly to other
 optional parameters in the COSE_Key structure)."
 
-**The one worked example (§6).** One EC2 P-256 key. 102 octets hashed, digest
+**The one worked example (§6).** One EC2 P-256 key. 75 octets hashed, digest
 `496bd8af…9da253ec`, which is also the `kid` in the same example, the `ckt` in
 §5.6 and the base64url string in §5.7. **Every printed value in RFC 9679
 descends from one key.** All six reproduce byte-for-byte from the key, with an
@@ -273,6 +273,14 @@ Three things block a plain adoption. Two are ours to fix; the third is not.
 | 2 | For RSA, Symmetric and HSS-LMS no defining specification is cited, so §7's "single unambiguous COSE Key representation" is undefined | §4.3, §4.4, §4.5, §7 | **ours** — pin the representation, or restrict to OKP/EC2 |
 | 3 | For AKP — the only post-quantum key type — `alg` is inside the digest, and RFC 9679 offers no sanctioned subset | §4.6, RFC 9964 §3 and §6 | **not ours** |
 
+**[verify pass] Blocker 2 is cheaper than it looks.** "No defining specification
+is cited" is true of RFC 9679, but **RFC 8230 §4** pins the RSA case for us —
+numeric key parameters are unsigned big-endian and "The octet sequence MUST
+utilize the minimum number of octets needed to represent the value" — and
+Symmetric `k` and HSS-LMS `pub` are opaque byte strings with nothing to
+normalise. So blocker 2 is discharged by adding one citation, not by restricting
+the key types. Blockers 1 and 3 are unaffected.
+
 What it buys if adopted: the one thing `DEC-003` demands ("canonical key bytes
 before hashing"), a citation rather than an invention under `R-O-03`, a
 reproducible 32-octet namespace root for P1, and a worked example that
@@ -321,9 +329,38 @@ Common parameter is REQUIRED for all AKP keys" — and §5.1 then pulls it in,
 because §5.1 excludes only *optional* parameters. The chain is
 §4.6 → RFC 9964 §3 → §5.1, not §4.
 
+**[verify pass] The chain has a shorter leg, and it is the dispositive one.**
+§4.6 does not ask a reader to *derive* the set; it says to consult the defining
+specification "to determine which parameters … are required", and RFC 9964
+answers that question directly in **§6**, not §3: "When computing the COSE Key
+Thumbprint as described in [RFC9679], the required parameters for AKPs are:
+kty, alg, pub." So there are two independent routes and both land in the same
+place — **§4.6 → RFC 9964 §6** states the thumbprint set outright, while
+**§4.6 → RFC 9964 §3 → §5.1** derives it from `alg` being REQUIRED for the key
+plus §5.1 excluding only optional parameters. Quoting only the second
+understates the case, because §6 needs no inference at all. `examples/`
+attributes the set to §6 (`parameter_set_from`), which is correct; the chain as
+first written here and in `record.yaml` named only §3. Both sections verified
+verbatim against `.cache/rfc-9964.txt` (§3 at lines 112–114, §6 at lines
+246–256).
+
 **[verified] The sharpest form of this, checked mechanically against the
-cached source rather than argued: the string `alg` occurs ZERO times in
-RFC 9679, and so does `AKP`.** Neither the parameter nor the key type that
+cached source rather than argued: the COSE Key parameter `alg` is named NOWHERE
+in RFC 9679 — `alg` occurs as a bare word zero times and as `"alg"` zero times
+— and `AKP` occurs zero times outright.** Its only six appearances as a
+substring are inside "algorithm" and "algorithms" (§3 twice, §5.7 four times),
+and not one of those names a key parameter.
+
+> **[corrected by the verify pass]** Pass 1 and the orchestrator both wrote
+> this as "the string `alg` occurs ZERO times in RFC 9679". As a claim about
+> the *string* that is false — `grep -c alg .cache/rfc-9679.txt` returns 5
+> matching lines, 6 occurrences — and a marker that says "checked mechanically"
+> must survive the mechanical check it invites. The claim that survives, and
+> the only one the architecture rests on, is about the **parameter**: no bare
+> `alg`, no quoted `"alg"`, no label 3 in any of §4.1–§4.5. `AKP` is the one
+> that really is zero.
+
+Neither the parameter nor the key type that
 makes it required is named anywhere in the document. So every statement of the
 form "RFC 9679 puts `alg` in the thumbprint" is false as written; what is true
 is that §4.6 delegates the required set, and a document RFC 9679 never cites
@@ -557,7 +594,19 @@ where this extraction had to reason past both RFC 9679 and our own documents.
    text `KeyId`. *ARCH-0001 v0.2.0.*
 4. **Do we restrict `KeyId` to OKP and EC2 keys?** §4.3, §4.4 and §4.5 cite no
    defining specification, so §7's uniqueness precondition is unmet for RSA,
-   Symmetric and HSS-LMS. Restricting is cheap now and expensive later. *DEC-003.*
+   Symmetric and HSS-LMS *on RFC 9679's own citations*. Restricting is cheap now
+   and expensive later. **[verify pass]** For RSA the cheaper answer is to cite
+   rather than restrict: **RFC 8230 §4** supplies exactly the missing rule —
+   "All numeric key parameters are encoded in an unsigned big-endian
+   representation as an octet sequence using the CBOR byte string type (major
+   type 2). The octet sequence MUST utilize the minimum number of octets needed
+   to represent the value." RFC 9679 never cites it, but we may, and under
+   `R-O-03` citing RFC 8230 §4 is a citation rather than an invention. Symmetric
+   (`k`) and HSS-LMS (`pub`) are opaque byte strings with no numeric
+   interpretation, so there is nothing to normalise for them and the precondition
+   is met by the bytes themselves. That leaves restriction unnecessary for all
+   five key types, and the open question narrows to whether we *want* the RSA
+   dependency. *DEC-003.*
 5. **Condition (0) — where is the key representation pinned?** **[beyond
    source]** §4.2's Note is the only instance RFC 9679 supplies. Our profile
    needs the general rule, and the `canonical-encoding` topic's six conditions do
@@ -598,8 +647,14 @@ implementer has to choose. Recorded rather than papered over.
 12. **§4.3, §4.4 and §4.5 cite no defining specification.** §4.1 and §4.2 both
     end "Further details are described in Section 7.1 of [RFC9053]"; the other
     three subsections end with the parameter list. For RSA that leaves `n`'s
-    leading octet unpinned, which `examples/` `V-0002`/`V-0003` show is a real
-    thumbprint divergence. *Open question 4.*
+    leading octet unpinned *as far as this document and its reference list go*,
+    which `examples/` `V-0002`/`V-0003` show is a real thumbprint divergence.
+    **[verify pass]** The rule exists elsewhere: RFC 8230 §4 requires the
+    minimum number of octets needed to represent the value, which makes
+    `V-0003`'s spelling non-conforming under RFC 8230 while conforming to
+    everything RFC 9679 says. **RFC 9679 never cites RFC 8230 — zero
+    occurrences in the document** — so the defect is the missing citation, not a
+    missing rule. *Open question 4.*
 13. **No defined thumbprint discriminates §4.2.1 from §4.2.3 ordering.** Every
     required label lies in −24..23. An implementation can get §4.2.1's map
     sorting wrong and pass every value in this document, and that changes with

@@ -9,7 +9,7 @@ reviewed_by: ""
 # Examples and test vectors
 
 `vectors.yaml` — **98 vectors, `rfc-8610#V-0001` … `rfc-8610#V-0098`, in source
-order with no gaps.** 92 `valid`, 5 `invalid`, 1 `indeterminate`. 19 carry a
+order with no gaps.** 92 `valid`, 5 `invalid`, 1 `indeterminate`. 20 carry a
 concrete instance the source prints.
 
 RFC 8610 is a document about a notation, so nearly every example in it is CDDL
@@ -136,11 +136,23 @@ than as part of any prelude.
 
 ## State
 
-**Pass 1 (extract) only.** Every `cddl` and `instance` block was verified by
-script to be a dedented contiguous slice of the cached source (103 blocks: 97
-single-range, 6 multi-range), and the file parses identically under both of the
-repository's YAML readers (`bin/_record_yaml.py` and `bin/_yaml.py`): 98
-vectors, identical ids, identical block text. **No vector has been run through a
-CDDL tool** — none is installed in this environment — so every `expect` here
-rests on the source's own statement or on arithmetic that the `notes` attribute
-to us.
+**Passes 1 and 2 of 3 complete.** Every `cddl` and `instance` block scalar was
+verified by script against the cached source — **109 block scalars: 103 a single
+unbroken source run, 1 spanning a page frame (`V-0096`), and 5 joining two
+non-adjacent ranges across an omitted line (`V-0012`, `V-0023`…`V-0026`), each
+declaring the omitted lines in its own `notes`.** So 104 are dedented contiguous
+slices once the page decoration is removed, and the remaining 5 are the declared
+compositions. A further 9 `instance` values are one-line prose-quoted scalars
+rather than block scalars (`h''`, `10`, `1e1`, `{3: 5, 4: 6}`, …); each was
+confirmed present in the source. Pass 2 re-derived all of this independently,
+added the `instance` that `V-0037`'s `notes` already cited but the vector did
+not carry (`{3: 5, 4: 6}`, source line 1275), and corrected pass 1's
+arithmetic, which reported the single-range count (103) as the total and gave
+the single-range figure as 97.
+
+The file parses identically under both of the repository's YAML readers
+(`bin/_record_yaml.py` and `bin/_yaml.py`) and under PyYAML `safe_load`: 98
+vectors, identical ids, identical block text, zero differences. **No vector has
+been run through a CDDL tool** — none is installed in this environment — so
+every `expect` here rests on the source's own statement or on arithmetic that
+the `notes` attribute to us.
