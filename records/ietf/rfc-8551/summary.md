@@ -117,9 +117,12 @@ answered by "your IT department did."
 | File | What it is |
 |---|---|
 | `record.yaml` | metadata, relations, `bears_on`, implementations survey |
-| `summary.md` | this file — the only written artifact |
+| `summary.md` | this file |
+| `distilled/` | the FX-1 artifact set, scaffolded — start at `distilled/README.md` |
 
-No `distilled/`. Summary bar, not FX-1; full extraction is owned by **#45**.
+**FX-1 extraction is in progress** under `distilled/`; until `record.yaml`
+declares `distillation.profile: full`, this summary is the reviewed text.
+Extraction is owned by **#45**.
 
 ## Limits
 
