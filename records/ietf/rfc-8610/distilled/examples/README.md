@@ -134,9 +134,49 @@ than as part of any prelude.
   ten set only bits in {0, 4…15} under the section's own rule
   `(str[n >> 3] & (1 << (n & 7))) != 0`, and none sets bit 1, 2 or 3.
 
+## Every vector text, parsed against the grammar
+
+**Pass 3 (cross-check, 2026-10-19) ran all 98 through RFC 8610's own ABNF.**
+The method: a general RFC 5234 recognizer written from scratch for this pass,
+loaded with `../schema/cddl-dedented.derived.abnf` and run from the start rule
+`cddl`. It is exact-ABNF recognition — unordered alternation, backtracking
+repetition — so it decides membership in the language Appendix B defines. It is
+**ours, not a CDDL implementation**: it checks syntax only and knows nothing of
+the type system, PEG ordering, cuts or map matching.
+
+**75 of the 98 parse as a complete CDDL file.** The other 23 are not CDDL files,
+and in every case the vector already said so:
+
+| why it does not parse as `cddl` | count | ids |
+|---|---|---|
+| **EDN, not CDDL** — Appendix G defines EDN in prose and gives it no grammar, so `cddl.abnf` is the wrong grammar for it | 12 | `V-0084`–`V-0095` |
+| **a CDDL fragment, not a rule** — each parses against the sub-production its `notes` names | 7 | `V-0015`, `V-0016` (`type1`), `V-0021` (`grpchoice`), `V-0059`–`V-0062` (`type1`, once the source's own prose quotes are stripped — see §1.2's convention above) |
+| **ABNF, not CDDL** — Appendix A introduces them as "the ABNF expressions" in its own words, and `A = "a" "b"` is not CDDL under any production; the trailing `    (1)`/`    (2)` is the source's figure label and part of the captured line | 2 | `V-0074`, `V-0075` |
+| **running prose** holding a quoted fragment | 2 | `V-0058`, `V-0076` |
+
+So every vector that is CDDL is either a well-formed CDDL file or a well-formed
+CDDL fragment: **0 of the 98 is malformed CDDL that the vector claims is good.**
+
+**The five negatives, and what actually catches each:**
+
+| id | parses? | caught by | the side condition it needs |
+|---|---|---|---|
+| `V-0013` `BAD-range1 = 0..10.0` | **yes** | type system only | `G-06` — names it and quotes both BAD-range lines |
+| `V-0014` `BAD-range2 = 0.0..10` | **yes** | type system only | `G-06` — same item, both directions |
+| `V-0041` cut + `{ "optional-key": "nonsense" }` | **yes** | instance matching only | `G-19` (the cut), with `G-20` for the `:` shortcut |
+| `V-0075` `A = "a" / "a" "b"` | **no — it is ABNF** | neither; not CDDL text | `G-14` — names the dead alternative correctly, as a property of CDDL's prioritized `/` |
+| `V-0076` `*a a` in prose | **no — it is prose** | neither; not CDDL text | `G-15` — and the bare fragment `*a a` **does** parse as a `grpchoice`, so the grammar does not catch it either |
+
+`V-0037` parses, and stays `indeterminate`: the grammar admits it, and `G-18`
+records that the source declines to decide it.
+
+The five verbatim CDDL files next door — `../schema/prelude.cddl`,
+`prelude-json-subset.cddl`, `ijson-types.cddl` and both reputon files — **all
+parse**, comment headers and all.
+
 ## State
 
-**Passes 1 and 2 of 3 complete.** Every `cddl` and `instance` block scalar was
+**Passes 1, 2 and 3 of 3 complete.** Every `cddl` and `instance` block scalar was
 verified by script against the cached source — **109 block scalars: 103 a single
 unbroken source run, 1 spanning a page frame (`V-0096`), and 5 joining two
 non-adjacent ranges across an omitted line (`V-0012`, `V-0023`…`V-0026`), each
@@ -153,6 +193,8 @@ the single-range figure as 97.
 The file parses identically under both of the repository's YAML readers
 (`bin/_record_yaml.py` and `bin/_yaml.py`) and under PyYAML `safe_load`: 98
 vectors, identical ids, identical block text, zero differences. **No vector has
-been run through a CDDL tool** — none is installed in this environment — so
-every `expect` here rests on the source's own statement or on arithmetic that
-the `notes` attribute to us.
+been run through a third-party CDDL tool** — none is installed in this
+environment. Pass 3 ran every one through this library's own ABNF recognizer
+driven by the captured grammar (above), which settles *syntax* and nothing
+else, so every `expect` here still rests on the source's own statement or on
+arithmetic that the `notes` attribute to us.

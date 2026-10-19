@@ -11,13 +11,20 @@ reviewed_by: ""
 FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what
 it does not.
 
-**State: passes 1 and 2 of 3 complete.** Pass 1: two agents in parallel at
-effort max, each reading only `.cache/rfc-8610.txt`. Pass 2 (verify, effort max,
-2026-10-19): an independent agent that did not extract, re-deriving every
-mechanical claim from the cache with checkers written from scratch. **The
-cross-check pass has NOT run** and no `reviewed_by` is signed, so this record
-carries no `profile`. Readable; nothing may be built on it. library#39 owns
-finishing it.
+**State: all three passes complete, `distillation.profile: full`.** Pass 1:
+two agents in parallel at effort max, each reading only `.cache/rfc-8610.txt`.
+Pass 2 (verify, effort max, 2026-10-19): an independent agent that did not
+extract, re-deriving every mechanical claim from the cache with checkers written
+from scratch. Pass 3 (cross-check, effort max, 2026-10-19): artifact against
+artifact — every requirement joined to a construct or a schema file by section,
+`protocol` and `state-machine` re-confirmed `not_applicable`, and **every
+example parsed against RFC 8610's own Appendix B grammar** by an ABNF recognizer
+written from scratch for the purpose (`schema/README.md`, `examples/README.md`).
+
+`profile: full` means **the FX-1 artifact set is complete against the standard**,
+not that CDDL is fully described here — see *This record is not the current
+state of CDDL* at the foot of this page, which still binds. **No `reviewed_by`
+is signed**: complete, not reviewed.
 
 Source: RFC 8610, *Concise Data Definition Language (CDDL)*.
 

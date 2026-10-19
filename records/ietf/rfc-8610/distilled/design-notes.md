@@ -33,7 +33,9 @@ Nothing below may be read as an accepted encoding decision.
 all-capitals BCP 14 keywords in 125 KB (`rfc-8610#R-0070`, `rfc-8610#R-0139`),
 and only the first is RFC 8610 speaking in its own voice. Its normativity is
 carried by a grammar (Appendix B) and a matching relation (Appendix C), both
-declared normative in their opening sentence (`rfc-8610#R-0093`). Reading it as
+declared normative in their opening sentence (`normative.md`, Appendix B and
+Appendix C — `rfc-8610#R-0093` carries that sentence for Appendix A only, which
+is the one instance of it `requirements.yaml` holds as an id). Reading it as
 a source of obligations yields almost nothing; reading it as a definition of
 what can and cannot be *said* about a data structure yields a great deal, and
 most of what it yields for us is **what it cannot say**.
@@ -93,7 +95,7 @@ right-hand-side argument". This is the construct `R-O-05` (proposed) needs —
 RFC 9052 §3 uses for `empty_or_serialized_map`. CDDL can *describe* it without
 any tag, which is exactly what option 5 wants: the CBOR-ness of the payload is a
 schema fact, not a wire fact. Its EDN notation `<< … >>`
-(Appendix G.3, `rfc-8610#R-0134`) is how our test vectors should write it.
+(Appendix G.3, `rfc-8610#R-0135`) is how our test vectors should write it.
 
 **Generics for P6's one-form-many-predicates (§3.10, `rfc-8610#R-0082`).**
 "the formal parameters are bound to the actual arguments supplied … (as if there
@@ -101,15 +103,16 @@ were a rule of the form parameter = argument)". `statement<ptype, pred>` is the
 natural expression of P2's form with P6's predicate-type discriminator, and the
 RFC's own example is `message<t, v> = {type: t, value: v}` — the same shape.
 
-**EDN as the test-vector notation (Appendix G, `rfc-8610#R-0093` declares the
-appendix normative).** Issue #39 already assigns diagnostic notation this role
-via `draft-ietf-cbor-edn-literals`. RFC 8610 Appendix G is its first normative
-extension: whitespace ignored inside prefixed byte strings (`rfc-8610#R-0132`),
-unprefixed single quotes for UTF-8 byte strings (`rfc-8610#R-0133`), `<< >>` for
-embedded CBOR (`rfc-8610#R-0134`), slash-delimited comments that are whitespace
-(`rfc-8610#R-0137`). The comment facility is what makes a 40-line signed
-statement readable as a fixture, and the RFC's own `/grasp-message/` example in
-G.6 is the pattern to copy.
+**EDN as the test-vector notation (Appendix G, which `normative.md` records as
+opening "This appendix is normative.").** Issue #39 already assigns diagnostic
+notation this role via `draft-ietf-cbor-edn-literals`. RFC 8610 Appendix G is
+its first normative extension: whitespace ignored inside prefixed byte strings
+(G.1, `rfc-8610#R-0133`), unprefixed single quotes for UTF-8 byte strings
+(G.2 — `normative.md`; no requirement id carries that particular sentence),
+`<< >>` for embedded CBOR (G.3, `rfc-8610#R-0135`), slash-delimited comments
+that are whitespace (G.6, `rfc-8610#R-0138`). The comment facility is what
+makes a 40-line signed statement readable as a fixture, and the RFC's own
+`/grasp-message/` example in G.6 is the pattern to copy.
 
 **The three-way separation of what a tool may claim (§4.2, `rfc-8610#R-0085`,
 `rfc-8610#R-0086`).** "In no case is it intended that a CDDL tool would be
@@ -167,8 +170,8 @@ as well". If any DEC-004 tag profile carries a bitfield, it needs `.size` and
 `.bits` together.
 
 **Appendix E's JSON story — adapted as a *cost sheet* for DEC-002 option 4,
-not as a bijection.** Appendix E is normative (`rfc-8610#R-0093`) and does give
-one schema two serializations, but it names three leaks in doing so:
+not as a bijection.** Appendix E is normative (`normative.md`, Appendix E) and
+does give one schema two serializations, but it names three leaks in doing so:
 `uint`/`nint`/`int` stop being type constraints and "becomes a predicate that
 the number be integral" (`rfc-8610#R-0127`); float precision "is only to restrict
 the set of permissible values", which "is unlikely to be very useful"
@@ -675,7 +678,7 @@ its own normative parts disagree. Reported, not repaired.
 13. **Appendix G.2 names four EDN byte-string prefixes; §3.1 and Appendix B
     admit two.** Appendix G.2 (normative) says byte strings are "prefixed by >h<
     for base16, >b32< for base32, >h32< for base32hex, or >b64< for base64 or
-    base64url" (`rfc-8610#R-0133`'s section). §3.1 (normative) says byte strings
+    base64url" (`rfc-8610#R-0134`'s section). §3.1 (normative) says byte strings
     "may be prefixed by "h" or "b64"" (`rfc-8610#R-0036`'s section), and the
     Appendix B grammar has `bsqual = "h" / "b64"`. Both appendices are normative
     and the document never reconciles them. The charitable reading is that EDN

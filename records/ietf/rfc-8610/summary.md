@@ -101,10 +101,19 @@ an acceptance of it:
 
 Appendix F names tool capabilities informatively; the RFC itself registers no
 implementation list. Several CDDL validators exist in the wild, but **none is
-installed in this environment**, so nothing in `distilled/schema/` has been run
-through a real CDDL or ABNF parser — the checks performed were closure,
-collision and byte-exactness, not a parse. *Searched on 2026-10-18; no parser
+installed in this environment**. *Searched on 2026-10-18; no third-party parser
 available locally.*
+
+The cross-check pass therefore built one: a general RFC 5234 ABNF recognizer
+written from scratch, driven by RFC 8610's own captured grammar
+(`distilled/schema/cddl-dedented.derived.abnf`). **All five verbatim CDDL files
+parse, and 75 of the 98 vectors parse as complete CDDL files**; the other 23 are
+EDN (12), CDDL fragments rather than rules (7), ABNF (2) or running prose (2),
+each already declared as such by the vector that holds it. It settles *syntax*
+only — it is this library's recognizer, not a CDDL implementation, and knows
+nothing of the type system, PEG ordering, cuts or map matching. That boundary is
+the point: `BAD-range1 = 0..10.0` parses, and only `grammar-gaps.derived.txt`'s
+side conditions reject it.
 
 ## Limits
 
@@ -132,8 +141,11 @@ available locally.*
   its own schema on a strict reading — not in one place but in all six of the
   floating-point values it carries against three `float16` members, none of
   which is representable in binary16.
-- The extraction is at **passes 1 and 2 of 3** — the verify pass re-derived every
-  mechanical claim from the cached source and corrected two (a block-scalar
-  census and a vector's missing instance), but **cross-check has not run** and no
-  human has signed anything off, so these artifacts are readable but not
-  buildable-on.
+- The extraction is **complete at FX-1, `profile: full`** — all three passes
+  have run at effort max. Verify re-derived every mechanical claim from the
+  cached source and corrected two (a block-scalar census and a vector's missing
+  instance); cross-check parsed every example against the grammar, adversarially
+  re-derived both derived schema files, and corrected eleven mis-cited
+  requirement ids in `design-notes.md` plus six quote-truncation defects. **No
+  human has signed anything off** — every `reviewed_by` is empty — so these
+  artifacts are complete, not reviewed.

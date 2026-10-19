@@ -144,7 +144,7 @@ ever created, the verbatim table belongs there, not here.
 
 ## State
 
-**Passes 1 and 2 of 3 complete.** Every verbatim region in this directory was
+**Passes 1, 2 and 3 of 3 complete.** Every verbatim region in this directory was
 verified byte-for-byte against the cached source by line range, by script,
 three times — once by the generator, once by an independent `sed`-based
 re-extraction and `diff`, and once in pass 2 by a checker written from scratch
@@ -180,8 +180,48 @@ What pass 2 established, beyond byte-equality:
   line-for-line. It is the margin-stripped original and nothing else, with all
   47 productions intact.
 
-`control-operators.derived.yaml` and `grammar-gaps.derived.txt` — the other two
-derived files — have **not** been adversarially re-derived. Nothing here has
-been run through a real RFC 8610 or ABNF parser; none is installed in this
-environment, so the checks performed are closure, collision, completeness and
-byte-exactness, not a parse.
+What pass 3 (cross-check, 2026-10-19) added:
+
+- **The grammar was executed.** A general RFC 5234 ABNF parser and recognizer
+  was written from scratch for this pass, loaded with
+  `cddl-dedented.derived.abnf`, and run from the start rule `cddl`. It is
+  exact-ABNF recognition — unordered alternation, backtracking repetition — so
+  it decides membership in the language Appendix B defines. **All five verbatim
+  CDDL files here parse** (`prelude.cddl`, `prelude-json-subset.cddl`,
+  `ijson-types.cddl`, `reputon-verbose.cddl`, `reputon-compact.cddl`), comment
+  headers and all, and **75 of the 98 vectors** in `../examples/vectors.yaml`
+  parse as complete CDDL files, with every one of the other 23 accounted for
+  (see `../examples/README.md`). `cddl.abnf` itself is **refused** by the same
+  loader at its first grammar line, which is the concrete demonstration of the
+  margin problem this directory's dedented companion exists to solve.
+- **Thirteen side conditions were executed against the grammar, not merely
+  asserted.** Each of the following parses, confirming the gap is real: `a = b`,
+  `a = (b)`, `a = (b,)` (G-01); `a = 0..10.0` (G-06); `a = 10..0` (G-07);
+  `a = ~uint` (G-09); `a = &(x: 1)` (G-10); `a = b .nosuchop c` (G-11);
+  `$foo = 1` and `$$foo = (a: 1)` (G-23); `0X1F`, `H'00'`, `B64'AA=='`, `1E3`,
+  `0x1P4` — all five forms G-28 names (G-28); `a = min..max` as one name (G-27);
+  `*a a` as a `grpchoice` (G-15). And each of these is **rejected**, confirming
+  the gap the other way: a tab as whitespace and a tab inside a text string
+  (G-30); a comment on a final line with no newline (G-34); `a = 1 .size 2
+  .bits 3` while `(1 .size 2) .bits 3` parses (G-44). U+007F is admitted by
+  `bytes` and refused by `text`, and a byte string spans lines where a text
+  string may not — both halves of G-31, both ways.
+- **Both derived files were adversarially re-derived.** The 14 operators in
+  `control-operators.derived.yaml` are the §6.1 registry table's 14 entries in
+  the registry's own order, and all 21 of its `quote:` spans are now exact
+  contiguous substrings of the whitespace-normalised source. `grammar-gaps.derived.txt`
+  holds 44 items `G-01`…`G-44` with no gap, and its tally re-derives: S 23,
+  I 5, S/I 1, N 12 = 41 carrying a verdict, plus the 3 Table 1 disagreements
+  that carry none.
+- **Six quote-fidelity defects were found and fixed, in our files, not the
+  source's.** Five truncated quotes ended in a substituted `.` where the source
+  has `:`, `;`, `,` or `)` (`.within` in `control-operators.derived.yaml`;
+  G-15, G-23, G-25, G-39 here), and G-24 joined two separate §3.1 bullets with
+  no elision marker. G-22's capitalised `AND` was already declared "(emphasis
+  ours)" and is left as it stands.
+
+Still true: **nothing here has been run through a third-party RFC 8610 or ABNF
+implementation** — none is installed in this environment. The recognizer above
+is this library's own and settles syntax only; every semantic claim in
+`grammar-gaps.derived.txt` and `control-operators.derived.yaml` still rests on
+the source's prose.
