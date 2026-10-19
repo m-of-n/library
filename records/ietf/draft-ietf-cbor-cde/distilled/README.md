@@ -72,14 +72,16 @@ relation to". The extraction's first result is that the baseline is less
 firm than that framing assumes:
 
 **CDE's §3 states the constraints but never names a role.** §3 and its
-subsections do carry normative force — five of the forty BCP 14 occurrences
-sit there, and three of them say what a CDE encoding must look like: §3.1.1's
-two MUSTs for integers, §3.2's "indefinite length encoding MUST NOT be used",
-§3.3's strictly-greater map-key MUST (the other two are §3.1.2's NOT
-RECOMMENDED for signalling NaNs and, in §1.2, the RECOMMENDED that makes CDE
-itself elective). But every one of them is agentless: *"Integers … MUST be
-encoded"*, not *"a CDE encoder MUST emit"*. **No sentence in §3 addresses an
-encoder or a decoder at all.** The only place in the document that attaches
+subsections do carry normative force: five of the forty BCP 14 occurrences sit
+there. Four of the five say what a CDE encoding must look like, and they form
+the three rules CDE adds — §3.1.1's two MUSTs for integers (one sentence, one
+rule), §3.2's "indefinite length encoding MUST NOT be used", and §3.3's
+strictly-greater map-key MUST. The fifth is §3.1.2's NOT RECOMMENDED for
+signalling NaNs, which binds the protocol designer rather than the encoding.
+(The sixth and last body occurrence is outside §3 altogether: §1.2's
+RECOMMENDED, the one that makes CDE itself elective.) But every one of the
+four is agentless: *"Integers … MUST be encoded"*, not *"a CDE encoder MUST
+emit"*. **No sentence in §3 addresses an encoder or a decoder at all.** The only place in the document that attaches
 these obligations to a role — and the only place that states any decoder
 obligation whatsoever — is Appendix C.3.1 and C.3.2, and Appendix C opens by
 declaring "This appendix is informative" and "It does not contain any
@@ -109,23 +111,45 @@ Reported, never repaired. The first two are substantive:
 
 1. **The constraint has two names.** §2 and **Table 1** — the document's own
    summary table, and so the most-cited place — call it
-   `definite-length-encoding` (4 occurrences). §3.2's defining heading and all
-   21 other occurrences call it `definite-length-only`. Table 1's `cde` row
-   therefore composes CDE out of a name that appears nowhere in §3 or the
-   appendices.
+   `definite-length-encoding` (4 occurrences, **all four inside §2**: the
+   defining sentence, the "Combining preferred-serialization with …" sentence,
+   and two Table 1 cells). §3.2's defining heading and all **22** other
+   occurrences — spread over the Abstract, the ToC, §1, §1.1, §3, §3.2, §3.3,
+   §4, A.1, C.2, C.3.1, C.3.2 and E — call it `definite-length-only`. Table 1's
+   `cde` row therefore composes CDE out of a name that appears nowhere in §3 or
+   the appendices.
 2. **Appendix C's disclaimer contradicts its content** (above).
 3. "This appendix is informative." appears twice in the same paragraph.
 4. Unbalanced parenthesis in C.3.2 item 3: `(see Section 5.3.1 of RFC 8949
    [STD94],` is never closed.
-5. C.1.1 item 2 presents a **new and stronger** requirement as a restatement —
-   "That is, encoders MUST support half-precision and single-precision
-   floating point" — and omits binary64 although the same bullet enumerates it.
+5. **C.1.1 item 2's "That is," is not a restatement**, in either direction.
+   The sentence "That is, encoders MUST support half-precision and
+   single-precision floating point" is offered as a consequence of the MUST
+   before it ("If multiple of these encodings preserve the precision of the
+   value to be encoded, only the shortest form of these MUST be emitted"), and
+   is neither equivalent nor a subset. It is **stronger**, because that MUST
+   bites only when more than one width preserves the value: an encoder handed
+   only values exactly representable in binary16 never needs binary32 under it,
+   yet this sentence requires binary32 anyway. And it is **weaker**, because it
+   names only half and single although the same bullet enumerates binary64, and
+   an encoder handed a binary64 value with no shorter exact form must emit
+   binary64 to satisfy the preceding MUST. (Pass 1 called this simply "new and
+   stronger"; the verify pass found it cuts both ways.)
 6. C.1.1 item 1's shortest-head range list stops at four additional bytes;
    there is no bullet for the 8-byte range, left implied by exclusion.
-7. **C.1.2 versus CDE, unreconciled.** C.1.2 says a decoder accepting
-   Preferred Serialization MUST accept indefinite-length items; §3.2 forbids
-   them outright. C.3.2 item 1 makes a CDE-checking decoder check both, and
-   nothing says C.1.2's MUSTs are superseded for CDE decoders.
+7. **C.1.2 versus CDE, reconciled only by implication.** C.1.2 items 2 and 3
+   say a decoder accepting Preferred Serialization MUST accept
+   indefinite-length items; §3.2 forbids them outright, and C.3.2 item 1 makes
+   a CDE-checking decoder check *both* preferred-serialization and
+   definite-length-only. The document's only answer is C.1.2's own scoping
+   sentence — "**Partial decoder implementations that want to accept at least
+   Preferred Serialization** need to pay attention to at least the following
+   requirements" — which takes CDE decoders out of C.1.2's scope by
+   implication. It is never said in terms, and it is not said anywhere a reader
+   following C.3.2 item 1 back through the words "preferred-serialization"
+   would arrive. A CDE decoder must not accept what C.1.2 item 2 says it must
+   accept. (Pass 1 called this flatly "unreconciled"; the scoping sentence is
+   the part it missed.)
 8. "Updates: 8949 (if approved)" and §1's "it does not make technical changes
    to RFC 8949" sit against §3.1.1's "CDE turns this recommendation into a
    mandate". Coherent only if CDE is read as a newly-named constraint set
@@ -134,3 +158,77 @@ Reported, never repaired. The first two are substantive:
    merge note, the `.dlo` note in §4, and "RFC Editor: please replace
    RFCXXXX". Any `XXX` a scanner finds in `normative.md` is the source's own
    placeholder, not one of ours.
+
+## What the verify pass changed
+
+Pass 2 (2026-10-18, effort max) re-derived everything pass 1 asserted, from the
+cached source, without reading pass 1's reasoning. Corrections, in descending
+order of how much rests on them:
+
+1. **The structural finding was overstated and is now sharpened** (above). §3
+   is not silent: it carries five of the forty keywords and three rules. What
+   §3 never does is name a role. And "the only statement anywhere in the
+   document" was false — §1.2 defines the CDE-checking decoder and Appendix E
+   asserts what it does, both non-normatively.
+2. **Appendix C carries 30 of the 40 keyword occurrences, not 29.** The
+   breakdown is C preamble 1, C.1.1 13, C.1.2 9, C.3.1 3, C.3.2 4. 29 is the
+   count after setting aside the preamble's meta-mention of the word MUST
+   (`R-0032`). `design-notes.md` already said 30; this file and
+   `requirements.yaml` said 29. Fixed in both.
+3. **`definite-length-only` occurs 22 times, not 21** (defect 1).
+4. **C.1.1 item 2's "That is," cuts both ways**, not just one (defect 5).
+5. **C.1.2 is scoped, not merely unreconciled** (defect 7).
+6. **`normative.md` had dropped six statements**, now added: §1.1's three
+   sentences describing Appendix C.1, C.2 and C.3; §3's statement of what the
+   Core Deterministic Encoding Requirements are designed for; and §4's
+   `"float16"` sentence (its `"float32"` sibling was present) and "CDDL
+   specifications may want to specify that the data items should be encoded in
+   Common CBOR Deterministic Encoding." 170 bullets became 176.
+7. **`schema/try-float16-encode.c` did not compile.** The figure caption sat
+   bare inside the BEGIN/END VERBATIM region, so the file contradicted its own
+   header claim that it "still compiles as-is". The caption now sits in a
+   comment just outside the region; the verbatim region is exactly source lines
+   2195–2215, byte for byte, and `cc -c` exits 0.
+8. **Four counts in `record.yaml` and this file were stale or wrong**: 39
+   source ranges for the fences (33), "exactly two failure paths" (four, all
+   local), `constrained_by` "populated only where pass 1 was confident" (absent
+   throughout, deliberately), and Tables 5 and 6 "spot-checked, not
+   exhaustively re-derived" (now re-derived, row for row).
+
+What it could not break, and tried to:
+
+- **The keyword reconciliation.** 40 in the source, 40 in the extraction, one
+  per `stated` entry, and each of the 40 source occurrences matched to exactly
+  one entry whose quoted text spans the line it sits on. No occurrence claimed
+  twice, none unclaimed. The argument that five of the 40 impose nothing on a
+  CDE implementation was re-derived independently and holds: two are a
+  hypothetical protocol the document itself faults for lacking determinism, two
+  are RFC 9679's own obligations inside a block quote, one is a meta-mention.
+- **Every quotation.** 73/73 requirement texts and 176/176 `normative.md`
+  bullets are contiguous substrings of the source after collapsing hard line
+  wraps, and every locator names the section that actually contains the quote.
+  No spliced quotes. 12 bullets and 0 requirements depend on the
+  hyphen/solidus rejoin; 0 bullets and 4 requirements depend on stripping a
+  `|` margin. 50/50 fenced blocks are exact source line runs with no page
+  header or footer leaked.
+- **Every table.** All 7 tables and the one figure caption are captured in
+  full. Tables 4, 5 and 6 were re-parsed out of the source and diffed against
+  the vectors row for row: 22/22, 63/63, 8/8 in order and byte for byte. All
+  9 distinct serializations Table 7 prints are covered by a vector.
+- **Every fixture.** All 118 vectors reproduce. 117 carry hex and were decoded
+  with a CBOR decoder and IEEE 754 arithmetic written for this pass — exact
+  rationals, round-half-even, no library and no `struct` float unpacking — and
+  every `diagnostic`, `decoded` and `expect` agreed. The 8 EDN-form
+  diagnostics were additionally re-encoded from scratch and matched byte for
+  byte. Every one of the 22 `invalid` vectors has an independently computed
+  violation backing its `violates`. `V-0118` is correctly marked as our
+  computation; `V-0117`'s bytes are the source's three-line annotated dump
+  concatenated and lower-cased, as its note says.
+- **Appendix F's C code.** Cross-checked against an independent implementation
+  of the same rule over 125,560 inputs, including all 65,536 binary16 patterns
+  widened to binary64 — no disagreement. The source's Figure 1 is correct.
+- **Both `not_applicable` verdicts.** No exchange between roles, no lifecycle.
+  The Appendix B sender/receiver aside is informative by the appendix's own
+  first line, hypothetical by its own wording, and offered as a negative
+  example.
+- **The unbalanced parenthesis** in C.3.2 item 3 (defect 4) is real.

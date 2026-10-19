@@ -43,16 +43,43 @@ Where the source gives a diagnostic form but not the encoded bytes, a computed
 `hex` says so in its `notes`. No byte string derived by this extraction is
 presented as something the document printed.
 
-## Not yet verified
+## Verified (pass 2, 2026-10-18)
 
-**Passes 2 and 3 have not run.** In particular:
+Every vector was reproduced from the cached source with a CBOR decoder and
+IEEE 754 arithmetic written for that pass — exact rationals, round-half-even,
+no CBOR library and no `struct`-based float unpacking — by an agent that did
+not write these fixtures.
+
+- **Tables 4, 5 and 6 were re-parsed out of the source and diffed row for
+  row**, not spot-checked: 22/22, 63/63 and 8/8 match the vectors in order and
+  byte for byte, EDN and hex. All 9 distinct serializations Table 7 prints are
+  covered by a vector.
+- **All 117 hex-bearing vectors decode to their stated `diagnostic` and
+  `decoded` value**, including all 20 `float'hex'` NaN rows, where the payload,
+  quiet bit, sign and "shortens to fNN" claim were each recomputed from the
+  Appendix C.1.1 trimming rule. The 8 EDN-form diagnostics were additionally
+  re-encoded from scratch and matched byte for byte.
+- **Every `expect` verdict follows from CDE's rules** as independently
+  implemented, and each of the 22 `invalid` vectors has a computed violation
+  backing its `violates`, and no vector breaks a rule its `violates` fails to
+  name: `V-0114` and `V-0115` break two rules each and name both, `V-0116`
+  breaks three and names all three.
+- **Provenance holds.** `V-0117`'s bytes are the source's three-line annotated
+  dump concatenated and lower-cased, as its note says; `V-0118`, `V-0006`–
+  `V-0008`, `V-0010`–`V-0011` are correctly marked as our computation;
+  `V-0013` is correctly marked as borrowed from RFC 8949; `V-0012` correctly
+  carries no hex at all.
+- **Appendix F's `try_float16_encode`** (`../schema/try-float16-encode.c`) was
+  cross-checked against the same independent implementation over 125,560
+  inputs, including all 65,536 binary16 patterns widened to binary64. No
+  disagreement: the source's figure is correct.
+
+## Still not verified
+
+**Pass 3 (cross-check) has not run.** In particular:
 
 - No vector has been validated against the derived schemas in `../schema/`.
-- The ~90 rows of Tables 5 and 6 were **spot-checked**, not exhaustively
-  re-derived: `float'7fbfe000'`→`f97dff`, `float'7fffe000'`→`f97fff` and
-  `[4, 5]`→`98020405` were confirmed correct. Reproducing every row
-  byte-for-byte is a verify-pass job.
-- `violates` strings have not been cross-checked against the requirement ids
-  in `../requirements.yaml`.
+- `violates` strings name sections and quote the source, but have not been
+  wired to the `R-NNNN` ids in `../requirements.yaml`.
 
 Until then these vectors are readable; nothing may be built on them.
