@@ -9,13 +9,73 @@ reviewed_by: ""
 # and application-extension structures CDE admits, and the two CDDL control
 # operators it registers.
 #
-# `constrained_by` is deliberately absent throughout. The requirement ids
-# (draft-ietf-cbor-cde#R-NNNN) are assigned by the requirements artifact,
-# written in parallel with this file; no id is derivable from the source's own
-# section numbering, so none is asserted here rather than guessed. Each
-# structure and field instead carries the exact source locator (section, item,
-# bullet, table row) of the text that constrains it, so the cross-check pass
-# can wire the links mechanically.
+# `constrained_by`: POPULATED, cross-check pass, 2026-10-18. All 81 fields of
+# the 24 structures below now carry the key. 63 of them hold 240 links to 62 of
+# the 73 entries in ../requirements.yaml; the other 18 hold an explicit empty
+# list and a `constrained_by_note` saying why. Pass 1 left the key off
+# altogether on purpose — requirements.yaml was being written in parallel and a
+# wrong id is worse than a missing one — so each structure and field carries the
+# exact source locator (section, item, bullet, table row) of the text that
+# constrains it. Those locators are kept: they are what the links were resolved
+# against, and they survive a renumbering of the R-ids.
+#
+# THE LINKING RULE, stated so a reviewer can disagree with a specific link
+# rather than with the whole table. A requirement R is linked to a field F iff
+# R determines which values or bytes F may take, or R explicitly names F's
+# subject as the thing it governs. Three corollaries decide the hard cases:
+#
+#  (a) Transitive consequences are NOT linked. R-0022 (the comparison "fails
+#      entirely" when it runs out of byte pairs) reaches map.key and both keys
+#      of lexicographic-map-key-sorting, but not major-type-0's argument, whose
+#      admissible values it does not change.
+#  (b) Where a bit is modelled as its own field in a dedicated structure, the
+#      link goes to that field, not to the wider field that contains it. The
+#      NaN Q-bit lives inside float16/32/64's `trailing_significand`, but
+#      R-0014/R-0016 are linked to nan-encoding.q_bit alone. This is why the
+#      three interchange-layout structures carry links only on `initial_byte`
+#      and `sign`: CDE decides WHICH format carries a value, never the bits
+#      inside a format, and the one exception is the NaN triple.
+#  (c) A requirement that names one of CDE's three constituents as the thing it
+#      governs is linked to that constituent's field in
+#      cde-encoding-constraint-set, whether it governs it by defining it
+#      (R-0006, R-0018, R-0020) or by imposing a duty with respect to it
+#      (R-0033, R-0063, R-0069). That is the "names F's subject" half of the
+#      rule, and it is what keeps the encoder/decoder duty sentences from
+#      floating free of the structures they are duties about.
+#
+# ELEVEN REQUIREMENTS ARE LINKED TO NO FIELD, and that is a result, not a hole.
+# None constrains a structure. R-0001 (§1.2, RFC 8949's conventions apply) and
+# R-0025 (§5, RFC 8949's security considerations apply) are incorporations by
+# reference. R-0003 (§1.2) is the document's own RECOMMENDED status. R-0024 (§4)
+# invites OTHER specifications to define their own control operators, not these
+# two. R-0026 (§5) is the hinge sentence about a deployment, not an encoding.
+# R-0028 to R-0032 are the five occurrences requirements.yaml's reconciliation
+# names as imposing nothing on CDE — two from an invented example protocol in
+# Appendix B, two from a block quote of RFC 9679 §4.2 whose force belongs to
+# that record, and one meta-mention of the word MUST. R-0072 (C.3.2, the
+# fail-closed rule) is the only one worth arguing about: it governs what a
+# decoder may hand to the application, and no structure here models that —
+# messages.yaml holds encoded forms, not API surface.
+#
+# EIGHTEEN FIELDS CARRY NO LINK, each with its reason on the field. They fall
+# into three groups and all three are substantive: six of the eight major-type
+# assignments (CDE pins only major types 0 and 1, on the integer structures via
+# R-0048/R-0049; the rest are RFC 8949's untouched); the [IEEE754] interchange
+# widths (`exponent` and `trailing_significand` in all three float layouts, plus
+# nan-encoding.exponent); and three of Appendix F's four fields, because NO
+# requirement in ../requirements.yaml has an Appendix F locator at all — Figure
+# 1 carries no BCP 14 keyword and states no obligation. The eighteenth is
+# major-type-2-byte-string.content: the only major-type content field with no
+# link, against major-type-3-text-string.content's four. UTF-8 validity is the
+# single data-content constraint CDE has and it reaches text strings only.
+#
+# ONE TENSION IS RECORDED AT THE FIELD RATHER THAN SMOOTHED OVER. R-0018 (§3.2,
+# "indefinite length encoding MUST NOT be used") and R-0053/R-0054 (C.1.2,
+# indefinite-length arrays, maps and strings "MUST be accepted") are linked to
+# the same fields — indefinite-length-encoding's three, and the `ai` of major
+# types 2 to 5. They point in opposite directions. C.1.2's preamble scopes
+# itself to partial preferred-serialization decoders, which takes CDE decoders
+# out of scope, but it never says so in terms; see ../design-notes.md.
 #
 # Byte values: where the source itself exhibits a byte (Tables 4, 5, 6, 7,
 # Appendix E, Figure 1) it is cited. Where the initial-byte arithmetic
@@ -31,6 +91,13 @@ messages:
       - name: major_type
         type: uint3
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD. The 3-bit major-type field and
+          all eight of its assignments are RFC 8949 Section 3's; CDE changes
+          none of them and states nothing about them. Only the two INTEGER
+          assignments are pinned by this document, and they are pinned on the
+          integer structures (R-0048, R-0049), not here.
         layout: |
           Bits 7-5 of the initial byte — the 3-bit field that the 5-bit ai
           field "follows" (§C.1). Values 0-7 select, in order: unsigned
@@ -42,6 +109,9 @@ messages:
       - name: additional_information
         type: uint5
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0018"
+          - "draft-ietf-cbor-cde#R-0034"
         layout: |
           Bits 4-0 of the initial byte; the source abbreviates this field
           "ai" (§C.1). CDE constrains which ai value may be used for a
@@ -59,6 +129,8 @@ messages:
       - name: argument
         type: uint64
         required: false
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0034"
         layout: |
           0, 1, 2, 4 or 8 bytes immediately following the initial byte,
           big-endian, unsigned; the count is fixed by ai alone. Present
@@ -93,6 +165,10 @@ messages:
       - name: ai_0_to_23_immediate
         type: uint5
         required: false
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0034"
+          - "draft-ietf-cbor-cde#R-0035"
+          - "draft-ietf-cbor-cde#R-0052"
         layout: |
           Arguments 0..23 MUST be encoded in the same byte as the major
           type (§C.1.1 item 1 bullet 1): ai = argument, no bytes follow.
@@ -103,6 +179,10 @@ messages:
       - name: ai_0x18_uint8
         type: uint8
         required: false
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0034"
+          - "draft-ietf-cbor-cde#R-0036"
+          - "draft-ietf-cbor-cde#R-0052"
         layout: |
           One additional byte (§C.1.1 item 1 bullet 2): arguments 24..255,
           i.e. integers 24 to 255 and -25 to -256. Evidence: `1818` (24),
@@ -110,6 +190,10 @@ messages:
       - name: ai_0x19_uint16
         type: uint16
         required: false
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0034"
+          - "draft-ietf-cbor-cde#R-0037"
+          - "draft-ietf-cbor-cde#R-0052"
         layout: |
           Two additional bytes, big-endian (§C.1.1 item 1 bullet 3):
           arguments 256..65535, i.e. integers 256 to 65535 and -257 to
@@ -118,6 +202,10 @@ messages:
       - name: ai_0x1a_uint32
         type: uint32
         required: false
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0034"
+          - "draft-ietf-cbor-cde#R-0038"
+          - "draft-ietf-cbor-cde#R-0052"
         layout: |
           Four additional bytes, big-endian (§C.1.1 item 1 bullet 4):
           arguments 65536..4294967295, i.e. integers 65536 to 4294967295
@@ -126,6 +214,9 @@ messages:
       - name: ai_0x1b_uint64
         type: uint64
         required: false
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0034"
+          - "draft-ietf-cbor-cde#R-0052"
         layout: |
           Eight additional bytes, big-endian: arguments
           4294967296..18446744073709551615, i.e. integers 4294967296 to
@@ -161,16 +252,29 @@ messages:
       - name: major_type
         type: uint3
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0048"
+          - "draft-ietf-cbor-cde#R-0059"
         layout: "Bits 7-5 of the initial byte = 0b000."
       - name: ai
         type: uint5
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0007"
+          - "draft-ietf-cbor-cde#R-0034"
+          - "draft-ietf-cbor-cde#R-0035"
+          - "draft-ietf-cbor-cde#R-0036"
+          - "draft-ietf-cbor-cde#R-0037"
+          - "draft-ietf-cbor-cde#R-0038"
         layout: |
           Bits 4-0. Shortest form per shortest-head-argument: initial byte
           0x00-0x17 for values 0..23, else 0x18, 0x19, 0x1a or 0x1b.
       - name: argument
         type: uint64
         required: false
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0007"
+          - "draft-ietf-cbor-cde#R-0048"
         layout: |
           0/1/2/4/8 big-endian bytes; the value of the data item IS the
           argument. Full range 0..18446744073709551615 (2^64 - 1).
@@ -201,16 +305,29 @@ messages:
       - name: major_type
         type: uint3
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0049"
+          - "draft-ietf-cbor-cde#R-0059"
         layout: "Bits 7-5 of the initial byte = 0b001."
       - name: ai
         type: uint5
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0007"
+          - "draft-ietf-cbor-cde#R-0034"
+          - "draft-ietf-cbor-cde#R-0035"
+          - "draft-ietf-cbor-cde#R-0036"
+          - "draft-ietf-cbor-cde#R-0037"
+          - "draft-ietf-cbor-cde#R-0038"
         layout: |
           Bits 4-0, shortest form; initial byte 0x20-0x37 for -1..-24,
           else 0x38, 0x39, 0x3a or 0x3b.
       - name: argument
         type: uint64
         required: false
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0007"
+          - "draft-ietf-cbor-cde#R-0049"
         layout: |
           0/1/2/4/8 big-endian bytes holding n, where the value of the data
           item is -1 - n. The shortest-head decision is made on n, not on
@@ -237,10 +354,18 @@ messages:
       - name: major_type
         type: uint3
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD; the assignment is RFC 8949's.
         layout: "Bits 7-5 of the initial byte = 0b010."
       - name: ai
         type: uint5
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0018"
+          - "draft-ietf-cbor-cde#R-0034"
+          - "draft-ietf-cbor-cde#R-0054"
+          - "draft-ietf-cbor-cde#R-0061"
         layout: |
           Bits 4-0 = the length of the content in bytes, in shortest form:
           initial byte 0x40-0x57 for lengths 0..23, then 0x58 (one length
@@ -251,6 +376,15 @@ messages:
       - name: content
         type: bstr
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD, and it is the only major-type
+          content field in this file with no link. CDE constrains the byte
+          string's HEAD (the ai links above) and forbids chunking, but says
+          nothing whatever about the content octets. Contrast major-
+          type-3-text-string.content, which carries four links: UTF-8 validity
+          is the single data-content constraint CDE has, and it reaches text
+          strings only.
         layout: |
           Exactly `argument` raw bytes, uninterpreted. CDE places no
           constraint on the bytes themselves — only on the head and on the
@@ -278,10 +412,18 @@ messages:
       - name: major_type
         type: uint3
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD; the assignment is RFC 8949's.
         layout: "Bits 7-5 of the initial byte = 0b011."
       - name: ai
         type: uint5
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0018"
+          - "draft-ietf-cbor-cde#R-0034"
+          - "draft-ietf-cbor-cde#R-0054"
+          - "draft-ietf-cbor-cde#R-0061"
         layout: |
           Bits 4-0 = the length of the content in BYTES (not characters),
           shortest form: initial byte 0x60-0x77 for 0..23, then 0x78,
@@ -290,6 +432,11 @@ messages:
       - name: content
         type: tstr
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0066"
+          - "draft-ietf-cbor-cde#R-0067"
+          - "draft-ietf-cbor-cde#R-0068"
+          - "draft-ietf-cbor-cde#R-0071"
         layout: |
           Exactly `argument` bytes of UTF-8. CDE encoders MUST emit "only
           valid UTF-8 in major type 3 text strings" (§C.3.1 item 3, part of
@@ -322,10 +469,19 @@ messages:
       - name: major_type
         type: uint3
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD; the assignment is RFC 8949's.
         layout: "Bits 7-5 of the initial byte = 0b100."
       - name: ai
         type: uint5
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0018"
+          - "draft-ietf-cbor-cde#R-0034"
+          - "draft-ietf-cbor-cde#R-0053"
+          - "draft-ietf-cbor-cde#R-0061"
+          - "draft-ietf-cbor-cde#R-0062"
         layout: |
           Bits 4-0 = the number of elements, shortest form: initial byte
           0x80-0x97 for 0..23 elements, then 0x98, 0x99, 0x9a, 0x9b.
@@ -335,6 +491,9 @@ messages:
       - name: elements
         type: "data item *"
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0063"
+          - "draft-ietf-cbor-cde#R-0069"
         layout: |
           Exactly `argument` data items follow the head, each itself fully
           CDE-encoded. Element ORDER is semantic in an array and CDE does
@@ -358,10 +517,21 @@ messages:
       - name: major_type
         type: uint3
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD; the assignment is RFC 8949's.
+          R-0070 names 'map (major type 5) entries', but what it governs is
+          the ordering of the entries, not the major-type field.
         layout: "Bits 7-5 of the initial byte = 0b101."
       - name: ai
         type: uint5
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0018"
+          - "draft-ietf-cbor-cde#R-0034"
+          - "draft-ietf-cbor-cde#R-0053"
+          - "draft-ietf-cbor-cde#R-0061"
+          - "draft-ietf-cbor-cde#R-0062"
         layout: |
           Bits 4-0 = the number of key/value PAIRS (not of data items),
           shortest form: initial byte 0xa0-0xb7 for 0..23 pairs, then
@@ -370,6 +540,13 @@ messages:
       - name: entries
         type: "(key, value) *"
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0019"
+          - "draft-ietf-cbor-cde#R-0020"
+          - "draft-ietf-cbor-cde#R-0064"
+          - "draft-ietf-cbor-cde#R-0066"
+          - "draft-ietf-cbor-cde#R-0067"
+          - "draft-ietf-cbor-cde#R-0070"
         layout: |
           2 * `argument` data items follow the head, in the order
           key_0, value_0, key_1, value_1, ... key_(n-1), value_(n-1).
@@ -378,6 +555,15 @@ messages:
       - name: key
         type: "data item"
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0019"
+          - "draft-ietf-cbor-cde#R-0020"
+          - "draft-ietf-cbor-cde#R-0022"
+          - "draft-ietf-cbor-cde#R-0064"
+          - "draft-ietf-cbor-cde#R-0065"
+          - "draft-ietf-cbor-cde#R-0066"
+          - "draft-ietf-cbor-cde#R-0067"
+          - "draft-ietf-cbor-cde#R-0070"
         layout: |
           The first item of each pair. Its complete CDE encoding — initial
           byte, argument bytes, content bytes, and the encodings of any
@@ -386,6 +572,9 @@ messages:
       - name: value
         type: "data item"
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0063"
+          - "draft-ietf-cbor-cde#R-0069"
         layout: |
           The second item of each pair, itself fully CDE-encoded. Values
           take no part in the ordering.
@@ -430,6 +619,14 @@ messages:
       - name: preceding_encoded_key
         type: bstr
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0019"
+          - "draft-ietf-cbor-cde#R-0020"
+          - "draft-ietf-cbor-cde#R-0021"
+          - "draft-ietf-cbor-cde#R-0022"
+          - "draft-ietf-cbor-cde#R-0064"
+          - "draft-ietf-cbor-cde#R-0065"
+          - "draft-ietf-cbor-cde#R-0070"
         layout: |
           The complete CDE encoding of the key of the map entry
           "immediately preceding" the current one in the encoding of the
@@ -438,12 +635,23 @@ messages:
       - name: current_encoded_key
         type: bstr
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0019"
+          - "draft-ietf-cbor-cde#R-0020"
+          - "draft-ietf-cbor-cde#R-0021"
+          - "draft-ietf-cbor-cde#R-0022"
+          - "draft-ietf-cbor-cde#R-0064"
+          - "draft-ietf-cbor-cde#R-0065"
+          - "draft-ietf-cbor-cde#R-0070"
         layout: |
           The complete CDE encoding of the current entry's key. Call it B.
           B MUST compare strictly greater than A.
       - name: compared_byte
         type: uint8
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0021"
+          - "draft-ietf-cbor-cde#R-0065"
         layout: |
           At each step j, the pair A[j] and B[j], each taken as "the
           unsigned integer value of" that byte (§3.3), i.e. 0..255 —
@@ -508,10 +716,15 @@ messages:
       - name: major_type
         type: uint3
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD; the assignment is RFC 8949's.
         layout: "Bits 7-5 of the initial byte = 0b110."
       - name: ai
         type: uint5
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0034"
         layout: |
           Bits 4-0 encode the tag number as the argument, shortest form:
           initial byte 0xc0-0xd7 for tags 0..23, then 0xd8 (one byte),
@@ -522,10 +735,17 @@ messages:
       - name: tag_number
         type: uint64
         required: false
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0034"
         layout: "0/1/2/4/8 big-endian argument bytes when ai >= 24."
       - name: tag_content
         type: "data item"
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0006"
+          - "draft-ietf-cbor-cde#R-0051"
+          - "draft-ietf-cbor-cde#R-0063"
+          - "draft-ietf-cbor-cde#R-0069"
         layout: |
           Exactly one data item follows the tag head and is itself fully
           CDE-encoded; CDE recurses through tag content without
@@ -570,10 +790,17 @@ messages:
       - name: tag_head
         type: uint8
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0008"
+          - "draft-ietf-cbor-cde#R-0059"
         layout: "The single byte 0xc2: major type 6 with ai = 2."
       - name: content_head
         type: uint5
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0008"
+          - "draft-ietf-cbor-cde#R-0018"
+          - "draft-ietf-cbor-cde#R-0034"
         layout: |
           A major type 2 definite-length byte string head giving the
           length of the magnitude in bytes, shortest form (0x40-0x57,
@@ -584,6 +811,13 @@ messages:
       - name: magnitude
         type: bstr
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0007"
+          - "draft-ietf-cbor-cde#R-0008"
+          - "draft-ietf-cbor-cde#R-0048"
+          - "draft-ietf-cbor-cde#R-0050"
+          - "draft-ietf-cbor-cde#R-0051"
+          - "draft-ietf-cbor-cde#R-0060"
         layout: |
           The unsigned magnitude, big-endian. "Leading zeros MUST NOT be
           present in the byte string content of tag 2 and 3" (§C.1.1 item
@@ -624,16 +858,30 @@ messages:
       - name: tag_head
         type: uint8
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0008"
+          - "draft-ietf-cbor-cde#R-0059"
         layout: "The single byte 0xc3: major type 6 with ai = 3."
       - name: content_head
         type: uint5
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0008"
+          - "draft-ietf-cbor-cde#R-0018"
+          - "draft-ietf-cbor-cde#R-0034"
         layout: |
           Major type 2 definite-length byte string head, shortest form, as
           for tag 2.
       - name: magnitude
         type: bstr
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0007"
+          - "draft-ietf-cbor-cde#R-0008"
+          - "draft-ietf-cbor-cde#R-0049"
+          - "draft-ietf-cbor-cde#R-0050"
+          - "draft-ietf-cbor-cde#R-0051"
+          - "draft-ietf-cbor-cde#R-0060"
         layout: |
           Big-endian unsigned n with no leading zero bytes (§C.1.1 item 3
           bullet 3); the value of the data item is -1 - n. Admissible
@@ -659,10 +907,16 @@ messages:
       - name: major_type
         type: uint3
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD; the assignment is RFC 8949's.
         layout: "Bits 7-5 of the initial byte = 0b111."
       - name: ai
         type: uint5
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0018"
+          - "draft-ietf-cbor-cde#R-0034"
         layout: |
           Bits 4-0. For a simple value, ai is the value itself when it is
           0..23 (initial byte 0xe0-0xf7) and 24 (initial byte 0xf8) when
@@ -674,6 +928,8 @@ messages:
       - name: simple_value
         type: uint8
         required: false
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0034"
         layout: |
           One byte when ai = 24. Per the generic rule the one-byte form
           covers arguments 24..255; RFC 8949's narrower restriction (that
@@ -698,6 +954,19 @@ messages:
       - name: half_binary16
         type: float16
         required: false
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0004"
+          - "draft-ietf-cbor-cde#R-0009"
+          - "draft-ietf-cbor-cde#R-0010"
+          - "draft-ietf-cbor-cde#R-0011"
+          - "draft-ietf-cbor-cde#R-0012"
+          - "draft-ietf-cbor-cde#R-0017"
+          - "draft-ietf-cbor-cde#R-0039"
+          - "draft-ietf-cbor-cde#R-0040"
+          - "draft-ietf-cbor-cde#R-0042"
+          - "draft-ietf-cbor-cde#R-0043"
+          - "draft-ietf-cbor-cde#R-0047"
+          - "draft-ietf-cbor-cde#R-0055"
         layout: |
           ai = 0x19, initial byte 0xf9, two argument bytes. "Positive and
           negative infinity and zero MUST be represented in half-precision
@@ -706,10 +975,27 @@ messages:
       - name: single_binary32
         type: float32
         required: false
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0009"
+          - "draft-ietf-cbor-cde#R-0011"
+          - "draft-ietf-cbor-cde#R-0012"
+          - "draft-ietf-cbor-cde#R-0039"
+          - "draft-ietf-cbor-cde#R-0040"
+          - "draft-ietf-cbor-cde#R-0042"
+          - "draft-ietf-cbor-cde#R-0056"
+          - "draft-ietf-cbor-cde#R-0057"
         layout: "ai = 0x1a, initial byte 0xfa, four argument bytes."
       - name: double_binary64
         type: float64
         required: false
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0009"
+          - "draft-ietf-cbor-cde#R-0011"
+          - "draft-ietf-cbor-cde#R-0012"
+          - "draft-ietf-cbor-cde#R-0039"
+          - "draft-ietf-cbor-cde#R-0042"
+          - "draft-ietf-cbor-cde#R-0056"
+          - "draft-ietf-cbor-cde#R-0057"
         layout: "ai = 0x1b, initial byte 0xfb, eight argument bytes."
     layout: |
       Selection rule (§C.1.1 item 2): "If multiple of these encodings
@@ -757,10 +1043,18 @@ messages:
       - name: initial_byte
         type: uint8
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0009"
+          - "draft-ietf-cbor-cde#R-0039"
+          - "draft-ietf-cbor-cde#R-0043"
+          - "draft-ietf-cbor-cde#R-0055"
         layout: "0xf9 — major type 7, ai = 25 (0x19)."
       - name: sign
         type: bits(1)
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0010"
+          - "draft-ietf-cbor-cde#R-0044"
         layout: |
           Bit 15 of the two argument bytes (bit 7 of the first argument
           byte). 0 positive, 1 negative. Preserved by shortening, including
@@ -769,6 +1063,14 @@ messages:
       - name: exponent
         type: bits(5)
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD. The exponent width and the
+          all-zeros/all-ones class encoding are [IEEE754] binary16's, which
+          this document names but never restates. CDE decides WHICH format
+          carries a value (the initial_byte links above); it never constrains
+          the bits inside a format. The one exception is the NaN triple, and
+          it is modelled as its own structure: see nan-encoding.
         layout: |
           Bits 14-10, i.e. bits 6-2 of the first argument byte. All zeros
           means zero or subnormal; all ones (0b11111) means infinity or
@@ -777,6 +1079,12 @@ messages:
       - name: trailing_significand
         type: bits(10)
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD. As for exponent: the width is
+          [IEEE754]'s and the content is the value. For a NaN the Q-bit and
+          the payload inside this field ARE constrained, and those links are
+          carried by nan-encoding.q_bit and nan-encoding.nan_payload.
         layout: |
           Bits 9-0: the low 2 bits of the first argument byte followed by
           all 8 bits of the second. For a NaN this splits into the Q-bit
@@ -812,14 +1120,26 @@ messages:
       - name: initial_byte
         type: uint8
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0009"
+          - "draft-ietf-cbor-cde#R-0039"
+          - "draft-ietf-cbor-cde#R-0040"
+          - "draft-ietf-cbor-cde#R-0056"
         layout: "0xfa — major type 7, ai = 26 (0x1a)."
       - name: sign
         type: bits(1)
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0044"
         layout: "Bit 31 of the four argument bytes."
       - name: exponent
         type: bits(8)
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD; the width is [IEEE754]
+          binary32's and is never restated here. See
+          float16-binary16.exponent.
         layout: |
           Bits 30-23: the low 7 bits of argument byte 3 plus the top bit
           of argument byte 2. All ones means infinity or NaN. Width is the
@@ -827,12 +1147,21 @@ messages:
       - name: trailing_significand
         type: bits(23)
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD; see
+          float16-binary16.trailing_significand. The NaN links are on nan-
+          encoding.
         layout: |
           Bits 22-0. For a NaN: Q-bit at bit 22, 22-bit payload at bits
           21-0.
       - name: payload_trim_width
         type: uint8
         required: false
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0013"
+          - "draft-ietf-cbor-cde#R-0045"
+          - "draft-ietf-cbor-cde#R-0046"
         layout: |
           13 — the number of significand bits between binary32 and
           binary16 (23 - 10), i.e. the N of §C.1.1 item 2 when shortening
@@ -867,10 +1196,16 @@ messages:
       - name: initial_byte
         type: uint8
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0009"
+          - "draft-ietf-cbor-cde#R-0039"
+          - "draft-ietf-cbor-cde#R-0056"
         layout: "0xfb — major type 7, ai = 27 (0x1b)."
       - name: sign
         type: bits(1)
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0044"
         layout: |
           Bit 63 of the eight argument bytes. Figure 1 extracts it as
           `b64 >> 48 & 0x8000`, i.e. straight into the binary16 sign
@@ -878,6 +1213,11 @@ messages:
       - name: exponent
         type: bits(11)
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD; the width is [IEEE754]
+          binary64's. Figure 1's `b64 >> 52 & 0x7ff` extracts it but mandates
+          nothing.
         layout: |
           Bits 62-52, extracted by Figure 1 as `b64 >> 52 & 0x7ff`. The
           code's constants fix the bias arithmetic without stating it:
@@ -887,6 +1227,10 @@ messages:
       - name: trailing_significand
         type: bits(52)
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD; see
+          float16-binary16.trailing_significand.
         layout: |
           Bits 51-0, extracted by Figure 1 as `b64 & 0xfffffffffffff`
           (13 hex digits = 52 bits). For a NaN: Q-bit at bit 51, 51-bit
@@ -894,6 +1238,10 @@ messages:
       - name: payload_trim_width
         type: uint8
         required: false
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0013"
+          - "draft-ietf-cbor-cde#R-0045"
+          - "draft-ietf-cbor-cde#R-0046"
         layout: |
           29 to binary32 (52 - 23) and 42 to binary16 (52 - 10) — the N of
           §C.1.1 item 2. The 42 appears in Figure 1 as the mask
@@ -935,6 +1283,10 @@ messages:
       - name: sign_bit
         type: bits(1)
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0004"
+          - "draft-ietf-cbor-cde#R-0017"
+          - "draft-ietf-cbor-cde#R-0044"
         layout: |
           The top bit of the interchange form. Part of "the value to be
           preserved" (§C.1.1 item 2), so a negative NaN stays negative
@@ -943,6 +1295,14 @@ messages:
       - name: exponent
         type: bits(5)
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD, and the omission is exact
+          rather than accidental: R-0044 enumerates what a NaN's preserved
+          value consists of -- 'the sign bit, the quiet bit, and the NaN
+          payload' -- and those are precisely the other three fields of this
+          structure, all three of which carry links. The all-ones exponent
+          that makes the value a NaN at all is [IEEE754]'s and is inherited.
         layout: |
           All ones in every format (5 bits for binary16, 8 for binary32,
           11 for binary64). The informative aside in §3.1.2 describes
@@ -952,6 +1312,12 @@ messages:
       - name: q_bit
         type: bits(1)
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0014"
+          - "draft-ietf-cbor-cde#R-0015"
+          - "draft-ietf-cbor-cde#R-0016"
+          - "draft-ietf-cbor-cde#R-0044"
+          - "draft-ietf-cbor-cde#R-0047"
         layout: |
           "the first bit (Q-bit) of the trailing significand component"
           (§1.2), i.e. the most significant bit of the trailing
@@ -964,6 +1330,18 @@ messages:
       - name: nan_payload
         type: bits(51)
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0004"
+          - "draft-ietf-cbor-cde#R-0012"
+          - "draft-ietf-cbor-cde#R-0013"
+          - "draft-ietf-cbor-cde#R-0017"
+          - "draft-ietf-cbor-cde#R-0041"
+          - "draft-ietf-cbor-cde#R-0042"
+          - "draft-ietf-cbor-cde#R-0044"
+          - "draft-ietf-cbor-cde#R-0045"
+          - "draft-ietf-cbor-cde#R-0046"
+          - "draft-ietf-cbor-cde#R-0047"
+          - "draft-ietf-cbor-cde#R-0058"
         layout: |
           "All but the first bit (Q-bit) of the trailing significand
           component of the [IEEE754] value for a NaN. Separate from sign
@@ -1047,6 +1425,15 @@ messages:
       - name: s16
         type: bits(16)
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD. No requirement in
+          ../requirements.yaml has an Appendix F locator -- Figure 1 carries
+          no BCP 14 keyword and states no obligation; it is example code. s16,
+          mant and exp are decompositions of an [IEEE754] binary64 input,
+          fixed by that standard. Only return_value is reachable from this
+          document's own rules, because the bytes it returns are the ones the
+          float rules mandate.
         layout: |
           `b64 >> 48 & 0x8000UL` — the binary64 sign bit moved into the
           binary16 sign position (bit 15). Every successful return path
@@ -1054,14 +1441,27 @@ messages:
       - name: mant
         type: bits(52)
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD; see s16.
         layout: "`b64 & 0xfffffffffffffUL` — the 52-bit trailing significand."
       - name: exp
         type: bits(11)
         required: true
+        constrained_by: []
+        constrained_by_note: >-
+          NO REQUIREMENT CONSTRAINS THIS FIELD; see s16.
         layout: "`b64 >> 52 & 0x7ffUL` — the 11-bit biased exponent."
       - name: return_value
         type: int32
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0039"
+          - "draft-ietf-cbor-cde#R-0040"
+          - "draft-ietf-cbor-cde#R-0042"
+          - "draft-ietf-cbor-cde#R-0043"
+          - "draft-ietf-cbor-cde#R-0045"
+          - "draft-ietf-cbor-cde#R-0046"
         layout: |
           -1 when no binary16 form preserves the value; otherwise
           0x0000..0xFFFF, the two bytes that, "prefixed with 0xF9, is
@@ -1115,6 +1515,12 @@ messages:
       - name: head_with_ai_31
         type: uint5
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0018"
+          - "draft-ietf-cbor-cde#R-0053"
+          - "draft-ietf-cbor-cde#R-0054"
+          - "draft-ietf-cbor-cde#R-0061"
+          - "draft-ietf-cbor-cde#R-0062"
         layout: |
           ai = 31 on major types 2, 3, 4 and 5 — the form that "does not
           express the length of a string, an array, or a map in its head"
@@ -1125,6 +1531,11 @@ messages:
       - name: chunks_or_items
         type: "data item *"
         required: false
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0018"
+          - "draft-ietf-cbor-cde#R-0053"
+          - "draft-ietf-cbor-cde#R-0054"
+          - "draft-ietf-cbor-cde#R-0061"
         layout: |
           For major types 2 and 3, definite-length chunks of the same
           major type — Table 6's example carries `4101` (h'01') and
@@ -1133,6 +1544,11 @@ messages:
       - name: break_stop_code
         type: uint8
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0018"
+          - "draft-ietf-cbor-cde#R-0053"
+          - "draft-ietf-cbor-cde#R-0054"
+          - "draft-ietf-cbor-cde#R-0061"
         layout: |
           The terminating byte, exhibited as the trailing `ff` of
           `5f4101420203ff` and of `c25f41004101ff`; the document never
@@ -1167,6 +1583,14 @@ messages:
       - name: preferred_serialization
         type: "encoding constraint"
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0002"
+          - "draft-ietf-cbor-cde#R-0005"
+          - "draft-ietf-cbor-cde#R-0006"
+          - "draft-ietf-cbor-cde#R-0033"
+          - "draft-ietf-cbor-cde#R-0063"
+          - "draft-ietf-cbor-cde#R-0069"
+          - "draft-ietf-cbor-cde#R-0073"
         layout: |
           "the shortest-head encoding constraint together with the
           preferred serializations of tags" (§2; §3.1: "a combination of
@@ -1176,10 +1600,29 @@ messages:
       - name: definite_length_only
         type: "encoding constraint"
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0002"
+          - "draft-ietf-cbor-cde#R-0005"
+          - "draft-ietf-cbor-cde#R-0018"
+          - "draft-ietf-cbor-cde#R-0033"
+          - "draft-ietf-cbor-cde#R-0061"
+          - "draft-ietf-cbor-cde#R-0062"
+          - "draft-ietf-cbor-cde#R-0063"
+          - "draft-ietf-cbor-cde#R-0069"
+          - "draft-ietf-cbor-cde#R-0073"
         layout: "Indefinite length encoding MUST NOT be used (§3.2)."
       - name: lexicographic_map_sorting
         type: "encoding constraint"
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0002"
+          - "draft-ietf-cbor-cde#R-0005"
+          - "draft-ietf-cbor-cde#R-0019"
+          - "draft-ietf-cbor-cde#R-0020"
+          - "draft-ietf-cbor-cde#R-0033"
+          - "draft-ietf-cbor-cde#R-0064"
+          - "draft-ietf-cbor-cde#R-0070"
+          - "draft-ietf-cbor-cde#R-0073"
         layout: |
           Map entries sorted bytewise lexicographically by their
           CDE-encoded map keys, strictly increasing (§3.3).
@@ -1223,6 +1666,8 @@ messages:
       - name: target
         type: "CDDL type"
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0023"
         layout: |
           The left-hand side: the byte string type whose content carries
           the embedded data item, written `bytes` in the document's
@@ -1231,6 +1676,8 @@ messages:
       - name: controller
         type: "CDDL type"
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0023"
         layout: |
           The right-hand side: the CDDL type the embedded data item must
           match. §4 notes that using the general type `any` is the weak
@@ -1267,12 +1714,16 @@ messages:
       - name: target
         type: "CDDL type"
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0023"
         layout: |
           The byte string type whose content carries a CBOR SEQUENCE of
           encoded data items, as for `.cborseq`.
       - name: controller
         type: "CDDL type"
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0023"
         layout: |
           The CDDL type every element of the sequence must match — one
           type for the whole sequence.
@@ -1295,12 +1746,16 @@ messages:
       - name: name
         type: tstr
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0027"
         layout: |
           The control operator name including its leading dot: `.cde` for
           one row, `.cdeseq` for the other.
       - name: reference
         type: tstr
         required: true
+        constrained_by:
+          - "draft-ietf-cbor-cde#R-0027"
         layout: |
           `[RFCXXXX]` in both rows, with the draft note "RFC Editor:
           please replace RFCXXXX with the RFC number of this RFC and

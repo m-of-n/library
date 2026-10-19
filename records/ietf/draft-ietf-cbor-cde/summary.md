@@ -121,6 +121,9 @@ unexercised here.*
 - Smaller defects, recorded in `distilled/README.md`: an unbalanced parenthesis
   in C.3.2 item 3; C.1.1 item 2 presenting a both-stronger-and-weaker
   requirement as a restatement; and draft-state artefacts left in the body.
-- The extraction is at **passes 1 and 2 of 3**; cross-check is in progress, and
-  nothing here carries a human sign-off, so these artifacts are readable but
-  not buildable-on.
+- The extraction is **complete — all three passes, `profile: full`**. The
+  cross-check pass ran all 117 hex-bearing vectors against this record's own
+  derived schemas (96 valid accepted, 21 invalid rejected, 0 failures, each
+  rejection under a rule its own `violates` cites) and completed
+  `messages.yaml`'s `constrained_by`. Nothing here carries a human sign-off
+  yet: every `reviewed_by` is still empty, which is what pass 4 is for.

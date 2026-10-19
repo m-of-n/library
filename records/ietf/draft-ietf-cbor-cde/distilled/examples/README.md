@@ -74,12 +74,51 @@ not write these fixtures.
   inputs, including all 65,536 binary16 patterns widened to binary64. No
   disagreement: the source's figure is correct.
 
-## Still not verified
+## Validated against the schemas (pass 3, cross-check, 2026-10-18)
 
-**Pass 3 (cross-check) has not run.** In particular:
+The two things pass 2 left open are now done.
 
-- No vector has been validated against the derived schemas in `../schema/`.
-- `violates` strings name sections and quote the source, but have not been
-  wired to the `R-NNNN` ids in `../requirements.yaml`.
+**Every vector that carries bytes has been run against this record's own
+`../schema/`.** The derived pseudocode and the data-model rules of the two
+derived CDDL files were transcribed into one runnable layered checker, and all
+**117 hex-bearing vectors went through it: 96 `valid` accepted, 21 `invalid`
+rejected, 0 failures.** The 118th, `V-0012`, carries no bytes because the source
+prints none; it was synthesised exactly as its own `notes` instruct — `0x9f`,
+256 encoded items, `0xff` — and is rejected, with the definite-length
+counterpart accepted as a control. All 96 valid vectors additionally survive the
+re-encode check the source itself proposes in the Appendix C preamble
+(`cde_encode(generic_decode(input)) == input`): **96 byte-identical, 0
+mismatched.**
 
-Until then these vectors are readable; nothing may be built on them.
+**Every `invalid` vector fails for a rule its own `violates` names.** Each of
+the 22 now carries `violates_requirements`, the machine-resolvable ids for the
+rules its prose cites — 55 links in all, every one resolving to an entry
+`../requirements.yaml` defines. The prose `violates` strings are unchanged. The
+checker's rejection reason was then matched against those ids rule by rule:
+**0 vectors are rejected under a rule their `violates_requirements` fails to
+name.** `V-0114` and `V-0115` are each rejected under both rules they cite, and
+`V-0116` under all three. `V-0006` cites two ids the checker's own rejection
+does not reach (`R-0066`, `R-0067`, basic validity) and that is correct: a map
+with two identical integer keys breaks the ordering rule *and* the duplicate-key
+validity rule, and the checker rejects it under the first.
+
+**Which layer catches which.** Of the 21 runnable `invalid` vectors the CDDL
+layer catches **none** — `../schema/README.md` says in terms that CDDL can
+express neither shortest-head nor sibling map ordering, and this is that claim
+measured. The head-level rules catch **9** (`V-0100`, `V-0101`, `V-0106`,
+`V-0109`–`V-0112`, `V-0116`, `V-0118`), the value-level rules **12**
+(`V-0006`, `V-0010`, `V-0013`, `V-0099`, `V-0102`–`V-0105`, `V-0113`–`V-0116`),
+and the extra-code check of `../schema/cde-encode.derived.pseudocode.txt` §4.2
+catches the **one** nothing else does: `V-0007`, the `-0.0`/`0.0` map, which is
+correctly sorted and passes every byte-level CDE rule. `V-0116` is caught twice,
+which is why 9 + 12 + 1 covers 21 vectors.
+
+**The checker discriminates rather than merely accepting.** 54 cases the source
+never prints were run through it — indefinite-length text, array and map heads
+(the source exhibits only the byte-string one), non-preferred heads at every
+argument width for integers, strings, arrays, maps and tags, non-preferred float
+widths including subnormals and NaN payloads, misordered, duplicate and
+byte-string-keyed maps, bignum range and leading-zero edges, reserved `ai`, a
+sub-32 one-byte simple value, and trailing data. **54 correct, 0 wrong.**
+
+Outstanding: a human `reviewed_by`, and nothing else.

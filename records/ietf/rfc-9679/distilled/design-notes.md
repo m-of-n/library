@@ -321,6 +321,16 @@ Common parameter is REQUIRED for all AKP keys" — and §5.1 then pulls it in,
 because §5.1 excludes only *optional* parameters. The chain is
 §4.6 → RFC 9964 §3 → §5.1, not §4.
 
+**[verified] The sharpest form of this, checked mechanically against the
+cached source rather than argued: the string `alg` occurs ZERO times in
+RFC 9679, and so does `AKP`.** Neither the parameter nor the key type that
+makes it required is named anywhere in the document. So every statement of the
+form "RFC 9679 puts `alg` in the thumbprint" is false as written; what is true
+is that §4.6 delegates the required set, and a document RFC 9679 never cites
+then puts `alg` in for a key type RFC 9679 never mentions. Two pass-1 agents of
+this extraction disagreed on exactly this point and the disagreement was
+settled against the source, not between them.
+
 **The parameter set is per-key-type, open-ended, and extended by documents RFC
 9679 has never seen.** That is the architectural fact, and it is sharper than
 "`alg` is in". Proved in `examples/` with the document's own key: adding `alg`

@@ -42,6 +42,12 @@ vectors:
     hex: "a201010102"
     decoded: "map with two entries, both keyed by the unsigned integer 1 (1 -> 1, 1 -> 2)"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0020"
+      - "draft-ietf-cbor-cde#R-0022"
+      - "draft-ietf-cbor-cde#R-0066"
+      - "draft-ietf-cbor-cde#R-0067"
+      - "draft-ietf-cbor-cde#R-0070"
     violates: '§3.3 lexicographic-map-sorting: "the (CDE-encoded) map key of a map entry MUST be lexicographically strictly greater than that of the map entry immediately preceding it in the encoding of the map". Equal keys are not strictly greater. Also Appendix C.3.1 item 3 (basic validity: no duplicate keys) and Appendix C.3.2 item 2 (CDE-checking decoders MUST reject duplicate map keys).'
     notes: 'The case §3.3 describes in prose when it walks the bytewise comparison: "If there is no such next pair, the comparison and thus CDE serialization fails entirely (the map keys of the two map entries are the same...)". HEX COMPUTED BY US: the source names this case but prints no bytes. The §3.3 aside explains why this matters: with the other CDE constraints, identical keys serialize identically and therefore sort adjacent, so the strictly-increasing phrasing is what turns the duplicate-key validity rule into a cheap check.'
   - id: "draft-ietf-cbor-cde#V-0007"
@@ -50,6 +56,9 @@ vectors:
     hex: "a2f9000001f9800002"
     decoded: "map with two entries keyed by the f16 floats 0.0 and -0.0 (0.0 -> 1, -0.0 -> 2)"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0066"
+      - "draft-ietf-cbor-cde#R-0067"
     violates: 'Appendix C.3.1 item 3: "CDE encoders MUST generate CBOR that fulfills basic validity (Section 5.3.1 of RFC 8949)... this includes not emitting duplicate keys in a major type 5 map". Per the §3.3 aside, RFC 8949 Section 5.6.1 treats -0.0 and 0.0 as equal map keys, so these two entries are duplicates.'
     notes: 'The one case the §3.3 aside singles out: "Section 5.6.1 of RFC 8949 lists one specific case ''(specifically, -0.0 is equal to 0.0)'' where two different keys are considered equivalent for the purpose of duplicate map keys; this needs to be checked with extra code for a full validity checker." HEX COMPUTED BY US: the source names this case but prints no bytes. NOTE THE TRAP THIS VECTOR EXISTS TO CATCH: lexicographic-map-sorting is SATISFIED here (0xf90000 < 0xf98000, strictly increasing), so an implementation that checks only the ordering constraint accepts it; the extra equivalence check is what rejects it.'
   - id: "draft-ietf-cbor-cde#V-0008"
@@ -72,6 +81,9 @@ vectors:
     hex: "c24102"
     decoded: "tag 2 (bignum) over the one-byte string 0x02, value 2"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0007"
+      - "draft-ietf-cbor-cde#R-0048"
     violates: '§3.1.1: "Integers that can be represented by basic major type 0 and 1 MUST be encoded using the (shortest-head) deterministic encoding defined for them". Appendix C.1.1 item 3: "Positive integers from 0 to 2^64 - 1 MUST be encoded as a type 0 integer."'
     notes: 'Appendix B: "the number 2 can be represented as an integer, float, big number, decimal fraction and other." The source names the representations to make an application-level (ALDR) point - that CDE fixes the encoding of each data item but does not choose between semantically equivalent data items - and prints no bytes for any of them. HEX COMPUTED BY US: the source names this case but prints no bytes. Included because the "big number" representation of 2 that Appendix B names is, as an encoding, forbidden by CDE - the same failure Table 6 records for 65536 as c243010000. THE EDN SHOWN IS OUR OWN NOTATION (RFC 8949 tag notation); the source prints no diagnostic form for it.'
   - id: "draft-ietf-cbor-cde#V-0011"
@@ -86,6 +98,9 @@ vectors:
     diagnostic: ""
     decoded: "an array or map of 256 or more elements/entries encoded with an indefinite-length head (0x9f or 0xbf) and a 0xff break"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0018"
+      - "draft-ietf-cbor-cde#R-0063"
     violates: '§3.2 definite-length-only: "indefinite length encoding MUST NOT be used". Also Appendix C.3.1 item 1 (CDE encoders MUST only emit CBOR that fulfills definite-length-only).'
     notes: 'The Appendix C.2 aside: "Some encoders turn to indefinite length encoding for arrays and maps with 256 or more elements/entries, to use the slightly smaller serialization size indefinite length encoding offers for these cases... As CDE requires definite-length-only, such behavior needs to be turned off for CDE." NO HEX RECORDED: the source gives neither bytes nor element content, so any instance would be entirely our invention. A harness should synthesise one, e.g. 0x9f followed by 256 encoded items and 0xff, and check that it is rejected.'
   - id: "draft-ietf-cbor-cde#V-0013"
@@ -94,6 +109,10 @@ vectors:
     hex: "62c0ae"
     decoded: "text string of length 2 whose content bytes 0xc0 0xae are not valid UTF-8 (an overlong encoding of U+002E)"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0066"
+      - "draft-ietf-cbor-cde#R-0067"
+      - "draft-ietf-cbor-cde#R-0071"
     violates: 'Appendix C.3.1 item 3: "CDE encoders MUST generate CBOR that fulfills basic validity (Section 5.3.1 of RFC 8949)... emitting only valid UTF-8 in major type 3 text strings." Also Appendix C.3.2 item 3: CDE-checking decoders "MUST check the validity of the UTF-8 encoding of text strings (major type 3)".'
     notes: "This draft states the UTF-8 rule twice (encoder and checking decoder) but shows no instance. HEX NOT FROM THIS SOURCE: 0x62c0ae is RFC 8949 Section 5.2's own well-formed-but-invalid-UTF-8 example (our rfc-8949#V-0133), reused here so the rule is exercised without inventing new bytes. Note that CDE deliberately does NOT require Unicode normalization (Appendix C.3.1 note), so a non-NFC text string is valid CDE."
   - id: "draft-ietf-cbor-cde#V-0014"
@@ -697,6 +716,10 @@ vectors:
     hex: "a2616200616101"
     decoded: 'map with two entries: text string "b" -> unsigned 0, text string "a" -> unsigned 1'
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0020"
+      - "draft-ietf-cbor-cde#R-0064"
+      - "draft-ietf-cbor-cde#R-0065"
     violates: '§3.3 lexicographic-map-sorting: "the (CDE-encoded) map key of a map entry MUST be lexicographically strictly greater than that of the map entry immediately preceding it". Key 0x6162 ("b") precedes key 0x6161 ("a"), which is smaller. Also Appendix C.3.1 item 2.'
     notes: 'Table 6 ("Failing Examples: Not CDE") row, EDN and bytes as printed in the source. Source comment: "Incorrect map key ordering". The hex above is the source''s own failing encoding. The CDE form a2616101616200 is OUR COMPUTATION - the source prints no corrected encoding for this row.'
   - id: "draft-ietf-cbor-cde#V-0100"
@@ -705,6 +728,9 @@ vectors:
     hex: "98020405"
     decoded: "array of two elements, 4 and 5, with the length 2 in a one-byte argument"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0034"
+      - "draft-ietf-cbor-cde#R-0035"
     violates: '§3.1 / Appendix C.1.1 item 1 shortest-head: "0 to 23 and -1 to -24 MUST be encoded in the same byte as the major type". The array head uses ai = 0x18 for the length 2.'
     notes: 'Table 6 ("Failing Examples: Not CDE") row, EDN and bytes as printed in the source. Source comment: "Array length not in preferred serialization". The hex above is the source''s own failing encoding. The CDE form 820405 is OUR COMPUTATION - the source prints no corrected encoding for this row.'
   - id: "draft-ietf-cbor-cde#V-0101"
@@ -713,6 +739,9 @@ vectors:
     hex: "1900ff"
     decoded: "unsigned integer 255 with the argument in a two-byte head"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0034"
+      - "draft-ietf-cbor-cde#R-0036"
     violates: 'Appendix C.1.1 item 1 shortest-head: "24 to 255 and -25 to -256 MUST be encoded only with one additional byte (ai = 0x18)".'
     notes: 'Table 6 ("Failing Examples: Not CDE") row, EDN and bytes as printed in the source. Source comment: "Integer not in preferred serialization". CDE form is 18ff, which the source prints in Table 4 for the same value (draft-ietf-cbor-cde#V-0020).'
   - id: "draft-ietf-cbor-cde#V-0102"
@@ -721,6 +750,9 @@ vectors:
     hex: "c34a00010000000000000000"
     decoded: "tag 3 (negative bignum) with 10 content bytes, the first of them zero, value -18446744073709551617"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0008"
+      - "draft-ietf-cbor-cde#R-0050"
     violates: '§3.1.1 / Appendix C.1.1 item 3: "Leading zeros MUST NOT be present in the byte string content of tag 2 and 3."'
     notes: 'Table 6 ("Failing Examples: Not CDE") row, EDN and bytes as printed in the source. Source comment: "Bignum with leading zero bytes". CDE form is c349010000000000000000, which the source prints in Table 4 for the same value (draft-ietf-cbor-cde#V-0035). Note that a decoder that is NOT CDE-checking must still accept these bytes: Appendix C.1.2 item 5 says "Leading zero bytes in the tag content of a tag 2 or 3 MUST be ignored".'
   - id: "draft-ietf-cbor-cde#V-0103"
@@ -729,6 +761,8 @@ vectors:
     hex: "fa41280000"
     decoded: "f32 float 10.5"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0039"
     violates: 'Appendix C.1.1 item 2 shortest-head for floats: "If multiple of these encodings preserve the precision of the value to be encoded, only the shortest form of these MUST be emitted." 10.5 is exactly representable in binary16.'
     notes: 'Table 6 ("Failing Examples: Not CDE") row, EDN and bytes as printed in the source. Source comment: "Not in preferred serialization". The hex above is the source''s own failing encoding. The CDE form f94940 is OUR COMPUTATION, verified by round-tripping 10.5 through binary16; the source prints no corrected encoding for this row.'
   - id: "draft-ietf-cbor-cde#V-0104"
@@ -737,6 +771,9 @@ vectors:
     hex: "fa7fc00000"
     decoded: "f32 quiet NaN with zero payload"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0039"
+      - "draft-ietf-cbor-cde#R-0047"
     violates: 'Appendix C.1.1 item 2: "a double or single quiet NaN that has a zero NaN payload will always be represented in a half-precision quiet NaN".'
     notes: 'Table 6 ("Failing Examples: Not CDE") row, EDN and bytes as printed in the source. Source comment: "Not in preferred serialization". CDE form is f97e00, which the source prints in Table 5 for the same bit pattern, as float''7fc00000'' (draft-ietf-cbor-cde#V-0083). The EDN here is the bare word "NaN", the same EDN Table 5 attaches to the VALID f97e00 - the EDN alone does not tell the two vectors apart, only the bytes do.'
   - id: "draft-ietf-cbor-cde#V-0105"
@@ -745,6 +782,9 @@ vectors:
     hex: "c243010000"
     decoded: "tag 2 (bignum) with the three content bytes 0x010000, value 65536"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0007"
+      - "draft-ietf-cbor-cde#R-0048"
     violates: '§3.1.1 / Appendix C.1.1 item 3: "Positive integers from 0 to 2^64 - 1 MUST be encoded as a type 0 integer."'
     notes: 'Table 6 ("Failing Examples: Not CDE") row, EDN and bytes as printed in the source. Source comment: "Integer value too small for bignum". CDE form is 1a00010000, which the source prints in Table 4 for the same value (draft-ietf-cbor-cde#V-0026).'
   - id: "draft-ietf-cbor-cde#V-0106"
@@ -753,6 +793,9 @@ vectors:
     hex: "5f4101420203ff"
     decoded: "indefinite-length byte string of two chunks, h'01' and h'0203', content 0x010203"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0018"
+      - "draft-ietf-cbor-cde#R-0063"
     violates: '§3.2 definite-length-only: "indefinite length encoding MUST NOT be used". Also Appendix C.3.1 item 1.'
     notes: 'Table 6 ("Failing Examples: Not CDE") row, EDN and bytes as printed in the source. Source comment: "Indefinite length encoding". The hex above is the source''s own failing encoding. The CDE form 43010203 is OUR COMPUTATION - the source prints no corrected encoding for this row.'
   - id: "draft-ietf-cbor-cde#V-0107"
@@ -775,6 +818,9 @@ vectors:
     hex: "1801"
     decoded: "unsigned integer 1 with a one-byte argument"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0034"
+      - "draft-ietf-cbor-cde#R-0035"
     violates: 'Appendix C.1.1 item 1 shortest-head: "0 to 23 and -1 to -24 MUST be encoded in the same byte as the major type". The value fits in the initial byte but is carried in a longer argument.'
     notes: 'Table 7 row 2, marked "no (mt0, but not shortest argument)". Bytes as printed in the source.'
   - id: "draft-ietf-cbor-cde#V-0110"
@@ -783,6 +829,9 @@ vectors:
     hex: "190001"
     decoded: "unsigned integer 1 with a two-byte argument"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0034"
+      - "draft-ietf-cbor-cde#R-0035"
     violates: 'Appendix C.1.1 item 1 shortest-head: "0 to 23 and -1 to -24 MUST be encoded in the same byte as the major type". The value fits in the initial byte but is carried in a longer argument.'
     notes: 'Table 7 row 2, marked "no (mt0, but not shortest argument)". Bytes as printed in the source.'
   - id: "draft-ietf-cbor-cde#V-0111"
@@ -791,6 +840,9 @@ vectors:
     hex: "1a00000001"
     decoded: "unsigned integer 1 with a four-byte argument"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0034"
+      - "draft-ietf-cbor-cde#R-0035"
     violates: 'Appendix C.1.1 item 1 shortest-head: "0 to 23 and -1 to -24 MUST be encoded in the same byte as the major type". The value fits in the initial byte but is carried in a longer argument.'
     notes: 'Table 7 row 2, marked "no (mt0, but not shortest argument)". Bytes as printed in the source.'
   - id: "draft-ietf-cbor-cde#V-0112"
@@ -799,6 +851,9 @@ vectors:
     hex: "1b0000000000000001"
     decoded: "unsigned integer 1 with an eight-byte argument"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0034"
+      - "draft-ietf-cbor-cde#R-0035"
     violates: 'Appendix C.1.1 item 1 shortest-head: "0 to 23 and -1 to -24 MUST be encoded in the same byte as the major type". The value fits in the initial byte but is carried in a longer argument.'
     notes: 'Table 7 row 2, marked "no (mt0, but not shortest argument)". Bytes as printed in the source.'
   - id: "draft-ietf-cbor-cde#V-0113"
@@ -807,6 +862,9 @@ vectors:
     hex: "c24101"
     decoded: "tag 2 (bignum) over the one-byte string 0x01, value 1"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0007"
+      - "draft-ietf-cbor-cde#R-0048"
     violates: '§3.1.1 / Appendix C.1.1 item 3: "Positive integers from 0 to 2^64 - 1 MUST be encoded as a type 0 integer."'
     notes: 'Table 7 row 3, marked "no (could use mt0)". The bignum content itself is minimal; the failure is that major type 0 was available. Bytes as printed in the source.'
   - id: "draft-ietf-cbor-cde#V-0114"
@@ -815,6 +873,11 @@ vectors:
     hex: "c2420001"
     decoded: "tag 2 (bignum) over the two-byte string 0x0001, value 1"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0007"
+      - "draft-ietf-cbor-cde#R-0008"
+      - "draft-ietf-cbor-cde#R-0048"
+      - "draft-ietf-cbor-cde#R-0050"
     violates: '§3.1.1 / Appendix C.1.1 item 3, two of its bullets at once: "Positive integers from 0 to 2^64 - 1 MUST be encoded as a type 0 integer." and "Leading zeros MUST NOT be present in the byte string content of tag 2 and 3."'
     notes: 'Table 7 row 4, marked "no (could use mt0, uses leading zeros)". Two rules broken at once. Bytes as printed in the source.'
   - id: "draft-ietf-cbor-cde#V-0115"
@@ -823,6 +886,11 @@ vectors:
     hex: "c243000001"
     decoded: "tag 2 (bignum) over the three-byte string 0x000001, value 1"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0007"
+      - "draft-ietf-cbor-cde#R-0008"
+      - "draft-ietf-cbor-cde#R-0048"
+      - "draft-ietf-cbor-cde#R-0050"
     violates: '§3.1.1 / Appendix C.1.1 item 3, two of its bullets at once: "Positive integers from 0 to 2^64 - 1 MUST be encoded as a type 0 integer." and "Leading zeros MUST NOT be present in the byte string content of tag 2 and 3."'
     notes: 'Table 7 row 4, marked "no (could use mt0, uses leading zeros)". The row ends with "etc.", so the class the source names is open-ended: every longer zero-padded bignum encoding of 1 fails the same way. Bytes as printed in the source.'
   - id: "draft-ietf-cbor-cde#V-0116"
@@ -831,6 +899,12 @@ vectors:
     hex: "c25f41004101ff"
     decoded: "tag 2 (bignum) over an indefinite-length byte string of two chunks, h'00' and h'01', content 0x0001, value 1"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0007"
+      - "draft-ietf-cbor-cde#R-0008"
+      - "draft-ietf-cbor-cde#R-0018"
+      - "draft-ietf-cbor-cde#R-0048"
+      - "draft-ietf-cbor-cde#R-0050"
     violates: '§3.1.1 / Appendix C.1.1 item 3, two of its bullets at once: "Positive integers from 0 to 2^64 - 1 MUST be encoded as a type 0 integer." and "Leading zeros MUST NOT be present in the byte string content of tag 2 and 3." AND §3.2 definite-length-only: "indefinite length encoding MUST NOT be used".'
     notes: 'Table 7 row 5, marked "no (could use mt0, uses leading zeros)" - and written as "0xc25f41004101ff, and similar", so again an open-ended class. Table 7 classifies PREFERRED serialization, not CDE, so its stated reason does not mention the indefinite-length byte string; under CDE that is an independent violation. Appendix E''s closing note makes the distinction explicit: "the preferred serialization constraint by itself does not exclude indefinite length encoding of the byte string that is the content of tag 2". Bytes as printed in the source.'
   - id: "draft-ietf-cbor-cde#V-0117"
@@ -846,5 +920,8 @@ vectors:
     hex: "c25f49056bc75e2d63100000ff"
     decoded: "tag 2 (bignum) whose content is an indefinite-length byte string with one chunk of 9 bytes, value 100000000000000000000"
     expect: "invalid"
+    violates_requirements:
+      - "draft-ietf-cbor-cde#R-0018"
+      - "draft-ietf-cbor-cde#R-0063"
     violates: '§3.2 definite-length-only: "indefinite length encoding MUST NOT be used". Also Appendix C.3.1 item 1.'
     notes: 'The closing note of Appendix E: "in addition to this serialization, there are multiple serializations that would also count as _preferred_ serializations, as the preferred serialization constraint by itself does not exclude indefinite length encoding of the byte string that is the content of tag 2." HEX COMPUTED BY US: the source names this case but prints no bytes. The chunking shown here (one chunk of all 9 bytes) is one arbitrary member of the open-ended class the source describes; any other chunking fails identically. This vector is the whole reason CDE needs definite-length-only on top of preferred-serialization: it IS a preferred serialization and is still not CDE.'

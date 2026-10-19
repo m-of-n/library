@@ -422,6 +422,58 @@ which are evidence, **not decisions**. They are marked `[8949]` and `[topic]`.
 the one row where CDE is looser than we need, which is the same fact read from
 the other side.
 
+**Traceability to `requirements.yaml`** (cross-check pass, 2026-10-18). Every
+row above is scored against a locator; this is the same row set resolved to
+requirement ids, so a reader can argue with a specific entry rather than with
+the table. 20 of the 28 rows resolve; 8 do not, and the reason differs by row.
+
+| row | requirement ids |
+|---|---|
+| CDE-01 | `R-0002`, `R-0005` |
+| CDE-02 | `R-0006`, `R-0034` |
+| CDE-03 | `R-0035`, `R-0036`, `R-0037`, `R-0038` |
+| CDE-04 | `R-0007`, `R-0008`, `R-0048`, `R-0049`, `R-0050` |
+| CDE-05 | `R-0006`, `R-0034` |
+| CDE-06 | **none** — see below |
+| CDE-07 | `R-0018`, `R-0061`, `R-0062` |
+| CDE-08 | `R-0019`, `R-0020` |
+| CDE-09 | `R-0009` |
+| CDE-10 | `R-0010` |
+| CDE-11 | `R-0011` |
+| CDE-12 | `R-0012`, `R-0013`, `R-0014`, `R-0044`, `R-0045`, `R-0046` |
+| CDE-13 | `R-0015`, `R-0016` |
+| CDE-14 | **none** — see below |
+| CDE-15 | **none** — see below |
+| CDE-16 | `R-0040` |
+| CDE-17 | `R-0066`, `R-0067` |
+| CDE-18 | `R-0020`, `R-0022`, `R-0067` |
+| CDE-19 | `R-0069`, `R-0070`, `R-0071`, `R-0072` |
+| CDE-20 | `R-0033` |
+| CDE-21 | `R-0032` |
+| CDE-22 | **none** — see below |
+| CDE-23 | `R-0026` |
+| CDE-24 | **none** — see below |
+| CDE-25 | **none** — see below |
+| CDE-26 | **none by construction** — the row scores an *absence* |
+| CDE-27 | `R-0068` |
+| CDE-28 | **none by construction** — inherited from RFC 8949, not stated here |
+
+**The six rows that score a statement but resolve to no id are not a gap in
+`requirements.yaml`, and naming them is the point of this table.** CDE-06
+(§3.1.1's aside recommending that new tag registrations address determinism),
+CDE-14 (§3.1.2 item 4, subnormals), CDE-15 (§3.1.2 item 5, no tag 4/5
+equivalence), CDE-22 (Appendix C's re-encode-and-compare advice), CDE-24
+(Appendix C note 3, serialization only) and CDE-25 (§1.1 and Appendix B, the
+ALDR layer) all carry **no BCP 14 keyword and impose no obligation**: they are
+informative statements about scope. Each is held verbatim in `normative.md`
+with its locator, and `R-0068` shows the contrast — an explicit *non*-
+requirement does earn an entry, because it determines what a field may contain
+(`messages.yaml`, `major-type-3-text-string.content`). The practical
+consequence for us is that **five of the eight rows our profile most needs to
+cite — CDE-14, CDE-15, CDE-24, CDE-25 and CDE-26 — are citable only as prose,
+not as a numbered requirement of CDE.** That is a cost of citing CDE at all, and
+it belongs in the R-O-03 discussion in §2 below.
+
 ### 2. So what is option 5's relation to CDE?
 
 Three answers, at three levels of precision.
@@ -720,8 +772,9 @@ contradicts itself. Recorded rather than smoothed over; all are consistent with
 a revision that "merges all active pull requests".
 
 - **D-1 · The constraint has two names.** §2 and Table 1 call it
-  `definite-length-encoding` (4 occurrences); §3 ¶4, §3.2, Appendix A.1 and
-  Appendix C.2 call it `definite-length-only`. A profile that cites "CDE's
+  `definite-length-encoding` (4 occurrences, all four inside §2); §3 ¶4, §3.2,
+  Appendix A.1 and Appendix C.2 call it `definite-length-only` (22
+  occurrences). A profile that cites "CDE's
   definite-length-only constraint" cites a name Table 1 spells differently, and
   Table 1 is the summary a reader is most likely to quote.
 - **D-2 · The shortest-argument enumeration stops at four bytes.** C.1.1 item
@@ -737,11 +790,56 @@ a revision that "merges all active pull requests".
   paragraph, around the sentence that disclaims its MUSTs. Editorial, and
   evidence of the merge; worth noting only because the disclaimed MUSTs are the
   part of the document we most want to lean on.
-- **D-4 · The duplicate-key claim has a documented hole and no fixture.** §3.3's
-  aside says the sorting rule "prevents encoding multiple entries that have the
-  same key", then concedes RFC 8949 §5.6.1's `-0.0` = `0.0` case "needs to be
-  checked with extra code for a full validity checker". Appendix D.3 has no
-  failing example for it. A conformance suite should carry
-  `a2f90000…f98000…` — a map keyed on both zeros, which is correctly sorted,
-  passes every CDE check, and is an invalid CBOR map. *Test-suite author; and
-  it is the reason R4 bars floats from key position.*
+- **D-4 · The duplicate-key claim has a documented hole and the source carries
+  no fixture for it.** §3.3's aside says the sorting rule "prevents encoding
+  multiple entries that have the same key", then concedes RFC 8949 §5.6.1's
+  `-0.0` = `0.0` case "needs to be checked with extra code for a full validity
+  checker". Appendix D.3 has no failing example for it, so **ours is the only
+  one**: `examples/vectors.yaml` `V-0007`, `a2f9000001f9800002` — a map keyed
+  on both zeros, which is correctly sorted, satisfies
+  `lexicographic-map-sorting`, and is an invalid CBOR map. The cross-check pass
+  confirmed the trap is real and that it needs its own layer: `V-0007` is the
+  **only** one of the 22 invalid vectors that the head-level and value-level
+  checks both accept, and the only one rejected by the extra-code check of
+  `schema/cde-encode.derived.pseudocode.txt` §4.2. *It is the reason R4 bars
+  floats from key position.*
+- **D-5 · C.1.1 item 1 says "argument" and then enumerates integer VALUES.**
+  Found by the cross-check pass while resolving `examples/vectors.yaml`'s
+  `violates` strings to requirement ids. The lead-in is unambiguous about
+  scope — "Shortest-form encoding of the argument MUST be used for **all major
+  types**", and "The shortest form encoding for **any argument** that is not a
+  floating point value is:" — but every one of the four bullets that follows is
+  written as a signed integer range, negatives included: "0 to 23 **and -1 to
+  -24**", "24 to 255 **and -25 to -256**", and so on. An argument is never
+  negative; for major type 1 it is `-1 - value`, and for major types 2–6 it is a
+  length, an element count, a pair count or a tag number, all plainly unsigned.
+  So the only text that actually covers a *non-integer* argument is the lead-in
+  sentence, which says the shortest form must be used but not which widths
+  exist, while the bullets that give the widths are phrased for integers alone.
+  The effect is visible in our own artifacts: `V-0100` is an **array length**
+  (`98020405`, Table 6's own failing row) and the rule it must cite is
+  `R-0035`, whose verbatim text is about "0 to 23 and -1 to -24". Read with
+  D-2, the document never states a width table for arguments as such — it
+  states one for integers, stops it at four bytes, and leaves the generalisation
+  to the reader. *Our profile must state the argument width table in argument
+  terms, unsigned, including the 8-byte row; D5 package.*
+- **D-6 · The C.1.2 scoping problem bites three times, not once.** Defect 7 in
+  `README.md` records C.1.2 items 2 and 3 (indefinite-length items "MUST be
+  accepted") against §3.2 (they "MUST NOT be used"). The cross-check pass found
+  the same shape a third time, in **C.1.2 item 5**: "Leading zero bytes in the
+  tag content of a tag 2 or 3 MUST be ignored" (`R-0060`), against C.1.1 item
+  3's "Leading zeros MUST NOT be present in the byte string content of tag 2 and
+  3" (`R-0050`) and C.3.2 item 1's requirement that a CDE-checking decoder check
+  preferred-serialization (`R-0069`) — under which Table 6 lists
+  `c34a00010000000000000000` as not CDE, and our `V-0102` and `V-0114`–`V-0116`
+  are rejected for exactly those bytes. One checklist says ignore them, the
+  other says reject them. The resolution is the same scoping sentence as in
+  defect 7, and it is just as implicit: C.1.2 governs "Partial decoder
+  implementations", not CDE decoders. It had been recorded only in
+  `messages.yaml`'s `tag-2-positive-bignum` notes; it belongs here, because it
+  means **the lenient-decoder and checking-decoder rules are interleaved in one
+  appendix with no marker telling an implementer which list applies to them** —
+  and an implementer who follows C.3.2 item 1 back through the words
+  "preferred-serialization" lands in C.1.1 and C.1.2 together. *Do not implement
+  both in the same code path; `schema/cde-check.derived.pseudocode.txt` §2 says
+  so explicitly.*
