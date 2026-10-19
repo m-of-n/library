@@ -72,9 +72,13 @@ of the ecosystem — essentially every COSE library implements ES256 and EdDSA.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled/`. **FX-1 extraction for this record is owned by #39** (Tier 1).
-This issue owns ingest, summary and relations only; the `distillation` block is
-deliberately untouched.
+`distilled/` exists and the **FX-1 extraction is in progress under #39**
+(Tier 1). Until pass 1 lands, the directory holds `bin/extract-scaffold`
+templates with TODO markers and nothing citable; `distilled/README.md` states
+the artifact set and which passes have run. The line this paragraph replaces
+said "No `distilled/`", which was written by #42 when that was true and became
+false the moment the record was scaffolded — the same stale-absence defect
+library#70 fixed on three other records.
 
 ## Limits
 
