@@ -3,17 +3,20 @@
  *
  * VERBATIM.  This file is NOT ours.  Everything between the BEGIN and END
  * markers below is reproduced byte-for-byte, including the document's
- * three-space page margin, its interior comment alignment and the figure
- * caption, from:
+ * three-space page margin and its interior comment alignment, from:
  *
  *   draft-ietf-cbor-cde-13, "CBOR Common Deterministic Encoding (CDE)",
  *   C. Bormann, Universitaet Bremen TZI, 14 October 2025,
  *   <https://www.ietf.org/archive/id/draft-ietf-cbor-cde-13.txt>
  *
  *   Appendix F, "Example Code for Encoding into 16-bit Floating Point",
- *   Figure 1, in full.  Cached source lines 2195-2215, caption at 2217
+ *   Figure 1, in full.  Cached source lines 2195-2215
  *   (.cache/draft-ietf-cbor-cde.txt, sha256
  *   bc554e3d2d37182f5f37c88aac2e61298089438068ccbc7c674d0940e675605c).
+ *
+ * The figure's caption (cached source line 2217) sits OUTSIDE the verbatim
+ * region, as a comment below it: inside, the bare caption line is not C and
+ * the file would not compile.  [verify pass, 2026-10-16: it did not.]
  *
  * Introduced in the source by (cached source lines 2186-2193): "Given that
  * CDE implementations that support floating point Numbers not only need to
@@ -29,7 +32,7 @@
  * WHOLE of this document's formal, machine-consumable material.  It must
  * not be edited; the three-space indentation is the page margin and is
  * retained so the region stays byte-identical to the source.  C is
- * insensitive to it, so the file still compiles as-is.
+ * insensitive to it, so the file compiles as-is (`cc -c`, checked).
  *
  * Scope, and what it does NOT cover -- read before treating this as the
  * encoder:
@@ -82,6 +85,7 @@
        return s16 + 0x7c00 + (mant >> 42);
      return -1;
    }
-
-           Figure 1: Example C Code for a Half-Precision Encoder
 /* ---- END VERBATIM ---- */
+
+/* Caption, cached source line 2217, verbatim apart from this comment wrapper:
+           Figure 1: Example C Code for a Half-Precision Encoder            */

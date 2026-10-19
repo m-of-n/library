@@ -1,0 +1,90 @@
+; =====================================================================
+; serial-control-operator.cddl
+;
+; VERBATIM.  Both fenced regions below are draft-ietf-cbor-serialization-08's
+; own CDDL, reproduced byte-for-byte with their three-space page margin,
+; from Section 8 ("CDDL Serialization Control Operator") - lines 967-969
+; and 974-975 of the cached text rendering
+; (.cache/draft-ietf-cbor-serialization.txt, sha256
+; a612e6c4f674da61b1c888431a06dca13457aaea53c1cd86c8b50f8999b47112).
+; Two fences, not two files: they are the two worked examples of a single
+; artifact, the `.serial` control operator, and neither stands alone.
+; Nothing here is ours.
+; =====================================================================
+;
+; WHAT SECTION 8 ADDS.  `.serial` is the one piece of new *syntax* this
+; draft contributes, and Section 10 asks IANA to register it in the
+; "CDDL Control Operators" registry.  Its whole definition is three
+; sentences of prose, which no fence below contains, so they are quoted
+; here rather than restated:
+;
+;     "The ".serial" control operator specifies the serialization of any
+;     type in CDDL, including the serialization of the whole document or
+;     byte-string-wrapped sub-parts."
+;
+;     "The controller (the right-hand side) MUST be either "prefp" or
+;     "dtrm", specifying preferred-plus (Section 4) or deterministic
+;     (Section 5) serialization, respectively."
+;
+;     "The scope of .serial applies recursively through nested arrays and
+;     maps, but does not extend into byte strings or other data items
+;     that happen to contain encoded CBOR.  Every instance of embedded
+;     CBOR that requires specific serialization must specify it
+;     explicitly."
+;
+; So the grammar of the operator is `<type> .serial (prefp / dtrm)`, the
+; controller is one of exactly two literal names, and new controller
+; values "are possible but are highly discouraged.  Standards action is
+; required to add them."
+;
+; WHAT IT DOES NOT CONSTRAIN.  Everything the two serializations are.
+; `.serial` is a *hook*: it names a rule set for a validator to apply,
+; in the same way RFC 8610's `.cbor` names a nested grammar.  A CDDL
+; tool that does not implement this draft will parse `stuff .serial
+; dtrm` and check `stuff` alone, which is why no file in this directory
+; can be fed to a validator and be said to have checked determinism.
+; The shortest-head predicate, the float-width choice, the single
+; permitted NaN and the map key ordering all live behind this operator,
+; not in it - see prefp-head.derived.abnf and the two derived pseudocode
+; files for the parts this library renders machine-checkable.
+;
+; THE SECOND FENCE IS THE DOCUMENT-WIDE IDIOM.  Section 8 introduces it
+; as "the first lines of a CDDL document as follows specify that
+; "my-protocol" be serialized with preferred-plus" - that is, you apply
+; `.serial` once, to the root rule, and it reaches every nested array
+; and map beneath it.  `my-protocol = ...` is the draft's ellipsis for
+; "the rest of your protocol", not CDDL that parses.
+;
+; THE FIRST FENCE IS THE WRAPPING IDIOM, and it is the one that matters
+; for a signing envelope.  `#6.24(bytes .cbor deterministic-stuff)` is
+; tag 24 (encoded CBOR data item) whose byte-string content is itself
+; CBOR matching `deterministic-stuff`.  Because the scope sentence above
+; stops `.serial` at a byte string boundary, the determinism here is
+; carried by the inner `.serial dtrm`, which had to be written
+; explicitly; an outer `.serial` on the wrapping protocol would not have
+; reached inside.  Appendix K.2 makes the same point in prose for COSE:
+; "determinism requirements do not extend into CBOR inside of byte
+; strings.  Once CBOR data is wrapped in a byte string, its internal
+; encoding is treated as opaque and is not subject to surrounding
+; serialization constraints."
+;
+; NOTE ON `bytes`.  The first fence writes `bytes`, the prelude synonym
+; for `bstr`.  That is the source's spelling and is kept.
+; =====================================================================
+
+; Introduced in Section 8 by: "For example, the following specifies that
+; a message or protocol described by "stuff" is deterministically
+; serialized and wrapped in a byte string:"
+; ---- BEGIN VERBATIM (draft-ietf-cbor-serialization-08, Section 8) ----
+   stuff = ...
+   deterministic-stuff = stuff .serial dtrm
+   wrapped-deterministic-stuff = #6.24(bytes .cbor deterministic-stuff)
+; ---- END VERBATIM ----
+
+; Introduced in Section 8 by: "For another example, the first lines of a
+; CDDL document as follows specify that "my-protocol" be serialized with
+; preferred-plus."
+; ---- BEGIN VERBATIM (draft-ietf-cbor-serialization-08, Section 8) ----
+   my-prefp-protocol = my-protocol .serial prefp
+   my-protocol = ...
+; ---- END VERBATIM ----

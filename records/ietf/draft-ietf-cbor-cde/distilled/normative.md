@@ -9,7 +9,7 @@ reviewed_by: ""
 <!-- Every normative statement, VERBATIM, with its locator. Keep the source's
 section structure as headings. Drop motivation, history, acknowledgements. -->
 
-Source: "CBOR Common Deterministic Encoding (CDE)", draft-ietf-cbor-cde-13, C. Bormann, Universität Bremen TZI, 14 October 2025; document header states "Updates: 8949 (if approved)", "Intended status: Best Current Practice", "Expires: 17 April 2026". Quotations are verbatim from the plain-text source. Blocks that reproduce tables, lists, structures, or pseudocode preserve the source's own line breaks and indentation inside fenced blocks. Where such a block spans a page boundary in the source it appears as consecutive fenced blocks, with only the running page header/footer falling between them. In the inline quotations the source's hard line wraps inside a sentence are rendered as single spaces, except where the source wraps immediately after a hyphen or a solidus inside a word ("shortest-" / "head", "encoder/" / "decoder"), where the word is rejoined without a space; no other character is altered. "Status of This Memo", "Copyright Notice", the Table of Contents, "About This Document", §7.2 (Informative References), Acknowledgments, Contributors and the Author's Address are omitted. The source itself marks Appendix A, Appendix B and Appendix C as informative; those self-characterisations are captured verbatim below, and the RFC 2119 keywords those appendices nonetheless carry are reproduced rather than suppressed.
+Source: "CBOR Common Deterministic Encoding (CDE)", draft-ietf-cbor-cde-13, C. Bormann, Universität Bremen TZI, 14 October 2025; document header states "Updates: 8949 (if approved)", "Intended status: Best Current Practice", "Expires: 17 April 2026". Quotations are verbatim from the plain-text source. Blocks that reproduce tables, lists, structures, or pseudocode preserve the source's own line breaks and indentation inside fenced blocks. Where such a block spans a page boundary in the source it appears as consecutive fenced blocks, with only the running page header/footer falling between them. In the inline quotations the source's hard line wraps inside a sentence are rendered as single spaces, except where the source wraps immediately after a hyphen or a solidus inside a word ("shortest-" / "head", "encoder/" / "decoder"), where the word is rejoined without a space; no other character is altered. Thirteen passages in the source are set as asides with a `|` margin on every line (§3, §3.1.1, §3.1.2 ×2, §3.2, §3.3 ×2, Appendix B ×5, Appendix C.2); every one of them is reproduced here only inside a fenced block, with its margin intact, so no inline quotation depends on stripping it. "Status of This Memo", "Copyright Notice", the Table of Contents, "About This Document", §7.2 (Informative References), "List of Figures", "List of Tables", Acknowledgments, Contributors and the Author's Address are omitted. The source itself marks Appendix A, Appendix B and Appendix C as informative; those self-characterisations are captured verbatim below, and the RFC 2119 keywords those appendices nonetheless carry are reproduced rather than suppressed.
 
 ## Document header
 
@@ -41,6 +41,9 @@ Expires: 17 April 2026
 - (§1.1) "ALDR rules are situated at the application-level, i.e., on top of CDE, and address requirements on deterministic representation of application data that are specific to an application or a set of applications."
 - (§1.1) "ALDR rules are routinely provided as part of a specification for a CBOR-based protocol, or, if needed, can be provided by referencing a shared "ALDR ruleset" that is defined in a separate document."
 - (§1.1) "The informative Appendix C provides brief checklists that implementers can use to check their CDE implementations."
+- (§1.1) "Appendix C.1 provides a checklist for implementing preferred-serialization."
+- (§1.1) "Appendix C.2 discusses the definite-length-only encoding constraint, which may be used by encoders to hit a sweet spot for maximizing interoperability with partial (e.g., constrained) CBOR decoder implementations."
+- (§1.1) "Appendix C.3 discusses lexicographic-map-sorting, which is added to these two encoding constraints to arrive at CDE."
 
 ## §1.2. Conventions and Definitions
 
@@ -237,6 +240,7 @@ The definitions themselves, verbatim (the source's hanging-indent definition lis
 
 - (§3) "This specification documents the _CBOR Common Deterministic Encoding_ (CDE) Best Current Practice that is based on the _Core Deterministic Encoding Requirements_ defined for CBOR in Section 4.2.1 of RFC 8949 [STD94]."
 - (§3) "Note that, for RFC8949, this specific set of requirements is elective — in principle, other variants of deterministic encoding can be defined (and have been, now being phased out, as detailed in Section 4.2.3 of RFC 8949 [STD94])."
+- (§3) "[STD94]'s "Core Deterministic Encoding Requirements" are designed to provide well-understood and easy-to-implement rules while maximizing coverage, i.e., the subset of CBOR data items that are fully specified by these rules, and also placing minimal burden on implementations."
 - (§3) "Formally, Common Deterministic Encoding (CDE) is an encoding constraint (named cde for short), built from multiple constituent encoding constraints (which may, in turn, be built from multiple constituent encoding constraints)."
 - (§3) "As discussed in Section 2, CDE combines the constraints of preferred-serialization with definite-length-only and the lexicographic-map-sorting constraint."
 
@@ -469,8 +473,10 @@ Aside:
 - (§4) "CDDL defines the structure of CBOR data items at the data model level; it enables being specific about the data items allowed in a particular place."
 - (§4) "It does not specify encoding; CBOR protocols can specify the use of CDE (or simply definite-length-only encoding) independent of the CDDL data model."
 - (§4) "CDDL operates by restricting the set of data-model level data items."
+- (§4) "E.g., CDDL allows the specification of a floating point data item as "float16"; this means the application data model only foresees data that can be encoded as [IEEE754] binary16."
 - (§4) "Note that specifying "float32" for a floating point data item enables all floating point values that can be represented as binary32; this includes values that can also be represented as binary16 and that will be so represented in Preferred Serialization."
 - (§4) "[RFC8610] defines control operators to indicate that the contents of a byte string carries a CBOR-encoded data item (.cbor) or a sequence of CBOR-encoded data items (.cborseq)."
+- (§4) "CDDL specifications may want to specify that the data items should be encoded in Common CBOR Deterministic Encoding."
 - (§4) "The present specification adds two CDDL control operators that can be used for this."
 - (§4) "The control operators .cde and .cdeseq are exactly like .cbor and .cborseq except that they also require the encoded data item(s) to be encoded according to CDE."
 

@@ -1,0 +1,326 @@
+=====================================================================
+serialization-check.derived.pseudocode.txt
+
+DERIVED - not verbatim.  draft-ietf-cbor-serialization-08 describes
+serialization checking in two paragraphs of Appendix H and states its
+decoder requirements as prose lists (Sections 4.2 and 5.2).  It gives
+no procedure.  Everything below was written for this record and must
+never be quoted as the draft's own algorithm.
+
+Derived from draft-ietf-cbor-serialization-08:
+  Section 3     what general serialization permits, and that a decoder
+                claiming it "MUST accept and decode all the encodings
+                for the data types it supports"
+  Section 4.2   the five preferred-plus decoder requirements
+  Section 5.2   deterministic adds nothing to decoding
+  Appendix C.4  NaN equivalence, including for duplicate map keys
+  Appendix H    what a checking decoder is, and what it is not
+  Appendix L.1  the four test procedures these vectors drive
+and, for the frame, RFC 8949 (STD 94) Sections 3, 3.3, 4.2.1, 5.6.
+
+TWO DIFFERENT JOBS, and the draft is emphatic that they not be
+confused.  ACCEPT (Part 1) is what any conforming decoder must take
+without complaint.  CHECK (Part 2) is the optional extra pass that
+rejects well-formed input which does not conform to a profile.
+Appendix H: "Serialization checking rejects input which, while well-
+formed CBOR, does not conform to a particular serialization rule set it
+is enforcing ... The data rejected by serialization checking is well-
+formed; it is rejected because it violates additional serialization
+constraints."
+=====================================================================
+
+PART 0 - THE PRECONDITION THAT IS NOT NEGOTIABLE
+-------------------------------------------------------------------
+  Before either job: full RFC 8949 well-formedness validation, always,
+  in every mode.  Appendix H: "All CBOR decoders - regardless of their
+  capabilities, modes, or optional features - must always perform full
+  input validation.  This includes rejecting CBOR features the decoder
+  does not support.  For example, a decoder that does not support
+  indefinite-length items must reject them because they are
+  unsupported, not because it is acting as a checking decoder.
+  Decoders that fail to perform this essential input validation are
+  fundamentally inadequate and represent a security risk.  The
+  appropriate remedy is to fix their input validation, not to add the
+  serialization checking described here."
+
+  So: CHECK is never a substitute for validation, and a rejection by
+  CHECK and a rejection as unsupported are different errors that a
+  library should report differently.  Appendix L.1.4 turns on exactly
+  that distinction - for a non-checking decoder "the expected error is
+  typically 'unsupported'".
+
+
+PART 1 - ACCEPT: what a conforming decoder must take   [Section 4.2]
+-------------------------------------------------------------------
+  Every requirement in Section 4.2 is conditional on the decoder
+  supporting the type at all.  The draft is built around partial
+  implementations - Section 1.1, "partial implementations are both
+  permitted and expected" - so none of this says a decoder must support
+  maps, or floats, or big numbers.
+
+  ACCEPT_REQUIREMENTS(decoder):
+   1  decoder MUST accept shortest-form encoded arguments.
+                                                      [4.2 r1]
+   2  if decoder supports arrays or maps:
+        definite-length arrays and maps MUST be accepted.
+                                                      [4.2 r2]
+   3  if decoder supports text or byte strings:
+        definite-length strings MUST be accepted.     [4.2 r3]
+   4  if decoder supports floating-point:
+        half-precision MUST be accepted;              [4.2 r4 b1]
+        double and single SHOULD be accepted, "leaving these out is
+          only foreseen for decoders that need to work in
+          exceptionally constrained environments";    [4.2 r4 b2]
+        if double is accepted then single MUST be accepted.
+                                                      [4.2 r4 b3]
+   5  if decoder accepts big numbers (tags 2 and 3):
+        big numbers per RFC 8949 Section 3.4.3 MUST be accepted;
+        leading zeros MUST be IGNORED - not rejected; [4.2 r5 b2]
+        an empty byte string MUST be accepted and treated as zero.
+                                                      [4.2 r5 b3]
+
+  NOTE THE ASYMMETRY IN STEP 5, which is one of the three differences
+  Section 4.4 lists between preferred-plus and RFC 8949 preferred
+  serialization: an encoder MUST NOT emit leading zeros (4.1 r5) while
+  a decoder MUST ignore them (4.2 r5).  A *checking* decoder is
+  therefore doing something the plain decoder is forbidden to do, and
+  the two modes must not share this branch.  CHECK_BIGNUM below is
+  where the rejection lives.
+
+  Section 5.2 is one sentence and adds nothing: "Decoders MUST meet the
+  decoder requirements described in Section 4.2.  That is, deterministic
+  encoding imposes no requirements over and above the requirements for
+  decoding preferred-plus serialization."  The reason is Section 5.3.3:
+  "Map decoding must never depend on the sort order of a map, even when
+  maps are required to be sorted."  A decoder that ignores order can
+  ignore it whether or not the encoder sorted.
+
+  And for general serialization, Section 3: "A decoder claiming to
+  support general serialization MUST accept and decode all the encodings
+  for the data types it supports" - including both definite and
+  indefinite lengths (Section 3.1).  Appendix L.2 draws the practical
+  conclusion: "CBOR libraries that don't support indefinite-length
+  decoding can not claim to support general serialization ... For the
+  purpose of classification by this document they are preferred-plus
+  libraries with extra decoding features."
+
+
+PART 2 - CHECK: the conformance pass                   [Appendix H]
+-------------------------------------------------------------------
+  CHECK(input, profile) -> conforms | violation(rule, offset)
+
+  profile is prefp or dtrm.  There is no CHECK for general
+  serialization: Appendix L.1.3, "General-serialization decoders are not
+  tested in this way, since they must accept all valid serialization
+  forms."  Run after, or interleaved with, well-formedness validation;
+  never instead of it (Part 0).
+
+   1  p := 0
+   2  conforms := CHECK_ITEM(input, p, profile)
+   3  if p != len(input): violation("trailing bytes", p)   ; framing,
+                          ; not this draft - RFC 8949 Appendix C
+   4  return conforms
+
+
+  CHECK_ITEM(b, p, profile):
+   1  ib := b[p];  mt := ib >> 5;  ai := ib & 0x1f
+   2  if ai in 28..30:  not well-formed            ; RFC 8949 Section 3
+   3  if ai = 31:
+        if mt in (2,3):  violation("indefinite-length string",  p)
+                                                    [Section 4.1 r3]
+        if mt in (4,5):  violation("indefinite-length array/map", p)
+                                                    [Section 4.1 r2]
+        otherwise:       not well-formed            ; RFC 8949 Section 3
+   4  (argument, p) := READ_ARGUMENT(b, p)
+   5  CHECK_SHORTEST(ai, argument, p)                [Section 4.1 r1]
+   6  dispatch on mt:
+        0, 1   -> done
+        2, 3   -> p := p + argument                  ; skip the content
+        4      -> repeat CHECK_ITEM `argument` times
+        5      -> CHECK_MAP(b, p, argument, profile)
+        6      -> if argument in (2,3): CHECK_BIGNUM(b, p, argument)
+                  else: CHECK_ITEM(b, p, profile)    ; the tag content
+        7      -> CHECK_MT7(b, p, ai)
+
+
+  CHECK_SHORTEST(ai, argument, p):                   [Section 4.1 r1]
+   1  if ai <= 23:                       return ok   ; argument is ai
+   2  if ai = 24 and argument >= 24:     return ok
+   3  if ai = 25 and argument >= 256:    return ok
+   4  if ai = 26 and argument >= 65536:  return ok
+   5  if ai = 27 and argument >= 2^32:   return ok   ; OURS - the draft
+                                         ; never states this case; see
+                                         ; prefp-encode.derived...txt
+   6  violation("argument not in shortest form", p)
+
+  This single predicate is what rejects most of the draft's own
+  general-only vectors: h'1800' and h'190000' (zero.edn), h'390018'
+  (minus_twenty_five.edn), h'd8011a69e4fbd3' (date_epoch_tag.edn, where
+  the offending argument is a *tag number*), the string segment lengths
+  inside h'5f5801015a000000020203ff' (byte_string.edn), and all three
+  keys of h'a31a00000003617a...' (map.edn).
+
+
+  CHECK_MAP(b, p, n, profile):               [Section 4.1 r2, 5.1 r2]
+   1  prev := nil
+   2  repeat n times:
+        start := p
+        CHECK_ITEM(b, p, profile)                    ; the key
+        key_bytes := b[start .. p-1]
+        if profile = dtrm and prev != nil
+           and not BYTEWISE_LT(prev, key_bytes):
+          violation("map keys not in bytewise lexicographic order",
+                    start)                           [Section 5.1 r2]
+        prev := key_bytes
+        CHECK_ITEM(b, p, profile)                    ; the value
+   3  return ok
+
+  BYTEWISE_LT is in prefp-encode.derived.pseudocode.txt: unsigned byte
+  comparison, left to right, shorter-is-less only on a prefix (which
+  two distinct CBOR keys cannot be).  NOT the RFC 7049 Section 3.9 /
+  RFC 8949 Section 4.2.3 length-first order, which Section 5.1 names
+  explicitly as the one it is not.
+
+  Checking order on the received bytes is sound here *because* the keys
+  arrive already encoded: Section 5.1 sorts "their deterministic
+  encodings of the map keys", and if every key individually passes the
+  rest of CHECK then its received bytes are its deterministic encoding.
+  Appendix C.4 says the same from the other side: "Sorting operates on
+  the fully encoded and serialized representation, not on the abstract
+  data model."
+
+  NOT CHECKED, because the draft does not ask for it: duplicate keys.
+  Appendix C.4 defines when two float keys are duplicates ("A map key
+  encoded as half-precision MUST be considered a duplicate of one
+  encoded as double-precision if they meet the equivalence rules
+  above"), but no rule in Section 4 or 5 prohibits duplicates, and the
+  comparable prohibition in RFC 8949 Section 4.2.1 is not restated.
+  Under dtrm a *strict* ordering check would catch byte-identical keys
+  as a side effect; this procedure uses `not BYTEWISE_LT(prev, key)`,
+  which does, and that is a stricter reading than the draft states.
+  Flagged, because an implementation that wants only what the draft
+  requires should use a non-strict comparison here.
+
+  NOT CHECKED EITHER: any semantic use of order.  Section 5.3.3,
+  "Applications MUST NOT rely on any particular map ordering, even if
+  deterministic serialization was used ... The sole purpose of map
+  sorting in deterministic serialization is to ensure reproducibility
+  of the encoded byte stream, not to provide any semantic ordering."
+
+
+  CHECK_BIGNUM(b, p, tag):                           [Section 4.1 r5]
+   1  ib := b[p]
+   2  if (ib >> 5) != 2:  not well-formed  ; tag 2/3 content must be a
+                          ; byte string - RFC 8949 Section 3.4.3
+   3  if (ib & 0x1f) = 31:
+        violation("indefinite-length string", p)      [Section 4.1 r3]
+   4  (len, p) := READ_ARGUMENT(b, p)
+   5  CHECK_SHORTEST(...)
+   6  if len > 0 and b[p] = 0x00:
+        violation("big number with leading zero", p)  [4.1 r5 b1]
+   7  if len <= 8:
+        violation("big number representable in major type 0/1", p)
+                                                      [4.1 r5 b2]
+   8  p := p + len
+
+  Steps 6 and 7 together are exactly rule 5, and step 7 needs no
+  arithmetic: with no leading zero, a content of 9 bytes or more is
+  always at least 2^64 and a content of 8 bytes or fewer never is,
+  while major type 0 reaches 2^64-1 and major type 1 reaches -2^64.
+  Both of the draft's "representable as an integer" vectors are caught
+  by step 7 alone - h'c348ffffffffffffffff' (65_bit_neg.edn, 8 bytes)
+  and h'c240' (zero.edn, 0 bytes) - and h'c2420003' (three.edn) is
+  caught by both steps.  See bignums.cddl for the Appendix F defect
+  this exposes.
+
+
+  CHECK_MT7(b, p, ai):                               [Section 4.1 r4]
+   1  if ai <= 23:                   return ok   ; simple value 0..23
+   2  if ai = 24:
+        if b[p] < 0x20: not well-formed           ; RFC 8949 Section 3.3
+        return ok                                 ; simple value 32..255
+   3  if ai = 25:   return CHECK_HALF(b[p..p+1])
+   4  if ai = 26:   return CHECK_SINGLE(b[p..p+3])
+   5  if ai = 27:   return CHECK_DOUBLE(b[p..p+7])
+
+  CHECK_HALF(v):
+   1  if is_nan(v) and v != h'7e00':
+        violation("NaN other than the half-precision quiet NaN")
+                                                      [4.1 r4 b3]
+   2  return ok           ; every other half pattern is shortest by
+                          ; construction - there is nothing narrower
+
+  CHECK_SINGLE(v) / CHECK_DOUBLE(v):
+   1  if is_nan(v):
+        violation("NaN other than the half-precision quiet NaN")
+                                                      [4.1 r4 b3]
+        ; EVERY single- or double-precision NaN is a violation, the
+        ; canonical one included: h'fa7fc00000' is the same value as
+        ; h'f97e00' (Appendix C.4's equivalence) and must therefore be
+        ; shortened, and a non-trivial one may not be encoded at all.
+        ; Both of the draft's float_quiet_nan.edn general-only
+        ; encodings and all three of float_nan_payload.edn fall here.
+   2  w := the narrowest width among {half, single} (for CHECK_DOUBLE:
+        {half, single}) that represents v exactly, or `none`
+        ; computed by running Appendix D's pref_plus_double_to_single()
+        ; and pref_plus_single_to_half() and watching for -1
+   3  if w exists and w is narrower than the encoded width:
+        violation("float not in shortest width that preserves
+                   precision")                        [4.1 r4 b2]
+   4  return ok
+
+  Step 2 is the one place in this file that is arithmetic rather than
+  pattern matching, and the draft hands the arithmetic over: Appendix
+  D's two functions return -1 exactly when the narrowing would lose
+  precision or overflow, so a checker can reuse the encoder's code
+  unchanged.  Fixed patterns that always fail step 3 - the infinities
+  and the zeros at single and double width - are decidable without it,
+  and prefp-head.derived.abnf excludes them by construction.
+  h'fa477fe000' (float_half.edn) is the case that needs the real
+  computation: 65504.0 is exactly representable in half, so it is a
+  violation, and nothing about the byte pattern says so.
+
+
+PART 3 - THE FOUR TESTS THE VECTORS DRIVE              [Appendix L.1]
+-------------------------------------------------------------------
+  Each example in ../examples/vectors.yaml carries the profile verdicts
+  these four procedures need.  The draft's own framing:
+
+  ENCODE TEST (L.1.1).  Feed the encoder the EDN representation; "A
+  test succeeds if the encoder produces any of the encoded
+  representations given in the example for that serialization type."
+  Note "any of": for preferred-plus, map.edn lists six acceptable
+  outputs, because key order is free.  For deterministic there is
+  exactly one.
+
+  DECODE TEST (L.1.2).  For the profile under test, feed the decoder
+  "every encoded representation defined for the target type.  A test
+  passes if the decoded output matches the value specified by the
+  corresponding EDN representation."
+
+  CHECKING DECODER TEST (L.1.3).  "for each example, supply the decoder
+  with every representation permitted under general serialization except
+  those allowed for the target serialization type.  Decoding each such
+  input must result in a conformance-checking error."  This is the set
+  of vectors in our file whose verdict for the profile is `invalid`,
+  and it is why the negative vectors are the point rather than a
+  garnish.
+
+  NON-CHECKING DECODER TEST (L.1.4).  The same inputs against a decoder
+  without the CHECK pass: "many of these inputs may successfully decode
+  rather than producing a conformance error.  When decoding does fail,
+  the expected error is typically 'unsupported'."  The draft declines to
+  specify which is which - "Which encoding forms are accepted and which
+  are rejected as unsupported is entirely dependent on the additional
+  capabilities a CBOR library chooses to support and therefore not
+  specified here" - but flags two expectations: "It is common for
+  preferred-plus and deterministic decoders to accept non-shortest-
+  length arguments", and "If the floating-point data type is supported,
+  all serialization types described in this document require support
+  for decoding half-precision representations and subnormals."
+
+  One example cannot drive the encode test at all:
+  float_nan_payload.edn has an empty `edn-representations` list, and
+  the draft says why - "there is no EDN representation for that".  It
+  is a decode-side and check-side fixture only.
+=====================================================================
