@@ -83,7 +83,10 @@ used for generating the IV, the algorithm identifier is set to 34
 ("IV-GENERATION")", which is the `AlgorithmID` field of `COSE_KDF_Context`. The
 registry holds two different namespaces in one column and the schema cannot tell
 them apart; `algorithm-values.derived.cddl` keeps it in a separate group so a
-validator cannot admit it where an `alg` is expected.
+validator cannot admit it where an `alg` is expected. (That quotation, and the
+same sentence quoted in `algorithm-values.derived.cddl`, heal a hyphenation line
+break at source L1263 — `IV-` / `GENERATION`. `capabilities.derived.cddl` heals
+the one at L1835. See `../README.md` defect 3.)
 
 ## Defects and ambiguities in RFC 9053 itself
 

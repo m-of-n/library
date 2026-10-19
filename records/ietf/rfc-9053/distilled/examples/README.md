@@ -125,7 +125,10 @@ capabilities needs to be told, out of band, how many items to read.
 
 **§8 misspells the algorithm it points at.** "see the ECDH-ES+A25KW element" in
 §8, against `ECDH-ES + A256KW` in Table 16 (−31) and "ECDH-ES + A256KW with an
-X25519 curve:" in §8.3. One missing `6`.
+X25519 curve:" in §8.3. One missing `6`. That quotation also *heals* a
+hyphenation line break — the plain text reads `ECDH-` / `ES+A25KW` across
+L1826/1827 — so it is verbatim against the RFC but not a contiguous substring
+of the cached text; see `../README.md` defect 3 for the rule.
 
 **Two annotation conventions, neither of them RFC 8949's.** `V-0001`–`V-0003`
 annotate with `\ ... \` nested inside an outer `/ ... /`; `V-0004`, which is

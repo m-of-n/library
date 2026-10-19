@@ -485,6 +485,8 @@ counter-evidence is as useless as one that only confirms.
 - **`IV-GENERATION` = 34 overloads the registry.** §6.1.2: "If HKDF is used for
   generating the IV, the algorithm identifier is set to 34 ("IV-GENERATION")" —
   which is the `AlgorithmID` field of `COSE_KDF_Context`, never an `alg` header.
+  (That quotation heals a hyphenation line break at source L1263: `IV-` /
+  `GENERATION`. See `README.md` defect 3.)
   "COSE Algorithms" therefore holds two namespaces in one column, with the
   constraint stated only in one sentence of §6.1.2. [analysis] Under P1 the two
   uses would be two labels in two namespaces and the overload could not arise.

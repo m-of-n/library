@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-9053
 record: rfc-9053
 type: summary
-updated: "2026-10-03"
+updated: "2026-10-19"
 ---
 
 # CBOR Object Signing and Encryption (COSE): Initial Algorithms
@@ -71,17 +71,55 @@ of the ecosystem — essentially every COSE library implements ES256 and EdDSA.
 |---|---|
 | `record.yaml` | metadata |
 | `summary.md` | this document |
+| `distilled/normative.md` | 323 verbatim statements, 31 fences, **all 23 tables** |
+| `distilled/requirements.yaml` | 222 entries — 101 stated, 121 inferred |
+| `distilled/schema/` | 1 verbatim (§5.2's CDDL) + 4 derived |
+| `distilled/messages.yaml` | 56 structures, 300 fields, all 43 code points |
+| `distilled/examples/` | 6 vectors — see *Limits* |
+| `distilled/state-machine.yaml` | two machines, both `derived: true` |
+| `distilled/design-notes.md` | the export path under MD-3, and five named cuts |
 
-`distilled/` exists and the **FX-1 extraction is in progress under #39**
-(Tier 1). Until pass 1 lands, the directory holds `bin/extract-scaffold`
-templates with TODO markers and nothing citable; `distilled/README.md` states
-the artifact set and which passes have run. The line this paragraph replaces
-said "No `distilled/`", which was written by #42 when that was true and became
-false the moment the record was scaffolded — the same stale-absence defect
-library#70 fixed on three other records.
+**FX-1 under #39 (Tier 1): passes 1 and 2 of 3 complete**; cross-check has not
+run, so nothing here carries a profile and nothing may be built on it.
+`distilled/README.md` states the artifact set and which passes have run.
+
+*(This paragraph has now been wrong in both directions. #42 wrote "No
+`distilled/`", true then and false the moment the record was scaffolded — the
+stale-absence defect library#70 fixed on three other records. The replacement
+said the directory held only TODO templates, which went stale the moment pass 1
+landed. The fix for a line that keeps going stale is to state what is there and
+date it, which is what the table above does.)*
 
 ## Limits
 
+*The first four come from the FX-1 extraction rather than from reading.*
+
+- **It prints no cryptographic test vectors at all.** Not one key, signature,
+  MAC, ciphertext, nonce, derived key, `COSE_Key` or `COSE_KDF_Context`, for
+  any of its **43 algorithm code points**. Verified hard across all 2444
+  lines: four `0x` literals in total, zero `h''` byte strings, zero base64,
+  zero runs of eight or more hex characters, zero PEM. §1.5 points instead at
+  `github.com/cose-wg/Examples` **commit 3221310 of 3 June 2020** —
+  informative, pinned 26 months before publication, digest unrecorded.
+- **A conformance checker built from the BCP 14 keywords misses the hardest
+  rules.** The ECDSA curve restriction ("working only with"), the EC2
+  key-type requirement ("requires"), the AES-GCM 96-bit nonce ("fixes") and
+  128-bit tag ("is fixed at"), the AES-CBC-MAC all-zero IV ("is fixed to"),
+  the `COSE_KDF_Context` AlgorithmID ("required to be present") and the
+  fresh-IV rule ("must") are **every one of them lowercase prose**. They are
+  held as `inferred` requirements naming the phrase that carries the force.
+- **It allocated exactly one code point.** §10 re-points the registries from
+  RFC 8152; §10.2 adds a single row — `IV-GENERATION` = 34, Recommended No. So
+  42 pre-existing plus 1 is the 43. This document is the citation of record
+  for 42 code points it did not allocate: cite the registry for the number and
+  §2.1/§2.2 for the constraint.
+- **A `MUST NOT` rests on an informative reference.** §4.1.1's "MUST NOT
+  exceed 2^32 [SP800-38D]" cites a tag listed in §12.2 **Informative**
+  References, while the identical NIST SP 800-38D also appears as `[AES-GCM]`
+  in §12.1 Normative under a different URL — and only the normative listing
+  carries the DOI. Separately, §12.2's `[SP800-56A]` is cited as "Revision 3"
+  with a Revision 3 DOI but a URL pointing at **r2**, and §5.2 bases the whole
+  context structure on it.
 - **It is Informational, and that is genuinely odd.** RFC 9052 — the structures
   — is Standards Track; RFC 9053 — the algorithms you must implement to
   interoperate — is not. A reader inferring standing from the companion

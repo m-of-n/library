@@ -11,10 +11,21 @@ reviewed_by: ""
 FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what
 it does not.
 
-**State: pass 1 of 3 complete.** Two agents in parallel at effort max, each
-reading only `.cache/rfc-9053.txt`. **The verify and cross-check passes have
-NOT run**, so this record carries no `profile`. Readable; nothing may be built
-on it. library#39 owns finishing it.
+**State: passes 1 and 2 of 3 complete.** Pass 1 (extract): two agents in
+parallel at effort max. Pass 2 (verify): one agent at effort max, independently
+re-deriving the counts and attacking every claim. Both read only
+`.cache/rfc-9053.txt`. **The cross-check pass has NOT run**, so this record
+carries no `profile`. Readable; nothing may be built on it. library#39 owns
+finishing it.
+
+What pass 2 changed: the hyphenation finding below (defect 3) was understated —
+pass 1 reported three severed tokens and had flagged three quotations, but six
+severance sites fall inside quoted text and ten quotations in sibling artifacts
+healed the break without saying so; the rule is now stated. Defect 5's
+comparison range was wrong. The §8 byte count said "five bytes" for three byte
+strings totalling ten. `state-machine.yaml` cited `R-0066` for §4.1.1's 2^32
+ceiling; the `MUST NOT` is `R-0065`. `record.yaml` said 214/8 testable where
+the file holds 212/10. Everything else below survived.
 
 Source: RFC 9053, *CBOR Object Signing and Encryption (COSE): Initial
 Algorithms*, August 2022. **Informational**, obsoletes RFC 8152, while its
@@ -34,9 +45,11 @@ companion RFC 9052 is **STD 96**.
 
 Not one key, signature, MAC, ciphertext, nonce, derived key, `COSE_Key` or
 `COSE_KDF_Context` — for any of **43 algorithm code points**. The only bytes it
-prints anywhere are five bytes of §8 capability encoding (`0x8102`,
-`0x820201`, `0x8101820104`), §9's `0x01`/`0x1801` pair, and §11's `"YES"`/`"NO "`
-illustration. §1.5 points instead at `github.com/cose-wg/Examples` **commit
+prints anywhere are three §8.3 capability byte strings totalling **10 bytes**
+(`0x8102`, `0x820201`, `0x8101820104`), §9's `0x01`/`0x1801` pair, and §11's
+`"YES"`/`"NO "` illustration. Verified by pass 2 across all 2443 lines: four
+`0x` literals in the whole document, zero `h''` byte strings, zero base64, and
+**no run of eight or more hex characters anywhere**. §1.5 points instead at `github.com/cose-wg/Examples` **commit
 3221310, 3 June 2020** — informative, pinned 26 months before publication, and
 with no digest recorded. For a document whose entire job is assigning code
 points to cryptographic algorithms, that absence is the headline.
@@ -101,17 +114,39 @@ Reported, never repaired:
 2. **§12.2's `[SP800-56A]` revision mismatch** — cited as "Revision 3" with DOI
    `…800-56Ar3` but the URL points at `…800-56Ar2.pdf`. §5.2 bases the whole
    context structure on this reference.
-3. **A token severed by hyphenation at a line break, three times** —
-   `IV-GENERATION` at §6.1.2 and §8.1, `Leading-zero` at §7.1.1. Three quotes
-   are therefore fragments, each flagged in its `field`. Note the *same*
-   sentence is unbroken for the y-coordinate, so the x and y rules read
-   differently in the plain text while being identical in the source XML.
+3. **Tokens severed by hyphenation at a line break.** The plain-text rendering
+   breaks 14 lines at a hyphen that belongs to the token. **Six of those sites
+   fall inside text this extraction quotes**: `recipient-specific` (§4.2.1,
+   L656), `IV-GENERATION` (§6.1.2, L1263 and §8.1, L1835), `Leading-zero`
+   (§7.1.1, L1690), `ECDH-ES+A25KW` (§8, L1827) and `Ephemeral-Static` (§8.3,
+   L1958). Note the *same* sentence is unbroken for the y-coordinate, so the x
+   and y rules read differently in the plain text while being identical in the
+   source XML — `normative.md` carries both forms, the x one as a fragment.
+
+   **Quotation rule for these, stated once for the whole directory**
+   (pass 2 — pass 1 applied it to `requirements.yaml` only and did not say so
+   elsewhere): where a quotation would cross such a break, it is either **cut
+   at the break and flagged in its `field`** — `R-0125`, `R-0182`, `R-0205`,
+   and the §7.1.1 x-coordinate statement in `normative.md` — or the break is
+   **healed**, joining the two halves with no space, because the hyphen is part
+   of the token and the severance is an artifact of the renderer, not of the
+   document. Healed quotations are therefore verbatim against the RFC but *not*
+   contiguous substrings of the cached plain text. They occur in
+   `messages.yaml` (5), `examples/vectors.yaml` (2), `examples/README.md`,
+   `design-notes.md`, `schema/README.md`, `schema/algorithm-values.derived.cddl`
+   and `schema/capabilities.derived.cddl`. No other quotation in this directory
+   departs from the cached bytes.
 4. §4.1.1 typo: **"AES-CGM"** for AES-GCM. §8 typo: **"ECDH-ES+A25KW"** for
    ECDH-ES+A256KW.
-5. **Table 8 (HKDF Algorithms) has no Value column**, unlike Tables 1–7 and
-   11–18. The HKDF algorithms are not separately registered; their code points
-   exist only bound into the recipient algorithm identifiers. Not an error, but
-   the schema lane must not look for HKDF code points.
+5. **Table 8 (HKDF Algorithms) has no Value column.** Every other table that
+   names *algorithms* has one — 1–7, 11–14, 16–18, 22, 23 — and Table 8 alone
+   among them does not. (The *parameter* tables 9, 10, 15, 19, 20 and 21 have
+   no Value column either, but they key on Label and are a different kind of
+   table; pass 1 wrote "unlike Tables 1–7 and 11–18", which is wrong, because
+   Table 15 falls in that range and is a parameter table.) The HKDF algorithms
+   are not separately registered; their code points exist only bound into the
+   recipient algorithm identifiers. Not an error, but the schema lane must not
+   look for HKDF code points.
 6. **§8's capability example `0x8101820104` is a CBOR *sequence*, not one
    array** (`0x8101` = `[1]`, `0x820104` = `[1,4]`); a one-item decode silently
    leaves three bytes unconsumed.
@@ -128,3 +163,12 @@ quotation rule in the file header. One paraphrase-as-quote, one recased
 sentence and two altered scare-quotes were fixed the same way. Every computed
 value — CBOR head bytes, signature sizes, protected-header bytes — is marked
 **(OURS)** wherever it appears, because RFC 9053 prints no bytes and no sizes.
+
+**Pass 2 re-ran that audit independently and the fix holds.** Every multi-line
+table cell in all 23 tables was reassembled and searched for across every
+artifact: 13 reassembled cells appear in `messages.yaml` and **not one of them
+is inside quotation marks** — each is introduced as "Description column,
+glossed not quoted". A separate case-insensitive run-matching sweep over the
+whole directory found **no recased quotation** and no altered character in any
+span of seven or more words. The only quotations that depart from the cached
+bytes are the hyphen-healed ones in defect 3 above.
