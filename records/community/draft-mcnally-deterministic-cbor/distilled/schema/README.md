@@ -131,13 +131,36 @@ for its own language**; that is the first job for anyone who has one. What pass
   heads), `ff` (break), `e0`–`f3` (simple values 0–19), `f7` (`undefined`) and
   `f8` (simple values 32–255). Argument widths were checked byte by byte
   against RFC 8949 Section 3: 0/1/2/4/8 as required, no mismatches. Major types
-  0–6 keep all 28 of their heads; major type 7 keeps 6 of 29.
+  0–6 keep 28 heads each — all 28 well-formed heads of major types 0, 1 and 6,
+  and 28 of the 29 of major types 2–5, which lose only their indefinite-length
+  head; major type 7 keeps 6 of 29.
 - **The CDDL was audited mechanically** for duplicate rule names, references to
   undefined rules, and redefinition of an RFC 8610 prelude name: none. 14 rules.
   The four unreferenced ones are deliberate and documented in place —
   `dcbor-tag-201` is a convenience root subsumed by `dcbor-tagged`, and the
   three Section 8.5 rules are marked informative.
 - **Every passage quoted in a header was diffed against the cached source.**
+
+The **cross-check pass (2026-10-16)** then did the one thing pass 1 could not,
+because `../examples/vectors.yaml` did not yet exist when these files were
+written: it transcribed `dcbor-validate.derived.pseudocode.txt` and
+`numeric-reduction.derived.pseudocode.txt` into a runnable checker, rebuilt the
+ABNF's admitted-byte set and the data-model half of the CDDL beside it, and ran
+**the whole vector set — all 67 vectors that carry bytes — through all three
+layers.** 52 `valid` accepted, 15 `invalid` rejected, **0 failures, and every
+rejection fired under a rule the vector's own `violates` cites.** The three
+layers divide the work exactly as claimed above: the procedure catches all 15,
+the CDDL catches 3 (`V-0055` and `V-0056` on the DCBOR_INT bound, `V-0070` on
+Section 2.6) and the ABNF 1 (`V-0070`, `f7`) — one and a half rules plus one.
+The checker was then shown to discriminate on 28 cases the source never prints,
+including all four indefinite-length heads, non-preferred integer, string, tag
+and float heads, a misordered map, a duplicate-key map, a non-NFC text string,
+`f7`/`f8`/`e0`/`f3`, the three `-0.0` spellings and a tag 1 wrapping a reducible
+float; and the encoder direction was run separately against all 43 values
+Table 3 names, byte-exact, including every NaN width and payload collapsing to
+`f97e00`. The census and the CDDL audit above were re-derived independently and
+reproduce: 229, 202, the same 27 bytes (5 by Section 2.1 and 22 by Section 2.6),
+14 rules, the same 4 unreferenced.
 
 ## What no artifact here can express
 

@@ -650,9 +650,18 @@ decide, so an implementer has to choose.
    within which *floating point values* are reduced to integers, and §2.5 (3)'s
    decoder rule is scoped to "encoded floating point values". **Nothing in the
    normative §2 narrows the integer range.** Nine of Table 4's eleven rows trace
-   to a §2 rule; these two do not. *Our profile must state the integer range in
-   its own normative text; it cannot inherit it by citing §2. `rfc-8949`
-   determinism row 9; D5 package.*
+   to a §2 rule; these two do not. **[analysis] §3 cuts the same way, and pass 2
+   adds it as independent corroboration: §3 reproduces the RFC 8610 prelude's
+   `number = int / float`, states that it "encompasses the full space of CBOR
+   numeric values representable by CBOR major types 0, 1, and 7", and then tells
+   dCBOR applications they "can use `number` to specify fields with numeric
+   values".** The prelude's `nint` is `#1`, the whole of major type 1, which
+   reaches `-2^64` — so the one type §3 recommends for numeric fields admits, by
+   the document's own description of it, exactly the two values Table 4 requires
+   a decoder to reject. A §2 that narrowed the integer range would have made §3's
+   sentence false; it does not, because it does not. *Our profile must state the
+   integer range in its own normative text; it cannot inherit it by citing §2.
+   `rfc-8949` determinism row 9; D5 package.*
 10. **§2.7's decoder rule is numbered "1."** where every other subsection numbers
     the decoder rule "2." (§2.1, §2.2, §2.3, §2.4, §2.6). Editorial, but it
     breaks the `<section>(<n>)` locator convention the rest of §2 establishes,
@@ -674,3 +683,26 @@ decide, so an implementer has to choose.
     verify the information presented here"), but it means the only
     non-single-maintainer implementation is the one that does not check the rules
     we most need checked. *Relevant to open question 7.*
+14. **Figure 1 is not rejected for the reason §2.5 gives for it, and a
+    conformance suite built from the figure will test the wrong rule.** Found by
+    the cross-check pass, which ran every vector through a transcription of
+    `../schema/dcbor-validate.derived.pseudocode.txt`. §2.5's indented note
+    presents Figure 1 — the map `{10: "ten", 10.0: "floating ten"}` — as a valid
+    CBOR map that dCBOR cannot represent *because Numeric Reduction collides its
+    keys*, and Figure 2 shows the collision. That is a statement about the
+    **encoder**: reduce Figure 1's data model and you get Figure 2's duplicate
+    keys, which §2.4 (1) forbids emitting. On the **decode** side the collision
+    never arises, because a decoder rejects Figure 1's bytes strictly earlier
+    and for a different rule: the key `f94900` is an integral floating point
+    value inside `DCBOR_INT`, which §2.5 (1) required to have been reduced and
+    §2.5 (3) therefore makes a decoder reject on sight — before any key is
+    compared with any other. There is no input on which a dCBOR decoder reports
+    "duplicate key" *because of* Numeric Reduction: by the time two encoded keys
+    can be equal, both have already passed the reduction check. **[analysis]**
+    Nothing in the source is false — §2.5's note says "cannot be *reduced to*
+    valid dCBOR maps", which is the encoder direction — but the figures sit in a
+    document whose every other rule is stated twice, once per role, and an
+    implementer who reads them as a decoder test will write an assertion that
+    can never fire. The library's own vector `V-0006` records both rules in its
+    `violates`, encoder rule first, and this entry is why the order matters.
+    *Test-suite author; relevant to open question 7 and to the D5 fixture set.*

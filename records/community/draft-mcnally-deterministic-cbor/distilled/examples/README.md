@@ -183,6 +183,17 @@ the source states.
    `V-0056`, whose `violates` cites §7.2 together with the §2.5 range rather
    than claiming a §2 rule that is not there.
 
+**The suite has been run.** The cross-check pass (2026-10-16) transcribed
+`../schema/dcbor-validate.derived.pseudocode.txt` and
+`../schema/numeric-reduction.derived.pseudocode.txt` into a checker and put
+check 1 above — decoder acceptance — over all **67 vectors that carry `hex`**:
+**52 `valid` accepted, 15 `invalid` rejected, 0 failures, and every rejection
+fired under a rule that vector's own `violates` cites.** The encoder side
+(check 3, the one a decode/re-encode loop cannot reach) was run over all 43
+values Table 3 names and reproduced each one byte-exact, every NaN width and
+payload collapsing to `f97e00`. The 5 vectors with no `hex` are scope markers
+and were not runnable, by construction.
+
 Everything else checks out. All 41 Table 3 rows and all 11 Table 4 rows were
 decoded by hand against their stated values: **every hex matches its value**,
 every encoding consumes exactly its own bytes, and all 62 source-printed hex
