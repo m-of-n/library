@@ -1,0 +1,149 @@
+{
+  "$comment": "DERIVED - not verbatim. RFC 9679 ships no schema of any kind. This JSON Schema is written by m-of-n/library from RFC 9679 §3, §4.1-4.5 and §6, and validates a JSON *rendering* of a COSE Key Thumbprint input - the fixture form our tests use. It is not a schema for CBOR: the authoritative structural rendering is cose-key-thumbprint-input.derived.cddl in this directory. Cite as derived, never as the RFC's own grammar (R-O-03).",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:library:rfc-9679:thumbprint-input.derived",
+  "title": "COSE Key Thumbprint input (fixture rendering)",
+  "description": "A key type, the exact parameter set that enters the hash for it, the deterministic encoding of that set, the hash function used, and the resulting thumbprint. The five branches of oneOf are RFC 9679 §4.1-4.5 made machine-checkable: each fixes the required labels for its key type and forbids every other label, which is §4's exclusion rule (rfc-9679#R-0007).",
+  "type": "object",
+  "required": ["key_type", "parameters", "cbor_hex", "hash_function", "thumbprint_hex"],
+  "additionalProperties": false,
+  "properties": {
+    "key_type": {
+      "description": "The §4 subsection this input is built against.",
+      "enum": ["OKP", "EC2", "RSA", "Symmetric", "HSS-LMS"]
+    },
+    "parameters": {
+      "description": "The COSE_Key parameters that enter the hash, keyed by decimal label as a string. Property order here is not significant; the encoded order is fixed by RFC 8949 §4.2.1 and is asserted by cbor_hex.",
+      "type": "object"
+    },
+    "cbor_hex": {
+      "description": "The deterministic encoding of `parameters` (§3 step 2, rfc-9679#R-0003) - the exact bytes that are hashed, lowercase or uppercase hex.",
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]+$"
+    },
+    "hash_function": {
+      "description": "H (§3 step 3). A Hash Name String from the IANA Named Information Hash Algorithm Registry, as §5.7 requires for the URI form (rfc-9679#R-0050). SHA-256 is the one every implementation supports (rfc-9679#R-0005).",
+      "type": "string",
+      "examples": ["sha-256", "sha-384", "sha-512"]
+    },
+    "thumbprint_hex": {
+      "description": "H(cbor_hex), hex.",
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]+$"
+    },
+    "thumbprint_base64url": {
+      "description": "The same value base64url-encoded without padding, as the §5.7 URI form requires (rfc-9679#R-0052, rfc-9679#R-0053).",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "uri": {
+      "description": "The §5.7 URI: prefix, hash algorithm identifier and unpadded base64url thumbprint, colon-separated (rfc-9679#R-0049).",
+      "type": "string",
+      "pattern": "^urn:ietf:params:oauth:ckt:[a-z0-9-]+:[A-Za-z0-9_-]+$"
+    },
+    "locator": {
+      "description": "Where in the source this fixture comes from, if it is the source's own example.",
+      "type": "string"
+    },
+    "note": {"type": "string"}
+  },
+  "oneOf": [
+    {
+      "title": "OKP (§4.1, kty 1)",
+      "properties": {
+        "key_type": {"const": "OKP"},
+        "parameters": {
+          "type": "object",
+          "required": ["1", "-1", "-2"],
+          "additionalProperties": false,
+          "properties": {
+            "1": {"const": 1, "description": "kty = OKP (rfc-9679#R-0013)"},
+            "-1": {"type": "integer", "description": "crv (rfc-9679#R-0014)"},
+            "-2": {"type": "string", "pattern": "^[0-9a-fA-F]*$", "description": "x, bstr as hex (rfc-9679#R-0015)"}
+          }
+        }
+      }
+    },
+    {
+      "title": "EC2 (§4.2, kty 2)",
+      "properties": {
+        "key_type": {"const": "EC2"},
+        "parameters": {
+          "type": "object",
+          "required": ["1", "-1", "-2", "-3"],
+          "additionalProperties": false,
+          "properties": {
+            "1": {"const": 2, "description": "kty = EC2 (rfc-9679#R-0017)"},
+            "-1": {"type": "integer", "description": "crv (rfc-9679#R-0018)"},
+            "-2": {"type": "string", "pattern": "^[0-9a-fA-F]*$", "description": "x, bstr as hex (rfc-9679#R-0019)"},
+            "-3": {"type": "string", "pattern": "^[0-9a-fA-F]*$", "description": "y, bstr as hex, uncompressed point only - a boolean here would be the compressed form RFC 9052 §7.1 admits and rfc-9679#R-0022 to rfc-9679#R-0024 exclude"}
+          }
+        }
+      }
+    },
+    {
+      "title": "RSA (§4.3, kty 3)",
+      "properties": {
+        "key_type": {"const": "RSA"},
+        "parameters": {
+          "type": "object",
+          "required": ["1", "-1", "-2"],
+          "additionalProperties": false,
+          "properties": {
+            "1": {"const": 3, "description": "kty = RSA (rfc-9679#R-0026)"},
+            "-1": {"type": "string", "pattern": "^[0-9a-fA-F]*$", "description": "n, bstr as hex (rfc-9679#R-0027). No normalisation is specified by the source - see README.md."},
+            "-2": {"type": "string", "pattern": "^[0-9a-fA-F]*$", "description": "e, bstr as hex (rfc-9679#R-0028)"}
+          }
+        }
+      }
+    },
+    {
+      "title": "Symmetric (§4.4, kty 4)",
+      "properties": {
+        "key_type": {"const": "Symmetric"},
+        "parameters": {
+          "type": "object",
+          "required": ["1", "-1"],
+          "additionalProperties": false,
+          "properties": {
+            "1": {"const": 4, "description": "kty = Symmetric (rfc-9679#R-0030)"},
+            "-1": {"type": "string", "pattern": "^[0-9a-fA-F]*$", "description": "k, the secret itself, bstr as hex (rfc-9679#R-0031). §7 constrains when this may be hashed at all."}
+          }
+        }
+      }
+    },
+    {
+      "title": "HSS-LMS (§4.5, kty 5)",
+      "properties": {
+        "key_type": {"const": "HSS-LMS"},
+        "parameters": {
+          "type": "object",
+          "required": ["1", "-1"],
+          "additionalProperties": false,
+          "properties": {
+            "1": {"const": 5, "description": "kty = HSS-LMS (rfc-9679#R-0033)"},
+            "-1": {"type": "string", "pattern": "^[0-9a-fA-F]*$", "description": "pub, the LMS public key, bstr as hex (rfc-9679#R-0034)"}
+          }
+        }
+      }
+    }
+  ],
+  "examples": [
+    {
+      "key_type": "EC2",
+      "locator": "§6",
+      "parameters": {
+        "1": 2,
+        "-1": 1,
+        "-2": "65eda5a12577c2bae829437fe338701a10aaa375e1bb5b5de108de439c08551d",
+        "-3": "1e52ed75701163f7f9e40ddf9f341b3dc9ba860af7e0ca7ca7e9eecd0084d19c"
+      },
+      "cbor_hex": "A40102200121582065EDA5A12577C2BAE829437FE338701A10AAA375E1BB5B5DE108DE439C08551D2258201E52ED75701163F7F9E40DDF9F341B3DC9BA860AF7E0CA7CA7E9EECD0084D19C",
+      "hash_function": "sha-256",
+      "thumbprint_hex": "496bd8afadf307e5b08c64b0421bf9dc01528a344a43bda88fadd1669da253ec",
+      "thumbprint_base64url": "SWvYr63zB-WwjGSwQhv53AFSijRKQ72oj63RZp2iU-w",
+      "uri": "urn:ietf:params:oauth:ckt:sha-256:SWvYr63zB-WwjGSwQhv53AFSijRKQ72oj63RZp2iU-w",
+      "note": "The source's only worked example. Its own key also carries kid (label 2), which is dropped before hashing."
+    }
+  ]
+}

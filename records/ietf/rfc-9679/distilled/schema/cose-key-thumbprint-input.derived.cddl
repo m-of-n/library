@@ -1,0 +1,109 @@
+; DERIVED - not verbatim. RFC 9679 ships no CDDL, no ABNF, no JSON Schema and
+; no formal grammar of any kind: it states the thumbprint input as a numbered
+; procedure (Section 3) plus five bullet lists of required parameters
+; (Sections 4.1 to 4.5). This file is written by this library from that prose
+; and is cross-checked against the one worked encoding the document prints
+; (source lines 442 to 444, A4 01 02 20 01 21 58 20 ... 22 58 20 ...).
+;
+; record:   rfc-9679
+; source:   RFC 9679, sha256:f6b460e38ba1496bbba7d1430175f6398af104d6b8803f7a4ea059af5d3fa29d
+; written:  2026-10-18 (FX-1 pass 1)
+; cite as:  "derived by m-of-n/library from RFC 9679 Sections 3, 4.1-4.5 and 6",
+;           never as the RFC's own grammar (R-O-03).
+
+; ---------------------------------------------------------------------------
+; What this grammar describes
+;
+; It describes the structure that is HASHED - the output of Section 3 step 1 -
+; and NOT a COSE_Key as received. A received COSE_Key (RFC 9052 Section 7) may
+; carry kid, alg, key_ops, Base IV and any number of profile parameters; step 1
+; constructs a new map holding only the parameters below (R-0007), and step 2
+; encodes THAT map under RFC 8949 Section 4.2.1.
+;
+; CDDL maps are closed: every member of the data map must be matched by an
+; entry of the group. That is exactly the Section 4 exclusion rule, so no
+; "extra parameters are forbidden" socket is needed or wanted here.
+;
+; TWO THINGS CDDL CANNOT STATE, both of which this input depends on:
+;
+;   1. Map entry ORDER. CDDL describes a map as an unordered set of entries.
+;      The order of the encoded entries is fixed by RFC 8949 Section 4.2.1
+;      (bytewise lexicographic order of the encoded keys), which gives
+;      1 (0x01) < -1 (0x20) < -2 (0x21) < -3 (0x22) for every key type below.
+;      See thumbprint-computation.derived.json, "entry_order".
+;   2. Encoding DETERMINISM: preferred serialization of every head, definite
+;      lengths, no indefinite-length strings. Also RFC 8949 Section 4.2.1.
+;
+; A conforming producer therefore satisfies this grammar AND both rules above.
+; Validating against this file alone does not establish that a byte string is
+; a well-formed thumbprint input.
+; ---------------------------------------------------------------------------
+
+COSE-Key-Thumbprint-Input = OKP-Thumbprint-Input
+                          / EC2-Thumbprint-Input
+                          / RSA-Thumbprint-Input
+                          / Symmetric-Thumbprint-Input
+                          / HSS-LMS-Thumbprint-Input
+
+; Section 4.1 - Octet Key Pair, e.g. X25519, Ed25519.
+; R-0012 .. R-0015. No d (label -4): an OKP private key and its public key
+; have the same thumbprint.
+OKP-Thumbprint-Input = {
+  1  => 1,            ; "kty", int, OKP            (R-0013)
+  -1 => int,          ; "crv"                      (R-0014)
+  -2 => bstr          ; "x"                        (R-0015)
+}
+
+; Section 4.2 - Elliptic curve keys with x- and y-coordinates, e.g. P-256.
+; R-0016 .. R-0024. y is a bstr and never the bool of a compressed point:
+; R-0022 requires the uncompressed representation and R-0024 requires a
+; compressed point to be converted before the thumbprint is computed.
+; No d (label -4): an EC2 private key and its public key have the same
+; thumbprint.
+EC2-Thumbprint-Input = {
+  1  => 2,            ; "kty", int, EC2            (R-0017)
+  -1 => int,          ; "crv"                      (R-0018)
+  -2 => bstr,         ; "x"                        (R-0019)
+  -3 => bstr          ; "y", uncompressed only     (R-0020, R-0022, R-0023)
+}
+
+; Section 4.3 - RSA public keys (labels per RFC 8230).
+; R-0025 .. R-0028. Public parameters only: none of d, p, q, dP, dQ, qInv or
+; other enters. NOTE the defect recorded in README.md: this document states no
+; normalisation for these two bstrs, so two encodings of one modulus are two
+; thumbprints.
+RSA-Thumbprint-Input = {
+  1  => 3,            ; "kty", int, RSA            (R-0026)
+  -1 => bstr,         ; "n", modulus               (R-0027)
+  -2 => bstr          ; "e", public exponent       (R-0028)
+}
+
+; Section 4.4 - Symmetric keys.
+; R-0029 .. R-0031. The hashed bytes contain the secret itself; Section 7
+; (R-0060 .. R-0064) constrains when this may be done at all.
+Symmetric-Thumbprint-Input = {
+  1  => 4,            ; "kty", int, Symmetric      (R-0030)
+  -1 => bstr          ; "k", the key material      (R-0031)
+}
+
+; Section 4.5 - HSS-LMS keys (labels per RFC 8778).
+; R-0032 .. R-0034. "pub" carries the LMS and LM-OTS typecodes inside itself,
+; so for this key type - and no other - the algorithm parameters are inside
+; the hashed bytes.
+HSS-LMS-Thumbprint-Input = {
+  1  => 5,            ; "kty", int, HSS-LMS        (R-0033)
+  -1 => bstr          ; "pub", LMS public key      (R-0034)
+}
+
+; ---------------------------------------------------------------------------
+; Section 4.6 - other key types. The required-parameter set for a key type not
+; listed above is defined by that key type's own specification (R-0035), so no
+; rule for it can be written here. A record added to the alternation above
+; must cite the defining document, not this file.
+;
+; Section 4 - kty itself. R-0008 requires label 1 in every key type, R-0009
+; requires the integer value from the IANA "COSE Key Types" registry, and
+; R-0010 removes tstr, which RFC 9052 Section 7.1 would otherwise admit. The
+; literal int values above are that rule applied; a tstr kty cannot be written
+; in this grammar.
+; ---------------------------------------------------------------------------
