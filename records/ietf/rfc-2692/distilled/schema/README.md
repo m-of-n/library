@@ -42,9 +42,10 @@ None of the following is imported here.
   (record `draft-ietf-spki-cert-structure`).
 - **RFC 9804**: the S-expression encoding (record `rfc-9804`).
 
-RFC 2692 itself points at none of these. It mentions only *"the SDSI name
-construct"*, adding *"[Note: SPKI and SDSI have merged.]"* (§General
-Requirements ¶9, p.4).
+RFC 2692 itself points at none of these. It mentions only the SDSI name
+construct, in a sentence split by a page break: *"if possible SPKI should
+support the SDSI"* (§General Requirements ¶9, p.3) / *"name construct.  [Note:
+SPKI and SDSI have merged.]"* (§General Requirements ¶9, p.4).
 
 ## Files
 
@@ -82,19 +83,29 @@ opaque `authorization`, which is where the source puts it: *"The definition of
 attributes or authorizations in a certificate is up to the author of code which
 uses the certificate."* (§General Requirements ¶4, p.3). `crl` and
 `revalidation-instrument` are **open**, because the source describes only a
-*"minimal CRL"* and gives the positive instrument no contents at all.
+*"minimal CRL"* and gives the positive instrument no contents at all. The
+objects the library made up to hold a leaf (the three `subject-*` wrappers,
+`name-attribute`, `authorization-attribute`, `validity-period` and the two
+pointers) are closed too. The source says nothing about their shape at all, so
+that closure is the library's, and it is not flagged `x-inferred`
+separately.
 
 **Opaque leaves.** The source names a public key, a key hash, a name, a date, a
 signature, a location, a certificate identifier and an authorization, and gives
 none of them a form. Those eight entries accept any JSON value. The only
-non-opaque leaf types are `sequence-number` (integer; inferred) and the
-`one-use` token.
+non-opaque leaf entries are `sequence-number` (integer; inferred) and the
+`one-use` token. Among properties, `delegation-allowed` is a boolean and the
+two `kind` members are constants. `revalidation-instrument.challenge` is
+opaque too.
 
-**Traceability.** Every `$defs` entry and every property (26) carries:
+**Traceability.** Every `$defs` entry except `NOT-EXPRESSIBLE`, and every
+property (26), carries the following. `NOT-EXPRESSIBLE` has `x-status` and a
+`description`, and each of its items carries its own `basis` and `status`.
 
-- `x-status`: `derived` (encodes a stated requirement; 25 entries, plus the
-  findings entry), `opaque` (named, no form given; 8), or `tentative` (floated
-  by the source with *"Maybe"*; one property, `delegation-allowed`);
+- `x-status`: `derived` (encodes a stated requirement; 24 entries plus the
+  findings entry, and 25 properties), `opaque` (named, no form given; 8
+  entries), or `tentative` (floated by the source with *"Maybe"*; one
+  property, `delegation-allowed`);
 - `x-inferred` (boolean), and `x-inferred-reason` whenever anything in the
   node is not literally stated. Such a node's `description` also begins
   `INFERRED`. There are 11 inferred entries and 13 inferred properties, listed
@@ -105,10 +116,11 @@ non-opaque leaf types are `sequence-number` (integer; inferred) and the
 Quotes follow these rules. Each is one contiguous run of source characters,
 with RFC line wrapping undone: a line break and the next line's indent become
 one space, and `collision-` + `free` joins with no space. In-line double spaces
-after a full stop are kept. **No quote crosses a page break.** Two sentences
-do, and each is quoted in two parts: the SDSI sentence (p.3 → p.4) and the
-personal-binding *"my own private"* / *"directory of keys"* sentence
-(p.6 → p.7). Locators name the section by its title, since RFC 2692's sections
+after a full stop are kept. **No quote crosses a page break.** Three quoted
+sentences do, and each is quoted in two parts: the SDSI sentence (p.3 → p.4),
+the Implementation of Certificates ¶1 *"such as smart cards or small"* /
+*"embedded systems."* sentence (p.4 → p.5), and the personal-binding *"my own
+private"* / *"directory of keys."* sentence (p.6 → p.7). Locators name the section by its title, since RFC 2692's sections
 are unnumbered, then the paragraph or list item, then the page.
 
 **`constrained_by` is empty throughout, by design.** Each `NOT-EXPRESSIBLE`
@@ -147,7 +159,7 @@ Abstract, Bg = Background.
 | `crl-pointer` | derived | (kind) | `{kind: "crl", location}` | VC |
 | `revalidation-pointer` | derived | yes | `{kind: "revalidation", location?}` | VC |
 | `online-validation-pointer` | derived | yes | either pointer | VC |
-| `certificate` | derived | yes | `{issuer, subject, attributes[1..], validity?, delegation-allowed?, online-validation?, signature}`, closed; **root** | GR, IC, Abs, Bg |
+| `certificate` | derived | yes | `{issuer, subject, attributes[1..], validity?, delegation-allowed?, online-validation?, signature}`, closed; **root** | GR, VC, IC, Uses, Abs, Bg |
 | `crl` | derived | (revoked) | `{revoked[], sequence-number, validity, signature}`, open | VC |
 | `revalidation-instrument` | derived | yes | `{validates, lifetime, challenge?, signature}`, open | VC |
 | `traditional-certificate` | derived | yes | certificate; subject key/hash; exactly one name | Uses |
@@ -312,7 +324,7 @@ In `$defs/NOT-EXPRESSIBLE.x-gaps`, each with its basis:
 The checks ran by script in this session's scratchpad. The script is not part
 of the record, and pass 2 should re-derive the checks rather than trust them.
 
-1. **Quotes.** All 92 distinct quotes (197 uses across `x-quotes` and finding
+1. **Quotes.** All 86 distinct quotes (200 uses across `x-quotes` and finding
    bases) were checked against `.cache/rfc-2692.txt` (sha256 `6a88c156…826976d`).
    Each was checked to be:
    - a substring of its cited lines after unwrapping;

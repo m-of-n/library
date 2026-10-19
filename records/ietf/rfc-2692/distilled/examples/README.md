@@ -269,7 +269,8 @@ print no example:
 
 - ¶1 defines KEYHOLDER and ¶2 states the purpose of a certificate. Both are
   cited by many source vectors.
-- ¶4 and ¶7 are exercised by constructed vectors only.
+- ¶4 and ¶7 print no example of their own. They are exercised by constructed
+  vectors and by List vectors (`GEN-4a`, `GEN-4b` and `GEN-7` in `exercises`).
 - ¶9 (names; SDSI) is exercised by `SR-GEN-C10` and the name-binding items.
   "the SDSI name construct" is named but not shown, and the source does not
   define it, so `GEN-9b` has no constructed vector. The bracketed "[Note: SPKI
@@ -277,7 +278,8 @@ print no example:
 
 **Validity and CRLs ¶1 and ¶4.** These are requirements, exercised by
 `SR-VAL-C08`, `-C09` and `-C17`, and by `-C15` and `-C16`. `VAL-1b` (on-line
-refinement "may also be necessary") is too open to test.
+refinement "may also be necessary") is too open to test on its own;
+`SR-VAL-C06` cites it only as support.
 
 **Implementation of Certificates ¶2 and ¶3.** These rules have no threshold or
 criterion, so no constructed vector can test them:

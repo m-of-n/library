@@ -243,7 +243,7 @@ machines:
   - id: M01
     name: certificate-input
     status: required
-    locator: "§Implementation of Certificates ¶2, ¶5, ¶6, p.5; §General Requirements ¶5, p.3"
+    locator: "§Implementation of Certificates ¶2, ¶4 to ¶7, p.5; §General Requirements ¶5, p.3"
     actor: "verifier: receives a certificate and checks its signature"
     purpose: "One certificate from arrival to a checked signature. The core requirement is that the signature is checked over the certificate exactly as transmitted, with white-space canonicalization of a text format the only change allowed."
     hands_off: "signature-verified continues in M03."
@@ -297,7 +297,8 @@ machines:
         from: received
         to: parsed
         trigger: completion
-        guard: "No white-space canonicalization applies, and the bytes are read into the structure in one pass, without a scan of the data and without recursion."
+        guard: "No white-space canonicalization applies, and the bytes parse against the structure definition."
+        action: "Read the bytes into the structure in one pass, without a scan of the data and without recursion."
         source:
           - locator: "§Implementation of Certificates ¶6, p.5"
             quote: "That is, neither packing nor parsing of the structure should require a scan of the data."
@@ -306,7 +307,7 @@ machines:
           - locator: "§Implementation of Certificates ¶7, p.5"
             quote: "For efficiency, if possible, an SPKI certificate should be packed and parsed without any recursion."
         inferred: false
-        note: "One pass and no recursion are qualified \"if possible\" in the source (¶6, ¶7)."
+        note: "One pass and no recursion are qualified \"if possible\" in the source (¶6, ¶7), so they are the action, not the guard: a parser that recurses still reaches parsed. (Pass 2: moved out of the guard, where an input that parses only with recursion matched neither M01-T03 nor M01-T05.)"
         constrained_by: []
       - id: M01-T04
         from: white-space-canonicalized
@@ -322,7 +323,7 @@ machines:
         from: received
         to: rejected-malformed
         trigger: completion
-        guard: "The bytes do not parse against the structure definition."
+        guard: "No white-space canonicalization applies, and the bytes do not parse against the structure definition."
         source:
           - locator: "§Implementation of Certificates ¶2, p.5"
             quote: "In particular, the structure should be specific enough that the creator of a certificate is constrained by the structure definition, not by complaints (or error messages) from the reader of a certificate."
@@ -376,7 +377,7 @@ machines:
         quote: "There should be no reformatting called for in the process of checking a certificate's signature (although one might canonicalize white space during certificate input, for example, if the format is text)."
       - behaviour: "Requiring library code, or ASN.1, to pack or parse the certificate."
         locator: "§Implementation of Certificates ¶4, p.5"
-        quote: "No library code should be required for the packing or parsing of SPKI certificates."
+        quote: "No library code should be required for the packing or parsing of SPKI certificates.  In particular, ASN.1 is not to be used."
     unspecified:
       - from: white-space-canonicalized
         trigger: completion
@@ -480,12 +481,16 @@ machines:
         trigger: clock-passes-not-after
         situation: "Tolerance for clock skew between issuer and verifier at either end of the period."
         open_question: OQ-04
+      - from: issued
+        trigger: completion
+        situation: "A certificate that carries only one end of a validity period: M02-T01, M02-T02 and M02-T04 assume both ends, M02-T03 assumes neither. M02-T03's reading of an absent period as unbounded is itself not stated."
+        open_question: OQ-03
 
   # =====================================================================
   - id: M03
     name: certificate-validation
     status: required
-    locator: "§Validity and CRLs ¶1, ¶2, ¶4, p.4"
+    locator: "§Validity and CRLs ¶1 to ¶5, p.4"
     actor: "verifier: decides whether one certificate is valid at t"
     purpose: "The required, deterministic validation: validity period, then on-line refinement, where a certificate that uses a CRL tells the verifier where to find it and the CRL's explicit validity dates select the one CRL that applies at t. Contrast M06, the rejected minimal CRL."
     determinism:
@@ -709,6 +714,10 @@ machines:
         situation: "The CRL obtained carries no explicit validity dates."
         open_question: OQ-05
       - from: fetching-crl
+        trigger: crl
+        situation: "The CRL obtained has explicit validity dates but its signature does not check. M03-T06's guard requires the signature (inferred), so no transition fires."
+        open_question: OQ-05
+      - from: fetching-crl
         trigger: completion
         situation: "No CRL can be obtained from the location the certificate names."
         open_question: OQ-06
@@ -804,7 +813,7 @@ machines:
         from: received
         to: pending
         trigger: completion
-        guard: "A CRL whose not-before is after t."
+        guard: "A CRL with a lifetime greater than 0 whose not-before is after t."
         source:
           - locator: "§Validity and CRLs ¶2, p.4"
             quote: "the CRL must carry explicit validity dates"
@@ -934,6 +943,10 @@ machines:
     error_states:
       - undated-crl-issued
       - overlap-issued
+    terminal_states:
+      - undated-crl-issued
+      - overlap-issued
+    note: "sequence-active cycles and is never terminal; the two violation states are sinks, so terminal_states lists them (pass 2: they had no exit and were listed nowhere as terminal)."
     unspecified:
       - from: sequence-active
         trigger: crl
@@ -986,12 +999,12 @@ machines:
         from: not-encountered
         to: not-encountered
         trigger: minimal-crl
-        guard: "The CRL does not list the certificate."
+        guard: "The CRL does not list the certificate, or the CRL has itself been annihilated here (M07)."
         source:
           - locator: "§Validity and CRLs ¶2, p.4"
             quote: "If it encounters some certificate that it lists, then it annihilates that certificate."
         inferred: true
-        inferred_reason: "The source states only the listing case."
+        inferred_reason: "The source states only the listing case. The second clause is the complement of M06-T01's inferred second clause, so the two guards are exclusive and complete."
         constrained_by: []
     error_states: []
     terminal_states:
@@ -1032,7 +1045,7 @@ machines:
         from: in-effect
         to: in-effect
         trigger: minimal-crl
-        guard: "The arriving CRL's sequence number shows it is the previous one."
+        guard: "The arriving CRL's sequence number shows the arriving CRL is the previous one, earlier than this CRL."
         action: "The arriving CRL is annihilated; this one remains."
         source:
           - locator: "§Validity and CRLs ¶2, p.4"
@@ -1053,7 +1066,7 @@ machines:
   - id: M08
     name: online-validation
     status: required
-    locator: "§Validity and CRLs ¶3, ¶4, ¶5, p.4"
+    locator: "§Validity and CRLs ¶1, ¶3, ¶4, ¶5, p.4"
     actor: "verifier: asks about a single certificate on-line"
     purpose: "Positive and negative on-line validation of a single certificate. The source requires support for both and gives the retail analogy; everything else is inferred."
     initial: idle
@@ -1137,6 +1150,10 @@ machines:
       - from: awaiting-answer
         trigger: completion
         situation: "No answer arrives."
+        open_question: OQ-06
+      - from: awaiting-answer
+        trigger: positive-online-validation
+        situation: "A positive answer arrives whose lifetime is 0 or does not cover t (M04 lapsed-on-arrival); M08-T02's guard fails and no transition fires."
         open_question: OQ-06
       - from: positively-validated
         trigger: completion
@@ -1241,9 +1258,9 @@ machines:
       - rejected-outside-challenge
       - rejected-reuse
     terminal_states:
-      - consumed
       - rejected-outside-challenge
       - rejected-reuse
+    note: "consumed is not terminal: a reuse attempt leaves it by M09-T06 (pass 2: it was listed as terminal while having that exit)."
     unspecified:
       - from: instrument-held
         trigger: one-use-instrument-used
@@ -1331,7 +1348,11 @@ machines:
     unspecified:
       - from: awaiting-name-resolution
         trigger: completion
-        situation: "The name cannot be resolved, or no key matching a hash is obtained."
+        situation: "The name cannot be resolved."
+        open_question: OQ-12
+      - from: awaiting-key-for-hash
+        trigger: matching-key-obtained
+        situation: "No key matching the hash is obtained, or a key obtained does not hash to the reference (M10-T04's guard fails)."
         open_question: OQ-12
 
   # =====================================================================
@@ -1421,6 +1442,18 @@ machines:
             quote: "One way to do this is to use smart cards, but those typically have slow processors and are connected through low-bandwidth links; however, if you only use the smart card at \"login\" time to certify a short-term key pair, you get high performance and low exposure of the long term key."
         inferred: true
         inferred_reason: "A fresh login certifying a fresh short-term key is supplied; the source describes one login."
+        constrained_by: []
+      - id: M11-T07
+        from: expired
+        to: expired
+        trigger: signed-key-used
+        guard: "None."
+        action: "Do not treat the signed-key as the certifying-key, for any purpose."
+        source:
+          - locator: "§List of Certificate Uses, item 'This signed-key should be considered equivalent', p.9"
+            quote: "This signed-key should be considered equivalent to the certifying-key until this certificate expires for the following purposes ..."
+        inferred: true
+        inferred_reason: "The source bounds the equivalence by \"until this certificate expires\"; the refusal after expiry is supplied as the negative test. Added in pass 2: expired had no handling of signed-key-used."
         constrained_by: []
     error_states: []
     unspecified:
@@ -1569,7 +1602,7 @@ machines:
     status: brainstorm
     status_quote: "The list below is a brainstorming list, accumulated on the SPKI mailing list, of uses of such certificates."
     status_locator: "§List of Certificate Uses ¶1, p.5"
-    locator: "§List of Certificate Uses, Other requirements, item 'Especially in lower-end applications', p.11; item 'Timestamping / notary services', p.10"
+    locator: "§List of Certificate Uses, Other requirements, items 'Especially in lower-end applications' and 'Reliable distribution', p.11; item 'Timestamping / notary services', p.10"
     actor: "verifier: holds a certificate issued by a key whose certification right may have expired"
     purpose: "Separates certificates issued before a certification right expired, which stay valid on their own terms, from those issued after, which do not. The source pairs this with notary services, read here as the means of fixing when a certificate was issued."
     hands_off: "accepted-issued-before continues in M03 as if the right had never expired."
@@ -1608,13 +1641,13 @@ machines:
       - id: M14-T02
         from: received
         to: checking-issuance-time
-        trigger: certification-right-expiration-certificate
-        guard: "Names the issuer of the certificate under test."
+        trigger: completion
+        guard: "A certification right expiration certificate naming the issuer of the certificate under test is held."
         source:
           - locator: "§List of Certificate Uses, Other requirements, item 'Especially in lower-end applications', p.11"
             quote: "This may imply a \"certification right expiration\" certificate requirement, probably to be implemented together with notary services."
         inferred: true
-        inferred_reason: "As M14-T01."
+        inferred_reason: "As M14-T01. Pass 2: the trigger was the certification-right-expiration-certificate message, but received is left by completion (M14-T01), so an expiration certificate already held on entry had no transition; the branch is now the completion complement of M14-T01. Late arrival is M14-T03."
         constrained_by: []
       - id: M14-T03
         from: right-in-force
@@ -1869,6 +1902,10 @@ machines:
     terminal_states:
       - purged
     unspecified:
+      - from: fetching
+        trigger: completion
+        situation: "The fetch fails or no key is found."
+        open_question: OQ-15
       - from: cached
         trigger: completion
         situation: "How long a cached key may be served without a fresh fetch. The source points at name servers (\"Cf. current name servers.\") but states no rule."
@@ -1892,13 +1929,13 @@ not_modelled:
       - locator: "§General Requirements ¶4, p.3"
         quote: "The creation of new authorizations should not require interaction with any other person or organization but rather be under the total control of the author of the code using the certificate."
   - item: "Minimal disclosure, anonymity, blinded signature keys, names"
-    locator: "§General Requirements ¶6 to ¶9, p.3"
+    locator: "§General Requirements ¶6 to ¶9, p.3-4"
     reason: "Properties a certificate must be able to carry; no lifecycle is described."
     source:
       - locator: "§General Requirements ¶8, p.3"
         quote: "Because one use of SPKI certificates is in secret balloting and similar applications, an SPKI certificate must be able to assign an attribute to a blinded signature key."
   - item: "Key attribute acquisition under the three name-binding models"
-    locator: "§List of Certificate Uses, item 'I need certificates to bind names to public keys', p.6"
+    locator: "§List of Certificate Uses, item 'I need certificates to bind names to public keys', p.6-7"
     reason: "Describes where a key's attributes come from (a naked key acquiring them from a named person, or loaded directly by other certificates), not states with triggers and failures. Left to design notes."
     source:
       - locator: "§List of Certificate Uses, item 'I need certificates to bind names to public keys', p.6"
@@ -1975,7 +2012,7 @@ open_questions:
         quote: "A certificate should be signed exactly as it is transmitted."
   - id: OQ-03
     locator: "§Validity and CRLs ¶1, p.4"
-    question: "What does a certificate with no validity period mean: valid without limit, or invalid? The source says only that a certificate should be able to carry one."
+    question: "What does a certificate with no validity period mean: valid without limit, or invalid? And one with only one end of a period? The source says only that a certificate should be able to carry one, as \"dates\"."
     affects:
       - M02-T03
     source:
@@ -1993,7 +2030,7 @@ open_questions:
         quote: "Under this set of requirements, behavior of certificate validation is deterministic (aside from the question of clock skew)."
   - id: OQ-05
     locator: "§Validity and CRLs ¶2, ¶5, p.4"
-    question: "What does a verifier do with a CRL that carries no validity dates, or an instrument with no lifetime: ignore it, or fail the certificate? The requirements bind the issuer."
+    question: "What does a verifier do with a CRL that carries no validity dates, or an instrument with no lifetime: ignore it, or fail the certificate? The requirements bind the issuer. The same question arises for a CRL whose signature does not check, a check the source names only for the minimal CRL."
     affects:
       - M03-T06
       - M04-T03
@@ -2080,7 +2117,7 @@ open_questions:
         quote: "This may imply a \"certification right expiration\" certificate requirement, probably to be implemented together with notary services."
   - id: OQ-15
     locator: "§List of Certificate Uses, Other requirements, items 'Keys will need to be cached locally' and 'Reliable distribution', p.11"
-    question: "How long may a cached key be served, and how does the cache learn of a revocation? The source names the interaction and points at name servers without a rule."
+    question: "How long may a cached key be served, how does the cache learn of a revocation, and what happens when a fetch fails? The source names the interaction and points at name servers without a rule."
     affects:
       - M16
     source:

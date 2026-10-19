@@ -57,7 +57,7 @@ draft-ietf-spki-cert-structure. Nothing here is taken from them.
 - **Locators.** The sections are unnumbered, so a locator is the section title
   plus a paragraph count and page: "§Validity and CRLs ¶2 (p.4)". List items
   are located by their opening words, and Open Questions are numbered Q1 to Q4.
-- **Inferred.** 36 of the 88 steps are `inferred: true`, each with an
+- **Inferred.** 37 of the 88 steps are `inferred: true`, each with an
   `inferred_reason`. Flows whose content is mostly inferred say so in their
   summary.
 - **Errors.** `on_error_basis` is `stated`, `inferred` or `unspecified`. 52
@@ -106,9 +106,14 @@ draft-ietf-spki-cert-structure. Nothing here is taken from them.
 
 ## Flows
 
-Twenty-six flows, each with a diagram. In the diagrams an arrow whose text
-ends in "(inferred)" is a step the source does not state. A crossed arrow
-(`--x`) is a failure outcome. A self-arrow is a local step.
+Twenty-six flows, each with a diagram. Each step of the flow in
+`protocol.yaml` is one solid or dashed arrow, in step order; a step taken only
+on a condition sits in an `opt` block. A step
+the source does not state is a dashed arrow (`-->>`) whose text ends in a
+parenthesis beginning "inferred". A crossed arrow (`--x`) inside an `alt`
+block is a failure outcome, marked the same way when the outcome is inferred.
+A self-arrow is a local step. `autonumber` numbers the failure arrows too, so
+step numbers in the text are the YAML `n`, not the diagram's numbers.
 
 ### 1. `direct-certificate-distribution`
 
@@ -134,7 +139,7 @@ sequenceDiagram
   alt signature fails, or would need reformatting
     V--xV: not accepted (inferred outcome)
   end
-  V->>V: validity-period covers now (inferred)
+  V-->>V: validity-period covers now (inferred)
   V->>V: on-line refinement of validity if used, see flows 9 to 13
   V->>V: has the keyholder been granted the authorization
 ```
@@ -326,10 +331,11 @@ sequenceDiagram
     V--xV: no deterministic result
   end
   V-->>V: a later CRL by sequence number annihilates the earlier (inferred for conforming CRL)
+  V-->>V: is the certificate listed in the current CRL (inferred for conforming CRL)
   alt certificate listed
     V--xV: certificate annihilated (stated for minimal CRL)
   end
-  Note over V: deterministic aside from clock skew
+  V->>V: result deterministic aside from clock skew
 ```
 
 ### 10. `minimal-crl-propagation`
@@ -347,8 +353,7 @@ sequenceDiagram
   participant C as crl-issuer
   participant V as verifier
   C->>V: minimal crl, by an unspecified method
-  V->>V: annihilate each listed certificate
-  V->>V: annihilate any previous CRL by sequence number
+  V->>V: annihilate each listed certificate and any previous CRL by sequence number
   V--xV: non-deterministic program behavior
 ```
 
@@ -514,7 +519,7 @@ sequenceDiagram
   participant C as key-cache
   participant R as global-repository
   V-->>C: look up public-key (inferred)
-  alt miss
+  opt miss
     R-->>C: fetch public-key, the long delay to avoid (inferred)
   end
   C->>V: public-key served locally, as a name server would
@@ -552,9 +557,9 @@ distribution of key revocations" (p.11); item "Timestamping / notary services"
 want them to be able to certify", but "you will usually also not want all keys
 they have generated to expire". "This may imply a 'certification right
 expiration' certificate requirement, probably to be implemented together with
-notary services." **Inferred:** step 2 (timestamping each certification) and
-step 3 (the trigger, issuer and delivery of the expiration certificate). The
-verifier rule in step 4 is stated as intent and inferred as a check.
+notary services." **Inferred:** step 2 (timestamping each certification),
+step 3 (the trigger, issuer and delivery of the expiration certificate) and
+step 4 (the verifier enforcing the stated intent).
 
 ```mermaid
 sequenceDiagram
@@ -566,7 +571,7 @@ sequenceDiagram
   A->>V: spki-certificate on keys generated while in role
   N-->>A: timestamp each certification (inferred)
   X-->>V: certification-right-expiration-certificate when the administrator changes (inferred issuer)
-  V->>V: keep keys certified before, reject certifications after
+  V-->>V: keep keys certified before, reject certifications after (inferred)
 ```
 
 ### 20. `reputation-voucher-introduction`
@@ -724,13 +729,17 @@ These are recorded so that nobody builds a flow the source says cannot exist.
 
 ## The List of Certificate Uses
 
-`use_cases` maps all 35 top-level and nested items (the wallet list's 33 cards
-are kept verbatim under one entry) to the flows above. Most are instances of
-flow 3 followed by flow 1, differing only in issuer and authorization: security
+`use_cases` has 35 entries: the 29 items at the list's top level (the
+wallet-card lead-in counted once, with its 33 cards kept verbatim under it) and
+the 6 "Other requirements:" items. The three name-binding sub-items share their
+parent's entry. 32 entries map to the flows above. Most are instances of flow 3
+followed by flow 1, differing only in issuer and authorization: security
 clearance (a governmental issuing authority), SAGE, DOC amateur radio licences,
 the ephemeral root-access certificate with an application-domain audit identity,
-the IP-address-space claim, and the wallet cards. The house-contract and
-"80-year-old man" items are bare questions with no mechanism.
+the IP-address-space claim, and the wallet cards. 3 entries map to no flow and
+say why: the house-contract and "80-year-old man" items are bare questions with
+no mechanism, and "Digital signatures (unforgeability)" is a property, not an
+exchange.
 
 ## Error paths
 
@@ -763,12 +772,12 @@ entries, with quotes, are in `error_paths`.
 | `untrusted-root` | chain starts at an unchosen key | not trusted | I | p.10 |
 | `short-term-certificate-expired` | signed-key certificate expired | no longer equivalent | S | p.9 |
 | `purpose-not-listed` | use outside the listed purposes | not equivalent | I | p.9 |
-| `delegation-against-rules-by-key-loaning` | holder lends the private key | undetectable, unpreventable | S | p.10; Q4 |
+| `delegation-against-rules-by-key-loaning` | holder lends the private key | unpreventable by any bit | S | p.10; Q4 |
 | `key-stolen-signature` | signature with a stolen key | certificates cannot prove it | S | Q1 |
 | `revocation-not-yet-propagated` | verifier acts before arrival | may accept what is revoked | I | p.11 |
 | `stale-cache` | cached key since revoked | served unless the cache accounts for revocations | I | p.11 |
 | `certifier-right-ceased` | certification after the right ended | rejected; earlier keys kept | I | p.11 |
-| `central-administrator-unreachable` | host auth cannot reach an administrator | must not block | S | p.10 |
+| `central-administrator-unreachable` | host auth cannot reach an administrator | must not block | I | p.10 |
 | `dossier-aggregation` | many certificates gathered | privacy violation | S | §General Requirements ¶6 |
 | `shared-private-key` | departmental certificate | key sharing, rejected | S | p.9 |
 | `negative-fact-undeterminable` | records incomplete, IDs escapable | absence undeterminable | S | Q3 |
@@ -815,8 +824,9 @@ The full entries, with quotes, are in `source_defects_and_ambiguities`.
   right expiration certificate ("may imply", "probably") and the 24-hour goal
   ("or something like that").
 - **"blinded signature key"** is not explained.
-- **Page breaks.** Four sentences cross page breaks (SDSI, smart cards,
-  personal binding, the signed-key bracket). Quotes stop at the break.
+- **Page breaks.** Three sentences (SDSI, smart cards, personal binding) and
+  one bracketed comment (the signed-key item's) cross page breaks. Quotes stop
+  at the break.
 
 ## What RFC 2692 does not define
 
