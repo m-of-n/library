@@ -1,11 +1,2843 @@
+# rfc-8551 protocol model, FX-1 pass 1 (protocol agent). See protocol.md for the prose and diagrams.
 record: rfc-8551
 reviewed_by: ""
-roles: [TODO]
+extracted: "2026-10-19"
+extracted_by: "FX-1 pass 1 (extract), protocol agent, effort high, from the source text only"
+source:
+  file: ".cache/rfc-8551.txt"
+  sha256: "dac39f749a08d3422bd78d4e492195067e7bc03f5fc2d0dac515f0d7ed884ae2"
+  lines: "3531"
+  bcp14_keywords: "190"
+applicability: >-
+  S/MIME is store-and-forward. RFC 8551 defines no interactive exchange, no session, no
+  request and response pairing, no acknowledgement and no error signalling from receiver
+  to sender: a sending agent builds a self-contained MIME entity (§3), hands it to any
+  transport that carries MIME (SMTP, HTTP, SIP, §1), and a receiving agent later processes
+  it on its own. Every flow here is therefore one sender's construction, the transport
+  and its intermediaries, and one receiver's local processing. Every on_error is local to
+  the role that detects it; the only failure the source says travels back to a sender is
+  a transport-level return by a message transfer agent (§3.1.3), which is not an S/MIME
+  message. The two places the source comes close to an exchange, a certificate request
+  answered by a signed return message (§4) and a certs-only message sent in response to a
+  registration request (§3.8, §3.9), name the exchange and define neither the request nor
+  the correlation. Certificate handling itself is out of scope by the source's own words
+  (§4, deferring to RFC 5750). The local decision procedures the source does give (the
+  encryption-algorithm rules of §2.7.1, the capability-list update of §2.7.1, the
+  key-management certificate selection of §2.5.3.1, S/MIME identification in §3.10, the
+  transfer-encoding choice of §3.1.2 and §3.1.3, and the RSA key-size tables of §4.2 to
+  §4.5) are modelled as flows of kind local-decision and drawn as flowcharts in
+  protocol.md. Anything not literally in the source is marked inferred with a reason.
+conventions:
+  quoting: >-
+    Each item under a quotes key is one contiguous run of .cache/rfc-8551.txt with the RFC
+    line wrapping undone: a source line break and the indent that follows it become one
+    space, page footer and header lines are dropped, and nothing else is altered (the two
+    spaces the RFC sets after a full stop inside a line are kept). No quote joins
+    non-adjacent text and nothing is elided. Every quote was checked mechanically against
+    the source. This is the convention requirements.yaml uses.
+  basis: >-
+    A step's action and message are stated unless the step carries inferred: true, in
+    which case inferred_reason says what the source does and does not say. on_error_basis
+    is stated, inferred or unspecified; unspecified means the source names the operation
+    or implies a failure and says nothing about what follows; inferred carries
+    on_error_inferred: true and the reason inside on_error.
+  constrained_by: >-
+    rfc-8551#R-NNNN ids from distilled/requirements.yaml. Requirements the step obeys or
+    that bind the structure it emits.
+  kind: >-
+    Flows: creation-and-delivery means a sender builds an S/MIME entity, a transport
+    carries it and a receiver processes it; receive-processing is the receiver's local
+    sequence; local-decision is a procedure one role runs on its own state; exchange is
+    the nearest the source comes to a request and a reply; out-of-scope means the source
+    places the mechanism elsewhere; intermediary means the flow is about what a transport
+    party does to an entity in transit.
+  message_names: >-
+    The messages agent writes messages.yaml concurrently, so every message names the
+    source's own term for the structure, media type or attribute. message_names_used lists
+    every name a step uses, with where the source defines or uses it, for the cross-check
+    pass (pass 3) to reconcile against messages.yaml. Names the source does not define as
+    a structure carry in_source: no and the reason.
+framing:
+  - id: "store-and-forward"
+    text: >-
+      S/MIME secures MIME entities that any MIME transport carries; there is no exchange
+      protocol of its own.
+    locator: "§1, §1.1"
+    basis: "stated"
+    quotes:
+      - |-
+        However, S/MIME is not restricted to mail; it can be used with any transport mechanism that transports MIME data, such as HTTP or SIP.
+      - |-
+        This document describes a protocol for adding cryptographic signature and encryption services to MIME data.
+  - id: "sender-receiver-separation"
+    text: >-
+      Requirements are split by role; receivers are bound to accept, senders are
+      recommended to be conservative.
+    locator: "§1.1"
+    basis: "stated"
+    quotes:
+      - |-
+        In general, the best strategy is to follow the Robustness Principle (be liberal in what you receive and conservative in what you send).
+      - |-
+        An automated process that sends an encrypted message might not be able to receive an encrypted message at all, for example.
+  - id: "one-preparation-procedure"
+    text: "Every secured entity is built the same way: canonical MIME, CMS processing, MIME wrapping."
+    locator: "§3"
+    basis: "stated"
+    quotes:
+      - |-
+        The data to be secured is always a canonical MIME entity.  The MIME entity and other data, such as certificates and algorithm identifiers, are given to CMS processing facilities that produce a CMS object.  Finally, the CMS object is wrapped in MIME.
+  - id: "steps-descriptive"
+    text: "The numbered steps bind by result, not by procedure."
+    locator: "§3.1"
+    basis: "stated"
+    quotes:
+      - |-
+        These steps are descriptive rather than prescriptive.  The implementer is free to use any procedure as long as the result is the same.
+  - id: "certificates-out-of-scope"
+    text: "How agents handle certificates is outside this document."
+    locator: "§4"
+    basis: "stated"
+    quotes:
+      - |-
+        This specification does not cover how S/MIME agents handle certificates -- only what they do after a certificate has been validated or rejected.
+roles:
+  - name: "sending-agent"
+    kind: "party"
+    also_called:
+      - "sending agent"
+      - "sender"
+      - "sending client"
+      - "originator"
+      - "S/MIME agent"
+      - "S/MIME implementation"
+      - "interactive sending agent"
+      - "sending agent that is controlled by a human"
+    description: >-
+      Creates S/MIME entities: prepares the MIME entity, chooses algorithms and formats,
+      drives CMS processing and wraps the result in MIME. Includes the non-security part
+      of the agent that canonicalizes (§3.1.1).
+    locators: ["§1.2", "§1.1", "§2.7.1", "§3"]
+    quotes:
+      - |-
+        Software that creates S/MIME CMS content types, MIME body parts that contain CMS content types, or both.
+      - |-
+        In general, canonicalization will be performed by the non-security part of the sending agent rather than the S/MIME implementation.
+  - name: "receiving-agent"
+    kind: "party"
+    also_called:
+      - "receiving agent"
+      - "recipient"
+      - "receiver"
+      - "receiving client"
+      - "client"
+      - "recipient computer"
+      - "S/MIME agent"
+      - "S/MIME implementation"
+    description: >-
+      Interprets and processes S/MIME entities: identifies them, decrypts, verifies,
+      decompresses, unwraps nested layers, caches the sender's capabilities and key
+      preference, and hands the resulting MIME entity on for presentation.
+    locators: ["§1.2", "§1.1", "§3.1", "§3.7"]
+    quotes:
+      - |-
+        Software that interprets and processes S/MIME CMS objects, MIME body parts that contain CMS content types, or both.
+  - name: "user"
+    kind: "party"
+    also_called:
+      - "user"
+      - "human sender"
+      - "human"
+    description: >-
+      The person behind an interactive agent: shown signed attributes, allowed to judge
+      weak encryption, warned about weak signatures, and the owner of the certificate
+      store.
+    locators: ["§2.5", "§2.7.2", "§4", "§6"]
+    quotes:
+      - |-
+        Interactive sending agents that include signed attributes that are not listed here SHOULD display those attributes to the user, so that the user is aware of all of the data being signed.
+      - |-
+        If an implementation supports verification of digital signatures generated with RSA and DSA keys of less than 1024 bits, it MUST warn the user.
+  - name: "cms-processing"
+    kind: "component"
+    also_called:
+      - "CMS processing facilities"
+      - "CMS generating process"
+      - "CMS processing"
+    description: >-
+      The facility inside an agent that turns a MIME entity plus certificates and
+      algorithm identifiers into a CMS object, and back. Its behaviour is defined by [CMS],
+      not here.
+    locators: ["§3", "§3.5.3.2", "§3.8"]
+    quotes:
+      - |-
+        The MIME entity and other data, such as certificates and algorithm identifiers, are given to CMS processing facilities that produce a CMS object.
+  - name: "mime-user-agent"
+    kind: "component"
+    also_called:
+      - "MIME-capable user agent"
+      - "receiving application"
+    description: "Receives the MIME entity the S/MIME layer produces and presents it."
+    locators: ["§3.1"]
+    quotes:
+      - |-
+        That MIME entity is typically passed to a MIME-capable user agent where it is further decoded and presented to the user or receiving application.
+  - name: "transport"
+    kind: "channel"
+    also_called:
+      - "standard Internet SMTP infrastructure"
+      - "Internet mail transport infrastructure"
+      - "transport mechanism"
+      - "communications channel"
+      - "transport path"
+    description: "Whatever carries the MIME entity; may not be 8-bit clean; may be observed."
+    locators: ["§1", "§3.1.3", "§3.2", "§2.7.3"]
+    quotes:
+      - |-
+        The primary reason for the 7-bit requirement is that the Internet mail transport infrastructure cannot guarantee transport of 8-bit or binary data.
+  - name: "message-transfer-agent"
+    kind: "intermediary"
+    also_called:
+      - "message transfer agent"
+      - "mail transport agents"
+      - "compliant agent"
+    description: >-
+      A relay on the transport path. One that cannot carry 8-bit or binary data has three
+      options, all of which defeat a clear-signed message.
+    locators: ["§3.1.3", "§3.1.4"]
+    quotes:
+      - |-
+        If a mail message with 8-bit data were to encounter a message transfer agent that cannot transmit 8-bit or binary data, the agent has three options, none of which are acceptable for a clear-signed message:
+  - name: "gateway"
+    kind: "intermediary"
+    also_called:
+      - "gateway that has no special knowledge of S/MIME"
+      - "benign intermediate agents"
+      - "gateway that modifies such whitespace (like BITNET)"
+    description: >-
+      A non-S/MIME intermediary that translates or rewrites messages: defaults unknown
+      media types to application/octet-stream, wraps lines, changes transfer encoding.
+    locators: ["§3.2.1", "§3.5.1", "§3.1.4"]
+    quotes:
+      - |-
+        When a MIME entity of type application/pkcs7-mime (for example) arrives at a gateway that has no special knowledge of S/MIME, it will default the entity's media type to application/octet-stream and treat it as a generic attachment, thus losing the type information.
+      - |-
+        However, the SignedData format protects the message content from being changed by benign intermediate agents.  Such agents might do line wrapping or content-transfer encoding changes that would break the signature.
+  - name: "trusted-gateway"
+    kind: "intermediary"
+    also_called:
+      - "trusted gateway"
+      - "a single mail gateway"
+    description: >-
+      A site gateway that holds the decryption key, removes the envelope and forwards the
+      still-signed message inside the site.
+    locators: ["§3.1.2"]
+    quotes:
+      - |-
+        For example, a trusted gateway might remove the envelope, but not the signature, of a message, and then forward the signed message on to the end recipient so that they can verify the signatures directly.
+  - name: "certification-authority"
+    kind: "party"
+    also_called:
+      - "certification authority"
+      - "certificate authorities"
+    description: >-
+      Issues the sending agent's certificate. The request mechanism is not defined by
+      S/MIME v4.0; a hardware token or diskette are named alternatives.
+    locators: ["§3.9", "§3.8", "Appendix B.2"]
+    quotes:
+      - |-
+        There are many ways of getting certificates, such as through an exchange with a certification authority, through a hardware token or diskette, and so on.
+  - name: "server-implementation"
+    kind: "party"
+    also_called:
+      - "Server implementations"
+      - "secure mail list servers"
+    description: "A receiving agent with no user to warn; rejects instead."
+    locators: ["§6"]
+    quotes:
+      - |-
+        Server implementations (e.g., secure mail list servers) where user warnings are not appropriate SHOULD reject messages with weak signatures.
+  - name: "attacker"
+    kind: "adversary"
+    also_called:
+      - "someone watching the communications channel"
+      - "an attacker watching the communications channel"
+      - "a careful attacker"
+      - "passive observers"
+      - "third party"
+    description: >-
+      Observes or modifies messages in transit, sends oversized keys, or drives a
+      compression oracle. Named in §2.7.3, §3.4, §3.7 and §6.
+    locators: ["§2.7.3", "§3.4", "§3.7", "§6"]
+    quotes:
+      - |-
+        An attacker could send certificates with keys that would result in excessive cryptographic processing -- for example, keys larger than those mandated in this specification, as such keys could swamp the processing element.
+  - name: "capabilities-list-maintainer"
+    kind: "mentioned"
+    also_called:
+      - "the maintainer of the registered SMIMECapabilities list"
+    description: "Arbitrates ambiguous capability OIDs. Not a party to any message flow."
+    locators: ["§2.5.2"]
+    quotes:
+      - |-
+        In the event that an OID is ambiguous, it needs to be arbitrated by the maintainer of the registered SMIMECapabilities list as to which type of algorithm will use the OID, and a new OID MUST be allocated under the smimeCapabilities OID to satisfy the other use of the OID.
+message_names_used:
+  - {name: "MIME entity", in_source: "yes", where: "§3.1"}
+  - {name: "canonical MIME entity", in_source: "yes", where: "§3, §3.1.1, §3.1.4"}
+  - {name: "message/rfc822", in_source: "yes", where: "§3.1"}
+  - {name: "ContentInfo", in_source: "external", where: "§3.3 to §3.8; defined in [CMS]"}
+  - {name: "Data", in_source: "yes", where: "§2.4, §2.4.1 (id-data); defined in [CMS]"}
+  - {name: "EnvelopedData", in_source: "yes", where: "§2.4.3, §3.3; defined in [CMS]"}
+  - {name: "AuthEnvelopedData", in_source: "yes", where: "§2.4.4, §3.4; defined in RFC 5083"}
+  - {name: "SignedData", in_source: "yes", where: "§2.4.2, §3.5.2, §3.5.3, §3.8; defined in [CMS]"}
+  - {name: "CompressedData", in_source: "yes", where: "§2.4.5, §3.6; defined in RFC 3274"}
+  - {name: "SignerInfo", in_source: "yes", where: "§2.5, §2.6; defined in [CMS]"}
+  - {name: "SignerIdentifier", in_source: "yes", where: "§2.6"}
+  - {name: "signingTime", in_source: "yes", where: "§2.5.1"}
+  - {name: "SMIMECapabilities", in_source: "yes", where: "§2.5.2, Appendix A"}
+  - {name: "SMIMEEncryptionKeyPreference", in_source: "yes", where: "§2.5.3, Appendix A"}
+  - {name: "signingCertificate", in_source: "external", where: "§2.5; defined in RFC 2634 §5"}
+  - {name: "signingCertificateV2", in_source: "external", where: "§2.5; defined in RFC 5035 §3"}
+  - {name: "message-digest attribute", in_source: "yes", where: "§2.1, §2.5; defined in RFC 5652 §11.2"}
+  - {name: "id-cap-preferBinaryInside", in_source: "yes", where: "§3.1.2, Appendix A"}
+  - {name: "application/pkcs7-mime", in_source: "yes", where: "§3.2, §5.1"}
+  - {name: "application/pkcs7-mime; smime-type=enveloped-data", in_source: "yes", where: "§3.2.2, §3.3"}
+  - {name: "application/pkcs7-mime; smime-type=authEnveloped-data", in_source: "yes", where: "§3.2.2, §3.4, §5.3"}
+  - {name: "application/pkcs7-mime; smime-type=signed-data", in_source: "yes", where: "§3.2.2, §3.5.2"}
+  - {name: "application/pkcs7-mime; smime-type=compressed-data", in_source: "yes", where: "§3.2.2, §3.6"}
+  - {name: "application/pkcs7-mime; smime-type=certs-only", in_source: "yes", where: "§3.2.2, §3.8"}
+  - {name: "multipart/signed", in_source: "yes", where: "§3.5.3; defined in RFC 1847"}
+  - {name: "application/pkcs7-signature", in_source: "yes", where: "§3.5.3.1, §5.2"}
+  - {name: "application/octet-stream", in_source: "yes", where: "§3.2.1, §3.10"}
+  - {name: "application/pkcs10", in_source: "historic", where: "§3.9, S/MIME v2 only"}
+  - {name: "Certificate", in_source: "yes", where: "§1.2"}
+  - {name: "CRL", in_source: "yes", where: "§3.8 (Certificate Revocation Lists (CRLs))"}
+  - {name: "list of capabilities", in_source: "yes", where: "§2.7.1; a stored local structure, contents only partly given"}
+  - {name: "preference data", in_source: "yes", where: "§2.5.3; a stored local structure"}
+  - {name: "multipart/mixed", in_source: "yes", where: "§3.1.4, §6"}
+  - {name: "text/html", in_source: "yes", where: "§6"}
+  - {name: "registration request", in_source: "no", where: "§3.8 and §3.9 name it; no format is defined"}
+  - {name: "certificate request message", in_source: "no", where: "§4 names the message; no format is defined"}
+  - {name: "signed return message", in_source: "no", where: "§4 names it; it is any signed S/MIME message"}
+  - {name: "returned message", in_source: "no", where: "§3.1.3 return as undeliverable; a transport-level non-delivery, not S/MIME"}
 flows:
-  - name: TODO
-    locator: "§TODO"
+  # ------------------------------------------------------------------ preparation
+  - name: "mime-entity-preparation"
+    title: "Preparing the inside MIME entity for signing, enveloping or compressing"
+    locator: "§3.1, §3.1.1, §3.1.2, §3.1.3"
+    kind: "local-decision"
+    participants: ["sending-agent", "cms-processing"]
+    summary: >-
+      Invoked by every creation flow. The three steps are descriptive; any procedure with
+      the same result conforms. The transfer-encoding choice is its own decision flow.
     steps:
-      - from: TODO
-        to: TODO
-        message: TODO          # must name a message in messages.yaml
-        on_error: TODO
+      - n: "1"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "MIME entity"
+        action: "Prepare the MIME entity according to local conventions."
+        locator: "§3.1"
+        quotes:
+          - |-
+            Step 1.  The MIME entity is prepared according to local conventions.
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "canonical MIME entity"
+        action: >-
+          Convert the leaf parts to canonical form: for text, CRLF line endings and the
+          charset's canonical representation; for other types, per that media type's
+          standard. Applies to enveloping and compressing as well as signing.
+        locator: "§3.1, §3.1.1"
+        quotes:
+          - |-
+            Step 2.  The leaf parts of the MIME entity are converted to canonical form.
+          - |-
+            MIME entities MUST be canonicalized for enveloping and compressing as well as signing.
+        constrained_by:
+          - "rfc-8551#R-0085"
+          - "rfc-8551#R-0086"
+          - "rfc-8551#R-0087"
+          - "rfc-8551#R-0088"
+          - "rfc-8551#R-0089"
+          - "rfc-8551#R-0090"
+          - "rfc-8551#R-0091"
+        on_error: >-
+          A non-canonical entity is detected only later, by the receiver, as a signature
+          that does not verify. The sender is given no check to run.
+        on_error_basis: "inferred"
+        on_error_inferred: true
+      - n: "3"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "canonical MIME entity"
+        action: "Apply transfer encoding to the leaves; see the transfer-encoding-choice flow."
+        locator: "§3.1, §3.1.2, §3.1.3"
+        quotes:
+          - |-
+            Step 3.  Appropriate transfer encoding is applied to the leaves of the MIME entity.
+        constrained_by:
+          - "rfc-8551#R-0093"
+          - "rfc-8551#R-0094"
+          - "rfc-8551#R-0096"
+          - "rfc-8551#R-0097"
+          - "rfc-8551#R-0098"
+        invokes: "transfer-encoding-choice"
+        on_error: "See transfer-encoding-choice and multipart-signed-in-transit."
+        on_error_basis: "stated"
+      - n: "4"
+        from: "sending-agent"
+        to: "cms-processing"
+        message: "canonical MIME entity"
+        action: >-
+          Hand the entity, with certificates and algorithm identifiers, to CMS processing.
+          The inner content is identified as id-data.
+        locator: "§3, §2.4.1"
+        quotes:
+          - |-
+            Sending agents MUST use the id-data content type identifier to identify the "inner" MIME message content.
+        constrained_by:
+          - "rfc-8551#R-0020"
+          - "rfc-8551#R-0099"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+  - name: "transfer-encoding-choice"
+    title: "Choosing binary or 7-bit-safe transfer encoding for the secured entity"
+    locator: "§3.1.2, §3.1.3, §3.2"
+    kind: "local-decision"
+    participants: ["sending-agent"]
+    summary: >-
+      Inner entities default to 7-bit-safe encoding so a trusted gateway can unwrap
+      them; binary inside is used only when every recipient is known to handle it. A
+      multipart/signed entity crossing a 7-bit transport must be 7-bit. The outer CMS
+      object's transfer encoding depends on the transport, base64 for SMTP in most cases.
+    steps:
+      - n: "1"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "id-cap-preferBinaryInside"
+        action: >-
+          Determine whether all intended recipients handle inner binary MIME objects: by
+          the id-cap-preferBinaryInside capability, prior agreement or other means.
+        locator: "§3.1.2"
+        quotes:
+          - |-
+            Implementations MAY determine that recipient implementations are capable of handling inner binary MIME entities by (1) interpreting the id-cap-preferBinaryInside SMIMECapabilities attribute, (2) prior agreement, or (3) other means.
+        constrained_by:
+          - "rfc-8551#R-0095"
+        on_error: "Capability unknown for any recipient: treat as not capable (step 3)."
+        on_error_basis: "stated"
+      - n: "2"
+        condition: "all intended recipients are capable"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "canonical MIME entity"
+        action: "Use binary encoding for the inner (all but the outermost) entities."
+        locator: "§3.1.2"
+        quotes:
+          - |-
+            In the case where S/MIME implementations can determine that all intended recipients are capable of handling inner (all but the outermost) binary MIME objects, implementations SHOULD use binary encoding as opposed to a 7-bit-safe transfer encoding for the inner entities.
+        constrained_by:
+          - "rfc-8551#R-0094"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "3"
+        condition: "one or more recipients unable, or unknown for any"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "canonical MIME entity"
+        action: "Use the §3.1.3 transfer encoding (7-bit) for all secured entities."
+        locator: "§3.1.2"
+        quotes:
+          - |-
+            If one or more intended recipients are unable to handle inner binary MIME objects or if this capability is unknown for any of the intended recipients, S/MIME implementations SHOULD use transfer encoding as described in Section 3.1.3 for all MIME entities they secure.
+        constrained_by:
+          - "rfc-8551#R-0093"
+          - "rfc-8551#R-0096"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "4"
+        condition: "the entity is multipart/signed and may cross a 7-bit transport"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "multipart/signed"
+        action: "Apply transfer encoding so the whole entity is 7-bit text (quoted-printable or base64)."
+        locator: "§3.1.3"
+        quotes:
+          - |-
+            If a multipart/signed entity is ever to be transmitted over the standard Internet SMTP infrastructure or other transport that is constrained to 7-bit text, it MUST have transfer encoding applied so that it is represented as 7-bit text.
+          - |-
+            Entities such as 8-bit text and binary data can be encoded with quoted-printable or base64 transfer encoding.
+        constrained_by:
+          - "rfc-8551#R-0097"
+        on_error: "See multipart-signed-in-transit: an MTA that meets 8-bit data defeats the signature."
+        on_error_basis: "stated"
+      - n: "5"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "application/pkcs7-mime"
+        action: >-
+          Choose the outer CMS object's transfer encoding by transport: base64 in most
+          cases, in particular for SMTP.
+        locator: "§3.2"
+        quotes:
+          - |-
+            Since CMS content types are binary data, in most cases base64 transfer encoding is appropriate -- in particular, when used with SMTP transport.
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+  # ------------------------------------------------------------------ algorithm decisions
+  - name: "encryption-algorithm-selection"
+    title: "Deciding which content-encryption algorithm to use (weak-encryption decision, Rule 1, Rule 2)"
+    locator: "§2.7, §2.7.1, §2.7.1.1, §2.7.1.2, §2.7.2"
+    kind: "local-decision"
+    participants: ["sending-agent", "user"]
+    summary: >-
+      Run before every encrypted message. The weak-encryption decision comes first and
+      overrides everything else; then Rule 1 (known capabilities) and Rule 2 (unknown
+      capabilities and unknown version), in that order. Inputs are the stored list of
+      capabilities and out-of-band information.
+    steps:
+      - n: "1"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "list of capabilities"
+        action: >-
+          Gather the inputs: capabilities lists from messages received from the recipient,
+          and out-of-band information (private agreements, user preferences, legal
+          restrictions).
+        locator: "§2.7.1"
+        quotes:
+          - |-
+            The decision process involves using information garnered from the capabilities lists included in messages received from the recipient, as well as out-of-band information such as private agreements, user preferences, legal restrictions, and so on.
+        on_error: "No list held: Rule 1 does not apply (step 4)."
+        on_error_basis: "stated"
+      - n: "2"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "MIME entity"
+        action: >-
+          Decide whether weak encryption is acceptable for this data. If not, a weak
+          algorithm is excluded whatever the rules below would choose.
+        locator: "§2.7.1"
+        quotes:
+          - |-
+            Before sending a message, the sending agent MUST decide whether it is willing to use weak encryption for the particular data in the message.  If the sending agent decides that weak encryption is unacceptable for this data, then the sending agent MUST NOT use a weak algorithm.  The decision to use or not use weak encryption overrides any other decision in this section about which encryption algorithm to use.
+        constrained_by:
+          - "rfc-8551#R-0073"
+          - "rfc-8551#R-0074"
+        on_error: >-
+          If the only algorithm the recipient can process is weak and weak is
+          unacceptable, the source gives no outcome; not sending, or sending what the
+          recipient may not decrypt (step 3), are the remaining options.
+        on_error_basis: "inferred"
+        on_error_inferred: true
+      - n: "3"
+        condition: "the sending agent is controlled by a human"
+        from: "sending-agent"
+        to: "user"
+        message: "MIME entity"
+        action: >-
+          Let the human judge the risk of a weaker algorithm before sending, and possibly
+          choose a stronger one the recipient may not be able to process.
+        locator: "§2.7.2"
+        quotes:
+          - |-
+            A sending agent that is controlled by a human SHOULD allow a human sender to determine the risks of sending data using a weaker encryption algorithm before sending the data, and possibly allow the human to use a stronger encryption algorithm such as AES GCM or AES CBC even if there is a possibility that the recipient will not be able to process that algorithm.
+        constrained_by:
+          - "rfc-8551#R-0081"
+        on_error: "Recipient cannot process the stronger algorithm: the message is unreadable to it; no recovery is defined."
+        on_error_basis: "inferred"
+        on_error_inferred: true
+      - n: "4"
+        condition: "Rule 1: capabilities received from the recipient"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "SMIMECapabilities"
+        action: >-
+          Select the first capability in the recipient's list that the sending agent knows
+          how to encrypt with.
+        locator: "§2.7.1, §2.7.1.1"
+        quotes:
+          - |-
+            If the sending agent has received a set of capabilities from the recipient for the message the agent is about to encrypt, then the sending agent SHOULD use that information by selecting the first capability in the list (that is, the capability most preferred by the intended recipient) that the sending agent knows how to encrypt.
+          - |-
+            The sending agent SHOULD use one of the capabilities in the list if the agent reasonably expects the recipient to be able to decrypt the message.
+        constrained_by:
+          - "rfc-8551#R-0075"
+          - "rfc-8551#R-0076"
+          - "rfc-8551#R-0077"
+          - "rfc-8551#R-0078"
+        on_error: >-
+          No listed capability the sender can encrypt with: unspecified. The list is
+          partial by definition (§2.5.2), so the sender may fall through to Rule 2's
+          defaults; the source does not say so.
+        on_error_basis: "inferred"
+        on_error_inferred: true
+      - n: "5"
+        condition: "Rule 2: no knowledge of the recipient's capabilities AND no knowledge of its S/MIME version"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "EnvelopedData"
+        action: "Use AES-256 GCM; if the agent chooses not to, use AES-128 CBC."
+        locator: "§2.7.1.2"
+        quotes:
+          - |-
+            If the following two conditions are met, the sending agent SHOULD use AES-256 GCM, as AES-256 GCM is a stronger algorithm and is required by S/MIME v4.0:
+          - |-
+            If the sending agent chooses not to use AES-256 GCM in this step, given the presumption is that a client implementing AES-GCM would do both AES-256 and AES-128, it SHOULD use AES-128 CBC.
+        constrained_by:
+          - "rfc-8551#R-0079"
+          - "rfc-8551#R-0080"
+          - "rfc-8551#R-0064"
+          - "rfc-8551#R-0065"
+        inferred: true
+        inferred_reason: >-
+          The message is AuthEnvelopedData when AES-256 GCM is chosen and EnvelopedData
+          when AES-128 CBC is chosen: §3.3 says the enveloped-only structure does not
+          support authenticated algorithms. The rule itself names only the algorithm.
+        on_error: >-
+          Neither rule applies (version known, capabilities unknown): unspecified. See
+          source_defects_and_tensions rule-gap-known-version.
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "EnvelopedData"
+        action: >-
+          When ECDH ephemeral-static is the key-encryption algorithm, use a key wrap whose
+          underlying function and key size match the content-encryption algorithm.
+        locator: "§2.3"
+        quotes:
+          - |-
+            When ECDH ephemeral-static is used, a key wrap algorithm is also specified in the KeyEncryptionAlgorithmIdentifier [RFC5652].
+        constrained_by:
+          - "rfc-8551#R-0016"
+          - "rfc-8551#R-0017"
+        on_error: >-
+          Mismatch seen by a recipient: it MAY enforce the rule and MUST use the weaker of
+          the two in strength computations. What enforcing means is not stated.
+        on_error_basis: "stated"
+        on_error_constrained_by:
+          - "rfc-8551#R-0018"
+          - "rfc-8551#R-0019"
+  - name: "multiple-recipients"
+    title: "Encrypting to a group whose capabilities do not overlap"
+    locator: "§2.7.3, §6"
+    kind: "local-decision"
+    participants: ["sending-agent", "transport", "attacker"]
+    summary: >-
+      Non-overlapping capabilities force more than one message. Sending the same content
+      under a strong and a weak algorithm hands the strong one to anyone who breaks the
+      weak one.
+    steps:
+      - n: "1"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "list of capabilities"
+        action: "Run encryption-algorithm-selection for each recipient and compare."
+        locator: "§2.7.3"
+        invokes: "encryption-algorithm-selection"
+        inferred: true
+        inferred_reason: "The source states the consequence of non-overlap; running the selection per recipient is how the overlap is found."
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "2"
+        condition: "capabilities do not overlap"
+        from: "sending-agent"
+        to: "transport"
+        message: "application/pkcs7-mime; smime-type=enveloped-data"
+        action: "Send more than one message, each encrypted for a subset of recipients."
+        locator: "§2.7.3"
+        quotes:
+          - |-
+            If a sending agent is composing an encrypted message to a group of recipients where the encryption capabilities of some of the recipients do not overlap, the sending agent is forced to send more than one message.
+        on_error: >-
+          A copy under weaker cryptography exposes the strong copy; the sender SHOULD NOT
+          send one.
+        on_error_basis: "stated"
+        on_error_constrained_by:
+          - "rfc-8551#R-0146"
+      - n: "3"
+        from: "attacker"
+        to: "transport"
+        message: "application/pkcs7-mime; smime-type=enveloped-data"
+        action: "Observe both copies and recover the strong copy's content by decrypting the weak one."
+        locator: "§2.7.3, §6"
+        quotes:
+          - |-
+            In other words, a sender SHOULD NOT send a copy of a message using weaker cryptography than they would use for the original of the message.
+        constrained_by:
+          - "rfc-8551#R-0146"
+        on_error: "Not a failure the protocol detects."
+        on_error_basis: "stated"
+  - name: "recipient-key-management-certificate-selection"
+    title: "Selecting the recipient's key-management certificate for a future EnvelopedData"
+    locator: "§2.5.3, §2.5.3.1, §6"
+    kind: "local-decision"
+    participants: ["sending-agent"]
+    summary: >-
+      Uses the SMIMEEncryptionKeyPreference stored from the recipient's earlier signed
+      messages, else a certificate with the signer's subject name usable for key
+      management, else any other method.
+    steps:
+      - n: "1"
+        condition: "an SMIMEEncryptionKeyPreference attribute was found in a SignedData received from the recipient"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "SMIMEEncryptionKeyPreference"
+        action: "Use the certificate it identifies."
+        locator: "§2.5.3.1"
+        quotes:
+          - |-
+            If an SMIMEEncryptionKeyPreference attribute is found in a SignedData object received from the desired recipient, this identifies the X.509 certificate that SHOULD be used as the X.509 key management certificate for the recipient.
+        constrained_by:
+          - "rfc-8551#R-0058"
+          - "rfc-8551#R-0059"
+          - "rfc-8551#R-0057"
+        on_error: >-
+          It is only a preference; any valid certificate may be used in replying.
+        on_error_basis: "stated"
+        on_error_quotes:
+          - |-
+            This, however, represents only a preference, and the receiving agent can use any certificate in replying to the sender that is valid.
+      - n: "2"
+        condition: "no such attribute found"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "Certificate"
+        action: >-
+          Search the certificates for one with the same subject name as the signer that
+          can be used for key management.
+        locator: "§2.5.3.1"
+        quotes:
+          - |-
+            If an SMIMEEncryptionKeyPreference attribute is not found in a SignedData object received from the desired recipient, the set of X.509 certificates SHOULD be searched for an X.509 certificate with the same subject name as the signer of an X.509 certificate that can be used for key management.
+        constrained_by:
+          - "rfc-8551#R-0060"
+          - "rfc-8551#R-0145"
+        on_error: "Not found: step 3."
+        on_error_basis: "stated"
+      - n: "3"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "Certificate"
+        action: "Or use some other method of determining the user's key management key."
+        locator: "§2.5.3.1, §4"
+        quotes:
+          - |-
+            Or, use some other method of determining the user's key management key.
+        constrained_by:
+          - "rfc-8551#R-0125"
+        invokes: "certificate-request-by-signed-return"
+        on_error: >-
+          No key management certificate found: encryption cannot be done for that
+          recipient. Several found: an arbitrary choice is allowed.
+        on_error_basis: "stated"
+        on_error_quotes:
+          - |-
+            If an X.509 key management certificate is not found, then encryption cannot be done with the signer of the message.  If multiple X.509 key management certificates are found, the S/MIME agent can make an arbitrary choice between them.
+  # ------------------------------------------------------------------ creation and delivery
+  - name: "enveloped-only"
+    title: "Creating, delivering and opening an enveloped-only message"
+    locator: "§3.3, §2.4.3, §2.7, §4.4, §4.5, §6"
+    kind: "creation-and-delivery"
+    participants: ["sending-agent", "cms-processing", "transport", "attacker", "receiving-agent", "mime-user-agent"]
+    summary: >-
+      EnvelopedData gives confidentiality only: no data integrity, so ciphertext can be
+      replaced and the result still processed. CBC malleability (Efail) is the concrete
+      attack.
+    steps:
+      - n: "1"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "Certificate"
+        action: "Obtain a public key for each recipient; pick the algorithm."
+        locator: "§2.4.3, §2.5.3.1, §2.7.1"
+        quotes:
+          - |-
+            In order to distribute the symmetric key, a sender needs to have access to a public key for each intended message recipient to use this service.
+        invokes: "recipient-key-management-certificate-selection, encryption-algorithm-selection"
+        on_error: "No key management certificate: encryption cannot be done for that recipient."
+        on_error_basis: "stated"
+      - n: "2"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "Certificate"
+        action: "Check the recipient's RSA or RSA-OAEP key size against the §4.4 table."
+        locator: "§4.4"
+        invokes: "rsa-key-size-decision"
+        constrained_by:
+          - "rfc-8551#R-0136"
+          - "rfc-8551#R-0137"
+          - "rfc-8551#R-0138"
+        on_error: "key size <= 2047: SHOULD NOT establish keys with it."
+        on_error_basis: "stated"
+      - n: "3"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "canonical MIME entity"
+        action: "Prepare the MIME entity according to §3.1."
+        locator: "§3.3"
+        quotes:
+          - |-
+            Step 1.  The MIME entity to be enveloped is prepared according to Section 3.1.
+        invokes: "mime-entity-preparation"
+        on_error: "See mime-entity-preparation."
+        on_error_basis: "stated"
+      - n: "4"
+        from: "sending-agent"
+        to: "cms-processing"
+        message: "EnvelopedData"
+        action: >-
+          Process into EnvelopedData, encrypting a copy of the CEK for each recipient and
+          one for the originator; content type id-data, encrypted content in
+          encryptedContent.
+        locator: "§3.3, §2.4.1"
+        quotes:
+          - |-
+            Step 2.  The MIME entity and other required data are processed into a CMS object of type EnvelopedData.  In addition to encrypting a copy of the content-encryption key (CEK) for each recipient, a copy of the CEK SHOULD be encrypted for the originator and included in the EnvelopedData (see [RFC5652], Section 6).
+        constrained_by:
+          - "rfc-8551#R-0112"
+          - "rfc-8551#R-0023"
+          - "rfc-8551#R-0024"
+          - "rfc-8551#R-0064"
+          - "rfc-8551#R-0065"
+          - "rfc-8551#R-0066"
+          - "rfc-8551#R-0012"
+          - "rfc-8551#R-0013"
+          - "rfc-8551#R-0014"
+          - "rfc-8551#R-0015"
+        on_error: "unspecified (CMS processing failure is not addressed)"
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "cms-processing"
+        to: "sending-agent"
+        message: "ContentInfo"
+        action: "Wrap the EnvelopedData in a ContentInfo."
+        locator: "§3.3"
+        quotes:
+          - |-
+            Step 3.  The EnvelopedData object is wrapped in a CMS ContentInfo object.
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "application/pkcs7-mime; smime-type=enveloped-data"
+        action: >-
+          Insert the ContentInfo into an application/pkcs7-mime entity with smime-type
+          enveloped-data, name and filename smime.p7m, base64 for SMTP.
+        locator: "§3.3, §3.2, §3.2.1, §3.2.2"
+        quotes:
+          - |-
+            Step 4.  The ContentInfo object is inserted into an application/pkcs7-mime MIME entity.
+          - |-
+            The smime-type parameter for enveloped-only messages is "enveloped-data".  The file extension for this type of message is ".p7m".
+        constrained_by:
+          - "rfc-8551#R-0100"
+          - "rfc-8551#R-0101"
+          - "rfc-8551#R-0102"
+          - "rfc-8551#R-0103"
+          - "rfc-8551#R-0104"
+          - "rfc-8551#R-0105"
+          - "rfc-8551#R-0106"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "7"
+        from: "sending-agent"
+        to: "transport"
+        message: "application/pkcs7-mime; smime-type=enveloped-data"
+        action: "Hand the entity to the transport."
+        locator: "§1"
+        inferred: true
+        inferred_reason: "The source defines the entity and names transports (§1); it defines no submission step."
+        on_error: "Transport failure is outside the source."
+        on_error_basis: "unspecified"
+      - n: "8"
+        from: "attacker"
+        to: "transport"
+        message: "EnvelopedData"
+        action: >-
+          Replace or modify ciphertext. With no data integrity the receiver still
+          processes the result; with CBC and partly known plaintext, chosen plaintext
+          blocks can be created.
+        locator: "§3.3, §6"
+        quotes:
+          - |-
+            Thus, it is possible to replace ciphertext in such a way that the processed message will still be valid, but the meaning can be altered.
+          - |-
+            Modification of the ciphertext in EnvelopedData can go undetected if authentication is not also used, which is the case when sending EnvelopedData without wrapping it in SignedData or enclosing SignedData within it.
+        on_error: >-
+          Undetectable at this layer. Mitigation per §6: AEAD (authenticated-enveloped-only)
+          or signing (multiple-operations).
+        on_error_basis: "stated"
+      - n: "9"
+        from: "transport"
+        to: "receiving-agent"
+        message: "application/pkcs7-mime; smime-type=enveloped-data"
+        action: "Receive and identify the entity as S/MIME."
+        locator: "§3.10"
+        invokes: "smime-identification"
+        on_error: "See smime-identification."
+        on_error_basis: "stated"
+      - n: "10"
+        from: "receiving-agent"
+        to: "cms-processing"
+        message: "EnvelopedData"
+        action: >-
+          Decrypt: recover the CEK with the agent's private key, checking the RSA key size
+          against the §4.5 table, then decrypt the content.
+        locator: "§4.5, §2.7, §2.3"
+        invokes: "rsa-key-size-decision"
+        constrained_by:
+          - "rfc-8551#R-0139"
+          - "rfc-8551#R-0140"
+          - "rfc-8551#R-0141"
+          - "rfc-8551#R-0064"
+          - "rfc-8551#R-0065"
+        on_error: >-
+          Decryption failure: the source defines no behaviour and no error signal. Its only
+          related guidance is §6's pointer to the Million Message Attack (RFC 3218) and,
+          for CBC, that decrypted content not be acted on before the integrity check
+          finishes. It gives no timing or uniform-error guidance itself.
+        on_error_basis: "unspecified"
+        on_error_quotes:
+          - |-
+            The Million Message Attack described in RFC 3218 [RFC3218].
+      - n: "11"
+        from: "receiving-agent"
+        to: "mime-user-agent"
+        message: "MIME entity"
+        action: "Pass the resulting MIME entity on for presentation."
+        locator: "§3.1, §6"
+        invokes: "receive-processing-and-presentation"
+        quotes:
+          - |-
+            When an S/MIME message is received, the security services on the message are processed, and the result is the MIME entity.
+        on_error: "See receive-processing-and-presentation."
+        on_error_basis: "stated"
+  - name: "authenticated-enveloped-only"
+    title: "Creating, delivering and opening an authenticated enveloped-only message"
+    locator: "§3.4, §2.4.4, §2.7, §6"
+    kind: "creation-and-delivery"
+    participants: ["sending-agent", "cms-processing", "transport", "attacker", "receiving-agent", "mime-user-agent"]
+    summary: >-
+      AuthEnvelopedData with an authenticated algorithm (AES-GCM, ChaCha20-Poly1305) gives
+      confidentiality and integrity, not origin authentication: any recipient can replace
+      the content without detection.
+    steps:
+      - n: "1"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "Certificate"
+        action: "Obtain a public key for each recipient; pick an authenticated algorithm."
+        locator: "§2.4.4, §2.7"
+        quotes:
+          - |-
+            This content type is used to apply data confidentiality and message integrity to a message.  This content type does not provide authentication or non-repudiation.
+        invokes: "recipient-key-management-certificate-selection, encryption-algorithm-selection"
+        constrained_by:
+          - "rfc-8551#R-0064"
+          - "rfc-8551#R-0066"
+        on_error: "No key management certificate: encryption cannot be done for that recipient."
+        on_error_basis: "stated"
+      - n: "2"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "canonical MIME entity"
+        action: "Prepare the MIME entity according to §3.1."
+        locator: "§3.4"
+        quotes:
+          - |-
+            Step 1.  The MIME entity to be enveloped is prepared according to Section 3.1.
+        invokes: "mime-entity-preparation"
+        on_error: "See mime-entity-preparation."
+        on_error_basis: "stated"
+      - n: "3"
+        from: "sending-agent"
+        to: "cms-processing"
+        message: "AuthEnvelopedData"
+        action: "Process into AuthEnvelopedData, a CEK copy for each recipient and one for the originator."
+        locator: "§3.4"
+        quotes:
+          - |-
+            Step 2.  The MIME entity and other required data are processed into a CMS object of type AuthEnvelopedData.  In addition to encrypting a copy of the CEK for each recipient, a copy of the CEK SHOULD be encrypted for the originator and included in the AuthEnvelopedData (see [RFC5083]).
+        constrained_by:
+          - "rfc-8551#R-0113"
+          - "rfc-8551#R-0016"
+          - "rfc-8551#R-0017"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "cms-processing"
+        to: "sending-agent"
+        message: "ContentInfo"
+        action: "Wrap the AuthEnvelopedData in a ContentInfo."
+        locator: "§3.4"
+        quotes:
+          - |-
+            Step 3.  The AuthEnvelopedData object is wrapped in a CMS ContentInfo object.
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "sending-agent"
+        to: "transport"
+        message: "application/pkcs7-mime; smime-type=authEnveloped-data"
+        action: "Insert into application/pkcs7-mime, smime-type authEnveloped-data, extension .p7m; send."
+        locator: "§3.4, §3.2.1, §5.3"
+        quotes:
+          - |-
+            The smime-type parameter for authenticated enveloped-only messages is "authEnveloped-data".  The file extension for this type of message is ".p7m".
+        constrained_by:
+          - "rfc-8551#R-0101"
+          - "rfc-8551#R-0102"
+          - "rfc-8551#R-0103"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "attacker"
+        to: "transport"
+        message: "AuthEnvelopedData"
+        action: >-
+          Replace ciphertext. Substantially harder than for enveloped-only; but any
+          recipient for whom the message is encrypted can replace it undetected, and with
+          more than one recipient one can forge to another by stripping itself.
+        locator: "§3.4, §6"
+        quotes:
+          - |-
+            Any recipient for whom the message is encrypted can replace it without detection.
+          - |-
+            Having more than one recipient would allow for the second recipient to create a message that the first recipient would believe is from the sender by stripping the second recipient from the message.
+        on_error: "Undetectable by design; origin needs SignedData (multiple-operations)."
+        on_error_basis: "stated"
+      - n: "7"
+        from: "attacker"
+        to: "transport"
+        message: "AuthEnvelopedData"
+        action: "Infer information from the ciphertext length, which equals the plaintext length."
+        locator: "§6"
+        quotes:
+          - |-
+            Applications for which this is a concern need to provide some type of padding so that the length of the message does not provide this information.
+        on_error: "Not detectable; padding is left to applications."
+        on_error_basis: "stated"
+      - n: "8"
+        from: "transport"
+        to: "receiving-agent"
+        message: "application/pkcs7-mime; smime-type=authEnveloped-data"
+        action: "Receive, identify, decrypt and verify the authentication tag."
+        locator: "§3.10, §6"
+        invokes: "smime-identification"
+        inferred: true
+        inferred_reason: "The tag check is the AEAD algorithm's, defined in RFC 5083 and RFC 5084; this source states only that it provides integrity."
+        on_error: >-
+          Integrity check fails: unspecified here. §6 recommends that decrypted content
+          not be acted on before the integrity check finishes.
+        on_error_basis: "unspecified"
+        on_error_quotes:
+          - |-
+            It is therefore recommended that mail systems migrate to using AES-GCM as quickly as possible and that the decrypted content not be acted on prior to finishing the integrity check.
+      - n: "9"
+        from: "receiving-agent"
+        to: "mime-user-agent"
+        message: "MIME entity"
+        action: >-
+          Present the content without asserting sender authentication; the §6
+          preconditions for that are not met by current S/MIME key agreement.
+        locator: "§6"
+        quotes:
+          - |-
+            Many people assume that the use of an authenticated encryption algorithm is all that is needed for the sender of the message to be authenticated.  In almost all cases, this is not a correct statement.
+          - |-
+            Currently, all S/MIME key agreement methods derive a key-encryption key (KEK) and wrap a CEK.
+        invokes: "receive-processing-and-presentation"
+        on_error: "See receive-processing-and-presentation."
+        on_error_basis: "stated"
+  - name: "signed-only-pkcs7-mime"
+    title: "Signing with application/pkcs7-mime and SignedData (opaque signing)"
+    locator: "§3.5, §3.5.1, §3.5.2, §2.4.1, §2.4.2, §2.5, §4.2"
+    kind: "creation-and-delivery"
+    participants: ["sending-agent", "user", "cms-processing", "transport", "gateway", "receiving-agent", "mime-user-agent"]
+    summary: >-
+      The content travels inside eContent, so benign intermediaries cannot break the
+      signature, but a receiver without S/MIME cannot view it.
+    steps:
+      - n: "1"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "Certificate"
+        action: >-
+          Hold a signing certificate; check the RSA or RSASSA-PSS key size against §4.2.
+        locator: "§3.9, §4.2"
+        quotes:
+          - |-
+            A sending agent that signs messages MUST have a certificate for the signature so that a receiving agent can verify the signature.
+        constrained_by:
+          - "rfc-8551#R-0124"
+          - "rfc-8551#R-0130"
+          - "rfc-8551#R-0131"
+          - "rfc-8551#R-0132"
+          - "rfc-8551#R-0009"
+          - "rfc-8551#R-0010"
+          - "rfc-8551#R-0011"
+        invokes: "registration-request, rsa-key-size-decision"
+        on_error: "No certificate: the agent cannot sign; obtaining one is registration-request."
+        on_error_basis: "inferred"
+        on_error_inferred: true
+      - n: "2"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "canonical MIME entity"
+        action: "Prepare the MIME entity according to §3.1."
+        locator: "§3.5.2"
+        quotes:
+          - |-
+            Step 1.  The MIME entity is prepared according to Section 3.1.
+        invokes: "mime-entity-preparation"
+        on_error: "See mime-entity-preparation."
+        on_error_basis: "stated"
+      - n: "3"
+        from: "sending-agent"
+        to: "user"
+        message: "SignerInfo"
+        action: "An interactive agent displays any signed attributes not listed in §2.5."
+        locator: "§2.5"
+        quotes:
+          - |-
+            Interactive sending agents that include signed attributes that are not listed here SHOULD display those attributes to the user, so that the user is aware of all of the data being signed.
+        constrained_by:
+          - "rfc-8551#R-0031"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "sending-agent"
+        to: "cms-processing"
+        message: "SignedData"
+        action: >-
+          Process into SignedData: eContentType id-data, the MIME entity in eContent; one
+          SignerInfo per signer with one each of signingTime, SMIMECapabilities,
+          SMIMEEncryptionKeyPreference, message-digest and content type, and one
+          signingCertificate or signingCertificateV2; the referenced encryption
+          certificate in certificates.
+        locator: "§3.5.2, §2.4.1, §2.4.2, §2.5, §2.5.1, §2.5.2, §2.5.3, §2.6"
+        quotes:
+          - |-
+            Step 2.  The MIME entity and other required data are processed into a CMS object of type SignedData.
+          - |-
+            Sending agents SHOULD generate one instance of each of the following signed attributes in each S/MIME message:
+        constrained_by:
+          - "rfc-8551#R-0021"
+          - "rfc-8551#R-0022"
+          - "rfc-8551#R-0025"
+          - "rfc-8551#R-0027"
+          - "rfc-8551#R-0029"
+          - "rfc-8551#R-0032"
+          - "rfc-8551#R-0033"
+          - "rfc-8551#R-0036"
+          - "rfc-8551#R-0037"
+          - "rfc-8551#R-0038"
+          - "rfc-8551#R-0040"
+          - "rfc-8551#R-0048"
+          - "rfc-8551#R-0049"
+          - "rfc-8551#R-0050"
+          - "rfc-8551#R-0052"
+          - "rfc-8551#R-0053"
+          - "rfc-8551#R-0054"
+          - "rfc-8551#R-0061"
+          - "rfc-8551#R-0002"
+          - "rfc-8551#R-0003"
+          - "rfc-8551#R-0004"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "cms-processing"
+        to: "sending-agent"
+        message: "ContentInfo"
+        action: "Wrap the SignedData in a ContentInfo."
+        locator: "§3.5.2"
+        quotes:
+          - |-
+            Step 3.  The SignedData object is wrapped in a CMS ContentInfo object.
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "sending-agent"
+        to: "transport"
+        message: "application/pkcs7-mime; smime-type=signed-data"
+        action: "Insert into application/pkcs7-mime, smime-type signed-data, .p7m; send."
+        locator: "§3.5.2, §3.2.1"
+        quotes:
+          - |-
+            The smime-type parameter for messages using application/pkcs7-mime with SignedData is "signed-data".  The file extension for this type of message is ".p7m".
+        constrained_by:
+          - "rfc-8551#R-0101"
+          - "rfc-8551#R-0102"
+          - "rfc-8551#R-0103"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "7"
+        from: "transport"
+        to: "gateway"
+        message: "application/pkcs7-mime; smime-type=signed-data"
+        action: >-
+          A benign intermediary may wrap lines or change transfer encoding of the outer
+          entity; the signed content inside eContent is protected from this.
+        locator: "§3.5.1"
+        quotes:
+          - |-
+            However, the SignedData format protects the message content from being changed by benign intermediate agents.
+        on_error: "No damage to the signature at this layer."
+        on_error_basis: "stated"
+      - n: "8"
+        from: "gateway"
+        to: "receiving-agent"
+        message: "application/pkcs7-mime; smime-type=signed-data"
+        action: "Deliver; the receiver identifies the entity as S/MIME."
+        locator: "§3.10"
+        invokes: "smime-identification"
+        on_error: >-
+          A receiver without S/MIME facilities cannot view the message at all.
+        on_error_basis: "stated"
+        on_error_quotes:
+          - |-
+            Messages signed using the SignedData format cannot be viewed by a recipient unless they have S/MIME facilities.
+      - n: "9"
+        from: "receiving-agent"
+        to: "cms-processing"
+        message: "SignedData"
+        action: "Verify the signature(s) and process the signed attributes."
+        locator: "§3.5, §2.5, §2.6, §4.3"
+        quotes:
+          - |-
+            In general, the multipart/signed form is preferred for sending, and receiving agents MUST be able to handle both.
+        constrained_by:
+          - "rfc-8551#R-0114"
+        invokes: "signature-verification"
+        on_error: "See signature-verification."
+        on_error_basis: "stated"
+      - n: "10"
+        from: "receiving-agent"
+        to: "mime-user-agent"
+        message: "MIME entity"
+        action: "Pass the eContent MIME entity on for presentation."
+        locator: "§3.1"
+        invokes: "receive-processing-and-presentation"
+        on_error: "See receive-processing-and-presentation."
+        on_error_basis: "stated"
+  - name: "signed-only-multipart-signed"
+    title: "Signing with multipart/signed and application/pkcs7-signature (clear signing)"
+    locator: "§3.5, §3.5.1, §3.5.3, §3.5.3.1, §3.5.3.2, §3.1.3"
+    kind: "creation-and-delivery"
+    participants: ["sending-agent", "cms-processing", "transport", "message-transfer-agent", "gateway", "receiving-agent", "mime-user-agent"]
+    summary: >-
+      The preferred sending form. The signed entity travels in the clear as the first
+      part, viewable by anyone; the detached SignedData travels as the second part. Any
+      byte change to the first part in transit breaks the signature.
+    steps:
+      - n: "1"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "canonical MIME entity"
+        action: "Prepare the entity per §3.1 with special care for clear signing: 7-bit transfer encoding."
+        locator: "§3.5.3.2, §3.1.3"
+        quotes:
+          - |-
+            Step 1.  The MIME entity to be signed is prepared according to Section 3.1, taking special care for clear-signing.
+        constrained_by:
+          - "rfc-8551#R-0097"
+          - "rfc-8551#R-0098"
+        invokes: "mime-entity-preparation, transfer-encoding-choice"
+        on_error: "See multipart-signed-in-transit for what an 8-bit first part meets."
+        on_error_basis: "stated"
+      - n: "2"
+        from: "sending-agent"
+        to: "cms-processing"
+        message: "SignedData"
+        action: "Obtain a SignedData with encapContentInfo eContent absent (detached signature)."
+        locator: "§3.5.3.2, §3.5.3.1, §2.4.1"
+        quotes:
+          - |-
+            Step 2.  The MIME entity is presented to CMS processing in order to obtain an object of type SignedData in which the encapContentInfo eContent field is absent.
+        constrained_by:
+          - "rfc-8551#R-0115"
+          - "rfc-8551#R-0022"
+          - "rfc-8551#R-0027"
+          - "rfc-8551#R-0029"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "multipart/signed"
+        action: "Insert the MIME entity, unaltered beyond §3.1, as the first part."
+        locator: "§3.5.3.2"
+        quotes:
+          - |-
+            Step 3.  The MIME entity is inserted into the first part of a multipart/signed message with no processing other than that described in Section 3.1.
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "application/pkcs7-signature"
+        action: "Transfer-encode the detached SignedData into an application/pkcs7-signature entity (.p7s)."
+        locator: "§3.5.3.2, §3.5.3.1"
+        quotes:
+          - |-
+            Step 4.  Transfer encoding is applied to the "detached signature" CMS SignedData object, and it is inserted into a MIME entity of type application/pkcs7-signature.
+          - |-
+            The file extension for signed-only messages using application/pkcs7-signature is ".p7s".
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "multipart/signed"
+        action: >-
+          Insert it as the second part; set protocol="application/pkcs7-signature" (quoted)
+          and micalg to the digest algorithm name(s), comma-separated.
+        locator: "§3.5.3.2"
+        quotes:
+          - |-
+            Step 5.  The MIME entity of the application/pkcs7-signature is inserted into the second part of the multipart/signed entity.
+          - |-
+            The multipart/signed Content-Type has two required parameters: the protocol parameter and the micalg parameter.
+        constrained_by:
+          - "rfc-8551#R-0116"
+          - "rfc-8551#R-0117"
+          - "rfc-8551#R-0118"
+          - "rfc-8551#R-0119"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "sending-agent"
+        to: "transport"
+        message: "multipart/signed"
+        action: "Send."
+        locator: "§3.1.3"
+        inferred: true
+        inferred_reason: "No submission step is defined; the transport is named in §3.1.3."
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "7"
+        from: "transport"
+        to: "message-transfer-agent"
+        message: "multipart/signed"
+        action: "Relay; an 8-bit-incapable MTA meeting 8-bit or binary data in the first part must return it."
+        locator: "§3.1.3"
+        invokes: "multipart-signed-in-transit"
+        on_error: "See multipart-signed-in-transit."
+        on_error_basis: "stated"
+      - n: "8"
+        from: "message-transfer-agent"
+        to: "gateway"
+        message: "multipart/signed"
+        action: >-
+          A gateway may translate the message; it stays viewable, but line wrapping or a
+          transfer-encoding change breaks the signature.
+        locator: "§3.5.1"
+        quotes:
+          - |-
+            They can also be viewed whether they are using a MIME-native user agent or they have messages translated by a gateway.
+          - |-
+            Such agents might do line wrapping or content-transfer encoding changes that would break the signature.
+        on_error: "The receiver's verification fails (step 10); the source defines no repair."
+        on_error_basis: "stated"
+      - n: "9"
+        from: "gateway"
+        to: "receiving-agent"
+        message: "multipart/signed"
+        action: >-
+          Deliver. A receiver without S/MIME views the first part as if unsigned. An S/MIME
+          receiver identifies the entity by protocol="application/pkcs7-signature".
+        locator: "§3.5.1, §3.10"
+        quotes:
+          - |-
+            Messages signed using the multipart/signed format can always be viewed by the receiver whether or not they have S/MIME software.
+        invokes: "smime-identification"
+        on_error: "See smime-identification."
+        on_error_basis: "stated"
+      - n: "10"
+        from: "receiving-agent"
+        to: "cms-processing"
+        message: "application/pkcs7-signature"
+        action: >-
+          Verify the detached signature over the first part's bytes, using micalg for
+          one-pass digesting.
+        locator: "§3.5.3.2, §3.5.3.3"
+        quotes:
+          - |-
+            The micalg parameter allows for one-pass processing when the signature is being verified.
+        constrained_by:
+          - "rfc-8551#R-0114"
+          - "rfc-8551#R-0120"
+        invokes: "signature-verification"
+        on_error: >-
+          Unrecognized micalg: recover gracefully (R-0120). Signature fails: see
+          signature-verification.
+        on_error_basis: "stated"
+        on_error_quotes:
+          - |-
+            Receiving agents SHOULD be able to recover gracefully from a micalg parameter value that they do not recognize.
+      - n: "11"
+        from: "receiving-agent"
+        to: "mime-user-agent"
+        message: "MIME entity"
+        action: "Pass the first part on for presentation."
+        locator: "§3.1"
+        invokes: "receive-processing-and-presentation"
+        on_error: "See receive-processing-and-presentation."
+        on_error_basis: "stated"
+  - name: "multipart-signed-in-transit"
+    title: "A clear-signed message meets an 8-bit-incapable transfer agent or a rewriting gateway"
+    locator: "§3.1.3, §3.1.4, §3.5.1, §3.2.1"
+    kind: "intermediary"
+    participants: ["sending-agent", "message-transfer-agent", "gateway", "receiving-agent"]
+    summary: >-
+      Every option open to an 8-bit-incapable MTA defeats a clear-signed message. RFC 1847
+      forbids changing the first part's transfer encoding, so a compliant MTA returns the
+      message as undeliverable. Other rewriting the source names: From-line quoting and
+      trailing-whitespace stripping (the §3.1.4 sample's own text) and media-type loss at
+      a non-S/MIME gateway.
+    steps:
+      - n: "1"
+        condition: "first part contains 8-bit or binary data and the MTA cannot transmit it"
+        from: "message-transfer-agent"
+        to: "message-transfer-agent"
+        message: "multipart/signed"
+        action: "Option 1: change the transfer encoding."
+        locator: "§3.1.3"
+        quotes:
+          - |-
+            The agent could change the transfer encoding; this would invalidate the signature.
+        on_error: "The signature no longer verifies at the receiver. RFC 1847 prohibits this option."
+        on_error_basis: "stated"
+      - n: "2"
+        from: "message-transfer-agent"
+        to: "receiving-agent"
+        message: "multipart/signed"
+        action: "Option 2: transmit anyway."
+        locator: "§3.1.3"
+        quotes:
+          - |-
+            The agent could transmit the data anyway, which would most likely result in the 8th bit being corrupted; this too would invalidate the signature.
+        on_error: "The signature no longer verifies at the receiver."
+        on_error_basis: "stated"
+      - n: "3"
+        from: "message-transfer-agent"
+        to: "sending-agent"
+        message: "returned message"
+        action: "Option 3, the only one open to an RFC 1847-compliant agent: return to the sender as undeliverable."
+        locator: "§3.1.3"
+        quotes:
+          - |-
+            If a compliant agent that cannot transmit 8-bit or binary data encountered a multipart/signed message with 8-bit or binary data in the first part, it would have to return the message to the sender as undeliverable.
+        on_error: >-
+          The only failure in the source that reaches the sender. Its format is the
+          transport's; S/MIME defines no retry.
+        on_error_basis: "stated"
+      - n: "4"
+        from: "gateway"
+        to: "receiving-agent"
+        message: "multipart/signed"
+        action: >-
+          A transport agent inserts > before lines beginning From, or a gateway strips
+          trailing whitespace; the §3.1.4 sample encodes both to survive.
+        locator: "§3.1.4"
+        quotes:
+          - |-
+            It's generally a good idea to encode lines that begin with From=20because some mail transport agents will insert a greater-than (>) sign, thus invalidating the signature.
+        inferred: true
+        inferred_reason: "Stated only inside the text of a sample message the source says is not an S/MIME message; it is advice, not a requirement."
+        on_error: "Signature invalid at the receiver; prevented by quoted-printable encoding at step 2 of mime-entity-preparation."
+        on_error_basis: "stated"
+      - n: "5"
+        from: "gateway"
+        to: "receiving-agent"
+        message: "application/octet-stream"
+        action: >-
+          A gateway with no S/MIME knowledge defaults application/pkcs7-mime (or
+          application/pkcs7-signature) to application/octet-stream; the filename usually
+          survives and carries the type.
+        locator: "§3.2.1"
+        quotes:
+          - |-
+            However, the suggested filename for an attachment is often carried across a gateway.
+        constrained_by:
+          - "rfc-8551#R-0102"
+          - "rfc-8551#R-0103"
+          - "rfc-8551#R-0107"
+          - "rfc-8551#R-0108"
+        on_error: "Receiver identifies by file suffix (smime-identification); type information is otherwise lost."
+        on_error_basis: "stated"
+  - name: "compressed-only"
+    title: "Creating, delivering and opening a compressed-only message"
+    locator: "§3.6, §2.4.5"
+    kind: "creation-and-delivery"
+    participants: ["sending-agent", "cms-processing", "transport", "receiving-agent", "mime-user-agent"]
+    summary: >-
+      CompressedData only reduces size; it provides no security service. Agents before
+      S/MIME 3.1 do not recognise it; RFC 3274's capability is the preferred way to know.
+    steps:
+      - n: "1"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "SMIMECapabilities"
+        action: "Check that the recipient has announced the ability to receive CompressedData."
+        locator: "§3.6"
+        quotes:
+          - |-
+            The use of a capability to indicate the ability to receive CompressedData is described in [RFC3274] and is the preferred method for compatibility.
+        on_error: >-
+          Not announced: the recipient may be pre-3.1 and will not recognize it. What the
+          sender then does is unspecified (not compressing is the evident choice).
+        on_error_basis: "inferred"
+        on_error_inferred: true
+      - n: "2"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "canonical MIME entity"
+        action: "Prepare the MIME entity according to §3.1."
+        locator: "§3.6"
+        quotes:
+          - |-
+            Step 1.  The MIME entity to be compressed is prepared according to Section 3.1.
+        invokes: "mime-entity-preparation"
+        on_error: "See mime-entity-preparation."
+        on_error_basis: "stated"
+      - n: "3"
+        from: "sending-agent"
+        to: "cms-processing"
+        message: "CompressedData"
+        action: "Process into CompressedData."
+        locator: "§3.6"
+        quotes:
+          - |-
+            Step 2.  The MIME entity and other required data are processed into a CMS object of type CompressedData.
+        constrained_by:
+          - "rfc-8551#R-0086"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "cms-processing"
+        to: "sending-agent"
+        message: "ContentInfo"
+        action: "Wrap in a ContentInfo."
+        locator: "§3.6"
+        quotes:
+          - |-
+            Step 3.  The CompressedData object is wrapped in a CMS ContentInfo object.
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "sending-agent"
+        to: "transport"
+        message: "application/pkcs7-mime; smime-type=compressed-data"
+        action: "Insert into application/pkcs7-mime, smime-type compressed-data, .p7z; send."
+        locator: "§3.6"
+        quotes:
+          - |-
+            The smime-type parameter for compressed-only messages is "compressed-data".  The file extension for this type of message is ".p7z".
+        constrained_by:
+          - "rfc-8551#R-0101"
+          - "rfc-8551#R-0102"
+          - "rfc-8551#R-0103"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "transport"
+        to: "receiving-agent"
+        message: "application/pkcs7-mime; smime-type=compressed-data"
+        action: "Identify, decompress, pass the MIME entity on."
+        locator: "§3.6, §3.10"
+        quotes:
+          - |-
+            Please note that versions of S/MIME prior to version 3.1 did not specify any use of CompressedData and will not recognize it.
+        invokes: "smime-identification, receive-processing-and-presentation"
+        on_error: "A pre-3.1 receiver does not recognize CompressedData; no fallback is defined."
+        on_error_basis: "stated"
+  - name: "multiple-operations"
+    title: "Nesting signing, enveloping and compressing; sign-then-encrypt and encrypt-then-sign"
+    locator: "§3.7, §3, §3.1.2, §6"
+    kind: "creation-and-delivery"
+    participants: ["sending-agent", "user", "transport", "trusted-gateway", "attacker", "receiving-agent"]
+    summary: >-
+      The three formats nest in any order, chosen by implementer and user; the order
+      decides what the signature covers and who can see the signers. Triple wrapping is
+      described in ESS, not here. Receivers must unwrap arbitrary nesting within resource
+      limits.
+    steps:
+      - n: "1"
+        from: "user"
+        to: "sending-agent"
+        message: "MIME entity"
+        action: "Choose the order of operations."
+        locator: "§3.7"
+        quotes:
+          - |-
+            It is possible to apply any of the signing, encrypting, and compressing operations in any order.  It is up to the implementer and the user to choose.
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "2a"
+        condition: "sign first, then envelope"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "application/pkcs7-mime; smime-type=enveloped-data"
+        action: >-
+          Build signed-only (either format), then use it as the MIME entity of
+          enveloped-only or authenticated-enveloped-only. Signers are hidden.
+        locator: "§3.7"
+        quotes:
+          - |-
+            When signing first, the signatories are then securely obscured by the enveloping.
+          - |-
+            A recipient of a message that is signed and then encrypted can assume that the signed message itself has not been altered but that a careful attacker could have changed the unauthenticated portions of the encrypted message.
+        invokes: "signed-only-multipart-signed, signed-only-pkcs7-mime, enveloped-only, authenticated-enveloped-only"
+        on_error: "Unauthenticated outer portions may have been changed; not detectable by the receiver."
+        on_error_basis: "stated"
+      - n: "2b"
+        condition: "envelope first, then sign"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "multipart/signed"
+        action: >-
+          Build enveloped-only, then sign it. Signers are exposed; signatures can be
+          verified without decrypting or holding private keys.
+        locator: "§3.7"
+        quotes:
+          - |-
+            When enveloping first, the signatories are exposed, but it is possible to verify signatures without removing the enveloping.
+          - |-
+            A recipient of a message that is encrypted and then signed can validate that the encrypted block was unaltered but cannot determine any relationship between the signer and the unencrypted contents of the message.
+        on_error: "The signature proves nothing about who wrote the plaintext."
+        on_error_basis: "stated"
+      - n: "2c"
+        condition: "compression is one of the operations"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "application/pkcs7-mime; smime-type=compressed-data"
+        action: >-
+          Compress before encrypting rather than after (binary ciphertext does not
+          compress); with a lossy algorithm, compress then sign.
+        locator: "§3.7, §6"
+        quotes:
+          - |-
+            If a lossy compression algorithm is used with signing, you will need to compress first, then sign.
+          - |-
+            However, care needs to be taken when designing a protocol that relies on using compression, so as not to create a compression oracle.
+        on_error: >-
+          Compression with encryption under adaptive input is a compression oracle; the
+          attacker reads content from compressed lengths. No in-protocol detection.
+        on_error_basis: "stated"
+      - n: "3"
+        from: "sending-agent"
+        to: "transport"
+        message: "application/pkcs7-mime"
+        action: "Send the outermost entity, inner entities 7-bit-safe unless binary-inside is known."
+        locator: "§3.1.2"
+        invokes: "transfer-encoding-choice"
+        on_error: "See transfer-encoding-choice."
+        on_error_basis: "stated"
+      - n: "4"
+        condition: "a site's trusted gateway decrypts"
+        from: "transport"
+        to: "trusted-gateway"
+        message: "application/pkcs7-mime; smime-type=enveloped-data"
+        action: "See trusted-gateway-unwrap."
+        locator: "§3.1.2"
+        invokes: "trusted-gateway-unwrap"
+        on_error: "See trusted-gateway-unwrap."
+        on_error_basis: "stated"
+      - n: "5"
+        from: "transport"
+        to: "receiving-agent"
+        message: "application/pkcs7-mime"
+        action: "Unwrap each layer in turn (identify, decrypt, verify, decompress) until the inner MIME entity."
+        locator: "§3.7"
+        quotes:
+          - |-
+            An S/MIME implementation MUST be able to receive and process arbitrarily nested S/MIME within reasonable resource limits of the recipient computer.
+        constrained_by:
+          - "rfc-8551#R-0121"
+        invokes: "smime-identification, signature-verification, receive-processing-and-presentation"
+        on_error: "Nesting beyond reasonable resource limits: the limit and the outcome are unspecified."
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "receiving-agent"
+        to: "receiving-agent"
+        message: "MIME entity"
+        action: "Treat each encrypted or signed piece as a distinct origin from unprotected content and from each other."
+        locator: "§6"
+        quotes:
+          - |-
+            Clients MUST treat each encrypted or signed piece of a MIME message as being of different origins both from unprotected content and from each other.
+        constrained_by:
+          - "rfc-8551#R-0149"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+  - name: "trusted-gateway-unwrap"
+    title: "A trusted gateway removes the envelope and forwards the signed message"
+    locator: "§3.1.2"
+    kind: "intermediary"
+    participants: ["transport", "trusted-gateway", "receiving-agent"]
+    summary: >-
+      Why inner entities are 7-bit by default: the inner signed entity is exposed to the
+      site's internal transport once the envelope is removed.
+    steps:
+      - n: "1"
+        from: "transport"
+        to: "trusted-gateway"
+        message: "application/pkcs7-mime; smime-type=enveloped-data"
+        action: "Receive the signed-then-enveloped message."
+        locator: "§3.1.2"
+        inferred: true
+        inferred_reason: "The source gives the gateway's action, not how it receives or holds the key."
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "trusted-gateway"
+        to: "receiving-agent"
+        message: "multipart/signed"
+        action: "Remove the envelope, not the signature; forward the signed message to the end recipient."
+        locator: "§3.1.2"
+        quotes:
+          - |-
+            For example, a trusted gateway might remove the envelope, but not the signature, of a message, and then forward the signed message on to the end recipient so that they can verify the signatures directly.
+        constrained_by:
+          - "rfc-8551#R-0093"
+        on_error: >-
+          The internal transport is not 8-bit clean and the inner entity was not 7-bit:
+          the end recipient cannot verify.
+        on_error_basis: "stated"
+        on_error_quotes:
+          - |-
+            If the transport internal to the site is not 8-bit clean, such as on a wide-area network with a single mail gateway, verifying the signature will not be possible unless the original MIME entity was only 7-bit data.
+      - n: "3"
+        from: "receiving-agent"
+        to: "receiving-agent"
+        message: "SignedData"
+        action: "Verify the signatures directly."
+        locator: "§3.1.2"
+        invokes: "signature-verification"
+        on_error: "See signature-verification."
+        on_error_basis: "stated"
+  # ------------------------------------------------------------------ certificates
+  - name: "certificate-management"
+    title: "Creating and receiving a certs-only certificate management message"
+    locator: "§3.8, §2.4.2, §3.2.1, §3.2.2, §4"
+    kind: "creation-and-delivery"
+    participants: ["certification-authority", "sending-agent", "cms-processing", "transport", "receiving-agent", "user"]
+    summary: >-
+      A degenerate SignedData with no content and no signers carries certificates and/or
+      CRLs, for instance in response to a registration request. The sender may be a CA or
+      any S/MIME agent.
+    steps:
+      - n: "1"
+        from: "sending-agent"
+        to: "cms-processing"
+        message: "SignedData"
+        action: "Make the certificates and/or CRLs available; eContent absent, signerInfos empty."
+        locator: "§3.8, §2.4.2"
+        quotes:
+          - |-
+            Step 1.  The certificates and/or CRLs are made available to the CMS generating process that creates a CMS object of type SignedData.  The SignedData encapContentInfo eContent field MUST be absent, and the signerInfos field MUST be empty.
+        constrained_by:
+          - "rfc-8551#R-0025"
+          - "rfc-8551#R-0122"
+          - "rfc-8551#R-0123"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "cms-processing"
+        to: "sending-agent"
+        message: "ContentInfo"
+        action: "Wrap in a ContentInfo."
+        locator: "§3.8"
+        quotes:
+          - |-
+            Step 2.  The SignedData object is wrapped in a CMS ContentInfo object.
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "sending-agent"
+        to: "transport"
+        message: "application/pkcs7-mime; smime-type=certs-only"
+        action: "Enclose in application/pkcs7-mime, smime-type certs-only, .p7c; send."
+        locator: "§3.8, §3.2.1"
+        quotes:
+          - |-
+            Step 3.  The ContentInfo object is enclosed in an application/pkcs7-mime MIME entity.
+          - |-
+            The smime-type parameter for a certificate management message is "certs-only".  The file extension for this type of message is ".p7c".
+        constrained_by:
+          - "rfc-8551#R-0101"
+          - "rfc-8551#R-0102"
+          - "rfc-8551#R-0103"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "transport"
+        to: "receiving-agent"
+        message: "application/pkcs7-mime; smime-type=certs-only"
+        action: "Identify; extract certificates and CRLs."
+        locator: "§3.10, §4"
+        invokes: "smime-identification"
+        inferred: true
+        inferred_reason: "The source defines only the creation steps; extraction is what the structure is for."
+        on_error: >-
+          There is no signature to verify; trust in the contents comes from certificate
+          validation, which §4 places out of scope (RFC 5750).
+        on_error_basis: "inferred"
+        on_error_inferred: true
+      - n: "5"
+        from: "receiving-agent"
+        to: "user"
+        message: "Certificate"
+        action: "Store and protect the certificates for later retrieval."
+        locator: "§4"
+        quotes:
+          - |-
+            Receiving and sending agents SHOULD also provide a mechanism to allow a user to "store and protect" certificates for correspondents in such a way as to guarantee their later retrieval.
+        constrained_by:
+          - "rfc-8551#R-0126"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+  - name: "registration-request"
+    title: "Obtaining a signing certificate from a certification authority"
+    locator: "§3.9, §3.8, §4.1"
+    kind: "out-of-scope"
+    participants: ["sending-agent", "certification-authority"]
+    summary: >-
+      A signing agent must have a certificate. S/MIME v4.0 requires no request mechanism;
+      v2's application/pkcs10 body part is historic and PKIX methods are referenced, not
+      specified. The reply may be a certs-only message.
+    steps:
+      - n: "1"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "Certificate"
+        action: "Generate a key pair from good non-deterministic randomness; protect the private key; RSA signature keys at least 2048 bits."
+        locator: "§4.1"
+        quotes:
+          - |-
+            An S/MIME user agent MUST NOT generate asymmetric keys less than 2048 bits for use with an RSA signature algorithm.
+        constrained_by:
+          - "rfc-8551#R-0127"
+          - "rfc-8551#R-0128"
+          - "rfc-8551#R-0129"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "sending-agent"
+        to: "certification-authority"
+        message: "registration request"
+        action: "Request a certificate by any mechanism: exchange with a CA, hardware token, diskette."
+        locator: "§3.9"
+        quotes:
+          - |-
+            However, S/MIME v4.0 does not require a particular certificate request mechanism.
+          - |-
+            S/MIME v2 [SMIMEv2] specified a method for "registering" public keys with certificate authorities using an application/pkcs10 body part.
+        constrained_by:
+          - "rfc-8551#R-0124"
+        on_error: "unspecified: no request format, no refusal, no transport is defined."
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "certification-authority"
+        to: "sending-agent"
+        message: "application/pkcs7-mime; smime-type=certs-only"
+        action: "Return the certificate(s), for example as a certificate management message."
+        locator: "§3.8"
+        quotes:
+          - |-
+            The certificate management message or MIME entity is used to transport certificates and/or Certificate Revocation Lists (CRLs), such as in response to a registration request.
+        invokes: "certificate-management"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+  - name: "certificate-request-by-signed-return"
+    title: "Requesting a correspondent's certificate in a signed return message"
+    locator: "§4, §2.5.3"
+    kind: "exchange"
+    participants: ["sending-agent", "transport", "receiving-agent"]
+    summary: >-
+      The nearest the source comes to an exchange: an agent wanting to encrypt asks the
+      intended recipient for its certificate; the answer is any signed message carrying
+      it. Neither the request nor the correlation is defined.
+    steps:
+      - n: "1"
+        from: "sending-agent"
+        to: "transport"
+        message: "certificate request message"
+        action: "Automatically generate a message to the intended recipient requesting its certificate."
+        locator: "§4"
+        quotes:
+          - |-
+            At a minimum, for initial S/MIME deployment, a user agent could automatically generate a message to an intended recipient requesting that recipient's certificate in a signed return message.
+        constrained_by:
+          - "rfc-8551#R-0125"
+        on_error: "unspecified: no format, no timeout, no reply correlation."
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "receiving-agent"
+        to: "transport"
+        message: "signed return message"
+        action: >-
+          Reply with a signed message whose SignedData carries the certificate, ideally
+          with SMIMECapabilities and SMIMEEncryptionKeyPreference.
+        locator: "§4, §2.5.3"
+        quotes:
+          - |-
+            The sending agent SHOULD include the referenced certificate in the set of certificates included in the signed message if this attribute is used.
+        constrained_by:
+          - "rfc-8551#R-0052"
+          - "rfc-8551#R-0054"
+        inferred: true
+        inferred_reason: "§4 names a signed return message; its content is inferred from §2.5.3 and §2.5.2, which say what a signed message carries."
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "transport"
+        to: "sending-agent"
+        message: "SignedData"
+        action: "Verify; cache capabilities and key preference; store the certificate."
+        locator: "§2.5.3, §2.7.1, §4"
+        invokes: "signature-verification, capability-and-preference-caching"
+        constrained_by:
+          - "rfc-8551#R-0126"
+        on_error: "See signature-verification."
+        on_error_basis: "stated"
+  - name: "rsa-key-size-decision"
+    title: "RSA key-size rules for generation, signing, verifying, encrypting and decrypting"
+    locator: "§4.1, §4.2, §4.3, §4.4, §4.5, §6, Appendix B.2"
+    kind: "local-decision"
+    participants: ["sending-agent", "receiving-agent", "user", "server-implementation", "attacker"]
+    summary: >-
+      Four tables by operation and three key-size bands, plus §6's warning below 1024
+      bits, server rejection, and resource management against oversized keys. ECDSA,
+      EdDSA and ECDH key sizes are fixed by the curve.
+    steps:
+      - n: "1"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "SignerInfo"
+        action: "Sign (RSA, RSASSA-PSS): <=2047 SHOULD NOT; 2048-4096 SHOULD; >4096 MAY."
+        locator: "§4.2"
+        constrained_by:
+          - "rfc-8551#R-0130"
+          - "rfc-8551#R-0131"
+          - "rfc-8551#R-0132"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "receiving-agent"
+        to: "receiving-agent"
+        message: "SignerInfo"
+        action: "Verify (RSA, RSASSA-PSS): <=2047 SHOULD NOT; 2048-4096 MUST; >4096 MAY."
+        locator: "§4.3"
+        constrained_by:
+          - "rfc-8551#R-0133"
+          - "rfc-8551#R-0134"
+          - "rfc-8551#R-0135"
+        on_error: >-
+          Verifying under 1024 bits at all: MUST warn the user; a server SHOULD reject
+          weak signatures instead.
+        on_error_basis: "stated"
+        on_error_constrained_by:
+          - "rfc-8551#R-0143"
+          - "rfc-8551#R-0144"
+      - n: "3"
+        from: "sending-agent"
+        to: "sending-agent"
+        message: "EnvelopedData"
+        action: "Encrypt (RSA, RSA-OAEP key establishment): <=2047 SHOULD NOT; 2048-4096 SHOULD; >4096 MAY."
+        locator: "§4.4"
+        constrained_by:
+          - "rfc-8551#R-0136"
+          - "rfc-8551#R-0137"
+          - "rfc-8551#R-0138"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "receiving-agent"
+        to: "receiving-agent"
+        message: "EnvelopedData"
+        action: "Decrypt (RSA, RSAES-OAEP): <=2047 MAY; 2048-4096 MUST; >4096 MAY."
+        locator: "§4.5"
+        constrained_by:
+          - "rfc-8551#R-0139"
+          - "rfc-8551#R-0140"
+          - "rfc-8551#R-0141"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "attacker"
+        to: "receiving-agent"
+        message: "Certificate"
+        action: "Send certificates with oversized keys to swamp the processing element."
+        locator: "§6"
+        quotes:
+          - |-
+            Agents that use such keys without first validating the certificate to a trust anchor are advised to have some sort of cryptographic resource management system to prevent such attacks.
+        constrained_by:
+          - "rfc-8551#R-0142"
+        on_error: "Resource management; no limit is given."
+        on_error_basis: "stated"
+  # ------------------------------------------------------------------ receipt
+  - name: "smime-identification"
+    title: "Identifying an S/MIME message on receipt"
+    locator: "§3.10, §3.2.1, §3.2.2"
+    kind: "receive-processing"
+    participants: ["transport", "receiving-agent"]
+    summary: >-
+      A message is S/MIME if it matches any of three criteria: application/pkcs7-mime;
+      multipart/signed with protocol="application/pkcs7-signature"; or
+      application/octet-stream with a file suffix p7m, p7s, p7c or p7z from the name or
+      filename parameter. smime-type is a hint for the kind of security applied.
+    steps:
+      - n: "1"
+        from: "transport"
+        to: "receiving-agent"
+        message: "application/pkcs7-mime"
+        action: "Media type application/pkcs7-mime: S/MIME."
+        locator: "§3.10"
+        quotes:
+          - |-
+            A message is considered an S/MIME message if it matches any of the criteria listed below.
+        constrained_by:
+          - "rfc-8551#R-0107"
+        on_error: "Not matched: next criterion."
+        on_error_basis: "stated"
+      - n: "2"
+        from: "transport"
+        to: "receiving-agent"
+        message: "multipart/signed"
+        action: "multipart/signed with protocol=\"application/pkcs7-signature\": S/MIME."
+        locator: "§3.10"
+        on_error: "Not matched: next criterion."
+        on_error_basis: "stated"
+      - n: "3"
+        from: "transport"
+        to: "receiving-agent"
+        message: "application/octet-stream"
+        action: "application/octet-stream with suffix p7m, p7s, p7c or p7z: S/MIME."
+        locator: "§3.10"
+        quotes:
+          - |-
+            The file suffix in the table below comes from the "name" parameter in the Content-Type header field or the "filename" parameter in the Content-Disposition header field.
+        on_error: "No criterion matches: not an S/MIME message; processed as ordinary MIME."
+        on_error_basis: "inferred"
+        on_error_inferred: true
+      - n: "4"
+        from: "receiving-agent"
+        to: "receiving-agent"
+        message: "application/pkcs7-mime"
+        action: >-
+          Read smime-type as a hint (enveloped-data, authEnveloped-data, signed-data,
+          certs-only, compressed-data) without decoding the ASN.1; the CMS content type
+          governs processing.
+        locator: "§3.2, §3.2.2, §3.2.1"
+        quotes:
+          - |-
+            It is explicitly intended that this field be a suitable hint for mail client applications to indicate whether a message is "signed", "authEnveloped", or "enveloped" without having to tunnel into the CMS payload.
+          - |-
+            A proper S/MIME implementation MUST use the media types and MUST NOT rely on the file extensions.
+        constrained_by:
+          - "rfc-8551#R-0100"
+          - "rfc-8551#R-0101"
+          - "rfc-8551#R-0107"
+          - "rfc-8551#R-0108"
+        inferred: true
+        inferred_reason: "That the CMS content type and not the hint governs processing is inferred from 'hint' and from smime-type being optional (§3.2, §5.1)."
+        on_error: >-
+          smime-type absent or not matching the CMS content: unspecified; the parameter is
+          optional.
+        on_error_basis: "unspecified"
+  - name: "signature-verification"
+    title: "Verifying a SignedData and processing its signed attributes"
+    locator: "§2.2, §2.5, §2.5.1, §2.5.2, §2.5.3, §2.6, §4.3, §6, Appendix B.2"
+    kind: "receive-processing"
+    participants: ["receiving-agent", "cms-processing", "user", "server-implementation"]
+    summary: >-
+      Invoked by both signed formats, nested messages and the trusted-gateway flow.
+      Signature mathematics, certificate path validation and multi-signer evaluation are
+      in [CMS] and RFC 5750; this source adds signer lookup, attribute cardinality,
+      attribute-violation rules, time encoding, key-size rules and warning duties.
+    steps:
+      - n: "1"
+        from: "receiving-agent"
+        to: "receiving-agent"
+        message: "SignerIdentifier"
+        action: >-
+          Locate the signer's certificate by issuerAndSerialNumber or subjectKeyIdentifier;
+          if several certificates share the subjectKeyIdentifier, try each before
+          reporting an error.
+        locator: "§2.6"
+        quotes:
+          - |-
+            S/MIME v4.0 implementations MUST support both issuerAndSerialNumber and subjectKeyIdentifier.
+          - |-
+            MUST be prepared to try each matching certificate during signature verification before indicating an error condition.
+        constrained_by:
+          - "rfc-8551#R-0061"
+          - "rfc-8551#R-0062"
+          - "rfc-8551#R-0063"
+        on_error: >-
+          No matching certificate, or none verifies: "an error condition", undefined. The
+          signer's certificate may legitimately be absent from the message if it was made
+          available before (R-0053); retrieval is out of scope (§4).
+        on_error_basis: "stated"
+      - n: "2"
+        from: "receiving-agent"
+        to: "cms-processing"
+        message: "SignerInfo"
+        action: >-
+          Verify the signature: mandatory receive algorithms ECDSA P-256/SHA-256 and
+          EdDSA curve25519, RSA PKCS #1 v1.5 with SHA-256 (MUST-); digests SHA-256 and
+          SHA-512.
+        locator: "§2.1, §2.2"
+        constrained_by:
+          - "rfc-8551#R-0003"
+          - "rfc-8551#R-0004"
+          - "rfc-8551#R-0005"
+          - "rfc-8551#R-0006"
+          - "rfc-8551#R-0007"
+          - "rfc-8551#R-0008"
+          - "rfc-8551#R-0151"
+        on_error: >-
+          Unknown algorithm or failed verification: no outcome is stated beyond the
+          signature failing. Historic algorithms (MD5, SHA-1, DSA) are treated differently
+          from current messages (Appendix B.2).
+        on_error_basis: "unspecified"
+        on_error_quotes:
+          - |-
+            For this reason, it is strongly suggested that user agents treat these signatures differently from those on current messages.
+      - n: "3"
+        from: "receiving-agent"
+        to: "receiving-agent"
+        message: "Certificate"
+        action: "Apply the §4.3 RSA verification key-size band; warn below 1024 bits."
+        locator: "§4.3, §6"
+        invokes: "rsa-key-size-decision"
+        constrained_by:
+          - "rfc-8551#R-0133"
+          - "rfc-8551#R-0134"
+          - "rfc-8551#R-0135"
+          - "rfc-8551#R-0143"
+          - "rfc-8551#R-0144"
+        on_error: "Weak key: warn the user (interactive) or reject (server)."
+        on_error_basis: "stated"
+      - n: "4"
+        from: "receiving-agent"
+        to: "receiving-agent"
+        message: "SignerInfo"
+        action: >-
+          Accept zero or one instance of each listed signed attribute; handle unrecognized
+          attributes and values gracefully.
+        locator: "§2.5"
+        quotes:
+          - |-
+            Receiving agents MUST be able to handle zero or one instance of each of the signed attributes listed here.
+        constrained_by:
+          - "rfc-8551#R-0026"
+          - "rfc-8551#R-0028"
+          - "rfc-8551#R-0030"
+        on_error: >-
+          Unrecognized attribute or value: graceful handling (undefined). More than one
+          instance: unspecified except for the two attributes in step 5.
+        on_error_basis: "stated"
+      - n: "5"
+        from: "receiving-agent"
+        to: "receiving-agent"
+        message: "SMIMECapabilities"
+        action: >-
+          Check SMIMECapabilities and SMIMEEncryptionKeyPreference: each, if present, is a
+          signed attribute, one instance, one AttributeValue.
+        locator: "§2.5.2, §2.5.3"
+        quotes:
+          - |-
+            If a signature is detected as violating these requirements, the signature SHOULD be treated as failing.
+        constrained_by:
+          - "rfc-8551#R-0036"
+          - "rfc-8551#R-0037"
+          - "rfc-8551#R-0038"
+          - "rfc-8551#R-0039"
+          - "rfc-8551#R-0047"
+          - "rfc-8551#R-0048"
+          - "rfc-8551#R-0049"
+          - "rfc-8551#R-0050"
+          - "rfc-8551#R-0051"
+        on_error: "Violation: the signature SHOULD be treated as failing. Unknown capability values: graceful."
+        on_error_basis: "stated"
+      - n: "6"
+        from: "receiving-agent"
+        to: "receiving-agent"
+        message: "signingTime"
+        action: "Decode signingTime in UTCTime (YY >= 50 is 19YY, else 20YY) or GeneralizedTime."
+        locator: "§2.5.1"
+        quotes:
+          - |-
+            If YY is greater than or equal to 50, the year is interpreted as 19YY; if YY is less than 50, the year is interpreted as 20YY.
+        constrained_by:
+          - "rfc-8551#R-0034"
+          - "rfc-8551#R-0035"
+        on_error: "The time is only as trustworthy as the signer; a far-future value is rejected in capability-and-preference-caching."
+        on_error_basis: "stated"
+      - n: "7"
+        from: "receiving-agent"
+        to: "receiving-agent"
+        message: "SignedData"
+        action: "Evaluate multiple SignerInfos, if present."
+        locator: "§3.5.3.1, §1.6"
+        quotes:
+          - |-
+            The signerInfos field contains the signatures for the MIME entity.
+        inferred: true
+        inferred_reason: "The source allows several signatures and several micalg values but never says how a receiver combines their results; §1.6 records only that a CMS Multiple Signers Clarification reference was added."
+        on_error: "Some signatures verify and others do not: unspecified here."
+        on_error_basis: "unspecified"
+      - n: "8"
+        condition: "the signature is valid"
+        from: "receiving-agent"
+        to: "receiving-agent"
+        message: "SMIMECapabilities"
+        action: "Cache capabilities and encryption key preference."
+        locator: "§2.5.3, §2.7.1"
+        invokes: "capability-and-preference-caching"
+        on_error: "See capability-and-preference-caching."
+        on_error_basis: "stated"
+      - n: "9"
+        from: "receiving-agent"
+        to: "user"
+        message: "MIME entity"
+        action: >-
+          Base any behaviour change or signed indicator on the verified state of the
+          signature, and re-check periodically if the indicator reports current status.
+        locator: "§6"
+        quotes:
+          - |-
+            If messaging environments make use of the fact that a message is signed to change the behavior of message processing (examples would be running rules or UI display hints), without first verifying that the message is actually signed and knowing the state of the signature, this can lead to incorrect handling of the message.
+        on_error: "Acting on an unverified signed message leads to incorrect handling."
+        on_error_basis: "stated"
+  - name: "capability-and-preference-caching"
+    title: "Processing and remembering SMIMECapabilities and the encryption key preference"
+    locator: "§2.5.2, §2.5.3, §2.7.1"
+    kind: "local-decision"
+    participants: ["sending-agent", "transport", "receiving-agent"]
+    summary: >-
+      Capability discovery in S/MIME is a side effect of signed mail: a sender announces
+      its decrypting capabilities, in preference order, in every signed message; the
+      receiver keeps a per-public-key list, updated only from verified signatures with a
+      newer, not far-future, signing time. The list later drives encryption-algorithm-
+      selection when the roles reverse.
+    steps:
+      - n: "1"
+        from: "sending-agent"
+        to: "transport"
+        message: "SMIMECapabilities"
+        action: >-
+          Announce capabilities (partial list, preference order, grouped by category) and
+          the preferred encryption certificate, as signed attributes of a signed message.
+        locator: "§2.5.2, §2.5.3, §2.7.1, Appendix A"
+        quotes:
+          - |-
+            Section 2.5.2 defines a method by which a sending agent can optionally announce, among other things, its decrypting capabilities in its order of preference.
+        constrained_by:
+          - "rfc-8551#R-0027"
+          - "rfc-8551#R-0040"
+          - "rfc-8551#R-0042"
+          - "rfc-8551#R-0043"
+          - "rfc-8551#R-0046"
+          - "rfc-8551#R-0054"
+          - "rfc-8551#R-0150"
+        on_error: "unspecified"
+        on_error_basis: "unspecified"
+      - n: "2"
+        condition: "no list yet for the sender's public key"
+        from: "receiving-agent"
+        to: "receiving-agent"
+        message: "list of capabilities"
+        action: >-
+          After verifying the signature and checking the timestamp, create a list with at
+          least the signing time and the symmetric capabilities.
+        locator: "§2.7.1"
+        quotes:
+          - |-
+            If the receiving agent has not yet created a list of capabilities for the sender's public key, then, after verifying the signature on the incoming message and checking the timestamp, the receiving agent SHOULD create a new list containing at least the signing time and the symmetric capabilities.
+        constrained_by:
+          - "rfc-8551#R-0067"
+          - "rfc-8551#R-0068"
+        on_error: "Signature not verified, or signing time far in the future: MUST NOT accept (step 4)."
+        on_error_basis: "stated"
+      - n: "3"
+        condition: "a list exists"
+        from: "receiving-agent"
+        to: "receiving-agent"
+        message: "list of capabilities"
+        action: "If the incoming signing time is newer than the stored one and the signature is valid, update both."
+        locator: "§2.7.1"
+        quotes:
+          - |-
+            If such a list already exists, the receiving agent SHOULD verify that the signing time in the incoming message is greater than the signing time stored in the list and that the signature is valid.
+          - |-
+            If so, the receiving agent SHOULD update both the signing time and capabilities in the list.
+        constrained_by:
+          - "rfc-8551#R-0069"
+          - "rfc-8551#R-0070"
+        on_error: "Not newer: keep the stored list."
+        on_error_basis: "inferred"
+        on_error_inferred: true
+      - n: "4"
+        from: "receiving-agent"
+        to: "receiving-agent"
+        message: "list of capabilities"
+        action: "Reject far-future signing times and capabilities from unverifiable signatures; store the list for future use."
+        locator: "§2.7.1"
+        quotes:
+          - |-
+            Values of the signing time that lie far in the future (that is, a greater discrepancy than any reasonable clock skew), or a capabilities list in messages whose signature could not be verified, MUST NOT be accepted.
+          - |-
+            The list of capabilities SHOULD be stored for future use in creating messages.
+        constrained_by:
+          - "rfc-8551#R-0071"
+          - "rfc-8551#R-0072"
+        on_error: "Rejected input leaves the stored list unchanged."
+        on_error_basis: "inferred"
+        on_error_inferred: true
+      - n: "5"
+        from: "receiving-agent"
+        to: "receiving-agent"
+        message: "preference data"
+        action: >-
+          Store the SMIMEEncryptionKeyPreference if the signature is valid and the signing
+          time is newer than the stored one, checking clock skew.
+        locator: "§2.5.3"
+        quotes:
+          - |-
+            Receiving agents SHOULD store the preference data if the signature on the message is valid and the signing time is greater than the currently stored value.
+          - |-
+            (As with the SMIMECapabilities, the clock skew SHOULD be checked and the data not used if the skew is too great.)
+        constrained_by:
+          - "rfc-8551#R-0055"
+          - "rfc-8551#R-0056"
+          - "rfc-8551#R-0057"
+        on_error: "Skew too great: data not used."
+        on_error_basis: "stated"
+  - name: "receive-processing-and-presentation"
+    title: "Presenting the recovered MIME entity: header protection, origins, HTML, integrity before action"
+    locator: "§3.1, §6"
+    kind: "receive-processing"
+    participants: ["receiving-agent", "mime-user-agent", "user"]
+    summary: >-
+      The Efail rules and the message/rfc822 header-protection rule govern what a
+      receiver does with the decrypted or verified entity.
+    steps:
+      - n: "1"
+        from: "receiving-agent"
+        to: "receiving-agent"
+        message: "MIME entity"
+        action: "Do not act on decrypted content before the integrity check finishes."
+        locator: "§6"
+        quotes:
+          - |-
+            This type of attack can be prevented by the use of an Authenticated Encryption with Associated Data (AEAD) algorithm with a more robust integrity check on the decryption process.
+        on_error: "CBC (EnvelopedData) has only a weak integrity check; malleated plaintext passes it."
+        on_error_basis: "stated"
+      - n: "2"
+        condition: "top-level protected entity is message/rfc822"
+        from: "receiving-agent"
+        to: "mime-user-agent"
+        message: "message/rfc822"
+        action: >-
+          Treat it as header protection: present it as the top-level message, merging
+          headers, and distinguish protected inner from unprotected outer header fields.
+        locator: "§3.1"
+        quotes:
+          - |-
+            When an S/MIME message is received, if the top-level protected MIME entity has a Content-Type of message/rfc822, it can be assumed that the intent was to provide header protection.  This entity SHOULD be presented as the top-level message, taking into account header-merging issues as previously discussed.
+          - |-
+            It is up to the receiving client to decide how to present this "inner" header along with the unprotected "outer" header.
+        constrained_by:
+          - "rfc-8551#R-0082"
+          - "rfc-8551#R-0083"
+          - "rfc-8551#R-0084"
+        on_error: "Inner and outer headers disagree: presentation is the client's decision; no rule is given."
+        on_error_basis: "stated"
+      - n: "3"
+        from: "mime-user-agent"
+        to: "user"
+        message: "text/html"
+        action: >-
+          Require text/html to be a complete HTML document; treat each multipart/mixed
+          piece, and each encrypted or signed piece, as a separate origin.
+        locator: "§6"
+        quotes:
+          - |-
+            Clients MUST require that a text/html content type be a complete HTML document (per [RFC1866]).
+          - |-
+            Clients SHOULD treat each of the different pieces of the multipart/mixed construct as being of different origins.
+        constrained_by:
+          - "rfc-8551#R-0147"
+          - "rfc-8551#R-0148"
+          - "rfc-8551#R-0149"
+        on_error: "An incomplete HTML document: the requirement says reject-or-not only by implication; handling is unspecified."
+        on_error_basis: "unspecified"
+  - name: "historic-message-processing"
+    title: "Processing historic mail under algorithms S/MIME 4.0 dropped"
+    locator: "Appendix B, B.1, B.2, B.3, B.4, §6"
+    kind: "receive-processing"
+    participants: ["receiving-agent", "user"]
+    summary: >-
+      Old algorithms are kept for reading old mail only: decrypt with RC2/40 or
+      tripleDES, verify with SHA-1, MD5, DSA and small RSA keys, treating the results as
+      weaker than current ones.
+    steps:
+      - n: "1"
+        from: "receiving-agent"
+        to: "receiving-agent"
+        message: "EnvelopedData"
+        action: "Decrypt historic mail with RC2/40 or tripleDES if supported; never encrypt new mail with them."
+        locator: "Appendix B.3"
+        quotes:
+          - |-
+            This algorithm should be supported only to decrypt existing email; it should not be used to encrypt new emails.
+        on_error: "Algorithm not supported: the old mail is no longer accessible."
+        on_error_basis: "stated"
+        on_error_quotes:
+          - |-
+            This means that if a user has historic emails and their user agent has been updated to only support the current set of recommended algorithms, some of those old emails will no longer be accessible.
+      - n: "2"
+        from: "receiving-agent"
+        to: "user"
+        message: "SignedData"
+        action: >-
+          Verify historic signatures but treat them differently: revocation may be
+          uncheckable, keys and hashes weak.
+        locator: "Appendix B.2"
+        quotes:
+          - |-
+            This means that unless CRLs are cached as part of the message it is not always possible to check to see if a certificate has been revoked.
+          - |-
+            If a message is known to be historic and it has been in the possession of the client for some time, then it might still be considered to be secure.
+        constrained_by:
+          - "rfc-8551#R-0143"
+          - "rfc-8551#R-0151"
+        on_error: "Revocation status unavailable: no outcome defined. Keys under 1024 bits: warn (R-0143)."
+        on_error_basis: "stated"
+error_paths:
+  - id: "signature-attribute-violation"
+    trigger: "SMIMECapabilities or SMIMEEncryptionKeyPreference not a signed attribute, more than one instance, or more than one AttributeValue."
+    detected_by: "receiving-agent"
+    in: ["signature-verification 5"]
+    outcome: "The signature SHOULD be treated as failing."
+    basis: "stated"
+    locator: "§2.5.2, §2.5.3"
+    constrained_by: ["rfc-8551#R-0039", "rfc-8551#R-0051"]
+  - id: "signer-certificate-ambiguous"
+    trigger: "Several certificates share the subjectKeyIdentifier."
+    detected_by: "receiving-agent"
+    in: ["signature-verification 1"]
+    outcome: "Try each matching certificate before indicating an error condition."
+    basis: "stated"
+    locator: "§2.6"
+    constrained_by: ["rfc-8551#R-0062", "rfc-8551#R-0063"]
+  - id: "signer-certificate-missing"
+    trigger: "No certificate matches the SignerIdentifier (omitted as previously made available, or never sent)."
+    detected_by: "receiving-agent"
+    in: ["signature-verification 1"]
+    outcome: "Unspecified; certificate retrieval and handling are out of scope (§4)."
+    basis: "unspecified"
+    locator: "§2.5.3, §2.6, §4"
+    constrained_by: ["rfc-8551#R-0053", "rfc-8551#R-0125"]
+  - id: "signature-invalid"
+    trigger: "The signature does not verify, including after transit damage."
+    detected_by: "receiving-agent"
+    in: ["signature-verification 2", "signed-only-multipart-signed 10", "multipart-signed-in-transit 1-4"]
+    outcome: "Unspecified beyond failure; capabilities and key preference from it are not accepted."
+    basis: "unspecified"
+    locator: "§2.6, §2.7.1, §3.1.3"
+    constrained_by: ["rfc-8551#R-0071"]
+  - id: "unknown-signature-or-digest-algorithm"
+    trigger: "A signature or digest algorithm the receiver does not support."
+    detected_by: "receiving-agent"
+    in: ["signature-verification 2"]
+    outcome: "Unspecified. The mandatory set is §2.1 and §2.2; historic ones per Appendix B."
+    basis: "unspecified"
+    locator: "§2.1, §2.2, Appendix B.2"
+    constrained_by: ["rfc-8551#R-0003", "rfc-8551#R-0005", "rfc-8551#R-0006", "rfc-8551#R-0007"]
+  - id: "unrecognized-micalg"
+    trigger: "A micalg value the receiver does not recognize."
+    detected_by: "receiving-agent"
+    in: ["signed-only-multipart-signed 10"]
+    outcome: "Recover gracefully."
+    basis: "stated"
+    locator: "§3.5.3.2"
+    constrained_by: ["rfc-8551#R-0120"]
+  - id: "unrecognized-attribute-or-capability"
+    trigger: "A signed attribute, attribute value or capability value the receiver does not recognize."
+    detected_by: "receiving-agent"
+    in: ["signature-verification 4", "signature-verification 5"]
+    outcome: "Handle in a graceful manner."
+    basis: "stated"
+    locator: "§2.5, §2.5.2"
+    constrained_by: ["rfc-8551#R-0030", "rfc-8551#R-0047"]
+  - id: "multiple-signatures-mixed"
+    trigger: "Several SignerInfos with differing results."
+    detected_by: "receiving-agent"
+    in: ["signature-verification 7"]
+    outcome: "Unspecified in this source."
+    basis: "unspecified"
+    locator: "§3.5.3.1, §1.6"
+  - id: "signing-time-far-future"
+    trigger: "signingTime beyond any reasonable clock skew."
+    detected_by: "receiving-agent"
+    in: ["capability-and-preference-caching 2-5"]
+    outcome: "MUST NOT be accepted; preference data not used."
+    basis: "stated"
+    locator: "§2.7.1, §2.5.3"
+    constrained_by: ["rfc-8551#R-0071", "rfc-8551#R-0056"]
+  - id: "signing-time-not-newer"
+    trigger: "Incoming signingTime not greater than the stored one."
+    detected_by: "receiving-agent"
+    in: ["capability-and-preference-caching 3", "capability-and-preference-caching 5"]
+    outcome: "Stored list and preference are not updated (inferred from the update condition)."
+    basis: "inferred"
+    inferred: true
+    locator: "§2.7.1, §2.5.3"
+    constrained_by: ["rfc-8551#R-0069", "rfc-8551#R-0055"]
+  - id: "capabilities-unverified"
+    trigger: "Capabilities list in a message whose signature could not be verified."
+    detected_by: "receiving-agent"
+    in: ["capability-and-preference-caching 4"]
+    outcome: "MUST NOT be accepted."
+    basis: "stated"
+    locator: "§2.7.1"
+    constrained_by: ["rfc-8551#R-0071"]
+  - id: "weak-encryption-unacceptable"
+    trigger: "The sender decides weak encryption is unacceptable for the data."
+    detected_by: "sending-agent"
+    in: ["encryption-algorithm-selection 2"]
+    outcome: "MUST NOT use a weak algorithm; overrides Rules 1 and 2."
+    basis: "stated"
+    locator: "§2.7.1"
+    constrained_by: ["rfc-8551#R-0073", "rfc-8551#R-0074"]
+  - id: "no-usable-capability"
+    trigger: "No listed capability the sender can encrypt with, or version known but capabilities unknown."
+    detected_by: "sending-agent"
+    in: ["encryption-algorithm-selection 4", "encryption-algorithm-selection 5"]
+    outcome: "Unspecified."
+    basis: "unspecified"
+    locator: "§2.7.1.1, §2.7.1.2"
+  - id: "recipient-cannot-decrypt"
+    trigger: "The sender chose an algorithm the recipient cannot process."
+    detected_by: "receiving-agent"
+    in: ["encryption-algorithm-selection 3"]
+    outcome: "The message is unreadable; no signal back. §6 calls the cost of a failed decryption hard to determine."
+    basis: "stated"
+    locator: "§2.7.2, §6"
+  - id: "non-overlapping-capabilities"
+    trigger: "Group recipients' capabilities do not overlap."
+    detected_by: "sending-agent"
+    in: ["multiple-recipients 2"]
+    outcome: "Send more than one message; SHOULD NOT send a copy under weaker cryptography."
+    basis: "stated"
+    locator: "§2.7.3, §6"
+    constrained_by: ["rfc-8551#R-0146"]
+  - id: "no-key-management-certificate"
+    trigger: "No key management certificate found for a recipient."
+    detected_by: "sending-agent"
+    in: ["recipient-key-management-certificate-selection 3", "enveloped-only 1", "authenticated-enveloped-only 1"]
+    outcome: "Encryption cannot be done for that recipient; several found: arbitrary choice."
+    basis: "stated"
+    locator: "§2.5.3.1"
+  - id: "key-wrap-mismatch"
+    trigger: "ECDH key wrap and content-encryption functions or sizes differ."
+    detected_by: "receiving-agent"
+    in: ["encryption-algorithm-selection 6"]
+    outcome: "Recipients MAY enforce; MUST use the weaker in strength computations."
+    basis: "stated"
+    locator: "§2.3"
+    constrained_by: ["rfc-8551#R-0016", "rfc-8551#R-0018", "rfc-8551#R-0019"]
+  - id: "weak-rsa-key"
+    trigger: "RSA key of 2047 bits or less; below 1024 for signatures."
+    detected_by: "sending-agent, receiving-agent"
+    in: ["rsa-key-size-decision 1-4", "signature-verification 3"]
+    outcome: "SHOULD NOT use (sign, verify, encrypt); MAY decrypt; MUST warn below 1024; servers SHOULD reject."
+    basis: "stated"
+    locator: "§4.2-§4.5, §6"
+    constrained_by: ["rfc-8551#R-0130", "rfc-8551#R-0133", "rfc-8551#R-0136", "rfc-8551#R-0139", "rfc-8551#R-0143", "rfc-8551#R-0144"]
+  - id: "oversized-key-dos"
+    trigger: "Certificates with keys larger than mandated."
+    detected_by: "receiving-agent, sending-agent"
+    in: ["rsa-key-size-decision 5"]
+    outcome: "Cryptographic resource management advised; no limit given."
+    basis: "stated"
+    locator: "§6"
+  - id: "decryption-failure"
+    trigger: "CEK recovery or content decryption fails."
+    detected_by: "receiving-agent"
+    in: ["enveloped-only 10", "authenticated-enveloped-only 8"]
+    outcome: >-
+      Unspecified. No uniform-error or timing guidance in this source; §6 points to the
+      Million Message Attack (RFC 3218) only.
+    basis: "unspecified"
+    locator: "§6"
+  - id: "integrity-check-failure"
+    trigger: "AEAD tag fails, or CBC plaintext malleated."
+    detected_by: "receiving-agent"
+    in: ["authenticated-enveloped-only 8", "receive-processing-and-presentation 1"]
+    outcome: "Do not act on decrypted content before the integrity check finishes (lowercase recommendation)."
+    basis: "stated"
+    locator: "§6"
+  - id: "ciphertext-modified-undetected"
+    trigger: "Ciphertext replaced in EnvelopedData, or by a co-recipient in AuthEnvelopedData."
+    detected_by: "none"
+    in: ["enveloped-only 8", "authenticated-enveloped-only 6"]
+    outcome: "Undetectable; use AuthEnvelopedData or SignedData."
+    basis: "stated"
+    locator: "§3.3, §3.4, §6"
+  - id: "mta-8bit-incapable"
+    trigger: "8-bit or binary first part of multipart/signed meets an MTA that cannot carry it."
+    detected_by: "message-transfer-agent"
+    in: ["multipart-signed-in-transit 1-3"]
+    outcome: "Re-encode (invalidates), corrupt (invalidates) or return to sender as undeliverable (RFC 1847-compliant)."
+    basis: "stated"
+    locator: "§3.1.3"
+    constrained_by: ["rfc-8551#R-0097"]
+  - id: "gateway-rewrite"
+    trigger: "Line wrapping, transfer-encoding change, From-quoting or whitespace stripping in transit."
+    detected_by: "receiving-agent"
+    in: ["signed-only-multipart-signed 8", "multipart-signed-in-transit 4"]
+    outcome: "Signature breaks; SignedData format is immune."
+    basis: "stated"
+    locator: "§3.5.1, §3.1.4"
+  - id: "gateway-type-loss"
+    trigger: "Non-S/MIME gateway defaults the media type to application/octet-stream."
+    detected_by: "receiving-agent"
+    in: ["multipart-signed-in-transit 5", "smime-identification 3"]
+    outcome: "Identify by file suffix; filename usually survives."
+    basis: "stated"
+    locator: "§3.2.1, §3.10"
+  - id: "trusted-gateway-8bit-damage"
+    trigger: "Inner entity not 7-bit and the site's internal transport not 8-bit clean."
+    detected_by: "receiving-agent"
+    in: ["trusted-gateway-unwrap 2"]
+    outcome: "Verification is not possible."
+    basis: "stated"
+    locator: "§3.1.2"
+    constrained_by: ["rfc-8551#R-0093"]
+  - id: "compresseddata-unrecognized"
+    trigger: "CompressedData sent to a pre-3.1 receiver."
+    detected_by: "receiving-agent"
+    in: ["compressed-only 6"]
+    outcome: "Not recognized; no fallback."
+    basis: "stated"
+    locator: "§3.6"
+  - id: "non-smime-receiver"
+    trigger: "Receiver without S/MIME facilities gets SignedData, or an S/MIME v2 client gets subjectKeyIdentifier."
+    detected_by: "receiving-agent"
+    in: ["signed-only-pkcs7-mime 8"]
+    outcome: "Cannot view (SignedData) / cannot read (v2 and subjectKeyIdentifier)."
+    basis: "stated"
+    locator: "§3.5.1, §2.6"
+  - id: "nesting-resource-limit"
+    trigger: "Nesting beyond the recipient computer's reasonable resource limits."
+    detected_by: "receiving-agent"
+    in: ["multiple-operations 5"]
+    outcome: "Unspecified."
+    basis: "unspecified"
+    locator: "§3.7"
+    constrained_by: ["rfc-8551#R-0121"]
+  - id: "compression-oracle"
+    trigger: "Compression with encryption under adaptive attacker input."
+    detected_by: "none"
+    in: ["multiple-operations 2c"]
+    outcome: "Content leaks through compressed length; avoid in protocol design."
+    basis: "stated"
+    locator: "§6"
+  - id: "length-leak"
+    trigger: "Counter-mode AEAD reveals plaintext length."
+    detected_by: "none"
+    in: ["authenticated-enveloped-only 7"]
+    outcome: "Applications provide padding."
+    basis: "stated"
+    locator: "§6"
+  - id: "unverified-signed-indicator"
+    trigger: "Behaviour or UI changed because a message is signed, without verifying."
+    detected_by: "receiving-agent"
+    in: ["signature-verification 9"]
+    outcome: "Incorrect handling of the message."
+    basis: "stated"
+    locator: "§6"
+  - id: "efail-html"
+    trigger: "Incomplete text/html or mixed origins in multipart/mixed."
+    detected_by: "receiving-agent"
+    in: ["receive-processing-and-presentation 3"]
+    outcome: "MUST require complete HTML; separate origins."
+    basis: "stated"
+    locator: "§6"
+    constrained_by: ["rfc-8551#R-0147", "rfc-8551#R-0148", "rfc-8551#R-0149"]
+  - id: "header-mismatch"
+    trigger: "Inner (protected) and outer headers differ."
+    detected_by: "receiving-agent"
+    in: ["receive-processing-and-presentation 2"]
+    outcome: "Client decides; RECOMMENDED to distinguish them."
+    basis: "stated"
+    locator: "§3.1"
+    constrained_by: ["rfc-8551#R-0083"]
+  - id: "historic-algorithm-unsupported"
+    trigger: "Old mail under an algorithm the updated agent dropped; revocation data expired."
+    detected_by: "receiving-agent"
+    in: ["historic-message-processing 1-2"]
+    outcome: "Mail inaccessible / revocation uncheckable; treat historic signatures differently."
+    basis: "stated"
+    locator: "Appendix B"
+  - id: "registration-failure"
+    trigger: "The CA does not issue."
+    detected_by: "sending-agent"
+    in: ["registration-request 2"]
+    outcome: "Unspecified; no mechanism is defined."
+    basis: "unspecified"
+    locator: "§3.9"
+source_defects_and_tensions:
+  - id: "if-present-vs-must-include"
+    kind: "tension"
+    locator: "§2.5, §2.5.2, §2.5.3"
+    text: >-
+      Each attribute section opens "If present" and §2.5 makes generation a SHOULD, yet
+      the next sentence reads "The SignedAttributes in a signerInfo MUST include a single
+      instance". Read literally, every signerInfo must carry both attributes. The evident
+      intent is "at most one instance"; the receiving rule (step 5 of
+      signature-verification) depends on which reading is taken.
+    quotes:
+      - |-
+        If present, the SMIMECapabilities attribute MUST be a SignedAttribute.
+      - |-
+        The SignedAttributes in a signerInfo MUST include a single instance of the SMIMECapabilities attribute.
+  - id: "extensions-vs-identification"
+    kind: "tension"
+    locator: "§3.2.1, §3.10"
+    text: >-
+      §3.2.1 forbids relying on file extensions; §3.10 identifies application/octet-stream
+      as S/MIME by file suffix. Reconcilable (identification is a heuristic, processing
+      uses the CMS type), but the source does not say so.
+    quotes:
+      - |-
+        A proper S/MIME implementation MUST use the media types and MUST NOT rely on the file extensions.
+  - id: "rule-gap-known-version"
+    kind: "gap"
+    locator: "§2.7.1.1, §2.7.1.2"
+    text: >-
+      Rule 1 needs known capabilities; Rule 2 needs both capabilities and version
+      unknown. A sender that knows the version but not the capabilities (or whose list
+      has nothing it can encrypt with) is covered by neither, and the list §2.7.1 stores
+      holds no version.
+  - id: "rule2-fallback-reasoning"
+    kind: "ambiguity"
+    locator: "§2.7.1.2, §6"
+    text: >-
+      The fallback from AES-256 GCM is AES-128 CBC, justified by a presumption about
+      AES-GCM implementations that would support AES-128 GCM, not CBC. The CBC fallback
+      is the mode §6 (Efail) urges mail systems to migrate away from.
+    quotes:
+      - |-
+        If the sending agent chooses not to use AES-256 GCM in this step, given the presumption is that a client implementing AES-GCM would do both AES-256 and AES-128, it SHOULD use AES-128 CBC.
+  - id: "rule2-structure-unstated"
+    kind: "gap"
+    locator: "§2.7.1.2, §3.3, §3.4"
+    text: >-
+      The rules pick an algorithm, not a structure; the switch between EnvelopedData (CBC)
+      and AuthEnvelopedData (GCM) follows only from §3.3 saying enveloped-only does not
+      support authenticated algorithms.
+  - id: "timestamp-undefined"
+    kind: "ambiguity"
+    locator: "§2.7.1"
+    text: >-
+      "checking the timestamp" is not defined; signingTime is the evident referent. The
+      behaviour when signingTime is absent (it is a SHOULD) is not given for either the
+      capability list or the preference data.
+  - id: "no-reasonable-skew-value"
+    kind: "gap"
+    locator: "§2.5.3, §2.7.1"
+    text: "Neither 'reasonable clock skew' nor 'too great' is quantified."
+  - id: "cross-reference-3.1"
+    kind: "defect"
+    locator: "§3.1"
+    text: >-
+      Processing into EnvelopedData, CompressedData and AuthEnvelopedData is said to be in
+      Sections 3.2 and 3.5; it is in §3.3, §3.4 and §3.6 (§3.5 is signing).
+    quotes:
+      - |-
+        Processing "outside" MIME entities into CMS EnvelopedData, CompressedData, and AuthEnvelopedData content types is described in Sections 3.2 and 3.5.
+  - id: "retrieval-actor"
+    kind: "ambiguity"
+    locator: "§4"
+    text: >-
+      The certificate retrieval duty is put on the receiving agent, for certificates of
+      "recipients of digital envelopes": a sending-side need.
+    quotes:
+      - |-
+        A receiving agent MUST provide some certificate retrieval mechanism in order to gain access to certificates for recipients of digital envelopes.
+  - id: "key-selection-wording"
+    kind: "ambiguity"
+    locator: "§2.5.3.1"
+    text: >-
+      "the same subject name as the signer of an X.509 certificate" reads as the issuer;
+      the intent is the signer of the received message.
+  - id: "error-condition-undefined"
+    kind: "gap"
+    locator: "§2.6, §2.5.2, §2.5.3"
+    text: >-
+      "indicating an error condition" and "treated as failing" have no defined effect:
+      S/MIME has no error signalling and the source does not say what the user sees.
+  - id: "multiple-signers-undefined"
+    kind: "gap"
+    locator: "§3.5.3.1, §3.5.3.2, §1.6"
+    text: "Several signatures and digest algorithms are allowed; combining their results is not defined here."
+  - id: "decryption-failure-guidance-absent"
+    kind: "gap"
+    locator: "§6"
+    text: >-
+      There is no requirement on decryption-failure handling, uniform errors or timing. The
+      only oracle material is the RFC 3218 pointer and the compression-oracle paragraph.
+  - id: "verify-band-1024-2047"
+    kind: "tension"
+    locator: "§4.3, §6, Appendix B.2"
+    text: >-
+      Verification of RSA keys of 2047 bits or less is SHOULD NOT, yet the warning duty
+      starts below 1024 and Appendix B wants historic mail verified; keys of 1024 to 2047
+      bits have no stated user-facing treatment.
+  - id: "compression-of-encrypted"
+    kind: "ambiguity"
+    locator: "§3.7"
+    text: >-
+      "could benefit as well" after "discouraged" leaves unclear whether compressing
+      base64 ciphertext is recommended; §6 adds the compression-oracle caution.
+    quotes:
+      - |-
+        Encrypted data that is transferred as base64-encoded data could benefit as well.
+  - id: "transfer-encoding-three-rules"
+    kind: "tension"
+    locator: "§3.1.2"
+    text: >-
+      "no transfer encoding is required at all", "As a rule ... SHOULD use transfer
+      encoding" and "SHOULD use binary encoding" for inner entities in one section;
+      consistent only once the conditions are applied in order (transfer-encoding-choice).
+  - id: "reference-label-swap"
+    kind: "defect"
+    locator: "§1.4, §7.1, Appendix A"
+    text: >-
+      §7.1 gives [SMIMEv3.1] the RFC set §1.4 gives v3.2 and vice versa; Appendix A labels
+      RFC 5751 as [SMIMEv2]. Editorial; no protocol effect.
+not_defined:
+  - "Any reply, acknowledgement, delivery report or error message from receiver to sender."
+  - "The format of a certificate request message (§4) or registration request (§3.9)."
+  - "Certificate validation, path building and revocation checking (RFC 5750)."
+  - "How several SignerInfos combine into one verification result."
+  - "What a user or application is shown when a signature fails or decryption fails."
+  - "Decryption-failure handling: uniform errors, timing, oracle resistance."
+  - "A limit for 'reasonable resource limits' on nesting or for oversized keys."
+  - "A value for reasonable clock skew."
+  - "Triple wrapping, signed receipts and other ESS structures (RFC 2634, RFC 5035)."
+  - "The algorithm rule when the recipient's version is known but its capabilities are not."

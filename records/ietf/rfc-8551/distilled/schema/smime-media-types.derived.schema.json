@@ -1,0 +1,262 @@
+{
+  "$comment": "DERIVED, not verbatim. Written by this library from the prose and tables of RFC 8551 sections 3.2, 3.2.1, 3.2.2, 3.3-3.8, 3.5.3.2 and 3.10 (source .cache/rfc-8551.txt, sha256 dac39f749a08d3422bd78d4e492195067e7bc03f5fc2d0dac515f0d7ed884ae2). RFC 8551 publishes no grammar or schema for these header parameters; the tables it does print are copied in inline.verbatim.txt (I-03 to I-06, I-11, I-12). Every constraint below cites its locator and, where one exists, its requirement id rfc-8551#R-NNNN.",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:library:rfc-8551:smime-media-types.derived",
+  "title": "RFC 8551 S/MIME media types and their header parameters (DERIVED)",
+  "description": "DERIVED. Validates one MIME entity's media type and parameters as they bear on S/MIME. INSTANCE MODEL (inferred, this library's, not the RFC's): a parsed header, not raw header text. mediaType is type/subtype lower-cased; parameters maps each Content-Type parameter name, lower-cased, to its value with any MIME quoting removed; contentDisposition, when the entity has a Content-Disposition field, holds its disposition type and parameters the same way. Because quoting is removed, the quoting requirement on the protocol parameter (R-0117) cannot be checked here; it is checked by multipart-signed-content-type.derived.abnf. TWO LEVELS. Validating against the root checks only what RFC 8551 states with MUST or as a required parameter: a failure is non-conformance. Validating against #/$defs/sendingAgentShould (anchor #should) adds the SHOULD-level sending-agent rules: a failure there is a deviation from a recommendation, to be reported as a warning, never as non-conformance. #/$defs/identifiesAsSmime (anchor #identifies) is the section 3.10 classifier and is independent of both.",
+  "type": "object",
+  "required": ["mediaType", "parameters"],
+  "properties": {
+    "mediaType": {
+      "type": "string",
+      "$comment": "Any media type is accepted at the root; only the three below are constrained. Inferred instance model: lower-cased type/subtype."
+    },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": {"type": "string"},
+      "$comment": "Content-Type parameters, names lower-cased, values unquoted (inferred instance model)."
+    },
+    "contentDisposition": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {"type": "string"},
+        "parameters": {"type": "object", "additionalProperties": {"type": "string"}}
+      },
+      "$comment": "The Content-Disposition field [RFC2183], named in section 3.2.1 (R-0103)."
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"mediaType": {"const": "multipart/signed"}}, "required": ["mediaType"]},
+      "then": {"$ref": "#/$defs/multipartSignedMust"}
+    },
+    {
+      "if": {"properties": {"mediaType": {"const": "application/pkcs7-mime"}}, "required": ["mediaType"]},
+      "then": {"$ref": "#/$defs/pkcs7MimeMust"}
+    },
+    {
+      "if": {"properties": {"mediaType": {"const": "application/pkcs7-signature"}}, "required": ["mediaType"]},
+      "then": {"$ref": "#/$defs/pkcs7SignatureMust"}
+    }
+  ],
+  "$defs": {
+    "smimeTypeDefined": {
+      "description": "The five smime-type values this specification defines (section 3.2.2, table I-04, lines 1535-1541). authEnveloped-data is the value registered by section 5.3 (I-13).",
+      "enum": ["enveloped-data", "signed-data", "certs-only", "compressed-data", "authEnveloped-data"],
+      "$comment": "Not a closed set for conformance: section 3.2.2 lines 1575-1576 say a registry for additional values is defined in [RFC7114], so a value outside this list is not an error at the root. Case: the RFC prints authEnveloped-data with a capital E (lines 1541, 1661, 2420); whether matching is case-sensitive is not stated in RFC 8551 and is not decided here (open)."
+    },
+    "smimeTypeToExtension": {
+      "description": "The file extension each smime-type's message takes, as stated per format: enveloped-data .p7m (section 3.3, lines 1605-1607), authEnveloped-data .p7m (section 3.4, lines 1660-1662), signed-data .p7m (section 3.5.2, lines 1781-1783), compressed-data .p7z (section 3.6, lines 2029-2031), certs-only .p7c (section 3.8, lines 2106-2107). Consistent with table I-03 (section 3.2.1, lines 1488-1496).",
+      "const": {
+        "enveloped-data": ".p7m",
+        "authEnveloped-data": ".p7m",
+        "signed-data": ".p7m",
+        "compressed-data": ".p7z",
+        "certs-only": ".p7c"
+      },
+      "$comment": "A lookup table carried as a const for harnesses to read; it validates nothing by itself."
+    },
+    "micalgTableValue": {
+      "description": "The 'Value Used' column of the section 3.5.3.2 micalg table (I-05, lines 1919-1928), plus the literal \"unknown\" that its 'Any other' row names.",
+      "enum": ["md5", "sha-1", "sha-224", "sha-256", "sha-384", "sha-512", "unknown"],
+      "$comment": "R-0119 (SHOULD be from the table). The 'Any other' row also admits values 'defined separately in the algorithm profile', and lines 1937-1938 say future values will be taken from the IANA 'Hash Function Textual Names' registry, so this enum is not closed for conformance."
+    },
+    "micalgHistorical": {
+      "description": "Table values marked * in section 3.5.3.2: 'MD5 and SHA-1 are historical and no longer considered secure.' (lines 1921-1922, 1930).",
+      "enum": ["md5", "sha-1"]
+    },
+    "micalgList": {
+      "description": "The micalg parameter value: one or more values separated by commas.",
+      "type": "string",
+      "pattern": "^[^,]+(,[^,]+)*$",
+      "$comment": "Section 3.5.3.2 lines 1914-1915, R-0118: 'If multiple message digest algorithms are used, they MUST be separated by commas per [RFC1847].' Whether whitespace may surround a comma is RFC 1847's matter, not stated in RFC 8551; this pattern neither forbids nor trims it (inferred)."
+    },
+    "multipartSignedMust": {
+      "description": "multipart/signed carrying an S/MIME signature (section 3.5.3.2).",
+      "type": "object",
+      "properties": {
+        "parameters": {
+          "type": "object",
+          "required": ["protocol", "micalg"],
+          "properties": {
+            "protocol": {
+              "const": "application/pkcs7-signature",
+              "$comment": "Section 3.5.3.2 line 1879, R-0116: 'The protocol parameter MUST be \"application/pkcs7-signature\".' Lower-case comparison of a media type value is the inferred instance model."
+            },
+            "micalg": {"$ref": "#/$defs/micalgList"}
+          },
+          "$comment": "required: section 3.5.3.2 lines 1876-1877, 'The multipart/signed Content-Type has two required parameters: the protocol parameter and the micalg parameter.' (stated; not a BCP 14 keyword, no R-id). Scope (inferred): RFC 8551 constrains multipart/signed only as S/MIME uses it; a multipart/signed whose protocol is some other value is not an S/MIME message (section 3.10, I-06) and fails here only because this schema is applied to S/MIME entities. Callers that see arbitrary mail apply #/$defs/identifiesAsSmime first."
+        }
+      }
+    },
+    "pkcs7MimeMust": {
+      "description": "application/pkcs7-mime (section 3.2, IANA template section 5.1, I-11).",
+      "type": "object",
+      "properties": {
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "smime-type": {"type": "string", "minLength": 1},
+            "name": {"type": "string", "minLength": 1}
+          },
+          "$comment": "Section 5.1 (I-11, lines 2309-2312): 'Required Parameters: NONE', 'Optional Parameters: smime-type name'. Nothing is required at MUST level. Other parameters are not forbidden by RFC 8551."
+        }
+      }
+    },
+    "pkcs7SignatureMust": {
+      "description": "application/pkcs7-signature (section 3.5.3.1, IANA template section 5.2, I-12).",
+      "type": "object",
+      "$comment": "Section 5.2 (I-12, lines 2365-2367): 'Required Parameters: N/A', 'Optional Parameters: N/A'. No parameter is required. The section 3.5.3.3 sample nevertheless carries name=smime.p7s (line 1980), so a name parameter is not treated as an error (inferred: the template's N/A is not read as a prohibition)."
+    },
+    "filenameShould": {
+      "description": "Filename rule of section 3.2.1 applied to a name or filename value.",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^[^.]{1,8}\\.[A-Za-z0-9]{3}$",
+          "$comment": "Section 3.2.1 lines 1498-1499, R-0105: 'the filename SHOULD be limited to eight characters followed by a three-letter extension.' Reading 'eight characters' as at most eight, with no dot in the base, is inferred."
+        },
+        {
+          "pattern": "^smime\\.",
+          "$comment": "Section 3.2.1 lines 1500-1502, R-0106: 'the use of the filename base \"smime\" SHOULD be used to indicate that the MIME entity is associated with S/MIME.'"
+        }
+      ]
+    },
+    "sendingAgentShould": {
+      "$anchor": "should",
+      "description": "SHOULD-level checks for what a sending agent emits. Includes the root (MUST level) by reference. Failures here are warnings.",
+      "allOf": [
+        {"$ref": "#"},
+        {
+          "if": {"properties": {"mediaType": {"const": "application/pkcs7-mime"}}, "required": ["mediaType"]},
+          "then": {
+            "required": ["contentDisposition"],
+            "properties": {
+              "parameters": {
+                "required": ["smime-type", "name"],
+                "properties": {
+                  "smime-type": {"$ref": "#/$defs/smimeTypeDefined"},
+                  "name": {
+                    "allOf": [
+                      {"$ref": "#/$defs/filenameShould"},
+                      {"pattern": "\\.p7[mcz]$", "$comment": "Section 3.2.1 lines 1485-1496, R-0104, table I-03: application/pkcs7-mime takes .p7m, .p7c or .p7z."}
+                    ]
+                  }
+                },
+                "$comment": "smime-type: section 3.2 lines 1474-1477, R-0101 ('SHOULD include the optional \"smime-type\" parameter'). name: section 3.2.1 lines 1481-1483, R-0102. Restricting smime-type to the five defined values is a lint for this specification's own formats; registered additions (RFC 7114) will warn here."
+              },
+              "contentDisposition": {
+                "required": ["parameters"],
+                "properties": {
+                  "parameters": {
+                    "required": ["filename"],
+                    "properties": {
+                      "filename": {
+                        "allOf": [
+                          {"$ref": "#/$defs/filenameShould"},
+                          {"pattern": "\\.p7[mcz]$", "$comment": "R-0104, table I-03."}
+                        ]
+                      }
+                    }
+                  }
+                },
+                "$comment": "Section 3.2.1 lines 1483-1484, R-0103: 'Sending agents SHOULD also emit the optional Content-Disposition field [RFC2183] with the \"filename\" parameter.'"
+              }
+            },
+            "allOf": [
+              {"$ref": "#/$defs/extensionMatchesSmimeType"}
+            ]
+          }
+        },
+        {
+          "if": {"properties": {"mediaType": {"const": "application/pkcs7-signature"}}, "required": ["mediaType"]},
+          "then": {
+            "properties": {
+              "parameters": {
+                "properties": {
+                  "name": {"pattern": "\\.p7s$", "$comment": "Section 3.5.3.1 lines 1843-1844 and table I-03: the extension for application/pkcs7-signature is .p7s. R-0104 governs name/filename for application/pkcs7-mime only (line 1481); applying it here is inferred from table I-03, which lists application/pkcs7-signature."}
+                }
+              },
+              "contentDisposition": {
+                "properties": {
+                  "parameters": {
+                    "properties": {
+                      "filename": {"pattern": "\\.p7s$", "$comment": "As for name."}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {"properties": {"mediaType": {"const": "multipart/signed"}}, "required": ["mediaType"]},
+          "then": {
+            "properties": {
+              "parameters": {
+                "properties": {
+                  "micalg": {
+                    "type": "string",
+                    "pattern": "^(md5|sha-1|sha-224|sha-256|sha-384|sha-512|unknown)(,(md5|sha-1|sha-224|sha-256|sha-384|sha-512|unknown))*$",
+                    "$comment": "Section 3.5.3.2 lines 1916-1928, R-0119: each value SHOULD be from the table (#/$defs/micalgTableValue). A value defined by an algorithm profile ('Any other' row) is permitted by the source and will warn here; a harness treats that warning as informational. A receiving agent is held to R-0120 instead: it SHOULD recover gracefully from an unrecognized micalg value, so this check is NOT applied to received messages."
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "extensionMatchesSmimeType": {
+      "description": "When both smime-type and name are present on application/pkcs7-mime, the name's extension agrees with #/$defs/smimeTypeToExtension.",
+      "allOf": [
+        {
+          "if": {"properties": {"parameters": {"properties": {"smime-type": {"enum": ["enveloped-data", "authEnveloped-data", "signed-data"]}}, "required": ["smime-type", "name"]}}},
+          "then": {"properties": {"parameters": {"properties": {"name": {"pattern": "\\.p7m$"}}}}},
+          "$comment": "Sections 3.3 (lines 1605-1607), 3.4 (lines 1660-1662), 3.5.2 (lines 1781-1783)."
+        },
+        {
+          "if": {"properties": {"parameters": {"properties": {"smime-type": {"const": "compressed-data"}}, "required": ["smime-type", "name"]}}},
+          "then": {"properties": {"parameters": {"properties": {"name": {"pattern": "\\.p7z$"}}}}},
+          "$comment": "Section 3.6 lines 2029-2031."
+        },
+        {
+          "if": {"properties": {"parameters": {"properties": {"smime-type": {"const": "certs-only"}}, "required": ["smime-type", "name"]}}},
+          "then": {"properties": {"parameters": {"properties": {"name": {"pattern": "\\.p7c$"}}}}},
+          "$comment": "Section 3.8 lines 2106-2107."
+        }
+      ],
+      "$comment": "These per-format statements are not BCP 14 sentences; they make concrete 'the appropriate extension' of R-0104. Filename in Content-Disposition is not cross-checked against smime-type here (inferred scope)."
+    },
+    "identifiesAsSmime": {
+      "$anchor": "identifies",
+      "description": "Section 3.10 (table I-06, lines 2149-2157): 'A message is considered an S/MIME message if it matches any of the criteria listed below.' Valid against this schema means the entity is identified as S/MIME.",
+      "anyOf": [
+        {"properties": {"mediaType": {"const": "application/pkcs7-mime"}}, "required": ["mediaType"]},
+        {
+          "properties": {
+            "mediaType": {"const": "multipart/signed"},
+            "parameters": {"properties": {"protocol": {"const": "application/pkcs7-signature"}}, "required": ["protocol"]}
+          },
+          "required": ["mediaType", "parameters"]
+        },
+        {
+          "properties": {
+            "mediaType": {"const": "application/octet-stream"},
+            "parameters": {"properties": {"name": {"pattern": "\\.(p7m|p7s|p7c|p7z)$"}}, "required": ["name"]}
+          },
+          "required": ["mediaType", "parameters"]
+        },
+        {
+          "properties": {
+            "mediaType": {"const": "application/octet-stream"},
+            "contentDisposition": {"properties": {"parameters": {"properties": {"filename": {"pattern": "\\.(p7m|p7s|p7c|p7z)$"}}, "required": ["filename"]}}, "required": ["parameters"]}
+          },
+          "required": ["mediaType", "contentDisposition"]
+        }
+      ],
+      "$comment": "Lines 2144-2146: the file suffix 'comes from the \"name\" parameter in the Content-Type header field or the \"filename\" parameter in the Content-Disposition header field.' Suffix matching is case-sensitive here; RFC 8551 does not say (open). Note R-0107/R-0108 (section 3.2.1): a proper implementation MUST use the media types and MUST NOT rely on the file extensions; this classifier only identifies, it does not authorize processing by extension."
+    }
+  }
+}
