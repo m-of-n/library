@@ -1,0 +1,1403 @@
+record: draft-ietf-cbor-serialization
+reviewed_by: ""
+# Every example in draft-ietf-cbor-serialization-08, in source order.
+#
+# WHAT `expect` MEANS HERE.  This document does not define a format that
+# encodings can be well-formed or ill-formed against: it defines three nested
+# serializations, and every encoding below is well-formed, valid CBOR and valid
+# GENERAL serialization - the source says so itself (Appendix L.1, "All examples
+# are well-formed and valid").  So a single valid/invalid verdict needs a
+# denominator.  Here:
+#
+#   expect        the verdict under PREFERRED-PLUS serialization (Section 4),
+#                 which Section 4.3 calls "the recommended default"
+#   conformance   the verdict under each of the three serializations
+#   violates      why `expect` is invalid, cited by section
+#   violates_deterministic
+#                 present only where deterministic serialization rejects an
+#                 encoding that preferred-plus accepts - which can be for one
+#                 reason only, map key order (Section 5.1 item 2)
+#
+# `expect: invalid` therefore means "a checking decoder configured for
+# preferred-plus must reject these bytes", which is exactly the test Appendix
+# L.1.3 describes.  A NON-checking preferred-plus decoder may well accept them;
+# Appendix L.1.4 expects it to.
+#
+# HEX PROVENANCE.  All 105 byte strings below are printed in the source.  NONE is
+# computed by this library - the document gives bytes for every example it
+# states, including the ones buried in prose, so no vector needed reconstructing
+# from a diagnostic form.  103 appear as contiguous h'' literals and were checked
+# against the cached text mechanically.  Two normalisations, neither touching a
+# byte: letter case, because Section 9.1 writes two of its five encodings with
+# uppercase hex digits (0x1A00000001, 0x1B0000000000000001); and rejoining, for
+# V-0001 and V-0002 only, whose bytes the source prints spaced and wrapped across
+# two lines of a table cell (source lines 186-187 and 189-190).
+#
+# AND EVERY ONE WAS DECODED.  An independent CBOR decoder re-derived each value
+# and each per-serialization verdict from the bytes; the generator aborts if a
+# verdict stated here is not the one the decoder computes.  The decoded value in
+# `decoded` is therefore checked against the source's EDN, not copied from it.
+vectors:
+
+  # ------------------------------------------------------------------
+  # §1, Table 1 - Table 1, "[1, 2] definite-length and indefinite-length serializations" - the first example in the document.
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0001"
+    locator: '§1, Table 1'
+    diagnostic: '[1, 2]'
+    hex: '820102'
+    decoded: 'an array of two items, unsigned 1 and unsigned 2 - definite length: the count 2 is in the initial byte'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'Table 1 row 1, "Definite-length": "The array length (2) is encoded at the beginning". PROVENANCE: the source prints these bytes spaced AND wrapped inside the table cell - "0x82 0x01" on source line 186, "0x02" on line 187 - so this and V-0002 are the only vectors in the file whose hex had to be rejoined across a line break. No byte is ours.'
+  - id: "draft-ietf-cbor-serialization#V-0002"
+    locator: '§1, Table 1'
+    diagnostic: '[1, 2]'
+    hex: '9f0102ff'
+    decoded: 'an array of two items, unsigned 1 and unsigned 2 - indefinite length: head 0x9f, then the items, then the break byte'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 2 - indefinite-length array or map'
+    notes: 'Table 1 row 2, "Indefinite-length": "The array is terminated by the break byte (0xff)". PROVENANCE: as V-0001, wrapped inside the table cell - "0x9f 0x01" on source line 189, "0x02 0xff" on line 190, rejoined here. This is the document''s opening illustration of the problem it exists to solve - "CBOR intentionally allows multiple valid serializations of the same data item".'
+
+  # ------------------------------------------------------------------
+  # §3 - Section 3's bullet list of what general serialization permits. These are examples of encodings preferred-plus removes, given before preferred-plus is defined.
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0003"
+    locator: '§3'
+    diagnostic: '0'
+    hex: '00'
+    decoded: 'the unsigned integer 0 - argument in the initial byte'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'First of the three forms the bullet lists: "CBOR arguments of any length (for example, the integer 0 may be encoded as 0x00, 0x1800, or 0x190000 and so on)".'
+  - id: "draft-ietf-cbor-serialization#V-0004"
+    locator: '§3'
+    diagnostic: '0'
+    hex: '1800'
+    decoded: 'the unsigned integer 0 - argument in one additional byte (ai 0x18)'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Second form from the same bullet. The bullet''s "and so on" is open-ended; Appendix L.2''s zero.edn closes it with the four- and eight-byte forms and the two big-number forms.'
+  - id: "draft-ietf-cbor-serialization#V-0005"
+    locator: '§3'
+    diagnostic: '0'
+    hex: '190000'
+    decoded: 'the unsigned integer 0 - argument in two additional bytes (ai 0x19)'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Third form from the same bullet.'
+
+  # ------------------------------------------------------------------
+  # §3
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0006"
+    locator: '§3'
+    diagnostic: '0.00'
+    hex: 'f90000'
+    decoded: 'the floating-point value positive zero - half precision'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'From the bullet "Floating-point values encoded at any length (for example, 0.00 can be 0xf90000, 0xfa00000000, and so on)". The source writes the value as "0.00"; Appendix L.2''s float_zero.edn writes the same value as "0.0".'
+  - id: "draft-ietf-cbor-serialization#V-0007"
+    locator: '§3'
+    diagnostic: '0.00'
+    hex: 'fa00000000'
+    decoded: 'the floating-point value positive zero - single precision'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
+    notes: 'Second form from the same bullet. Half precision represents positive zero exactly, so every wider encoding of it is a rule-4 violation.'
+
+  # ------------------------------------------------------------------
+  # §3
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0008"
+    locator: '§3'
+    diagnostic: '0'
+    hex: 'c34100'
+    decoded: 'the big number -1 - NOT the 0 the source claims, see notes - tag 3 (negative big number) with a one-byte content of 0x00'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 5 - leading zeros encoded in a big number; §4.1 item 5 - a value major type 0 or 1 can carry, encoded as a big number'
+    notes: 'DEFECT IN THE SOURCE, reported and not repaired. The bullet reads "Big number representation of values that are also representable using major types 0 and 1 (for example, 0 can be encoded as the big number 0xc34100)". It cannot: 0xc3 is tag 3, the NEGATIVE big number, whose value is -1-n, so with a content of 0x00 these bytes decode to -1, not 0. The positive big number 0 is 0xc2 0x41 0x00 or 0xc2 0x40, and Appendix L.2''s zero.edn lists exactly those two (h''c2420000'' and h''c240'') among its general encodings of 0 - never 0xc34100. The point the bullet is making survives the slip, because -1 is also representable with a major type (type 1, as 0x20), but the stated value is wrong. Verified by decoding: these bytes are the big number -1.'
+
+  # ------------------------------------------------------------------
+  # §4.1 item 4
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0009"
+    locator: '§4.1 item 4'
+    diagnostic: '0.0'
+    hex: 'f90000'
+    decoded: 'the floating-point value positive zero - half precision'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'The rule''s own worked example: "For example, 0.0 can always be reduced to half-precision so it MUST be encoded as 0xf90000" (draft-ietf-cbor-serialization#R-0034). Same bytes as V-0006 and as float_zero.edn; recorded separately because it is a separate example in the source, and because this is the one place the document states it as a MUST.'
+
+  # ------------------------------------------------------------------
+  # §4.1 item 4
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0010"
+    locator: '§4.1 item 4'
+    diagnostic: '0.1'
+    hex: 'fb3fb999999999999a'
+    decoded: 'the floating-point value 0.1, which no shorter width represents exactly - double precision'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: '"For another example, 0.1 would lose precision if not encoded as double-precision so it MUST be encoded as 0xfb3fb999999999999a" (R-0035). The counter-example to 0.0: it fixes the rule''s upper end, as 0.0 fixes its lower. Not repeated in Appendix L.2, which uses 1.7976931348623157e+308 for its double vector instead, so this is the only test case in the document for a value that is irreducible for PRECISION rather than for range.'
+
+  # ------------------------------------------------------------------
+  # §4.1 item 4
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0011"
+    locator: '§4.1 item 4'
+    diagnostic: 'NaN'
+    hex: 'f97e00'
+    decoded: 'the canonical quiet NaN - half precision, sign bit clear, most significant significand bit set, all remaining significand bits clear'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: '"Encoders MUST NOT output any NaN other than the half-precision NaN 0xf9 0x7e 0x00 (sign bit clear, most significant significand bit set, all remaining significand bits clear)" (R-0037). The source prints the bytes spaced, as 0xf9 0x7e 0x00. Appendix L.2''s float_quiet_nan.edn repeats the same encoding as a vector.'
+
+  # ------------------------------------------------------------------
+  # §9.1 - Section 9.1, "Covert Channel" - the only place in the document that enumerates all five argument widths for one value. Requiring preferred-plus or deterministic serialization is offered as the mitigation: "Another option is to require preferred-plus or deterministic serialization and to have decoders issue a warning if not compliant."
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0012"
+    locator: '§9.1'
+    diagnostic: '1'
+    hex: '01'
+    decoded: 'the unsigned integer 1 - argument in the initial byte'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'First of the five forms in the covert-channel example: "a CBOR argument (such as an integer encoding or a string length) can be encoded up to five different ways (e.g. the value 1 can be encoded as 0x01, 0x1801, 0x190001, 0x1A00000001, or 0x1B0000000000000001)". The source writes the last two with uppercase hex digits; this file normalises hex to lower case throughout, which changes no byte.'
+  - id: "draft-ietf-cbor-serialization#V-0013"
+    locator: '§9.1'
+    diagnostic: '1'
+    hex: '1801'
+    decoded: 'the unsigned integer 1 - argument in one additional byte'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Second of the five. The security argument: "This variability can be used to encode ~2 hidden bits per argument. Since every CBOR item carries an argument, even moderately complex protocols may accumulate sufficient bits to exfiltrate sensitive material (e.g., cryptographic keys) or to generate persistent identifiers for tracking users or devices."'
+  - id: "draft-ietf-cbor-serialization#V-0014"
+    locator: '§9.1'
+    diagnostic: '1'
+    hex: '190001'
+    decoded: 'the unsigned integer 1 - argument in two additional bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Third of the five.'
+  - id: "draft-ietf-cbor-serialization#V-0015"
+    locator: '§9.1'
+    diagnostic: '1'
+    hex: '1a00000001'
+    decoded: 'the unsigned integer 1 - argument in four additional bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Fourth of the five.'
+  - id: "draft-ietf-cbor-serialization#V-0016"
+    locator: '§9.1'
+    diagnostic: '1'
+    hex: '1b0000000000000001'
+    decoded: 'the unsigned integer 1 - argument in eight additional bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Fifth of the five - and the one encoding whose prohibition Section 4.1 item 1 never actually states, since its enumeration stops at the four-byte form. Section 9.1 counts five ways; Section 4.1 rules out three of them explicitly and the fourth only by implication.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (zero.edn) - "The integer 0". Seven general encodings, one preferred-plus, one deterministic - the widest spread of any vector in the document, and the clearest demonstration of what preferred-plus removes.
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0017"
+    locator: 'App. L.2 (zero.edn)'
+    diagnostic: '0'
+    hex: '00'
+    decoded: 'the unsigned integer 0 - major type 0, argument in the initial byte'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'Printed in the source; decoded and checked. Conforms to all three serializations.'
+  - id: "draft-ietf-cbor-serialization#V-0018"
+    locator: 'App. L.2 (zero.edn)'
+    diagnostic: '0'
+    hex: '1800'
+    decoded: 'the unsigned integer 0 - major type 0, one additional argument byte'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0019"
+    locator: 'App. L.2 (zero.edn)'
+    diagnostic: '0'
+    hex: '190000'
+    decoded: 'the unsigned integer 0 - major type 0, two additional argument bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0020"
+    locator: 'App. L.2 (zero.edn)'
+    diagnostic: '0'
+    hex: '1a00000000'
+    decoded: 'the unsigned integer 0 - major type 0, four additional argument bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0021"
+    locator: 'App. L.2 (zero.edn)'
+    diagnostic: '0'
+    hex: '1b0000000000000000'
+    decoded: 'the unsigned integer 0 - major type 0, eight additional argument bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0022"
+    locator: 'App. L.2 (zero.edn)'
+    diagnostic: '0'
+    hex: 'c2420000'
+    decoded: 'the unsigned integer 0 - tag 2 with a two-byte content of 0x0000'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 5 - leading zeros encoded in a big number; §4.1 item 5 - a value major type 0 or 1 can carry, encoded as a big number'
+    notes: 'Violates both bullets of rule 5 at once: the content has leading zeros, and the value fits in major type 0.'
+  - id: "draft-ietf-cbor-serialization#V-0023"
+    locator: 'App. L.2 (zero.edn)'
+    diagnostic: '0'
+    hex: 'c240'
+    decoded: 'the unsigned integer 0 - tag 2 with an EMPTY content'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 5 - a value major type 0 or 1 can carry, encoded as a big number'
+    notes: 'The empty big number byte string. An encoder may never produce it, but Section 4.2 item 5 requires a decoder to take it: "An empty byte string MUST be accepted and treated as the value zero" (draft-ietf-cbor-serialization#R-0049). No leading-zero violation, because there are no bytes to lead.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (three.edn) - "The integer 3". Same shape as zero.edn without the empty-content case.
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0024"
+    locator: 'App. L.2 (three.edn)'
+    diagnostic: '3'
+    hex: '03'
+    decoded: 'the unsigned integer 3 - major type 0, argument in the initial byte'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'Printed in the source; decoded and checked. Conforms to all three serializations.'
+  - id: "draft-ietf-cbor-serialization#V-0025"
+    locator: 'App. L.2 (three.edn)'
+    diagnostic: '3'
+    hex: '1803'
+    decoded: 'the unsigned integer 3 - major type 0, one additional argument byte'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0026"
+    locator: 'App. L.2 (three.edn)'
+    diagnostic: '3'
+    hex: '190003'
+    decoded: 'the unsigned integer 3 - major type 0, two additional argument bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0027"
+    locator: 'App. L.2 (three.edn)'
+    diagnostic: '3'
+    hex: '1a00000003'
+    decoded: 'the unsigned integer 3 - major type 0, four additional argument bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0028"
+    locator: 'App. L.2 (three.edn)'
+    diagnostic: '3'
+    hex: '1b0000000000000003'
+    decoded: 'the unsigned integer 3 - major type 0, eight additional argument bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0029"
+    locator: 'App. L.2 (three.edn)'
+    diagnostic: '3'
+    hex: 'c2420003'
+    decoded: 'the unsigned integer 3 - tag 2 with a two-byte content of 0x0003'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 5 - leading zeros encoded in a big number; §4.1 item 5 - a value major type 0 or 1 can carry, encoded as a big number'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (minus_twenty_five.edn) - "The integer -25". The only vector exercising the negative half of the shortest-form table.
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0030"
+    locator: 'App. L.2 (minus_twenty_five.edn)'
+    diagnostic: '-25'
+    hex: '3818'
+    decoded: 'the negative integer -25 - major type 1, one additional argument byte (argument 24, value -1-24)'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'The boundary case for rule 1''s second bullet on the negative side: -25 is the first value that needs an additional byte, because -1..-24 fit in the initial byte.'
+  - id: "draft-ietf-cbor-serialization#V-0031"
+    locator: 'App. L.2 (minus_twenty_five.edn)'
+    diagnostic: '-25'
+    hex: '390018'
+    decoded: 'the negative integer -25 - major type 1, two additional argument bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0032"
+    locator: 'App. L.2 (minus_twenty_five.edn)'
+    diagnostic: '-25'
+    hex: '3a00000018'
+    decoded: 'the negative integer -25 - major type 1, four additional argument bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0033"
+    locator: 'App. L.2 (minus_twenty_five.edn)'
+    diagnostic: '-25'
+    hex: '3b0000000000000018'
+    decoded: 'the negative integer -25 - major type 1, eight additional argument bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0034"
+    locator: 'App. L.2 (minus_twenty_five.edn)'
+    diagnostic: '-25'
+    hex: 'c3420018'
+    decoded: 'the negative integer -25 - tag 3 with a two-byte content of 0x0018 (n = 24, value -1-24)'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 5 - leading zeros encoded in a big number; §4.1 item 5 - a value major type 0 or 1 can carry, encoded as a big number'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (65_bit_neg.edn) - "Largest negative integer".
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0035"
+    locator: 'App. L.2 (65_bit_neg.edn)'
+    diagnostic: '-18446744073709551616'
+    hex: '3bffffffffffffffff'
+    decoded: 'the negative integer -2^64, the largest-magnitude value major type 1 can carry - major type 1, eight argument bytes, argument 2^64-1, value -1-(2^64-1)'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'The far end of major type 1. Its argument is 0xffffffffffffffff, which needs all eight bytes, so this is the one integer vector in the document where the eight-byte form IS the shortest form.'
+  - id: "draft-ietf-cbor-serialization#V-0036"
+    locator: 'App. L.2 (65_bit_neg.edn)'
+    diagnostic: '-18446744073709551616'
+    hex: 'c348ffffffffffffffff'
+    decoded: 'the negative integer -2^64, the largest-magnitude value major type 1 can carry - tag 3 with an eight-byte content of 0xffffffffffffffff'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 5 - a value major type 0 or 1 can carry, encoded as a big number'
+    notes: 'No leading zeros, so only the unification bullet is violated - and this is the vector that fixes the 9-byte floor for big numbers: an 8-byte content is always a value major type 1 can carry.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (byte_string.edn) - "The byte string of length 3: 0x010203".
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0037"
+    locator: 'App. L.2 (byte_string.edn)'
+    diagnostic: 'h''010203'''
+    hex: '43010203'
+    decoded: 'the three-byte byte string 0x010203 - definite length 3 in the initial byte, then the content'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'Printed in the source; decoded and checked. Conforms to all three serializations.'
+  - id: "draft-ietf-cbor-serialization#V-0038"
+    locator: 'App. L.2 (byte_string.edn)'
+    diagnostic: 'h''010203'''
+    hex: '5f4101420203ff'
+    decoded: 'the three-byte byte string 0x010203 - indefinite length: two definite segments, h''01'' then h''0203'', then the break'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 3 - indefinite-length byte or text string'
+    notes: 'Both segment lengths are themselves shortest-form here; only the indefinite framing violates the rules.'
+  - id: "draft-ietf-cbor-serialization#V-0039"
+    locator: 'App. L.2 (byte_string.edn)'
+    diagnostic: 'h''010203'''
+    hex: '5f5801015a000000020203ff'
+    decoded: 'the three-byte byte string 0x010203 - indefinite length: segment lengths encoded in one and four additional bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form; §4.1 item 3 - indefinite-length byte or text string'
+    notes: 'Three violations in one encoding: the indefinite framing, and the non-shortest length argument of each of the two segments. The segment-length case is the reason Section 4.1 item 1''s reach has to be understood as "every argument anywhere", not "every integer value".'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (text_string.edn) - "The text string 'hi there'".
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0040"
+    locator: 'App. L.2 (text_string.edn)'
+    diagnostic: '"hi there"'
+    hex: '686869207468657265'
+    decoded: 'the eight-character text string "hi there" - definite length 8 in the initial byte, then eight bytes of UTF-8'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'Printed in the source; decoded and checked. Conforms to all three serializations.'
+  - id: "draft-ietf-cbor-serialization#V-0041"
+    locator: 'App. L.2 (text_string.edn)'
+    diagnostic: '"hi there"'
+    hex: '7f686869207468657265ff'
+    decoded: 'the eight-character text string "hi there" - indefinite length with a single definite segment carrying the whole string'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 3 - indefinite-length byte or text string'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0042"
+    locator: 'App. L.2 (text_string.edn)'
+    diagnostic: '"hi there"'
+    hex: '7f64686920746468657265ff'
+    decoded: 'the eight-character text string "hi there" - indefinite length with two segments, "hi t" and "here"'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 3 - indefinite-length byte or text string'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0043"
+    locator: 'App. L.2 (text_string.edn)'
+    diagnostic: '"hi there"'
+    hex: '7f790004686920747b000000000000000468657265ff'
+    decoded: 'the eight-character text string "hi there" - indefinite length with two segments whose lengths use two and eight additional bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form; §4.1 item 3 - indefinite-length byte or text string'
+    notes: 'The text-string counterpart of byte_string.edn''s third form: indefinite framing plus a non-shortest length on each segment.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (array.edn) - "The array [1, 2, 3]". The same contrast as Table 1, now as a test fixture.
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0044"
+    locator: 'App. L.2 (array.edn)'
+    diagnostic: '[1, 2, 3]'
+    hex: '83010203'
+    decoded: 'an array of three unsigned integers - definite length 3 in the initial byte, then the three items'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'Printed in the source; decoded and checked. Conforms to all three serializations.'
+  - id: "draft-ietf-cbor-serialization#V-0045"
+    locator: 'App. L.2 (array.edn)'
+    diagnostic: '[1, 2, 3]'
+    hex: '9f010203ff'
+    decoded: 'an array of three unsigned integers - indefinite length, then the three items, then the break'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 2 - indefinite-length array or map'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (map.edn) - "Map with three items using integer map keys", with the source's note: "Note that map order is not significant in the CBOR data model. Maps are only sorted to provide deterministic encoding." Six of the eight general encodings are valid preferred-plus; exactly one is valid deterministic. This is the clearest vector in the document for the single difference between the two serializations.
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0046"
+    locator: 'App. L.2 (map.edn)'
+    diagnostic: '{1:"x", 2:"y", 3:"z"}'
+    hex: 'a301617802617903617a'
+    decoded: 'a three-entry map with the integer keys 1, 2 and 3 and the text values "x", "y" and "z" - definite length 3, keys in ascending order 1, 2, 3'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'THE one deterministic encoding of this map. Keys encode to h''01'', h''02'', h''03'', which are already in bytewise order.'
+  - id: "draft-ietf-cbor-serialization#V-0047"
+    locator: 'App. L.2 (map.edn)'
+    diagnostic: '{1:"x", 3:"z", 2:"y"}'
+    hex: 'a301617803617a026179'
+    decoded: 'a three-entry map with the integer keys 1, 2 and 3 and the text values "x", "y" and "z" - definite length 3, key order 1, 3, 2'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: invalid
+    violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0048"
+    locator: 'App. L.2 (map.edn)'
+    diagnostic: '{2:"y", 3:"z", 1:"x"}'
+    hex: 'a302617903617a016178'
+    decoded: 'a three-entry map with the integer keys 1, 2 and 3 and the text values "x", "y" and "z" - definite length 3, key order 2, 3, 1'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: invalid
+    violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0049"
+    locator: 'App. L.2 (map.edn)'
+    diagnostic: '{2:"y", 1:"x", 3:"z"}'
+    hex: 'a302617901617803617a'
+    decoded: 'a three-entry map with the integer keys 1, 2 and 3 and the text values "x", "y" and "z" - definite length 3, key order 2, 1, 3'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: invalid
+    violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0050"
+    locator: 'App. L.2 (map.edn)'
+    diagnostic: '{3:"z", 1:"x", 2:"y"}'
+    hex: 'a303617a016178026179'
+    decoded: 'a three-entry map with the integer keys 1, 2 and 3 and the text values "x", "y" and "z" - definite length 3, key order 3, 1, 2'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: invalid
+    violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0051"
+    locator: 'App. L.2 (map.edn)'
+    diagnostic: '{3:"z", 2:"y", 1:"x"}'
+    hex: 'a303617a026179016178'
+    decoded: 'a three-entry map with the integer keys 1, 2 and 3 and the text values "x", "y" and "z" - definite length 3, key order 3, 2, 1'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: invalid
+    violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0052"
+    locator: 'App. L.2 (map.edn)'
+    diagnostic: '{3:"z", 2:"y", 1:"x"}'
+    hex: 'bf03617a026179016178ff'
+    decoded: 'a three-entry map with the integer keys 1, 2 and 3 and the text values "x", "y" and "z" - indefinite length, key order 3, 2, 1, terminated by the break'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 2 - indefinite-length array or map'
+    violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0053"
+    locator: 'App. L.2 (map.edn)'
+    diagnostic: '{3:"z", 2:"y", 1:"x"}'
+    hex: 'a31a00000003617a19000261791b00000000000000016178'
+    decoded: 'a three-entry map with the integer keys 1, 2 and 3 and the text values "x", "y" and "z" - definite length 3, key order 3, 2, 1, with the keys encoded in four, two and eight additional argument bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
+    notes: 'Three keys, three different non-shortest widths - and a second lesson: the map is unsorted under the comparison as written too, since h''1a00000003'' > h''190002'' bytewise. Had the keys been sorted, the sort would still have been over these non-canonical bytes, which is why rule 5.1 item 2 says "their DETERMINISTIC encodings of the map keys".'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (map_strings.edn) - "Three item map with string keys". Same eight-to-six-to-one shape as map.edn, with text keys instead of integer keys.
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0054"
+    locator: 'App. L.2 (map_strings.edn)'
+    diagnostic: '{"abc": 1, "def": 2, "ghi": 3}'
+    hex: 'a3636162630163646566026367686903'
+    decoded: 'a three-entry map with the text keys "abc", "def" and "ghi" and the integer values 1, 2 and 3 - definite length 3, keys in ascending order'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'THE one deterministic encoding. Keys encode to h''63616263'', h''63646566'', h''63676869'' - already in bytewise order, and since all three are the same length, this is one of the maps where the rejected RFC 7049 length-first sort would give the same answer.'
+  - id: "draft-ietf-cbor-serialization#V-0055"
+    locator: 'App. L.2 (map_strings.edn)'
+    diagnostic: '{"abc": 1, "ghi": 3, "def": 2}'
+    hex: 'a3636162630163676869036364656602'
+    decoded: 'a three-entry map with the text keys "abc", "def" and "ghi" and the integer values 1, 2 and 3 - definite length 3, key order abc, ghi, def'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: invalid
+    violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0056"
+    locator: 'App. L.2 (map_strings.edn)'
+    diagnostic: '{"def": 2, "abc": 1, "ghi": 3}'
+    hex: 'a3636465660263616263016367686903'
+    decoded: 'a three-entry map with the text keys "abc", "def" and "ghi" and the integer values 1, 2 and 3 - definite length 3, key order def, abc, ghi'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: invalid
+    violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0057"
+    locator: 'App. L.2 (map_strings.edn)'
+    diagnostic: '{"def": 2, "ghi": 3, "abc": 1}'
+    hex: 'a3636465660263676869036361626301'
+    decoded: 'a three-entry map with the text keys "abc", "def" and "ghi" and the integer values 1, 2 and 3 - definite length 3, key order def, ghi, abc'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: invalid
+    violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0058"
+    locator: 'App. L.2 (map_strings.edn)'
+    diagnostic: '{"ghi": 3, "abc": 1, "def": 2}'
+    hex: 'a3636768690363616263016364656602'
+    decoded: 'a three-entry map with the text keys "abc", "def" and "ghi" and the integer values 1, 2 and 3 - definite length 3, key order ghi, abc, def'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: invalid
+    violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0059"
+    locator: 'App. L.2 (map_strings.edn)'
+    diagnostic: '{"ghi": 3, "def": 2, "abc": 1}'
+    hex: 'a3636768690363646566026361626301'
+    decoded: 'a three-entry map with the text keys "abc", "def" and "ghi" and the integer values 1, 2 and 3 - definite length 3, key order ghi, def, abc'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: invalid
+    violates_deterministic: '§5.1 item 2 - map items not sorted in the bytewise lexicographic order of their encoded keys'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0060"
+    locator: 'App. L.2 (map_strings.edn)'
+    diagnostic: '{"abc": 1, "def": 2, "ghi": 3}'
+    hex: 'bf636162630163646566026367686903ff'
+    decoded: 'a three-entry map with the text keys "abc", "def" and "ghi" and the integer values 1, 2 and 3 - indefinite length, keys in ascending order, terminated by the break'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 2 - indefinite-length array or map'
+    notes: 'Sorted, so the only violation is the indefinite framing. Under the Section 6 special serialization - deterministic except that maps and arrays take indefinite lengths - this encoding would be the conforming one.'
+  - id: "draft-ietf-cbor-serialization#V-0061"
+    locator: 'App. L.2 (map_strings.edn)'
+    diagnostic: '{"abc": 1, "def": 2, "ghi": 3}'
+    hex: 'bf7f6161626263ff017f6264656166ff027f63676869ff03ff'
+    decoded: 'a three-entry map with the text keys "abc", "def" and "ghi" and the integer values 1, 2 and 3 - indefinite-length map whose three keys are themselves indefinite-length text strings: "a"+"bc", "de"+"f", "ghi"'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 2 - indefinite-length array or map; §4.1 item 3 - indefinite-length byte or text string'
+    notes: 'The hardest encoding in the document: four nested indefinite-length items. It is also the ONLY encoding in the document on which the two candidate map sort orders disagree. Its keys encode to 7, 7 and 6 bytes; bytewise lexicographic order (Section 5.1 item 2) leaves them as they are, while the RFC 7049 Section 3.9 / RFC 8949 Section 4.2.3 length-first order that the rule explicitly rejects would put the 6-byte key first. Since this encoding is rejected by both preferred-plus and deterministic serialization for its indefinite framing, no conformance test built from these fixtures ever reaches the distinction - see the README.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (positive_bignum.edn) - "A positive big num", with the source's note: "Note that big numbers are included in the test data because preferred-plus serialization requires their unification with integers."
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0062"
+    locator: 'App. L.2 (positive_bignum.edn)'
+    diagnostic: '79228162514264337593543950335'
+    hex: 'c24cffffffffffffffffffffffff'
+    decoded: 'the positive big number 2^96-1 - tag 2 with a 12-byte content, no leading zeros'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'Twelve bytes of 0xff - well above the 9-byte floor, so the big number form is required here rather than merely permitted.'
+  - id: "draft-ietf-cbor-serialization#V-0063"
+    locator: 'App. L.2 (positive_bignum.edn)'
+    diagnostic: '79228162514264337593543950335'
+    hex: 'c24e0000ffffffffffffffffffffffff'
+    decoded: 'the positive big number 2^96-1 - tag 2 with a 14-byte content carrying two leading zero bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 5 - leading zeros encoded in a big number'
+    notes: 'The pure leading-zeros case: the value is too large for major type 0, so only rule 5''s first bullet is violated.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (negative_bignum.edn) - "Negative bignum on boundary with type 1 integer", with the source's note: "Note that this is the value closest that can be represented as a big number, not a type 1 integer for preferred-plus serialization."
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0064"
+    locator: 'App. L.2 (negative_bignum.edn)'
+    diagnostic: '-18446744073709551617'
+    hex: 'c349010000000000000000'
+    decoded: 'the negative big number -(2^64+1), one below what major type 1 can carry - tag 3 with a nine-byte content of 0x010000000000000000 (n = 2^64)'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'THE SMALLEST LEGAL BIG NUMBER in preferred-plus, and the vector that fixes the floor at nine content bytes. Appendix F''s `bnbstr = bstr .size (8..bnmax)` admits eight, which nothing can satisfy; see schema/bignums.cddl.'
+  - id: "draft-ietf-cbor-serialization#V-0065"
+    locator: 'App. L.2 (negative_bignum.edn)'
+    diagnostic: '-18446744073709551617'
+    hex: 'c34c000000010000000000000000'
+    decoded: 'the negative big number -(2^64+1), one below what major type 1 can carry - tag 3 with a twelve-byte content carrying three leading zero bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 5 - leading zeros encoded in a big number'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0066"
+    locator: 'App. L.2 (negative_bignum.edn)'
+    diagnostic: '-18446744073709551617'
+    hex: 'c35f450000000001480000000000000000ff'
+    decoded: 'the negative big number -(2^64+1), one below what major type 1 can carry - tag 3 whose content is an INDEFINITE-length byte string of two segments, h''0000000001'' and eight zero bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 3 - indefinite-length byte or text string; §4.1 item 5 - leading zeros encoded in a big number'
+    notes: 'Two violations: the content byte string is indefinite-length, and once the segments are joined the magnitude carries four leading zero bytes. The only vector in the document where an indefinite-length string appears as tag content rather than at the top level.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (date_epoch_tag.edn) - "An epoch date tag", with the source's note: "Note that this is provided as a test case for tags. There are no requirements for dates in this document. The tag content in this example does vary by serialization type."
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0067"
+    locator: 'App. L.2 (date_epoch_tag.edn)'
+    diagnostic: '1(1776614355)'
+    hex: 'c11a69e4fbd3'
+    decoded: 'tag 1 (epoch date) applied to the unsigned integer 1776614355 - tag number 1 in the initial byte; content argument in four additional bytes, which is its shortest form'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'Printed in the source; decoded and checked. Conforms to all three serializations.'
+  - id: "draft-ietf-cbor-serialization#V-0068"
+    locator: 'App. L.2 (date_epoch_tag.edn)'
+    diagnostic: '1(1776614355)'
+    hex: 'd8011a69e4fbd3'
+    decoded: 'tag 1 (epoch date) applied to the unsigned integer 1776614355 - tag number 1 in one additional byte'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'The tag NUMBER is non-shortest; the content is untouched. The first of four encodings in this file that violate rule 1 on a tag number alone - the clearest demonstration that the shortest-form rule reaches arguments that are not values.'
+  - id: "draft-ietf-cbor-serialization#V-0069"
+    locator: 'App. L.2 (date_epoch_tag.edn)'
+    diagnostic: '1(1776614355)'
+    hex: 'd900011a69e4fbd3'
+    decoded: 'tag 1 (epoch date) applied to the unsigned integer 1776614355 - tag number 1 in two additional bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0070"
+    locator: 'App. L.2 (date_epoch_tag.edn)'
+    diagnostic: '1(1776614355)'
+    hex: 'da000000011a69e4fbd3'
+    decoded: 'tag 1 (epoch date) applied to the unsigned integer 1776614355 - tag number 1 in four additional bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0071"
+    locator: 'App. L.2 (date_epoch_tag.edn)'
+    diagnostic: '1(1776614355)'
+    hex: 'db00000000000000011a69e4fbd3'
+    decoded: 'tag 1 (epoch date) applied to the unsigned integer 1776614355 - tag number 1 in eight additional bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0072"
+    locator: 'App. L.2 (date_epoch_tag.edn)'
+    diagnostic: '1(1776614355)'
+    hex: 'c11b0000000069e4fbd3'
+    decoded: 'tag 1 (epoch date) applied to the unsigned integer 1776614355 - tag number 1 in the initial byte; content argument in eight additional bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'The mirror image: a shortest-form tag number with a non-shortest content. Together with the four above, this file covers both halves of a tagged item independently.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (date_string_tag.edn) - "A date string tag", with the same note as date_epoch_tag.edn: "this is provided as a test case for tags. There are no requirements for dates in this document."
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0073"
+    locator: 'App. L.2 (date_string_tag.edn)'
+    diagnostic: '0("2026-04-19T03:59:15Z")'
+    hex: 'c074323032362d30342d31395430333a35393a31355a'
+    decoded: 'tag 0 (date string) applied to the twenty-character text string "2026-04-19T03:59:15Z" - tag number 0 in the initial byte; string length 20 in the initial byte of the content'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'Printed in the source; decoded and checked. Conforms to all three serializations.'
+  - id: "draft-ietf-cbor-serialization#V-0074"
+    locator: 'App. L.2 (date_string_tag.edn)'
+    diagnostic: '0("2026-04-19T03:59:15Z")'
+    hex: 'd80074323032362d30342d31395430333a35393a31355a'
+    decoded: 'tag 0 (date string) applied to the twenty-character text string "2026-04-19T03:59:15Z" - tag number 0 in one additional byte'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0075"
+    locator: 'App. L.2 (date_string_tag.edn)'
+    diagnostic: '0("2026-04-19T03:59:15Z")'
+    hex: 'd9000074323032362d30342d31395430333a35393a31355a'
+    decoded: 'tag 0 (date string) applied to the twenty-character text string "2026-04-19T03:59:15Z" - tag number 0 in two additional bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0076"
+    locator: 'App. L.2 (date_string_tag.edn)'
+    diagnostic: '0("2026-04-19T03:59:15Z")'
+    hex: 'da0000000074323032362d30342d31395430333a35393a31355a'
+    decoded: 'tag 0 (date string) applied to the twenty-character text string "2026-04-19T03:59:15Z" - tag number 0 in four additional bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0077"
+    locator: 'App. L.2 (date_string_tag.edn)'
+    diagnostic: '0("2026-04-19T03:59:15Z")'
+    hex: 'db000000000000000074323032362d30342d31395430333a35393a31355a'
+    decoded: 'tag 0 (date string) applied to the twenty-character text string "2026-04-19T03:59:15Z" - tag number 0 in eight additional bytes'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 1 - the argument is not in shortest form'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0078"
+    locator: 'App. L.2 (date_string_tag.edn)'
+    diagnostic: '0("2026-04-19T03:59:15Z")'
+    hex: 'c07f74323032362d30342d31395430333a35393a31355aff'
+    decoded: 'tag 0 (date string) applied to the twenty-character text string "2026-04-19T03:59:15Z" - indefinite-length content string with one segment carrying the whole value'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 3 - indefinite-length byte or text string'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0079"
+    locator: 'App. L.2 (date_string_tag.edn)'
+    diagnostic: '0("2026-04-19T03:59:15Z")'
+    hex: 'c07f6232307232362d30342d31395430333a35393a31355aff'
+    decoded: 'tag 0 (date string) applied to the twenty-character text string "2026-04-19T03:59:15Z" - indefinite-length content string with two segments, "20" and "26-04-19T03:59:15Z"'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 3 - indefinite-length byte or text string'
+    notes: 'Seven general encodings, the most of any file. Tag 0 is the one tag number that cannot be made non-shortest in the other direction - 0 is already in the initial byte.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (true.edn) - "The simple value 'true'".
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0080"
+    locator: 'App. L.2 (true.edn)'
+    diagnostic: 'true'
+    hex: 'f5'
+    decoded: 'the simple value 21, true - major type 7, simple value in the initial byte'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'The only encoding there is. Simple values below 24 have exactly one form, so this file has one general, one preferred-plus and one deterministic encoding and no negative cases at all.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (simple111.edn) - "The simple value 111", with the source's note: "Note that the simple value 111 is of not particular significance. It was selected because it is an unassigned simple value."
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0081"
+    locator: 'App. L.2 (simple111.edn)'
+    diagnostic: 'simple(111)'
+    hex: 'f86f'
+    decoded: 'the unassigned simple value 111 - major type 7 with ai 24, the value in one additional byte'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'Valid in all three serializations. This document narrows major type 7 for floats only - unlike draft-mcnally-deterministic-cbor, which admits only false, true and null and would reject these bytes.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (float_zero.edn) - "Floating-point positive zero".
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0082"
+    locator: 'App. L.2 (float_zero.edn)'
+    diagnostic: '0.0'
+    hex: 'f90000'
+    decoded: 'the floating-point value positive zero - half precision'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'Printed in the source; decoded and checked. Conforms to all three serializations.'
+  - id: "draft-ietf-cbor-serialization#V-0083"
+    locator: 'App. L.2 (float_zero.edn)'
+    diagnostic: '0.0'
+    hex: 'fa00000000'
+    decoded: 'the floating-point value positive zero - single precision'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0084"
+    locator: 'App. L.2 (float_zero.edn)'
+    diagnostic: '0.0'
+    hex: 'fb0000000000000000'
+    decoded: 'the floating-point value positive zero - double precision'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
+    notes: 'Positive zero is exactly representable in half at every width, so both wider encodings are always violations - one of the few float cases a grammar can decide without arithmetic.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (float_double.edn) - "Double-precision normal float".
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0085"
+    locator: 'App. L.2 (float_double.edn)'
+    diagnostic: '1.7976931348623157e+308'
+    hex: 'fb7fefffffffffffff'
+    decoded: 'the largest finite double-precision value - double precision; neither single nor half can represent it, so eight bytes is the shortest width'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'One encoding only. The document''s example of a value that is irreducible for RANGE; 0.1 in Section 4.1 is its example of one irreducible for PRECISION, and that value appears nowhere in Appendix L.2.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (float_double_subnormal.edn) - "Double-precision negative subnormal float", with the source's note: "Note that full subnormal support is required for all serializations defined in this document."
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0086"
+    locator: 'App. L.2 (float_double_subnormal.edn)'
+    diagnostic: '-5.0e-324'
+    hex: 'fb8000000000000001'
+    decoded: 'the negative double-precision subnormal of smallest magnitude, -2^-1074 - double precision, exponent field zero, significand 1, sign bit set'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'One encoding only. Appendix L.1 flags this one as the awkward case for test harnesses: "the EDN string ''-5.0e-324'' will likely need to be passed as a value of type double to the API of a C-language CBOR library".'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (float_single.edn) - "Single-precision normal float".
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0087"
+    locator: 'App. L.2 (float_single.edn)'
+    diagnostic: '-16777216.0'
+    hex: 'fbc170000000000000'
+    decoded: 'the floating-point value -2^24, exactly representable in single precision but not in half - double precision'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0088"
+    locator: 'App. L.2 (float_single.edn)'
+    diagnostic: '-16777216.0'
+    hex: 'facb800000'
+    decoded: 'the floating-point value -2^24, exactly representable in single precision but not in half - single precision, which is the shortest width that preserves the value'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'Printed in the source; decoded and checked. Conforms to all three serializations.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (float_single_subnormal.edn) - "Single-precision subnormal float".
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0089"
+    locator: 'App. L.2 (float_single_subnormal.edn)'
+    diagnostic: '5.8774717541114375E-39'
+    hex: 'fb3800000000000000'
+    decoded: 'the value 2^-127, which is subnormal in single precision - double precision, where the value is a normal number'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0090"
+    locator: 'App. L.2 (float_single_subnormal.edn)'
+    diagnostic: '5.8774717541114375E-39'
+    hex: 'fa00400000'
+    decoded: 'the value 2^-127, which is subnormal in single precision - single precision, where the value is subnormal: exponent field zero, significand 2^22'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'A value that is subnormal at one width and normal at another. Rule 4''s "Subnormal numbers MUST be supported in this shortest-length encoding" is what forces the narrowing across that boundary - the easy mistake is to stop narrowing when the result would be subnormal, which Appendix D''s code explicitly does not do.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (float_half.edn) - "half-precision normal float".
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0091"
+    locator: 'App. L.2 (float_half.edn)'
+    diagnostic: '65504.0'
+    hex: 'fb40effc0000000000'
+    decoded: 'the largest finite half-precision value, 65504 - double precision'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0092"
+    locator: 'App. L.2 (float_half.edn)'
+    diagnostic: '65504.0'
+    hex: 'fa477fe000'
+    decoded: 'the largest finite half-precision value, 65504 - single precision'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
+    notes: 'THE case that no grammar can decide. Nothing in these four bytes says the value is exactly representable in half; only the arithmetic of Appendix D does. Compare the zeros and infinities in this directory, which are fixed bit patterns.'
+  - id: "draft-ietf-cbor-serialization#V-0093"
+    locator: 'App. L.2 (float_half.edn)'
+    diagnostic: '65504.0'
+    hex: 'f97bff'
+    decoded: 'the largest finite half-precision value, 65504 - half precision, the shortest width that preserves the value'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'Printed in the source; decoded and checked. Conforms to all three serializations.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (float_half_subnormal.edn) - "Half-precision subnormal float".
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0094"
+    locator: 'App. L.2 (float_half_subnormal.edn)'
+    diagnostic: '3.0517578125E-5'
+    hex: 'fb3f00000000000000'
+    decoded: 'the value 2^-15, which is subnormal in half precision - double precision, where the value is normal'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0095"
+    locator: 'App. L.2 (float_half_subnormal.edn)'
+    diagnostic: '3.0517578125E-5'
+    hex: 'fa38000000'
+    decoded: 'the value 2^-15, which is subnormal in half precision - single precision, where the value is normal'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0096"
+    locator: 'App. L.2 (float_half_subnormal.edn)'
+    diagnostic: '3.0517578125E-5'
+    hex: 'f90200'
+    decoded: 'the value 2^-15, which is subnormal in half precision - half precision, where the value is subnormal: exponent field zero, significand 512'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'The deepest narrowing in the set: double to single to half, ending in a subnormal. Both of Appendix D''s functions must succeed in sequence, and the second must take the subnormal branch.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (float_neg_infinity.edn) - "Negative Infinity".
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0097"
+    locator: 'App. L.2 (float_neg_infinity.edn)'
+    diagnostic: '-Infinity'
+    hex: 'f9fc00'
+    decoded: 'negative infinity - half precision: exponent field all ones, significand zero, sign bit set'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'Printed in the source; decoded and checked. Conforms to all three serializations.'
+  - id: "draft-ietf-cbor-serialization#V-0098"
+    locator: 'App. L.2 (float_neg_infinity.edn)'
+    diagnostic: '-Infinity'
+    hex: 'faff800000'
+    decoded: 'negative infinity - single precision'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0099"
+    locator: 'App. L.2 (float_neg_infinity.edn)'
+    diagnostic: '-Infinity'
+    hex: 'fbfff0000000000000'
+    decoded: 'negative infinity - double precision'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 4 - not the shortest of double, single or half-precision that preserves precision'
+    notes: 'Infinity is exactly representable in half at every width, so both wider encodings are always violations. Appendix D''s functions narrow it through the `mant == 0` branch under the all-ones exponent, with no special case needed.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (float_quiet_nan.edn) - "Floating-point quiet NaN".
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0100"
+    locator: 'App. L.2 (float_quiet_nan.edn)'
+    diagnostic: 'NaN'
+    hex: 'f97e00'
+    decoded: 'the canonical quiet NaN - sign clear, most significant significand bit set, nothing else - half precision'
+    expect: valid
+    conformance:
+      general: valid
+      preferred_plus: valid
+      deterministic: valid
+    notes: 'The one NaN encoding permitted in preferred-plus and deterministic serialization.'
+  - id: "draft-ietf-cbor-serialization#V-0101"
+    locator: 'App. L.2 (float_quiet_nan.edn)'
+    diagnostic: 'NaN'
+    hex: 'fa7fc00000'
+    decoded: 'the canonical quiet NaN - sign clear, most significant significand bit set, nothing else - single precision'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 4 - a NaN other than the half-precision quiet NaN 0xf97e00'
+    notes: 'Rejected by rule 4 bullet 3 even though it is the canonical quiet NaN at its own width: "Encoders MUST NOT output any NaN other than the half-precision NaN 0xf9 0x7e 0x00". It is also the same VALUE as h''f97e00'' under Appendix C.4''s equivalence (sign bits identical, significands identical when zero-extended to 64 bits), so it is a shortening violation as well. Either reading rejects it.'
+  - id: "draft-ietf-cbor-serialization#V-0102"
+    locator: 'App. L.2 (float_quiet_nan.edn)'
+    diagnostic: 'NaN'
+    hex: 'fb7ff8000000000000'
+    decoded: 'the canonical quiet NaN - sign clear, most significant significand bit set, nothing else - double precision'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 4 - a NaN other than the half-precision quiet NaN 0xf97e00'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+
+  # ------------------------------------------------------------------
+  # App. L.2 (float_nan_payload.edn) - " Floating-point NaN payload/significand is 0x1ff" (the leading space is the source's). The only file whose preferred-plus and deterministic lists are both EMPTY, and the source says why: "The NaN payload is a special case. For preferred-plus and deterministic serialization, the decode should fail. For general serialization a NaN with a payload should be returned, but there is no EDN representation for that." Its `edn-representations` list is empty too, so this fixture cannot drive the encode test of Appendix L.1.1.
+  # ------------------------------------------------------------------
+  - id: "draft-ietf-cbor-serialization#V-0103"
+    locator: 'App. L.2 (float_nan_payload.edn)'
+    diagnostic: '(no EDN representation - the source''s list for this example is empty)'
+    hex: 'f97dff'
+    decoded: 'a NaN whose significand is 0x1ff - a non-trivial NaN, excluded from both of this document''s serializations - half precision, significand 0x1ff'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 4 - a NaN other than the half-precision quiet NaN 0xf97e00'
+    notes: 'Printed in the source; decoded and checked. A general-serialization-only encoding of this value.'
+  - id: "draft-ietf-cbor-serialization#V-0104"
+    locator: 'App. L.2 (float_nan_payload.edn)'
+    diagnostic: '(no EDN representation - the source''s list for this example is empty)'
+    hex: 'fa7fbfe000'
+    decoded: 'a NaN whose significand is 0x1ff - a non-trivial NaN, excluded from both of this document''s serializations - single precision, significand 0x1ff shifted left 13 bits = 0x3fe000'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 4 - a NaN other than the half-precision quiet NaN 0xf97e00'
+    notes: 'Appendix C.4''s equivalence in action: this is the SAME VALUE as h''f97dff'', because the significands match once both are zero-extended on the right to 64 bits.'
+  - id: "draft-ietf-cbor-serialization#V-0105"
+    locator: 'App. L.2 (float_nan_payload.edn)'
+    diagnostic: '(no EDN representation - the source''s list for this example is empty)'
+    hex: 'fb7ff7fc0000000000'
+    decoded: 'a NaN whose significand is 0x1ff - a non-trivial NaN, excluded from both of this document''s serializations - double precision, significand 0x1ff shifted left 42 bits = 0x7fc0000000000'
+    expect: invalid
+    conformance:
+      general: valid
+      preferred_plus: invalid
+      deterministic: invalid
+    violates: '§4.1 item 4 - a NaN other than the half-precision quiet NaN 0xf97e00'
+    notes: 'The third equivalent width. Verified: 0x1ff << 42 = 0x7fc0000000000.'
