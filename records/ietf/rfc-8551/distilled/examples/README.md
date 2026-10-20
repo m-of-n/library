@@ -79,6 +79,32 @@ control, the §3.6 inflate, and the `email` parse. It fixed the key-size
 table padding, the §3.2.2-C01 and §3.5.3.2-C02 locators, and the obligation
 wording on SHOULD-level results, and it widened S-05.
 
+Pass 3 (cross-check, 2026-10-19) ran every vector against the schema
+artifacts and recorded the outcome as `xcheck` on each vector. For a
+fixture, each `.eml` (LF→CRLF, Python `email`) is parsed into the JSON
+Schema's instance shape and validated with `jsonschema` 4.10.3 at the
+root, `#should` and `#identifies`. The raw multipart/signed Content-Type
+is matched against the two ABNF rules, hand-translated to regular
+expressions because no ABNF tool is installed. The derived hex is walked
+as DER and its OIDs and algorithms are compared with the
+`algorithm-requirements` sets and key-size rows. The four `asn1parse`
+dumps regenerate identically, and `cms -verify -noverify` on §3.5.2
+succeeds again. Constructed cases are built as instances where a schema
+can express them. The two SMIMECapability encodings were checked against
+the module's syntax, with the OID computed from the module's own arcs.
+No ASN.1 compiler is installed. Every vector's R-ids exist, and every
+`messages` entry exists and carries the vector's R-ids, except
+EX-3.1.2-C01 and EX-3.10-C01, which cite no R-id.
+
+Result: all 47 agree, 28 pass and 19 reject as expected. Before the fix
+below it was 46 and 1. **EX-3.2.2-01** was the mismatch. A value built by
+the source's own guidelines 1 and 3 (`enveloped-OID.2.16.840.1.101.3.4.1.2`)
+was warned on by the JSON Schema's `#should`, because that level
+restricted smime-type to the five defined values. The source states no
+such SHOULD: R-0101 asks only that the parameter be included. The schema
+was fixed. No new source defect was found. Every failing check on a source
+sample is one of S-01 to S-10.
+
 ## Findings (recorded, not repaired)
 
 | id | where | finding |

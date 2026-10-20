@@ -300,10 +300,23 @@ source_tensions:
       issuerAndSerialNumber sid; the version rule is RFC 5652's (pointer). For the examples pass.
     inferred: true
     inferred_reason: computed in the scratchpad from the source's own base64 (lines 1984-1990) and hex (lines 1997-1998).
+  - id: TEN-14
+    where: "§3.2, §3.2.2, §2.4.1"
+    what: >-
+      The sentence behind R-0099 conditions what the carried CMS object contains on the
+      eContentType, for every application/pkcs7-mime object. eContentType is a component of
+      EncapsulatedContentInfo (MSG-04), which SignedData and CompressedData carry; the
+      EnvelopedData and AuthEnvelopedData that the same media type carries (§3.2.2 table, inner
+      content id-data) have no eContentType, and §2.4.1 names the EnvelopedData field
+      encryptedContentInfo contentType (MSG-19). This file reads R-0099's eContentType as
+      MSG-19/contentType for EnvelopedData and as the inner content type of MSG-22 for
+      AuthEnvelopedData, and wires R-0099 only where the source's own field name exists (MSG-04).
+    inferred: true
+    inferred_reason: the reading for EnvelopedData and AuthEnvelopedData is this file's; the source names no field of those structures in §3.2.
 
 # ---------------------------------------------------------------------------
 coverage: >-
-  43 messages, 198 fields (nested fields counted), 255 verbatim quotes (251 under quotes, 4 under
+  44 messages, 199 fields (nested fields counted), 256 verbatim quotes (252 under quotes, 4 under
   quotes_selection, quotes_ordering and quotes_example). 144 of the 151
   requirements are wired to at least one field or entry. The seven wired nowhere bind no field of
   any structure: R-0001 (umbrella conformance to this document and to five other
@@ -968,7 +981,7 @@ messages:
           - rfc-8551#R-0047
           - rfc-8551#R-0150
     uses: >-
-      Receivers build and update a per-sender capabilities list from it (R-0067 to R-0072); senders
+      Receivers build and update a capabilities list for each sender's public key from it (R-0067 to R-0072); senders
       choose the content-encryption algorithm from it (R-0077, R-0078) and may learn binary
       handling from id-cap-preferBinaryInside (R-0095).
     layout: "Attribute { 1.2.840.113549.1.9.15 | SET { SEQUENCE OF SMIMECapability { capabilityID | [parameters] } } }"
@@ -1238,7 +1251,7 @@ messages:
         text: 'Modification of the ciphertext in EnvelopedData can go undetected if authentication is not also used, which is the case when sending EnvelopedData without wrapping it in SignedData or enclosing SignedData within it.'
     fields:
       - name: recipientInfos
-        type: not-stated (RFC 5652 §6.1); each carries a KeyEncryptionAlgorithmIdentifier (MSG-18)
+        type: not-stated (RFC 5652 §6.1, a SET OF RecipientInfo; pointer); each carries a KeyEncryptionAlgorithmIdentifier (MSG-18)
         required: true
         constraints: >-
           One encrypted copy of the CEK per recipient, and a copy for the originator (R-0112).
@@ -1532,6 +1545,7 @@ messages:
         type: OBJECT IDENTIFIER
         required: true
         literal: id-data
+        notes: the field R-0099's eContentType stands for in EnvelopedData (TEN-14).
         constrained_by:
           - rfc-8551#R-0023
           - rfc-8551#R-0020
@@ -1722,7 +1736,11 @@ messages:
         name_kind: synthetic
         type: integer bits
         values: ["<= 2047 SHOULD NOT", "2048..4096 MUST", "> 4096 MAY"]
-        constraints: below 1024 bits the user MUST be warned if verification is supported (R-0143); servers SHOULD reject weak signatures (R-0144).
+        constraints: >-
+          below 1024 bits the user MUST be warned if verification is supported (R-0143); servers
+          SHOULD reject weak signatures (R-0144). R-0143 names RSA and DSA keys alike; DSA
+          signature algorithms are historic (MSG-20, §B.2), and R-0143 is the only BCP 14 rule
+          that bounds a DSA key size, so the DSA case has no row of its own here.
         quotes:
           - at: "§4.3"
             text: '2048 <= key size <= 4096 : MUST       (Note 1)'
@@ -1788,7 +1806,7 @@ messages:
     fields:
       - name: recipient information
         name_kind: synthetic
-        type: not-stated (RFC 5083); each carries a KeyEncryptionAlgorithmIdentifier (MSG-18)
+        type: not-stated (RFC 5083, recipientInfos, a SET OF RecipientInfo; pointer); each carries a KeyEncryptionAlgorithmIdentifier (MSG-18)
         required: true
         quotes:
           - at: "§3.4"
@@ -1799,7 +1817,7 @@ messages:
           - rfc-8551#R-0113
       - name: authenticated encrypted content
         name_kind: synthetic
-        type: not-stated (RFC 5083); its content type is id-data (§3.2.2 table) and its algorithm an authenticated one (MSG-23)
+        type: not-stated (RFC 5083, authEncryptedContentInfo; pointer); its content type is id-data (§3.2.2 table) and its algorithm an authenticated one (MSG-23). It stands for R-0099's eContentType here (TEN-14).
         required: true
         inferred: true
         inferred_reason: >-
@@ -2149,7 +2167,7 @@ messages:
         name_kind: synthetic
         type: CMS ContentInfo (MSG-01), transfer-encoded
         required: true
-        constraints: when the eContentType is id-data the CMS object carries a §3.1 MIME entity; other contents MAY be carried for other eContentType values (R-0099).
+        constraints: when the eContentType is id-data the CMS object carries a §3.1 MIME entity; other contents MAY be carried for other eContentType values (R-0099). EnvelopedData and AuthEnvelopedData have no eContentType (TEN-14).
         constrained_by:
           - rfc-8551#R-0099
     file_extensions:
@@ -2517,11 +2535,11 @@ messages:
             constraints: MUST be empty (R-0123).
             constrained_by:
               - rfc-8551#R-0123
-          - name: certificates and CRLs
+          - name: certificates and/or CRLs
             name_kind: synthetic
             type: not-stated (RFC 5652)
             required: true
-            constraints: the payload of the message.
+            constraints: the payload of the message; at least one of the two.
             constrained_by:
               - rfc-8551#R-0025
     layout: "MIME header CRLF CRLF body → ContentInfo → SignedData { encapContentInfo { id-data } (no eContent) | certificates | crls | signerInfos {} }"
@@ -2944,3 +2962,22 @@ messages:
           - "md2WithRSAEncryption, signingTime: inside comments only (MSG-20, MSG-09)"
     notes: TEN-09 and TEN-10. The schema artifact carries the module text verbatim; this entry indexes it.
     layout: not applicable.
+
+  - name: Certificate request message (§4)
+    id: MSG-44
+    kind: not-defined
+    locator: "§4"
+    source: "§4 (lines 2167-2169)"
+    normative_status: not-defined
+    encoding: not applicable; the source defines no request format and names no media type for it.
+    quotes:
+      - at: "§4"
+        text: 'At a minimum, for initial S/MIME deployment, a user agent could automatically generate a message to an intended recipient requesting that recipient''s certificate in a signed return message.'
+    fields:
+      - name: signed return message
+        name_kind: synthetic
+        type: any signed S/MIME message (MSG-30 or MSG-36), SignedData (MSG-03) inside
+        required: not-stated
+        inferred: true
+        inferred_reason: §4 names the reply, not its form; that it is MSG-30 or MSG-36 follows only from its being signed.
+    layout: not applicable. The request's form, how the recipient recognizes it, and how it is matched to the reply are not defined.

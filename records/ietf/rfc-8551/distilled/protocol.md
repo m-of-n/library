@@ -31,8 +31,8 @@ Every creation flow has the same shape: “The data to be secured is always a ca
 | `source`, `applicability`, `conventions` | digest, the store-and-forward note, the quoting and basis rules |
 | `framing` | 5 statements of what kind of document this is, quoted |
 | `roles` | 13 roles with the source's names for them, locators and quotes |
-| `message_names_used` | every message name a step uses, with where the source defines it; `in_source: no` marks names the source uses but never defines as a structure (registration request, certificate request message, signed return message, returned message). For the cross-check pass to reconcile with `messages.yaml` |
-| `flows` | 22 flows, 124 steps. Each step has `from`, `to`, `message`, `action`, `locator`, `quotes`, `constrained_by`, `on_error` and `on_error_basis`; where needed also `condition`, `invokes`, `inferred` / `inferred_reason`, `on_error_inferred`, `on_error_quotes` and `on_error_constrained_by` |
+| `message_names_used` | 39 names: every message name a step uses (`used_as: message`, 32) or names in its action (`used_as: action`, 7), with where the source defines it; `in_source: no` marks names the source uses but never defines as a structure (registration request, certificate request message, signed return message). `messages_yaml` and `field` give the `messages.yaml` entry that defines each, reconciled in pass 3; only the certificate request message has none |
+| `flows` | 22 flows, 126 steps. Each step has `from`, `to`, `message`, `action`, `locator`, `quotes`, `constrained_by`, `on_error` and `on_error_basis`; where needed also `condition`, `invokes`, `inferred` / `inferred_reason`, `on_error_inferred`, `on_error_quotes` and `on_error_constrained_by` |
 | `error_paths` | 36 error paths: trigger, detecting role, flow steps, outcome, basis |
 | `source_defects_and_tensions` | 17 entries, recorded and not repaired |
 | `not_defined` | 10 things an implementer will not find in RFC 8551 |
@@ -65,16 +65,18 @@ The two agents are defined in §1.2. A sending agent is “Software that creates
 
 In the diagrams, `smime-type=X` stands for the media type `application/pkcs7-mime; smime-type=X`. Mermaid treats a semicolon as a line break, so the diagrams do not use one.
 
+Each arrow is one `protocol.yaml` step, in step order, between the step's `from` and `to`. Its label starts with the step's `n` in parentheses and the step's `message`, then a short form of its action. `alt` and `opt` blocks are the steps' conditions. A `Note` is an `on_error` outcome or context and never a step. A role that appears only in a note acts only in an `on_error`. “Step k” with a section number is the source's own step numbering, which differs from `n`.
+
 ### `mime-entity-preparation`
 
 ```mermaid
 sequenceDiagram
   participant SA as sending-agent
   participant CMS as cms-processing
-  SA->>SA: Step 1 prepare MIME entity (local conventions)
-  SA->>SA: Step 2 canonicalize leaves (text: CRLF + charset) R-0085..R-0091
-  SA->>SA: Step 3 transfer encoding (see transfer-encoding-choice)
-  SA->>CMS: canonical MIME entity, inner content id-data (R-0020)
+  SA->>SA: (1) MIME entity — prepare per local conventions (§3.1 Step 1)
+  SA->>SA: (2) canonical MIME entity — canonicalize leaves, text CRLF + charset (§3.1 Step 2) R-0085..R-0091
+  SA->>SA: (3) canonical MIME entity — transfer encoding, see transfer-encoding-choice (§3.1 Step 3)
+  SA->>CMS: (4) canonical MIME entity — inner content id-data (R-0020)
   Note over SA: non-canonical entity is only found later, as a failed signature
 ```
 
@@ -83,16 +85,16 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
   participant SA as sending-agent
-  SA->>SA: all recipients handle inner binary? (id-cap-preferBinaryInside, agreement, other)
+  SA->>SA: (1) id-cap-preferBinaryInside — all recipients handle inner binary? (capability, agreement, other)
   alt all capable
-    SA->>SA: binary inner entities (R-0094)
+    SA->>SA: (2) canonical MIME entity — binary inner entities (R-0094)
   else unable or unknown for any
-    SA->>SA: 7-bit transfer encoding for all secured entities (R-0096)
+    SA->>SA: (3) canonical MIME entity — 7-bit transfer encoding for all secured entities (R-0096)
   end
   opt multipart/signed over a 7-bit transport
-    SA->>SA: MUST be 7-bit (quoted-printable / base64) (R-0097)
+    SA->>SA: (4) multipart/signed — MUST be 7-bit, quoted-printable or base64 (R-0097)
   end
-  SA->>SA: outer CMS object: base64 for SMTP in most cases
+  SA->>SA: (5) application/pkcs7-mime — outer CMS object, base64 for SMTP in most cases
 ```
 
 ### `encryption-algorithm-selection`
@@ -101,19 +103,19 @@ sequenceDiagram
 sequenceDiagram
   participant U as user
   participant SA as sending-agent
-  SA->>SA: gather capabilities lists + out-of-band info
-  SA->>SA: weak encryption acceptable for this data? (MUST decide, R-0073)
+  SA->>SA: (1) list of capabilities — gather capabilities lists + out-of-band info
+  SA->>SA: (2) MIME entity — weak encryption acceptable for this data? (MUST decide, R-0073)
   opt controlled by a human
-    SA->>U: show the risk of a weaker algorithm, offer stronger (R-0081)
+    SA->>U: (3) MIME entity — show the risk of a weaker algorithm, offer stronger (R-0081)
   end
   alt Rule 1: capabilities known
-    SA->>SA: first listed capability it can encrypt with (R-0077)
+    SA->>SA: (4) SMIMECapabilities — first listed capability it can encrypt with (R-0077)
   else Rule 2: capabilities AND version unknown
-    SA->>SA: AES-256 GCM, else AES-128 CBC (R-0079, R-0080)
+    SA->>SA: (5) ContentEncryptionAlgorithmIdentifier — AES-256 GCM, else AES-128 CBC (R-0079, R-0080)
   else neither rule applies
     Note over SA: unspecified (rule-gap-known-version)
   end
-  SA->>SA: ECDH: key wrap matches content cipher and size (R-0016)
+  SA->>SA: (6) KeyEncryptionAlgorithmIdentifier — ECDH key wrap matches content cipher and size (R-0016)
 ```
 
 ### `multiple-recipients`
@@ -123,12 +125,12 @@ sequenceDiagram
   participant SA as sending-agent
   participant T as transport
   participant X as attacker
-  SA->>SA: select algorithm per recipient
+  SA->>SA: (1) list of capabilities — select algorithm per recipient (encryption-algorithm-selection)
   alt capabilities do not overlap
-    SA->>T: more than one enveloped message
+    SA->>T: (2) smime-type=enveloped-data — more than one message, each for a subset
   end
   Note over SA: SHOULD NOT send a copy under weaker cryptography (R-0146)
-  X->>T: decrypt the weak copy to read the strong one
+  X->>T: (3) smime-type=enveloped-data — decrypt the weak copy to read the strong one
 ```
 
 ### `recipient-key-management-certificate-selection`
@@ -137,11 +139,11 @@ sequenceDiagram
 sequenceDiagram
   participant SA as sending-agent
   alt SMIMEEncryptionKeyPreference received from recipient
-    SA->>SA: use the certificate it identifies (R-0059)
+    SA->>SA: (1) SMIMEEncryptionKeyPreference — use the certificate it identifies (R-0059)
   else not found
-    SA->>SA: certificate with signer's subject name, usable for key management (R-0060)
+    SA->>SA: (2) Certificate — signer's subject name, usable for key management (R-0060)
   else
-    SA->>SA: some other method (e.g. certificate-request-by-signed-return)
+    SA->>SA: (3) Certificate — some other method (e.g. certificate-request-by-signed-return)
   end
   Note over SA: none found: cannot encrypt for that recipient. Several: arbitrary choice
 ```
@@ -156,19 +158,20 @@ sequenceDiagram
   participant X as attacker
   participant RA as receiving-agent
   participant MUA as mime-user-agent
-  SA->>SA: recipient certificates, algorithm, RSA key size (4.4)
-  SA->>SA: Step 1 prepare entity (3.1)
-  SA->>CMS: Step 2 EnvelopedData, CEK per recipient + originator (R-0112)
-  CMS-->>SA: Step 3 ContentInfo
-  SA->>T: Step 4 smime-type=enveloped-data, smime.p7m
-  X->>T: replace ciphertext: undetected, no integrity
-  T->>RA: smime-type=enveloped-data
-  RA->>RA: identify (3.10)
-  RA->>CMS: decrypt, RSA key size (4.5)
+  SA->>SA: (1) Certificate — a public key per recipient, pick the algorithm
+  SA->>SA: (2) Certificate — recipient RSA key size (§4.4)
+  SA->>SA: (3) canonical MIME entity — prepare per §3.1 (§3.3 Step 1)
+  SA->>CMS: (4) EnvelopedData — CEK per recipient + originator (R-0112) (§3.3 Step 2)
+  CMS-->>SA: (5) ContentInfo (§3.3 Step 3)
+  SA->>SA: (6) smime-type=enveloped-data — smime.p7m (§3.3 Step 4)
+  SA->>T: (7) smime-type=enveloped-data
+  X->>T: (8) EnvelopedData — replace ciphertext: undetected, no integrity
+  T->>RA: (9) smime-type=enveloped-data — identify (§3.10)
+  RA->>CMS: (10) EnvelopedData — decrypt, RSA key size (§4.5)
   alt decryption fails
     Note over RA: unspecified, only a pointer to RFC 3218, no timing guidance
   else
-    RA->>MUA: MIME entity
+    RA->>MUA: (11) MIME entity
   end
 ```
 
@@ -182,18 +185,18 @@ sequenceDiagram
   participant X as attacker
   participant RA as receiving-agent
   participant MUA as mime-user-agent
-  SA->>SA: recipient certificates, authenticated algorithm
-  SA->>SA: Step 1 prepare entity (3.1)
-  SA->>CMS: Step 2 AuthEnvelopedData, CEK per recipient + originator (R-0113)
-  CMS-->>SA: Step 3 ContentInfo
-  SA->>T: Step 4 smime-type=authEnveloped-data, smime.p7m
-  X->>T: co-recipient replaces content undetected, length visible
-  T->>RA: smime-type=authEnveloped-data
-  RA->>CMS: decrypt + tag check
+  SA->>SA: (1) Certificate — a public key per recipient, an authenticated algorithm
+  SA->>SA: (2) canonical MIME entity — prepare per §3.1 (§3.4 Step 1)
+  SA->>CMS: (3) AuthEnvelopedData — CEK per recipient + originator (R-0113) (§3.4 Step 2)
+  CMS-->>SA: (4) ContentInfo (§3.4 Step 3)
+  SA->>T: (5) smime-type=authEnveloped-data — smime.p7m (§3.4 Step 4)
+  X->>T: (6) AuthEnvelopedData — a co-recipient replaces content undetected
+  X->>T: (7) AuthEnvelopedData — length visible
+  T->>RA: (8) smime-type=authEnveloped-data — identify, decrypt, check the tag
   alt integrity check fails
-    Note over RA: unspecified, do not act before the check finishes (6)
+    Note over RA: unspecified, do not act before the check finishes (§6)
   else
-    RA->>MUA: MIME entity, not origin-authenticated
+    RA->>MUA: (9) MIME entity — not origin-authenticated
   end
 ```
 
@@ -208,19 +211,19 @@ sequenceDiagram
   participant G as gateway
   participant RA as receiving-agent
   participant MUA as mime-user-agent
-  SA->>SA: signing certificate (R-0124), RSA key size (4.2)
-  SA->>SA: Step 1 prepare entity (3.1)
-  SA->>U: show unlisted signed attributes (R-0031)
-  SA->>CMS: Step 2 SignedData, eContent = entity, signed attributes
-  CMS-->>SA: Step 3 ContentInfo
-  SA->>T: Step 4 smime-type=signed-data, smime.p7m
-  T->>G: line wrap / re-encoding cannot reach eContent
-  G->>RA: smime-type=signed-data
+  SA->>SA: (1) Certificate — signing certificate (R-0124), RSA key size (§4.2)
+  SA->>SA: (2) canonical MIME entity — prepare per §3.1 (§3.5.2 Step 1)
+  SA->>U: (3) SignerInfo — show unlisted signed attributes (R-0031)
+  SA->>CMS: (4) SignedData — eContent = entity, signed attributes (§3.5.2 Step 2)
+  CMS-->>SA: (5) ContentInfo (§3.5.2 Step 3)
+  SA->>T: (6) smime-type=signed-data — smime.p7m (§3.5.2 Step 4)
+  T->>G: (7) smime-type=signed-data — line wrap / re-encoding cannot reach eContent
+  G->>RA: (8) smime-type=signed-data — identify
   alt no S/MIME facilities
     Note over RA: cannot view the message
   else
-    RA->>CMS: signature-verification
-    RA->>MUA: eContent MIME entity
+    RA->>CMS: (9) SignedData — signature-verification
+    RA->>MUA: (10) MIME entity — the eContent
   end
 ```
 
@@ -235,21 +238,21 @@ sequenceDiagram
   participant G as gateway
   participant RA as receiving-agent
   participant MUA as mime-user-agent
-  SA->>SA: Step 1 prepare entity, 7-bit if it may cross a 7-bit transport (R-0097)
-  SA->>CMS: Step 2 SignedData, eContent absent (R-0115)
-  SA->>SA: Step 3 entity as first part
-  SA->>SA: Step 4 application/pkcs7-signature, smime.p7s
-  SA->>SA: Step 5 second part, protocol + micalg (R-0116..R-0119)
-  SA->>T: multipart/signed
-  T->>MTA: relay (8-bit first part: see multipart-signed-in-transit)
-  MTA->>G: may be translated, line-wrapped, re-encoded
-  G->>RA: multipart/signed
+  SA->>SA: (1) canonical MIME entity — prepare, 7-bit if it may cross a 7-bit transport (R-0097) (§3.5.3.2 Step 1)
+  SA->>CMS: (2) SignedData — eContent absent (R-0115) (Step 2)
+  SA->>SA: (3) multipart/signed — entity as first part (Step 3)
+  SA->>SA: (4) application/pkcs7-signature — smime.p7s (Step 4)
+  SA->>SA: (5) multipart/signed — second part, protocol + micalg (R-0116..R-0119) (Step 5)
+  SA->>T: (6) multipart/signed
+  T->>MTA: (7) multipart/signed — relay (8-bit first part: see multipart-signed-in-transit)
+  MTA->>G: (8) multipart/signed — may be translated, line-wrapped, re-encoded
+  G->>RA: (9) multipart/signed — identify by protocol
   alt receiver without S/MIME
-    RA->>MUA: first part viewed as unsigned
+    Note over RA,MUA: first part viewed as unsigned
   else
-    RA->>CMS: verify detached signature over first part (micalg one-pass)
+    RA->>CMS: (10) application/pkcs7-signature — verify detached signature over first part (micalg one-pass)
     Note over RA: unknown micalg: recover gracefully (R-0120)
-    RA->>MUA: first part
+    RA->>MUA: (11) MIME entity — first part
   end
 ```
 
@@ -263,15 +266,15 @@ sequenceDiagram
   participant RA as receiving-agent
   Note over MTA: 8-bit or binary first part, MTA cannot carry it
   alt option 1, change transfer encoding (RFC 1847 prohibits)
-    MTA->>MTA: change the transfer encoding
-    MTA->>RA: multipart/signed, signature invalid
+    MTA->>MTA: (1) multipart/signed — change the transfer encoding
+    Note over MTA,RA: delivered with the signature invalid
   else option 2, transmit anyway
-    MTA->>RA: multipart/signed, 8th bit corrupted, signature invalid
+    MTA->>RA: (2) multipart/signed — 8th bit corrupted, signature invalid
   else option 3, the only compliant one
-    MTA-->>SA: returned message (undeliverable)
+    MTA-->>SA: (3) multipart/signed — returned as undeliverable
   end
-  G->>RA: "From " quoted as ">From", trailing whitespace stripped, signature invalid
-  G->>RA: application/octet-stream (type lost, filename survives)
+  G->>RA: (4) multipart/signed — "From " quoted as ">From", trailing whitespace stripped, signature invalid
+  G->>RA: (5) application/octet-stream — type lost, filename survives
 ```
 
 ### `compressed-only`
@@ -283,16 +286,16 @@ sequenceDiagram
   participant T as transport
   participant RA as receiving-agent
   participant MUA as mime-user-agent
-  SA->>SA: recipient announced CompressedData capability (RFC 3274)?
-  SA->>SA: Step 1 prepare entity (3.1)
-  SA->>CMS: Step 2 CompressedData
-  CMS-->>SA: Step 3 ContentInfo
-  SA->>T: Step 4 smime-type=compressed-data, smime.p7z
-  T->>RA: smime-type=compressed-data
+  SA->>SA: (1) SMIMECapabilities — recipient announced CompressedData capability (RFC 3274)?
+  SA->>SA: (2) canonical MIME entity — prepare per §3.1 (§3.6 Step 1)
+  SA->>CMS: (3) CompressedData (§3.6 Step 2)
+  CMS-->>SA: (4) ContentInfo (§3.6 Step 3)
+  SA->>T: (5) smime-type=compressed-data — smime.p7z (§3.6 Step 4)
+  T->>RA: (6) smime-type=compressed-data — identify, decompress
   alt pre-3.1 receiver
     Note over RA: will not recognize it, no fallback
   else
-    RA->>MUA: decompressed MIME entity
+    RA->>MUA: (7) MIME entity — decompressed
   end
 ```
 
@@ -306,23 +309,23 @@ sequenceDiagram
   participant TG as trusted-gateway
   participant X as attacker
   participant RA as receiving-agent
-  U->>SA: choose order (any order)
+  U->>SA: (1) MIME entity — choose order (any order)
   alt sign then envelope
-    SA->>SA: signed-only, then enveloped (signers hidden)
-    X->>T: may change unauthenticated outer portions
+    SA->>SA: (2a) smime-type=enveloped-data — signed-only, then enveloped (signers hidden)
+    Note over T,X: a careful attacker may change unauthenticated outer portions
   else envelope then sign
-    SA->>SA: enveloped-only, then signed (signers exposed, verifiable without key)
+    SA->>SA: (2b) multipart/signed — enveloped-only, then signed (signers exposed, verifiable without key)
   end
   opt compression
-    SA->>SA: binary-transferred ciphertext: compression discouraged, lossy: compress then sign
-    X->>T: compression oracle on adaptive input
+    SA->>SA: (2c) smime-type=compressed-data — binary-transferred ciphertext: compression discouraged, lossy: compress then sign
+    Note over T,X: compression oracle on adaptive input
   end
-  SA->>T: outermost entity
+  SA->>T: (3) application/pkcs7-mime — outermost entity
   opt site gateway
-    T->>TG: trusted-gateway-unwrap
+    T->>TG: (4) smime-type=enveloped-data — trusted-gateway-unwrap
   end
-  T->>RA: unwrap layers within resource limits (R-0121)
-  RA->>RA: each signed / encrypted piece is a separate origin (R-0149)
+  T->>RA: (5) application/pkcs7-mime — unwrap layers within resource limits (R-0121)
+  RA->>RA: (6) MIME entity — each signed / encrypted piece is a separate origin (R-0149)
 ```
 
 ### `trusted-gateway-unwrap`
@@ -332,13 +335,12 @@ sequenceDiagram
   participant T as transport
   participant TG as trusted-gateway
   participant RA as receiving-agent
-  T->>TG: smime-type=enveloped-data (signed inside)
-  TG->>TG: remove envelope, keep signature
-  TG->>RA: signed message over the site's internal transport
+  T->>TG: (1) smime-type=enveloped-data — signed inside
+  TG->>RA: (2) multipart/signed — envelope removed, signature kept, over the site's internal transport
   alt internal transport not 8-bit clean and inner entity not 7-bit
     Note over RA: verifying the signature is not possible
   else
-    RA->>RA: signature-verification
+    RA->>RA: (3) SignedData — signature-verification
   end
 ```
 
@@ -351,12 +353,11 @@ sequenceDiagram
   participant T as transport
   participant RA as receiving-agent
   participant U as user
-  SA->>CMS: Step 1 certificates/CRLs, eContent absent, signerInfos empty
-  CMS-->>SA: Step 2 ContentInfo
-  SA->>T: Step 3 smime-type=certs-only, smime.p7c
-  T->>RA: smime-type=certs-only
-  RA->>RA: extract certificates and CRLs (no signature to verify)
-  RA->>U: store and protect (R-0126)
+  SA->>CMS: (1) SignedData — certificates/CRLs, eContent absent, signerInfos empty (§3.8 Step 1)
+  CMS-->>SA: (2) ContentInfo (§3.8 Step 2)
+  SA->>T: (3) smime-type=certs-only — smime.p7c (§3.8 Step 3)
+  T->>RA: (4) smime-type=certs-only — identify, extract certificates and CRLs (no signature to verify)
+  RA->>U: (5) Certificate — store and protect (R-0126)
 ```
 
 ### `registration-request`
@@ -365,10 +366,10 @@ sequenceDiagram
 sequenceDiagram
   participant SA as sending-agent
   participant CA as certification-authority
-  SA->>SA: key pair: good randomness, protected key, RSA at least 2048 (4.1)
-  SA->>CA: registration request (mechanism not required by v4.0)
+  SA->>SA: (1) Certificate — key pair: good randomness, protected key, RSA at least 2048 (§4.1)
+  SA->>CA: (2) registration request — mechanism not required by v4.0
   Note over SA,CA: v2 application/pkcs10 is historic, PKIX methods referenced only
-  CA-->>SA: smime-type=certs-only (e.g., inferred)
+  CA-->>SA: (3) smime-type=certs-only — e.g., inferred
 ```
 
 ### `certificate-request-by-signed-return`
@@ -378,11 +379,10 @@ sequenceDiagram
   participant SA as sending-agent
   participant T as transport
   participant RA as receiving-agent
-  SA->>T: certificate request message (format not defined)
-  T->>RA: certificate request message
-  RA-->>T: signed return message (certificate, capabilities, key preference)
-  T-->>SA: SignedData
-  SA->>SA: verify, cache capabilities and preference, store certificate
+  SA->>T: (1) certificate request message — format not defined
+  T->>RA: (2) certificate request message — delivery inferred
+  RA-->>T: (3) signed return message — certificate, capabilities, key preference
+  T-->>SA: (4) SignedData — verify, cache capabilities and preference, store certificate
   Note over SA,RA: no correlation, timeout or refusal defined
 ```
 
@@ -395,15 +395,15 @@ sequenceDiagram
   participant U as user
   participant S as server-implementation
   participant X as attacker
-  SA->>SA: sign: up to 2047 SHOULD NOT, 2048-4096 SHOULD, above 4096 MAY
-  SA->>SA: encrypt: up to 2047 SHOULD NOT, 2048-4096 SHOULD, above 4096 MAY
-  RA->>RA: verify: up to 2047 SHOULD NOT, 2048-4096 MUST, above 4096 MAY
-  RA->>RA: decrypt: up to 2047 MAY, 2048-4096 MUST, above 4096 MAY
-  opt verifying under 1024 bits
-    RA->>U: MUST warn (R-0143)
-    S->>S: SHOULD reject weak signatures (R-0144)
+  SA->>SA: (1) SignerInfo — sign: up to 2047 SHOULD NOT, 2048-4096 SHOULD, above 4096 MAY
+  RA->>RA: (2) SignerInfo — verify: up to 2047 SHOULD NOT, 2048-4096 MUST, above 4096 MAY
+  opt verifying under 1024 bits (on_error of step 2)
+    Note over RA,U: MUST warn the user (R-0143)
+    Note over S: SHOULD reject weak signatures (R-0144)
   end
-  X->>RA: oversized keys: resource management
+  SA->>SA: (3) EnvelopedData — encrypt: up to 2047 SHOULD NOT, 2048-4096 SHOULD, above 4096 MAY
+  RA->>RA: (4) EnvelopedData — decrypt: up to 2047 MAY, 2048-4096 MUST, above 4096 MAY
+  X->>RA: (5) Certificate — oversized keys: resource management
 ```
 
 ### `smime-identification`
@@ -412,17 +412,16 @@ sequenceDiagram
 sequenceDiagram
   participant T as transport
   participant RA as receiving-agent
-  T->>RA: incoming MIME entity
   alt application/pkcs7-mime
-    RA->>RA: S/MIME
+    T->>RA: (1) application/pkcs7-mime — S/MIME
   else multipart/signed, protocol="application/pkcs7-signature"
-    RA->>RA: S/MIME
+    T->>RA: (2) multipart/signed — S/MIME
   else application/octet-stream, suffix p7m p7s p7c p7z
-    RA->>RA: S/MIME
+    T->>RA: (3) application/octet-stream — S/MIME
   else
-    RA->>RA: not S/MIME
+    Note over RA: not S/MIME (inferred)
   end
-  RA->>RA: smime-type is a hint, media types and CMS type govern (R-0107, R-0108)
+  RA->>RA: (4) application/pkcs7-mime — smime-type is a hint, media types and CMS type govern (R-0107, R-0108)
 ```
 
 ### `signature-verification`
@@ -433,21 +432,21 @@ sequenceDiagram
   participant CMS as cms-processing
   participant U as user
   participant S as server-implementation
-  RA->>RA: SignerIdentifier lookup, try each SKI match (R-0061..R-0063)
-  RA->>CMS: verify SignerInfo (ECDSA P-256, EdDSA, RSA-SHA256)
-  RA->>RA: RSA key size (4.3)
-  opt under 1024 bits
-    RA->>U: warn
-    S->>S: reject
+  RA->>RA: (1) SignerIdentifier — lookup, try each SKI match (R-0061..R-0063)
+  RA->>CMS: (2) SignerInfo — verify (ECDSA P-256, EdDSA, RSA-SHA256)
+  RA->>RA: (3) Certificate — RSA key size (§4.3)
+  opt under 1024 bits (on_error of step 3)
+    Note over RA,U: warn
+    Note over S: reject
   end
-  RA->>RA: zero or one of each attribute, unknown handled gracefully
-  RA->>RA: SMIMECapabilities / KeyPreference cardinality, violation = failing
-  RA->>RA: signingTime UTCTime (YY at least 50 means 19YY) or GeneralizedTime
-  Note over RA: several SignerInfos: combination not defined
+  RA->>RA: (4) SignerInfo — zero or one of each attribute, unknown handled gracefully
+  RA->>RA: (5) SMIMECapabilities — and KeyPreference: cardinality, violation = failing
+  RA->>RA: (6) signingTime — UTCTime (YY at least 50 means 19YY) or GeneralizedTime
+  RA->>RA: (7) SignedData — several SignerInfos: combination not defined
   alt valid
-    RA->>RA: capability-and-preference-caching
+    RA->>RA: (8) SMIMECapabilities — capability-and-preference-caching
   end
-  RA->>U: signed indicator only from verified state (6)
+  RA->>U: (9) MIME entity — signed indicator only from verified state (§6)
 ```
 
 ### `capability-and-preference-caching`
@@ -457,16 +456,15 @@ sequenceDiagram
   participant SA as sending-agent
   participant T as transport
   participant RA as receiving-agent
-  SA->>T: signed message with SMIMECapabilities + SMIMEEncryptionKeyPreference
-  T->>RA: SignedData
-  alt signature unverifiable or signing time far in future
-    RA->>RA: MUST NOT accept (R-0071)
-  else no list for this public key
-    RA->>RA: create list: signing time + symmetric capabilities (R-0068)
-  else list exists and signing time newer
-    RA->>RA: update signing time and capabilities (R-0070)
+  SA->>T: (1) SMIMECapabilities — signed message with SMIMECapabilities + SMIMEEncryptionKeyPreference
+  Note over T,RA: delivered and verified (signature-verification)
+  alt no list for this public key
+    RA->>RA: (2) list of capabilities — create: signing time + symmetric capabilities (R-0068)
+  else list exists
+    RA->>RA: (3) list of capabilities — signing time newer and signature valid: update both (R-0070)
   end
-  RA->>RA: store preference data if valid and newer, check skew (R-0055, R-0056)
+  RA->>RA: (4) list of capabilities — unverifiable or far-future: MUST NOT accept (R-0071), else store
+  RA->>RA: (5) preference data — store if valid and newer, check skew (R-0055, R-0056)
 ```
 
 ### `receive-processing-and-presentation`
@@ -476,12 +474,11 @@ sequenceDiagram
   participant RA as receiving-agent
   participant MUA as mime-user-agent
   participant U as user
-  RA->>RA: recommended (lowercase): do not act on content before the integrity check finishes
+  RA->>RA: (1) MIME entity — recommended (lowercase): do not act on content before the integrity check finishes
   opt top-level protected entity is message/rfc822
-    RA->>MUA: present as top-level message, distinguish inner/outer headers (R-0083, R-0084)
+    RA->>MUA: (2) message/rfc822 — present as top-level message, distinguish inner/outer headers (R-0083, R-0084)
   end
-  MUA->>U: text/html must be a complete document (R-0147)
-  MUA->>U: each multipart/mixed piece, each protected piece a separate origin
+  MUA->>U: (3) text/html — must be a complete document (R-0147), each multipart/mixed piece and each protected piece a separate origin
 ```
 
 ### `historic-message-processing`
@@ -490,10 +487,10 @@ sequenceDiagram
 sequenceDiagram
   participant RA as receiving-agent
   participant U as user
-  RA->>RA: decrypt old mail (RC2/40, tripleDES) only to read, never to encrypt
+  RA->>RA: (1) EnvelopedData — decrypt old mail (RC2/40, tripleDES) only to read, never to encrypt
   Note over RA: dropped algorithm: old mail no longer accessible
-  RA->>U: historic signatures treated differently (expired CRLs, weak keys and hashes)
-  RA->>RA: id-dsa read as id-dsa-with-sha1 (R-0151)
+  RA->>U: (2) SignedData — historic signatures treated differently (expired CRLs, weak keys and hashes)
+  RA->>RA: (3) SignerInfo — id-dsa read as id-dsa-with-sha1 (R-0151)
 ```
 
 ## Decision procedures

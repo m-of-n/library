@@ -8,6 +8,7 @@ source_file: ".cache/rfc-8551.txt (3531 lines, ASCII, LF line ends, form feed be
 extracted: "2026-10-19"
 extracted_by: "FX-1 pass 1 (extract), examples agent, effort high, from the source text only"
 pass: 1
+cross_check: "FX-1 pass 3 (cross-check), 2026-10-19: all 47 vectors run against the schema artifacts and messages.yaml; all 47 agree with their expected results (28 pass, 19 reject as expected) after one schema fix. Per vector: xcheck. Method: README.md."
 reviewed_by: ""
 fixture_count: 17
 verbatim_fixture_count: 7
@@ -90,6 +91,15 @@ count_reconciliation: >-
 #            marked external: <document>. It is context for the harness, not
 #            a statement of this source.
 # source_issue   a defect or inconsistency in the SOURCE; README lists them.
+# xcheck     pass 3 (cross-check). against: the schema/ artifacts the vector
+#            was run against (file and rule or $defs name); messages: the
+#            messages.yaml entries (MSG-NN) that carry its structure; result:
+#            pass (every instance accepted where the vector expects it) or
+#            reject-as-expected (at least one instance rejected, and every
+#            rejection is one the vector expects: a fail check, a violating
+#            case, or a SHOULD-level departure rejected only by #should).
+#            An empty against means no schema artifact can express the rule;
+#            the vector is then checked against messages.yaml only.
 
 fixtures:
   # ---------------- verbatim (unmarked file name = the source's bytes) -------
@@ -224,6 +234,10 @@ vectors:
       - {check: "underlying function of key wrap == underlying function of content encryption", expected: "AES == AES", result: pass}
       - {check: "key size of key wrap == key size of content encryption", expected: "128 == 128", result: pass}
     constrained_by: ["rfc-8551#R-0016", "rfc-8551#R-0017"]
+    xcheck:
+      against: ["algorithm-requirements.derived.yaml key_encryption.constraints R-0016"]
+      messages: ["MSG-18"]
+      result: pass
 
   - id: EX-2.5.2-01
     title: "SMIMECapability for sha256WithRSAEncryption keeps its NULL parameter"
@@ -255,6 +269,11 @@ vectors:
       encodes NULL. The source does not say whether the registered list
       overrides R-0046 for this OID. Source issue S-10.
     source_issue: S-10
+    xcheck:
+      against: ["SecureMimeMessageV3dot1.asn1 SMIMECapability"]
+      messages: ["MSG-11"]
+      result: pass
+      note: "der_hex parses as SMIMECapability { capabilityID 1.2.840.113549.1.1.11, parameters NULL }; the not-run check above holds on the derived DER. S-10 stands."
 
   - id: EX-2.5.2-02
     title: "algorithm names as examples of the SMIMECapabilities categories"
@@ -272,6 +291,11 @@ vectors:
       - {input: "rsaEncryption", expected: "key encipherment algorithm"}
     expected_result: "each name falls in the category stated; a list grouping them per R-0040 keeps each category contiguous."
     constrained_by: ["rfc-8551#R-0040"]
+    xcheck:
+      against: ["algorithm-requirements.derived.yaml sets signature, content_encryption, key_encryption"]
+      messages: ["MSG-10", "MSG-11"]
+      result: pass
+      note: "all four names map to a table set; the table does not separate symmetric from authenticated symmetric (AES-128 CBC and AES-128 GCM are both content_encryption)."
 
   - id: EX-2.5.2-03
     title: "rsaEncryption as the example of an ambiguous capability OID"
@@ -285,6 +309,11 @@ vectors:
     expected_basis: stated
     expected_result: "ambiguous: one OID, two usages (signature, key encipherment)."
     constrained_by: ["rfc-8551#R-0044", "rfc-8551#R-0045"]
+    xcheck:
+      against: []
+      messages: ["MSG-11"]
+      result: pass
+      note: "no schema can express an ambiguous OID; MSG-11 carries R-0044 and R-0045."
 
   - id: EX-2.7.2-01
     title: "RC2 and TripleDES as the examples of weak and weaker algorithms"
@@ -299,6 +328,11 @@ vectors:
       - {input: "RC2", expected: "weak"}
       - {input: "TripleDES", expected: "weaker than AES (not state of the art)"}
     constrained_by: ["rfc-8551#R-0073", "rfc-8551#R-0074", "rfc-8551#R-0081"]
+    xcheck:
+      against: ["algorithm-requirements.derived.yaml content_encryption", "SecureMimeMessageV3dot1.asn1 SMIMECapabilitiesParametersForRC2CBC"]
+      messages: ["MSG-20"]
+      result: reject-as-expected
+      note: "RC2 and TripleDES are absent from content_encryption, as expected; the module still types RC2 parameters (schema README finding 8)."
 
   - id: EX-3.1.4-01
     title: "Sample Canonical MIME Entity (multipart/mixed, not an S/MIME message)"
@@ -352,6 +386,11 @@ vectors:
         S-09.
     constrained_by: ["rfc-8551#R-0085", "rfc-8551#R-0088", "rfc-8551#R-0089", "rfc-8551#R-0093", "rfc-8551#R-0097", "rfc-8551#R-0098"]
     source_issue: S-09
+    xcheck:
+      against: ["smime-media-types.derived.schema.json root, #identifies"]
+      messages: ["MSG-25"]
+      result: reject-as-expected
+      note: "root accepts the entity and both parts; #identifies rejects all three, as line 1407 says."
 
   - id: EX-3.2.2-01
     title: "OID.<oid> smime-type string, AES-128 CBC"
@@ -370,6 +409,11 @@ vectors:
       in_source: false
       note: "2.16.840.1.101.3.4.1.2 is id-aes128-CBC (external: RFC 3565). The example's pairing of OID and name holds. §1.6 (line 551) records that this example was updated to the AES-128 CBC OID."
     constrained_by: ["rfc-8551#R-0109", "rfc-8551#R-0111"]
+    xcheck:
+      against: ["smime-media-types.derived.schema.json #should", "smime-media-types.derived.schema.json $defs/smimeTypeDefined"]
+      messages: ["MSG-28"]
+      result: pass
+      note: "built on as enveloped-OID.2.16.840.1.101.3.4.1.2 (guidelines 1 and 3): root and #should accept. MISMATCH before pass 3: #should restricted smime-type to the five defined values, a SHOULD the source does not state; fixed in the schema."
 
   - id: EX-3.2.2-02
     title: "certs-only takes no signed- prefix"
@@ -382,6 +426,10 @@ vectors:
     expected_basis: stated
     expected_result: 'one value, "certs-only"; no "signed-", "authEnv-" or "enveloped-" variants.'
     constrained_by: ["rfc-8551#R-0110"]
+    xcheck:
+      against: ["smime-media-types.derived.schema.json $defs/smimeTypeDefined"]
+      messages: ["MSG-28"]
+      result: pass
 
   - id: EX-3.2.2-03
     title: "common string data for id-data"
@@ -394,6 +442,10 @@ vectors:
     expected_basis: stated
     expected_result: 'common string "data"; with guideline 1 this yields "signed-data", "authEnveloped-data" and "enveloped-data" in the table at lines 1535-1541.'
     constrained_by: ["rfc-8551#R-0111"]
+    xcheck:
+      against: ["smime-media-types.derived.schema.json $defs/smimeTypeDefined"]
+      messages: ["MSG-28"]
+      result: pass
 
   - id: EX-3.3-01
     title: "Sample enveloped-only message (application/pkcs7-mime, enveloped-data)"
@@ -461,6 +513,11 @@ vectors:
         bytes. Source issue S-08.
     constrained_by: ["rfc-8551#R-0023", "rfc-8551#R-0024", "rfc-8551#R-0099", "rfc-8551#R-0101", "rfc-8551#R-0102", "rfc-8551#R-0103", "rfc-8551#R-0104", "rfc-8551#R-0105", "rfc-8551#R-0106", "rfc-8551#R-0112", "rfc-8551#R-0136"]
     source_issue: S-08
+    xcheck:
+      against: ["smime-media-types.derived.schema.json root, #should, #identifies", "DER walk + openssl asn1parse of the derived hex", "algorithm-requirements.derived.yaml content_encryption, key_sizes §4.4"]
+      messages: ["MSG-29", "MSG-15", "MSG-19"]
+      result: reject-as-expected
+      note: "headers accept at all three levels; content_encryption rejects des-ede3-cbc and §4.4 puts 1024 bits at SHOULD NOT, matching the two fail checks."
 
   - id: EX-3.4-01
     title: "Sample authenticated enveloped-only message (authEnveloped-data)"
@@ -524,6 +581,11 @@ vectors:
         RFC 8551. Source issues S-06, S-07, S-08.
     constrained_by: ["rfc-8551#R-0064", "rfc-8551#R-0099", "rfc-8551#R-0101", "rfc-8551#R-0102", "rfc-8551#R-0103", "rfc-8551#R-0104", "rfc-8551#R-0105", "rfc-8551#R-0106", "rfc-8551#R-0113", "rfc-8551#R-0136"]
     source_issue: [S-06, S-07, S-08]
+    xcheck:
+      against: ["smime-media-types.derived.schema.json root, #should, #identifies", "DER walk + openssl asn1parse of the derived hex", "algorithm-requirements.derived.yaml content_encryption, key_sizes §4.4"]
+      messages: ["MSG-31", "MSG-22", "MSG-23"]
+      result: reject-as-expected
+      note: "headers accept at all three levels; aes128-GCM is listed (R-0064); §4.4 rejects 1024 bits, matching the fail check."
 
   - id: EX-3.5.2-01
     title: "Sample signed-only message, application/pkcs7-mime with SignedData"
@@ -606,6 +668,11 @@ vectors:
         source example whose signature can be checked. Source issue S-08.
     constrained_by: ["rfc-8551#R-0003", "rfc-8551#R-0004", "rfc-8551#R-0021", "rfc-8551#R-0022", "rfc-8551#R-0025", "rfc-8551#R-0027", "rfc-8551#R-0029", "rfc-8551#R-0061", "rfc-8551#R-0099", "rfc-8551#R-0101", "rfc-8551#R-0102", "rfc-8551#R-0103", "rfc-8551#R-0104", "rfc-8551#R-0114"]
     source_issue: S-08
+    xcheck:
+      against: ["smime-media-types.derived.schema.json root, #should, #identifies", "DER walk + openssl asn1parse of the derived hex", "algorithm-requirements.derived.yaml digest, signature"]
+      messages: ["MSG-30", "MSG-03", "MSG-04", "MSG-05"]
+      result: reject-as-expected
+      note: "headers accept at all three levels; sha1 and dsaWithSHA1 are in neither set, matching the two fail checks; no Appendix A OID occurs. openssl cms -verify -noverify re-run: successful."
 
   - id: EX-3.5.3.2-01
     title: "historical micalg values"
@@ -622,6 +689,11 @@ vectors:
     checks:
       - {check: "value in micalg table", expected: false, result: pass}
     constrained_by: ["rfc-8551#R-0119", "rfc-8551#R-0120"]
+    xcheck:
+      against: ["smime-media-types.derived.schema.json root, #should", "multipart-signed-content-type.derived.abnf micalg-param, micalg-table-name"]
+      messages: ["MSG-37"]
+      result: reject-as-expected
+      note: "all three values: root and micalg-param accept (R-0120), #should and micalg-table-name reject."
 
   - id: EX-3.5.3.3-01
     title: "Sample multipart/signed Message"
@@ -707,6 +779,11 @@ vectors:
         S-05, S-08.
     constrained_by: ["rfc-8551#R-0027", "rfc-8551#R-0029", "rfc-8551#R-0097", "rfc-8551#R-0104", "rfc-8551#R-0106", "rfc-8551#R-0114", "rfc-8551#R-0115", "rfc-8551#R-0116", "rfc-8551#R-0117", "rfc-8551#R-0118", "rfc-8551#R-0119", "rfc-8551#R-0130", "rfc-8551#R-0133"]
     source_issue: [S-02, S-03, S-04, S-05, S-08]
+    xcheck:
+      against: ["smime-media-types.derived.schema.json root, #should, #identifies (both levels of the entity)", "multipart-signed-content-type.derived.abnf smime-protocol-param, micalg-param", "DER walk + openssl asn1parse of the derived hex", "algorithm-requirements.derived.yaml digest, signature, key_sizes §4.2/§4.3"]
+      messages: ["MSG-36", "MSG-35"]
+      result: reject-as-expected
+      note: "outer headers accept at all three levels and match both ABNF rules; part 2 accepts at root and #should and is not identified (schema README finding 12); sha-256 and sha256WithRSAEncryption are listed; 1024 bits rejects under §4.2/§4.3, matching the fail check."
 
   - id: EX-3.5.3.3-02
     title: "the digested content of the sample multipart/signed message"
@@ -734,6 +811,11 @@ vectors:
       with no trailing CRLF; the printed bytes are text + CRLF. The source
       does not say how it delimited the part. Source issue S-03.
     source_issue: [S-02, S-03]
+    xcheck:
+      against: []
+      messages: ["MSG-36", "MSG-25"]
+      result: reject-as-expected
+      note: "no schema applies to the octets; the digest mismatch (S-02) reproduces."
 
   - id: EX-3.6-01
     title: "Sample compressed-only message (compressed-data)"
@@ -780,6 +862,11 @@ vectors:
         long form). Source issue S-01.
     constrained_by: ["rfc-8551#R-0086", "rfc-8551#R-0089", "rfc-8551#R-0101", "rfc-8551#R-0102", "rfc-8551#R-0103", "rfc-8551#R-0104", "rfc-8551#R-0105", "rfc-8551#R-0106"]
     source_issue: S-01
+    xcheck:
+      against: ["smime-media-types.derived.schema.json root, #should, #identifies", "DER walk + openssl asn1parse of the derived hex"]
+      messages: ["MSG-32", "MSG-24"]
+      result: reject-as-expected
+      note: "headers accept at all three levels; the body fails the DER walk at octet 0, matching the fail check (S-01)."
 
 # ====================================================================
 # Constructed vectors (in_source: false). NOT FROM THE SOURCE: each input
@@ -799,6 +886,10 @@ vectors:
       - {input: {key_agreement: "ECDH ephemeral-static", key_wrap: "AES-128 key wrap", content: "AES-128 CBC"}, expected: "conforms"}
       - {input: {key_agreement: "ECDH ephemeral-static", key_wrap: "AES-128 key wrap", content: "AES-256 GCM"}, expected: "sender violates R-0016; recipient MAY reject (R-0018); in any cryptographic strength computation it does, it MUST use the weaker of the two, 128 bits (R-0019)"}
     constrained_by: ["rfc-8551#R-0016", "rfc-8551#R-0017", "rfc-8551#R-0018", "rfc-8551#R-0019"]
+    xcheck:
+      against: ["algorithm-requirements.derived.yaml key_encryption.constraints R-0016"]
+      messages: ["MSG-18"]
+      result: reject-as-expected
 
   - id: EX-2.4.1-C01
     title: "inner content type id-data and where the MIME entity is stored"
@@ -814,6 +905,11 @@ vectors:
       - {input: {format: "application/pkcs7-mime signed-data", eContentType: "an OID other than id-data", eContent: "a MIME entity"}, expected: "violates R-0020 / R-0021"}
       - {input: {format: "application/pkcs7-mime enveloped-data", encryptedContentInfo.contentType: "id-data", encryptedContent: "absent"}, expected: "violates R-0024"}
     constrained_by: ["rfc-8551#R-0020", "rfc-8551#R-0021", "rfc-8551#R-0022", "rfc-8551#R-0023", "rfc-8551#R-0024"]
+    xcheck:
+      against: []
+      messages: ["MSG-04", "MSG-19"]
+      result: pass
+      note: "CMS content is outside the JSON Schema's scope (schema README)."
 
   - id: EX-2.5.1-C01
     title: "signingTime CHOICE by year"
@@ -832,6 +928,11 @@ vectors:
       - {input: "2026-10-19T00:00:00Z encoded as GeneralizedTime", expected: "violates R-0032"}
     note: "The source gives no rule for years before 1950, which UTCTime cannot represent under R-0034; no case is made for them. The string formats of UTCTime and GeneralizedTime come from CMS (external: RFC 5652 §11.3), not from this source."
     constrained_by: ["rfc-8551#R-0032", "rfc-8551#R-0033"]
+    xcheck:
+      against: []
+      messages: ["MSG-09"]
+      result: pass
+      note: "signingTime is commented out of the module; its syntax is RFC 5652's."
 
   - id: EX-2.5.1-C02
     title: "UTCTime two-digit year"
@@ -847,6 +948,10 @@ vectors:
       - {input: {YY: "00"}, expected: 2000}
       - {input: {YY: "49"}, expected: 2049}
     constrained_by: ["rfc-8551#R-0034"]
+    xcheck:
+      against: []
+      messages: ["MSG-09"]
+      result: pass
 
   - id: EX-2.5.1-C03
     title: "receiving agent processes both time encodings"
@@ -861,6 +966,10 @@ vectors:
       - {input: "signingTime GeneralizedTime for 2026-10-19T00:00:00Z (sender violated R-0032)", expected: "processed: 2026-10-19T00:00:00Z"}
       - {input: "signingTime GeneralizedTime for 2050-01-01T00:00:00Z", expected: "processed: 2050-01-01T00:00:00Z"}
     constrained_by: ["rfc-8551#R-0035"]
+    xcheck:
+      against: []
+      messages: ["MSG-09"]
+      result: pass
 
   - id: EX-2.5.2-C01
     title: "SMIMECapabilities placement and instance count"
@@ -877,6 +986,11 @@ vectors:
       - {input: "one SMIMECapabilities attribute whose attrValues has two AttributeValues", expected: "violates R-0038; signature SHOULD be treated as failing"}
       - {input: "no SMIMECapabilities attribute", expected: "conforms (R-0036 applies only if present; R-0026 handles zero instances)"}
     constrained_by: ["rfc-8551#R-0026", "rfc-8551#R-0036", "rfc-8551#R-0037", "rfc-8551#R-0038", "rfc-8551#R-0039"]
+    xcheck:
+      against: ["SecureMimeMessageV3dot1.asn1 SMIMECapabilities"]
+      messages: ["MSG-10"]
+      result: pass
+      note: "the attribute count rules are CMS Attribute rules, not module syntax."
 
   - id: EX-2.5.2-C02
     title: "preferBinaryInside capability: parameters omitted, not NULL"
@@ -892,6 +1006,11 @@ vectors:
       - {input: {der_hex: "300f060b2a864886f70d0109100b010500"}, meaning: "SMIMECapability { id-cap-preferBinaryInside, NULL }", expected: "violates R-0046"}
     note: "id-cap-preferBinaryInside = { id-cap 1 } = { id-smime 11 1 } = 1.2.840.113549.1.9.16.11.1, all from Appendix A (lines 3210-3219). The DER encodings were computed for this file (external: X.690)."
     constrained_by: ["rfc-8551#R-0046"]
+    xcheck:
+      against: ["SecureMimeMessageV3dot1.asn1 SMIMECapability, id-cap-preferBinaryInside"]
+      messages: ["MSG-12"]
+      result: reject-as-expected
+      note: "the OID decodes to 1.2.840.113549.1.9.16.11.1, computed from the module's arcs; both encodings are valid SMIMECapability syntax (parameters ANY OPTIONAL); only R-0046 rejects the NULL form."
 
   - id: EX-2.5.3-C01
     title: "SMIMEEncryptionKeyPreference placement and instance count"
@@ -907,6 +1026,10 @@ vectors:
       - {input: "two SMIMEEncryptionKeyPreference attributes in signedAttrs", expected: "violates R-0049; signature SHOULD be treated as failing"}
       - {input: "one SMIMEEncryptionKeyPreference with two AttributeValues", expected: "violates R-0050; signature SHOULD be treated as failing"}
     constrained_by: ["rfc-8551#R-0048", "rfc-8551#R-0049", "rfc-8551#R-0050", "rfc-8551#R-0051"]
+    xcheck:
+      against: ["SecureMimeMessageV3dot1.asn1 SMIMEEncryptionKeyPreference"]
+      messages: ["MSG-14"]
+      result: pass
 
   - id: EX-2.7.1-C01
     title: "updating the stored capabilities list"
@@ -925,6 +1048,10 @@ vectors:
       - {input: {stored: "2026-10-18T00:00:00Z", incoming_time: "2026-10-19T11:00:00Z", signature: "not verifiable"}, expected: "MUST NOT accept the capabilities (R-0071)"}
       - {input: {stored: "2026-10-18T00:00:00Z", incoming_time: "2036-10-19T00:00:00Z", signature: valid}, expected: "MUST NOT accept the signing time (R-0071)"}
     constrained_by: ["rfc-8551#R-0067", "rfc-8551#R-0068", "rfc-8551#R-0069", "rfc-8551#R-0070", "rfc-8551#R-0071", "rfc-8551#R-0072"]
+    xcheck:
+      against: []
+      messages: ["MSG-10"]
+      result: pass
 
   - id: EX-2.7.1-C02
     title: "the weak-encryption decision overrides the rules"
@@ -940,6 +1067,10 @@ vectors:
       - {input: {recipient_capabilities: ["RC2"], weak_acceptable: true, sender_supports: ["RC2"]}, expected: "RC2 permitted by this rule"}
     note: "RC2 is the source's own example of a weak algorithm (EX-2.7.2-01)."
     constrained_by: ["rfc-8551#R-0073", "rfc-8551#R-0074", "rfc-8551#R-0076"]
+    xcheck:
+      against: ["algorithm-requirements.derived.yaml content_encryption"]
+      messages: ["MSG-23"]
+      result: pass
 
   - id: EX-2.7.1.1-C01
     title: "Rule 1: first known capability in the recipient's list"
@@ -954,6 +1085,10 @@ vectors:
       - {input: {recipient_list: ["ChaCha20-Poly1305", "AES-256 GCM"], sender_knows: ["ChaCha20-Poly1305", "AES-256 GCM"]}, expected: "ChaCha20-Poly1305 (SHOULD)"}
       - {input: {recipient_list: ["AES-128 CBC", "AES-256 GCM"], sender_knows: ["AES-256 GCM", "AES-128 CBC"]}, expected: "AES-128 CBC (SHOULD; the recipient's order wins, not the sender's)"}
     constrained_by: ["rfc-8551#R-0075", "rfc-8551#R-0076", "rfc-8551#R-0077", "rfc-8551#R-0078"]
+    xcheck:
+      against: ["algorithm-requirements.derived.yaml content_encryption"]
+      messages: ["MSG-23"]
+      result: pass
 
   - id: EX-2.7.1.2-C01
     title: "Rule 2: nothing known about the recipient"
@@ -970,6 +1105,10 @@ vectors:
       - {input: {capabilities_known: false, version_known: true}, expected: "Rule 2 does not apply (its second condition fails); the source gives no further rule"}
       - {input: {capabilities_known: true}, expected: "Rule 1 applies first (R-0076: rules are ordered)"}
     constrained_by: ["rfc-8551#R-0076", "rfc-8551#R-0079", "rfc-8551#R-0080"]
+    xcheck:
+      against: ["algorithm-requirements.derived.yaml content_encryption.selection"]
+      messages: ["MSG-23"]
+      result: pass
 
   - id: EX-3.1.1-C01
     title: "canonical line ending for text"
@@ -986,6 +1125,10 @@ vectors:
       - {input: {content_type: "text/plain", body_hex: "610d620d"}, expected: "not canonical: bare CR"}
       - {input: {content_type: "text/plain", body_hex: "610d0a620a"}, expected: "not canonical: mixed"}
     constrained_by: ["rfc-8551#R-0085", "rfc-8551#R-0088", "rfc-8551#R-0089"]
+    xcheck:
+      against: []
+      messages: ["MSG-25"]
+      result: reject-as-expected
 
   - id: EX-3.1.2-C01
     title: "absent Content-Transfer-Encoding means 7BIT"
@@ -1000,6 +1143,11 @@ vectors:
       - {input: "part 1 of 3.5.3.3-multipart-signed.eml (no header fields at all)", expected: "7bit"}
     note: "Lowercase rule, no BCP 14 keyword; hence no constrained_by."
     constrained_by: []
+    xcheck:
+      against: []
+      messages: ["MSG-25"]
+      result: pass
+      note: "messages.yaml ENC-03 quotes the rule."
 
   - id: EX-3.1.3-C01
     title: "multipart/signed over a 7-bit transport"
@@ -1014,6 +1162,11 @@ vectors:
       - {input: {transport: "SMTP", part1_cte: "quoted-printable", part1_line: "=A1Hola Michael!"}, expected: "conforms (the 3.1.4 sample's encoding)"}
       - {input: {transport: "SMTP", part1: "7-bit text with no Content-Transfer-Encoding"}, expected: "conforms (already 7-bit)"}
     constrained_by: ["rfc-8551#R-0097"]
+    xcheck:
+      against: []
+      messages: ["MSG-36"]
+      result: pass
+      note: "messages.yaml ENC-03 carries R-0097."
 
   - id: EX-3.2.1-C01
     title: "file extension by media type and CMS content"
@@ -1033,6 +1186,10 @@ vectors:
       - {input: "application/pkcs7-mime, CompressedData, name=smime.p7m", expected: "departs from R-0104 (SHOULD: .p7z)"}
     note: "Agrees with the extensions stated in §3.3 (line 1607), §3.4 (1662), §3.5.2 (1783), §3.5.3.1 (1844), §3.6 (2031) and §3.8 (2107)."
     constrained_by: ["rfc-8551#R-0104"]
+    xcheck:
+      against: ["smime-media-types.derived.schema.json #should, $defs/smimeTypeToExtension"]
+      messages: ["MSG-27", "MSG-35"]
+      result: reject-as-expected
 
   - id: EX-3.2.1-C02
     title: "filename form"
@@ -1049,6 +1206,10 @@ vectors:
       - {input: "smime.p7", expected: "departs from R-0105 (SHOULD; 2-letter extension)"}
       - {input: "letter.p7m", expected: "conforms to R-0105; does not use the 'smime' base of R-0106"}
     constrained_by: ["rfc-8551#R-0105", "rfc-8551#R-0106"]
+    xcheck:
+      against: ["smime-media-types.derived.schema.json #should ($defs/filenameShould)"]
+      messages: ["MSG-27"]
+      result: reject-as-expected
 
   - id: EX-3.2.1-C03
     title: "media type decides, not the extension"
@@ -1063,6 +1224,11 @@ vectors:
       - {input: 'Content-Type: application/pkcs7-signature; name=smime.p7m', expected: "processed as application/pkcs7-signature"}
     note: "§3.10 is the one place the source does use the suffix, for application/octet-stream (EX-3.10-C01)."
     constrained_by: ["rfc-8551#R-0107", "rfc-8551#R-0108"]
+    xcheck:
+      against: ["smime-media-types.derived.schema.json root, #should, #identifies"]
+      messages: ["MSG-27", "MSG-35"]
+      result: reject-as-expected
+      note: "root dispatches on mediaType, not on the name; #should flags the mismatched extension (R-0104)."
 
   - id: EX-3.2.2-C01
     title: "smime-type table"
@@ -1081,6 +1247,10 @@ vectors:
       - {input: "application/pkcs7-mime carrying EnvelopedData with no smime-type parameter", expected: "departs from R-0101 (SHOULD)"}
     note: "Matching of smime-type values is shown in the source's case only; the source states no case rule for parameter values or names, so no case-folding vector is made."
     constrained_by: ["rfc-8551#R-0101"]
+    xcheck:
+      against: ["smime-media-types.derived.schema.json $defs/smimeTypeDefined, #should"]
+      messages: ["MSG-28"]
+      result: reject-as-expected
 
   - id: EX-3.5.3.1-C01
     title: "detached signature has no eContent"
@@ -1094,6 +1264,10 @@ vectors:
       - {input: "application/pkcs7-signature, SignedData, encapContentInfo { id-data }", expected: "conforms (as in 3.5.3.3-signature.derived.hex)"}
       - {input: "application/pkcs7-signature, SignedData, encapContentInfo { id-data, [0] eContent }", expected: "violates R-0115"}
     constrained_by: ["rfc-8551#R-0115"]
+    xcheck:
+      against: ["DER walk + openssl asn1parse of the derived hex"]
+      messages: ["MSG-04", "MSG-35"]
+      result: pass
 
   - id: EX-3.5.3.2-C01
     title: "multipart/signed protocol parameter"
@@ -1110,6 +1284,11 @@ vectors:
       - {input: 'protocol="application/pkcs7-mime"', expected: "violates R-0116"}
       - {input: "no protocol parameter", expected: "violates: protocol is one of the two required parameters (lines 1876-1877)"}
     constrained_by: ["rfc-8551#R-0116", "rfc-8551#R-0117"]
+    xcheck:
+      against: ["multipart-signed-content-type.derived.abnf smime-protocol-param", "smime-media-types.derived.schema.json root"]
+      messages: ["MSG-36"]
+      result: reject-as-expected
+      note: "the unquoted case is visible to the ABNF only; the JSON Schema sees unquoted values."
 
   - id: EX-3.5.3.2-C02
     title: "micalg values"
@@ -1129,6 +1308,10 @@ vectors:
       - {input: ["an algorithm with no value defined in its algorithm profile"], expected: "micalg=unknown"}
       - {input: ["SHA-1"], expected: "micalg=sha-1 (table value, marked historical and no longer secure)"}
     constrained_by: ["rfc-8551#R-0118", "rfc-8551#R-0119"]
+    xcheck:
+      against: ["multipart-signed-content-type.derived.abnf micalg-param, micalg-table-name", "smime-media-types.derived.schema.json root, #should"]
+      messages: ["MSG-37"]
+      result: reject-as-expected
 
   - id: EX-3.8-C01
     title: "certificate management (certs-only) structure"
@@ -1145,6 +1328,11 @@ vectors:
       - {input: "certs-only SignedData carrying CRLs only, no certificates", expected: "conforms (certificates and/or CRLs, line 2095)"}
     note: "The source prints no certs-only sample message; these are all constructed."
     constrained_by: ["rfc-8551#R-0025", "rfc-8551#R-0122", "rfc-8551#R-0123"]
+    xcheck:
+      against: ["smime-media-types.derived.schema.json root, #should, #identifies"]
+      messages: ["MSG-33"]
+      result: pass
+      note: "header only; the SignedData cases have no DER to check."
 
   - id: EX-3.10-C01
     title: "identifying an S/MIME message"
@@ -1166,6 +1354,10 @@ vectors:
       - {input: "application/pkcs7-signature on its own", expected: "not listed in the table"}
     note: "A table rule with no BCP 14 keyword; hence no constrained_by. The suffix comes from name or filename (lines 2144-2146)."
     constrained_by: []
+    xcheck:
+      against: ["smime-media-types.derived.schema.json #identifies"]
+      messages: ["MSG-39"]
+      result: reject-as-expected
 
   - id: EX-4.1-C01
     title: "RSA signing key generation floor"
@@ -1181,6 +1373,10 @@ vectors:
       - {input: {rsa_bits: 2048, use: signature}, expected: "permitted"}
       - {input: {rsa_bits: 1024, use: "key transport only"}, expected: "not covered by R-0129 (signature use only); see EX-4.4-C01"}
     constrained_by: ["rfc-8551#R-0129"]
+    xcheck:
+      against: ["algorithm-requirements.derived.yaml key_sizes §4.1"]
+      messages: ["MSG-21"]
+      result: pass
 
   - id: EX-4.2-C01
     title: "key size when generating RSA / RSASSA-PSS signatures"
@@ -1201,6 +1397,10 @@ vectors:
       - {input: 4097, expected: "MAY"}
       - {input: 8192, expected: "MAY"}
     constrained_by: ["rfc-8551#R-0130", "rfc-8551#R-0131", "rfc-8551#R-0132"]
+    xcheck:
+      against: ["algorithm-requirements.derived.yaml key_sizes §4.2"]
+      messages: ["MSG-21"]
+      result: pass
 
   - id: EX-4.3-C01
     title: "key size when verifying RSA / RSASSA-PSS signatures"
@@ -1220,6 +1420,10 @@ vectors:
       - {input: 4096, expected: "MUST"}
       - {input: 4097, expected: "MAY"}
     constrained_by: ["rfc-8551#R-0133", "rfc-8551#R-0134", "rfc-8551#R-0135"]
+    xcheck:
+      against: ["algorithm-requirements.derived.yaml key_sizes §4.3"]
+      messages: ["MSG-21"]
+      result: pass
 
   - id: EX-4.4-C01
     title: "key size when encrypting with RSA / RSA-OAEP"
@@ -1238,6 +1442,10 @@ vectors:
       - {input: 4096, expected: "SHOULD"}
       - {input: 4097, expected: "MAY"}
     constrained_by: ["rfc-8551#R-0136", "rfc-8551#R-0137", "rfc-8551#R-0138"]
+    xcheck:
+      against: ["algorithm-requirements.derived.yaml key_sizes §4.4"]
+      messages: ["MSG-21"]
+      result: pass
 
   - id: EX-4.5-C01
     title: "key size when decrypting with RSA / RSAES-OAEP"
@@ -1257,6 +1465,10 @@ vectors:
       - {input: 4096, expected: "MUST"}
       - {input: 4097, expected: "MAY"}
     constrained_by: ["rfc-8551#R-0139", "rfc-8551#R-0140", "rfc-8551#R-0141"]
+    xcheck:
+      against: ["algorithm-requirements.derived.yaml key_sizes §4.5"]
+      messages: ["MSG-21"]
+      result: pass
 
   - id: EX-6-C01
     title: "weak signature keys: warn or reject"
@@ -1274,6 +1486,11 @@ vectors:
       - {input: {agent: "mail list server", algorithm: RSA, bits: 512}, expected: "SHOULD reject the message"}
     note: "The source does not define 'weak signatures' for R-0144 beyond this paragraph; the 512-bit case is taken as weak under R-0143's bound."
     constrained_by: ["rfc-8551#R-0143", "rfc-8551#R-0144"]
+    xcheck:
+      against: ["algorithm-requirements.derived.yaml key_sizes §6"]
+      messages: ["MSG-21"]
+      result: pass
+      note: "R-0144 (server SHOULD reject) is not a table row."
 
   - id: EX-B.2-C01
     title: "id-dsa recognised as id-dsa-with-sha1"
@@ -1288,6 +1505,10 @@ vectors:
       - {input: "SignerInfo signatureAlgorithm id-dsa-with-sha1 (as in EX-3.5.2-01)", expected: "id-dsa-with-sha1"}
     note: "The OID values (1.2.840.10040.4.1, 1.2.840.10040.4.3) are not printed in RFC 8551 (external: RFC 3279 / RFC 3370)."
     constrained_by: ["rfc-8551#R-0151"]
+    xcheck:
+      against: ["algorithm-requirements.derived.yaml signature_historic"]
+      messages: ["MSG-20"]
+      result: pass
 
 source_issues:
   - id: S-01

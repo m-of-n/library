@@ -1210,6 +1210,49 @@ option-1 evidence the 2026-10-12 minute names. Nothing here decides DEC-002.
     authority. Should the answer say so? Settle it in `topics/delegation-models.yaml`
     (not edited here).
 
+Questions 16 to 18 were added by the pass-3 cross-check. Each is a place where
+RFC 8551 itself is silent or inconsistent and the artifacts had to read it one
+way; none is ours to decide, and each names the readings the artifacts took.
+
+16. **Does smime-type or the CMS content type govern receipt?** §3.2.2 ¶7
+    (N-099): *"It is explicitly intended that this field be a suitable hint for
+    mail client applications to indicate whether a message is "signed",
+    "authEnveloped", or "enveloped" without having to tunnel into the CMS
+    payload."* §3.2 ¶5 (R-0101): *"The Content-Type header field of all
+    application/pkcs7-mime objects SHOULD include the optional "smime-type"
+    parameter, as described in the following sections."* The source does not say
+    which one governs when they disagree, or whether a mismatch is an error.
+    `state-machine.yaml` M03-T06 to T10 dispatch on smime-type when it is
+    present; `protocol.yaml` `smime-identification` step 4 reads the content type
+    as governing (inferred) and leaves the mismatch unspecified. It bears on
+    adopt 11's hint checked against the signed bytes. Settle it where §5.1
+    profiles import.
+17. **Rule 1 with no usable capability.** §2.7.1.1 (R-0077): *"If the sending
+    agent has received a set of capabilities from the recipient for the message
+    the agent is about to encrypt, then the sending agent SHOULD use that
+    information by selecting the first capability in the list (that is, the
+    capability most preferred by the intended recipient) that the sending agent
+    knows how to encrypt."* Rule 2's first condition (§2.7.1.2) is *"The sending
+    agent has no knowledge of the encryption capabilities of the recipient."*,
+    which a sender holding a list does not meet. `state-machine.yaml` M06-T07
+    fails (no-algorithm); `protocol.yaml` `encryption-algorithm-selection` step 4
+    falls through to Rule 2's defaults. Both readings are inferred. Not a design
+    question for us unless a `speaks` list (question 1) is meant to drive
+    algorithm choice.
+18. **What does R-0099's `eContentType` mean for an enveloped object?** §3.2 ¶2
+    (R-0099) conditions every application/pkcs7-mime object on it: *"The carried
+    CMS object always contains a MIME entity that is prepared as described in
+    Section 3.1 if the eContentType is id-data."* EnvelopedData has no
+    eContentType, and §2.4.1 (R-0023) names a different field: *"the CMS
+    EnvelopedData encryptedContentInfo contentType MUST include the id-data
+    OID"*. The §3.2.2 table nonetheless lists `enveloped-data` and
+    `authEnveloped-data` with inner content `id-data`. `messages.yaml` reads the
+    word as MSG-19/contentType and as MSG-22's inner content type (TEN-14,
+    inferred) and wires R-0099 only to MSG-04/eContentType; `examples/vectors.yaml`
+    applies R-0099 to the §3.3 and §3.4 enveloped vectors. It matters only if §5.1
+    imports enveloped S/MIME. Settle it with question 14, once `rfc-5652` is
+    ingested.
+
 **Source defects, recorded and not repaired.** Each is already recorded in this
 record's artifacts. This file only collects them.
 - **References:** §7.1 swaps the [SMIMEv3.1] and [SMIMEv3.2] sets, and Appendix
@@ -1220,7 +1263,8 @@ record's artifacts. This file only collects them.
 - **Requirement tensions:** R-0037 and R-0049, *"MUST include a single
   instance"* against *"If present"* (TEN-02; protocol
   `if-present-vs-must-include`); R-0022, *"the media type MUST be stored"* in
-  eContent (TEN-03); R-0108 against §3.10's identification by suffix
+  eContent (TEN-03); R-0099's *"eContentType"*, which EnvelopedData and
+  AuthEnvelopedData do not have (TEN-14, question 18); R-0108 against §3.10's identification by suffix
   (protocol `extensions-vs-identification`); R-0125 puts a sending-side need on a
   receiving agent (protocol `retrieval-actor`).
 - **A reason that does not match its rule:** R-0080's AES-128 CBC fallback is

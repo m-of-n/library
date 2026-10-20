@@ -271,3 +271,15 @@ check its digest first).
   Appendix B no longer called informative and R-0151 added to the table;
   RECOMMENDED added to `levels`; the R-0016 unwrap exception stated; eight
   uncovered lists added to the coverage reconciliation.
+- **Pass 3 (cross-check), 2026-10-19.** All 47 example vectors were run
+  against these artifacts (see `examples/README.md` and each vector's
+  `xcheck`). One fix: `#should` no longer restricts smime-type to the
+  five values of `$defs/smimeTypeDefined`. R-0101 is a SHOULD on the
+  parameter's presence only. A value assigned by the §3.2.2 guidelines
+  (R-0109–R-0111), or registered under [RFC7114], deviates from no
+  SHOULD. It had warned on EX-3.2.2-01. `smimeTypeDefined` stays as a
+  lookup. Found and left open: ABNF literals are case-insensitive
+  (RFC 5234), and that includes the micalg table values. The JSON Schema
+  compares micalg case-sensitively. RFC 8551 states no case rule for
+  values. Noted in the ABNF header. Metaschema re-validated
+  (`jsonschema` 4.10.3).

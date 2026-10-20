@@ -7,6 +7,8 @@ extracted: '2026-10-19'
 extracted_by: 'FX-1 pass 1 (extract), state-machine agent, effort high, from the source text only'
 verified: '2026-10-19'
 verified_by: 'FX-1 pass 2 (verify), independent state-machine verifier, from the source text only: every quote an exact run of the unwrapped source (spacing kept, no blank-line or page-break crossing), every locator naming the section that holds its quote, every constrained_by id resolving, reachability and exits checked per machine. 11 machines, 89 states, 129 transitions (38 states and 41 transitions inferred), 38 triggers (15 messages, 23 events), 13 source tensions, 10 not_modelled. Pass 2 added terminal_states, M04-T17, M11-T11 to M11-T13 and ST-13, made M03-T12 inferred, made the guards out of M04 checking-key-size, M04 checking-attributes and M06 rule-1-applies mutually exclusive, and fixed the ST-03 locator.'
+cross_checked: '2026-10-19'
+cross_checked_by: 'FX-1 pass 3 (cross-check), state machine against messages.yaml, protocol.yaml and requirements.yaml, checked mechanically and then by reading: every transition trigger is declared in triggers_used, every message trigger resolves to a messages.yaml entry (resolves_to, added in pass 3), every event trigger has a definition, no declared trigger is unused, every from, to, initial, error and terminal state exists in its machine, every state is reachable, and every constrained_by id exists in requirements.yaml. 11 machines, 90 states, 131 transitions (39 states and 43 transitions inferred), 39 triggers (15 messages, 24 events), 13 source tensions, 10 not_modelled. Pass 3 added M02-T05 with the state signature-invalidated-modified and the event intermediate_agent_modifies (protocol.yaml multipart-signed-in-transit step 4 and signed-only-multipart-signed step 8 had a gateway breaking the signature, M02 did not), added M06-T14 (protocol.yaml encryption-algorithm-selection step 3 offers the human risk review for any weaker algorithm, M06 only after Rule 1), wired the §4.2 and §4.4 key-size tables into the M01 build guards (protocol.yaml signed-only-pkcs7-mime step 1 and enveloped-only step 2 check them), recorded the smime-type hint against content-type disagreement with protocol.yaml smime-identification step 4 (M03 unspecified), an unusable preferred certificate (M10 unspecified), the Rule 1 exhausted-list reading against protocol.yaml (ST-03), and the one state with no exit that is not terminal (M11 MAY, in this note).'
 note: >-
   Every lifecycle RFC 8551 describes or implies, as machines an
   implementation or a test harness can drive. RFC 8551 is mostly a format
@@ -45,12 +47,16 @@ note: >-
   message named as the source names it (a media type with its smime-type, a
   CMS content type, a signed attribute) or a named event; every trigger is
   listed once under triggers_used, tagged message or event, for the
-  cross-check pass to reconcile against messages.yaml. completion is the UML
+  cross-check pass to reconcile against messages.yaml; resolves_to, on every
+  message trigger, names the messages.yaml entry (MSG-nn), field or variant
+  it reconciles to (pass 3). completion is the UML
   completion event: the activity of the source state has finished and the
   guards pick the branch. error_states are states in which the machine yields
   no usable result. terminal_states are the states with no exit, where one run
   of the machine ends (pass 2: they were marked nowhere); an empty list means
-  the machine has none. A guard of always means the transition is taken whenever
+  the machine has none. The one state with no exit that is not listed is M11
+  MAY: the source gives it no exit, and the M11 note records it as open, not
+  terminal (pass 3). A guard of always means the transition is taken whenever
   its trigger occurs. constrained_by lists rfc-8551#R-NNNN entries of
   requirements.yaml whose text is quoted by, or governs, the transition; it
   was checked mechanically to name only ids that exist. unspecified entries
@@ -61,68 +67,83 @@ triggers_used:
   # ---------------------------------------------------------------- messages
   - name: 'MIME entity'
     kind: 'message'
+    resolves_to: 'MSG-25 (Inner MIME entity). For M03-T05 the entity may be a top-level message that matches no §3.10 criterion; messages.yaml profiles only the S/MIME criteria (MSG-39), so such an entity is any MIME message.'
     locator: '§3.1'
     quote: 'A MIME message is composed of a MIME header and a MIME body.'
     note: 'The canonical MIME entity to be secured (sending) or the entity found after a layer is removed (receiving). Not a CMS type.'
   - name: 'message/rfc822'
     kind: 'message'
+    resolves_to: 'MSG-26 (message/rfc822 header-protection wrapper)'
     locator: '§3.1'
     quote: 'In order to protect outer, non-content-related message header fields (for instance, the "Subject", "To", "From", and "Cc" fields), the sending client MAY wrap a full MIME message in a message/rfc822 wrapper in order to apply S/MIME security services to these header fields.'
   - name: 'application/pkcs7-mime'
     kind: 'message'
+    resolves_to: 'MSG-27 (application/pkcs7-mime); MSG-39 field application/octet-stream is the other route into identified-pkcs7-mime'
     locator: '§3.2, §3.10'
     quote: 'The application/pkcs7-mime media type is used to carry CMS content types, including EnvelopedData, SignedData, and CompressedData.'
     note: 'Without, or before reading, the smime-type parameter (§3.10 table row 1 matches on the media type alone).'
   - name: 'application/pkcs7-mime; smime-type=enveloped-data'
     kind: 'message'
+    resolves_to: 'MSG-29; MSG-28 field enveloped-data; when smime-type is absent (a SHOULD, R-0101, and not a parameter of the application/octet-stream entity that M03-T03 identifies by suffix), M03 raises this trigger from the ContentInfo (MSG-01) contentType instead, MSG-27 carrying EnvelopedData (MSG-15)'
     locator: '§3.3'
     quote: 'The smime-type parameter for enveloped-only messages is "enveloped-data".'
   - name: 'application/pkcs7-mime; smime-type=authEnveloped-data'
     kind: 'message'
+    resolves_to: 'MSG-31; MSG-28 field authEnveloped-data; when smime-type is absent (a SHOULD, R-0101, and not a parameter of the application/octet-stream entity that M03-T03 identifies by suffix), M03 raises this trigger from the ContentInfo (MSG-01) contentType instead, MSG-27 carrying AuthEnvelopedData (MSG-22)'
     locator: '§3.4'
     quote: 'The smime-type parameter for authenticated enveloped-only messages is "authEnveloped-data".'
   - name: 'application/pkcs7-mime; smime-type=signed-data'
     kind: 'message'
+    resolves_to: 'MSG-30; MSG-28 field signed-data; when smime-type is absent (a SHOULD, R-0101, and not a parameter of the application/octet-stream entity that M03-T03 identifies by suffix), M03 raises this trigger from the ContentInfo (MSG-01) contentType instead, MSG-27 carrying SignedData (MSG-03) with signerInfos present'
     locator: '§3.5.2'
     quote: 'The smime-type parameter for messages using application/pkcs7-mime with SignedData is "signed-data".'
   - name: 'application/pkcs7-mime; smime-type=compressed-data'
     kind: 'message'
+    resolves_to: 'MSG-32; MSG-28 field compressed-data; when smime-type is absent (a SHOULD, R-0101, and not a parameter of the application/octet-stream entity that M03-T03 identifies by suffix), M03 raises this trigger from the ContentInfo (MSG-01) contentType instead, MSG-27 carrying CompressedData (MSG-24)'
     locator: '§3.6'
     quote: 'The smime-type parameter for compressed-only messages is "compressed-data".'
   - name: 'application/pkcs7-mime; smime-type=certs-only'
     kind: 'message'
+    resolves_to: 'MSG-33 (certificate management message); MSG-28 field certs-only; when smime-type is absent (a SHOULD, R-0101, and not a parameter of the application/octet-stream entity that M03-T03 identifies by suffix), M03 raises this trigger from the ContentInfo (MSG-01) contentType instead, MSG-27 carrying the degenerate SignedData of §3.8 (MSG-03, MSG-33)'
     locator: '§3.8'
     quote: 'The smime-type parameter for a certificate management message is "certs-only".'
   - name: 'multipart/signed'
     kind: 'message'
+    resolves_to: 'MSG-36 (multipart/signed); MSG-39 field multipart/signed'
     locator: '§3.5.3, §3.10'
     quote: 'The multipart/signed media type has two parts.  The first part contains the MIME entity that is signed; the second part contains the "detached signature" CMS SignedData object in which the encapContentInfo eContent field is absent.'
     note: 'With protocol="application/pkcs7-signature" (§3.10 table row 2, R-0116).'
   - name: 'application/octet-stream'
     kind: 'message'
+    resolves_to: 'MSG-39 field application/octet-stream (identification by file suffix)'
     locator: '§3.10'
     quote: 'The file suffix in the table below comes from the "name" parameter in the Content-Type header field or the "filename" parameter in the Content-Disposition header field.'
     note: 'An S/MIME object whose media type a gateway defaulted to application/octet-stream (§3.2.1); identified only by file suffix p7m, p7s, p7c or p7z. See ST-01.'
   - name: 'SignerInfo'
     kind: 'message'
+    resolves_to: 'MSG-05 (SignerInfo)'
     locator: '§2.5'
     quote: 'The SignerInfo type allows the inclusion of unsigned and signed attributes along with a signature.'
     note: 'One SignerInfo of a received SignedData, whether carried in application/pkcs7-mime; smime-type=signed-data or in the application/pkcs7-signature part of multipart/signed.'
   - name: 'EnvelopedData'
     kind: 'message'
+    resolves_to: 'MSG-15 (EnvelopedData)'
     locator: '§2.4.3'
     quote: 'This content type is used to apply data confidentiality to a message.'
   - name: 'AuthEnvelopedData'
     kind: 'message'
+    resolves_to: 'MSG-22 (AuthEnvelopedData)'
     locator: '§2.4.4'
     quote: 'This content type is used to apply data confidentiality and message integrity to a message.'
   - name: 'SMIMECapabilities'
     kind: 'message'
+    resolves_to: 'MSG-10 (SMIMECapabilities attribute); MSG-07 field smimeCapabilities'
     locator: '§2.5.2'
     quote: 'If present, the SMIMECapabilities attribute MUST be a SignedAttribute.'
     note: 'A signed attribute, received inside a SignerInfo of an incoming signed message.'
   - name: 'SMIMEEncryptionKeyPreference'
     kind: 'message'
+    resolves_to: 'MSG-14 (SMIMEEncryptionKeyPreference attribute); MSG-07 field encrypKeyPref'
     locator: '§2.5.3'
     quote: 'If present, the SMIMEEncryptionKeyPreference attribute MUST be a SignedAttribute.'
     note: 'A signed attribute, received inside a SignerInfo of an incoming signed message.'
@@ -166,6 +187,12 @@ triggers_used:
     kind: 'event'
     locator: '§3.1.3'
     quote: 'If a mail message with 8-bit data were to encounter a message transfer agent that cannot transmit 8-bit or binary data, the agent has three options, none of which are acceptable for a clear-signed message:'
+  - name: 'intermediate_agent_modifies'
+    kind: 'event'
+    locator: '§3.5.1'
+    quote: 'Such agents might do line wrapping or content-transfer encoding changes that would break the signature.'
+    inferred: true
+    inferred_reason: 'The source names the benign intermediate agents and what they might do, not an event. Added in pass 3 for M02-T05.'
   - name: 'verification_completed'
     kind: 'event'
     locator: '§3.1'
@@ -388,38 +415,38 @@ machines:
         from: 'transfer-encoded'
         to: 'signeddata-built'
         trigger: 'completion'
-        guard: 'The operation is sign in the application/pkcs7-mime format (§3.5.1 leaves the choice to the sender), and the sending agent has a certificate for the signature.'
+        guard: 'The operation is sign in the application/pkcs7-mime format (§3.5.1 leaves the choice to the sender), the sending agent has a certificate for the signature, and for RSA or RSASSA-PSS the agent accepts its key size under the §4.2 table (2048 to 4096 SHOULD, above 4096 MAY, 2047 or less SHOULD NOT; pass 3).'
         quote: 'The MIME entity and other required data are processed into a CMS object of type SignedData.'
         locator: '§3.5.2, Step 2'
-        constrained_by: ['rfc-8551#R-0020', 'rfc-8551#R-0021', 'rfc-8551#R-0022', 'rfc-8551#R-0025', 'rfc-8551#R-0027', 'rfc-8551#R-0029', 'rfc-8551#R-0031', 'rfc-8551#R-0032', 'rfc-8551#R-0033', 'rfc-8551#R-0054', 'rfc-8551#R-0124']
+        constrained_by: ['rfc-8551#R-0020', 'rfc-8551#R-0021', 'rfc-8551#R-0022', 'rfc-8551#R-0025', 'rfc-8551#R-0027', 'rfc-8551#R-0029', 'rfc-8551#R-0031', 'rfc-8551#R-0032', 'rfc-8551#R-0033', 'rfc-8551#R-0054', 'rfc-8551#R-0124', 'rfc-8551#R-0130', 'rfc-8551#R-0131', 'rfc-8551#R-0132']
         inferred: false
       - id: 'M01-T08'
         from: 'transfer-encoded'
         to: 'detached-signeddata-built'
         trigger: 'completion'
-        guard: 'The operation is sign in the multipart/signed format, and the sending agent has a certificate for the signature.'
+        guard: 'The operation is sign in the multipart/signed format, the sending agent has a certificate for the signature, and for RSA or RSASSA-PSS the agent accepts its key size under the §4.2 table (as M01-T07; pass 3).'
         quote: 'The MIME entity is presented to CMS processing in order to obtain an object of type SignedData in which the encapContentInfo eContent field is absent.'
         locator: '§3.5.3.2, Step 2'
-        constrained_by: ['rfc-8551#R-0022', 'rfc-8551#R-0025', 'rfc-8551#R-0027', 'rfc-8551#R-0029', 'rfc-8551#R-0115', 'rfc-8551#R-0124']
+        constrained_by: ['rfc-8551#R-0022', 'rfc-8551#R-0025', 'rfc-8551#R-0027', 'rfc-8551#R-0029', 'rfc-8551#R-0115', 'rfc-8551#R-0124', 'rfc-8551#R-0130', 'rfc-8551#R-0131', 'rfc-8551#R-0132']
         inferred: false
       - id: 'M01-T09'
         from: 'transfer-encoded'
         to: 'envelopeddata-built'
         trigger: 'completion'
-        guard: 'The operation is envelope; M06 selected a non-authenticated content-encryption algorithm (e.g. AES-128 CBC); M10 found a key management certificate for every recipient; for ECDH the key wrap matches the content-encryption algorithm (§2.3).'
+        guard: 'The operation is envelope; M06 selected a non-authenticated content-encryption algorithm (e.g. AES-128 CBC); M10 found a key management certificate for every recipient; for RSA or RSA-OAEP the agent accepts each recipient key size under the §4.4 table (2048 to 4096 SHOULD, above 4096 MAY, 2047 or less SHOULD NOT; pass 3); for ECDH the key wrap matches the content-encryption algorithm (§2.3).'
         quote: 'The MIME entity and other required data are processed into a CMS object of type EnvelopedData.'
         locator: '§3.3, Step 2'
-        constrained_by: ['rfc-8551#R-0016', 'rfc-8551#R-0017', 'rfc-8551#R-0023', 'rfc-8551#R-0024', 'rfc-8551#R-0065', 'rfc-8551#R-0112', 'rfc-8551#R-0137']
+        constrained_by: ['rfc-8551#R-0016', 'rfc-8551#R-0017', 'rfc-8551#R-0023', 'rfc-8551#R-0024', 'rfc-8551#R-0065', 'rfc-8551#R-0112', 'rfc-8551#R-0136', 'rfc-8551#R-0137', 'rfc-8551#R-0138']
         inferred: false
         note: 'The "enveloped-only" structure does not support authenticated symmetric algorithms (§3.3); AEAD algorithms go to M01-T10.'
       - id: 'M01-T10'
         from: 'transfer-encoded'
         to: 'authenvelopeddata-built'
         trigger: 'completion'
-        guard: 'The operation is authenticated envelope; M06 selected an authenticated algorithm (AES-128 GCM, AES-256 GCM, ChaCha20-Poly1305); M10 found a key management certificate for every recipient; for ECDH the key wrap matches.'
+        guard: 'The operation is authenticated envelope; M06 selected an authenticated algorithm (AES-128 GCM, AES-256 GCM, ChaCha20-Poly1305); M10 found a key management certificate for every recipient; for RSA or RSA-OAEP the recipient key sizes are accepted under the §4.4 table (as M01-T09; pass 3); for ECDH the key wrap matches.'
         quote: 'The MIME entity and other required data are processed into a CMS object of type AuthEnvelopedData.'
         locator: '§3.4, Step 2'
-        constrained_by: ['rfc-8551#R-0016', 'rfc-8551#R-0017', 'rfc-8551#R-0064', 'rfc-8551#R-0066', 'rfc-8551#R-0113', 'rfc-8551#R-0137']
+        constrained_by: ['rfc-8551#R-0016', 'rfc-8551#R-0017', 'rfc-8551#R-0064', 'rfc-8551#R-0066', 'rfc-8551#R-0113', 'rfc-8551#R-0136', 'rfc-8551#R-0137', 'rfc-8551#R-0138']
         inferred: false
       - id: 'M01-T11'
         from: 'transfer-encoded'
@@ -430,6 +457,7 @@ machines:
         locator: '§3.6, Step 2'
         constrained_by: []
         inferred: false
+        note: '§3.6 warns that agents before S/MIME 3.1 do not recognise CompressedData and names the RFC 3274 receive capability as the preferred method for compatibility. The guard does not check it; protocol.yaml compressed-only step 1 does, with its outcome inferred (pass 3).'
       - id: 'M01-T12'
         from: 'content-to-secure'
         to: 'certs-only-signeddata-built'
@@ -443,20 +471,20 @@ machines:
         from: 'transfer-encoded'
         to: 'not-creatable'
         trigger: 'completion'
-        guard: 'The operation is sign and the sending agent has no certificate for the signature.'
+        guard: 'The operation is sign and the sending agent has no certificate for the signature, or declines to sign with an RSA or RSASSA-PSS key of 2047 bits or fewer (§4.2 SHOULD NOT; pass 3).'
         quote: 'A sending agent that signs messages MUST have a certificate for the signature so that a receiving agent can verify the signature.'
         locator: '§3.9'
-        constrained_by: ['rfc-8551#R-0124']
+        constrained_by: ['rfc-8551#R-0124', 'rfc-8551#R-0130']
         inferred: true
         inferred_reason: 'The source states the obligation, not what happens when it is unmet.'
       - id: 'M01-T14'
         from: 'transfer-encoded'
         to: 'not-creatable'
         trigger: 'completion'
-        guard: 'The operation is envelope or authenticated envelope and either M10 ended in no-key-management-certificate for some recipient or M06 ended in no-algorithm.'
+        guard: 'The operation is envelope or authenticated envelope and either M10 ended in no-key-management-certificate for some recipient, or M06 ended in no-algorithm, or the agent declines a recipient RSA or RSA-OAEP key of 2047 bits or fewer (§4.4 SHOULD NOT; pass 3).'
         quote: 'In order to distribute the symmetric key, a sender needs to have access to a public key for each intended message recipient to use this service.'
         locator: '§2.4.3, §2.4.4'
-        constrained_by: ['rfc-8551#R-0074']
+        constrained_by: ['rfc-8551#R-0074', 'rfc-8551#R-0136']
         inferred: true
         inferred_reason: 'The source states the precondition; the failure branch is ours. A sender could instead drop the recipient or send a separate message (M07); the source does not say.'
       - id: 'M01-T15'
@@ -599,7 +627,7 @@ machines:
   # ======================================================================
   - id: 'M02'
     name: 'clear-signed-message-in-transport'
-    locator: '§3.1.3, §3.5.1'
+    locator: '§3.1.3, §3.1.4, §3.5.1'
     actor: 'message transfer agents on the path of a multipart/signed message; the signature as later verified by the recipient'
     purpose: 'What can happen to a multipart/signed message with 8-bit or binary data in its first part when it meets a transport that cannot carry 8-bit data, and why §3.1.3 requires 7-bit transfer encoding.'
     initial: 'in-transit'
@@ -622,12 +650,16 @@ machines:
         meaning: 'An RFC 1847-compliant agent returned the message as undeliverable.'
         inferred: false
         kind: 'error'
+      - name: 'signature-invalidated-modified'
+        meaning: 'A benign intermediate agent, such as a gateway translating the message, wrapped lines or changed the content-transfer encoding of the signed part. Added in pass 3.'
+        inferred: true
+        kind: 'error'
     transitions:
       - id: 'M02-T01'
         from: 'in-transit'
         to: 'delivered-intact'
         trigger: 'multipart/signed'
-        guard: 'The first part is 7-bit data (natively or after the transfer encoding R-0097 requires), or every hop is 8-bit clean.'
+        guard: 'The first part is 7-bit data (natively or after the transfer encoding R-0097 requires), or every hop is 8-bit clean; and no intermediate agent modified the first part (M02-T05).'
         quote: 'MIME entities that are already 7-bit data need no transfer encoding.'
         locator: '§3.1.3'
         constrained_by: ['rfc-8551#R-0097']
@@ -660,8 +692,19 @@ machines:
         locator: '§3.1.3'
         constrained_by: ['rfc-8551#R-0097']
         inferred: false
-    error_states: ['signature-invalidated-reencoded', 'signature-invalidated-corrupted', 'returned-to-sender']
-    terminal_states: ['delivered-intact', 'signature-invalidated-reencoded', 'signature-invalidated-corrupted', 'returned-to-sender']
+      - id: 'M02-T05'
+        from: 'in-transit'
+        to: 'signature-invalidated-modified'
+        trigger: 'intermediate_agent_modifies'
+        guard: 'A benign intermediate agent wraps lines or changes the content-transfer encoding of the first part, whether or not it carries 8-bit data.'
+        quote: 'Such agents might do line wrapping or content-transfer encoding changes that would break the signature.'
+        locator: '§3.5.1'
+        constrained_by: []
+        inferred: true
+        inferred_reason: 'Section 3.5.1 says this to explain what the SignedData format protects against; that a multipart/signed first part is exposed to it is the contrast, not a statement. Added in pass 3 to agree with protocol.yaml multipart-signed-in-transit step 4 and signed-only-multipart-signed step 8.'
+        note: 'Section 3.1.4 gives two cases with its sample: a transport agent inserting > before lines beginning From, and a gateway that modifies trailing whitespace; both are avoided by quoted-printable encoding at §3.1 Step 3.'
+    error_states: ['signature-invalidated-reencoded', 'signature-invalidated-corrupted', 'returned-to-sender', 'signature-invalidated-modified']
+    terminal_states: ['delivered-intact', 'signature-invalidated-reencoded', 'signature-invalidated-corrupted', 'returned-to-sender', 'signature-invalidated-modified']
     note: 'The application/pkcs7-mime signed-data format is not subject to this machine: the SignedData format protects the message content from being changed by benign intermediate agents (§3.5.1).'
 
   # ======================================================================
@@ -926,6 +969,7 @@ machines:
       - 'An application/pkcs7-mime entity whose smime-type is not one of the five in §3.2.2, or whose eContentType is not id-data: Other contents MAY be carried when the eContentType contains different values (§3.2, R-0099), and other documents define additional CMS content types (§3.1). identified-pkcs7-mime has no exit for it (pass 2).'
       - 'Failure to decompress a CompressedData: the source defines no failure for it.'
       - 'Whether a failed layer stops presentation of the content or only its protected status (M03-T15, M03-T16).'
+      - 'An smime-type that disagrees with the content type of the ContentInfo. §3.2.2 makes smime-type a hint for display, and the source says nothing on which governs processing or whether a mismatch is an error. M03-T06 to M03-T10 dispatch on smime-type when it is present and on the content type only when it is absent; protocol.yaml smime-identification step 4 reads the content type as governing (inferred) and leaves the mismatch unspecified (pass 3).'
 
   # ======================================================================
   - id: 'M04'
@@ -1469,12 +1513,22 @@ machines:
         from: 'outside-rules'
         to: 'algorithm-selected'
         trigger: 'completion'
-        guard: 'An algorithm chosen from out-of-band information, honouring the weak-encryption decision.'
+        guard: 'An algorithm chosen from out-of-band information, honouring the weak-encryption decision, and either not a weaker algorithm or the agent is not controlled by a human (otherwise M06-T14).'
         quote: 'The decision process involves using information garnered from the capabilities lists included in messages received from the recipient, as well as out-of-band information such as private agreements, user preferences, legal restrictions, and so on.'
         locator: '§2.7.1'
         constrained_by: ['rfc-8551#R-0074']
         inferred: true
         inferred_reason: 'The rules do not cover this state; out-of-band information is the only basis the source names.'
+      - id: 'M06-T14'
+        from: 'outside-rules'
+        to: 'human-risk-review'
+        trigger: 'completion'
+        guard: 'The algorithm chosen from out-of-band information is a weaker algorithm, weak encryption is acceptable, and the agent is controlled by a human.'
+        quote: 'A sending agent that is controlled by a human SHOULD allow a human sender to determine the risks of sending data using a weaker encryption algorithm before sending the data, and possibly allow the human to use a stronger encryption algorithm such as AES GCM or AES CBC even if there is a possibility that the recipient will not be able to process that algorithm.'
+        locator: '§2.7.2'
+        constrained_by: ['rfc-8551#R-0081']
+        inferred: true
+        inferred_reason: 'outside-rules is itself inferred (ST-03); §2.7.2 is not tied to a rule, so a weaker algorithm reached from out-of-band information gets the same review as one reached by Rule 1. Added in pass 3: protocol.yaml encryption-algorithm-selection step 3 offers the review for any weaker algorithm.'
     error_states: ['no-algorithm']
     terminal_states: ['algorithm-selected', 'no-algorithm']
     note: 'The decision to use or not use weak encryption overrides any other decision in this section about which encryption algorithm to use (§2.7.1). Using algorithms such as RC2 is never recommended unless the only alternative is no cryptography (§6).'
@@ -1770,6 +1824,8 @@ machines:
     error_states: ['no-key-management-certificate']
     terminal_states: ['certificate-chosen', 'no-key-management-certificate']
     note: 'The procedure is stated for a future CMS EnvelopedData; AuthEnvelopedData needs the same choice (§2.4.4) and is not named (ST-05).'
+    unspecified:
+      - 'An SMIMEEncryptionKeyPreference that identifies a certificate the agent does not hold or cannot use. Step 2 is conditioned on the attribute not being found, and §2.5.3 calls the attribute only a preference (R-0057); falling through to step 2 is the evident reading but is not stated, so selecting has no exit for it. protocol.yaml recipient-key-management-certificate-selection step 1 records the same preference rule as its on_error (pass 3).'
 
   # ======================================================================
   - id: 'M11'
@@ -1946,8 +2002,8 @@ source_tensions:
   - id: 'ST-03'
     locator: '§2.7.1, §2.7.1.1, §2.7.1.2'
     quote: 'These rules are ordered, so the sending agent SHOULD make its decision in the order given.'
-    note: 'Two cases fall outside both rules: capabilities unknown but S/MIME version known (Rule 2 needs both conditions), and a capabilities list none of whose entries the agent can use. Modelled as outside-rules and no-algorithm, both inferred.'
-    affects: ['M06-T04', 'M06-T07', 'M06-T13']
+    note: 'Two cases fall outside both rules: capabilities unknown but S/MIME version known (Rule 2 needs both conditions), and a capabilities list none of whose entries the agent can use. Modelled as outside-rules and no-algorithm, both inferred. protocol.yaml encryption-algorithm-selection step 4 reads the second case differently, as a possible fall-through to the Rule 2 defaults (inferred); the source supports neither reading (pass 3).'
+    affects: ['M06-T04', 'M06-T07', 'M06-T13', 'M06-T14']
   - id: 'ST-04'
     locator: '§2.5.3, §2.7.1'
     quote: 'Section 2.7.1 explains a strategy for caching preference data.'
