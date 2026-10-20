@@ -332,9 +332,36 @@ because §5.1 excludes only *optional* parameters. The chain is
 **[verify pass] The chain has a shorter leg, and it is the dispositive one.**
 §4.6 does not ask a reader to *derive* the set; it says to consult the defining
 specification "to determine which parameters … are required", and RFC 9964
-answers that question directly in **§6**, not §3: "When computing the COSE Key
-Thumbprint as described in [RFC9679], the required parameters for AKPs are:
-kty, alg, pub." So there are two independent routes and both land in the same
+answers that question directly in **§6**, not §3. Its lead-in, verbatim
+(RFC 9964 §6, source lines 246–247), ends at the colon:
+
+> When computing the COSE Key Thumbprint as described in [RFC9679], the
+> required parameters for AKPs are:
+
+and the set itself is printed as a bullet list, not a sentence (lines 249,
+251, 253):
+
+```text
+   *  "kty" (label: 1, data type: int, value: 7)
+
+   *  "alg" (label: 3, data type: int, value: int)
+
+   *  "pub" (label: -1, value: bstr)
+```
+
+<!-- [correction] 2026-10-19, found by the rfc-9964 extraction (library#39
+     Tier 2). This passage previously ran the lead-in and a reduction of its
+     bullets together INSIDE one pair of quotation marks, as
+     '... the required parameters for AKPs are: kty, alg, pub.' That string is
+     not in RFC 9964: the lead-in stops at "are:", and the bare-name form
+     "kty"/"alg"/"pub" appears in §6 only in the JWK list, not the COSE one.
+     The splice mattered because the paragraph below asserts the sections were
+     "verified verbatim", so a profile: full record was claiming a verbatim
+     check that the string could not pass. The substance was always right —
+     kty, alg and pub ARE the three — so this is a presentation fix, and the
+     falsified form is recorded here rather than silently replaced. -->
+
+So there are two independent routes and both land in the same
 place — **§4.6 → RFC 9964 §6** states the thumbprint set outright, while
 **§4.6 → RFC 9964 §3 → §5.1** derives it from `alg` being REQUIRED for the key
 plus §5.1 excluding only optional parameters. Quoting only the second

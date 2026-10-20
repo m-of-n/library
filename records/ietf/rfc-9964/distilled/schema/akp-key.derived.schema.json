@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:library:rfc-9964:akp-key.derived",
+  "title": "rfc-9964 - AKP key, JWK form and COSE fixture form",
+  "$comment": "DERIVED - not verbatim. RFC 9964 ships no JSON Schema, no CDDL and no grammar of any kind; every constraint here was written by this library from the document's prose (sections 3, 4, 5), its IANA registration templates (section 8.1) and its Appendix A figures. The source's own renderings are in akp-source-renderings.txt and the authoritative structural rendering is akp-key.derived.cddl - where the two could disagree, the CDDL is right. This schema exists because our fixtures are carried as JSON, not CBOR. Do not cite this file as RFC 9964's schema.",
+  "oneOf": [
+    { "$ref": "#/$defs/akp-jwk" },
+    { "$ref": "#/$defs/akp-cose-key-fixture" }
+  ],
+  "$defs": {
+    "base64url": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "$comment": "Section 3: 'When AKP keys are expressed as JWKs, the key parameters are base64url encoded.' Unpadded, as every Appendix A.1 value is."
+    },
+    "hex": {
+      "type": "string",
+      "pattern": "^[0-9a-f]*$",
+      "$comment": "Lower case, as the source prints every hex value in Appendix A."
+    },
+    "ml-dsa-alg-name": {
+      "enum": ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
+      "$comment": "Section 8.1.4. Section 5 notes these abbreviate 'ML-DSA with the parameter choices given in Table 1 of [FIPS-204]'."
+    },
+    "ml-dsa-alg-code-point": {
+      "enum": [-48, -49, -50],
+      "$comment": "Section 8.1.1: ML-DSA-44 = -48, ML-DSA-65 = -49, ML-DSA-87 = -50."
+    },
+
+    "akp-jwk": {
+      "type": "object",
+      "title": "AKP key in JWK form (sections 3, 4, 5)",
+      "properties": {
+        "kty": { "const": "AKP" },
+        "alg": { "type": "string" },
+        "pub": { "$ref": "#/$defs/base64url" },
+        "priv": { "$ref": "#/$defs/base64url" },
+        "kid": { "type": "string" }
+      },
+      "required": ["kty", "alg", "pub"],
+      "$comment": "Section 3, the three REQUIREDs: 'The alg JSON Web Key (JWK) parameter or COSE Key Common parameter is REQUIRED for all AKP keys. The pub parameter contains public information and is REQUIRED. The priv parameter contains private information and MUST NOT be present in public keys.' additionalProperties is NOT false: `kid`, `use`, `key_ops` and the rest of RFC 7517 remain available, and section 6 relies on `kid` existing.",
+      "allOf": [
+        {
+          "if": { "properties": { "alg": { "const": "ML-DSA-44" } }, "required": ["alg"] },
+          "then": { "properties": { "pub": { "minLength": 1750, "maxLength": 1750 } } }
+        },
+        {
+          "if": { "properties": { "alg": { "const": "ML-DSA-65" } }, "required": ["alg"] },
+          "then": { "properties": { "pub": { "minLength": 2603, "maxLength": 2603 } } }
+        },
+        {
+          "if": { "properties": { "alg": { "const": "ML-DSA-87" } }, "required": ["alg"] },
+          "then": { "properties": { "pub": { "minLength": 3456, "maxLength": 3456 } } }
+        },
+        {
+          "if": { "properties": { "alg": { "$ref": "#/$defs/ml-dsa-alg-name" } }, "required": ["alg"] },
+          "then": { "properties": { "priv": { "minLength": 43, "maxLength": 43 } } }
+        }
+      ],
+      "$comment-lengths": "The base64url character counts are the unpadded encodings of Table 1's pub sizes (1312, 1952, 2592 bytes) and of section 4's 32-byte seed; all four were measured against Appendix A.1 rather than computed from the table alone. They constrain the ENCODING, not the key: a string of the right length can still decode to the wrong number of bytes only if it is malformed, which `base64url`'s pattern already rejects."
+    },
+
+    "akp-cose-key-fixture": {
+      "type": "object",
+      "title": "AKP COSE_Key as our fixtures carry it",
+      "$comment": "A rendering, not the wire form. Labels are decimal strings because JSON object keys are strings; `parameters` holds the hex of each byte-string value. The wire form is akp-key.derived.cddl.",
+      "properties": {
+        "kty": { "const": 7 },
+        "alg": { "type": "integer" },
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "1": { "const": 7 },
+            "2": { "$ref": "#/$defs/hex" },
+            "3": { "type": "integer" },
+            "-1": { "$ref": "#/$defs/hex" },
+            "-2": { "$ref": "#/$defs/hex" }
+          },
+          "required": ["1", "3", "-1"],
+          "$comment": "Labels per section 6 and sections 8.1.3.1-8.1.3.2. Label 2 is `kid` (RFC 9052 section 7), which every Appendix A.2 example carries and which this document never makes required."
+        },
+        "encoded_hex": { "$ref": "#/$defs/hex" },
+        "thumbprint_input_hex": { "$ref": "#/$defs/hex" },
+        "thumbprint_sha256_hex": { "$ref": "#/$defs/hex", "minLength": 64, "maxLength": 64 }
+      },
+      "required": ["parameters"],
+      "allOf": [
+        {
+          "if": { "properties": { "parameters": { "properties": { "3": { "const": -48 } }, "required": ["3"] } } },
+          "then": { "properties": { "parameters": { "properties": { "-1": { "minLength": 2624, "maxLength": 2624 } } } } }
+        },
+        {
+          "if": { "properties": { "parameters": { "properties": { "3": { "const": -49 } }, "required": ["3"] } } },
+          "then": { "properties": { "parameters": { "properties": { "-1": { "minLength": 3904, "maxLength": 3904 } } } } }
+        },
+        {
+          "if": { "properties": { "parameters": { "properties": { "3": { "const": -50 } }, "required": ["3"] } } },
+          "then": { "properties": { "parameters": { "properties": { "-1": { "minLength": 5184, "maxLength": 5184 } } } } }
+        },
+        {
+          "if": { "properties": { "parameters": { "properties": { "3": { "$ref": "#/$defs/ml-dsa-alg-code-point" } }, "required": ["3"] } } },
+          "then": { "properties": { "parameters": { "properties": { "-2": { "minLength": 64, "maxLength": 64 } } } } }
+        }
+      ]
+    },
+
+    "akp-cose-thumbprint-input-fixture": {
+      "type": "object",
+      "title": "The section 6 thumbprint input, nothing else",
+      "$comment": "Not reachable from the root oneOf on purpose - it is a narrower object that a test asserts against directly. `additionalProperties: false` on `parameters` is section 6's required set read against RFC 9679 section 3 step 1: only the required parameters are present.",
+      "properties": {
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "1": { "const": 7 },
+            "3": { "type": "integer" },
+            "-1": { "$ref": "#/$defs/hex" }
+          },
+          "required": ["1", "3", "-1"],
+          "additionalProperties": false
+        },
+        "encoded_hex": { "$ref": "#/$defs/hex" },
+        "digest_alg": { "const": "SHA-256" },
+        "thumbprint_hex": { "$ref": "#/$defs/hex", "minLength": 64, "maxLength": 64 }
+      },
+      "required": ["parameters", "encoded_hex", "thumbprint_hex"]
+    },
+
+    "ml-dsa-signature-fixture": {
+      "type": "object",
+      "title": "An ML-DSA signature, by length only",
+      "$comment": "Table 1 sizes 2420 / 3309 / 4627 bytes. Section 5: 'Signatures are encoded as byte strings using the algorithms defined in Section 7.2 of US NIST [FIPS-204].' Nothing below the length is checkable by schema.",
+      "properties": {
+        "alg": { "$ref": "#/$defs/ml-dsa-alg-code-point" },
+        "signature_hex": { "$ref": "#/$defs/hex" }
+      },
+      "required": ["alg", "signature_hex"],
+      "allOf": [
+        { "if": { "properties": { "alg": { "const": -48 } }, "required": ["alg"] },
+          "then": { "properties": { "signature_hex": { "minLength": 4840, "maxLength": 4840 } } } },
+        { "if": { "properties": { "alg": { "const": -49 } }, "required": ["alg"] },
+          "then": { "properties": { "signature_hex": { "minLength": 6618, "maxLength": 6618 } } } },
+        { "if": { "properties": { "alg": { "const": -50 } }, "required": ["alg"] },
+          "then": { "properties": { "signature_hex": { "minLength": 9254, "maxLength": 9254 } } } }
+      ]
+    }
+  },
+  "$comment-does-not-constrain": [
+    "That `pub` is a valid FIPS 204 public key. Section 7.3 requires range checks inside pkDecode (Algorithm 23) that no length or pattern can express.",
+    "That `pub` and `priv` are a pair. Section 7.4 is explicit that they may be 'tampered with or mismatched' with consequences 'from operations failing to private key compromise'.",
+    "Map order and deterministic encoding. A JSON object has no byte order; the thumbprint input does. RFC 8949 section 4.2.1, required by RFC 9679 section 3 step 2. The rules and the measured byte layouts are in akp-parameters.derived.json.",
+    "The empty ctx of section 5. It has no label in any registry this document touches and so appears in no structure here.",
+    "That a `kid` is a thumbprint. Section 6 only points at the Appendix A examples as 'examples of AKP thumbprints'."
+  ]
+}

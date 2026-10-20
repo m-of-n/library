@@ -1,0 +1,145 @@
+; rfc-9964 - the ML-DSA COSE_Sign1 and JWS, as instantiated by this document
+;
+; DERIVED - not verbatim. RFC 9964 defines no message structure at all: it
+; registers algorithm code points and key parameters and defers the envelope to
+; RFC 9052. Every production below was written by this library, from the
+; document's section 5 prose and from decoding its three Appendix A COSE
+; examples. Do not cite this file as RFC 9964's grammar.
+;
+; Built from: section 5 (lines 175-238), Appendix A.2 Figures 6-8 (1454-2872).
+; The outer shape is RFC 9052 section 4.2's COSE_Sign1 and is reproduced here
+; only so that the ML-DSA specialisation has something to attach to.
+;
+; THE FINDING THIS FILE CARRIES: RFC 9964 registers NO new COSE header
+; parameter and NO new JOSE header parameter. Its IANA section (8.1) touches
+; four registries - COSE Algorithms, COSE Key Types, COSE Key Type Parameters,
+; JOSE/JWK equivalents - and the COSE Header Parameters registry is not among
+; them. The only header parameter an ML-DSA signature needs is `alg` (label 1),
+; which RFC 9052 already defines.
+;
+; Prelude names used (RFC 8610 Appendix D): int, bstr, tstr, nil, any.
+
+label = int / tstr
+values = any
+
+ml-dsa-44 = -48
+ml-dsa-65 = -49
+ml-dsa-87 = -50
+ml-dsa-alg = ml-dsa-44 / ml-dsa-65 / ml-dsa-87
+
+; ---------------------------------------------------------------------------
+; 1. Headers
+; ---------------------------------------------------------------------------
+;
+; `alg` is label 1 (RFC 9052 section 3.1, Table 2) and carries -48 / -49 / -50
+; (section 8.1.1). All three Appendix A examples place `alg` and `kid` in the
+; PROTECTED bucket and leave the unprotected bucket empty.
+;
+; [analysis] Putting `alg` in the protected bucket is not required by RFC 9964
+; - it says nothing about header placement - but it is what every example does,
+; and for AKP it matters more than usual: `alg` is also inside the key's
+; thumbprint, so an unprotected `alg` would be a mutable copy of a value the
+; key identifier commits to.
+
+ml-dsa-protected-header = {
+  1 => ml-dsa-alg,                ; alg,  REQUIRED in practice; the only
+                                  ;       algorithm-specific header there is
+  ? 4 => bstr,                    ; kid,  32 octets in every example - the
+                                  ;       COSE Key Thumbprint of the signer
+  * label => values,
+}
+
+ml-dsa-unprotected-header = {
+  * label => values,              ; empty in all three examples
+}
+
+; ---------------------------------------------------------------------------
+; 2. COSE_Sign1
+; ---------------------------------------------------------------------------
+;
+; RFC 9964 section 5: "When producing COSE signatures, no encoding is needed;
+; see Section 4 of [RFC9052] for more details on how COSE signatures are
+; created."
+
+ML-DSA-COSE-Sign1 = [
+  protected: bstr,                ; a bstr wrapping ml-dsa-protected-header;
+                                  ; 39 octets in every Appendix A example
+  unprotected: ml-dsa-unprotected-header,
+  payload: bstr / nil,            ; nil for a detached payload
+  signature: ml-dsa-signature,
+]
+
+; THE TAG. Appendix A.2 prints every COSE_Sign1 in the TAGGED form - the
+; sign1_diag values all begin `18([`, and the sign1 hex all begins 0xd2. Tag 18
+; is RFC 9052 section 2 Table 1's, an IANA CBOR Tags allocation. This document
+; does not discuss the choice; it simply never prints the untagged form.
+ML-DSA-COSE-Sign1-Tagged = #6.18(ML-DSA-COSE-Sign1)
+
+ml-dsa-signature = ML-DSA-44-Signature / ML-DSA-65-Signature / ML-DSA-87-Signature
+ML-DSA-44-Signature = bstr .size 2420
+ML-DSA-65-Signature = bstr .size 3309
+ML-DSA-87-Signature = bstr .size 4627
+
+; ---------------------------------------------------------------------------
+; 3. Sig_structure - what is actually signed
+; ---------------------------------------------------------------------------
+;
+; RFC 9052 section 4.4. Reproduced because RFC 9964's `raw_to_be_signed` fields
+; are instances of it and are the record's most directly testable fixture: all
+; three are 85 octets, differing only in the two bytes of `alg` and the 32 of
+; `kid`.
+
+ML-DSA-Sig-structure = [
+  context: "Signature1",
+  body_protected: bstr,           ; the same 39 octets as `protected` above
+  external_aad: bstr,             ; empty (0x40) in all three examples
+  payload: bstr,                  ; h'68656c6c6f20706f7374207175616e74756d20
+                                  ;   7369676e617475726573' = "hello post
+                                  ;   quantum signatures", 29 octets
+]
+
+; ---------------------------------------------------------------------------
+; 4. JWS
+; ---------------------------------------------------------------------------
+;
+; Section 5: "When producing JSON Web Signatures, the signature byte strings
+; are base64url encoded and the encoded signature size is larger than described
+; in the table above." The three Appendix A.1 `jws` values are JWS Compact
+; Serialization with a protected header of exactly {"alg", "kid"}.
+;
+; CDDL over a JSON text is a rendering, not the hashed or signed artifact. Kept
+; here so the two serialisations sit side by side.
+
+ML-DSA-JWS-Protected-Header = {
+  "alg" => "ML-DSA-44" / "ML-DSA-65" / "ML-DSA-87",
+  ? "kid" => tstr,                ; the RFC 7638 JWK Thumbprint, base64url
+  * tstr => values,
+}
+
+; ---------------------------------------------------------------------------
+; 5. What this grammar deliberately does NOT constrain
+; ---------------------------------------------------------------------------
+;
+; (a) THAT THE SIGNATURE VERIFIES. Length is all a grammar can check. Section 5
+;     points at FIPS 204 Algorithm 2 for signing and section 7.2 of FIPS 204
+;     for the encoding; neither is expressible here.
+;
+; (b) ctx. Section 5: "The ctx parameter MUST be the empty string for
+;     ML-DSA-44, ML-DSA-65, and ML-DSA-87." `ctx` is a FIPS 204 signing-input
+;     parameter with no COSE or JOSE label, so no structure carries it and no
+;     schema can check it. This is the one normative MUST in section 5 that is
+;     unobservable from the wire bytes.
+;
+; (c) WHETHER `kid` IS A THUMBPRINT. Every example's `kid` is the key's COSE Key
+;     Thumbprint (verified - see ../examples/vectors.yaml), but section 6 only
+;     says "See the kid values in the JWK and COSE Key examples in Appendix A
+;     for examples of AKP thumbprints." That is an illustration, not a rule, and
+;     `? 4 => bstr` is as far as the grammar may go.
+;
+; (d) TAG PRESENCE. Both ML-DSA-COSE-Sign1 and ML-DSA-COSE-Sign1-Tagged are
+;     defined because RFC 9052 permits either and RFC 9964 exhibits only the
+;     tagged one. A validator must be told which it is checking.
+;
+; (e) HashML-DSA. Section 7.2: "As the verify routines are different, future
+;     support for HashML-DSA would require the registration of additional
+;     algorithms." No code point, so nothing to admit or exclude.

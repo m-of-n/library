@@ -1,0 +1,150 @@
+; rfc-9964 - AKP COSE_Key and JWK, as a grammar
+;
+; DERIVED - not verbatim. RFC 9964 ships no CDDL, no ABNF and no JSON Schema;
+; every production below was written by this library from the document's prose,
+; its IANA registration templates and its Appendix A figures. The source's own
+; renderings are in akp-source-renderings.txt. Do not cite this file as RFC
+; 9964's grammar.
+;
+; Built from: section 3 (lines 103-151), section 4 (153-173), section 5
+; (175-238), section 8.1.1-8.1.3 (341-447). Cross-checked against the six
+; Appendix A figures (628-2870), which every rule below accepts.
+;
+; Prelude names used (RFC 8610 Appendix D): int, uint, bstr, tstr, bool, any.
+
+; ---------------------------------------------------------------------------
+; 1. The key type and its two parameters
+; ---------------------------------------------------------------------------
+
+; "Name: AKP / Value: 7" (section 8.1.2.1). Section 6 restates it as
+; `"kty" (label: 1, data type: int, value: 7)`.
+akp-kty = 7
+
+; Section 8.1.1: the three algorithms this document registers for kty 7.
+; `Capabilities: [kty]` on each, i.e. the algorithm fixes the key type.
+ml-dsa-44 = -48
+ml-dsa-65 = -49
+ml-dsa-87 = -50
+ml-dsa-alg = ml-dsa-44 / ml-dsa-65 / ml-dsa-87
+
+; Section 3: "The parameters for public and private information classes contain
+; byte strings in a format specified by the alg value." So `alg` is NOT
+; decoration on an AKP key - it is the only thing that gives `pub` and `priv`
+; a format. The AKP key type is open: section 6 opens with "the AKP key type
+; and thumbprint computations are suitable for use with algorithms other than
+; ML-DSA", so `akp-any-alg` admits an algorithm this document does not register.
+akp-any-alg = int
+
+; ---------------------------------------------------------------------------
+; 2. COSE_Key for AKP
+; ---------------------------------------------------------------------------
+
+; Section 3: "The alg ... COSE Key Common parameter is REQUIRED for all AKP
+; keys. The pub parameter contains public information and is REQUIRED. The priv
+; parameter contains private information and MUST NOT be present in public
+; keys."
+;
+; `alg` REQUIRED is the structural novelty. For every key type RFC 9679 section
+; 4.1-4.5 defines, `alg` is optional; here it is not, and that is what puts it
+; inside the thumbprint (see akp-thumbprint-input.derived.cddl).
+;
+; The remaining COSE Key Common Parameters (kid 2, key_ops 4, Base IV 5) are
+; RFC 9052 section 7's, not this document's; they are admitted but unconstrained.
+
+; `label` and `values` keep RFC 9052 section 7's own names and spelling, so the
+; wildcard row below reads the same as the COSE_Key generic it specialises.
+label = int / tstr
+values = any
+
+AKP-COSE-Key-Public = {
+  1 => akp-kty,                   ; kty      REQUIRED (RFC 9052 section 7)
+  3 => akp-any-alg,               ; alg      REQUIRED (section 3)
+  -1 => bstr,                     ; pub      REQUIRED (section 3)
+  ? 2 => bstr,                    ; kid      optional, RFC 9052 section 7
+  * label => values,
+}
+
+AKP-COSE-Key-Private = {
+  1 => akp-kty,
+  3 => akp-any-alg,
+  -1 => bstr,                     ; pub      REQUIRED even in a private key
+  -2 => bstr,                     ; priv     the private information class
+  ? 2 => bstr,
+  * label => values,
+}
+
+AKP-COSE-Key = AKP-COSE-Key-Public / AKP-COSE-Key-Private
+
+; ---------------------------------------------------------------------------
+; 3. The ML-DSA size constraints
+; ---------------------------------------------------------------------------
+
+; Table 1 (section 5) gives pub sizes 1312 / 1952 / 2592 and signature sizes
+; 2420 / 3309 / 4627. Section 4: "the priv parameter MUST be the seed and MUST
+; have a length of 32 bytes". Section 7.3: "the seed length check MUST be
+; performed. The length of the seed is 256 bits, which is 32 bytes."
+;
+; NOTE on Table 1's "Private Key" column (2560 / 4032 / 4896): those are NOT
+; this parameter. The table's own note says "priv size is always 32 bytes and
+; that KeyGen_internal is called to produce the expanded private keys for
+; "Private Key" in the table above." The expanded form is the one representation
+; this document deliberately does not define (section 4).
+
+ml-dsa-seed = bstr .size 32
+
+ML-DSA-44-COSE-Key-Public  = { 1 => akp-kty, 3 => ml-dsa-44, -1 => bstr .size 1312, ? 2 => bstr, * label => values }
+ML-DSA-65-COSE-Key-Public  = { 1 => akp-kty, 3 => ml-dsa-65, -1 => bstr .size 1952, ? 2 => bstr, * label => values }
+ML-DSA-87-COSE-Key-Public  = { 1 => akp-kty, 3 => ml-dsa-87, -1 => bstr .size 2592, ? 2 => bstr, * label => values }
+
+ML-DSA-44-COSE-Key-Private = { 1 => akp-kty, 3 => ml-dsa-44, -1 => bstr .size 1312, -2 => ml-dsa-seed, ? 2 => bstr, * label => values }
+ML-DSA-65-COSE-Key-Private = { 1 => akp-kty, 3 => ml-dsa-65, -1 => bstr .size 1952, -2 => ml-dsa-seed, ? 2 => bstr, * label => values }
+ML-DSA-87-COSE-Key-Private = { 1 => akp-kty, 3 => ml-dsa-87, -1 => bstr .size 2592, -2 => ml-dsa-seed, ? 2 => bstr, * label => values }
+
+ML-DSA-COSE-Key =
+    ML-DSA-44-COSE-Key-Public  / ML-DSA-65-COSE-Key-Public  / ML-DSA-87-COSE-Key-Public
+  / ML-DSA-44-COSE-Key-Private / ML-DSA-65-COSE-Key-Private / ML-DSA-87-COSE-Key-Private
+
+ML-DSA-44-Signature = bstr .size 2420
+ML-DSA-65-Signature = bstr .size 3309
+ML-DSA-87-Signature = bstr .size 4627
+ML-DSA-Signature = ML-DSA-44-Signature / ML-DSA-65-Signature / ML-DSA-87-Signature
+
+; ---------------------------------------------------------------------------
+; 4. What this grammar deliberately does NOT constrain
+; ---------------------------------------------------------------------------
+;
+; (a) MAP ORDER. CDDL describes a map as an unordered set of entries. The
+;     COSE_Key may be serialised in any order; only the thumbprint input has a
+;     byte order, and that rule is RFC 8949 section 4.2.1's, carried in
+;     akp-thumbprint-input.derived.cddl. [analysis] Worth knowing: the printed
+;     Appendix A COSE_Key bytes are NOT in section 4.2.1 order - the map is
+;     kid(2), kty(1), alg(3), pub(-1), priv(-2), so label 2 precedes label 1.
+;     Nothing in RFC 9964 or RFC 9052 requires otherwise. See
+;     ../examples/README.md.
+;
+; (b) WHETHER pub AND priv AGREE. Section 7.4: "it is possible that the public
+;     and private information class parameters have been tampered with or
+;     mismatched ... the consequences of using mismatched parameters can range
+;     from operations failing to private key compromise." No CDDL can express
+;     that `pub` is KeyGen_internal(`priv`); it is a cryptographic check.
+;
+; (c) THE INTERNAL STRUCTURE OF pub. Section 5: "The pub parameter is the ML-DSA
+;     public key as described in Section 5.3 of US NIST [FIPS-204]", encoded by
+;     pkEncode (Algorithm 22, cited in section 7.3). The range checks that
+;     section 7.3 requires ("the inputs need to be within the ranges given in
+;     the algorithms") are inside those 1312 / 1952 / 2592 bytes and are not a
+;     length constraint. A `.size`-conforming bstr can still be an invalid key.
+;
+; (d) THE EXPANDED PRIVATE KEY. Section 4 defines it out: "this document
+;     specifies ML-DSA private key information using only the seed format." A
+;     2560-byte `priv` is rejected by ml-dsa-seed, which is the intent.
+;
+; (e) ctx. Section 5: "The ctx parameter MUST be the empty string for
+;     ML-DSA-44, ML-DSA-65, and ML-DSA-87." `ctx` is a FIPS 204 signing input,
+;     not a COSE_Key or header parameter, and has no label in any registry this
+;     document touches. It is unrepresentable here and the requirement is
+;     consequently unenforceable by schema.
+;
+; (f) HashML-DSA. Section 7.2: "This document does not specify algorithms for
+;     use with HashML-DSA". No code point exists, so there is nothing to
+;     exclude - ml-dsa-alg admits exactly -48, -49, -50.
