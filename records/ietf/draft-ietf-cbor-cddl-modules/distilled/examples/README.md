@@ -35,7 +35,7 @@ be checked about it:
 | a directive printed on its own | 1 | `V-0015` |
 | environment-variable value | 1 | `V-0001` |
 
-## `expect` tally, and why three of them are not `valid`
+## `expect` tally, and the three that are the document contradicting itself
 
 **9 valid · 2 invalid · 4 incomplete · 4 not-applicable.** No negative was
 invented. Every one is the document's own.
@@ -47,19 +47,39 @@ invented. Every one is the document's own.
   Appendix A's `id` admits neither `-` nor `.` (`R-0082`), where RFC 8610's
   `id` admits both. Three dotted selectors in two of the seven directive
   instances the document prints. `../schema/grammar-gaps.derived.txt` G-01.
-- **`incomplete` ×4 — `V-0002`, `V-0004`, `V-0006`, `V-0008`.** All four are
-  *module inputs*, and their incompleteness is **by design**: the dangling rule
-  name is exactly what the directive resolves. This is worth stating precisely,
-  because it fixes the sense of §2.1's central claim. Read as basic CDDL on its
-  own, **every one of the six module files the document prints has at least one
-  rule name that resolves to nothing** — `COSE_Key`, `cose.COSE_Key`, `label`
-  and `values`, `cose.empty_or_serialized_map`. So "each module source file can
-  at the same time be basic CDDL on its own" (`R-0023`) is a claim about
-  **lexical** well-formedness. RFC 8610's one dispensation for an undefined
-  name is §3.9's socket convention — "Tools honor that convention by not
-  raising an error if such a type or group is not defined at all"
-  (`rfc-8610#R-0079`) — and it applies **only** to names with a leading `$` or
-  `$$`, which none of these are.
+- **`incomplete` ×4 — `V-0002`, `V-0004`, `V-0006`, `V-0009`.** The first
+  **three** are *module inputs*, and their incompleteness is **by design**: the
+  dangling rule name is exactly what the directive resolves. The fourth,
+  `V-0009`, is **not** a module input and its incompleteness is **not** by
+  design — it is a composed *output* that does not resolve, and it is the next
+  section of this file. *[corrected in pass 2: this list previously named
+  `V-0008`, which is one of the two `invalid` entries. The four `incomplete`
+  entries are `V-0002`, `V-0004`, `V-0006` and `V-0009`, as `vectors.yaml` has
+  always had them, and the characterisation "all four are module inputs" was
+  wrong for the one that matters most.]*
+
+  The by-design three are worth stating precisely, because they fix the sense of
+  §2.1's central claim. Read as basic CDDL on its own, **every one of the six
+  module files the document prints has at least one rule name that resolves to
+  nothing** — `COSE_Key`, `cose.COSE_Key`, `label` and `values`,
+  `cose.empty_or_serialized_map`. So "each module source file can at the same
+  time be basic CDDL on its own" (`R-0023`) is a claim about **lexical**
+  well-formedness. RFC 8610's one dispensation for an undefined name is §3.9's
+  socket convention — "Tools honor that convention by not raising an error if
+  such a type or group is not defined at all" (`rfc-8610#R-0079`) — and it
+  applies **only** to names with a leading `$` or `$$`, which none of these are.
+- **Why two module inputs with the same defect get different verdicts.** Each
+  entry's `expect` is judged against its own `expect_basis`, and the basis is
+  not the same for all six module inputs. `V-0002`, `V-0004` and `V-0006` are
+  judged on *rule-name resolution* ("RFC 8610 Appendix B grammar, plus
+  rule-name resolution") and come out `incomplete`. `V-0008` and `V-0010` are
+  judged on *derivability under Appendix A* and come out `invalid`, because the
+  directive itself is ungrammatical (G-01) — a sharper failure than a dangling
+  name, so it is the one recorded. `V-0012` is judged on the same Appendix A
+  basis and comes out `valid`: its directive *is* derivable. `V-0012`'s module
+  file dangles exactly as `V-0010`'s does; that is covered by the six-file
+  claim above, not by its `expect`. Read `expect` together with
+  `expect_basis` and never alone.
 - **`not-applicable` ×4 — `V-0001`, `V-0014`, `V-0018`, `V-0019`.** A shell
   command line or an environment-variable value; no CDDL grammar applies.
 
@@ -83,6 +103,19 @@ library's verbatim capture at
 decfrac eb16 eb64legacy eb64url encoded-cbor false float float16 float16-32
 float32 float32-64 float64 int integer mime-message nil nint null number regexp
 tdate text time true tstr uint undefined unsigned uri`.
+
+**And it is wrong in both directions at once, which is what fixes the cause
+beyond argument.** The same three lines contain **two definitions that nothing
+references**: `cose.label` and `cose.values` are defined and then never used.
+In every other composed output the unreferenced definitions are accounted for:
+the root rule in each, plus, in `V-0013`, the unprefixed alias the document
+explicitly points out ("Note how an additional rule provides an alias",
+`R-0064`), which exists for the consumer to use and is unreferenced by
+design. `V-0009` is the only block in the document with both a
+dangling reference and a dead definition, and **the two dead definitions are
+precisely the two names that would have closed the two dangling references,
+under the other spelling.** A block that carries the right rules under the
+wrong names is not an under-specification; it is one un-updated line.
 
 The cause is visible in `V-0008`, the input that produced it: its module file
 still reads `mydata = {* label => values}`, naming the **unprefixed** rules,

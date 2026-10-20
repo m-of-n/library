@@ -138,13 +138,18 @@ implementation in the document.*
   analysis of dereferenceable identifiers in a third — **this library holds
   neither**, so the analysis of the namespacing question is one hop away and
   unread.
-- `CRLF = %x0A / %x0D.0A` is redefined against STD 68 to admit a bare LF. That
-  is the same defect `rfc-8610` records, and here it stands **alone** rather
-  than camouflaged among four identical core-rule redefinitions — so the defect
-  now sits in two current CDDL documents.
-- The extraction is at **pass 1 of 3**; verify and cross-check have not run and
-  nothing carries a human sign-off, so these artifacts are readable but not
-  buildable-on.
+- `CRLF = %x0A / %x0D.0A` is redefined against STD 68 to admit a bare LF, and
+  **nothing in the draft says so**. The substance is not the problem: RFC 9165
+  §3 makes the byte-identical change, declares it and calls it "customary for
+  ABNF", so relaxing ABNF's own newline is deliberate practice. What is
+  defective here is the silence — a documentation gap, the same one `rfc-8610`
+  records in its narrowed form, and less camouflaged here because `SP` is the
+  only other core rule the appendix touches and it keeps its value.
+- The extraction is at **passes 1 and 2 of 3**; the cross-check pass has not run
+  and nothing carries a human sign-off, so these artifacts are readable but not
+  buildable-on. Pass 2 re-derived the two findings above from the source
+  independently — both hold — and corrected six pointers and counts elsewhere in
+  the record, listed in `distilled/README.md`.
 
 ## Where it cuts against MD-3
 
@@ -156,8 +161,10 @@ option. Two are worth stating here:
   on none, so module names are *not* a fourth registry. The qualification
   matters though: the authority moved into the deployment environment rather
   than disappearing, and the only resolver the draft describes keys modules on
-  **RFC numbers**, inside an appendix marked "for information only". An
-  unstated authority is harder to audit than a named one.
+  **RFC numbers** — and it is scoped to one tool, not to the specification:
+  §2.4 presents it as what "the CDDL Tool described in Appendix B" does, and
+  Appendix B marks itself "for information only". An unstated authority is
+  harder to audit than a named one.
 - **Modules make option 5's unstateable exclusion easier to breach.** One
   `include` readmits a module's whole transitive closure, including any tag,
   with no export declaration to inspect. That is a native prohibition breached

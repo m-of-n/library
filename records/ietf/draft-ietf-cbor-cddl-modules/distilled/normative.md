@@ -458,7 +458,11 @@ sha256 `43c17148af31265a171f2e722b24d2e0063d0ab253d8b681cc1c223d5df696ab`),
 with a margin-removed companion at
 `module-directives-dedented.derived.abnf`. Each of its ten productions is
 carried as an individual requirement in `requirements.yaml`
-(`R-0073`–`R-0082`), because here the productions *are* the obligations.
+(`R-0078`–`R-0087`), because here the productions *are* the obligations.
+*[corrected in pass 2: this pointer previously read `R-0073`–`R-0082`, which
+lands on §3's security sentences and the first five productions. The ten
+productions are `R-0078`–`R-0087`, as `requirements.yaml`'s own `note` and
+`reconciliation` both say.]*
 
 Three properties of that grammar that no sentence of the document states, and
 which `schema/grammar-gaps.derived.txt` records in full:
@@ -468,7 +472,14 @@ which `schema/grammar-gaps.derived.txt` records in full:
    `cose.label`, `cose.values` and `cose.empty_or_serialized_map` that §2.6's
    own examples write in a `from` clause.
 2. `CRLF` is redefined as `%x0A / %x0D.0A`, admitting a bare LF where STD 68's
-   core rule is CR LF.
+   core rule is CR LF — and the appendix says nothing about having done so.
+   The **substance** of that relaxation is deliberate, customary practice:
+   RFC 9165 §3 makes the byte-identical redefinition and *declares* it ("As is
+   customary for ABNF, the syntax of ABNF itself (_not_ the syntax expressed in
+   ABNF!) is relaxed to allow a single line feed as a newline",
+   `rfc-9165#R-0053`). What this appendix lacks is that sentence. The gap is
+   therefore a **documentation** gap, not a grammar error (`README.md`
+   defect 4, `schema/grammar-gaps.derived.txt` G-02).
 3. `directive` requires `RS` (one or more spaces) after `";#"`, where §2.3's
    prose requires only that the line "start with the prefix ;#".
 

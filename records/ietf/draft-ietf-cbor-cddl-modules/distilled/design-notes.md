@@ -204,8 +204,14 @@ adopted the CDDL control-operator registry; the caller's question was whether
 module names would be a **fourth**. **They are not.** But the authority is not
 absent — it is *unstated*: the only resolution mechanism the document actually
 describes keys its bundled modules on **RFC numbers** (`R-0040`, "using names
-such as rfc9052"), and that mechanism sits inside an appendix that declares
-itself "for information only" (`R-0088`). **[analysis]** So whoever populates
+such as rfc9052"), and that mechanism is scoped to one tool rather than to the
+specification — §2.4 introduces it as what happens "in the module structure
+implementation that is part of the CDDL Tool described in Appendix B"
+(`R-0038`), and Appendix B, the only place that tool is specified, declares
+itself "for information only" (`R-0088`). *[precision corrected in pass 2: the
+`CDDL_INCLUDE_PATH` text is in §2.4, not inside the appendix. What is in the
+appendix is the tool. `requirements.yaml`'s `field` for `R-0038` already had
+this right.]* **[analysis]** So whoever populates
 the search path is the name authority, and §3 says as much without using the
 word. For `MD-3`: adopting CDDL modules adds **no registry dependency** and
 does add a **build-reproducibility** dependency. Those are different costs and
@@ -444,8 +450,9 @@ Three distinct costs, and the third is specific to this draft.
    **whose only demonstration of `include` with an `as` clause produces a model
    that does not resolve** (`examples/README.md`). Both are the kind of defect a
    -07 fixes; neither is fixed in the bytes we hold.
-2. **Expiry.** `R-0001`: expires **6 March 2027**. Not expired today — 138 days
-   remain — which puts it in better standing than `draft-ietf-cbor-cde`, which
+2. **Expiry.** `R-0001`: expires **6 March 2027**. Not expired — **137 days
+   remain as of 2026-10-20**, the date of this record's verify pass — which
+   puts it in better standing than `draft-ietf-cbor-cde`, which
    this library holds **expired 2026-04-17 and parked**. But the -07 revision
    still has an **unfinished Acknowledgments section** (defect 8 in
    `README.md`), which is a drafting-in-progress signal on a document seven
@@ -476,9 +483,17 @@ Three distinct costs, and the third is specific to this draft.
 - **Open question 6** — plug-file concatenation order is semantic and must be
   pinned. **Confirmed, and the problem is relocated rather than solved.**
 - **Defect 7** — `CRLF = %x0A / %x0D.0A` admits a bare LF against RFC 5234.
-  **Reproduced verbatim** in this draft's Appendix A (`R-0087`), where it stands
-  alone rather than camouflaged among four identical core-rule redefinitions.
-  So the defect is now in *two* current CDDL documents.
+  **Reproduced verbatim** in this draft's Appendix A (`R-0087`), and
+  **undeclared here as there**, where it stands alone rather than camouflaged
+  among four identical core-rule redefinitions. **Stands, in that record's own
+  narrowed form**: the `rfc-9165` extraction established on 2026-10-19 that
+  RFC 9165 §3 makes the identical redefinition and *declares* it, calling it
+  "customary for ABNF" (`rfc-9165#R-0053`), so the substance is deliberate
+  practice and the defect is the *silence*, not the rule. This draft is
+  silent, so it is another undeclared instance — along with RFC 9682's
+  Figure 11, which carries it over unremarked. One declared instance, three
+  undeclared. *[framing narrowed in pass 2; this bullet previously said "the
+  defect is now in two current CDDL documents".]*
 - **The claim that RFC 8610 gives no module system.** Correct, and this document
   is the separate, later one that `rfc-8610`'s notes said `#39` listed.
 - **Open question 11** — do the four siblings change the above? For this one:
@@ -534,12 +549,22 @@ documents.
    module naming rationale and the "further work" of `R-0019`, `R-0021` and
    `R-0041` actually live, and a reviewer asking *why* filenames was decided on
    cannot be answered from this document. *Ingest decision.*
-8. **Does the `rfc-9682` grammar update change Appendix A's `id`?** `R-0005`
-   says CDDL is defined by RFC 8610 **and RFC 9682** as well as RFC 9165 and
-   RFC 9741; `rfc-9682` is "Updates to the CDDL Grammar" and is a sibling in
-   #39 tier 2. If it changes `id`, G-01's severity changes with it. **This
-   record cannot answer it and must not be read as having tried.** *#39 tier 2,
-   the `rfc-9682` lane.*
+8. ~~**Does the `rfc-9682` grammar update change Appendix A's `id`?**~~
+   **ANSWERED in pass 2 (2026-10-20): no, and G-01 is therefore at full
+   strength.** `R-0005` says CDDL is defined by RFC 8610 **and RFC 9682** as
+   well as RFC 9165 and RFC 9741, and if RFC 9682 had widened or narrowed `id`,
+   G-01's severity would move with it. The `rfc-9682` record landed in this
+   library between this record's pass 1 and pass 2, and its
+   production-by-production change table lists `id` — with `ALPHA`, `EALPHA`
+   and `DIGIT` beside it — among the **forty-one productions carried into
+   Figure 11 unaltered**
+   (`records/ietf/rfc-9682/distilled/schema/production-changes.derived.txt`).
+   So the CDDL `id` in force today is still
+   `EALPHA *(*("-" / ".") (EALPHA / DIGIT))`, and Appendix A's `id` is narrower
+   than the **current** grammar, not merely than the 2019 one. The same table
+   records `CRLF` as unchanged too, which is what lets this record's defect 4
+   count three undeclared instances of that redefinition against RFC 9165's one
+   declared one. *Closed; nothing is owed to the `rfc-9682` lane on this point.*
 9. **Who tells the CBOR WG about G-01 and the `V-0009` defect?** Both are
    mechanically demonstrable, both are in the bytes we cite, and the draft names
    its issue tracker (`https://github.com/cbor-wg/cddl-modules`). Reporting is

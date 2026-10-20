@@ -65,13 +65,18 @@ are the ones a reader is most likely to trip over.
    directive instances the document prints — source lines 388 and 414, carrying
    three dotted selectors — are therefore not derivable from `directive`.
    G-01.
-2. **`CRLF` is redefined against its own metalanguage.** Appendix A declares
-   STD 68, whose core rule is `CRLF = CR LF`; the appendix redefines it as
-   `%x0A / %x0D.0A`, admitting a bare LF. The same redefinition RFC 8610
-   Appendix B makes — `rfc-8610` defect 7 — but there four other core rules are
-   redefined *identically* in the same block, which camouflages it. Here only
-   `SP` keeps its core value, so this redefinition stands alone and unremarked.
-   G-02.
+2. **`CRLF` is redefined against its own metalanguage, and the redefinition is
+   undeclared.** Appendix A declares STD 68, whose core rule is `CRLF = CR LF`;
+   the appendix redefines it as `%x0A / %x0D.0A`, admitting a bare LF. **The
+   substance of that is not an error** — RFC 9165 §3 makes the byte-identical
+   redefinition, *declares* it and calls it "customary for ABNF"
+   (`rfc-9165#R-0053`), so relaxing ABNF's own newline is deliberate community
+   practice. What is defective here is only that it is **undeclared**: a
+   documentation gap, not a grammar one. The same gap as `rfc-8610` defect 7 as
+   that record now frames it — camouflaged there by four core rules redefined
+   *identically* in the same block, whereas here `SP` is the only other core
+   rule touched and it keeps its value, so the one conflicting redefinition
+   stands alone and still unremarked. G-02.
 3. **The prose and the grammar disagree on what makes a line a directive.**
    §2.3 requires only that the line "start with the prefix ;#"; `directive`
    requires whitespace after it. A line beginning `;#` that is *not* a
@@ -83,8 +88,11 @@ are the ones a reader is most likely to trip over.
 ## What the composed outputs show that the prose does not
 
 Checked against the document alone: **not one of the seven composed outputs it
-prints contains a single `;` character.** The only semicolons anywhere in the
-example region are the `;#` of the seven *input* directives. Because directives
+prints contains a single `;` character.** Across the display-block span that
+holds every example — source lines **309–519** — the only semicolons are the
+`;#` of the seven *input* directives. (That line range is given because it is
+exact: §2.5's prose carries one more semicolon at line 296, outside any
+example.) Because directives
 *are* comments (`R-0023`, `R-0032`), that means the transformation is
 **one-way** — a composed model cannot be read back as the module structure that
 produced it — and that every comment in every input module is discarded.
