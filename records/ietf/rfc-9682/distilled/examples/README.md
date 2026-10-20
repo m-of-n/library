@@ -26,8 +26,13 @@ three of one 19-byte byte string, all resolving to
   common left margin (which a YAML block scalar performs in any case) and
   re-indentation for YAML; relative indentation, the source's own comments, its
   blank lines and the alignment of its trailing comment column are the
-  source's. 6 are multi-line blocks, 9 are single source lines, and 1
+  source's. 6 are multi-line blocks, 8 are single source lines, and 1
   (`V-0012`, `#7.25`) is a fragment quoted from running prose.
+  *[correction, 2026-10-20, pass 3 (cross-check): this read "9 are single
+  source lines", which with 6 and 1 sums to 16 against 15 vectors. The
+  enumeration in `vectors.yaml`'s own header names eight — `V-0003`…`V-0009`
+  and `V-0011` — and eight is right. The same miscount stood in that header
+  and in `record.yaml`'s examples coverage and is corrected in both.]*
 - **`instance`** — **mixed, and `vectors.yaml`'s own header declares which is
   which.** `V-0002`'s is Figure 6 entire, verbatim. **The six one-line
   `instance` values of `V-0003`…`V-0008` are OURS**: each composes Figure 6's
@@ -112,9 +117,43 @@ semantic step Appendix B.2 describes. That appendix is informative.
 
 ## Running these against the grammar
 
-Nothing in this record executes. The dedented companion
-`../schema/cddl-updated-dedented.derived.abnf` exists so that a future pass can
-load Figure 11 into an ABNF recognizer and run `V-0001`…`V-0015` against it, as
-the `rfc-8610` record's cross-check pass did for RFC 8610's Appendix B. **That
-has not been done here.** Pass 1 asserts the expectations from the grammar by
-hand, branch by branch, and says so.
+**These have been run.** *[correction, 2026-10-20, pass 3 (cross-check): this
+section read "Nothing in this record executes … **That has not been done
+here.** Pass 1 asserts the expectations from the grammar by hand, branch by
+branch, and says so." That was true of pass 1 and false from pass 2 onward.
+Pass 2 built the recognizer; pass 3 re-executed every vector. The sentence is
+replaced rather than hedged, because a reader who believed it would re-do work
+that is done.]*
+
+The dedented companion `../schema/cddl-updated-dedented.derived.abnf` is what
+makes it possible: an RFC 5234 / RFC 7405 engine with ABNF's **symmetric**
+alternation — every node returns the *set* of reachable end positions, so an
+ambiguity is visible rather than hidden by PEG-style ordering — loaded with
+Figure 11 and, separately, with RFC 8610's Appendix B from
+`../../../rfc-8610/distilled/schema/cddl.abnf`. Both load closed, 55 rules and
+47, no dangling reference, every rule reachable from `cddl`.
+
+- **13 of the 15 vectors have a CDDL verdict against Figure 11, and all 13
+  hold.** 12 are whole files matched against `cddl`; `V-0012` (`#7.25`) is a
+  fragment and is matched against `type2`. `V-0013` is the one negative and is
+  refused, by both grammars, for the reason it gives.
+- **`V-0002` and `V-0015` have no CDDL verdict** and their `expect: valid`
+  means only that each is the source's own text reproduced exactly. They were
+  executed in their own terms instead: `V-0002`'s hex decodes to `array(6)` of
+  three `text(19)` and three `bytes(19)`, every payload the same 19 bytes
+  `446f6d696e6f277320f09f81b3202b20e28c98`, which is UTF-8 for the string
+  Figure 5's six rules all produce; `V-0015` parses as ABNF, defines exactly
+  one rule, and is the same `SESC` as Figure 11's (source lines 558–560),
+  whitespace-collapsed.
+- **Every block was re-lifted from the cache by the line range `source_ranges`
+  declares** — all 14 ranges byte-identical to the YAML beside them — so the
+  vectors were run against the source's own bytes rather than against this
+  file's rendering of them. (`V-0012` has no range: it is the prose fragment.)
+- **The six `instance` values of `V-0003`…`V-0008` were decoded**: each is 19
+  bytes and round-trips through UTF-8 to the same string.
+- **Under RFC 8610's grammar, 10 of those 13 are accepted too**, which is the
+  record's thesis rather than a defect. The old grammar refuses three:
+  `V-0010` (the angle-bracket tag-number form), `V-0011` (a comment-only file,
+  which `cddl = S 1*(rule S)` rejected) and `V-0013`, which both grammars
+  refuse. `V-0003` and `V-0004` are accepted by both **and mean something
+  else**, with no diagnostic on either side.

@@ -66,6 +66,22 @@ and `\u{10FFFF}` accepted, which is the residue recorded below; and the new
 `"#" "7" ["." head-number]` and `"#" DIGIT ["." uint]`, while `#6`, `#6.1` and
 `#3.4` match only the latter.
 
+**Pass 3 (cross-check, 2026-10-20) reloaded both grammars from the same two
+captures** and re-confirmed the closure and the reachability, and in addition
+checked **every construct in `../messages.yaml` against these bytes**: all 18
+are productions of Figure 11, the six changed ones are productions of
+RFC 8610's Appendix B as well, every `was`, `now` and `definition` matches the
+captured right-hand side of the grammar it names — with the incremental `=/`
+forms checked as alternative subsets rather than as whole right-hand sides —
+every rule-shaped `fields[].type` and `fields[].name` resolves to a Figure 11
+production, and every declared source line range matches the line run the rule
+occupies. **One locator was wrong** — `memberkey` said line 526 where the rule
+runs 526–528 — and is corrected there with a dated note. It also re-verified
+all **12** verbatim regions in this directory byte-identical to their declared
+source line ranges with all 12 digests verifying, the dedented companion's
+re-indentation to source lines 482–591 byte-for-byte, and the
+derived/verbatim convention in both filename and header for all 7 files.
+
 ## There are no page frames in this document
 
 Worth stating because the sibling record's equivalent capture needed three

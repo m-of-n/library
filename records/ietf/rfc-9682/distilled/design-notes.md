@@ -8,7 +8,7 @@ reviewed_by: ""
 
 **Scope and provenance conventions.** Section numbers with no document name
 (`§3.2`) are RFC 9682. Our own documents are cited by id (`ARCH-0002 P1`,
-`MD-3`, `R-O-03`). Three markers distinguish voices:
+`MD-3`, `R-O-03`). Four markers distinguish voices:
 
 - unmarked prose reports **RFC 9682** or **our decisions**, as cited;
 - a quotation is RFC 9682's own words, contiguous and mechanically checked,
@@ -19,7 +19,12 @@ reviewed_by: ""
 - **[analysis]** marks reasoning of this extraction that neither the source nor
   our documents state;
 - **[correction]** marks a working assumption of the project, or a claim in a
-  sibling record of this library, that the sources do not support.
+  sibling record of this library, that the sources do not support;
+- **[correction, _date_, _pass_]** — the *dated* form — marks something **this
+  file itself** got wrong, saying what it used to claim and why that was
+  false. It is the library's maintenance convention, not a finding about the
+  source, and the two senses are deliberately kept apart by the date.
+  *(The second sense was added 2026-10-20 by pass 3, which needed it.)*
 
 **Decision status, stated plainly.** DEC-002 in `ARCH-0001` §7 lists **four**
 options. "Option 5" exists only as *proposed* text in
@@ -233,8 +238,17 @@ leaving Unicode normalisation exactly where it was.** `DECISIONS-0001`'s
 standing note lists condition **(6) a declared Unicode normalisation rule** as
 "reachable by no candidate and stated in no document of ours". RFC 9682 does
 not supply it, and it makes the gap wider: `"café"`, `"caf\u{e9}"` and
-`"café"` are three spellings of one byte sequence, while `"cafe\u{301}"`
-is a *fourth* spelling of a different one that renders identically. RFC 8610
+`"caf\u00e9"` are three spellings of one byte sequence, while `"cafe\u{301}"`
+is a *fourth* spelling of a different one that renders identically.
+**[correction, 2026-10-20, pass 3 (cross-check)]** The third spelling read
+`"café"`, byte-identical to the first, so the sentence offered two identical
+spellings as three: the escape had been silently resolved into the character
+it denotes -- this record's own central hazard, item (c) of
+`schema/production-changes.derived.txt`, for a fourth time. Restored as the
+bare four-digit JSON form, which `hexchar`'s `non-surrogate` branch adds and
+RFC 8610 had no way to write. All three were run through an ABNF recognizer
+loaded with Figure 11 and accepted; three is a floor and not a count, because
+the braced form admits leading zeros (`"caf\u{0e9}"`) as well. RFC 8610
 §3.1 — "Processing of CDDL does not involve Unicode normalization processes" —
 is untouched, and §3.8.6 still compares text "bytewise identical". **[analysis]**
 Under `ARCH-0002` P1 the local label is user-chosen text, so this is the P1

@@ -123,18 +123,27 @@ does not. *Searched on 2026-10-19; no named implementation in the document.*
   declares itself informative. A normative caveat became informative prose.
 - Smaller: one curly closing quotation mark at line 355 where the same phrase
   is correctly paired at line 333; a byte order mark at the head of line 1.
-- The extraction is at **passes 1 and 2 of 3**; cross-check has not run. Pass 2
-  **built the recognizer pass 1 lacked** — an RFC 5234 engine with ABNF's
-  symmetric alternation, loaded with Figure 11 and with RFC 8610's Appendix B —
-  and re-derived the change table from both sources independently. It confirmed
-  the table, the three code-point counts, the silent disagreement, the
-  behaviour split, all four `hexscalar` branches and the dead alternative, and
-  every one of the 15 vectors' `expect` verdicts. It **falsified five claims**, each now
-  corrected and marked in place; the sharpest was that four artifacts stated
-  this record's own central hazard with the escape `\uD83C\uDC73` silently
-  resolved into the character it denotes, which is the very failure the hazard
-  describes. Readable and now checked; still not cross-checked against the
-  sibling records.
+- The extraction is at **`profile: full`** — all three machine passes run at
+  maximum effort, cross-check included — and **pass 4, a human signature on
+  each artifact, is outstanding**, so this is readable and checked but not yet
+  buildable-on. Pass 2 **built the recognizer pass 1 lacked** — an RFC 5234
+  engine with ABNF's symmetric alternation, loaded with Figure 11 and with
+  RFC 8610's Appendix B — and re-derived the change table from both sources
+  independently. It confirmed the table, the three code-point counts, the
+  silent disagreement, the behaviour split, all four `hexscalar` branches and
+  the dead alternative, and every one of the 15 vectors' `expect` verdicts. It
+  **falsified five claims**, each corrected and marked in place; the sharpest
+  was that four artifacts stated this record's own central hazard with the
+  escape `\uD83C\uDC73` silently resolved into the character it denotes, which
+  is the very failure the hazard describes. Pass 3 **executed** all 15 vectors
+  against that recognizer rather than reading their verdicts — all 13 that have
+  a CDDL verdict hold, and the two that are not CDDL were decoded and loaded in
+  their own terms — cross-checked requirements against schema, messages and
+  examples by name, and **falsified seven more**, among them the same hazard
+  striking a fourth and a fifth time, on a different escape, in the two Cut 5
+  paragraphs. All seven are corrected in place and marked. **This record has still not been
+  read against `rfc-9165`, `rfc-9741` or `draft-ietf-cbor-cddl-modules`** —
+  that is `library#39`'s remaining Tier 2 work, not a gap in this artifact set.
 
 ## What this changed in `rfc-8610`
 
@@ -165,10 +174,14 @@ Five cuts are recorded in `distilled/design-notes.md`. The two sharpest:
   option 5 pays that option 2 does not.
 - **Cut 5 puts option 1 on the right side of condition (6).** The new escape
   syntax multiplies the spellings of an ARCH-0002 P1 local label — `"café"`,
-  `"caf\u{e9}"`, and `"cafe\u{301}"` as a fourth spelling of *different* bytes
+  `"caf\u{e9}"` and `"caf\u00e9"` are one byte sequence three ways, and
+  `"cafe\u{301}"` is a fourth spelling of *different* bytes
   that renders identically — while RFC 8610 §3.1's "Processing of CDDL does not
   involve Unicode normalization processes" is untouched. Option 1's native
-  identifiers are byte strings, which sidesteps it.
+  identifiers are byte strings, which sidesteps it. *(Pass 3 restored the third
+  spelling: this line named two and then called the next "a fourth", because
+  the escape had been resolved into the character it denotes. See
+  `distilled/design-notes.md`, Cut 5.)*
 
 And one absence recorded so it stays visible: §5 is "This document has no IANA
 actions", so this document neither helps nor hurts option 5's registry

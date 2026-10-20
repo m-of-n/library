@@ -11,20 +11,27 @@ reviewed_by: ""
 FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what
 it does not.
 
-**State: passes 1 and 2 of 3 complete. `distillation.standard: FX-1` and NO
-`profile`** — an unfinished extraction is neither `full` nor `partial` and the
-gate says so. Pass 1 (extract, effort max, 2026-10-19): one agent reading only
-`.cache/rfc-9682.txt`. Pass 2 (verify, effort max, 2026-10-20): an independent
-agent that did not extract, which re-derived the change table from both sources
-and **built the ABNF recognizer pass 1 said it had not built** — an RFC 5234
-engine with ABNF's symmetric alternation, loaded with Figure 11 and with
-RFC 8610's Appendix B. It confirmed the table, the three code-point counts, the
-silent-disagreement claim, the three-way behaviour split, all four `hexscalar`
-branches and the new dead alternative, and it **falsified five claims, each now
-corrected and marked** (`record.yaml`, `distillation.passes`, the `verify`
-entry). **Cross-check has not run**; nothing here has yet been read against the
-sibling records by an agent that had not already read this one. No
-`reviewed_by` is signed.
+**State: all three machine passes complete. `distillation.standard: FX-1`,
+`distillation.profile: full`** as of 2026-10-20. Pass 1 (extract, effort max,
+2026-10-19): one agent reading only `.cache/rfc-9682.txt`. Pass 2 (verify,
+effort max, 2026-10-20): an independent agent that did not extract, which
+re-derived the change table from both sources and **built the ABNF recognizer
+pass 1 said it had not built** — an RFC 5234 engine with ABNF's symmetric
+alternation, loaded with Figure 11 and with RFC 8610's Appendix B. It confirmed
+the table, the three code-point counts, the silent-disagreement claim, the
+three-way behaviour split, all four `hexscalar` branches and the new dead
+alternative, and it **falsified five claims, each now corrected and marked**
+(`record.yaml`, `distillation.passes`, the `verify` entry). Pass 3
+(cross-check, effort max, 2026-10-20): a third agent that did neither of the
+others. It **executed all 15 vectors** against the recognizer rather than
+reading their verdicts, checked requirements ↔ schema ↔ messages ↔ examples by
+name, and **falsified seven more claims** — the sharpest being that
+`design-notes.md`'s Cut 5 and `summary.md`'s Cut 5 had let the **same hazard
+strike a fourth and a fifth time, on a different escape**, listing two
+byte-identical spellings of `café` as three. Every one of the seven is corrected in place and marked
+`[correction]` with the date and what it used to say. **Pass 4 is human review:
+no `reviewed_by` is signed, so these artifacts are readable and checked but not
+yet buildable-on.**
 
 Source: RFC 9682, *Updates to the Concise Data Definition Language (CDDL)
 Grammar*, Standards Track, November 2024, Updates: 8610. sha256
@@ -54,10 +61,10 @@ exactly where they were.
 | kind | file | coverage |
 |---|---|---|
 | normative | `normative.md` | 77 verbatim bullets across 18 distinct locators, plus 18 reproduced blocks — every figure in the document and both aside blocks. All 75 plain bullets confirmed contiguous substrings of the whitespace-normalised source **and** confirmed by section range (both ends of every span inside the locator's own line range); all 18 blocks confirmed exact source line runs. The 2 remaining bullets are the declared-severed quotes, whose halves pass the same two checks |
-| requirements | `requirements.yaml` | 87 entries, `R-0001`–`R-0087`, source order, no gaps: **0 stated, 87 inferred**, because the document has no BCP 14 keyword to state one with. `source_keyword_count` and `extracted_keyword_count` both **0**, with an 8350-character `reconciliation` giving the full **thirteen**-occurrence census of BCP-14-shaped words in the source (all lower case, each inspected — pass 2 corrected this from eight, which had omitted the five lower-case `may`) and stating what was counted instead. Every one of the 33 requirement ids the reconciliation cites was re-checked against the entry it names |
+| requirements | `requirements.yaml` | 87 entries, `R-0001`–`R-0087`, source order, no gaps: **0 stated, 87 inferred**, because the document has no BCP 14 keyword to state one with. `source_keyword_count` and `extracted_keyword_count` both **0**, with an ~8350-character `reconciliation` giving the full **thirteen**-occurrence census of BCP-14-shaped words in the source (all lower case, each inspected — pass 2 corrected this from eight, which had omitted the five lower-case `may`; pass 3 re-derived the census independently and got the same thirteen at the same thirteen line numbers, and 0 all-capitals) and stating what was counted instead. Every one of the **35** requirement ids the reconciliation cites was re-checked against the entry it names *[correction, 2026-10-20, pass 3: this said 33, which was pass 1's count; pass 2's census additions cite `R-0033` and `R-0061` as well, so it is 35. All 35 resolve]* |
 | schema | `schema/` | **4 verbatim, 3 derived.** Figure 11 entire — 55 productions, one unbroken region, source lines 482–591, per-region sha256, the RFC's three-column margin intact; the four delta figures; this document's own six quotations of the RFC 8610 text it replaces; and the declined Erratum 6543 proposal. Derived: a dedented tool-readable companion that round-trips, **the production-by-production change table**, and the status of RFC 8610's 44 side conditions. See `schema/README.md` |
 | messages | `messages.yaml` | 18 constructs — 6 changed, 8 new, 4 unchanged-but-load-bearing — with parts, concrete syntax, and an `old_parser_behaviour` line for each. **`constrained_by` is omitted throughout, deliberately and stated in the file header**: with zero keyword occurrences there is no honest way to tie a construct to a requirement id, and inventing one is the failure FX-1 exists to prevent. The honest join is by section and is in `locator_join` |
-| examples | `examples/` | 15 vectors `V-0001`–`V-0015`: 14 valid, 1 invalid, 0 indeterminate. **The one negative is the source's own.** Every `cddl` field verbatim by line range; all 6 multi-line blocks independently re-derived as exact source line runs; **0 span a page frame and 0 join non-adjacent ranges**, because this document has no page frames. The 6 one-line `instance` values are declared **ours** in the file's own header |
+| examples | `examples/` | 15 vectors `V-0001`–`V-0015`: 14 valid, 1 invalid, 0 indeterminate. **The one negative is the source's own.** Every `cddl` field verbatim by line range, and pass 3 re-lifted all 14 declared ranges byte-identically; **0 span a page frame and 0 join non-adjacent ranges**, because this document has no page frames. The 6 one-line `instance` values are declared **ours** in the file's own header. **All 15 have been EXECUTED against Figure 11** — 13 have a CDDL verdict and all 13 hold; `V-0002` is a CBOR hex dump and `V-0015` is ABNF, so each was executed in its own terms instead |
 | design-notes | `design-notes.md` | what we adopt, adapt and reject for `D4`; **five named cuts against MD-3**, three of them option-neutral, one favouring option 2 and one putting option 1 on the right side of condition (6) of `DECISIONS-0001`'s standing note; and five open questions |
 
 ## Not applicable
@@ -85,12 +92,12 @@ exactly where they were.
   changed production, in `messages.yaml` under the same key, and in
   `design-notes.md` where it bears on us.
 
-## The two quotation hazards, and what was done about them
+## The three quotation hazards, and what was done about them
 
-Both were found **mechanically**, not by eye, and **neither is healed anywhere
-in this record.** This document has no page frames at all — no form feed, no
-running head, no `[Page n]` footer in 699 lines — so the hazards are different
-from the sibling records':
+All three were found **mechanically**, not by eye, and **none of them is
+healed anywhere in this record.** This document has no page frames at all — no
+form feed, no running head, no `[Page n]` footer in 699 lines — so the first
+two are different from the sibling records':
 
 1. **Two aside blocks**, source lines 162–165 and 342–362, prefix every line
    with `      |`. Normalising whitespace across one interleaves `|` into the
@@ -106,11 +113,23 @@ from the sibling records':
    half** as `text`, open their `field` with "SEVERED QUOTE." and quote the
    severed half there. A third and fourth break fall inside reference entries
    (lines 430, 432) and are declared wherever `[EDN-LITERALS]` is cited.
+3. **A third hazard, and it is this record's own: writing a `\uXXXX` escape
+   through an ordinary editing path RESOLVES it into the character it
+   denotes.** Pass 1 wrote seven such occurrences across six artifacts; pass 2
+   found five of them (four of one escape, one of another) and pass 3 the
+   remaining two. Every one of the seven sat inside a sentence *about* the
+   hazard. It makes each such sentence false, because the literal character
+   parses **identically** under both grammars (that is Figure 5's own rule
+   `c`, held as `V-0005`) while the escape is the thing that disagrees. The
+   full statement, and the rule that any pass writing such an escape must
+   assemble the string in a script and re-read the bytes on disk, is item (c)
+   at the head of
+   `schema/production-changes.derived.txt`.
 
-Nine quotations written in pass 1 failed one of these checks and were replaced
-with spans that pass. They are recorded here because the failure mode is the
-one this library has been bitten by: a sibling record once healed 15 such
-breaks silently.
+Nine quotations written in pass 1 failed one of the first two checks and were
+replaced with spans that pass. They are recorded here because the failure mode
+is the one this library has been bitten by: a sibling record once healed 15
+such breaks silently.
 
 ## Source defects found
 
