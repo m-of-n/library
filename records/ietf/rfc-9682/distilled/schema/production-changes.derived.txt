@@ -1,0 +1,601 @@
+=====================================================================
+production-changes.derived.txt
+
+DERIVED -- NOT verbatim. The table and its three verdict columns are
+this library's; do not cite them as RFC 9682's text. Every right-hand
+side in the "RFC 8610 had" and "RFC 9682 has" columns IS the source's
+own bytes, dedented: the first from RFC 9682's own quotations of
+RFC 8610 (rfc8610-originals.abnf, Figures 1, 3, 7, 9, 12, 14) and the
+second from Appendix A's Figure 11 (cddl-updated.abnf). Where a line is
+the source's wording it is in "double quotes" with its section; the
+framing, the CHANGE verdict, and every "what an 8610-era parser gets
+wrong" line are ours.
+
+Source: RFC 9682, "Updates to the Concise Data Definition Language
+(CDDL) Grammar", cached source sha256
+  d35602e7f784e509a5984283ea8d998adfee23f086ad0d77bd22f98c6cdea89c
+Scope statement, RFC 9682 Section 1, quoted: "the updated collected ABNF
+syntax in Figure 11 in Appendix A replaces the collected ABNF syntax in
+Appendix B of [RFC8610]."
+
+TWO PLACES WHERE THIS DOCUMENT CANNOT BE QUOTED AS FLOWING PROSE, and
+how this file handles them. Both were found mechanically, not by eye.
+
+  (a) THE RFC'S ASIDE BLOCKS. Source lines 162-165 and 342-362 are set
+      as asides, every line prefixed "      |". Normalising whitespace
+      across such a block interleaves "|" characters into the text, so a
+      sentence spanning two of its lines CANNOT be quoted whole. This
+      file never flows a sentence out of an aside; it reproduces the two
+      blocks as exact source line runs, at the foot, under ASIDE BLOCKS,
+      and the prose above points at them.
+
+  (b) ONE END-OF-LINE WORD BREAK IN PROSE. Source line 329 ends "the
+      head-" and line 330 begins "number stands for the simple value",
+      so the token `head-number` is severed at that one occurrence and
+      the sentence "For #7, the head-number stands for the simple
+      value ..." is NOT a contiguous span of this document. Change 2
+      below quotes the obligation-bearing half, from "number stands for
+      the simple value", and says so there. The same token is whole and
+      quotable at line 332 and in Figure 10.
+
+      There is exactly one other end-of-line word break in the
+      document's prose -- line 669 ends "copying-", line 670 begins
+      "and-pasting" -- and it is handled the same way where Appendix B.2
+      is quoted (see ../design-notes.md and ../normative.md). Nothing in
+      this extraction silently heals either break.
+=====================================================================
+
+THE SHAPE OF THE CHANGE, mechanically derived and independently
+re-derivable from the two captures in this directory:
+
+    RFC 8610 Appendix B        47 rule definitions
+    RFC 9682 Appendix A        55 rule definitions
+    ------------------------------------------------
+    new                         8
+    changed right-hand side     6
+    carried over unchanged     41
+    dropped                     0
+
+"Changed" and "unchanged" are decided after stripping each rule's
+trailing ABNF comments and collapsing runs of whitespace, so a rule
+whose only difference is line wrapping counts as unchanged. No rule
+differs by wrapping alone.
+
+CHANGE verdict vocabulary, ours:
+  CORRECTION   the document presents it as addressing an erratum, and it
+               makes the grammar say what the prose already said.
+  RELAXATION   the updated grammar accepts strings the old one rejected.
+  RESTRICTION  the updated grammar rejects strings the old one accepted.
+A production may carry two verdicts; SESC carries two in opposite
+directions and is the only one that does.
+
+
+---------------------------------------------------------------------
+ 1. cddl                                 RELAXATION  (not an erratum)
+---------------------------------------------------------------------
+RFC 8610 had   (Figure 7, "ABNF from RFC 8610 for Top-Level Rule cddl")
+
+    cddl = S 1*(rule S)
+
+RFC 9682 has   (Figure 8, "Update to Top-Level ABNF in Appendices B and
+                C of RFC 8610")
+
+    cddl = S *(rule S)
+
+WHY. Section 3.1 opens "[RFC8610] requires a CDDL file to have at least
+one rule." and closes "Therefore, the present update extends the grammar
+as in Figure 8 and turns the existence of at least one rule into a
+semantic constraint, to be fulfilled after processing of all
+directives." The motive is CDDL modules: "With CDDL modules
+[CDDL-MODULES], CDDL files can also include directives, and these might
+be the source of all the rules that ultimately make up the module
+created by the file."
+
+WHAT AN 8610-ERA PARSER GETS WRONG. It OVER-REJECTS. An empty file, and
+a file containing only whitespace and comments, both match the updated
+`cddl` and are refused by the old one. Nothing that parsed before stops
+parsing.
+
+SIDE CONDITION ADDED, ours: "at least one rule, after processing of all
+directives" is now a semantic check a tool must carry outside the
+grammar. RFC 8610's own reason for the grammatical form survives as
+prose and is quoted in Section 3.1: "a CDDL data model needs to have at
+least one rule to provide an entry point (i.e., a start rule)". See
+grammar-gaps-status.derived.txt, G-04.
+
+
+---------------------------------------------------------------------
+ 2. type2                                RELAXATION  (not an erratum)
+---------------------------------------------------------------------
+RFC 8610 had   (Figure 9, "Original ABNF from RFC 8610 for Tag Syntax";
+                the source's own lead-in reads "; extracted from the
+                ABNF in RFC 8610:")
+
+    type2 =/ "#" "6" ["." uint] "(" S type S ")"
+
+Both figures use ABNF's INCREMENTAL-ALTERNATIVE operator `=/`, so each
+prints the alternatives it changes and not the whole of `type2`. The
+alternative above is present verbatim in RFC 8610 Appendix B, on its own
+line; the one-alternative statement is RFC 9682's framing of it.
+RFC 8610 defines `type2` with `=` and eleven alternatives, and Figure 11
+resolves both figures back into one `=` definition with twelve.
+
+RFC 9682 has   (Figure 10, "Update to Tag and Simple Value ABNF in
+                Appendices B and C of RFC 8610")
+
+    type2 =/ "#" "6" ["." head-number] "(" S type S ")"
+           / "#" "7" ["." head-number]
+    head-number = uint / ("<" type ">")
+
+In the collected grammar (Figure 11) the two alternatives sit in
+`type2`'s list immediately before the pre-existing
+
+    / "#" DIGIT ["." uint]                ; major/ai
+    / "#"                                 ; any
+
+WHY. Section 3.2: "This means tag numbers can only be given as literal
+numbers (uints)." and "Some specifications operate on ranges of tag
+numbers; for example, [RFC9277] has a range of tag numbers 1668546817
+(0x63740101) to 1668612095 (0x6374FFFF) to tag specific content formats.
+This cannot currently be expressed in CDDL. Similar considerations apply
+to simple values (#7.xx)."
+
+WHAT AN 8610-ERA PARSER GETS WRONG. It OVER-REJECTS the angle-bracket
+form and nothing else:
+  - `#6.<ct-tag-number>(content)` -- refused; `["." uint]` admits a
+    literal only.
+  - `#7.<25>` -- refused.
+  - `#7.25` -- ACCEPTED by both, via the old `"#" DIGIT ["." uint]`
+    alternative, and with the same meaning. Section 3.2 fixes that
+    meaning. ITS FIRST SENTENCE IS SEVERED BY AN END-OF-LINE WORD BREAK
+    (source line 329 ends "the head-", line 330 begins "number"), so the
+    obligation-bearing half is quoted and the severed half named rather
+    than healed: "number stands for the simple value if it is in the
+    ranges 0..23 or 32..255 (as per Section 3.3 of RFC 8949 [STD94], the
+    simple values 24..31 are not used)." The subject of that clause,
+    carried on the previous line, is "For #7, the head-"; the companion
+    sentence for #6 is on one line and quotable whole, "For #6, the
+    head-number stands for the tag number." The sentence that follows is
+    whole and is quoted whole: "For 24..31, the head-number stands for
+    the "additional information", e.g., #7.25 or #7.<25> is a float16,
+    etc." So is the closing parenthetical: "(All ranges mentioned here
+    are inclusive.)"
+    That the reading was ALREADY RFC 8610's is stated in the Section 3.2
+    aside, note 2, reproduced at the foot of this file: it names
+    [Err6575] as the erratum that would add the observation to RFC 8610
+    Section 2.2.3 and says the point "is correctly noted in Section 3.6
+    of" that RFC -- the citation itself falls on the next aside line, so
+    the quotable span stops at "of".
+
+A NEW DEAD ALTERNATIVE, OURS -- the document does not state this.
+RFC 8610 Appendix A establishes prioritized (PEG) choice for CDDL, and
+the CDDL grammar is written so the ABNF and PEG readings coincide. Under
+prioritized choice the new `"#" "7" ["." head-number]` alternative
+precedes `"#" DIGIT ["." uint]`, so that older alternative is now
+UNREACHABLE for DIGIT = "7" in every input, and partly unreachable for
+DIGIT = "6" (reachable only when no parenthesized type follows). Read as
+plain symmetrical ABNF instead, the grammar is now AMBIGUOUS for `#7.n`:
+two parses exist. They agree on the string and, for n in 0..31, on the
+meaning; for n in 32..255 only the new alternative has a defined
+reading, because a CBOR additional information is five bits and cannot
+be 32. The residual ambiguity is therefore harmless but real, and it is
+the same species of defect as RFC 8610's own `grpent` comment
+"; preempted by above" (G-02), which this document carries forward
+unchanged. The source's closest acknowledgement is in the Section 3.2
+aside, note 2, which regrets the dot and declines to change it; it is
+reproduced as an exact line run at the foot of this file, because every
+sentence in it crosses the aside's "|" prefix and so cannot be flowed.
+
+SIDE CONDITIONS ADDED, ours: (a) the 0..23 / 24..31 / 32..255 reading of
+a `#7` head-number, which no grammar can express; (b) the angle-bracket
+disambiguation the source argues for in the same aside, note 1, which
+calls the reuse of the generics brackets "innocuous" on the ground that
+a generic parameter follows a rule name while this follows the dot --
+again an aside, again reproduced as a line run rather than flowed.
+
+
+---------------------------------------------------------------------
+ 3. SCHAR                                 RESTRICTION + CORRECTION
+---------------------------------------------------------------------
+RFC 8610 had   (Figure 1)
+
+    SCHAR = %x20-21 / %x23-5B / %x5D-7E / %x80-10FFFD / SESC
+
+RFC 9682 has   (Figure 4, "Update to ABNF in Appendix B of [RFC8610]:
+                BCHAR, SCHAR, and PCHAR")
+
+    SCHAR = %x20-21 / %x23-5B / %x5D-7E / NONASCII / SESC
+    NONASCII = %xA0-D7FF / %xE000-10FFFD
+
+WHY. Erratum ID 6278 plus a completeness argument. Section 2.1.2: "As
+U+007F is not printable, including it in a byte string literal is as
+confusing as for a text string literal; therefore, it should be excluded
+from BCHAR as it is from SCHAR. The same reasoning also applies to the
+C1 control characters, so the updated ABNF actually excludes the entire
+range from U+007F to U+009F." and "For completeness, all these rules
+should also explicitly exclude the code points that have been set aside
+for UTF-16 surrogates."
+
+CODE POINTS REMOVED, ours: U+0080-U+009F (32, the C1 controls) and
+U+D800-U+DFFF (2048, the surrogate range). 2080 in all. None added.
+
+WHAT AN 8610-ERA PARSER GETS WRONG. It OVER-ACCEPTS. A text string
+holding a raw C1 control byte sequence, or a code point in the surrogate
+range, parses under RFC 8610 and is refused by the updated grammar.
+
+
+---------------------------------------------------------------------
+ 4. SESC             RESTRICTION *and* RELAXATION + CORRECTION
+---------------------------------------------------------------------
+RFC 8610 had   (Figure 1, captioned "Original ABNF from RFC 8610 for
+                Strings with Permissive ABNF for SESC (Which Did Not
+                Allow Hex Escapes)")
+
+    SESC = "\" (%x20-7E / %x80-10FFFD)
+
+RFC 9682 has   (Figure 2, "Update to String ABNF in Appendix B of
+                [RFC8610]: Allow Hex Escapes")
+
+    SESC = "\" ( %x22 / "/" / "\" /                 ; \" \/ \\
+                 %x62 / %x66 / %x6E / %x72 / %x74 / ; \b \f \n \r \t
+                 (%x75 hexchar) )                   ; \uXXXX
+
+WHY. Section 2.1.1: "The ABNF used in [RFC8610] for the content of text
+string literals is rather permissive" and "This allows almost any non-C0
+character to be escaped by a backslash, but critically misses out on the
+\uXXXX and \uHHHH\uLLLL forms that JSON allows to specify characters in
+hex (which should apply here according to item 6 of Section 3.1 of
+[RFC8610])." The `\u{hex}` form is an addition taken on the occasion:
+"This document uses the opportunity to add a popular form of directly
+specifying characters in strings using hexadecimal escape sequences of
+the form \u{hex}, where hex is the hexadecimal representation of the
+Unicode scalar value."
+
+THE RESTRICTION, ours. RFC 8610 admitted a backslash before any of
+1,114,077 code points (95 in %x20-7E plus 1,113,982 in %x80-10FFFD).
+RFC 9682 admits exactly EIGHT single-character escapes -- `\"` `\/` `\\`
+`\b` `\f` `\n` `\r` `\t` -- plus the `\u` family, which now requires a
+payload. Everything else that RFC 8610 spelled as an escape is a syntax
+error. Three consequences worth naming:
+  - `\'` IS GONE FROM TEXT STRINGS. The document states the BCHAR half
+    ("With the SESC updated as above, \' is no longer allowed in BCHAR
+    and now needs to be explicitly included there") and says nothing
+    about SCHAR, where `\'` is simply no longer a legal escape. No
+    expressive power is lost -- U+0027 is inside `%x23-5B` and needs no
+    escape in a text string -- but `"\'"` was valid RFC 8610 CDDL and is
+    not valid RFC 9682 CDDL.
+  - CASE IS NOW SIGNIFICANT IN THE ESCAPE LETTER. `%x62`/`%x66`/`%x6E`/
+    `%x72`/`%x74`/`%x75` are numeric, hence exact, so `\B` `\F` `\N`
+    `\R` `\T` `\U` are all errors while `\b` ... `\u` are not. The hex
+    DIGITS are quoted strings and so remain case-insensitive, which is
+    why Figure 5 can write `\u{1F073}` and `\u{6f}` in one file. The
+    Section 2.1.1 aside states the mechanism, and says the numeric form
+    was chosen to "maximize compatibility with ABNF tools" -- quotable
+    only from source line 165, because "in order to" closes line 164 and
+    the full clause therefore crosses the aside's "|" prefix. The aside
+    is reproduced as an exact line run at the foot of this file.
+  - THE DOCUMENT NEVER CLAIMS THIS PART IS BACKWARD COMPATIBLE, ours.
+    Section 3's claim -- "These changes are backward compatible (i.e.,
+    CDDL files that comply with [RFC8610] continue to match the updated
+    grammar)" -- opens "Each subsection that follows" and so covers only
+    Sections 3.1 and 3.2. For Section 2 the document says instead that
+    "These changes are intended to mirror the way existing
+    implementations have dealt with the errata reports", which is a
+    claim about deployed tools and not about the language, and it calls
+    only the hex-escape ADDITION "backward-compatible". Read strictly,
+    Section 2 narrows the language and Section 3 widens it.
+
+THE RELAXATION. `\uXXXX`, the JSON surrogate-pair form `\uHHHH\uLLLL`,
+and the new `\u{hex}` form all become expressible. Section 2.1.1 records
+that CDDL does not thereby acquire surrogates: "(Note that CDDL imports
+from JSON the unwieldy \uHHHH\uLLLL syntax, which represents Unicode
+code points beyond U+FFFF by making them look like UTF-16 surrogate
+pairs; CDDL text strings do not use UTF-16 or surrogates.)" Forward
+compatibility is explicitly NOT claimed: "The latter change is not
+automatically forward compatible (i.e., CDDL specifications that make
+use of this syntax do not necessarily work with existing implementations
+until these are updated, which is recommended by this specification)."
+
+WHAT AN 8610-ERA PARSER GETS WRONG -- AND THIS IS THE DANGEROUS ONE,
+ours. For `\u{...}` and for the JSON pair form, the old grammar does not
+fail; it SILENTLY DISAGREES. Under RFC 8610, `"D\u{6f}mino"` parses: the
+SESC alternative consumes `\u`, and `{`, `6`, `f`, `}` are each ordinary
+SCHARs (U+007B and U+007D lie in %x5D-7E, `6` in %x23-5B, `f` in
+%x5D-7E). The result is a nine-character string beginning `D`, `u`,
+`{`, `6`, `f`, `}`. Under RFC 9682 the same seven source characters are
+one escape for U+006F and the string is `Domino`. The same holds for
+`"🁳"`, which the old grammar reads as `u`, `D`, `8`, `3`,
+`C`, `u`, `D`, `C`, `7`, `3`. NO DIAGNOSTIC IS PRODUCED ON EITHER SIDE.
+Section 4 names exactly this class: "Attackers may want to exploit such
+potential confusion by crafting CDDL models that are interpreted
+differently by different parts of a system."
+
+THE EXCLUSION IS LEXICAL, NOT SEMANTIC, ours. `hexscalar` admits
+`1*3HEXDIG`, so `\u{0}` ... `\u{1F}`, `\u{7F}` and `\u{80}` ... `\u{9F}`
+are all well-formed escapes for the very code points `SCHAR` and `BCHAR`
+now exclude directly, and `\u{9}` makes U+0009 expressible inside a text
+string for the first time (there is still no literal tab anywhere in
+CDDL -- `SP = %x20`). The document declines the semantic half in terms:
+"(Note that, apart from addressing the inconsistencies, there is no
+attempt to further exclude non-printable characters from the ABNF; doing
+this properly would draw in complexity from the ongoing evolution of the
+Unicode standard [UNICODE] that is not needed here.)"
+
+
+---------------------------------------------------------------------
+ 5. BCHAR                                 RESTRICTION + CORRECTION
+---------------------------------------------------------------------
+RFC 8610 had   (Figure 3, and again as Figure 12 in Appendix B)
+
+    BCHAR = %x20-26 / %x28-5B / %x5D-10FFFD / SESC / CRLF
+
+RFC 9682 has   (Figure 4)
+
+    BCHAR = %x20-26 / %x28-5B / %x5D-7E / NONASCII / SESC / "\'" / CRLF
+
+WHY. Erratum ID 6278 is the subject: "Updating BCHAR also provides an
+opportunity to address [Err6278], which points to an inconsistency in
+treating U+007F (DEL) between SCHAR and BCHAR." And the `"\'"`
+alternative is forced by the SESC restriction: "With the SESC updated as
+above, \' is no longer allowed in BCHAR and now needs to be explicitly
+included there; see Figure 4."
+
+CODE POINTS REMOVED, ours: U+007F (DEL), U+0080-U+009F (32) and
+U+D800-U+DFFF (2048). 2081 in all. The `"\'"` alternative is not an
+addition in net terms -- RFC 8610 reached `\'` through its permissive
+SESC -- so the set of accepted byte-string bodies shrinks in every
+direction.
+
+WHAT AN 8610-ERA PARSER GETS WRONG. It OVER-ACCEPTS DEL, the C1 range
+and the surrogate range inside a byte-string literal; it reads
+`\u{...}` the way described under SESC above. `\'` parses under both.
+
+
+---------------------------------------------------------------------
+ 6. PCHAR                                 RESTRICTION + CORRECTION
+---------------------------------------------------------------------
+RFC 8610 had   (Figure 14, "ABNF Definition of WS from RFC 8610")
+
+    PCHAR = %x20-7E / %x80-10FFFD
+
+RFC 9682 has   (Figure 4)
+
+    PCHAR = %x20-7E / NONASCII
+
+WHY, in one sentence of Section 2.1.2: "The same reasoning also applies
+to text in comments (PCHAR)."
+
+CODE POINTS REMOVED, ours: U+0080-U+009F (32) and U+D800-U+DFFF (2048).
+
+WHAT AN 8610-ERA PARSER GETS WRONG. It OVER-ACCEPTS a C1 control or a
+surrogate-range code point inside a CDDL comment. Because `COMMENT` is
+`NL` is whitespace, that is a whole-file property, not a string-literal
+one: a stray C1 byte in a comment makes a file that an updated tool
+refuses and an old tool accepts.
+
+
+=====================================================================
+ THE EIGHT NEW PRODUCTIONS
+=====================================================================
+All eight are reachable only from the six changed productions above; no
+previously existing rule references any of them. Figure 11 is closed --
+all 55 rules are defined and no rule reference is dangling (checked
+mechanically against cddl-updated-dedented.derived.abnf).
+
+ 7. head-number = uint / ("<" type ">")
+    Figure 10. Supports change 2. The whole of the relaxation: a tag
+    number or simple value may now be any `type`, hence a range.
+
+ 8. hexchar = "{" (1*"0" [ hexscalar ] / hexscalar) "}" /
+              non-surrogate / (high-surrogate "\" %x75 low-surrogate)
+    Figure 2. Three forms in one rule: the braced `\u{hex}` form, the
+    bare four-digit JSON form, and the JSON surrogate pair. The
+    `1*"0" [ hexscalar ]` branch is what admits leading zeros, and on
+    its own -- with the optional `hexscalar` absent -- it is what makes
+    `\u{0}`, `\u{00}` and `\u{000}` legal spellings of U+0000.
+
+ 9. non-surrogate = ((DIGIT / "A"/"B"/"C" / "E"/"F") 3HEXDIG) /
+                    ("D" %x30-37 2HEXDIG )
+    Figure 2. Exactly four hex digits, D800-DFFF excluded by
+    construction: a leading "D" forces the second digit into %x30-37
+    (0-7). Note that the first branch's alternation list omits "D",
+    which is why the second branch exists.
+
+10. high-surrogate = "D" ("8"/"9"/"A"/"B") 2HEXDIG
+11. low-surrogate  = "D" ("C"/"D"/"E"/"F") 2HEXDIG
+    Figure 2. The two halves of the JSON pair form, usable ONLY as a
+    pair and only inside `hexchar`. A lone surrogate is unreachable:
+    `hexchar`'s pair branch requires both halves with a literal `\u`
+    between them, and neither `non-surrogate` nor `hexscalar` admits
+    D800-DFFF.
+
+12. hexscalar = "10" 4HEXDIG / HEXDIG1 4HEXDIG
+                / non-surrogate / 1*3HEXDIG
+    Figure 2. The braced form's payload: 1 to 6 hex digits with no
+    leading zero, capping at 10FFFF (the `"10" 4HEXDIG` branch) and
+    excluding D800-DFFF (via `non-surrogate`; the other three branches
+    cannot reach four digits starting D8-DF). `\u{110000}` is refused.
+
+13. HEXDIG1 = DIGIT1 / "A" / "B" / "C" / "D" / "E" / "F"
+    Figure 2. `HEXDIG` without "0". Parallel to the pre-existing
+    `DIGIT1`, and used only by `hexscalar` to forbid a leading zero in
+    the unbraced-length branch.
+
+14. NONASCII = %xA0-D7FF / %xE000-10FFFD
+    Figure 4. The one rule that carries the whole surrogate and C1 fix,
+    shared by `SCHAR`, `BCHAR` and `PCHAR`. The Acknowledgments credit
+    it: "In one of the ensuing discussions, Doug Ewell proposed defining
+    an ABNF rule "NONASCII", of which we have included the essence."
+
+
+=====================================================================
+ THE FORTY-ONE UNCHANGED -- AND THE FIVE THAT MATTER
+=====================================================================
+Carried into Figure 11 with no change, comments included: rule,
+typename, groupname, assignt, assigng, genericparm, genericarg, type,
+type1, rangeop, ctlop, group, grpchoice, grpent, memberkey, bareword,
+optcom, occur, uint, value, int, number, hexfloat, fraction, exponent,
+text, bytes, bsqual, id, ALPHA, EALPHA, DIGIT, DIGIT1, HEXDIG, BINDIG,
+S, WS, SP, NL, COMMENT, CRLF.
+
+Five of those forty-one are the answer to a question this library had
+open against the rfc-8610 record, and in each case the answer is "not
+touched":
+
+  CRLF = %x0A / %x0D.0A          -- UNCHANGED. The grammar still
+      redefines an RFC 5234 core rule and still admits a bare LF where
+      RFC 5234's `CRLF` is `%x0D %x0A`. RFC 9682 edits six productions
+      in this block's immediate neighbourhood (PCHAR is two lines
+      above it in Figure 11) and leaves this one alone. See
+      grammar-gaps-status.derived.txt, G-29.
+
+  bsqual = "h" / "b64"           -- UNCHANGED, two prefixes. Appendix B.2
+      goes exactly as far as recommending the extension to somebody
+      else: "Finally, the approach taken lends support to extending
+      bsqual in CDDL similar to the way this is done for CBOR diagnostic
+      notation in [EDN-LITERALS]." Support lent; not taken.
+
+  memberkey = type1 S ["^" S] "=>" / ...  -- UNCHANGED, the cut `^` is
+      still in the grammar and still absent from RFC 8610's Table 1.
+      This document does not touch Table 1 at all: its replacement scope
+      is "the collected ABNF syntax in Appendix B of [RFC8610]", and
+      Table 1 is in RFC 8610 Section 3.11. G-42, G-43, G-44 all stand.
+
+  rangeop / number / type1       -- UNCHANGED, so `0..10.0` still parses
+      and is still what RFC 8610 Section 2.2.2.1 calls NOT DEFINED.
+      G-06 stands.
+
+  WS = SP / NL  and  SP = %x20   -- UNCHANGED, so there is still no
+      horizontal tab in CDDL. G-30 stands, with one wrinkle: U+0009 is
+      now expressible inside a text string as `\u{9}`.
+
+ALSO UNCHANGED AND WORTH NAMING: `grpent`'s own comment
+"; preempted by above" survives verbatim, so the grammar still documents
+its own dead alternative (G-02) -- and change 2 above adds a second one.
+
+
+=====================================================================
+ TWO THINGS APPENDIX A DROPS RATHER THAN CHANGES
+=====================================================================
+Ours. Appendix A says it "provides the full ABNF from [RFC8610] as
+updated by the present document", and Section 1 says Figure 11 "replaces
+the collected ABNF syntax in Appendix B of [RFC8610]". Two sentences of
+RFC 8610 Appendix B are not reproduced anywhere in Appendix A, and the
+word "syntax" in that replacement clause is the only thing deciding
+whether they survive:
+
+  1. THE CASE-SENSITIVITY PREAMBLE. RFC 8610 Appendix B opens by
+     warning that its quote-delimited strings are case insensitive while
+     CDDL string values and names are case sensitive -- the sentence
+     that makes `0X1F`, `H'00'` and `1E3` legal CDDL. [PROVENANCE: that
+     sentence is RFC 8610's, NOT RFC 9682's, and is therefore not quoted
+     verbatim here; RFC 9682 reproduces six fragments of RFC 8610's
+     grammar and none of its appendix prose. It is held verbatim at
+     ../../../rfc-8610/distilled/schema/cddl.abnf, whose header quotes
+     Appendix B's preamble in full.] Appendix A of RFC 9682 carries only
+     "This appendix is normative." and "It provides the full ABNF from
+     [RFC8610] as updated by the present document." The caution survives
+     in RFC 9682 only as the Section 2.1.1 aside, scoped to the new
+     rules by its own phrase "as is intended here" and reproduced as an
+     exact line run at the foot of this file. A reader who takes
+     Appendix A as the whole grammar no longer gets it. G-28 is
+     therefore harder to find than it was, not resolved.
+
+  2. THE PREFIXED-BYTE-STRING NOTE. RFC 8610 Appendix B closes "Note
+     that this ABNF does not attempt to reflect the detailed rules of
+     what can be in a prefixed byte string." [PROVENANCE: RFC 8610's
+     sentence, not RFC 9682's; held verbatim in the header of
+     ../../../rfc-8610/distilled/schema/cddl.abnf at RFC 8610 source
+     lines 2601-2602.] Figure 11 has no closing note of any kind; the
+     next line after `CRLF` is the figure caption.
+     The substance moves into Appendix B.2, which is declared
+     INFORMATIVE ("This appendix is informative.") and states the model
+     the document actually adopted: "This document takes the simpler
+     approach of leaving the processing of the content of the byte
+     string literal to a semantic step after processing the syntax of
+     the bytes and BCHAR rules, as updated by Figures 2 and 4 in Section
+     2.1" and "Therefore, the rules in Figure 14 (as updated by Figure
+     4) are applied to the result of this processing where bsqual is
+     given as h or b64." So a normative caveat became informative prose,
+     and the two-stage model that replaces it -- syntax by BCHAR first,
+     then WS/COMMENT over the decoded content -- is stated only in an
+     appendix that disclaims normative force. G-12 stands, restated.
+
+=====================================================================
+14 productions changed or added, 41 carried, 0 dropped; 2 sentences of
+RFC 8610 Appendix B not carried. Of RFC 8610's 44 enumerated side
+conditions, 2 are closed, 1 is half-closed, 1 is amended and 2 are
+restated; 38 stand, and 3 new ones are added -- itemised in
+grammar-gaps-status.derived.txt.
+=====================================================================
+
+=====================================================================
+ ASIDE BLOCKS, REPRODUCED AS EXACT SOURCE LINE RUNS
+=====================================================================
+VERBATIM within a derived file, and marked as such line by line. These
+are the RFC's two aside blocks. Every line carries the source's own
+"      |" prefix, including the two lines that are "      |  " with
+trailing whitespace and nothing else (source lines 343 and 351). They
+are reproduced rather than quoted because normalising whitespace across
+an aside interleaves "|" into the text, so no sentence spanning two of
+its lines is a contiguous span of this document. Nothing is dedented,
+rewrapped or joined.
+
+----- SOURCE LINES 162-165 (the Section 2.1.1 aside, attached to
+----- Figure 2), sha256 cbd14e97ef38545c8f58fe830cf89891788d190745d71aa2e76cd94cab8e9718
+      |  Notes: In ABNF, strings such as "A", "B", etc., are case
+      |  insensitive, as is intended here.  The rules above could have
+      |  also used %s"b", etc., instead of %x62, but didn't, in order to
+      |  maximize compatibility with ABNF tools.
+----- END
+
+----- SOURCE LINES 342-362 (the Section 3.2 aside, notes 1 and 2),
+----- sha256 4f6b60d16ca96d4a852fd7d8bde61eae54fe8c3c3af5353669828a94a9af2a98
+      |  Notes:
+      |  
+      |     1.  This syntax reuses the angle bracket syntax for
+      |         generics; this reuse is innocuous because a generic
+      |         parameter or argument only ever occurs after a rule name
+      |         (id), while it occurs after the "." (dot) character
+      |         here.  (Whether there is potential for human confusion
+      |         can be debated; the above example deliberately uses
+      |         generics as well.)
+      |  
+      |     2.  The updated ABNF grammar makes it a bit more explicit
+      |         that the number given after the optional dot is the
+      |         value of the argument: for tags and simple values, it is
+      |         not giving the CBOR "additional information”, as it is
+      |         with other uses of # in CDDL.  (Adding this observation
+      |         to Section 2.2.3 of [RFC8610] is the subject of
+      |         [Err6575]; it is correctly noted in Section 3.6 of
+      |         [RFC8610].)  In hindsight, maybe a different character
+      |         than the dot should have been chosen for this special
+      |         case; however, changing the grammar in the current
+      |         document would have been too disruptive.
+----- END
+
+
+=====================================================================
+ SOURCE DEFECT IN THE ASIDE ABOVE -- REPORTED, NOT REPAIRED
+=====================================================================
+Source line 355, reproduced above, reads
+
+      |         not giving the CBOR "additional information”, as it is
+
+The phrase OPENS with U+0022 QUOTATION MARK and CLOSES with U+201D
+RIGHT DOUBLE QUOTATION MARK. Every other quotation mark in the 699 lines
+of rfc9682.txt is U+0022; this is the only curly quote in the file.
+The same phrase in the Section 3.2 prose body, source line 333, is
+correctly paired with two U+0022 marks, so the two statements of one
+phrase disagree typographically inside one section.
+
+Mechanically confirmed: the file's complete non-ASCII inventory is
+U+FEFF (a BYTE ORDER MARK at the head of line 1), U+00E4, U+00FC and
+U+00C9 in author and reviewer names, U+1F073 and U+2318 in the Section
+2.2 example and in Figure 6's comments, and this one U+201D.
+
+It is a rendering defect in the exact bytes that `content.sha256` pins,
+not a defect in CDDL, and it is recorded because an extraction that
+quotes line 355 necessarily reproduces it. The BOM is recorded for the
+same reason: a tool that reads rfc9682.txt as plain ASCII sees three
+stray bytes before "Internet Engineering Task Force".

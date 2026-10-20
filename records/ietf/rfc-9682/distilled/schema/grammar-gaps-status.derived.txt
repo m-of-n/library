@@ -1,0 +1,493 @@
+=====================================================================
+grammar-gaps-status.derived.txt
+
+DERIVED -- NOT verbatim. This is a STATUS SHEET, not a standard. It
+takes the 44 side conditions this library enumerated against RFC 8610
+(../../../rfc-8610/distilled/schema/grammar-gaps.derived.txt, items
+G-01...G-44, themselves derived and themselves ours) and asks of each
+one question only: DOES RFC 9682 CHANGE IT? Every verdict here is ours.
+Where a line is RFC 9682's own wording it is in "double quotes" with its
+section; the G-nn framing and wording is quoted from the rfc-8610 record
+and is marked [8610-REC] where it appears.
+
+Nothing in this file is normative and nothing in it may be cited as
+RFC 9682's text. The grammar in force is cddl-updated.abnf; the
+production-by-production statement of the change is
+production-changes.derived.txt.
+
+Source: RFC 9682, cached source sha256
+  d35602e7f784e509a5984283ea8d998adfee23f086ad0d77bd22f98c6cdea89c
+=====================================================================
+
+                           THE TALLY
+
+    CLOSED by this document                                 2
+    HALF-CLOSED (one of two limbs closed)                   1
+    AMENDED (the condition survives in a changed form)      1
+    RESTATED OR MADE HARDER TO FIND (not closed)            2
+    STANDS, untouched                                      38
+    ------------------------------------------------------ --
+                                                           44
+
+    NEW side conditions this document adds                  3
+    NEW grammar-level observations (ours, not conditions)    2
+
+RFC 9682 edits six productions and adds eight. Thirty-eight of the
+forty-four conditions live in parts of RFC 8610 this document does not
+reach at all -- Appendix C's matching rules, the type system, the
+fourteen control operators, the standard prelude, generics, map
+matching, Table 1 and Section 5. The document's own scope sentence is
+the reason, Section 1: "the updated collected ABNF syntax in Figure 11
+in Appendix A replaces the collected ABNF syntax in Appendix B of
+[RFC8610]." Appendix B is 1 of RFC 8610's 8 appendices.
+
+
+=====================================================================
+ CLOSED (2)
+=====================================================================
+
+G-32  SURROGATES IN SCHAR, BCHAR, PCHAR AND SESC -- CLOSED, all four.
+      [8610-REC] "All four admit the surrogate range. `%x80-10FFFD`
+      spans U+D800-U+DFFF, which are not Unicode scalar values and
+      cannot be encoded in UTF-8, while §3.1 says "CDDL uses UTF-8
+      [RFC3629] for its encoding.""
+
+      HOW. `NONASCII = %xA0-D7FF / %xE000-10FFFD` replaces `%x80-10FFFD`
+      in all three of SCHAR, BCHAR and PCHAR, and SESC loses its open
+      range entirely. RFC 9682 states the intent: "For completeness, all
+      these rules should also explicitly exclude the code points that
+      have been set aside for UTF-16 surrogates."
+
+      AND THE ESCAPE PATH IS CLOSED TOO, which the document does not
+      spell out and which this library checked by hand against the new
+      rules. A LONE surrogate is unreachable through `\u` as well:
+        - `non-surrogate` forces a leading "D" into `%x30-37`, so
+          D800-DFFF cannot be written as four hex digits;
+        - `hexscalar`'s other three branches cannot produce four digits
+          beginning D8-DF (`"10" 4HEXDIG` needs a literal "10";
+          `HEXDIG1 4HEXDIG` is five digits; `1*3HEXDIG` is at most
+          three);
+        - `1*"0" [ hexscalar ]` cannot smuggle one in either, because
+          the optional payload is still a `hexscalar`;
+        - the only surrogate-shaped form, `high-surrogate "\" %x75
+          low-surrogate`, requires BOTH halves and denotes a code point
+          above U+FFFF. Section 2.1.1 says so in terms: "(Note that CDDL
+          imports from JSON the unwieldy \uHHHH\uLLLL syntax, which
+          represents Unicode code points beyond U+FFFF by making them
+          look like UTF-16 surrogate pairs; CDDL text strings do not use
+          UTF-16 or surrogates.)"
+      `\u{110000}` is refused as well: the grammar caps at 10FFFF.
+
+      ONE RESIDUE, ours. The direct ranges stop at 10FFFD, as RFC 8610's
+      did, but the new `hexscalar` reaches 10FFFF. So U+10FFFE and
+      U+10FFFF cannot appear as characters in a CDDL string and CAN be
+      written as `\u{10FFFE}` and `\u{10FFFF}`. The inconsistency is new
+      with this document -- RFC 8610 had no hex-escape grammar to be
+      inconsistent with -- and no sentence in RFC 9682 addresses it.
+      It is reported, not repaired. The rfc-8610 record already noted
+      the bound: [8610-REC] "(The upper bound 10FFFD, rather than
+      10FFFF, excludes the last two noncharacters only.)"
+
+G-33  SESC ADMITS A BACKSLASH BEFORE ANY PRINTABLE CHARACTER -- CLOSED.
+      [8610-REC] "The grammar neither restricts escapes to JSON's set
+      (\" \\ \/ \b \f \n \r \t \uXXXX) nor requires \u to be followed by
+      four hex digits. A tool must apply RFC 8259 §7 on top of the
+      grammar."
+
+      HOW. Both limbs. The new SESC is a closed set of exactly the eight
+      JSON escapes plus `(%x75 hexchar)`, and `hexchar` is mandatory
+      after `%x75`, so bare `\u` is now a syntax error. RFC 9682 states
+      the defect it is closing: "This allows almost any non-C0 character
+      to be escaped by a backslash, but critically misses out on the
+      \uXXXX and \uHHHH\uLLLL forms that JSON allows to specify
+      characters in hex (which should apply here according to item 6 of
+      Section 3.1 of [RFC8610])."
+
+      THE SIDE CONDITION DOES NOT VANISH, IT MOVES, ours. "Apply RFC
+      8259 §7 on top of the grammar" is no longer needed for the SHAPE
+      of an escape, which the grammar now fixes. It is still needed for
+      the MEANING -- the grammar says `\u{41}` is well-formed and says
+      nothing about it denoting "A" -- and a conforming tool still has
+      to compute a scalar value from a hexchar. See NEW-3 below for the
+      companion move on prefixed byte strings.
+
+
+=====================================================================
+ HALF-CLOSED (1)
+=====================================================================
+
+G-31  SCHAR AND BCHAR ARE NOT PARALLEL -- one limb closed, one standing.
+      [8610-REC] named two ways, "in two ways we did not find stated
+      anywhere in the document":
+
+      LIMB 1, U+007F (DEL): CLOSED, and now stated. RFC 8610's SCHAR
+      excluded DEL and its BCHAR admitted it. Erratum ID 6278 is exactly
+      this, and RFC 9682 Section 2.1.2 both fixes it and says why: "As
+      U+007F is not printable, including it in a byte string literal is
+      as confusing as for a text string literal; therefore, it should be
+      excluded from BCHAR as it is from SCHAR." It goes further than the
+      erratum asked -- "The same reasoning also applies to the C1
+      control characters, so the updated ABNF actually excludes the
+      entire range from U+007F to U+009F." -- and further again to PCHAR:
+      "The same reasoning also applies to text in comments (PCHAR)."
+
+      LIMB 2, LINE SPANNING: STANDS, and is still unstated. [8610-REC]
+      "BCHAR includes CRLF, so a byte string literal may span lines;
+      SCHAR does not, so a text string literal may not." Figure 11
+      carries `BCHAR = ... / CRLF` and `SCHAR = ...` with no CRLF,
+      exactly as RFC 8610 did. No sentence of RFC 9682 mentions it. The
+      asymmetry is now the ONLY remaining difference in kind between the
+      two productions, which arguably makes it more conspicuous and
+      certainly makes it narrower: after this document the two rules
+      differ by `%x27`/`%x22` (the delimiter each must exclude), by
+      BCHAR's explicit `"\'"`, and by CRLF. Nothing else.
+
+
+=====================================================================
+ AMENDED (1)
+=====================================================================
+
+G-04  THE ROOT IS THE FIRST RULE -- amended, not closed.
+      [8610-REC] "The root is the FIRST rule, and "there is no way to
+      use a group as a root -- it must be a type." The grammar has no
+      notion of a root."
+
+      WHAT CHANGED. RFC 8610 enforced "there is at least one rule"
+      grammatically, through `cddl = S 1*(rule S)`. RFC 9682 withdraws
+      that and relocates it: "the present update extends the grammar as
+      in Figure 8 and turns the existence of at least one rule into a
+      semantic constraint, to be fulfilled after processing of all
+      directives." So a tool must now carry a condition the grammar used
+      to carry for it -- see NEW-1. RFC 8610's reason survives as prose
+      and RFC 9682 quotes it approvingly: "a CDDL data model needs to
+      have at least one rule to provide an entry point (i.e., a start
+      rule)."
+
+      WHAT DID NOT CHANGE. "No way to use a group as a root" is
+      untouched; the grammar still has no notion of a root at all; and
+      the first-rule convention is still nowhere in the ABNF.
+
+      ours: the amendment makes G-04 strictly worse for a tool. Before,
+      an empty file failed at parse time with a grammar error. Now it
+      parses, and failing it is the tool's own responsibility, at a
+      point the document locates only as "after processing of all
+      directives" -- a phase that is specified in [CDDL-MODULES], an
+      Internet-Draft RFC 9682 cites as "Work in Progress".
+
+
+=====================================================================
+ RESTATED OR MADE HARDER TO FIND (2) -- NOT CLOSED
+=====================================================================
+
+G-12  THE ABNF DOES NOT SAY WHAT CAN BE IN A PREFIXED BYTE STRING --
+      stands, restated, and demoted from normative to informative.
+      [8610-REC] quoted RFC 8610 Appendix B's closing note and added
+      "`bsqual = "h" / "b64"` is the whole of it".
+
+      `bsqual = "h" / "b64"` is still the whole of it -- unchanged in
+      Figure 11. What changed is where the caveat lives. RFC 8610's
+      closing note sat inside an appendix declared normative; Figure 11
+      has no closing note of any kind, and the substance reappears in
+      RFC 9682's Appendix B.2, which opens "This appendix is
+      informative." B.2 is also where the resolution model is stated:
+      "This document takes the simpler approach of leaving the
+      processing of the content of the byte string literal to a semantic
+      step after processing the syntax of the bytes and BCHAR rules, as
+      updated by Figures 2 and 4 in Section 2.1" and "Therefore, the
+      rules in Figure 14 (as updated by Figure 4) are applied to the
+      result of this processing where bsqual is given as h or b64."
+
+      ours: a tool implementer now reads the only statement of the
+      two-stage model in an appendix that disclaims normative force.
+      That is a worse place for it than Appendix B's closing note was.
+      See NEW-3.
+
+      AND THE EXTENSION WAS DECLINED. Appendix B.2's last paragraph goes
+      exactly as far as endorsing somebody else's work: "Finally, the
+      approach taken lends support to extending bsqual in CDDL similar
+      to the way this is done for CBOR diagnostic notation in
+      [EDN-LITERALS]." Support lent, not taken. [EDN-LITERALS] is cited
+      as "Work in Progress, Internet-Draft, draft-ietf-cbor-edn-
+      literals-13" -- note the end-of-line word break in the reference
+      itself, source lines 430-431 -- and the sibling record
+      ../../../draft-ietf-cbor-edn-literals holds four or more prefixes.
+      So CDDL has two byte-string prefixes after this document and EDN
+      has more, and the divergence is now deliberate and documented
+      rather than accidental.
+
+G-28  CASE SENSITIVITY IS SPLIT BETWEEN TWO NOTATIONS IN ONE GRAMMAR --
+      stands, and is harder to find than it was.
+      [8610-REC] "So `0X1F`, `0B10`, `H'00'`, `B64'...'`, `1E3` and
+      `0x1P4` are all admitted via the quoted literals, while
+      `ALPHA = %x41-5A / %x61-7A` and `EALPHA` are numeric and therefore
+      exactly as written. A reader who takes the grammar literally and
+      ignores the appendix's preamble gets a different language."
+
+      RFC 8610 Appendix B's preamble carried the caution. RFC 9682
+      Appendix A does not reproduce it: it carries "This appendix is
+      normative." and "It provides the full ABNF from [RFC8610] as
+      updated by the present document." and nothing else. The caution
+      appears in RFC 9682 only in the Section 2.1.1 aside, where it is
+      scoped to the new rules by the phrase "as is intended here" and
+      explains the choice of `%x62` over `%s"b"` by "in order to
+      maximize compatibility with ABNF tools". That aside is reproduced
+      as an exact line run in production-changes.derived.txt.
+
+      ours, AND THE NEW RULES MAKE IT SHARPER, not milder. Inside one
+      rule, SESC, the escape LETTER is now case-SENSITIVE (`%x62`,
+      `%x6E`, `%x75` are numeric, so `\B`, `\N`, `\U` are errors) while
+      the hex DIGITS of the payload are case-INSENSITIVE (`"A"`..`"F"`
+      are quoted). Figure 5 exercises both in one file: `\u{1F073}`
+      upper-case, `\u{6f}` lower-case. Nothing in RFC 9682 says a
+      reader must notice the difference, and [RFC7405], the RFC that
+      exists to make ABNF case-sensitivity explicit, is listed as a
+      normative reference and then deliberately not used.
+
+
+=====================================================================
+ STANDS, UNTOUCHED (38)
+=====================================================================
+Listed by id with the one-line reason RFC 9682 does not reach them. The
+five that this library had open questions about are given first and in
+full; the rest are a roll-call, because "untouched" is the whole of the
+finding and padding it would hide the five.
+
+G-29  CRLF REDEFINES AN RFC 5234 CORE RULE AND ADMITS A BARE LF --
+      STANDS, VERBATIM AND UNREMARKED. Figure 11's last grammar line is
+      `CRLF = %x0A / %x0D.0A`, byte-identical to RFC 8610's. This is the
+      single most pointed "no" in this status sheet: RFC 9682 rewrites
+      PCHAR two lines above it in the same block, is titled "Updates to
+      the ... CDDL Grammar", lists [STD68] (RFC 5234) as a NORMATIVE
+      reference, says in Section 1.1 "The grammar in [RFC8610] is based
+      on ABNF, which is defined in [STD68] and [RFC7405]" -- and leaves
+      a redefined core rule in place without a word. [8610-REC] "ALPHA,
+      DIGIT, HEXDIG and SP are redefined identically to RFC 5234, so a
+      reader may reasonably assume the core rules are being restated --
+      and then get CRLF wrong." After RFC 9682, `HEXDIG1` joins the list
+      of rules that look like restatements, so the camouflage is one
+      rule thicker.
+
+G-30  THERE IS NO HORIZONTAL TAB IN CDDL -- STANDS, with one wrinkle.
+      `WS = SP / NL` and `SP = %x20` are unchanged, and SCHAR still
+      begins at `%x20`, so a literal tab is still a syntax error
+      everywhere including inside a text string, and still no sentence
+      says so. THE WRINKLE, ours: `hexscalar`'s `1*3HEXDIG` branch makes
+      `\u{9}` a well-formed escape, so U+0009 becomes EXPRESSIBLE inside
+      a CDDL text string for the first time while remaining unwritable
+      as itself. The same holds for the whole C0 range, for U+007F and
+      for the C1 range that Section 2.1.2 has just finished excluding
+      from the direct ranges -- `\u{0}`, `\u{1F}`, `\u{7F}`, `\u{9F}`
+      are all well-formed. The document declines the semantic half
+      explicitly: "(Note that, apart from addressing the
+      inconsistencies, there is no attempt to further exclude
+      non-printable characters from the ABNF; doing this properly would
+      draw in complexity from the ongoing evolution of the Unicode
+      standard [UNICODE] that is not needed here.)" So the C1 exclusion
+      of Section 2.1.2 is LEXICAL ONLY, and a conforming tool that
+      wanted to keep C1 controls out of strings would still need a
+      semantic check. Reported; the document's parenthetical is its own
+      answer.
+
+G-34  A COMMENT REQUIRES A LINE TERMINATOR -- STANDS, and becomes easier
+      to hit. `COMMENT = ";" *PCHAR CRLF` is unchanged, so a comment on a
+      final line with no newline still does not parse, and nothing hints
+      at it. ours: `cddl = S *(rule S)` now admits a file that is
+      NOTHING BUT comments, which is a plausible artefact of the CDDL
+      modules use case Section 3.1 is written for -- a file whose rules
+      all arrive by directive, annotated. Such a file fails if its last
+      line is unterminated, for a reason no sentence in either document
+      states.
+
+G-06  `0..10.0` PARSES AND IS NOT DEFINED -- STANDS. `rangeop`, `number`
+      and `type1` are all carried over unchanged, so [8610-REC]'s
+      "canonical demonstration that cddl.abnf is not a definition of
+      CDDL" survives intact. RFC 9682 does touch ranges, but only in
+      prose and only to use them: Section 3.2's `ct-tag-number =
+      1668546817..1668612095`.
+
+G-02  `grpent`'S SECOND ALTERNATIVE IS DEAD, AND THE GRAMMAR SAYS SO --
+      STANDS. The comment `; preempted by above` is carried into
+      Figure 11 verbatim. AND THIS DOCUMENT ADDS A SECOND INSTANCE: see
+      NEW-OBS-1.
+
+G-42, G-43, G-44  TABLE 1 DISAGREES WITH THE GRAMMAR IN THREE PLACES --
+      ALL THREE STAND, including G-43, the absence of the cut `^` from
+      Table 1 although `memberkey = type1 S ["^" S] "=>"` keeps it and
+      RFC 8610 Section 3.5.4 makes it load-bearing. This document does
+      not touch Table 1 and cannot: Table 1 is in RFC 8610 Section 3.11
+      and the replacement scope is "the collected ABNF syntax in
+      Appendix B of [RFC8610]". Nothing in RFC 9682 mentions precedence,
+      the comma, the cut, or Section 3.11.
+
+ROLL-CALL, the remaining 30, each untouched because RFC 9682 edits no
+production and writes no sentence that reaches it:
+
+  G-01  type-vs-group not decidable by syntax         (RFC 8610 App C)
+  G-03  memberkey absent => arrays only               (App C)
+  G-05  redefinition and forward extension rules      (App C)
+  G-07  inverted range is the empty set               (§2.2.2.1)
+  G-08  int and float literals are disjoint types     (§2.2.1)
+  G-09  `~` is defined only for map/array/tag         (§3.7)
+  G-10  `&` requires a group whose entries have values(§2.2.2.2)
+  G-11  all fourteen control operators' targets       (§3.8)
+  G-13  `/` and `//` are prioritized choice           (App A, App C)
+  G-14  a later alternative can be unreachable        (App A)
+  G-15  occurrence indicators are greedy              (App A)
+  G-16  CDDL omits PEG's NOT and AND                  (App A)
+  G-17  maps are not matched by the PEG algorithm     (§3.5.3)
+  G-18  non-determinism is undetectable by tools      (§3.5.3)
+  G-19  cut semantics                                 (§3.5.4, App C)
+  G-20  `:` implies a cut; "colon without a cut" is   (§3.5.4)
+        inexpressible
+  G-21  `#7.25` constrains the data model, not bytes  (§3.2)
+  G-22  group entry order matters in arrays           (§2.1)
+  G-23  socket/plug and the `$`/`$$` convention       (§3.9)
+  G-24  comments are whitespace; no annotations       (§3.1)
+  G-25  Table 1 is a summary, not the definition      (§3.11)
+  G-26  CDDL brings no security issues of its own     (§5)
+  G-27  `min..max` is one name, not a range           (§2.2.2.1)
+  G-35  no case insensitivity in text strings         (§3.1)
+  G-36  CDDL constrains the data model, never bytes   (§2.2.3)
+  G-37  no way to say "this tag, any content"         (§3.2)
+  G-38  no ordering vocabulary, no set type           (§3.5)
+  G-39  `.cbor`/`.cborseq` and embedded encodings     (§4.2)
+  G-40  the prelude is fixed and has no `string`      (App D)
+  G-41  generics are specified by analogy             (§3.10)
+
+Two of those thirty are worth one extra line each, ours, because this
+document EXERCISES them rather than changing them:
+  - G-13 and G-14 are the machinery that makes NEW-OBS-1 a defect at
+    all. Without prioritized choice there would be no dead alternative,
+    only an ambiguity.
+  - G-21 and G-36 are why Section 3.2's clarification matters: the
+    number after the dot in `#7.n` is a VALUE, not a CBOR additional
+    information, and that is a data-model statement with no byte-level
+    content. Section 3.2's aside, note 2, says the updated grammar
+    "makes it a bit more explicit" and names [Err6575] as the erratum
+    that would say so in RFC 8610's own prose.
+
+
+=====================================================================
+ NEW SIDE CONDITIONS THIS DOCUMENT ADDS (3)
+=====================================================================
+Conditions a conforming tool must now carry that it did not carry
+before. Same vocabulary as the rfc-8610 sheet: S = statically decidable
+from the specification, I = only against an instance, N = not decidable
+or convention only. The verdicts are ours.
+
+NEW-1  §3.1                                              checkable: S
+       AT LEAST ONE RULE, AFTER DIRECTIVE PROCESSING. The grammar no
+       longer enforces it: "Therefore, the present update extends the
+       grammar as in Figure 8 and turns the existence of at least one
+       rule into a semantic constraint, to be fulfilled after processing
+       of all directives." Two things make this harder than it looks.
+       First, "after processing of all directives" names a phase that
+       RFC 9682 does not define; it belongs to [CDDL-MODULES], cited as
+       "Work in Progress, Internet-Draft,
+       draft-ietf-cbor-cddl-modules-03". (That token is contiguous in
+       the source, at lines 423-424; it is wrapped before it here so
+       that this file does not split it either.) Second, a tool with no
+       module support has no
+       directives to process, so for it the condition reduces to
+       RFC 8610's old grammatical one -- and it will reject exactly the
+       files Section 3.1 was written to allow. Marked S because the
+       count is decidable from the specification once the phase is
+       fixed; the phase is the part that is not.
+
+NEW-2  §3.2                                              checkable: S
+       THE THREE RANGES OF A `#7` HEAD-NUMBER. The grammar admits any
+       `head-number` after `"#" "7" "."` and cannot say what it means.
+       Section 3.2 supplies the reading in a sentence this extraction
+       cannot quote whole, because source line 329 ends "the head-" and
+       line 330 begins "number"; the obligation-bearing half is "number
+       stands for the simple value if it is in the ranges 0..23 or
+       32..255 (as per Section 3.3 of RFC 8949 [STD94], the simple
+       values 24..31 are not used)." and the next sentence is whole:
+       "For 24..31, the head-number stands for the "additional
+       information", e.g., #7.25 or #7.<25> is a float16, etc." Three
+       disjoint ranges with two different meanings, and -- ours -- a
+       fourth case the document does not name: a `head-number` given as
+       `<type>` whose type admits a value in 24..31 AND a value outside
+       it (say `0..255`) selects both readings at once. The grammar
+       permits it, Section 3.2 does not address it, and the acceptance
+       criterion for such a model is undefined. Reported.
+
+NEW-3  App B.2                                           checkable: S
+       TWO-STAGE PROCESSING OF A PREFIXED BYTE STRING. Syntax first by
+       `bytes`/`BCHAR`, then the whitespace and comment rules over the
+       RESULT: "Therefore, the rules in Figure 14 (as updated by Figure
+       4) are applied to the result of this processing where bsqual is
+       given as h or b64." This is the condition that makes `h'43424F52
+       ; comment'` work at all, and it is stated ONLY in an appendix
+       whose first line is "This appendix is informative." B.2 also
+       states the consequence for anyone pasting ABNF into CDDL -- the
+       sentence is severed at source line 669, which ends "copying-",
+       with line 670 beginning "and-pasting", so the quotable half is
+       "and-pasting into CDDL models from ABNF that contains single
+       quotes (which may also hide as apostrophes in comments); these
+       need to be escaped or possibly replaced by %x27."
+
+
+=====================================================================
+ NEW GRAMMAR-LEVEL OBSERVATIONS (2) -- ours, not side conditions
+=====================================================================
+
+NEW-OBS-1  A SECOND DEAD ALTERNATIVE IN `type2`. Figure 11 places
+      `/ "#" "7" ["." head-number]` before the pre-existing
+      `/ "#" DIGIT ["." uint]                ; major/ai`. Under the
+      prioritized choice that RFC 8610 Appendix A establishes for CDDL,
+      the older alternative is now unreachable for DIGIT = "7" and
+      partly unreachable for DIGIT = "6". Read as plain symmetrical
+      ABNF, `#7.n` has two parses. They agree for n in 0..31; for n in
+      32..255 only the new one has a defined reading, because a CBOR
+      additional information is five bits. Harmless in effect, and
+      precisely the species of defect G-02 records and G-14 explains.
+      The source's nearest acknowledgement is the Section 3.2 aside,
+      note 2, which regrets the choice of the dot and declines to
+      change it on the ground that doing so "would have been too
+      disruptive"; it is reproduced as an exact line run in
+      production-changes.derived.txt.
+
+NEW-OBS-2  SECTION 2 NARROWS THE LANGUAGE AND SAYS SO NOWHERE.
+      Section 3 carries a compatibility claim -- "These changes are
+      backward compatible (i.e., CDDL files that comply with [RFC8610]
+      continue to match the updated grammar) but not necessarily forward
+      compatible" -- and its scope is Section 3 only, because the
+      sentence before it reads "Each subsection that follows specifies a
+      small change to the grammar that is intended to enable certain
+      kinds of specifications." Section 2 makes no equivalent claim. It
+      says instead that "These changes are intended to mirror the way
+      existing implementations have dealt with the errata reports",
+      which is a statement about deployed tools, and it calls only the
+      hex-escape ADDITION "a backward-compatible addition to the syntax
+      for hexadecimal escapes".
+
+      ours: Section 2 is not backward compatible in the sense Section 3
+      uses, and the document never says so. Concretely, these are valid
+      RFC 8610 CDDL and invalid RFC 9682 CDDL:
+          a = "\'"              ; `\'` is no longer a SESC
+          b = "\a"              ; nor is any other letter outside the 8
+          c = "x\<U+00FC>y"     ; nor a backslash before a non-ASCII char
+          d = "\u"              ; `\u` now requires a payload
+          e = 'x<U+007F>y'      ; DEL is no longer a BCHAR
+          f = "x<U+0085>y"      ; nor is any C1 control a SCHAR
+          ; also: any C1 or surrogate code point inside a comment,
+          ; which makes it a whole-file property and not a literal one
+      (`<U+nnnn>` stands for the character itself; this file is ASCII by
+      choice so that it cannot itself be the thing it is describing.)
+      And the reverse direction is the dangerous one, recorded in full
+      under SESC in production-changes.derived.txt: `"D\u{6f}mino"` and
+      `"🁳"` PARSE UNDER BOTH GRAMMARS WITH DIFFERENT
+      MEANINGS and produce no diagnostic on either side. Section 4
+      names the class without naming the instance: "Attackers may want
+      to exploit such potential confusion by crafting CDDL models that
+      are interpreted differently by different parts of a system."
+
+=====================================================================
+44 conditions carried forward from the rfc-8610 record: 2 closed,
+1 half-closed, 1 amended, 2 restated, 38 standing. 3 new conditions and
+2 new observations. The headline, for a reader who reads one line of
+this file: RFC 9682 FIXES THE SURROGATE AND ESCAPE DEFECTS AND LEAVES
+THE BARE-LF `CRLF`, THE TWO-PREFIX `bsqual`, AND ALL THREE TABLE 1
+DISAGREEMENTS EXACTLY WHERE THEY WERE.
+=====================================================================
