@@ -8,7 +8,7 @@ reviewed_by: ""
 
 # RFC 8551 — examples and test vectors
 
-Pass 1 (extract), examples agent, effort high, working from the source only
+Pass 1 (extract), examples agent, effort max, working from the source only
 (`.cache/rfc-8551.txt`, sha256 `dac39f74…7ed884ae2`, 3531 lines).
 
 `vectors.yaml` holds **47 vectors**:
