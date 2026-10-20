@@ -508,6 +508,25 @@ tags (RFC 8392 §6), but that is the interchange half. So on tags, options 2 and
 confirms is not evidence (`docs/extraction.md`), and this is a place where the
 narrowing's headline constraint turns out to be inert.
 
+> **[qualified] 2026-10-19 by the `rfc-9964` extraction (library#39 Tier 2).**
+> This cut is sound **for the thumbprint path and only for it**, which is this
+> record's scope. It is false of the *signature* path: all three of RFC 9964's
+> COSE examples are **tag 18** (`d2` / `18([`), and the untagged form is never
+> printed. So option 5 must add tag 18 on export and strip it on import, and
+> the no-tags rule is **not** inert once a post-quantum statement is actually
+> signed. The sentence above should be read as scoped to §3's bare map, not as
+> a claim about COSE generally.
+>
+> `rfc-9964` also found something stronger that cuts against *every* option
+> rather than one: a post-quantum `KeyId` **contains an IANA allocation** — the
+> `alg` value −48/−49/−50 — inside the digest preimage, in a position that
+> changes the digest. Option 3 and option 4 inherit it through §6's JWK set,
+> whose `"ML-DSA-44"` is an IANA JOSE name; option 1 has no alternative
+> representation to digest; and a digest over `(kty, pub)` alone would be an
+> R-O-03 invention. **Registry-independence is unavailable for post-quantum
+> principals under any candidate**, which corrects a premise of MD-3 rather
+> than scoring one of its options.
+
 **Cut D — `DEC-003` does not wait on `DEC-002`, and the sequencing assumes it
 does.** §5.4 concedes the construction is syntax-portable ("logically equivalent
 to a digest of the SPKI representation of the key ... computed over the CBOR

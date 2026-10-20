@@ -111,7 +111,7 @@ COSE, JOSE or JWT library was used**, so a shared library bug cannot hide here.
    removed, so no value in `vectors.yaml` is a transcription.
 5. **The whole file round-trips.** `vectors.yaml` was re-read with the
    library's own `_record_yaml` and every digest recomputed *from what the file
-   stores* rather than from the extraction's memory. 150-odd assertions, zero
+   stores* rather than from the extraction's memory. 121 assertions, zero
    failures.
 6. **Both YAML readers agree**: 12 vectors under `_record_yaml.load_yaml` and
    under `_yaml.parse`.
