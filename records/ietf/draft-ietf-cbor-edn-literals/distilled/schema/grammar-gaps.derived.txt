@@ -336,6 +336,19 @@ G-19  THREE RULES IN FIGURE 1 ARE DEFINED AND NEVER REFERENCED:
       Otherwise Figure 1 is CLOSED: 85 productions, no duplicate names,
       82 distinct names referenced, every one defined there or an RFC
       5234 core rule.
+
+      HOW MUCH THE UNDECIDED ROOT COSTS, measured by the cross-check
+      pass against all 251 vectors: nothing, on this corpus.  seq and
+      one-item return the same verdict on every one of the 251.  They
+      differ only where the input is item-less or carries more than one
+      item -- `seq = S [item *(MSC item) SOC]` admits the empty text, a
+      comment-only text, several items and a trailing comma, while
+      `one-item = S item S` admits exactly one item and no trailing
+      comma -- and exactly one input in the whole set is of that shape:
+      "//" with its newline (V-0014), which seq accepts as an item-less
+      sequence and one-item rejects.  Both readings reject it as held,
+      for the G-31 reason, so no vector's verdict moves.  The defect is
+      real and the exposure is one line.
       Locator: Section 6.1 (Figure 1).
       Verdict: DEFECT (dead rules); the closure result is a positive.
 
@@ -445,6 +458,58 @@ G-30  THE DRAFT IS AN INTERNET-DRAFT.  "Updates: 8610, 8949 (if
       Verdict: NOT-CHECKABLE.
 
 
+E.  FOUND BY THE CROSS-CHECK PASS, BY RUNNING THE GRAMMAR
+---------------------------------------------------------------------
+
+G-31  AN END-OF-LINE COMMENT REQUIRES A TERMINATING NEWLINE, so a CDN
+      text cannot END with one.  Figure 1 spells a comment:
+
+          eol-comment     = "#" / "//"
+          comment         = "/" non-slash-star *non-slash "/"
+                          / "/*" ends-in-star
+                                 *(non-slash-star ends-in-star) "/"
+                          / eol-comment *non-lf %x0A
+
+      The third alternative ends in a mandatory %x0A.  There is no
+      alternative that lets an eol-comment be closed by end of input, so
+      `1 # done` does not parse and `1 # done` plus a newline does.  The
+      slash-delimited and C-style forms are self-closing and have no
+      such dependency, which is why the asymmetry is easy to miss.
+
+      WHY IT MATTERS HERE.  Three of the document's own Section 2.3.1
+      examples -- V-0059, V-0060 and V-0061 -- are lines whose last
+      token is a `#` comment.  As the document renders them each line is
+      followed by a newline and all three are valid CDN.  Transcribed as
+      a line, without that terminator, none of the three parses.  They
+      are the only three vectors of 251 affected, and they are why the
+      corpus scores 242/251 as held and 246/251 with the terminator
+      restored.  This is also the reason "//" alone (V-0014) fails the
+      grammar as well as Section 2.1.1's prose.
+      Locator: Section 6.1 (Figure 1), Section 2.3.1.
+      Verdict: DEFECT (end of input under-specified), STATIC.  Observed
+      from a parse, not reasoned.
+
+G-32  SECTION 7.2's "Reference" FIELD DESCRIBES THE WRONG REGISTRY.
+      Both registry field blocks are headed by the identical sentence
+      "Each entry in the registry must include:" (source lines 3281 and
+      3381), and Section 7.2's ENCODING INDICATOR block then ends:
+
+          Reference:
+             a reference document that provides a description of the app-
+             extension identifier
+
+      An Encoding Indicators entry has no app-extension identifier; the
+      field plainly means the encoding indicator.  Section 7.1's block,
+      from which the wording is copied, says the same four fields
+      correctly.  A copy-paste error, recorded not repaired: both blocks
+      are fenced verbatim in ../normative.md.
+      Locator: Section 7.2 against Section 7.1.
+      Requirement: draft-ietf-cbor-edn-literals#R-0193 (the one
+      requirement text that occurs TWICE in the document; its locator
+      names the first occurrence and its `field` records the second).
+      Verdict: DEFECT (cosmetic), NOT-CHECKABLE.
+
+
 ---------------------------------------------------------------------
 WHAT WAS CHECKED MECHANICALLY, AND WHAT WAS NOT
 
@@ -458,14 +523,44 @@ Checked by script against the cached source and the verbatim files:
     which is an independent proof that no rule was lost at a frame;
   - the per-figure production counts: Fig 2 = 7, Fig 3 = 10, Fig 4 = 4,
     Fig 5 = 14, Fig 6 = 9, Fig 7 = 37, Figs 8-10 = 12, Figs 11-14 = 26;
-  - the cross-figure name collisions of G-18 (24 names redefined, 15
-    identically, 9 differently);
-  - the unresolved-name lists behind G-17;
+  - the cross-figure name collisions of G-18 (24 names redefined, 16
+    identically, 8 differently);
+  - the unresolved-name lists behind G-17 (EIGHT names needed from
+    Figure 1 and declared nowhere);
   - cdn-dedented.derived.abnf round-trips: re-indenting it by three
     columns reproduces the four verbatim regions of cdn.abnf line for
     line, and the generator aborts if it does not.
 
-NOT checked: nothing here has been run through a real ABNF or PEG
-parser, and no CDN implementation was used.  No conformance claim is
-made about any tool.  G-10, G-11, G-13 and G-21 are reasoned from the
-grammar text, not observed from a parse.
+Added by the CROSS-CHECK PASS (pass 3, 2026-10-19), which did run a
+parser -- an RFC 5234 ABNF reader plus a memoised set-of-end-positions
+recogniser, reading cdn.abnf's own bytes:
+
+  - G-10, G-11, G-13, G-15 and G-21 are no longer reasoned from the
+    grammar text.  Every example they assert was run: simple(25),
+    simple(31), simple(1000) and simple(256) are rejected while
+    simple(23), simple(32) and simple(255) parse; h'00'_ , 'A'_ , "A"_ ,
+    ''_ and ""_ parse; 0X1267, 0O11147, 0B1001, 1E5 and 0x1.8P0 parse
+    while NAN, TRUE and INFINITY do not; HT parses between tokens and
+    not inside a string literal; DEL parses inside a quoted string and
+    not inside a raw string; b64'-_+/' parses at the Figure 1 layer and
+    -_+/ parses as Figure 4 content.  56 such claims were tested and all
+    56 held.
+  - G-20 is now OBSERVED: against Figures 2+3, 4711...0815 parses as h
+    content; against Figures 2+4, 47...08 does not parse as b64 content.
+  - G-19's dead start symbol was measured.  Of 251 vectors, seq and
+    one-item agree on all 251; the two diverge on exactly one input in
+    the whole corpus, "//" followed by its newline, which seq accepts as
+    an item-less sequence and one-item rejects.  See G-31.
+  - 242 of the 251 vectors parse as held, 246 with the document's own
+    line terminator restored.  Nothing in the grammar analysis changed.
+
+STILL NOT checked: no CDN implementation was used -- none is installed
+in this environment -- so no conformance claim is made about any tool.
+The recogniser is a plain backtracking ABNF recogniser, NOT a PEG: where
+ordered choice is load-bearing (G-08) it accepts the union of the
+alternatives, so it answers "what does the grammar as written admit"
+and not "what would a Section 6-conforming PEG parser do".  G-01's
+delimiter widths are not in the ABNF at all and were hand-coded in two
+modes, lenient (rawdelim = 1*"`" may match any width) and the Section
+6.1 item 7 PEG reading (maximal munch); no vector distinguishes them.
+G-08 itself remains NOT-CHECKABLE for the same reason.

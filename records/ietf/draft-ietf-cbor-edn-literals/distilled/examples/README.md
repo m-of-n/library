@@ -45,8 +45,8 @@ record, so it is machine-greppable:
 | --- | --- | --- |
 | `SOURCE HEX.` | **52** | the document prints these bytes. This extraction **decoded them and confirmed they denote the `edn`**. |
 | `SOURCE HEX CORRECTED.` | **1** | the document prints bytes that **do not** denote the `edn`. `hex` carries *our* corrected bytes; `notes` quotes the document's and shows the arithmetic. |
-| `COMPUTED HEX.` | **172** | the document prints only the EDN. The bytes are this extraction's encoding of it, in RFC 8949 Preferred Serialization unless an encoding indicator says otherwise — which is the document's own assumption, `R-0222` (§4.1). |
-| `NO HEX.` | **26** | no bytes, and the reason is stated — almost always an unassigned `CPA888`/`CPA999` tag number, occasionally a value the document declines to fix. |
+| `COMPUTED HEX.` | **173** | the document prints only the EDN. The bytes are this extraction's encoding of it, in RFC 8949 Preferred Serialization unless an encoding indicator says otherwise — which is the document's own assumption, `R-0222` (§4.1). |
+| `NO HEX.` | **25** | no bytes, and the reason is stated — almost always an unassigned `CPA888`/`CPA999` tag number, occasionally a value the document declines to fix. **Seventeen carry `expect: valid`** and are the deliberate non-encodables; the other eight are eight of the nine `invalid`. |
 
 **63 byte sequences printed by the document were independently re-encoded from
 the EDN and compared; 61 matched and 2 did not** — the 2 are both cells of one
@@ -65,6 +65,21 @@ Table 6 (10 rows × 2 columns), §4.2's `98 02 f4 f5` and §4.3's
 > A byte string this extraction derived is **never** presented as one the
 > document printed. Where the two disagree, both appear and the disagreement is
 > the finding.
+
+> The cross-check pass moved one vector out of `NO HEX.`. `V-0238`
+> (`987654321098765432310`) withheld its bytes because "the encoding REQUIRES
+> major type 6 (tag 2), which is exactly what a no-IANA-tags profile forbids" —
+> while `V-0239` carried `c249358a750438f380f5f6` for **the same value**, one
+> line below, from the same sentence of §6.1 item 5: "E.g.,
+> 987654321098765432310, which is equivalent to `2(h'35 8a 75 04 38 f3 80 f5
+> f6')` in its Preferred Serialization". A vector set cannot refuse a value's
+> bytes on one line and print them on the next, and the withheld side was the
+> wrong one: the reason given was a statement about **our** tag profile, not
+> about the document declining to fix the value, which it fixes in that very
+> clause. `V-0238` now carries the bytes, with the profile caveat kept in
+> `notes`. Provenance moved `172`/`26` → `173`/`25`; the `NO HEX.` class is now
+> exactly the deliberate non-encodables and the invalid vectors, with nothing in
+> it whose bytes the document states.
 
 ## The defect the round-trip found
 
@@ -111,6 +126,54 @@ Two further source defects are recorded as vectors rather than fixed:
   error in the authored source. It is transcribed as we hold it and marked
   `invalid`, with the distinction spelled out in `notes`; a reader with the XML
   source should re-check it.
+
+## Every vector against the grammar
+
+**The cross-check pass (2026-10-19) ran all 251 `edn` values through the §6.1
+grammar.** This is the check that had never been done: the vectors are CDN
+*source text* and `../schema/cdn.abnf` is CDN's own ABNF, so "does this example
+validate against the schema" means "does this `edn` parse". The instrument was an
+RFC 5234 ABNF reader plus a memoised set-of-end-positions recogniser, reading
+`cdn.abnf`'s own bytes — it strips the `;` headers and the three-column margin
+itself, so the grammar under test is the verbatim artifact and not a
+transcription. It is a backtracking recogniser, **not** a PEG: ABNF alternation
+is unordered, so where §6's ordered choice is load-bearing it accepts the union
+(`schema/grammar-gaps.derived.txt` G‑08).
+
+**242 of 251 parse as held. 246 of 251 parse with the document's own line
+terminator restored.** The verdict is identical from both candidate start
+symbols and identical under both readings of the raw-string delimiter widths.
+
+| vector | `expect` | why it does not parse |
+| --- | --- | --- |
+| `V-0014` `//` | invalid | `comment = … / eol-comment *non-lf %x0A` needs the terminating LF (G‑31). With the LF it parses under `seq` as an item-less sequence and not under `one-item` — the **only** input in the corpus where the start symbol matters |
+| `V-0015` `/*foo/` | invalid | `ends-in-star` needs a `*`, and `non-slash-star` excludes both `*` and `/`, so neither the slash nor the C-style alternative can match |
+| `V-0059`–`V-0061` | **valid** | each ends in a trailing `#` comment, which needs the LF the block scalar strips (G‑31). Valid CDN on the document's own line; the three are the only vectors affected |
+| `V-0101` `[[][]]` | invalid | `MSC = ("," S) / (MS ["," S])` and both alternatives are non-empty, so the separator is **mandatory in the grammar**, not only in §2.4.1's prose |
+| `V-0174` `b1<"Hello world">` | invalid | `app-sequence` doubles the angle brackets. All three of `b1<…>`, `b1<…>>` and `b1<<…>` are rejected; only `b1<<"Hello world">>` parses |
+| `V-0220` `(_ )` | invalid | `streamstring = "(_" MS string *(MSC string) SOC ")"` requires at least one `string` |
+| `V-0231` | invalid | the `bytes_in_IRI` line's single `>`. Restore it and the whole example parses, which is the evidence that the rest of the four-line literal is sound |
+
+Three results worth stating because they are easy to assume the other way:
+
+- **Six of the nine `invalid` vectors fail the GRAMMAR, not only the semantics.**
+  Only `V-0044`, `V-0045` (`1.1_1`, `1.1_2` — encoding indicators too small) and
+  `V-0102` (a duplicate map key) parse and then fail on meaning. The sibling
+  `rfc-8610` record's invalid set is mostly the semantic kind; this one is not,
+  because four of CDN's own error cases — the two repurposed comment forms, the
+  mandatory separator and the chunkless `(_ )` — are written into Figure 1. Every
+  one of the six carries a `violates` that already cited the §6.1 production, so
+  the artifact and the parser agree.
+- **All 17 deliberate non-encodables parse.** Ellipses, the CRI model, the
+  unassigned `CPA888`/`CPA999` tags: those are reasons no *bytes* can be given,
+  and none of them is a parse failure. 17 of 17.
+- **`seq` versus `one-item` changes no verdict.** §6.1 names no root and
+  `one-item` is referenced nowhere (G‑19), so the choice is undecided. On this
+  corpus it is also inconsequential: the two differ only on item-less and
+  multi-item input (`seq` admits the empty text, a comment-only text, several
+  items and a trailing comma; `one-item` admits exactly one item and no trailing
+  comma), and exactly one vector is of that shape — `V-0014`, and only once its
+  newline is restored. The defect is real; the exposure here is one line.
 
 ## What `expect` means
 
@@ -194,8 +257,8 @@ Applying that rule consistently:
 A literal that recurs in a later section making a different point is kept as a
 separate vector (`h''` at V-0006 and again at V-0241, where §6.2.1 covers it as
 the empty case of the `app-string-h` grammar). `notes` says so when it happens.
-**Match vectors on `id`, never on `edn` or `hex`:** 225 vectors carry a `hex`
-and those take only 113 distinct values, so 175 of them share bytes with at
+**Match vectors on `id`, never on `edn` or `hex`:** 226 vectors carry a `hex`
+and those take only 113 distinct values, so 177 of them share bytes with at
 least one other — that is what an equivalence table is. Six `edn` strings
 (`true`, `h''`, `<<>>`, `1.5_2`, `h'68656c6c6f20776f726c64'`, `'Hello world'`)
 occur twice, always in two different sections making two different points.
@@ -245,7 +308,8 @@ Everything the document asserts numerically was recomputed:
   replacement for the deprecated `streamstring`, but neither appears in §6.2
   Table 7 nor in §7.1 Table 8. The five §3.6 vectors are therefore written with
   prefixes that are, as draft-27 stands, unregistered. See `design-notes.md`.
-- **No encoding for anything needing `CPA888` or `CPA999`.** 26 vectors. Those
+- **No encoding for anything needing `CPA888` or `CPA999`.** Eight of the
+  twenty-five `NO HEX.` vectors name one of those tag numbers outright. Those
   tag numbers are placeholders; §7.5's RFC-Editor note says to substitute what
   IANA assigns (suggested 888 and 999). Any byte string we invented would go
   stale at publication.

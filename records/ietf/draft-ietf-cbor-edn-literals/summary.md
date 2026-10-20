@@ -120,13 +120,24 @@ explicitly **provisional** names although both are mandatory to implement, and
   algorithm cited rather than invented; §1.3.2 says CDN has none to cite. So
   canonicalisation belongs one level down, in the CBOR — and nobody should diff
   two `.cdn` files instead of two byte strings.
-- Nine quoted spans sit on mid-token hyphenation breaks and two sentences
-  cannot be quoted whole; a page frame also cuts §2.4.1's mandatory-separator
-  sentence in half. Twenty-six further grammar defects and gaps are enumerated
-  in `distilled/schema/grammar-gaps.derived.txt`.
-- The extraction is at **pass 1 of 3**; verify and cross-check have not run and
-  no human has signed anything off, so these artifacts are readable but not
-  buildable-on.
+- **An end-of-line comment needs its newline, so a CDN text cannot *end* with
+  one.** `comment = … / eol-comment *non-lf %x0A` makes the LF mandatory and
+  offers no end-of-input alternative, so `1 # done` does not parse while the
+  same line followed by a newline does. Three of the draft's own §2.3.1
+  examples are such lines. Found by running the grammar; recorded as `G-31`.
+- **§6.1 names no start symbol.** `seq` and `one-item` are both plausible
+  roots, `one-item` is referenced nowhere, and no sentence says which is the
+  root. It makes no difference to any of the 251 vectors — the two differ only
+  on item-less and multi-item input — but a tool has to choose. (`G-19`.)
+- Eleven quoted requirement spans sit on mid-token hyphenation breaks and two
+  sentences cannot be quoted whole; a page frame also cuts §2.4.1's
+  mandatory-separator sentence in half, and fifteen quotations in the vector set
+  had silently healed such a break before the verify pass restored the source's
+  bytes. The full enumeration — thirty-two side conditions and defects,
+  `G-01`…`G-32` — is in `distilled/schema/grammar-gaps.derived.txt`.
+- The extraction is **complete at FX-1 `profile: full`** — extract, verify and
+  cross-check, each at effort max — but **no human has reviewed it**: every
+  `reviewed_by` is empty.
 
 ## One thing it gets right that RFC 8610 does not
 

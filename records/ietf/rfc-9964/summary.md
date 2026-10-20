@@ -89,9 +89,14 @@ not claim they have been.
 | `record.yaml` | metadata |
 | `summary.md` | this document |
 
-No `distilled/`. **FX-1 extraction for this record is owned by #39** (Tier 2),
-not by the NIST lane — this issue owns ingest, summary and the relation graph
-only, and the `distillation` block is deliberately untouched.
+`distilled/` exists and the **FX-1 extraction is in progress under #39**
+(Tier 2) — not the NIST lane, which owned ingest, summary and the relation
+graph only. `distilled/README.md` states the artifact set and which passes have
+run; consult it rather than this paragraph, which has no way of staying
+current. The line it replaces read "No `distilled/`", true when written and
+false the moment the record was scaffolded — the stale-absence defect
+library#70 fixed on three records, and the eighth of nine summaries still
+carrying the phrase.
 
 ## Limits
 

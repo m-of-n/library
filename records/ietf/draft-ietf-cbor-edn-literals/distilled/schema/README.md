@@ -49,7 +49,7 @@ this record's `content.sha256`.
 | `encoding-indicator-registry.txt` | **verbatim** | Section 7.2, Table 9 — the 10 initial encoding indicators and the `ai` value each selects | the grammar's `spec = ["_" *wordchar]` admits any of them and many more; the registry, not the grammar, says which mean anything |
 | `tags.txt` | **verbatim** | Section 7.5, Table 12 — the two CBOR tags requested | **`CPA888` and `CPA999` are placeholders, not assignments.** Section 7.5 gives them as "suggested assignments: 888 and 999" and an RFC-Editor note instructs that the `CPA` prefix be stripped and the residue replaced |
 | `byte-string-prefixes.derived.yaml` | derived | **the library#39 question, settled**: every byte-string prefix, its status, its carriers, what the draft does to RFC 8610 Appendix G and RFC 8949 Section 8, and the residual mismatch with CDDL | the table and the verdicts are **ours**; every `quote:` is the draft's own words and is checked as a contiguous span of the source. RFC 8610 and RFC 8949 were **not read**; they are cited from this library's `rfc-8610` record |
-| `grammar-gaps.derived.txt` | derived | **30 enumerated side conditions and defects** (G‑01…G‑30) a conforming tool must carry beyond the ABNF, each with a locator and a STATIC / INSTANCE / NOT-CHECKABLE / DEFECT verdict | it is a list, not an implementation, and the verdicts are ours. Nothing here was run through a real ABNF or PEG parser |
+| `grammar-gaps.derived.txt` | derived | **32 enumerated side conditions and defects** (G‑01…G‑32) a conforming tool must carry beyond the ABNF, each with a locator and a STATIC / INSTANCE / NOT-CHECKABLE / DEFECT verdict. `G‑31` and `G‑32` were found by the cross-check pass | it is a list, not an implementation, and the verdicts are ours. The claims WERE run through an ABNF recogniser by the cross-check pass — see *State* — but no CDN implementation was used and `G‑08`'s PEG ordering is still unchecked |
 | `README.md` | — | this file | — |
 
 ## The byte-string prefix question (library#39)
@@ -173,11 +173,19 @@ file. Full detail and locators in `grammar-gaps.derived.txt`.
 - **Section 6.3 understates its own dependencies.** It says the integrated
   grammars need "common definitions in Figures 2 and 9". Checked mechanically:
   Figure 9 references `DIGIT1`, `HEXDIG1` and `ODIGIT`, and Figures 11–14
-  reference `startrawdelim`, `alikerawdelim` and `shortrawdelim` — none of which
-  Figure 2 defines. All six live only in Figure 1. (G‑17)
-- **Nine rule names are defined more than once with different right-hand
+  reference `alikerawdelim`, `ellipsis`, `eol-comment`, `shortrawdelim` and
+  `startrawdelim` — none of which Figure 2 defines. **All eight live only in
+  Figure 1.** (Pass 1 said six, omitting `ellipsis` and `eol-comment`; the
+  cross-check pass re-derived the closure of the integrated set against the
+  verbatim files and got eight.) (G‑17)
+- **Eight rule names are defined more than once with different right-hand
   sides**, across figures a reader is told to combine. Twenty-four names are
-  defined twice or more; fifteen identically. The `blank`/`lblank` family (`S`,
+  defined twice or more; sixteen identically. (Pass 1 counted nine differing and
+  fifteen identical, putting `ellipsis` among the differing ones although its two
+  definitions differ only in an ABNF comment. The cross-check pass re-derived the
+  split by parsing the verbatim files figure by figure: **24 names redefined, 16
+  identically, 8 differently** — `ALPHA`, `S`, `bstr`, `comment`, `non-lf`,
+  `non-slash`, `non-slash-star`, `non-star`.) The `blank`/`lblank` family (`S`,
   `non-lf`, `non-slash`, `non-slash-star`, `non-star`) differs *deliberately* —
   Figure 1 parses source where HT and CR may appear, Section 6.2 parses decoded
   content where they cannot — but the draft never namespaces the two sets.
@@ -229,8 +237,9 @@ registry content a tool must honour.
 
 ## State
 
-**Pass 1 of 3 (extract) complete for this directory.** What was established
-mechanically, by script, against the cached source:
+**All three passes complete for this directory** — extract, verify, cross-check,
+each at effort max. What was established mechanically, by script, against the
+cached source:
 
 - **All 23 verbatim regions across 13 files are byte-identical to the source
   lines their headers name**, verified by re-reading each written file and
@@ -244,12 +253,49 @@ mechanically, by script, against the cached source:
   columns reproduces the four verbatim regions of `cdn.abnf` line for line, and
   the generator aborts if it does not.
 - Per-figure production counts: Fig 2 = 7, Fig 3 = 10, Fig 4 = 4, Fig 5 = 14,
-  Fig 6 = 9, Fig 7 = 37, Figs 8–10 = 12, Figs 11–14 = 26.
+  Fig 6 = 9, Fig 7 = 37, Figs 8–10 = 12, Figs 11–14 = 26. Re-derived figure by
+  figure by the cross-check pass from the BEGIN/END region labels: all eight
+  agree, 204 productions across the fourteen figures.
 - Every `quote:` in `byte-string-prefixes.derived.yaml` (13 of 13) is a
   contiguous span of the whitespace-normalised source.
 
-**Not done:** nothing here has been run through a real ABNF or PEG parser, and
-no CDN implementation was used — none is installed in this environment. The
-checks performed are closure, collision, completeness and byte-exactness, not a
-parse. `grammar-gaps.derived.txt` and `byte-string-prefixes.derived.yaml` have
-not been adversarially re-derived; that is pass 2's job.
+**AND NOW, A PARSE.** The cross-check pass (2026-10-19) wrote an RFC 5234 ABNF
+reader and a memoised set-of-end-positions recogniser, pointed it at `cdn.abnf`
+itself — stripping the `;` headers and the three-column margin in the reader, so
+the grammar under test is this directory's own bytes — and ran the corpus
+through it. Results:
+
+- **`cdn.abnf` loads as 85 productions with 82 distinct names referenced, 0
+  unresolved and exactly three unreferenced** (`lblank`, `newline`, `one-item`).
+  Independently reproduced; `cdn-dedented.derived.abnf` yields the same 85 rules
+  in the same order with identical right-hand sides, which is a second,
+  stronger round-trip than the line-for-line one.
+- **242 of the 251 vectors in `../examples/vectors.yaml` parse**; 246 with the
+  line terminator the document's own lines carry. The nine that do not are the
+  six `expect: invalid` vectors whose `violates` already names a §6.1
+  production, and three §2.3.1 vectors that end in an end-of-line comment
+  (G‑31). Full result in `../examples/README.md`.
+- **The start symbol does not matter for this corpus.** `seq` and `one-item`
+  give the same verdict on all 251, and diverge on exactly one input in the
+  whole set — `//` with its newline, which `seq` accepts as an item-less
+  sequence and `one-item` rejects. That is the practical size of G‑19's defect.
+- **56 parse claims made in this file and in `grammar-gaps.derived.txt` were
+  run as tests, and all 56 hold** — `b32'…'`, `nosuch'x'`, `pragma'y'` and
+  `true'x'` parse; `simple(25)`, `simple(31)`, `simple(1000)` and `simple(256)`
+  do not while `simple(23)`/`simple(32)`/`simple(255)` do; `0X1267`, `0O11147`,
+  `0B1001`, `1E5` and `0x1.8P0` parse while `NAN`, `TRUE` and `INFINITY` do
+  not; `h'00'_`, `'A'_`, `"A"_`, `''_` and `""_` parse; HT parses between
+  tokens and not inside a string literal; DEL parses inside a quoted string and
+  not inside a raw string; a lone surrogate is rejected and U+D7FF/U+E000
+  accepted; `(_ h'01', "foo")` and `(_ "foo", "bar")` parse; and against
+  Figures 2+3 and 2+4, `4711...0815` parses as `h` content while `47...08` does
+  not parse as `b64` content, which is G‑20 observed rather than reasoned.
+
+**Still not done:** no CDN implementation was used — none is installed in this
+environment — so no conformance claim is made about any tool. The recogniser is
+a plain backtracking ABNF recogniser, *not* a PEG: where ordered choice is
+load-bearing (G‑08) it accepts the union, which is the right instrument for
+asking what the grammar as written admits and the wrong one for asking what a
+§6-conforming PEG parser would do. The raw-string delimiter widths (G‑01) are
+not in the ABNF at all and were hand-coded in two modes, lenient and the §6.1
+item 7 PEG reading; no vector distinguishes them.
