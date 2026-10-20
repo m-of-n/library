@@ -404,8 +404,13 @@ Verbatim (source line 485):
 - (§2.7) "Together with the start (root) rule name, cose.COSE_Key, supplied by -scose.COSE_Key, this results in the following CDDL 1.0 specification:"
 
 Verbatim (source lines 509–519). The synthesized root rule is spelled
-`$.start.$`, which appears exactly once in the document and is nowhere
-defined:
+`$.start.$`, which occurs exactly once in the document — here, as its own
+definition — and whose convention is nowhere introduced:
+*[correction 2026-10-20, cross-check pass: this read "appears exactly once in
+the document and is nowhere defined", which is false at face value — the line
+below assigns the name. Pass 2 corrected the same wording in
+`schema/grammar-gaps.derived.txt` G-18 and left four other copies of it
+standing; this is one of them.]*
 
 ```
    $.start.$ = cose.COSE_Key
@@ -548,5 +553,12 @@ absence is part of the extraction. The grep counts are in `README.md`.
 - **No versioning and no variant selection** — §2 says so itself and points at
   `[I-D.bormann-cbor-cddl-2-draft]`, a second Internet-Draft, for the design
   considerations.
-- **No definition of `$.start.$`**, the synthesized root rule name §2.7's
-  output uses once.
+- **No introduction of the `$.start.$` convention.** The synthesized root rule
+  name occurs exactly once in the document, at source line 509, and that one
+  occurrence *is* its definition (`R-0068`); what the document never does is
+  say where the spelling comes from, whether the name is reserved, or what a
+  basic-CDDL tool should make of a socket-shaped root rule.
+  *[correction 2026-10-20, cross-check pass: this bullet read "**No definition
+  of `$.start.$`**", which contradicts `schema/grammar-gaps.derived.txt` G-18 as
+  pass 2 corrected it — line 509 is the definition. The absence is of the
+  convention, not of the assignment.]*

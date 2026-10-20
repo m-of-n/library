@@ -152,7 +152,12 @@ evidence for a rule the document states only by example:
 | `V-0003` / `V-0005` | the `as cose` clause | **what prefixing is**: four names grow a `cose.` prefix; `int`, `tstr`, `bstr`, `any` do not (`R-0053`) |
 | `V-0007` / `V-0011` | `include … from` vs `import … from` | explicit `include` is **not** transitive (`R-0056`); explicit `import` is (`R-0060`) |
 | `V-0011` / `V-0013` | the selector written without its prefix | emits **one extra line**, the alias at source line 456 (`R-0064`) — which is the whole basis for that rule, and it is never stated as one (G-21) |
-| `V-0005` / `V-0016` | `-s` on the command line | the root rule is emitted as `$.start.$`, a name used once in the document and nowhere defined (G-18) |
+| `V-0005` / `V-0016` | `-s` on the command line | the root rule is emitted as `$.start.$`, a name that occurs once in the document — as its own definition — with the convention behind it never introduced (G-18) |
+
+*[correction 2026-10-20, cross-check pass: the last row read "a name used once
+in the document and nowhere defined", the wording pass 2 corrected in
+`../schema/grammar-gaps.derived.txt` G-18 and left standing in four other
+places, of which this was one. Source line 509 assigns the name.]*
 
 ## Reproducing any of this
 

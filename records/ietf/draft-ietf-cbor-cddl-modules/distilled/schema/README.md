@@ -102,7 +102,14 @@ rather than asserted from this source: the RFC 9052 fragments those outputs are
 drawn from *do* carry per-field comments (`; kty`, `; kid`, `; alg`,
 `; criticality`, `; content type`, `; key identifier`, `; IV`, `; Partial IV`),
 per this library's verbatim capture at
-`records/ietf/rfc-9052/distilled/schema/cose.cddl` lines 60–67 and 168–175. The
+`records/ietf/rfc-9052/distilled/schema/cose.cddl` — in its `COSE_Key` and
+`Generic_Headers` fragments, found under that file's own markers
+`; §7 Key Objects -- COSE_Key` and
+`; §3.1 Common COSE Header Parameters -- Generic_Headers`. *[correction
+2026-10-20, cross-check pass: this cited "lines 60–67 and 168–175" of that
+file. The ranges are still right, but a cross-record citation by line number is
+the drift pass 2 had to repair in `grammar-gaps.derived.txt` G-01; productions
+are stable and line numbers are not.]* The
 document's rendering also drops the redundant inner parentheses of RFC 9052's
 `? 4 => [+ (tstr / int) ]`, normalises the indentation from four columns to two
 and adds a trailing comma after the last member. **None of those changes the

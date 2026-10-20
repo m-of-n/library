@@ -318,7 +318,13 @@ The cross-document half of this is attributed rather than asserted from this
 source: the RFC 9052 fragments those outputs are drawn from *do* carry per-field
 comments (`; kty`, `; kid`, `; alg`, `; criticality`, `; content type`,
 `; key identifier`, `; IV`, `; Partial IV`), per this library's verbatim capture
-at `records/ietf/rfc-9052/distilled/schema/cose.cddl` lines 60–67 and 168–175.
+at `records/ietf/rfc-9052/distilled/schema/cose.cddl` — its `COSE_Key` and
+`Generic_Headers` fragments, under that file's own markers
+`; §7 Key Objects -- COSE_Key` and
+`; §3.1 Common COSE Header Parameters -- Generic_Headers`. *[correction
+2026-10-20, cross-check pass: this cited "lines 60–67 and 168–175" of that
+file — a cross-record citation by line number, the drift pass 2 repaired in
+G-01. The ranges still hold; the citation form did not.]*
 The rendering also drops the redundant inner parentheses of
 `? 4 => [+ (tstr / int) ]`, reindents from four columns to two and adds a
 trailing comma. **None of those changes the language** — an occurrence

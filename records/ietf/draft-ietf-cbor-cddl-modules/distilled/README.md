@@ -11,11 +11,14 @@ reviewed_by: ""
 FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what it
 does not.
 
-**State: passes 1 and 2 of 3 complete (extract, verify). No `profile` is
-declared** — this record claims `distillation.standard: FX-1` and records both
-passes; the cross-check pass is not done, so there is no numerator yet
-(`docs/extraction.md`: "An *unfinished* extraction is neither `full` nor
-`partial`: it has no profile yet"). **No `reviewed_by` is signed.**
+**State: all three machine passes complete (extract, verify, cross-check), and
+`distillation.profile: full` against `standard: FX-1` as of 2026-10-20.** The
+artifact set is complete, every artifact kind is present or declared
+not-applicable with a reason, and the cross-check pass found the set internally
+consistent — see *Cross-check run (pass 3)* below for what it checked and the
+five things it corrected. **Pass 4 is human review and has not happened: no
+`reviewed_by` is signed, so these artifacts are readable but not
+buildable-on.**
 
 Pass 2 (verify, 2026-10-20) re-derived the record's four sharpest claims from
 the cached source alone, without reading pass 1's reasoning first: the `id`
@@ -279,8 +282,18 @@ re-run from pass 1's.
 - **Citation integrity.** Every `R-`, `V-` and `G-` id cited anywhere under
   `distilled/`, in `record.yaml` or in `summary.md` resolves: 92 R ids defined
   and all local citations found, 19 of 19 V ids, 21 of 21 G ids, **0 dangling**.
-  The only unqualified-looking exceptions are `rfc-8610#R-0102` and
-  `rfc-8610#R-0106`, which are cross-record and both exist in that record.
+  Four distinct **cross-record** ids are cited, all of them record-prefixed and
+  all four verified to exist in the record named: `rfc-8610#R-0079` (×6),
+  `rfc-8610#R-0102` (×4), `rfc-8610#R-0106` (×2) and `rfc-9165#R-0053` (×5).
+  *[correction 2026-10-20, cross-check pass: this said "the only
+  unqualified-looking exceptions are `rfc-8610#R-0102` and `rfc-8610#R-0106`".
+  Those two are merely the only ones a prefix-blind resolver notices, because
+  they fall outside this record's `R-0001`–`R-0092` range. The other two —
+  `rfc-8610#R-0079` and `rfc-9165#R-0053` — **collide with ids this record also
+  defines** (its own `R-0079` is the `from-clause` production and its `R-0053`
+  is the prelude exemption), so a resolver that drops the prefix silently
+  returns the wrong requirement. That is the dangerous case, and it was the
+  unreported one.]*
 - **The six module files.** Read as basic CDDL alone, all six have at least one
   rule name that resolves to nothing (`COSE_Key`, `cose.COSE_Key`, `label` and
   `values`, `cose.empty_or_serialized_map` twice) — re-derived, not taken over.
@@ -291,6 +304,197 @@ re-run from pass 1's.
   0, `plug` 0, `$$` 0, `/=` 0, `//=` 0, `order` 1 (line 181), `precedence` 1
   (line 252), `determin` 1 (line 259), `register`/`registry` 0. Semicolons in
   all seven composed outputs: **0**.
+
+### Cross-check run (pass 3, 2026-10-20)
+
+Pass 3 did neither the extract nor the verify pass and wrote its own scripts. It
+is the FX-1 cross-check: **requirements ↔ schema ↔ messages ↔ examples.** It did
+not repeat pass 2's word sweeps, which stand.
+
+**The four cross-check deliverables (`.claude/skills/extract` §3).**
+
+1. **Every field a requirement names exists in `messages.yaml` or the schema —
+   holds, in both directions.** `messages.yaml` carries **13 constructs and 41
+   fields**; **all 41** have a non-empty `constrained_by`, citing **43 distinct**
+   requirement ids, and **all 43 resolve**. Each of Appendix A's **ten**
+   productions appears in `messages.yaml` *and* in `schema/`, and each one's
+   requirement (`R-0078`–`R-0087`, one per production) is cited by at least one
+   message field. Checked the hard way too: every field-like token in the 92
+   requirement texts — production names, `%s"…"` literals, `%x` ranges, `;#`,
+   `CDDL_INCLUDE_PATH`, `-icose=rfc9052`, `-scose.COSE_Key`, `$.start.$`,
+   rule-name left-hand sides — was harvested mechanically and looked up: **30 of
+   32 are held** in `messages.yaml` or `schema/`. The two that are not are
+   `[I-D.bormann-cbor-cddl-2-draft]` and `[I-D.bormann-t2trg-deref-id]`, which
+   are bibliography, not fields — and they are the record's one open limit (see
+   the end of this file).
+2. **Every message in a protocol flow is defined — `not_applicable`, and the
+   verdict is consistent with everything else here.** There is no `protocol.yaml`
+   to cross-check against. The verdict was not re-litigated by re-running the
+   sweep; it was tested for *consistency*: all **13** constructs in
+   `messages.yaml` carry an `encoding:` beginning **"plain text"** and none
+   names a sender, a receiver or a role, which is what the file's header
+   already claims ("There is no CBOR, no COSE and no wire format anywhere in
+   this document"); the **19** vectors divide by `role:` into **6** module
+   inputs, **7** composed outputs, **3** shell command lines, **1** directive,
+   **1** grammar and **1** environment-variable value, and **not one is a
+   message**; `normative.md`'s twenty locators are all front matter, §1–§4 or
+   an appendix, with no exchange among them; and §4 allocates nothing
+   (`R-0076`), so there is no registration to model either. Nothing in the
+   record contradicts the verdict.
+3. **Every state-machine trigger is a defined message or a named event — also
+   `not_applicable`, same test, and the one thing that *looks* like a trigger
+   checks out.** Swept the whole of `distilled/` for the state-machine
+   vocabulary. `guard` and `lifecycle` occur **only** inside this file's own
+   prose about the absence. `transition` occurs once outside it, in
+   `requirements.yaml`'s `field` note for `R-0025`, where it means a tooling
+   transition and not a state transition. And `trigger` occurs exactly once as
+   a **field name**: `messages.yaml`'s `alias rule` construct has
+   `- name: trigger`, whose value is "the selector written without the prefix,
+   with an `as` clause present". That is a *syntactic condition on a one-shot
+   transformation* — it names no source state, no target state and no event —
+   and it is a defined condition on a defined construct, with both its
+   `constrained_by` ids (`R-0063`, `R-0064`) resolving. So the deliverable is
+   satisfied rather than vacuous. The one procedure in the document, module
+   name resolution, is held as data in `schema/name-resolution.derived.yaml`,
+   whose own fields read `resolution.specified_by_this_document: false`,
+   `module_name.carries_a_principal/_version/_digest/_uri: false` and
+   `one_way.composition_is_reversible: false` — a lookup, not a lifecycle, and
+   the file contains no `state`, `transition`, `trigger` or `guard` key at all.
+4. **Every example validates against the schema — all 19 confirmed, from the
+   verbatim capture.** Pass 3 built the two checkers rather than taking pass 2's
+   verdicts: (a) a backtracking recogniser for `directive`, whose character
+   classes were read **out of `schema/module-directives.abnf` by parsing its
+   `%x` ranges**, not transcribed by hand — first set 55 characters
+   (`$ @ A-Z _ a-z`), repeat set 65 (adds `0-9`), `filename` 65 (`- . 0-9 A-Z _
+   a-z`), and `.`/`-` in `filename` but in neither `id` set; and (b) a rule-name
+   closure checker over the composed outputs using the **40** prelude names read
+   from `records/ietf/rfc-8610/distilled/schema/prelude.cddl`. Result: **19 of 19
+   `expect` verdicts reproduced**, tally **9 valid · 2 invalid · 4 incomplete · 4
+   not-applicable**; of the seven printed directive instances **exactly two are
+   not derivable** (lines 388 and 414), which is `G-01` and `V-0008`/`V-0010`;
+   **six composed outputs closed, `V-0009` not** (dangling `label`, `values`),
+   and `V-0009` is the only block with dead definitions beyond its root rule
+   (`cose.label`, `cose.values`), which is `V-0013`'s alias apart. `V-0017`,
+   whose basis is ABNF rather than CDDL, was checked separately: after dedent
+   **all ten productions parse as well-formed RFC 5234 / RFC 7405 ABNF with no
+   undefined reference**, so its `expect: valid` holds.
+
+**Whole-record sweep, re-derived.**
+
+- **Source.** 784 lines, 25 993 bytes, **13 form feeds**, sha256 recomputed
+  `7cf825aa…a644` — identical to `record.yaml`'s `content.sha256` and to
+  `summary.md`'s `| **Digest** |` row. (A note for anyone re-checking: Python's
+  `str.splitlines()` splits on those 13 form feeds too, which shifts every line
+  number by up to 13. Use `split("\n")`.)
+- **Appendix A.** Lines 677–688, **12 lines, 10 productions**, region sha256
+  `43c17148…96ab` recomputed and matching; the capture's body is byte-identical
+  to the source region; common indent 3; **dedent and re-indent are exact
+  inverses**; the dedented file's grammar-body sha256 is `520099c0…c149e`, which
+  is what its own header claims; **no page-furniture and no blank line falls
+  inside the region**.
+- **Quote fidelity and page frames, independently.** **89** bullet quotes across
+  **20** distinct locators in `normative.md`, **18** fenced blocks (18 distinct —
+  so `examples/` has 19 vectors where this file has 18 blocks, the difference
+  being Appendix A's grammar, which is `V-0017` and lives in `schema/`), **92**
+  requirement texts and **19** vector texts were each matched against the source
+  twice, once with the page furniture removed and once with it left in. **All
+  218 spans matched both: 0 failures, 0 page-frame crossings.** 14 footers, 13
+  headers, 13 form feeds.
+- **BCP 14.** 0 with stripping on, 11 with it off, **0** across all 92
+  requirement texts, and **0** on the source with lines 146–150 deleted — so the
+  zero is exact, not a filter artefact. `reconciliation` is 7 142 characters,
+  as the header says.
+- **Both YAML readers, on all five YAML artifacts.** `requirements.yaml`,
+  `messages.yaml`, `examples/vectors.yaml`, `schema/name-resolution.derived.yaml`
+  and `record.yaml` all parse under `bin/_yaml.py` and `bin/_record_yaml.py`, and
+  **agree on every value**, with identical id sequences (92 and 19, unique and
+  contiguous from 1). The two readers differ **by design** on five things, and
+  normalising for them is what "agree" means here: block-scalar chomping,
+  numeric coercion, boolean/null coercion, flow collections (`_yaml.py` has
+  none, so `['a','b']` is a string to it) and `\"` unescaping inside a
+  double-quoted scalar. Those are properties of the two tools and apply to every
+  record in this library.
+- **Derived vs verbatim.** **1 verbatim, 4 derived.** Every `.derived.` filename
+  has a header claiming derived; `module-directives.abnf` has no infix and its
+  header claims verbatim; no name and header disagree. Re-derived with the same
+  first-marker-wins rule `bin/validate` uses.
+- **Placeholder markers under `distilled/`: 0.** Every file under `distilled/`
+  was swept for the all-capitals four-letter placeholder token before `status`
+  moved to `distilled`, because `bin/validate` rejects that status while one
+  survives. The Acknowledgments placeholder therefore stays **described, never
+  quoted** — defect 8. (Precisely: `bin/validate` sweeps the FX-1 artifact
+  paths, which is every file under `distilled/` except this one. Pass 3 swept
+  all of them anyway and this file carries no instance either.)
+- **Citations.** 92 R, 19 V and 21 G ids defined, unique and contiguous; every
+  one of the 132 is cited somewhere; **0 dangling**. **Entering pass 3, 23 of
+  the 92 R ids were cited nowhere but their own definition** — `R-0002`,
+  `R-0004`, `R-0006`, `R-0007`, `R-0010`, `R-0011`, `R-0013`, `R-0014`,
+  `R-0016`, `R-0017`, `R-0018`, `R-0024`, `R-0025`, `R-0026`, `R-0027`,
+  `R-0029`, `R-0037`, `R-0044`, `R-0055`, `R-0059`, `R-0065`, `R-0070`,
+  `R-0074`. (Writing that list here is itself a citation of each, so the count
+  is now 0 — said this way because the number is a measurement of a moment, and
+  a later pass re-running the check will get 0 and should not read it as
+  disagreement.) That is deliberate, not an omission: every one is
+  document status, motivation, terminology, a section lead-in, a presentation
+  convention or security posture, and **none names a construct or a field that
+  `messages.yaml` and `schema/` do not already hold** — which is the thing
+  deliverable 1 asks. They are recorded so a later pass does not have to
+  re-derive the list.
+- **Cross-record claims, re-verified at the source.** `rfc-8610`'s `id = EALPHA
+  *(*("-" / ".") (EALPHA / DIGIT))` and `EALPHA = ALPHA / "@" / "_" / "$"` are
+  where `G-01` says they are — inside the `BEGIN VERBATIM B-3` region of
+  `records/ietf/rfc-8610/distilled/schema/cddl.abnf`, cited by production name.
+  The **40** prelude names are set-equal to the list `examples/README.md` prints,
+  and **five** of them are hyphenated (`cbor-any`, `encoded-cbor`, `float16-32`,
+  `float32-64`, `mime-message`). `rfc-9682`'s change table does list `id`,
+  `EALPHA`, `ALPHA`, `DIGIT` **and** `CRLF` among its forty-one
+  carried-unchanged productions. `rfc-8610#R-0079`, `rfc-8610#R-0102`,
+  `rfc-8610#R-0106` and `rfc-9165#R-0053` all exist and say what this record
+  quotes them as saying. **Every cross-record id in this record is written with
+  its record name in full**, never abbreviated to `#R-nnnn`: the abbreviation
+  resolves to the wrong requirement under any prefix-blind reader, and **two of
+  these four** — `rfc-8610#R-0079` and `rfc-9165#R-0053` — fall inside this
+  record's own `R-0001`–`R-0092` range, so for those two a prefix-blind reader
+  silently succeeds with the wrong text rather than failing.
+
+**Five things corrected in pass 3**, all of them our own text, each marked
+`[correction 2026-10-20]` where it sits. None is a finding and none touches the
+source.
+
+1. **The `$.start.$` wording pass 2 corrected in one place survived in six.**
+   Pass 2 fixed `G-18`'s headline — "used once and never defined" is false at
+   face value, because source line 509 *is* the definition — and left the same
+   claim standing in `normative.md` **twice** (the inline note before the §2.7
+   block, and the *What the document does not say* bullet), in `messages.yaml`,
+   in `examples/vectors.yaml` `V-0016`, in `examples/README.md`'s diff-pairs
+   table, and in `record.yaml`'s own coverage line for the normative artifact.
+   All six now say what `G-18` says: the name occurs once, as its own
+   definition, and the *convention* is what is never introduced. This is the
+   shape of the failure worth naming — a correction applied where it was found
+   rather than where the claim lives, in a record that states the same fact in
+   six artifacts.
+2. **Three cross-record citations by line number.** `schema/README.md`,
+   `design-notes.md` and `G-17` each cited
+   `records/ietf/rfc-9052/distilled/schema/cose.cddl` "lines 60–67 and 168–175".
+   The ranges are correct today, but this is precisely the drift pass 2 had to
+   repair in `G-01`, and the remedy is the same: all three now cite the
+   `COSE_Key` and `Generic_Headers` fragments by production name and by that
+   file's own `; §…` markers. **No cross-record citation by line number remains
+   anywhere in this record.**
+3. **The citation-integrity bullet above understated the cross-record surface**
+   — see its own correction note. Two of the four cross-record ids collide with
+   ids this record defines, which is the case that actually misleads.
+4. **`summary.md` said the draft "names no implementation".** It names `cddlc`,
+   with a repository, an install command and a version floor — in an appendix it
+   declares informative. The record's own `R-0089`–`R-0092`, `V-0018`, `V-0019`
+   and `G-20` all said so; only the summary did not.
+5. **`record.yaml` carried `authors: []`** while `summary.md`'s metadata table
+   named both authors off the same four title-block lines — the record and its
+   summary disagreeing about a fact both state. Now filled from source lines
+   5–8. It changes the two generated views that read the field
+   (`index/bibliography.md`'s entry, and `bin/render-html`'s Authors row, which
+   is suppressed on an empty list); `bin/export` does not read `authors`, so the
+   CSL-JSON and BibTeX are untouched.
 
 ## This record and `rfc-8610`'s gate
 
@@ -319,9 +523,17 @@ the 2019 one. Defect 1 stands at full strength. `rfc-9682` also leaves `CRLF`
 untouched, which is why defect 4's narrowed framing names three undeclared
 instances of that redefinition and one declared one.
 
-**One question this record still cannot answer**: the rationale for naming
-modules by filename lives in `[I-D.bormann-cbor-cddl-2-draft]` and the
-dereferenceable-identifier security analysis in `[I-D.bormann-t2trg-deref-id]`.
-Pass 2 confirmed that **this library holds neither** — there is no record under
-`records/ietf/` for either — so the namespacing argument is one hop away and
-unread. `design-notes.md` open questions 6 and 7 own it.
+**One question this record still cannot answer, and it is the record's one open
+limit**: the rationale for naming modules by filename lives in
+`[I-D.bormann-cbor-cddl-2-draft]-09` (1 September 2026, §4 and §A.2, per
+`R-0021` and `R-0041`) and the dereferenceable-identifier security analysis in
+`[I-D.bormann-t2trg-deref-id]-07` (24 February 2026, per `R-0075`). Pass 2
+confirmed that **this library holds neither**, and pass 3 re-confirmed it on
+2026-10-20 across **all 439 record directories, not just `records/ietf/`**, and
+in `.cache/`: no record, no identifier naming either draft in any record, and no
+cached copy. So the namespacing argument is one hop away and unread, and this
+is the only gap the cross-check's token sweep found between what the
+requirements name and what `messages.yaml` and `schema/` hold — correctly, since
+these are bibliography rather than fields. **Ingesting them is a separate
+decision and pass 3 did not take it**; `design-notes.md` open questions 6 and 7
+own it, and `summary.md`'s *Limits* states it where a reader meets it.

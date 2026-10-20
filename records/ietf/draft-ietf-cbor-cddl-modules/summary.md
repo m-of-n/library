@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: draft-ietf-cbor-cddl-modules
 record: draft-ietf-cbor-cddl-modules
 type: summary
-updated: "2026-10-19"
+updated: "2026-10-20"
 ---
 
 # CDDL Module Structure
@@ -89,10 +89,37 @@ that the draft deliberately leaves to "the context of the models".
 
 ## Implementations
 
-The draft references `cddlc` by command line (`-2tcddl`) but registers and
-names no implementation, and its Acknowledgments section is **still an
-unfinished placeholder at revision -07**. *Searched on 2026-10-19; no named
-implementation in the document.*
+**One, named, and informative only.** Appendix B names `cddlc` — "CDDL
+conversion utilities", `https://github.com/cabo/cddlc` — gives the install
+command `gem install cddlc`, requires Ruby ≥ 3.0, and sets a version floor of
+**0.2.5**, which is the nearest thing the draft has to a conformance target:
+every composed output in §2.5–§2.7 is whatever that implementation emits. But
+Appendix B opens "This appendix is for information only", so none of it is
+normative, and the draft registers nothing. Note also that Appendix B writes
+the conversion flags as two arguments (`-2 -tcddl`) where all seven examples
+write them as one (`-2tcddl`). `distilled/examples/vectors.yaml` V-0018 and
+V-0019 hold both command lines; the requirements are `R-0088`–`R-0092`.
+*Searched on 2026-10-19; re-checked 2026-10-20: neither `cddlc` nor `cddl` is
+installed in this environment, so nothing in this record was produced by
+running either.*
+
+*[correction 2026-10-20, cross-check pass: this section read "The draft
+references `cddlc` by command line (`-2tcddl`) but registers and names no
+implementation … no named implementation in the document." The second half is
+false and contradicted this record's own artifacts — Appendix B names the tool,
+its repository, its install command and its minimum version, and
+`examples/README.md`, `R-0089`–`R-0092` and G-20 all say so. What is true is
+that the naming is confined to an appendix the draft declares informative.]*
+
+The cross-check pass built two checkers rather than running `cddlc`: a
+recogniser for `directive` driven by the character ranges in
+`distilled/schema/module-directives.abnf`, and a structural ABNF check of the
+dedented grammar. Both are this library's, and they settle derivability and
+well-formedness only — nothing about what a composer emits. Results are in
+`distilled/README.md`.
+
+Its Acknowledgments section is **still an unfinished placeholder at revision
+-07**.
 
 ## Limits
 
@@ -132,12 +159,18 @@ implementation in the document.*
   the §3.9 socket convention, which covers only `$`/`$$` names — none of these.
   So an un-updated tool gets an unresolvable model and nothing says what it
   does: the same "silence is success" failure mode, now about whole files.
-- **It is a work in progress, two drafts deep.** Its own boilerplate says it is
+- **It is a work in progress, two drafts deep, and the two drafts it leans on
+  are the one thing this record cannot answer.** Its own boilerplate says it is
   "inappropriate to use Internet-Drafts as reference material". The design
-  rationale for the naming scheme is in another draft, and the security
-  analysis of dereferenceable identifiers in a third — **this library holds
-  neither**, so the analysis of the namespacing question is one hop away and
-  unread.
+  rationale for naming modules by filename is in
+  **`[I-D.bormann-cbor-cddl-2-draft]-09`** (1 September 2026, §4 and §A.2) and
+  the security analysis of dereferenceable identifiers in
+  **`[I-D.bormann-t2trg-deref-id]-07`** (24 February 2026). **This library holds
+  neither — no record and no cached copy, re-confirmed 2026-10-20** — so the
+  namespacing argument is one hop away and unread, and the analysis of what it
+  means to resolve a name that carries no principal is the piece this record
+  most needs and does not have. Whether to ingest them is a separate decision:
+  `distilled/design-notes.md` open questions 6 and 7 own it.
 - `CRLF = %x0A / %x0D.0A` is redefined against STD 68 to admit a bare LF, and
   **nothing in the draft says so**. The substance is not the problem: RFC 9165
   §3 makes the byte-identical change, declares it and calls it "customary for
@@ -145,11 +178,14 @@ implementation in the document.*
   defective here is the silence — a documentation gap, the same one `rfc-8610`
   records in its narrowed form, and less camouflaged here because `SP` is the
   only other core rule the appendix touches and it keeps its value.
-- The extraction is at **passes 1 and 2 of 3**; the cross-check pass has not run
-  and nothing carries a human sign-off, so these artifacts are readable but not
-  buildable-on. Pass 2 re-derived the two findings above from the source
-  independently — both hold — and corrected six pointers and counts elsewhere in
-  the record, listed in `distilled/README.md`.
+- The extraction is **`profile: full` against FX-1** as of 2026-10-20: all three
+  machine passes are done (extract, verify, cross-check). **Nothing carries a
+  human sign-off**, so these artifacts are readable but not buildable-on — pass 4
+  is a person signing `reviewed_by` and has not happened. Pass 2 re-derived the
+  two findings above independently (both hold) and corrected six pointers and
+  counts; pass 3 cross-checked requirements against schema, messages and
+  examples, reproduced all 19 example verdicts from the verbatim grammar, and
+  corrected five more. Both lists are in `distilled/README.md`.
 
 ## Where it cuts against MD-3
 
