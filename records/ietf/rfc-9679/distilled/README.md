@@ -149,8 +149,10 @@ Reported, never repaired:
    Key SHA-256 Thumbprint", but §3 requires only that SHA-256 be *supported* and
    permits others, and the member is a bare binary string with nowhere to name
    H. A SHA-384 `ckt` is indistinguishable on the wire from a SHA-256 one.
-4. **§5.5 misattributes both of its cross-references** — the `ckt` to "Section 7
-   of [RFC9052]" (which defines `COSE_Key` and never mentions `ckt`, a member
+4. **§5.4 and §5.5 misattribute three cross-references between them, and that
+   is a property of those two subsections rather than three slips.** Two are in
+   §5.5 — the `ckt` to "Section 7 of [RFC9052]" (which defines `COSE_Key` and
+   never mentions `ckt`, a member
    *this* document defines) and the `jkt` to "Section 4 of [RFC7517]" (which
    lists JWK parameters; `jkt` is RFC 7638, and the confirmation member is
    RFC 9449 §6.1). Both legs checked against the documents themselves by the
@@ -164,6 +166,79 @@ Reported, never repaired:
    reference list titles [RFC7638] "JSON Web Key (JWK) Thumbprint" and its
    Acknowledgements thank that document's authors "for their work on the JWK
    Thumbprint specification", so the document contradicts its own §5.5.
+
+   **[correction] 2026-10-20, maintenance pass on this `profile: full` record
+   (library#39 Tier 2), prompted by the `rfc-9360` summary.** This item was
+   headed "**§5.5 misattributes both of its cross-references**" and recorded
+   **two**. There are **three**. The third is one subsection earlier, in §5.4,
+   and the extract and verify passes both walked past it because it reads as a
+   gloss rather than as a citation:
+
+   > "as the "x5t" (X.509 certificate SHA-1 thumbprint) [RFC9360] value defined
+   > for X.509 certificate objects does"
+
+   **"SHA-1" occurs zero times in RFC 9360**, under every spelling checked
+   against `.cache/rfc-9360.txt` — `SHA-1`, `SHA1`, `sha-1`, `sha1`, 0 each,
+   and the substring `SHA` occurs **three** times in the whole document on two
+   lines: twice as "SHALL" in the BCP 14 boilerplate (source line 96) and once
+   as "SHA-256" in §2 (source line 239). RFC 9360's `x5t` is hash-agile:
+   "COSE_CertHash = [ hashAlg: (int / tstr), hashValue: bstr ]", whose first
+   element is "an algorithm identifier that is an integer or a string
+   containing the hash algorithm identifier corresponding to the Value column
+   (integer or text string) of the algorithm registered in the "COSE
+   Algorithms" registry", and whose only algorithm obligation is the one that
+   §2 line carries: "applications that use this header parameter
+   MUST support the hash algorithm 'SHA-256' but can use other hash
+   algorithms". The parenthetical is the **JOSE** registry name for `x5t`,
+   where `x5t` genuinely *is* a SHA-1 digest, imported wholesale and attached
+   to the COSE citation. *(`rfc-9360`'s `summary.md` locates that name at
+   RFC 7515 §4.1.7. Not re-derived here: neither RFC 7515 nor RFC 7517 is in
+   `.cache/`, so the JOSE leg is carried from the sibling record and the
+   falsification above stands on RFC 9360 alone, which is where it has to
+   stand.)*
+
+   Two facts make it worse than a stray word. **Source line 276 — this
+   sentence — is the only place RFC 9679's body names [RFC9360] at all**, and
+   `x5t` is a one-occurrence string in the document, so the document's single
+   statement about RFC 9360 is the wrong one. And the error is
+   security-directional rather than neutral: it tells a reader that a COSE
+   `x5t` is a SHA-1 digest, i.e. **weaker** than RFC 9360 defines, and it lands
+   on a document whose own recorded defect points the other way —
+   `rfc-9360` carries `contradicts: rfc-9054` because its §5 claims "The
+   security of the algorithm used for 'x5t' does not affect the security of the
+   system" while its §2 makes a protected `x5t` the integrity binding for a
+   removable `x5chain`. A reader who takes RFC 9679's gloss together with
+   RFC 9360 §5's claim concludes "`x5t` is SHA-1 and that does not matter",
+   which is the one combination neither document can support.
+
+   **The pattern, which is the finding.** All three sit in §5.4–§5.5, the two
+   subsections whose entire job is to relate this document's thumbprint to a
+   neighbouring construct, and each names a *family* document in place of the
+   *defining* one: RFC 9052 for a member RFC 9679 itself defines, RFC 7517 for
+   a member RFC 7638 and RFC 9449 define, RFC 9360 for a gloss that belongs to
+   JOSE. Four cross-references in those two subsections make a checkable claim
+   about what another document defines — §5.4's "Section 4.1.2.7 of [RFC5280]"
+   and its [RFC9360] gloss, §5.5's "Section 7 of [RFC9052]" and "Section 4 of
+   [RFC7517]" — and **three of the four are wrong**. The one that checks out is
+   RFC 5280 §4.1.2.7, verified against this library's own `rfc-5280`
+   extraction (`distilled/normative.md`, "§4.1.2.7 Subject Public Key Info"),
+   not against the source, which is not in `.cache/` either. (§5.5 also cites
+   [RFC7800] and [RFC8747] for the JWT and CWT confirmation methods; those name
+   documents without a section and were **not** checked here.) The
+   two §5.5 legs send a reader to the wrong place; the §5.4 leg states
+   something false about the right one, which is why it survived two passes
+   that were checking locators.
+
+   **Reported, not repaired, and the edge is authored on the other side.**
+   `records/ietf/rfc-9360/record.yaml` carries `contradicts: rfc-9679` with its
+   reason in that record's `summary.md`, as `docs/references.md` §2 requires.
+   `contradicts` is **symmetric** there — its inverse is itself — and the same
+   §2 states "Inverses are derived, never authored", so no reciprocal edge is
+   written here; `bin/reindex`'s `INVERSE` map carries `contradicts:
+   contradicts` and the crosswalk already shows `rfc-9679 → rfc-9360`.
+   Confirmed by re-running that derivation over all 439 records: 0 dangling.
+   Same reasoning, same precedent as the `see_also: rfc-8778` note in
+   `record.yaml`.
 5. §4.1 labels its own columns differently from §4.2–§4.5 — `value: int` where
    every other subsection writes `data type:`.
 6. **No defined thumbprint discriminates §4.2.1 from §4.2.3 map ordering.**

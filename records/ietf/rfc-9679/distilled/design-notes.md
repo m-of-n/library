@@ -215,6 +215,20 @@ is syntax-independent: digest a canonical representation of exactly the
 essential components. That makes `DEC-003` answerable in the same shape under
 any `DEC-002` option, which matters for sequencing — see cut D.
 
+**[correction] 2026-10-20 — one caution about the rest of §5.4, added by a
+maintenance pass (library#39 Tier 2).** Nothing above changes: the sentence
+quoted here is §5.4's *third*, it is captured correctly, and RFC 5280 §4.1.2.7
+really is Subject Public Key Info (checked against this library's own
+`rfc-5280` extraction). But the **second** sentence of the same subsection
+carries a misattribution, so anyone following this passage back into §5.4
+should not take the rest of it on trust: it glosses `x5t` as "(X.509
+certificate SHA-1 thumbprint) [RFC9360]", and **"SHA-1" occurs zero times in
+RFC 9360**, where `x5t` is `COSE_CertHash = [hashAlg, hashValue]` with SHA-256
+merely mandatory to support. It is the third of three misattributed
+cross-references in §5.4–§5.5 — `distilled/README.md` item 4 carries all three
+and the pattern. The portability argument above does not rest on it, which is
+exactly why it is flagged here rather than rewritten.
+
 ---
 
 ## What we reject, and why

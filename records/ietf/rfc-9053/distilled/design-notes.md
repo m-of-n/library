@@ -250,6 +250,79 @@ verifiable `COSE_Sign1` is:
    option 5 declines the tag registry — no tag, which means the recipient must
    be told out of band that these bytes are a `COSE_Sign1`.
 
+   > **[update] 2026-10-20, maintenance pass on this `profile: full` record
+   > (library#39 Tier 2).** The clause above records the out-of-band dependence
+   > as a **live cost** of option 5's no-tags rule. It is **closed**, by a
+   > document this library did not hold when item 6 was written:
+   > `records/ietf/rfc-9596`, COSE's `typ` (type) header parameter, label 16.
+   > Three facts, each verified against the cached sources rather than taken
+   > from the sibling record's summary:
+   >
+   > - **`typ` is inside the signature.** RFC 9596 §2's one MUST NOT — "The
+   >   "typ" parameter MUST NOT be present in unprotected headers" — forces it
+   >   into the protected bucket, and RFC 9052 §4.4's `Sig_structure` covers
+   >   `body_protected`. The type declaration is therefore signed.
+   > - **The tags are not, and RFC 8392's own procedure proves it from inside
+   >   the document.** §7.1 step 6 prepends them *after* step 4 has created the
+   >   signed object — "If needed by the application, prepend the COSE object
+   >   with the appropriate COSE CBOR tag to indicate the type of the COSE
+   >   object" — and §7.2 steps 2–3 strip them *before* step 5 validates: "If
+   >   the object begins with the CWT CBOR tag, remove it", "If the object is
+   >   tagged with one of the COSE CBOR tags, remove it and use it to determine
+   >   the type of the CWT". An attacker can add or remove tag 18 or tag 61
+   >   without touching a signature, and §7.2 step 3 sanctions the untagged case
+   >   outright: "If the object does not have a COSE CBOR tag, the COSE message
+   >   type is determined from the application context."
+   > - **So the no-tags rule loses nothing authenticated**, and `typ` is
+   >   strictly stronger than what it replaces: the same information, moved from
+   >   outside `Sig_structure` to inside it.
+   >
+   > **The counterweight is as important as the closure, and there are three
+   > parts to it.**
+   >
+   > 1. **The mechanism that rescues option 5's no-tags clause can only name
+   >    types the way option 5's *other* clause forbids.** RFC 9596 §2 fixes the
+   >    value space to "either an unsigned integer as registered in the "CoAP
+   >    Content-Formats" registry ... or a string content type value" — **two
+   >    global registries with no key component**, which is precisely what
+   >    `ARCH-0002` P1 and `R-M-12` reject. (That quotation heals a hyphenation
+   >    line break at RFC 9596 source L116/L117, `Content-` / `Formats`, the
+   >    same way §4(d) below heals `IV-` / `GENERATION`, and the ellipsis elides
+   >    the `[CoAP.ContentFormats]` reference tag.) The P1-collision paragraph
+   >    below
+   >    already states the general form of this: "no tags" and "no registry
+   >    dependence" are different rules and `MD-3` states only the first. `typ`
+   >    is the sharpest instance of it, because here the registry dependence is
+   >    the *price of the fix*.
+   > 2. **Nothing in RFC 9596 requires anyone to check it.**
+   >    `bin/bcp14-count .cache/rfc-9596.txt` = **3**, all three in §2 — one
+   >    OPTIONAL, one MAY, one MUST NOT — and **no MUST, SHOULD, SHALL or
+   >    RECOMMENDED in the body at all**. §2 says the parameter "is ignored by
+   >    COSE implementations (libraries implementing [RFC9052] and this
+   >    specification), other than being passed through to applications", and
+   >    §3's two reject rules are lowercase "should", which §1.1's "when, and
+   >    only when, they appear in all capitals" drains of normative force. **A
+   >    conformant implementation of RFC 9596 performs no check whatsoever.** So
+   >    what is closed is the *carriage* of the type, not its *enforcement*, and
+   >    that leaves `typ` in the same authenticated-but-unenforced position as
+   >    the P1 type entry in the `crit` dilemma below — covered by the
+   >    signature, ignored by a stock verifier. The gain over the tag is real
+   >    and it is exactly one thing: the bytes are inside `Sig_structure`.
+   > 3. **One concrete lint consequence.** A rule enforcing option 5's no-tags
+   >    exclusion must **not** flag `typ: 61`. RFC 8392 registered 61 **twice**,
+   >    and both registrations were checked in `.cache/rfc-8392.txt`: the CBOR
+   >    Tag registry at §9.4.1 ("CBOR Tag: 61 / Data Item: CBOR Web Token
+   >    (CWT)") and the CoAP Content-Formats registry at §9.3.1 ("Media Type:
+   >    application/cwt / ... / Id: 61"). Same number, different registry,
+   >    opposite verdicts under MD-3 — the first forbidden, the second reachable
+   >    through `typ`.
+   >
+   > **What this does not do** is add `typ` to the list above. Item 6 states the
+   > *minimum* a verifiable export must carry, RFC 9596 §2 makes use of the
+   > parameter "OPTIONAL", and whether we emit it is open question 1's business,
+   > not this item's. What has changed is that question 1's no-tag branch no
+   > longer pays an out-of-band cost for the choice.
+
 **And one thing neither COSE document gives us: determinism of the transmitted
 bytes.** §9's first bullet is "The restriction applies to the encoding of the
 COSE_KDF_Context". The identical §9 of RFC 9052 scopes the identical
@@ -560,6 +633,24 @@ RFC 9679, five years later, to give it one.
    Untagged means the recipient is told out of band which message type the bytes
    are — the same out-of-band dependence §8.3's capability sequence has
    (`examples/README.md`). Owner: the DEC-002 ADR.
+
+   **[update] 2026-10-20: the out-of-band half of this question is answered and
+   the question is now narrower.** "Untagged means the recipient is told out of
+   band which message type the bytes are" is no longer true as a consequence of
+   declining the tag: RFC 9596's `typ` (label 16) carries the type **inside**
+   `Sig_structure`, because its §2 MUST NOT keeps it out of the unprotected
+   bucket, while RFC 8392 §7.1 step 6 / §7.2 steps 2–3 show the tags being
+   prepended after signing and stripped before validation. The full derivation,
+   and the three-part counterweight — `typ`'s value space is two global
+   registries, so it cuts against P1; RFC 9596 contains **no MUST, SHOULD,
+   SHALL or RECOMMENDED at all**, so no implementation is required to check it;
+   and `typ: 61` must not be linted as a tag, because RFC 8392 registered 61 in
+   both the CBOR Tag and CoAP Content-Format registries — is recorded at item 6
+   of §1, which is where the cost was originally booked. **What remains open
+   here is unchanged in owner and narrower in substance:** not "tag or
+   out-of-band" but "tag, `typ`, or neither", and `typ` is the option that
+   trades a CBOR-tag dependence for a media-type-registry dependence rather
+   than removing registry dependence. Owner: still the DEC-002 ADR.
 2. **Which signature algorithms does the profile name, and is ES512 in it?**
    This extraction's reading is ES256 and EdDSA/Ed25519, on §2.2.1 (fixture
    determinism) and §2.2 (two passes) respectively. ES512's 132-byte signature

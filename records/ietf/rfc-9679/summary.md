@@ -139,10 +139,29 @@ encoder and no CBOR or COSE library, and all of it reproduces.
   and encodes in one octet, so bytewise and length-first sorts coincide. An
   implementation can get §4.2.1's map sorting wrong and pass every value the
   document prints.
-- **§5.5 misattributes both of its cross-references** — the `ckt` to RFC 9052
+- **§5.4 and §5.5 misattribute three cross-references between them.** Two are in
+  §5.5 — the `ckt` to RFC 9052
   §7 (which is "Key Objects" and never mentions `ckt`, a member *this* document
   defines) and the `jkt` to RFC 7517 §4 (which lists JWK parameters; `jkt` does
   not occur anywhere in RFC 7517, and lives in RFC 9449 §6.1).
+  **[correction] 2026-10-20: this bullet recorded two, and there is a third, in
+  §5.4.** It glosses `x5t` as "(X.509 certificate SHA-1 thumbprint) [RFC9360]",
+  and **"SHA-1" occurs zero times in RFC 9360** under every spelling checked.
+  There `x5t` is `COSE_CertHash = [ hashAlg: (int / tstr), hashValue: bstr ]`,
+  hash-agile, with SHA-256 the only algorithm it mentions and that one only
+  "MUST support ... but can use other hash algorithms"; the parenthetical is
+  the JOSE registry name for `x5t`, attached to a COSE citation. The source
+  sentence is also **the only place RFC 9679's body names RFC 9360 at all**.
+  All three sit in the two subsections that relate this thumbprint to a
+  neighbouring construct, and each names a family document in place of the
+  defining one — so it is one property of §5.4–§5.5 rather than three slips.
+  The §5.4 leg is the worst of the three: the other two send a reader to the
+  wrong place, this one states something false about the right one, and it
+  states it in the direction of *weaker* security than RFC 9360 defines.
+  `records/ietf/rfc-9360` authors `contradicts: rfc-9679` for it with the
+  reason in its own `summary.md`; `contradicts` is symmetric and
+  `docs/references.md` §2 derives the inverse, so no edge is authored here.
+  Full working in `distilled/README.md` item 4.
 - The extraction is **complete to FX-1 `profile: full`** — extract, verify and
   cross-check have all run at effort max. No human has signed anything off:
   every `reviewed_by` is empty, so these artifacts are machine-checked, not

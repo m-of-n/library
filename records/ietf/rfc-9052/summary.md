@@ -187,6 +187,15 @@ explicit not-applicable declaration, and the same strain shows in
   "CounterSignature0" pointing at RFC 8152. Endorsing somebody else's signed
   statement — the primitive nearest to what we want — is therefore RFC 9338's
   subject, not this document's.
+  **[update] 2026-10-20: and RFC 9338's mechanism binds a signature for only
+  one of RFC 9052's structures.** §3.3's `other_fields` is "Omitted if there
+  are only two bstr fields in the target structure", and counted against the
+  CDDL in `distilled/schema/cose.cddl` only `COSE_Sign1` puts a *signature*
+  there (`COSE_Mac`/`COSE_Mac0` put a MAC tag; `COSE_Sign`, `COSE_Signature`,
+  `COSE_Encrypt` and `COSE_Encrypt0` get nothing and keep the RFC 8152 context
+  string). So a countersignature over a `COSE_Sign` — the *k*-of-*n* shape —
+  binds none of its *n* signatures. `distilled/design-notes.md` §6 carries the
+  derivation and answers that record's open question 7 with it.
 - **§9 is much narrower than "deterministic COSE".** Its restrictions apply
   *only* to encoding `Sig_structure`, `Enc_structure` and `MAC_structure`:
   definite lengths, minimum-length arguments, no duplicate labels. Nothing
