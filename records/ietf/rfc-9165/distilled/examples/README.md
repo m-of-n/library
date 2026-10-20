@@ -120,23 +120,75 @@ ambiguity is a real fork in the specification, and closure is the rule a tool is
 most likely to omit because ABNF libraries usually ship the core rules by
 default and this document forbids relying on them.
 
+## Which production each vector is an instance of — cross-check, EXECUTED
+
+**Added 2026-10-20 (cross-check pass).** FX-1's cross-check asks that every
+example validate against the schema. Running all 18 through the recogniser
+showed the vectors sit at **three different productions**, which the file had
+not recorded, and turned up one mis-keyed block.
+
+| production | n | vectors |
+|---|---|---|
+| CDDL `cddl` — a whole document | 9 | V-0001 V-0002 V-0003 V-0004 V-0010 V-0013 V-0014 V-0016 V-0017 |
+| CDDL `type1` — a type expression quoted in prose | 3 | V-0006 V-0007 V-0008 |
+| ABNF controller string | 4 | V-0005 V-0009 V-0011 V-0012 |
+| instance, not schema text | 2 | V-0015 V-0018 |
+
+- **8 of the 9 whole documents parse**; the ninth is `V-0013`, which is
+  `indeterminate` *because* it does not (Figure 6, source line 382 column 9).
+  That reproduces the verify pass's result on an independent run.
+- **The three prose one-liners parse as `type`, `type1` and `grpent`** and as
+  none of `cddl`, `rule`, `type2` or `memberkey`. They are well-formed CDDL at
+  the production the source uses them at. A reader who ran them through a tool
+  expecting a document would get a spurious failure, which is why the table is
+  here.
+- **`V-0005` was keyed `cddl:` and is not CDDL.** It parses as *no* CDDL
+  production at all, and loads cleanly as ABNF — 4 rules, 0 undefined, 3 of the
+  4 reachable from the selector `roid`. Its own `matches` calls it "the
+  controller string", and its two sibling `COMPUTED BY US` blocks V-0011 and
+  V-0012 key the same kind of object `abnf:`. **Re-keyed `abnf:`; the bytes are
+  unchanged.** Prose right, data wrong — see the vector's own `[correction]`.
+- **Closure re-derived from the vectors themselves**, not from the schema
+  files: V-0011 (`date-time`) reaches **14 of 14**, V-0012 (`full-date`)
+  reaches **5 of 14**, 0 undefined in both. That is the verify pass's corrected
+  count, reproduced by a third implementation.
+- **The two instance-bearing vectors are the honest limit.** `V-0015`'s
+  `{"organisation": "ACME"}` against Figure 7 and `V-0018`'s `{"v": 1, 2: 1}`
+  against Figure 9 need a CDDL **validator**, not a recogniser: the schemas
+  parse and the instances are well formed, but the *match* is argued from
+  RFC 8610's map-matching rules, not run. No third-party CDDL implementation is
+  installed here. This is the one part of deliverable 4 that is reasoned rather
+  than executed, and it is the source's own examples that make it so — the
+  document prints no instance anywhere.
+
 ## Mechanical state
 
-Passes 1 and 2 of 3 — extract and verify. Cross-check has not run. All of the
+Passes 1, 2 and 3 of 3 — extract, verify and cross-check. All of the
 following were checked by script against `.cache/rfc-9165.txt`, and every one
 was **recomputed by the verify pass with its own implementation** rather than by
-re-running pass 1's:
+re-running pass 1's; the cross-check pass then re-ran the starred ones a third
+time, independently again:
 
-- 18 vectors, ids `V-0001`–`V-0018` contiguous with no gaps, parsing identically
-  under both `bin/_record_yaml` and `bin/_yaml`.
-- 10 of 10 declared source ranges re-slice byte-identically after margin
-  removal, and every range is contiguous in the raw source.
-- 3 of 3 `COMPUTED BY US` blocks re-derive exactly from the source by the
+- **\*** 18 vectors, ids `V-0001`–`V-0018` contiguous with no gaps, parsing
+  identically under both `bin/_record_yaml` and `bin/_yaml`.
+- **\*** 10 of 10 declared source ranges re-slice byte-identically after
+  **common**-margin removal, and every range is contiguous in the raw source.
+  The common margin is not a constant: the RFC's body margin is 3 columns, but
+  a figure adds its own, so `V-0009`'s single line carries **6**. A re-slicer
+  that assumes 3 reports a false mismatch on that one vector — noted because
+  the cross-check pass wrote one and had to fix it, not the record.
+- **\*** 3 of 3 `COMPUTED BY US` blocks re-derive exactly from the source by the
   document's own §2.3 dedent and §2.2 concatenation. **The verify pass found
   V-0011 and V-0012 one line short** — the `.det` join of Figure 5's two
   literals produces a blank line before `DIGIT`, which both blocks omitted
   although V-0011's own `notes` asserted it. Fixed; all three now re-derive
-  byte-for-byte against an independent dedent.
+  byte-for-byte against an independent dedent. **The cross-check pass re-derived
+  all three a third time** from a dedent written from §2.3's two numbered steps,
+  locating the three byte-string literals by scanning for `<name> = '` and its
+  closing quote rather than trusting any declared line range: **3 of 3 exact,
+  including the trailing newline**, and the blank line before `DIGIT` present in
+  both Figure 5 blocks. It also re-confirmed the algorithm the other way round —
+  the same `det()` reproduces the source's **own** Figure 4 literal exactly.
 - V-0004's literal content equals our computation of `"oid" .det cbor-tags-oid`,
   which checks our reading of the algorithm against the source's own result.
   **The verify pass made the condition explicit:** the equality holds only once
@@ -149,21 +201,31 @@ re-running pass 1's:
 - 25 further quotations in `notes` fields hand-enumerated and verified contiguous
   (the automated pass cannot resolve them: the source's own text is full of
   nested quotation marks).
-- ABNF closure re-derived for every controller: `cbor-tags-oid` 4 rules / 0
+- **\*** ABNF closure re-derived for every controller: `cbor-tags-oid` 4 rules / 0
   undefined / closed from both selectors (3 of the 4 reachable from each);
   Figure 5's composition 14 rules / 0 undefined / closed from both selectors,
   **across the `.det` join** — 5 of the 14 reachable from `full-date`
   (`full-date`, `date-fullyear`, `date-month`, `date-mday`, `DIGIT`) and all 14
   from `date-time`. Pass 1 recorded the first of those two as 4, counting it
-  exclusively while counting the second inclusively; corrected.
-- The case-insensitivity census re-derived, and then **executed**: the composed
-  `date-time` rule-list loaded into an Earley recogniser matches
+  exclusively while counting the second inclusively; corrected. **Reproduced a
+  third time by the cross-check pass**, off the vectors rather than the schema
+  files: 5 and 14, 0 undefined.
+- **\*** The case-insensitivity census re-derived, and then **executed**: the
+  composed `date-time` rule-list loaded into an Earley recogniser matches
   `1990-12-31t23:59:60z` and rejects `1990-12-31x23:59:60Z`, so the acceptance
-  is case folding and not a permissive parser.
-- **Figure 6's non-parse executed** rather than argued. The recogniser stalls at
-  the first `.` of `bar = ...`, source line 382 column 9, and accepts the other
-  eight figures — so `V-0013`'s `indeterminate` stands on a run, not a reading.
+  is case folding and not a permissive parser. Re-run by the cross-check pass:
+  `1990-12-31T23:59:60Z` and `1990-12-31t23:59:60z` accepted,
+  `1990-12-31x23:59:60Z` and `1990-12-31T23:59:60` (no offset) rejected.
+  **But see `../schema/README.md`'s `[correction]` of 2026-10-20: the census is
+  verified and the premise it is applied to is testimony**, because RFC 5234 and
+  RFC 7405 are both uncached here and the recogniser folds case by construction.
+- **\*** **Figure 6's non-parse executed** rather than argued. The recogniser
+  stalls at the first `.` of `bar = ...`, source line 382 column 9, and accepts
+  the other eight figures — so `V-0013`'s `indeterminate` stands on a run, not a
+  reading. Reproduced by the cross-check pass at the same line and column.
 
 **Nothing here has been run through a third-party CDDL or ABNF implementation** —
 none is installed in this environment. The dedent implementation, the closure
-checker and the case-sensitivity census are this library's own.
+checker, the case-sensitivity census and the CDDL recogniser are this library's
+own, and they settle **structure, not conformance**. Items marked **\*** were
+computed three times, by three passes, with three implementations.

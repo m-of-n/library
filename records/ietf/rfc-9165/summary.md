@@ -39,7 +39,17 @@ record names and the registry does not:
 Three incompatible kinds now share one flat namespace, which matters for
 anyone building a validator: implement all twenty behind a single "narrow the
 target" interface and **four of them are wrong**. `distilled/messages.yaml`
-carries the five-phase evaluation order this implies.
+carries the five-phase evaluation order this implies — **ours, and now with
+per-boundary provenance**, because the only ordering statement RFC 9165 makes
+anywhere is *inside* `.det`. Two boundaries are forced by its own figures and
+one by its own words; **the fourth, "check an ABNF controller before matching",
+is forced by nothing, and the choice changes verdicts.** A specification like
+`a = int / (text .abnf 'x⏎x = 1*DIGIT')` is ill-formed if closure is checked
+statically and perfectly valid against the instance `1` if the controller is
+parsed lazily, and RFC 9165 settles neither. Any negative test this library
+writes against `R-0055` or `R-0026` must put the violating operator on a branch
+the instance actually reaches, or it tests the tool's schedule rather than the
+rule.
 
 All six are type controls, and that is forced rather than chosen: `ctlop`
 appears only inside `type1`, so **CDDL has no group-control syntax at all** —
@@ -122,13 +132,25 @@ case-sensitivity census and CDDL recogniser settle structure, not conformance.
 - **`.feature`'s controller has no admissibility rule** — only the 2-element
   array form is defined — and `.feature` is the only registered control
   operator no instance can test.
+- **An operator name is not maximally munched, and `.abnfb` is the sharp case.**
+  `ctlop = "." id` with a nullable `S` lets every multi-letter operator name
+  split into a shorter operator plus a typename, so `a = 1 .<op>` parses with no
+  controller at all — *executed for all twenty* registered names, not one of
+  which is safe. Usually the mis-parse is nonsense a tool rejects. But exactly
+  two names are proper prefixes of another registered name, and **RFC 9165
+  created one of them**: `a = 1 .abnfb` parses as **`.abnf` applied to the type
+  `b`** — a registered operator, a plausible typename, no error. The grammar
+  defect is RFC 8610's and is owed to its gap ledger; the prefix collision is
+  this document's own naming. See `distilled/README.md`.
 - `.cat` is not commutative *in type*, so operand order is a correctness
   question rather than a style one; and §2.3's two single-item dedent forms are
   offered as alternatives but are **not** equivalent (`"" .det rhs` yields text
   and invokes the UTF-8 `MUST`; `rhs .det ""` does not). §2.3's dedent counts
   leading **space** characters only, so a tab-indented literal dedents by zero.
-- The extraction is at **passes 1 and 2 of 3** — extract and verify; cross-check
-  has not run and no `profile` is declared. The four claims pass 1 flagged as
+- The extraction is **complete at all three passes** — extract, verify,
+  cross-check — and declares `profile: full` against `standard: FX-1`. **No
+  `reviewed_by` is signed**, so it is readable but not yet buildable-on. The
+  four claims pass 1 flagged as
   ours rather than the source's **all survived the verify pass**, and three are
   now executed against RFC 8610's grammar rather than argued from it: all six
   are type controls (`ctlop` occurs in exactly one production in both
@@ -136,10 +158,29 @@ case-sensitivity census and CDDL recogniser settle structure, not conformance.
   reading; the operator-class taxonomy (the two assignments genuinely at risk,
   `.within` and `.default`, are restrictive on RFC 8610's own words —
   "the identical formal semantics (intersection)" and "the implied .ne
-  control"); and Figure 6's non-parse. **One limit is worth carrying forward:**
-  this library holds no `rfc-5234` record and no cached RFC 5234, so the
-  `element`/`elements` productions are the record's one load-bearing claim that
-  cannot be checked against a source here.
+  control"); and Figure 6's non-parse.
+- **The uncached-source limit, which is wider than this record first said.**
+  This library holds **no `rfc-5234` record and no cached RFC 5234** —
+  re-confirmed by the cross-check pass — and no RFC 7405 either. **Two**
+  claims rest on that, not one. *[correction] 2026-10-20 (cross-check pass):
+  the verify pass called the `element`/`elements` productions "the record's one
+  load-bearing claim" resting on an uncached document. There are two, and the
+  second is this record's headline finding.*
+  1. the `element` / `elements` productions, which fix *which* reading of §3's
+     controller rule is the stronger one; and
+  2. **case insensitivity itself** — that RFC 5234 §2.3 makes a quoted string
+     case-*insensitive* and that RFC 7405's `%s` is what makes one sensitive.
+     The *census* is verified from RFC 9165's own cache (only `"T"` and `"Z"`
+     bear letters; no `%s` or `%i` anywhere), and the acceptance of
+     `1990-12-31t23:59:60z` was executed — but executed by a recogniser whose
+     literal matching is case-insensitive **by construction**, because RFC 5234
+     is what says it should be. The run confirms the census and the
+     consequence; it cannot confirm the premise.
+  Neither is testimony about *RFC 9165*: both are testimony about a normative
+  reference, and the existence of the `element`/`elements` fork needs no RFC
+  5234 at all — the document uses the two words for one thing one sentence
+  apart, which is visible in the cache. **Ingesting RFC 5234 and RFC 7405 is
+  what closes both**, and this record recommends it rather than doing it.
 
 ## What this did to `rfc-8610`, which is at `profile: full`
 

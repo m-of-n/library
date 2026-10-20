@@ -57,6 +57,110 @@ evaluation_order:
     OURS, derived from the operators' own definitions and from the two
     compositions the document prints. The document never states an
     evaluation order; it demonstrates one.
+    [correction] 2026-10-20 (cross-check pass): `basis` labelled the WHOLE
+    model as ours and left it there, which under-reported it in one
+    direction and over-reported it in the other. THREE of the four phase
+    boundaries do have a basis in the source -- two demonstrated in its own
+    figures, one stated in its own words -- and ONE does not and changes
+    verdicts. See `boundaries` and `schedule_sensitivity` below, which the
+    cross-check pass added after attacking this as the record's largest
+    unexercised claim. The per-boundary provenance is the labelling the
+    record's own standard requires; the single model-level OURS was not.
+  source_says_about_order: >-
+    MEASURED BY THE CROSS-CHECK PASS, over the whole cached source: the ONLY
+    ordering statement RFC 9165 makes anywhere is INSIDE one operator --
+    "both arguments (target and controller) are independently _dedented_
+    before the concatenation takes place" (§2.3, source lines 220-221). A
+    scan for `before`, `after`, `prior to` and `takes place` across all 556
+    lines returns that sentence and nothing else. Every other use of
+    "first"/"then" in the document is positional ("the first rule in
+    Figure 3", "the first element") or narrative. So there is no stated
+    inter-phase order to agree or disagree with, and the five phases are a
+    schedule this library proposes.
+  boundaries:
+    - boundary: "1 -> 2  generic instantiation before literal computation"
+      forced_by_source: "yes, by demonstration"
+      why: >-
+        The document's ONLY .plus application has an unbound generic
+        parameter as its target, `(BASE .plus 1)` in Figure 1. There is no
+        value to add until RFC 8610 §3.10 binds BASE, so the binding must
+        precede the arithmetic.
+      our_part: >-
+        OURS: the DEPENDENCY is forced, the GLOBAL BARRIER is not. A fully
+        concrete `a = 1 .plus 2` needs no phase 1 at all (executed: it
+        parses and has nothing to instantiate). Phase 1 as written is a
+        conservative schedule that is always safe, not a rule the document
+        states.
+    - boundary: "2 -> 3  literal computation before ABNF controller parsing"
+      forced_by_source: "yes, by demonstration"
+      why: >-
+        In Figure 5 the .abnf controller IS a computed string: `Tag0 =
+        #6.0(text .abnf date-time)` where `date-time = "date-time" .cat
+        rfc3339`. The controller string does not exist until phase 2 has
+        run, so phase 3 cannot precede it.
+      our_part: >-
+        OURS: same caveat. A source-literal controller needs no phase 2.
+    - boundary: "3 -> 4  ABNF controller parsing before matching"
+      forced_by_source: "NO -- and this is the one that matters"
+      why: >-
+        §3 says WHAT must hold and never WHEN it is checked: "(Note that
+        all rules referenced need to be defined in each ABNF operator
+        controller string -- there is no implicit import of core ABNF rules
+        from [RFC5234] or other rules.)" Nothing in RFC 9165 or RFC 8610
+        requires a tool to check a controller it never reaches, and nothing
+        requires or forbids short-circuiting a `/`.
+      our_part: >-
+        OURS, WHOLLY, and it is observable. See `schedule_sensitivity`.
+    - boundary: "4 -> 5  matching before feature reporting"
+      forced_by_source: "yes, by statement"
+      why: >-
+        §4 makes the report a function of the instance's own match, twice:
+        a tool "may mark the instance as using a feature that is annotated
+        by the specification", and "the label (map key) actually used makes
+        a fine feature detail for the tool's diagnostic output." A label
+        ACTUALLY USED is not known until the instance has been matched.
+      our_part: >-
+        Nothing. This boundary is the document's.
+  schedule_sensitivity:
+    finding: >-
+      OURS, added by the cross-check pass, and EXECUTED. Because boundary
+      3 -> 4 is not fixed by the source, two conformant tools can return
+      DIFFERENT VERDICTS on the same specification and the same instance.
+      The record previously presented all five phases as equally settled.
+    fixture: 'a = int / (text .abnf ''x<LF>x = 1*DIGIT'')'
+    fixture_note: '<LF> stands for one newline inside the byte-string literal; RFC 8610''s BCHAR admits it, which is what lets a multi-line ABNF controller be written at all.'
+    instance: '1'
+    executed: >-
+      The fixture PARSES as CDDL under rfc-8610's own Appendix B grammar
+      (Earley recogniser, this library's own), and its controller FAILS
+      closure: selector `x`, one rule `x = 1*DIGIT`, `DIGIT` referenced and
+      undefined, so rfc-9165#R-0055 is violated by the controller.
+    schedule_a: >-
+      The schedule in `phases` -- closure checked statically in phase 3,
+      before any instance is seen. The SPECIFICATION is ill-formed, so the
+      verdict is an error whatever the instance.
+    schedule_b: >-
+      A controller parsed lazily, on first match. `1` matches the first
+      alternative `int`; the second alternative is never evaluated; no
+      closure check ever runs. The instance is VALID.
+    same_shape_at_phase_2: >-
+      `a = int / ("x" .cat h'ff')` (also executed: parses as CDDL) does the
+      same to rfc-9165#R-0026. Eager phase 2 computes a text result that is
+      not valid UTF-8 and errors; lazy evaluation never computes it and the
+      instance is valid.
+    consequence_for_us: >-
+      OURS. Both fixtures are already listed in ../examples/README.md as
+      candidate negative fixtures for R-0055 and R-0026, as UNCONDITIONAL
+      violations. They are not unconditional: whether they are violations
+      at all depends on a schedule the source does not fix. Any negative
+      test this library writes against R-0055 or R-0026 must therefore put
+      the violating operator on a branch the instance REACHES, or it tests
+      the tool's schedule rather than the rule.
+    what_the_document_would_have_to_say: >-
+      OURS. One sentence would close it: whether an ABNF controller's
+      closure and a computed literal's well-formedness are conditions on
+      the SPECIFICATION or on a MATCH. RFC 9165 says neither, and a
+      successor could.
   phases:
     - phase: 1
       name: "generic instantiation"
@@ -355,10 +459,18 @@ constructs:
     kind: "controller shape (the only shape-semantic controller in CDDL)"
     syntax: '(["<feature-name>", "<feature-detail>"])'
     layout:
+      # [correction] 2026-10-20 (cross-check pass): these two parts were the
+      # only `layout` parts in this file with no `constrained_by`, against the
+      # convention `abnf-controller-string` sets three lines below. R-0066 is
+      # the structural rule that names both positions ("the first element
+      # being the feature name ... the second element being the detail"), and
+      # it was already on the construct; it is now on each part it constrains.
       - part: "element 0"
         what: "the feature name, 'that would otherwise be the entire controller'"
+        constrained_by: ["rfc-9165#R-0066"]
       - part: "element 1"
         what: "the detail, 'usually another string'"
+        constrained_by: ["rfc-9165#R-0066"]
     undefined_cases: >-
       OURS. The document gives the 2-element form and nothing else. A
       1-element array, a 3-element array and a non-array non-string

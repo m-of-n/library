@@ -41,6 +41,10 @@ its own header.
 | `registry-tables.txt` | **verbatim** | Table 1 (name and purpose) and Table 2 (name and reference), with their captions and centring | Table 2 is the **whole** of a registry entry. No target type, no controller type, no semantics, no operator class |
 | `README.md` | — | this file | — |
 
+**7 verbatim files, 2 derived, and this `README.md`, which is neither** — ten
+files in the directory. (`distilled/README.md` and `record.yaml` said *eight*
+verbatim until the cross-check pass of 2026-10-20; the eighth was this file.)
+
 **15 verbatim regions across 7 files, each carrying its source line range and a
 sha256 of exactly those lines.** All 15 were re-verified byte-for-byte against
 the cache by a checker that parses the BEGIN/END markers and re-slices
@@ -104,6 +108,17 @@ can be built from the margin-bearing capture without un-indenting it first.
   this ABNF are `"T"` and `"Z"`, and **no RFC 7405 `%s` or `%i` prefix appears.**
   RFC 5234 §2.3 makes quoted strings case *insensitive*, so
   `Tag0 = #6.0(text .abnf date-time)` admits `1990-12-31t23:59:60z`.
+  **[correction] 2026-10-20 (cross-check pass): the premise is testimony, and
+  this said it flatly.** That RFC 5234 §2.3 makes a quoted string
+  case-insensitive, and that RFC 7405's `%s` is what makes one sensitive, are
+  claims about **two documents this library does not hold** — there is no
+  `rfc-5234` and no `rfc-7405` record and no cache of either. What *is*
+  verified here is the census (from RFC 9165's own bytes) and the consequence
+  (executed). The execution does not reach the premise: the recogniser's
+  literal matching is case-insensitive **by construction**, because RFC 5234 is
+  what says it should be, so the run shows that *under that premise* the
+  composed grammar folds case — not that the premise holds. Source defect 1's
+  `[correction]` note carries the same point.
   **Re-derived and then EXECUTED by the verify pass.** The census is
   comment-invariant: the composed `date-time` controller holds ten quoted
   strings — `"."`, `"+"`, `"-"`, `":"`, `"Z"`, `":"`, `":"`, `"-"`, `"-"`,
@@ -178,11 +193,27 @@ file.
    specification writer. (iii) The two readings are therefore not different
    *expressive power* but different *tolerance*, which is why no example can
    distinguish them. **The limit:** this library holds **no `rfc-5234` record
-   and no cached copy of RFC 5234**, so the two productions quoted above are
+   and no cached copy of RFC 5234** — re-confirmed by the cross-check pass,
+   which also found **no RFC 7405** — so the two productions quoted above are
    the only part of this finding that cannot be checked against a source here.
    They are correct as written, but that is testimony, not verification —
-   ingesting RFC 5234 is what would close it, and until then this is the one
-   load-bearing claim in the record resting on an uncached document.
+   ingesting RFC 5234 is what would close it.
+
+   **[correction] 2026-10-20 (cross-check pass).** The verify pass closed that
+   paragraph "and until then this is the one load-bearing claim in the record
+   resting on an uncached document." **It is not the only one, and the other is
+   this record's headline finding:** that embedded ABNF is case-insensitive by
+   default rests on RFC 5234 §2.3 and on RFC 7405's `%s`, and neither document
+   is cached here either. See *Case sensitivity* under *What was checked
+   mechanically*, where the premise is now labelled. What is genuinely
+   singular about the `element`/`elements` claim is narrower: it is the only
+   place where the uncached productions decide **which of two readings of RFC
+   9165's own words is correct**, rather than supplying a premise whose
+   consequence this record then measures. Note also what does *not* rest on
+   either: the *existence* of the fork is established from RFC 9165's cache
+   alone — the document names the production `elements` and then requires one
+   valid `element` in the next sentence — and `rfc-9165#R-0050`'s verbatim text
+   is verified against that cache.
 2. **Figure 4 spells a text-string result in byte-string notation.** §2.2's
    result rule — which §2.3 inherits by "works like .cat" — makes the result of
    `"oid" .det cbor-tags-oid` a **text** string, because the target `"oid"` is a
@@ -239,13 +270,25 @@ says that if such a record is created, the verbatim tables belong there.
 
 ## State
 
-**Passes 1 and 2 of 3** — extract and verify. Cross-check has not run and no
-`reviewed_by` is signed. Every mechanical claim above was produced by scripts
-run against `.cache/rfc-9165.txt`, and the verify pass recomputed all of them
-with its own implementations rather than re-running pass 1's: 15/15 regions
-byte-identical with digests verifying, the dedent re-derived from scratch, and
-Figure 6, the case-insensitivity census and G-44 **executed** against RFC 8610's
-Appendix B with an Earley recogniser written for the pass. **Nothing has been
-run through a third-party CDDL or ABNF implementation**, none being installed
-here — so that recogniser settles structure, not conformance. Every semantic
-claim still rests on the source's prose.
+**Passes 1, 2 and 3 of 3** — extract, verify and cross-check. No `reviewed_by`
+is signed. Every mechanical claim above was produced by scripts run against
+`.cache/rfc-9165.txt`; the verify pass recomputed all of them with its own
+implementations rather than re-running pass 1's, and the cross-check pass
+recomputed the region set and the dedent a third time: 15/15 regions
+byte-identical with per-region digests verifying and all 15 equal to their own
+`rstrip`ped form, 3 nested spans, 127 distinct source lines with 24 covered
+twice, and the derived file's D-2 and D-3 re-derived from a dedent written
+independently from §2.3's two numbered steps. Figure 6, the case-insensitivity
+census and G-44 were **executed** against RFC 8610's Appendix B with an Earley
+recogniser written for the verify pass and reused by the cross-check pass.
+
+**The derived/verbatim convention was re-checked file by file:** 9 files carry a
+claim, 7 verbatim and 2 derived, and for all 9 the filename infix and the first
+of `derived`/`verbatim` in the first 12 lines agree. `README.md` is skipped, as
+`docs/extraction.md` requires. No generation banner appears in any file.
+
+**Nothing has been run through a third-party CDDL or ABNF implementation**, none
+being installed here — so that recogniser settles structure, not conformance.
+Every semantic claim still rests on the source's prose, and two of them rest on
+prose this library does not hold: see the `[correction]` notes of 2026-10-20 on
+source defect 1 and on *Case sensitivity*.

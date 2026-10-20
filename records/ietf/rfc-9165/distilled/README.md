@@ -11,15 +11,68 @@ reviewed_by: ""
 FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what it
 does not.
 
-**State: passes 1 and 2 of 3 complete — extract and verify. NO `profile` is
-declared.** Cross-check has not run, and under `docs/extraction.md` an
-unfinished extraction is neither `full` nor `partial`. `record.yaml` carries
-`distillation.standard: FX-1` with two `passes` entries. **No `reviewed_by` is
-signed anywhere.** The verify pass upheld all four of pass 1's self-flagged
-claims, executed three of them against RFC 8610's grammar rather than arguing
-them, and fixed six defects of our own — the largest being a blank line the
-`.det` join produces that three derived blocks omitted while their own prose
-asserted it. `record.yaml`'s `passes[1].note` is the full account.
+**State: all three passes complete — extract, verify, cross-check.
+`distillation.profile: full` against `standard: FX-1`.** **No `reviewed_by` is
+signed anywhere**, so these artifacts are readable but not yet buildable-on;
+pass 4 is a person's. `record.yaml`'s `passes[*].note` is the full account of
+each pass.
+
+The verify pass upheld all four of pass 1's self-flagged claims, executed three
+of them against RFC 8610's grammar rather than arguing them, and fixed six
+defects of our own — the largest being a blank line the `.det` join produces
+that three derived blocks omitted while their own prose asserted it.
+
+**The cross-check pass found seven more, all ours.** Five are the same family as
+pass 2's — a claim stated in prose that the data did not carry — and **two are
+propagation failures**: a correction pass 2 made in one artifact that never
+reached another artifact stating the same claim. The `rfc-9741`,
+`draft-ietf-cbor-cddl-modules` and `rfc-9682` cross-checks each found exactly
+that, so it was swept for deliberately here.
+
+**The two propagation failures, listed first because they are the ones a reader
+would otherwise still believe:**
+
+- **The 4-vs-5 reachability miscount survived in `V-0010`'s notes.** Pass 2 fixed
+  it in `schema/README.md`, `schema/embedded-abnf-dedented.derived.abnf`,
+  `examples/README.md` *and* `V-0012`'s notes — four artifacts — and missed the
+  fifth, where `closed from both `full-date` (4 rules reachable) and `date-time`
+  (all 14)` is the exclusive-against-inclusive pairing pass 2 itself named.
+  Re-derived at **5 of 14** and corrected.
+- **The non-partition survived in this file**, which stated the classes as bare
+  set inclusion — under which restrictive and annotative overlap, because
+  equality is a subset. Pass 2 fixed that with `proper` plus a partition
+  criterion in `control-operators.derived.yaml` and `summary.md`; it did not
+  reach the index. Corrected above.
+
+The other four of pass 2's corrections were checked across every artifact that
+states them and **all propagated cleanly**: the `.det` blank line, the "three
+regions nested inside two others" count, "four years" (now only inside
+`design-notes.md`'s own correction note), and the hyphenated `left-hand`.
+
+**And the five of the same family as pass 2's:**
+
+1. **A multi-line YAML flow sequence** in `schema/control-operators.derived.yaml`
+   — the only one in this library's YAML — which `bin/_record_yaml` could not
+   parse at all and which `bin/_yaml`, the reader `bin/validate` uses, parsed
+   **silently wrong**, turning the first colon inside the G-28 finding into a map
+   key. The verify pass's own note claims "every YAML parsing identically under
+   both loaders"; it did not. Respelled as a block sequence.
+2. **"8 verbatim files"** here and in `record.yaml`, against `schema/README.md`'s
+   7. Seven is right; the eighth was `schema/README.md` itself.
+3. **`V-0005` was keyed `cddl:`** and is an ABNF controller string — its own
+   `matches` says so and its two siblings key the same object `abnf:`. Found by
+   *running* it: it parses as no CDDL production and loads cleanly as ABNF.
+4. **The maximal-munch gap was filed as the sixth gap this document adds**, in a
+   key headed `adds_new_ones_of_its_own`, while the item's own last sentence said
+   it belongs to RFC 8610. Recounted to five and moved; see below.
+5. **The uncached-source limit named one claim where there are two**, and the
+   unnamed one is this record's headline finding. See *The RFC 5234 limit*.
+
+It also attacked the largest unexercised claim in the record — `messages.yaml`'s
+five-phase evaluation order — and **split it**: three of the four phase
+boundaries do have a basis in the source, one does not, and the one that does
+not **changes verdicts** on a fixture the pass wrote and executed. All of that
+is now in `messages.yaml` under `boundaries` and `schedule_sensitivity`.
 
 Source: RFC 9165, *Additional Control Operators for the Concise Data Definition
 Language (CDDL)*, C. Bormann, Standards Track, December 2021.
@@ -49,8 +102,8 @@ closes **the operator-set quarter of that gate and nothing more.**
 |---|---|---|
 | normative | `normative.md` | **78 verbatim bullets and 13 reproduced blocks** across 9 locators (§1, §1.1, §2, §2.1, §2.2, §2.3, §3, §4, §5, §6). All 78 confirmed contiguous substrings of the whitespace-normalised source **and** inside the locator's own section range, by section map rather than document-wide; all 13 fenced blocks byte-identical to their declared source line ranges. The 13 blocks are both tables, all nine figures, the dedenting definition and the `CRLF` production |
 | requirements | `requirements.yaml` | **84 entries, `R-0001`–`R-0084`, source order, no gaps: 5 stated, 79 inferred.** `source_keyword_count` and `extracted_keyword_count` both 5, with a reconciliation that states the real baseline — a grammar extension's normativity is in its operator definitions — and names what was counted instead. Every `text` was **sliced out of the cache by line range and boundary marker, never retyped.** §1.1's boilerplate is deliberately never quoted: `bin/validate` counts texts with stripping off, so quoting it would add 11 phantom keywords |
-| schema | `schema/` | **8 verbatim files in 15 regions, 2 derived.** The central artifact is `control-operators.derived.yaml`: all six operators as data, in Table 2's registry order, with target, controller, result type, predicate, control kind, class and per-operator gaps — written with `rfc-8610`'s field names so the two read as one table of twenty operators. All 15 verbatim regions re-verified byte-for-byte with per-region `sha256`, independently again by the verify pass, and for all 15 the digest equals that of the same lines `rstrip`ped, proving no trailing whitespace. Three of the 15 are nested inside two others by source line range — A-2 in F-3, A-3 and A-4 in F-5 — because the ABNF lives inside the CDDL literals. See `schema/README.md` |
-| messages | `messages.yaml` | **13 constructs** — the 6 operators, 3 string structures, 1 operation, 3 idioms — and a **5-phase evaluation order**, which is the part a tool gets wrong. `constrained_by` **is** populated here, unlike in `rfc-8610` where the file header states it is omitted throughout: 62 distinct requirement ids referenced, **0 dangling** |
+| schema | `schema/` | **7 verbatim files in 15 regions, 2 derived** (10 files in the directory, counting this `README.md`, which is neither). *[correction] 2026-10-20 (cross-check pass): this said 8. `schema/README.md` said 7 and 7 is right — the eighth was `README.md` itself, which `docs/extraction.md` excludes from the convention and which asserts nothing about its own bytes.* The central artifact is `control-operators.derived.yaml`: all six operators as data, in Table 2's registry order, with target, controller, result type, predicate, control kind, class and per-operator gaps — written with `rfc-8610`'s field names so the two read as one table of twenty operators. All 15 verbatim regions re-verified byte-for-byte with per-region `sha256`, independently again by the verify pass, and for all 15 the digest equals that of the same lines `rstrip`ped, proving no trailing whitespace. Three of the 15 are nested inside two others by source line range — A-2 in F-3, A-3 and A-4 in F-5 — because the ABNF lives inside the CDDL literals. See `schema/README.md` |
+| messages | `messages.yaml` | **13 constructs** — the 6 operators, 3 string structures, 1 operation, 3 idioms — and a **5-phase evaluation order**, which is the part a tool gets wrong. The order is **ours**, and the cross-check pass gave it **per-boundary provenance**: 1→2 and 2→3 forced by the document's own Figures 1 and 5, 4→5 forced by §4's own words ("may mark **the instance**", "the label (map key) **actually used**"), and **3→4 forced by nothing** — with an executed fixture on which the two schedules disagree. The only ordering statement in the whole source is *inside* `.det`. `constrained_by` **is** populated here, unlike in `rfc-8610` where the file header states it is omitted throughout: 62 distinct requirement ids referenced, **0 dangling** |
 | examples | `examples/` | **18 vectors, `V-0001`–`V-0018`, source order, no gaps.** 17 `valid`, 1 `indeterminate`, 0 `invalid`. Provenance is explicit per vector: 14 the source's own bytes by line range, 3 `COMPUTED BY US` from the document's **own** §2.3 dedent and §2.2 concatenation, 1 `OURS`. 10 of 10 declared ranges re-slice byte-identically; 3 of 3 computed blocks re-derive exactly — after the verify pass found `V-0011` and `V-0012` one line short, the `.det` join's blank line before `DIGIT`, and fixed them. See `examples/README.md` |
 | design-notes | `design-notes.md` | the operator set as the real target; the cross-field verdict; **eight numbered mappings onto our decisions**, of which five cut against MD-3 and one — `.feature` as a way to declare an invariant the schema cannot check — is the first finding in this library's CDDL chain that goes MD-3's way; 11 source defects; and what this invalidates in `rfc-8610` |
 
@@ -112,10 +165,23 @@ fourteen.
 
 **The class column is ours and the registry records nothing like it.** Three
 semantically incompatible kinds of operator now share one flat namespace:
-16 of those 20 *restrictive* (the result is a subset of the target), 3 *constructive*
-(the result is computed and in general disjoint from the target), 1
-*annotative* (the result equals the target). A tool that implements all twenty of them
+16 of those 20 *restrictive* (the result is a subset of the target, and in
+general a **proper** one), 3 *constructive* (the result is computed and in
+general disjoint from the target), 1 *annotative* (the result equals the
+target). The test that keeps the three disjoint is
+`schema/control-operators.derived.yaml`'s `partition_criterion`: **can this
+operator reject an instance the target alone would accept?** — restrictive yes,
+annotative no, constructive inapplicable because its result is not related to
+the target by inclusion at all. A tool that implements all twenty of them
 behind one "narrow the target" interface gets four of them wrong.
+
+*[correction] 2026-10-20 (cross-check pass): this paragraph stated the classes
+as **bare set inclusion**, under which restrictive and annotative overlap —
+equality is a subset, so `.feature` would satisfy both. That is exactly the
+defect the verify pass found and fixed with `proper` plus an explicit partition
+criterion, and the fix reached `control-operators.derived.yaml` and `summary.md`
+but **not this file**. The second of two such misses this pass found; see
+`V-0010`'s `[correction]` for the first.*
 
 ## Does anything here let CDDL express a cross-field constraint? No
 
@@ -175,12 +241,101 @@ that a reader of `statement.cddl` cannot tell the invariant is unchecked.
   `a = 1 .plus 2 .cat 3` does not parse and `a = (1 .plus 2) .cat 3` does.
 - **G-42 and G-43 are untouched.** This document never mentions operator
   precedence, never cites Table 1, and does not touch the cut `^`.
-- **Six new gaps**, listed in `schema/control-operators.derived.yaml` under
-  `cross_field_constraints.grammar_gaps_touched`, for any successor to
-  `grammar-gaps.derived.txt`. The sixth is the verify pass's: an operator name
-  is **not maximally munched**, so `a = 1 .plus` parses as `.p` applied to a
-  type called `lus`. That is G-27's trap on the other side of the operator, and
-  it belongs to RFC 8610's grammar rather than to this document.
+- **Five new gaps**, listed in `schema/control-operators.derived.yaml` under
+  `cross_field_constraints.grammar_gaps_touched.adds_new_ones_of_its_own`, for
+  any successor to `grammar-gaps.derived.txt`. *[correction] 2026-10-20
+  (cross-check pass): this said six. The sixth was the maximal-munch gap, which
+  is not one this document adds — see below.*
+- **One gap this document only exposed**, now under its own key
+  `exposed_in_rfc_8610s_grammar`: an operator name is **not maximally munched**,
+  so `a = 1 .plus` parses as `.p` applied to a type called `lus`. The verify
+  pass found it; the cross-check pass executed the generalisation the verify
+  pass had asserted — `a = 1 .<op>` with **no controller at all** parses for
+  **all twenty** registered names, because every one is at least two letters and
+  so leaves a valid typename behind. Not one of the twenty is safe.
+
+### Where the maximal-munch gap belongs — decided by the cross-check pass
+
+**The grammar half belongs in `rfc-8610`'s `grammar-gaps.derived.txt`.** Every
+production involved — `ctlop = "." id`, `id`, `S = *WS`,
+`type1 = type2 [S (rangeop / ctlop) S type2]` — is RFC 8610 Appendix B's; RFC
+9165 states no CDDL production at all, its only production being the ABNF
+`CRLF`; and the property holds for RFC 8610's own fourteen with no reference to
+this document. It is also the exact mirror of **G-27**, which is numbered in
+that file and is the one side of the trap Appendix B comments on. Splitting a
+symmetric defect across two records leaves a reader of that ledger seeing one
+half with no pointer to the other. The precedents both run the same way: the
+`registry_state_is_not_rfc_8610` finding and the narrowed CRLF framing were both
+reached here and both landed **in** `rfc-8610`.
+
+**The registry half belongs here, and it is this document's own doing.** Exactly
+two of the twenty names are proper prefixes of another registered name:
+`.cbor` of `.cborseq` (RFC 8610's) and **`.abnf` of `.abnfb` — both registered
+by RFC 9165**. For those two pairs the shorter reading is itself a *registered*
+operator applied to a plausible typename, so `a = 1 .abnfb` parses as `.abnf`
+applied to the type `b` (executed). That turns the hazard from a mis-parse a
+tool would reject into a silently well-formed constraint with a different
+meaning — and it is a consequence of this document's naming choices, the second
+such finding here after §2.3's `.dedcat` aside.
+
+**Not moved by this pass, and the move has three dependents.** `rfc-8610` is at
+`profile: full`, another lane may hold it, and a cross-record edit is the owning
+agent's to sequence. The cost is concrete: adding this as a **forty-fifth
+entry** to `rfc-8610/distilled/schema/grammar-gaps.derived.txt` — or amending
+G-27 to cover the controller side — invalidates a tally in three places, because
+**44 is written down three times**:
+
+1. `rfc-8610/distilled/schema/grammar-gaps.derived.txt` itself — "44 items,
+   G-01 through G-44. 41 carry a checkability verdict";
+2. `rfc-8610/distilled/schema/cddl.abnf`, whose header note sums the 44 against
+   RFC 9682 as "2 + 1 + 1 + 2 + 38 = 44" — and which *already* carries a
+   correction for summing to 42 when it omitted two of them;
+3. `rfc-9682/distilled/schema/grammar-gaps-status.derived.txt`, a status sheet
+   that asks of *exactly* those 44 "does RFC 9682 change it?" and tallies back
+   to 44. It is a status sheet, not a ledger, so it is a **dependent** and not
+   an alternative home.
+
+**Amending G-27 rather than adding a forty-fifth entry keeps all three tallies
+at 44**, which
+is the cheaper of the two routes and is this pass's recommendation. `rfc-9682`
+was being edited by another lane while this pass ran. Reported, not repaired,
+and the sequencing is upstream of this record.
+
+### The RFC 5234 limit, and why it does not make this `partial`
+
+This library holds **no `rfc-5234` record and no cached RFC 5234** — and no
+RFC 7405 either, which the cross-check pass confirmed. **Two** claims rest on
+that, not the one the verify pass named: the `element`/`elements` productions,
+and **case insensitivity itself**, which is this record's headline finding. Both
+are now labelled as testimony at every appearance.
+
+It is nonetheless compatible with `profile: full`, on four grounds:
+
+1. **It is a reference-level limit, not a document-level one.** RFC 9165 is
+   fully cached and fully extracted. Of its references the library caches only
+   RFC 8610; RFC 7405, RFC 3339, RFC 8943 and RFC 8949 are uncached too. If an
+   uncached normative reference forced `partial`, no record in this library
+   could ever be `full`.
+2. **The library has already accepted this exact dependency at `full`.**
+   `rfc-8610` is `standard: FX-1`, `profile: full`, and its G-29 asserts
+   "RFC 5234's own CRLF is `%x0D %x0A` only" — a claim about RFC 5234's content
+   from the same uncached document. Disqualifying it here would apply a new
+   standard to one record.
+3. **Nothing in the FX-1 artifact set turns on it.** No requirement text, no
+   schema region, no vector, no computed literal and no design mapping depends
+   on an RFC 5234 production. `rfc-9165#R-0050` quotes §3's "one valid
+   "element"" verbatim and verifies against *this* document's cache. What the
+   uncached productions decide is only the *consequence* of a source defect.
+4. **`profile: partial` would misdescribe the record.** `docs/extraction.md`
+   requires a `profile_reason` naming what is **not covered** — a paywalled
+   source, a secondary reference, a catalogue read for one lane. Nothing about
+   RFC 9165 is uncovered here. The honest statement is a declared limit, which
+   is what this is.
+
+**The recommendation, which is not this pass's to execute:** ingest RFC 5234
+and RFC 7405. That closes both claims and would let the case-insensitivity
+finding be verified rather than attested. `bin/ingest` was deliberately not run
+by this pass.
 
 ## Source defects found
 
