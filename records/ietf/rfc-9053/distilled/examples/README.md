@@ -86,10 +86,17 @@ gaps.** Every concrete value the document prints, and nothing else.
 | `V-0005` | §9 | the integer 1 as `0x01`, not `0x1801` | `0x01` valid / `0x1801` invalid |
 | `V-0006` | §11 | the `"YES"` / `"NO "` padding illustration | **none** — text strings |
 
-Three of the six are capability structures, which is to say that **the only
-bytes RFC 9053 prints anywhere are five bytes of §8 capability encoding**, for a
-feature that is advisory and that §8.3 itself describes as "one of many
-encodings that could be used for that purpose."
+Three of the six are capability structures, which is to say that, apart from
+§9's `0x01`/`0x1801` pair, **the only bytes RFC 9053 prints anywhere are ten
+bytes of §8 capability encoding** — `0x8102` (2 bytes), `0x820201` (3) and
+`0x8101820104` (5) — for a feature that is advisory and that §8.3 itself
+describes as "one of many encodings that could be used for that purpose."
+
+*(Pass 3 corrected this sentence. It said "five bytes", counting only the
+third example; the three byte strings together are ten. Pass 2 fixed the same
+arithmetic in `../README.md` and in `record.yaml` and did not reach this file.
+`schema/capabilities.derived.cddl`'s "those five bytes" is a different claim
+and is right: `0x8101820104` on its own is five bytes.)*
 
 ## How a vector is built
 

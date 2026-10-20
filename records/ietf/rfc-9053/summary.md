@@ -79,9 +79,11 @@ of the ecosystem — essentially every COSE library implements ES256 and EdDSA.
 | `distilled/state-machine.yaml` | two machines, both `derived: true` |
 | `distilled/design-notes.md` | the export path under MD-3, and five named cuts |
 
-**FX-1 under #39 (Tier 1): passes 1 and 2 of 3 complete**; cross-check has not
-run, so nothing here carries a profile and nothing may be built on it.
-`distilled/README.md` states the artifact set and which passes have run.
+**FX-1 under #39 (Tier 1): complete — `profile: full`.** All three passes have
+run at effort max: extract, verify, cross-check. `messages.yaml`'s 300 fields
+carry 709 `constrained_by` links to 170 of the 222 requirements, and the 52
+that link to nothing are enumerated by group in that file's header.
+`distilled/README.md` states the artifact set and what each pass changed.
 
 *(This paragraph has now been wrong in both directions. #42 wrote "No
 `distilled/`", true then and false the moment the record was scaffolded — the
@@ -96,7 +98,7 @@ date it, which is what the table above does.)*
 
 - **It prints no cryptographic test vectors at all.** Not one key, signature,
   MAC, ciphertext, nonce, derived key, `COSE_Key` or `COSE_KDF_Context`, for
-  any of its **43 algorithm code points**. Verified hard across all 2444
+  any of its **43 algorithm code points**. Verified hard across all 2443
   lines: four `0x` literals in total, zero `h''` byte strings, zero base64,
   zero runs of eight or more hex characters, zero PEM. §1.5 points instead at
   `github.com/cose-wg/Examples` **commit 3221310 of 3 June 2020** —

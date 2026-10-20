@@ -11,12 +11,11 @@ reviewed_by: ""
 FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what
 it does not.
 
-**State: passes 1 and 2 of 3 complete.** Pass 1 (extract): two agents in
-parallel at effort max. Pass 2 (verify): one agent at effort max, independently
-re-deriving the counts and attacking every claim. Both read only
-`.cache/rfc-9053.txt`. **The cross-check pass has NOT run**, so this record
-carries no `profile`. Readable; nothing may be built on it. library#39 owns
-finishing it.
+**State: FX-1 complete, all three passes, `profile: full`.** Pass 1 (extract):
+two agents in parallel at effort max. Pass 2 (verify): one agent at effort max,
+independently re-deriving the counts and attacking every claim. Pass 3
+(cross-check): one agent at effort max, checking artifact against artifact.
+All three read only `.cache/rfc-9053.txt` and the artifacts.
 
 What pass 2 changed: the hyphenation finding below (defect 3) was understated —
 pass 1 reported three severed tokens and had flagged three quotations, but six
@@ -27,6 +26,33 @@ strings totalling ten. `state-machine.yaml` cited `R-0066` for §4.1.1's 2^32
 ceiling; the `MUST NOT` is `R-0065`. `record.yaml` said 214/8 testable where
 the file holds 212/10. Everything else below survived.
 
+What pass 3 changed, and it is a short list because pass 2 was thorough.
+`messages.yaml`'s `constrained_by` was omitted on all 300 fields and is now
+wired: **709 links to 170 of the 222 requirements**, 21 fields carrying an
+explicit `[]` with a stated reason, and the linking rule plus the 52 unlinked
+requirements enumerated by group in that file's header. `state-machine.yaml`
+now carries `constrained_by` on every transition and on the error state, and
+three of its claims were falsified: the advisory-threshold transition asserted
+`constrained_by: []` while all seven of its thresholds are recorded entries;
+the ChaCha20/Poly1305 pair "2^36 / 2^64" was printed in the wrong order against
+the messages-then-failures convention the AES-CCM pair sets (2^36 is the
+failed-decryption limit, 2^64 the message limit); and the AES-GCM pair read as
+though both numbers were failed decryptions when 2^24.5 bounds messages.
+`examples/README.md` still said "five bytes" where the three §8.3 byte strings
+total ten — the one site pass 2's fix did not reach. `summary.md` said the
+source is 2444 lines; it is 2443, as every other artifact already said.
+
+What pass 3 checked and did **not** change: the derived CDDL's 43 algorithm
+code points, 4 key types and 7 curves were compared value for value against
+every table that carries a Value column — 1–7, 11–14, 16–18, 23 — by script,
+name by name and in both directions: 54 comparisons, 0 mismatches. So were the
+label and capability tables (9, 10, 15, 19, 20, 21, 22), including Table 15's
+five-way ES/SS split, Table 9's and Table 10's identical fourteen-algorithm
+scope, and Table 22's element counts. `kdf-context.cddl` is still byte-identical
+to source lines 1168–1184 (same SHA-256 as the extracted range). All six
+vectors validate against the transcribed CDDL, including `0x8101820104` as the
+CBOR **sequence** it is: a one-item decode consumes two bytes and leaves three.
+
 Source: RFC 9053, *CBOR Object Signing and Encryption (COSE): Initial
 Algorithms*, August 2022. **Informational**, obsoletes RFC 8152, while its
 companion RFC 9052 is **STD 96**.
@@ -36,10 +62,10 @@ companion RFC 9052 is **STD 96**.
 | normative | `normative.md` | 323 verbatim statements and 31 fenced blocks, §1–§11 in source order, **all 23 tables reproduced in full** (checked present by caption) plus 8 further fences. Boilerplate, the changes-from-8152 history, Acknowledgments and Author's Address dropped |
 | requirements | `requirements.yaml` | 222 entries, `R-0001`–`R-0222`, source order, no gaps: **101 stated, 121 inferred**. `source_keyword_count` and `extracted_keyword_count` both 101, `reconciliation` empty because there is nothing to reconcile — every one of the 101 source occurrences was mapped to exactly one stated entry **by raw byte offset: 101 covered, 0 missed, 0 double-counted**, with a per-section tally that sums to 101 |
 | schema | `schema/` | **1 verbatim, 4 derived.** `kdf-context.cddl` is §5.2's `PartyInfo`/`COSE_KDF_Context` fragment, byte-exact at source lines 1168–1184 including the three-space margin (verified by `diff`). The derived four cover all 43 algorithm code points, the key structures per key type, the nine algorithm-specific header parameters, and the §8 capability arrays. No JSON Schema: every structure is a CBOR array or a negative-integer-labelled map, so a JSON projection would be invented |
-| messages | `messages.yaml` | 56 structures, 300 fields — 12 non-algorithm structures plus **all 43 algorithm code points with no gaps** plus the 4-entry HKDF family. `constrained_by` omitted throughout (the ids belong to a concurrently written file); locators are exact and are the join key for pass 3 |
+| messages | `messages.yaml` | 56 structures, 300 fields — 12 non-algorithm structures plus **all 43 algorithm code points with no gaps** plus the 4-entry HKDF family. `constrained_by` wired by pass 3: **709 links to 170 of 222 requirements** over 279 fields, 21 fields with an explicit `[]` and a reason, the linking rule and the 52 unlinked requirements stated in the file header |
 | examples | `examples/` | **6 vectors — and that is the finding.** See below |
 | protocol | — | `not_applicable`; see `record.yaml` |
-| state machine | `state-machine.yaml` | **two machines, and this is the only Tier 1 record where this artifact is not N/A.** A key-usage lifecycle (counter-driven ceilings into rekey) and a key-trust promotion. Both are explicitly marked `derived: true` — RFC 9053 names no state as a state |
+| state machine | `state-machine.yaml` | **two machines, and this is the only Tier 1 record where this artifact is not N/A.** A key-usage lifecycle (counter-driven ceilings into rekey) and a key-trust promotion. Both are explicitly marked `derived: true` — RFC 9053 names no state as a state. Every transition and the error state carry `constrained_by`; the two hard ceilings are `R-0065` (2^32 messages, §4.1.1) and `R-0079` (2^61 block-cipher operations, §4.2.1) and everything else in the machine is lowercase prose |
 
 ## The document prints no cryptographic test vectors
 
