@@ -1,0 +1,771 @@
+# =====================================================================
+# draft-ietf-cbor-edn-literals messages -- for a NOTATION, the messages
+# are its LITERAL FORMS. Each entry below is one form CDN defines: its
+# concrete syntax, what it denotes, the CBOR it maps to, its parts, and
+# the requirement ids that constrain it.
+#
+# ON `constrained_by`. It IS populated here, unlike the sibling record
+# rfc-8610, which omitted it throughout. The reason the two differ:
+# rfc-8610 carries two BCP 14 keywords in 125 KB and almost nothing in
+# its schema directory had a requirement id to point at, so filling the
+# key would have meant inventing links (docs/extraction.md, R-O-03).
+# This draft carries ten keywords but 215 extracted requirements, 205 of
+# them `kind: inferred` definitional statements that define the literal
+# forms directly -- so nearly every field here has a real id behind it
+# and the link is the source's own sentence, not our invention.
+#
+# WHERE IT IS OMITTED, and why, so the omission is not read as an
+# oversight: a `constrained_by` list is left EMPTY on a field whose only
+# warrant is the ABNF itself (a grammar production is not a numbered
+# requirement) or on a field marked OURS. No entry carries an id that
+# does not resolve; a script checks every one against
+# requirements.yaml.
+#
+# QUOTED SENTENCES in `notes` and `layout` are the draft's own words.
+# Anything marked OURS is this library's reading, not the document's.
+# ABNF productions are reproduced from the verbatim files in schema/,
+# with the draft's three-column left margin removed.
+#
+# Source: "Concise Diagnostic Notation (CDN)",
+#   draft-ietf-cbor-edn-literals-27, C. Bormann, 20 July 2026.
+#   cached source sha256
+#   43cfb1236435a9de62d3c202b7ee653b0f5adbd40d3800bbb9379379dbdbf7e9
+# =====================================================================
+record: draft-ietf-cbor-edn-literals
+reviewed_by: ""
+messages:
+  - name: 'decimal integer literal'
+    locator: '§2.2, §6.1'
+    encoding: CDN-text
+    denotes: 'a CBOR integer'
+    layout: 'decnumber = [sign] (1*DIGIT ["." *DIGIT] / "." 1*DIGIT) ["e" [sign] 1*DIGIT] -- read as an integer when neither the "." nor the "e" part is present. sign = "+" / "-".'
+    cbor: 'major type 0 (non-negative) or 1 (negative) if the value fits; otherwise tag 2 (positive bignum) or tag 3 (negative bignum). In the tag case NO encoding indicator applies.'
+    fields:
+      - name: 'sign'
+        type: 'optional "+" or "-"'
+        required: false
+        layout: 'A leading "+" is a no-op; a leading "-" inverts the sign. So 0, 000, +0 and -0 are all the integer zero.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0030"]
+      - name: 'digits'
+        type: '1*DIGIT'
+        required: true
+        layout: 'Leading zeros are allowed: 1, 001, +1 and +0001 are the same integer one.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0029"]
+      - name: 'spec'
+        type: 'encoding indicator'
+        required: false
+        layout: 'number = (hexfloat / hexint / octint / binint / decnumber / nonfin) spec'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0132"]
+    notes: 'SYNTAX, not value, decides integer versus float: a decimal point or an exponent makes it major type 7 even for a mathematically integral number.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0029", "draft-ietf-cbor-edn-literals#R-0030", "draft-ietf-cbor-edn-literals#R-0173"]
+  - name: 'hexadecimal / octal / binary integer literal'
+    locator: '§2.2, §6.1'
+    encoding: CDN-text
+    denotes: 'a CBOR integer'
+    layout: 'hexint = [sign] "0x" 1*HEXDIG ; octint = [sign] "0o" 1*ODIGIT ; binint = [sign] "0b" 1*BDIGIT'
+    cbor: 'as the decimal integer literal: major type 0/1, or tag 2/3.'
+    fields:
+      - name: 'base marker'
+        type: '"0x", "0o" or "0b"'
+        required: true
+        layout: 'OURS: these are ABNF double-quoted literals, therefore CASE-INSENSITIVE, so 0X1267, 0O11147 and 0B1001 also parse. No sentence of the draft says so.'
+        constrained_by: []   # warranted by the ABNF alone, or OURS; no requirement id applies
+      - name: 'digits'
+        type: '1*HEXDIG / 1*ODIGIT / 1*BDIGIT'
+        required: true
+        layout: '4711, 0x1267, 0o11147 and 0b1001001100111 are the same number (Table 1).'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0028"]
+    notes: 'Octal uses the 0o prefix ONLY -- the draft writes "(0x, 0o prefix only, and 0b, respectively)", excluding the C-style bare leading zero.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0028", "draft-ietf-cbor-edn-literals#R-0172"]
+  - name: 'decimal floating-point literal'
+    locator: '§2.2, §6.1'
+    encoding: CDN-text
+    denotes: 'a CBOR floating-point value'
+    layout: 'decnumber with the "." part and/or the "e" exponent present. The grammar allows 3. for 3.0 and .3 for 0.3.'
+    cbor: 'major type 7. Preferred Serialization unless an encoding indicator is given, which then "needs to be _1, _2, or _3". Precision is adjusted to binary64 BEFORE Preferred Serialization chooses a width. Tag 4/5 representations are not generated.'
+    fields:
+      - name: 'mantissa'
+        type: '1*DIGIT ["." *DIGIT] / "." 1*DIGIT'
+        required: true
+        layout: '1.5, 0.15e1, 15e-1 are the same number (Table 1).'
+        constrained_by: []   # warranted by the ABNF alone, or OURS; no requirement id applies
+      - name: 'exponent'
+        type: '["e" [sign] 1*DIGIT]'
+        required: false
+        layout: 'OURS: "e" is ABNF double-quoted, so 1E5 parses too.'
+        constrained_by: []   # warranted by the ABNF alone, or OURS; no requirement id applies
+      - name: 'spec'
+        type: 'encoding indicator'
+        required: false
+        layout: '_1 = f9 (binary16), _2 = fa (binary32), _3 = fb (binary64). 1.5 is f9 3e00, 1.5_2 is fa 3fc00000, 1.5_3 is fb 3ff8000000000000 (Table 2).'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0134", "draft-ietf-cbor-edn-literals#R-0140"]
+    notes: '0.0 and -0.0 are DIFFERENT CDN literals and different CBOR values (f9 0000 and f9 8000) though mathematically equal. An indicator too small for the value is an ERROR, never a rounding: Table 2 shows 1.1_1 and 1.1_2 as (error).'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0031", "draft-ietf-cbor-edn-literals#R-0032", "draft-ietf-cbor-edn-literals#R-0174", "draft-ietf-cbor-edn-literals#R-0175"]
+  - name: 'hexadecimal floating-point literal'
+    locator: '§2.2, §6.1'
+    encoding: CDN-text
+    denotes: 'a CBOR floating-point value'
+    layout: 'hexfloat = [sign] "0x" (1*HEXDIG ["." *HEXDIG] / "." 1*HEXDIG) "p" [sign] 1*DIGIT'
+    cbor: 'major type 7, as the decimal floating-point literal.'
+    fields:
+      - name: 'mantissa'
+        type: 'hexadecimal'
+        required: true
+        layout: '0x1.8p0 and 0x18p-4 are both 1.5 (Table 1).'
+        constrained_by: []   # warranted by the ABNF alone, or OURS; no requirement id applies
+      - name: 'exponent'
+        type: '"p" [sign] 1*DIGIT -- DECIMAL'
+        required: true
+        layout: 'The mantissa is hexadecimal and the exponent decimal; the draft cites IEEE 754 5.12.3, C 6.4.4.3 and C++ 5.13.4.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0172"]
+    notes: 'The "p" exponent is REQUIRED: without it the literal is a hexint. PEG order in `number` puts hexfloat before hexint so 0x1.8p0 is not mis-read. floating-suffix / floating-point-suffix from C and C++ is not used.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0031", "draft-ietf-cbor-edn-literals#R-0172"]
+  - name: 'non-finite floating-point literal'
+    locator: '§2.2, §6.1'
+    encoding: CDN-text
+    denotes: 'positive infinity, negative infinity, or one specific NaN'
+    layout: 'nonfin = %s"Infinity" / %s"-Infinity" / %s"NaN"'
+    cbor: 'Infinity f9 7c00; -Infinity f9 fc00; NaN f9 7e00. With indicators: _2 gives fa 7f800000 / fa ff800000 / fa 7fc00000, _3 gives fb 7ff0000000000000 / fb fff0000000000000 / fb 7ff8000000000000 (Table 2).'
+    fields:
+      - name: 'keyword'
+        type: '"Infinity", "-Infinity" or "NaN"'
+        required: true
+        layout: 'CASE-SENSITIVE (%s"..."), so NAN and INFINITY do not parse. Written exactly as in the draft''s own sentence.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0033"]
+    notes: 'NaN names EXACTLY ONE bit pattern: zero sign bit, all-zero significand except a set quiet bit. Any other NaN payload needs the float app-extension, which is NOT mandatory to implement. The minus in -Infinity is part of the keyword, not a `sign`.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0033", "draft-ietf-cbor-edn-literals#R-0034"]
+  - name: 'double-quoted text string literal'
+    locator: '§2.3.1, §6.1'
+    encoding: CDN-text
+    denotes: 'a CBOR text string'
+    layout: 'tstr = DQUOTE *double-quoted DQUOTE ; double-quoted = unescaped / SQUOTE / "\\" escapable-d'
+    cbor: 'major type 3, the UTF-8 bytes of the resulting string.'
+    fields:
+      - name: 'content'
+        type: '*double-quoted'
+        required: true
+        layout: 'All JSON escaping rules apply, with ONE exception: a raw newline (LF, U+000A) may appear and is copied into the string. Carriage returns are NOT copied.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0039"]
+      - name: 'escapes'
+        type: 'escapable-d'
+        required: false
+        layout: '\b \f \n \r \t \\ \" \/ \uXXXX, plus CDN''s addition \u{NNN} where NNN is a Unicode scalar value in hex. JSON surrogate pairs are kept.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0040"]
+    notes: 'Any interoperable RFC 7493 JSON text is also a CDN text, which is why \/ survives here and is withdrawn from single-quoted literals. HT (%x09) is NOT in `unescaped`, so a literal tab inside a string literal does not parse -- stated only in an ABNF comment.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0036", "draft-ietf-cbor-edn-literals#R-0039", "draft-ietf-cbor-edn-literals#R-0040"]
+  - name: 'raw string literal'
+    locator: '§2.3.3, §6.1'
+    encoding: CDN-text
+    denotes: 'a CBOR text string, with no backslash processing'
+    layout: 'rawstring = startrawdelim raw-inner alikerawdelim ; rawdelim = 1*` -- one or more GRAVE ACCENT (U+0060) characters'
+    cbor: 'major type 3.'
+    fields:
+      - name: 'opening delimiter'
+        type: 'startrawdelim'
+        required: true
+        layout: 'Use more backquotes than the longest run inside the string.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0050"]
+      - name: 'inner text'
+        type: 'raw-inner = 1*(rawchars / shortrawdelim)'
+        required: true
+        layout: 'AT LEAST ONE character: a raw string can never be empty, so the empty string must use '''' or "".'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0051"]
+      - name: 'closing delimiter'
+        type: 'alikerawdelim'
+        required: true
+        layout: 'Exactly as wide as the opening delimiter. The grammar cannot express this; the rule lives in ABNF comments and in §6.1 item 7.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0176"]
+    notes: 'TWO POST-PROCESSING RULES, applied after the delimiters are matched and absent from the grammar: (1) one leading newline (LF or CRLF) is removed; (2) failing that, if the inner string both starts and ends with a space, exactly one space is removed from each end; (3) failing both, the inner text is used unchanged. NOTE the grammar files this under the nonterminal `bstr` although it denotes TEXT -- the rule carries the comment "; note: rawstring is text; app-... can be any type".'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0048", "draft-ietf-cbor-edn-literals#R-0049", "draft-ietf-cbor-edn-literals#R-0050", "draft-ietf-cbor-edn-literals#R-0051", "draft-ietf-cbor-edn-literals#R-0052", "draft-ietf-cbor-edn-literals#R-0053", "draft-ietf-cbor-edn-literals#R-0054", "draft-ietf-cbor-edn-literals#R-0176"]
+  - name: 'single-quoted byte string literal (unprefixed)'
+    locator: '§2.3.2, §6.1'
+    encoding: CDN-text
+    denotes: 'a CBOR byte string -- the UTF-8 bytes of the literal''s text'
+    layout: 'sqstr = SQUOTE *single-quoted SQUOTE'
+    cbor: 'major type 2. ''hello world'' and h''68656c6c6f20776f726c64'' are the same byte string.'
+    fields:
+      - name: 'content'
+        type: '*single-quoted'
+        required: true
+        layout: 'JSON escaping rules apply equivalently; \\ is a backslash and \'' a single quote.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0044"]
+      - name: 'withdrawn escapes'
+        type: 'two exclusions'
+        required: false
+        layout: '\/ is NOT available (it exists only for JSON compatibility, and single quotes do not occur in JSON). \u escapes are NOT available for U+0020..U+007E.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0042", "draft-ietf-cbor-edn-literals#R-0043"]
+    notes: 'This is the only byte-string form that needs no app-extension. It is also the form that matches CDDL''s `bytes = [bsqual] %x27 *BCHAR %x27` with bsqual absent.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0041", "draft-ietf-cbor-edn-literals#R-0042", "draft-ietf-cbor-edn-literals#R-0043", "draft-ietf-cbor-edn-literals#R-0044", "draft-ietf-cbor-edn-literals#R-0045"]
+  - name: 'sequence literal, unprefixed (embedded CBOR)'
+    locator: '§2.3.4, §6.1'
+    encoding: CDN-text
+    denotes: 'a CBOR byte string holding the ENCODING of the items inside'
+    layout: 'embedded = "<<" seq ">>" ; seq = S [item *(MSC item) SOC] -- zero or more item literals separated by a comma or blank space.'
+    cbor: 'major type 2, carrying the encoded CBOR sequence. <<1>> is h''01''; <<1, 2>> is h''0102''; <<''''>> -- i.e. <<>> -- is h''''.'
+    fields:
+      - name: 'items'
+        type: 'zero or more item'
+        required: false
+        layout: 'Separated by comma and/or blank space, with an optional trailing comma.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0055"]
+      - name: 'encoding indicators on items'
+        type: 'spec on each item'
+        required: false
+        layout: 'HONOURED before the sequence is assembled: <<1_1>> is h''190001'', <<1_0, 2_2>> is h''1801 1a00000002''.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0058"]
+    notes: 'The draft''s basic output format prefers h'''' over embedded CBOR, so a generator aimed at comparability should not emit <<>> unprompted.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0055", "draft-ietf-cbor-edn-literals#R-0057", "draft-ietf-cbor-edn-literals#R-0058"]
+  - name: 'deprecated indefinite-length string syntax (streamstring)'
+    locator: '§4.3, §6.1'
+    encoding: CDN-text
+    denotes: 'an indefinite-length CBOR byte or text string, built from chunks'
+    layout: 'streamstring = "(_" MS string *(MSC string) SOC ")"'
+    cbor: 'major type 2 or 3 with ai=31, one chunk per argument, terminated by ff. (_ h''0123'', h''4567'') and (_ "foo", "bar") are the two shapes.'
+    fields:
+      - name: 'chunks'
+        type: '1*string'
+        required: true
+        layout: 'ALL of one type -- the grammar states this only as the comment "; check semantically that strings are either all text or all bytes". At least one chunk is required, because the type is read off the chunks.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0146"]
+      - name: 'empty case'
+        type: ''''' _ or "" _'
+        required: false
+        layout: '(_ ) alone would be ambiguous between 5f ff and 7f ff and is therefore not used. '''' _ and "" _ (written without the space) are reserved for NO chunks, not as short forms for one empty chunk.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0147"]
+    notes: 'DEPRECATED by this draft: "new CDN documents should instead use the ilbs/ilts app-extensions". It is nonetheless still fully grammatical -- `item` still lists `streamstring` and Figure 1 still defines it, unmarked.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0145", "draft-ietf-cbor-edn-literals#R-0146", "draft-ietf-cbor-edn-literals#R-0147", "draft-ietf-cbor-edn-literals#R-0148"]
+  - name: 'array'
+    locator: '§2.4, §2.4.1, §6.1'
+    encoding: CDN-text
+    denotes: 'a CBOR array'
+    layout: 'array = "[" (specms S item *(MSC item) SOC / spec S) "]"'
+    cbor: 'major type 4. [_ 1, 2] marks an indefinite-length encoding; [_0 false, true] fixes the head size, giving 98 02 f4 f5.'
+    fields:
+      - name: 'elements'
+        type: 'zero or more item'
+        required: false
+        layout: 'Any CDN item.'
+        constrained_by: []   # warranted by the ABNF alone, or OURS; no requirement id applies
+      - name: 'separator'
+        type: 'MSC = ("," S) / (MS ["," S])'
+        required: true
+        layout: 'A comma OR blank space, and at least one of them. [1, 2, 3] and [1  2  3] are the same; [[][]] is NOT well-formed CDN while [[] []] and [[],[]] are.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0066", "draft-ietf-cbor-edn-literals#R-0068", "draft-ietf-cbor-edn-literals#R-0069"]
+      - name: 'trailing comma'
+        type: 'SOC = S [","  S]'
+        required: false
+        layout: 'Allowed, not required.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0067"]
+      - name: 'encoding indicator'
+        type: 'specms / spec'
+        required: false
+        layout: 'Written immediately after the opening bracket: _ for indefinite length, or _i / _0.._3 for the head size.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0143", "draft-ietf-cbor-edn-literals#R-0144"]
+    notes: 'This is the one place a BARE underscore is admitted by both the grammar and the prose.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0066", "draft-ietf-cbor-edn-literals#R-0067", "draft-ietf-cbor-edn-literals#R-0068", "draft-ietf-cbor-edn-literals#R-0069", "draft-ietf-cbor-edn-literals#R-0143", "draft-ietf-cbor-edn-literals#R-0144"]
+  - name: 'map'
+    locator: '§2.4, §2.4.1, §2.4.2, §6.1'
+    encoding: CDN-text
+    denotes: 'a CBOR map'
+    layout: 'map = "{" (specms S keyp *(MSC keyp) SOC / spec S) "}" ; keyp = item S ":" S item'
+    cbor: 'major type 5, as for arrays.'
+    fields:
+      - name: 'members'
+        type: 'zero or more keyp'
+        required: false
+        layout: 'key : value pairs.'
+        constrained_by: []   # warranted by the ABNF alone, or OURS; no requirement id applies
+      - name: 'key'
+        type: 'item -- ANY CBOR data item'
+        required: true
+        layout: 'The chief extension over JSON objects: the key need not be a text string.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0065"]
+      - name: 'separator'
+        type: 'MSC'
+        required: true
+        layout: 'As for arrays.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0066"]
+      - name: 'encoding indicator'
+        type: 'specms / spec'
+        required: false
+        layout: 'After the opening brace.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0143", "draft-ietf-cbor-edn-literals#R-0144"]
+    notes: 'Duplicate keys are WELL-FORMED and NOT VALID; a diagnostic implementation MAY accept them. {1: "to", 1: "from"} is the draft''s example.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0065", "draft-ietf-cbor-edn-literals#R-0066", "draft-ietf-cbor-edn-literals#R-0070"]
+  - name: 'tag'
+    locator: '§2.5, §6.1'
+    encoding: CDN-text
+    denotes: 'a CBOR tagged data item'
+    layout: 'tagged = uint spec "(" S item S ")" ; uint = "0" / DIGIT1 *DIGIT'
+    cbor: 'major type 6. 1_1(1363896240) encodes as d9 0001 1a 514b67b0 -- the indicator sizes the TAG HEAD, not the content.'
+    fields:
+      - name: 'tag number'
+        type: 'uint'
+        required: true
+        layout: 'Decimal, no leading zeros except for the tag number zero itself: 0|[1-9][0-9]*.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0071"]
+      - name: 'encoding indicator'
+        type: 'spec'
+        required: false
+        layout: 'Binds to the tag head.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0072"]
+      - name: 'content'
+        type: 'exactly one item'
+        required: true
+        layout: 'In parentheses.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0071"]
+    notes: '0("2013-03-21T20:04:00Z") and 1(1363896240) are the draft''s examples. CDDL writes the same thing as #6.98(...), which is why a CDDL-ism in a CDN file does not parse (Appendix A).'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0071", "draft-ietf-cbor-edn-literals#R-0072"]
+  - name: 'simple value keyword'
+    locator: '§2.6, §6.1'
+    encoding: CDN-text
+    denotes: 'a CBOR simple value'
+    layout: 'simple = %s"false" / %s"true" / %s"null" / %s"undefined" / ...'
+    cbor: 'major type 7: false = 20 (f4), true = 21 (f5), null = 22 (f6), undefined = 23 (f7).'
+    fields:
+      - name: 'keyword'
+        type: 'one of four'
+        required: true
+        layout: 'CASE-SENSITIVE. true, false and null come from JSON; undefined comes from JavaScript.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0073"]
+    notes: 'All four are RESERVED as app-extension identifiers (§3), because `app-prefix = lcalpha *lcldh` would otherwise match them and true''x'' would compete with the keyword.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0073", "draft-ietf-cbor-edn-literals#R-0080"]
+  - name: 'simple(n)'
+    locator: '§2.6, §6.1'
+    encoding: CDN-text
+    denotes: 'any CBOR simple value, by number'
+    layout: 'simple = %s"simple(" S simple-number S ")"'
+    cbor: 'major type 7 with the given value. simple(20) is false; simple(42) is mt 7, value 42.'
+    fields:
+      - name: 'number'
+        type: 'simple-number'
+        required: true
+        layout: 'The GRAMMAR admits 0-23 and 32-255 and nothing else -- its own comment reads ";; there are no simple values between 24-31". The PROSE admits any 0|[1-9][0-9]*, which is WIDER: simple(25) and simple(1000) are admitted by the sentence and rejected by the figure.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0074"]
+    notes: 'OURS: the grammar is right and the prose is not narrowed anywhere. Recorded as grammar-gaps.derived.txt G-10.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0074"]
+  - name: 'ellipsis'
+    locator: '§5.2, §3.5, §6.1'
+    encoding: CDN-text
+    denotes: 'elided material -- information deliberately removed and irrecoverable'
+    layout: 'ellipsis = 3*"." -- three OR MORE dots in a row'
+    cbor: 'Normally an ERROR on ingestion. When the tag-based form is enabled: a whole subtree becomes /CPA/888(null); a partly elided string becomes CPA888 wrapping an array of string parts alternating with 888(null).'
+    fields:
+      - name: 'dots'
+        type: '3*"."'
+        required: true
+        layout: 'Three or more.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0156"]
+      - name: 'position'
+        type: 'an item, a map key, a map value, or inside an h'''' literal or a t1/b1 argument'
+        required: true
+        layout: '[1, 2, ..., 3] elides array elements; h''4711...0815'' elides bytes INSIDE a hex literal; t1<<"a", ..., "b">> elides part of a string. b64'''' has NO ellipsis syntax.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0113", "draft-ietf-cbor-edn-literals#R-0163"]
+    notes: 'A single ellipsis can stand for SEVERAL elements. The tag form cannot carry more than one elided map MEMBER, because the resulting map would have duplicate keys. Eliding is NOT the same as commenting out: a comment leaves the consumer unaware that anything was removed.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0111", "draft-ietf-cbor-edn-literals#R-0112", "draft-ietf-cbor-edn-literals#R-0113", "draft-ietf-cbor-edn-literals#R-0114", "draft-ietf-cbor-edn-literals#R-0115", "draft-ietf-cbor-edn-literals#R-0156", "draft-ietf-cbor-edn-literals#R-0157", "draft-ietf-cbor-edn-literals#R-0158", "draft-ietf-cbor-edn-literals#R-0159", "draft-ietf-cbor-edn-literals#R-0160", "draft-ietf-cbor-edn-literals#R-0161", "draft-ietf-cbor-edn-literals#R-0162", "draft-ietf-cbor-edn-literals#R-0163", "draft-ietf-cbor-edn-literals#R-0164"]
+  - name: 'comment'
+    locator: '§2.1, §6.1'
+    encoding: CDN-text
+    denotes: 'blank space -- comments are not data items and leave no trace in the CBOR'
+    layout: 'comment = "/" non-slash-star *non-slash "/" / "/*" ends-in-star *(non-slash-star ends-in-star) "/" / eol-comment *non-lf %x0A ; eol-comment = "#" / "//"'
+    cbor: 'none.'
+    fields:
+      - name: 'slash-delimited inline'
+        type: '"/" ... "/"'
+        required: false
+        layout: 'Opens with a slash followed by a character that is neither a star nor a slash.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0021"]
+      - name: 'C-style inline'
+        type: '"/*" ... "*/"'
+        required: false
+        layout: 'NEW in this draft, and BACKWARD-INCOMPATIBLE: "/*foo/" was a complete comment under RFC 8610 Appendix G.6 and is now the start of a C-style comment.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0022", "draft-ietf-cbor-edn-literals#R-0027"]
+      - name: 'end-of-line'
+        type: '"#" or "//" to LF'
+        required: false
+        layout: 'NEW in this draft. "//" was an EMPTY inline comment under RFC 8610 Appendix G.6 and now introduces an end-of-line comment.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0023", "draft-ietf-cbor-edn-literals#R-0026"]
+    notes: 'Usable only where the syntax allows blank space. An app-extension may define its OWN internal comment syntax for the text inside its literals: h'''' mirrors the outer syntax, b64'''' offers only the # form (a slash is base64-classic data), and none of the other extensions in this draft offers any.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0020", "draft-ietf-cbor-edn-literals#R-0021", "draft-ietf-cbor-edn-literals#R-0022", "draft-ietf-cbor-edn-literals#R-0023", "draft-ietf-cbor-edn-literals#R-0024", "draft-ietf-cbor-edn-literals#R-0026", "draft-ietf-cbor-edn-literals#R-0027", "draft-ietf-cbor-edn-literals#R-0093", "draft-ietf-cbor-edn-literals#R-0094"]
+  - name: 'encoding indicator'
+    locator: '§4, §4.1, §4.2, §7.2'
+    encoding: CDN-text
+    denotes: 'which of several CBOR serialisations was or is to be used. It never changes the DATA MODEL value.'
+    layout: 'spec = ["_" *wordchar] ; specms = ["_" *wordchar MS] ; wordchar = "_" / ALPHA / DIGIT'
+    cbor: 'selects the additional-information field of the item''s head: _i ai=0..23, _0 ai=24, _1 ai=25, _2 ai=26, _3 ai=27, _ ai=31 (indefinite). _4, _5, _6 and _7 are RESERVED.'
+    fields:
+      - name: 'underscore'
+        type: '"_"'
+        required: true
+        layout: 'Then a maximal run of alphanumerics and underscores.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0132"]
+      - name: 'placement'
+        type: 'immediately right of the item'
+        required: true
+        layout: 'Or, for an array or map, immediately after the opening bracket or brace.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0133", "draft-ietf-cbor-edn-literals#R-0143"]
+      - name: 'value'
+        type: 'registered in the §7.2 registry'
+        required: true
+        layout: 'The grammar admits any wordchar run; the registry says which mean anything.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0142"]
+    notes: 'A CDN-consuming implementation MUST ACCEPT encoding indicators -- where the same sentence defines accept as "process or ignore". An indicator too small for its item is an ERROR with no truncation and no rounding. Where none is given, a diagnostic encoder is expected to produce Preferred Serialization with definite-length encoding only.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0125", "draft-ietf-cbor-edn-literals#R-0127", "draft-ietf-cbor-edn-literals#R-0128", "draft-ietf-cbor-edn-literals#R-0129", "draft-ietf-cbor-edn-literals#R-0132", "draft-ietf-cbor-edn-literals#R-0133", "draft-ietf-cbor-edn-literals#R-0134", "draft-ietf-cbor-edn-literals#R-0135", "draft-ietf-cbor-edn-literals#R-0136", "draft-ietf-cbor-edn-literals#R-0137", "draft-ietf-cbor-edn-literals#R-0138", "draft-ietf-cbor-edn-literals#R-0139", "draft-ietf-cbor-edn-literals#R-0140", "draft-ietf-cbor-edn-literals#R-0141", "draft-ietf-cbor-edn-literals#R-0142", "draft-ietf-cbor-edn-literals#R-0143", "draft-ietf-cbor-edn-literals#R-0144"]
+  - name: 'prefixed literal (the general form)'
+    locator: '§3, §6.1'
+    encoding: CDN-text
+    denotes: 'whatever the named app-extension defines -- NOT necessarily a byte string'
+    layout: 'app-prefix = lcalpha *lcldh / ucalpha *ucldh ; app-string = app-prefix sqstr ; app-rstring = app-prefix rawstring ; app-sequence = app-prefix "<<" seq ">>"'
+    cbor: 'defined per extension; see the entries below and Table 7.'
+    fields:
+      - name: 'prefix'
+        type: '[a-z][a-z0-9-]* or its all-uppercase variant'
+        required: true
+        layout: 'Registered in the §7.1 App-Extension Identifiers registry. false, true, null and undefined are reserved and cannot be identifiers. An identifier yields ONE or TWO prefixes, never more.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0079", "draft-ietf-cbor-edn-literals#R-0080", "draft-ietf-cbor-edn-literals#R-0081", "draft-ietf-cbor-edn-literals#R-0084"]
+      - name: 'carrier'
+        type: 'a single-quoted string, a raw string, or a sequence literal'
+        required: true
+        layout: 'The string forms are SHORTHAND for a one-element sequence literal: b64`Zm9v` is b64<<"Zm9v">>. The extension CANNOT DISTINGUISH the three.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0075", "draft-ietf-cbor-edn-literals#R-0076", "draft-ietf-cbor-edn-literals#R-0085", "draft-ietf-cbor-edn-literals#R-0086", "draft-ietf-cbor-edn-literals#R-0087"]
+      - name: 'uppercase variant'
+        type: 'optional'
+        required: false
+        layout: 'By CONVENTION -- not by rule -- the uppercase prefix wraps the lowercase value in an appropriate CBOR tag.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0082", "draft-ietf-cbor-edn-literals#R-0083"]
+    notes: 'MANDATORY TO IMPLEMENT: h, b64, t1, b1, dt, ip. Everything else in this draft -- hash, cri, float, ilbs, ilts -- is OPTIONAL. An unknown or unimplemented prefix is "usually an error and processing has to stop", which is a RESOLUTION rule: the grammar admits any lowercase prefix, registered or not.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0075", "draft-ietf-cbor-edn-literals#R-0076", "draft-ietf-cbor-edn-literals#R-0079", "draft-ietf-cbor-edn-literals#R-0080", "draft-ietf-cbor-edn-literals#R-0081", "draft-ietf-cbor-edn-literals#R-0082", "draft-ietf-cbor-edn-literals#R-0083", "draft-ietf-cbor-edn-literals#R-0084", "draft-ietf-cbor-edn-literals#R-0085", "draft-ietf-cbor-edn-literals#R-0086", "draft-ietf-cbor-edn-literals#R-0087", "draft-ietf-cbor-edn-literals#R-0088", "draft-ietf-cbor-edn-literals#R-0151"]
+  - name: 'h -- base16 byte string literal'
+    locator: '§3.1, §6.2.1, §6.3.1, §6.3.3'
+    encoding: CDN-text
+    denotes: 'a CBOR byte string, base16-decoded from the literal''s content'
+    layout: 'h''...'' / h`...` / h<<...>> ; app-string-h = S *(HEXDIG S HEXDIG S / ellipsis S) [eol-comment *non-lf]'
+    cbor: 'major type 2. h''12345678'' is the four bytes 12 34 56 78.'
+    fields:
+      - name: 'hex digits'
+        type: 'pairs of HEXDIG'
+        required: true
+        layout: 'Upper or lower case. Blank space is IGNORED, so h''4 86 56c 6c6f'' and h''48 65 6c 6c 6f'' are the same bytes.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0089", "draft-ietf-cbor-edn-literals#R-0092"]
+      - name: 'comments'
+        type: 'both inline forms and # / //'
+        required: false
+        layout: 'The h content grammar mirrors the outer comment syntax.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0093"]
+      - name: 'ellipsis'
+        type: '3*"."'
+        required: false
+        layout: 'Permitted INSIDE the literal, e.g. h''4711...0815''. b64 has no equivalent.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0163", "draft-ietf-cbor-edn-literals#R-0181"]
+    notes: 'MANDATORY TO IMPLEMENT. No padding. This is the form the draft''s own basic output format prefers, and the only byte-string form that is also a CDDL literal when written with single quotes. An uppercase H variant is NOT used (Table 7).'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0089", "draft-ietf-cbor-edn-literals#R-0090", "draft-ietf-cbor-edn-literals#R-0092", "draft-ietf-cbor-edn-literals#R-0093", "draft-ietf-cbor-edn-literals#R-0181"]
+  - name: 'b64 -- base64 byte string literal'
+    locator: '§3.1, §6.2.2, §6.3.2, §6.3.4'
+    encoding: CDN-text
+    denotes: 'a CBOR byte string, base64-decoded from the literal''s content'
+    layout: 'b64''...'' / b64`...` / b64<<...>> ; app-string-b64 = B *(4(b64dig B)) [...] ["#" *non-lf] ; b64dig = ALPHA / DIGIT / "-" / "_" / "+" / "/"'
+    cbor: 'major type 2. b64''EjRWeA'' is the four bytes 12 34 56 78.'
+    fields:
+      - name: 'base64 digits'
+        type: 'b64dig'
+        required: true
+        layout: 'BOTH alphabets: classic (+, /) and URL-safe (-, _). The draft says they "have the same meaning where they overlap" -- these four characters are exactly where they do not. OURS: nothing forbids a MIXED literal.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0090", "draft-ietf-cbor-edn-literals#R-0182"]
+      - name: 'padding'
+        type: '"=" or "=="'
+        required: false
+        layout: 'Accommodated but not required.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0182"]
+      - name: 'comments'
+        type: 'ONLY # to end of line'
+        required: false
+        layout: 'A slash is base64-classic DATA, so slash-delimited comments are impossible here. The draft''s worked example turns on this: b64''/base64 not a comment/ but one follows # comment''.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0094", "draft-ietf-cbor-edn-literals#R-0183"]
+    notes: 'MANDATORY TO IMPLEMENT. No ellipsis syntax. An uppercase B64 variant is NOT used (Table 7).'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0089", "draft-ietf-cbor-edn-literals#R-0090", "draft-ietf-cbor-edn-literals#R-0094", "draft-ietf-cbor-edn-literals#R-0182", "draft-ietf-cbor-edn-literals#R-0183"]
+  - name: 'b32, h32 -- NOT DEFINED'
+    locator: '§3.1, §7.1'
+    encoding: CDN-text
+    denotes: 'nothing. These names are held in the IANA registry as Reserved against RFC8949 and have NO meaning in CDN.'
+    layout: 'would be b32''...'' / h32''...''. The grammar ADMITS both lexically, because `app-prefix = lcalpha *lcldh` accepts any [a-z][a-z0-9-]* string.'
+    cbor: 'none. Resolution fails at §5.1: an app-extension "not known or not implemented by the ingesting process" is "usually an error and processing has to stop".'
+    fields:
+      - name: 'status'
+        type: 'Reserved in Table 8, absent from Table 7'
+        required: true
+        layout: '"This has not been implemented widely and therefore is not directly included in this specification."'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0091"]
+      - name: 'route back'
+        type: '§7.1 registry, expert review'
+        required: false
+        layout: '"These and further byte string formats now can easily be added back as prefixed literals."'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0091", "draft-ietf-cbor-edn-literals#R-0190"]
+    notes: 'THIS IS THE library#39 ANSWER. RFC 8610 Appendix G.2 named four EDN prefixes where the CDDL grammar''s bsqual admits two; this draft obsoletes Appendix G outright and defines exactly the two. Full disposition in schema/byte-string-prefixes.derived.yaml. Do NOT use an ABNF check as a prefix allowlist -- b32''...'' parses.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0077", "draft-ietf-cbor-edn-literals#R-0078", "draft-ietf-cbor-edn-literals#R-0091", "draft-ietf-cbor-edn-literals#R-0151", "draft-ietf-cbor-edn-literals#R-0190", "draft-ietf-cbor-edn-literals#R-0194"]
+  - name: 'dt / DT -- epoch date-time'
+    locator: '§3.2, §6.2.3'
+    encoding: CDN-text
+    denotes: 'lowercase: a NUMBER (the epoch-based date/time). Uppercase: the same number wrapped in tag 1.'
+    layout: 'dt''1969-07-21T02:56:16Z'' and the raw-string and sequence forms ; app-string-dt = date-time (RFC 3339)'
+    cbor: 'dt''1969-07-21T02:56:16Z'' is -14159024; dt''1969-07-21T02:56:16.5Z'' is -14159023.5; DT''1969-07-21T02:56:16Z'' is 1(-14159024) (Table 3).'
+    fields:
+      - name: 'date-time'
+        type: 'RFC 3339 Standard Date/Time String'
+        required: true
+        layout: 'As a text OR byte string.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0095"]
+      - name: 'fractional seconds'
+        type: 'time-secfrac'
+        required: false
+        layout: 'PRESENT -> the value is a FLOATING-POINT number; ABSENT -> an INTEGER. It is the SYNTAX that decides, so dt''...T02:56:16.0Z'' is -14159024.0 and not -14159024.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0096"]
+    notes: 'MANDATORY TO IMPLEMENT. The uppercase variant is the draft''s worked example of the tag convention. Figure 5''s comments carry the real ranges; the grammar itself admits 9999-99-99T99:99:99Z.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0095", "draft-ietf-cbor-edn-literals#R-0096", "draft-ietf-cbor-edn-literals#R-0097", "draft-ietf-cbor-edn-literals#R-0184"]
+  - name: 'ip / IP -- IP address or prefix'
+    locator: '§3.3, §6.2.4'
+    encoding: CDN-text
+    denotes: 'lowercase: a byte string (or, with a prefix length, an array [length, bytes]). Uppercase: the same wrapped in tag 54 (IPv6) or tag 52 (IPv4).'
+    layout: 'ip''192.0.2.42'' ; IP''2001:db8::/64'' ; app-string-ip = IPaddress ["/" uint]'
+    cbor: 'ip''192.0.2.42'' is h''c000022a''; IP''192.0.2.42'' is 52(h''c000022a''); IP''192.0.2.0/24'' is 52([24,h''c00002'']); IP''2001:db8::/64'' is 54([64,h''20010db8'']) (Table 4).'
+    fields:
+      - name: 'address'
+        type: 'IPv4address / IPv6address (RFC 3986 §3.2.2)'
+        required: true
+        layout: 'The ABNF is rearranged for PEG compatibility.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0098", "draft-ietf-cbor-edn-literals#R-0185"]
+      - name: 'prefix length'
+        type: '["/" uint]'
+        required: false
+        layout: 'With a prefix length the byte string is TRUNCATED per RFC 9164 §4.2 -- 192.0.2.0/24 gives three bytes, not four.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0100"]
+    notes: 'MANDATORY TO IMPLEMENT. The TAG carries the address family, so the lowercase form is AMBIGUOUS: ip''2001:db8::/56'' is an unwrapped [56,h''20010db8''] and "the information on whether an address is IPv4 or IPv6 often needs to come from the context". There is NO representation of RFC 9164''s Interface format and therefore no way to write a zone identifier.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0098", "draft-ietf-cbor-edn-literals#R-0099", "draft-ietf-cbor-edn-literals#R-0100", "draft-ietf-cbor-edn-literals#R-0101", "draft-ietf-cbor-edn-literals#R-0102", "draft-ietf-cbor-edn-literals#R-0185"]
+  - name: 'hash -- cryptographic hash value'
+    locator: '§3.4'
+    encoding: CDN-text
+    denotes: 'a byte string: the OUTPUT of a hash function applied to the literal''s input'
+    layout: 'hash<<''foo'', -16>> / hash''foo'' -- a string, optionally followed by an algorithm identifier'
+    cbor: 'hash<<''foo''>> is h''2C26B46B68FFC68FF99B453C1D30413413422D706483BFA0F98A5E886266E7AE'' (Table 5).'
+    fields:
+      - name: 'input'
+        type: 'a text or byte string'
+        required: true
+        layout: 'The data to be hashed.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0103"]
+      - name: 'algorithm'
+        type: 'an integer or a text string'
+        required: false
+        layout: 'An identifier in the IANA COSE Algorithms registry, by value or -- if no algorithm is registered with that value -- by registry name. DEFAULT: -16 ("SHA-256").'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0104", "draft-ietf-cbor-edn-literals#R-0105"]
+    notes: 'NOT mandatory to implement. No uppercase HASH variant is defined. OURS: a consumer must be able to COMPUTE the digest, which makes this the only literal in the draft whose value is not a syntactic transformation of its text. It also couples CDN to the COSE registry.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0103", "draft-ietf-cbor-edn-literals#R-0104", "draft-ietf-cbor-edn-literals#R-0105", "draft-ietf-cbor-edn-literals#R-0106"]
+  - name: 't1, b1 -- string concatenation'
+    locator: '§3.5'
+    encoding: CDN-text
+    denotes: 't1: a text string. b1: a byte string. Both are the concatenation of their arguments'' BYTES.'
+    layout: 't1<<"Hello ", "world">> ; b1<<''Hello'', h''20'', ''world''>>'
+    cbor: 't1<<"Hello ", "world">> is "Hello world"; b1<<h''48656c6c6f'', h''20776f726c64''>> is ''Hello world''.'
+    fields:
+      - name: 'arguments'
+        type: 'one or more string literals, of EITHER kind'
+        required: true
+        layout: 'Text and byte strings may MIX: the join is at the byte level, proceeding left to right.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0108", "draft-ietf-cbor-edn-literals#R-0109"]
+      - name: 'result validity'
+        type: 'UTF-8 for t1'
+        required: true
+        layout: 'The joined bytes "needs to be valid UTF-8 except for ''diagnostic'' implementations" that are enabled for well-formed-but-invalid CBOR.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0110"]
+      - name: 'ellipsis arguments'
+        type: '...'
+        required: false
+        layout: 'Turn the result into a CPA888 tag wrapping an array of string spans alternating with 888(null). Adjacent ellipses collapse; nested ones flatten. With NO ellipsis the result is always a single string data item.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0111", "draft-ietf-cbor-edn-literals#R-0112", "draft-ietf-cbor-edn-literals#R-0113", "draft-ietf-cbor-edn-literals#R-0114", "draft-ietf-cbor-edn-literals#R-0115"]
+    notes: 'MANDATORY TO IMPLEMENT -- but the NAMES ARE PROVISIONAL. §3.5 opens with a cref marked for removal: t1 and b1 are "placeholders ... while the actual names are still being decided by the WG". These replace RFC 8610 Appendix G.4''s juxtaposition syntax, which this draft removes entirely.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0038", "draft-ietf-cbor-edn-literals#R-0107", "draft-ietf-cbor-edn-literals#R-0108", "draft-ietf-cbor-edn-literals#R-0109", "draft-ietf-cbor-edn-literals#R-0110", "draft-ietf-cbor-edn-literals#R-0111", "draft-ietf-cbor-edn-literals#R-0112", "draft-ietf-cbor-edn-literals#R-0113", "draft-ietf-cbor-edn-literals#R-0114", "draft-ietf-cbor-edn-literals#R-0115"]
+  - name: 'ilbs, ilts -- indefinite-length string construction'
+    locator: '§3.6'
+    encoding: CDN-text
+    denotes: 'an indefinite-length CBOR byte string (ilbs) or text string (ilts), with ONE CHUNK PER ARGUMENT'
+    layout: 'ilbs<<''Hello '', "world">> ; ilts<<...>>'
+    cbor: 'ilbs<<>> is 5f ff; ilbs<<"Hello world">> is 5f 4b 48656c6c6f20776f726c64 ff; ilbs<<''Hello '', "world">> is 5f 46 48656c6c6f20 45 776f726c64 ff; ilbs<<''Hello ''_0, ''world''>> is 5f 5806 48656c6c6f20 45 776f726c64 ff.'
+    fields:
+      - name: 'arguments'
+        type: 'zero or more strings'
+        required: false
+        layout: 'One chunk of the correct major type per argument. Zero arguments gives the empty indefinite-length string.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0116"]
+      - name: 'encoding indicators on arguments'
+        type: 'spec'
+        required: false
+        layout: 'HONOURED per chunk -- this is the one app-extension in the draft that defines special handling of encoding variants, as §2.3.4 anticipates. An indicator on the WHOLE literal is pointless, since indefinite length is already implied.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0117"]
+    notes: 'NOT mandatory to implement, although they are the stated REPLACEMENT for the deprecated streamstring syntax. NO ELLIPSES: "There is no way to include ellipses in an indefinite length string."'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0116", "draft-ietf-cbor-edn-literals#R-0117", "draft-ietf-cbor-edn-literals#R-0118"]
+  - name: 'cri / CRI -- Constrained Resource Identifier'
+    locator: '§3.7, §6.2.5'
+    encoding: CDN-text
+    denotes: 'lowercase: a CRI reference as a CBOR structure. Uppercase: the same wrapped in tag 99.'
+    layout: 'cri''https://example.com/bottarga/shaved'''
+    cbor: 'cri''https://example.com/bottarga/shaved'' is [-4, ["example", "com"], ["bottarga", "shaved"]]; the CRI form is 99([-4, ["example", "com"], ["bottarga", "shaved"]]).'
+    fields:
+      - name: 'reference'
+        type: 'a URI Reference (RFC 3986) or IRI Reference (RFC 3987)'
+        required: true
+        layout: 'For a non-ASCII input, first apply RFC 3987 §3.1 and then the Figure 7 grammar.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0119", "draft-ietf-cbor-edn-literals#R-0186"]
+    notes: 'NOT mandatory to implement. The mapping is NOT a function: "there may be more than one CRI reference that can be converted to the URI/IRI reference given; implementations are expected to favor the simplest variant available and make non-surprising choices otherwise." OURS: that makes cri'''' unsuitable for a byte-exact test vector unless the chosen CRI is pinned.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0119", "draft-ietf-cbor-edn-literals#R-0120", "draft-ietf-cbor-edn-literals#R-0121", "draft-ietf-cbor-edn-literals#R-0186"]
+  - name: 'float -- IEEE 754 bit pattern'
+    locator: '§3.8'
+    encoding: CDN-text
+    denotes: 'a CBOR floating-point value given by its RAW BYTES'
+    layout: 'float''fe00'' -- the argument is read EXACTLY as a hex literal, as if it carried the h prefix'
+    cbor: 'the byte string is prefixed by 0xF9 (2 bytes, binary16), 0xFA (4 bytes, binary32) or 0xFB (8 bytes, binary64). [float''fe00'', float''fe00''_2, float''47110815''] encodes as 83 F9 FE00 FA FFC00000 FA 47110815.'
+    fields:
+      - name: 'bytes'
+        type: '2, 4 or 8 bytes in hex'
+        required: true
+        layout: 'ANY OTHER LENGTH RAISES AN ERROR.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0123"]
+      - name: 'encoding indicator'
+        type: 'spec'
+        required: false
+        layout: 'The interpretation "does not create or imply an encoding indicator; that can be added separately".'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0123"]
+    notes: 'NOT mandatory to implement -- and it is the ONLY way to write a NaN payload other than the single one CDN calls NaN. OURS: that combination is a trap for a test suite. For finite values the decimal and hex floating-point forms are preferred.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0122", "draft-ietf-cbor-edn-literals#R-0123", "draft-ietf-cbor-edn-literals#R-0124"]
+  - name: 'Diagnostic Notation Unresolved App-Extension Tag (CPA999)'
+    locator: '§5.1, §7.5'
+    encoding: CDN-text
+    denotes: 'a prefixed literal CARRIED UNINTERPRETED, so that its decoding can be postponed to a later stage of ingestion'
+    layout: 'CPA999([<prefix text string>, [<argument>, ...]])'
+    cbor: 'cri''https://example.com'' becomes /CPA/ 999(["cri", ["https://example.com"]]); hash<<"data", -44>> becomes /CPA/ 999(["hash", ["data", -44]]).'
+    fields:
+      - name: 'prefix'
+        type: 'text string'
+        required: true
+        layout: 'The app-extension prefix as written.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0152"]
+      - name: 'arguments'
+        type: 'array'
+        required: true
+        layout: 'For an APP-STRING: exactly one item, a text string holding the text notated by the single-quoted string. For an APP-SEQUENCE: zero or more items, one per element of the sequence.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0153", "draft-ietf-cbor-edn-literals#R-0154"]
+    notes: 'A stage that is not prepared to handle this tag must treat it exactly as an unknown prefix: "this is an error and processing has to stop". The tag NUMBER IS A PLACEHOLDER: §7.5 asks IANA for the "specification required" space with "suggested assignments: 888 and 999", and an RFC-Editor note instructs that the CPA prefix be stripped and the residue replaced.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0151", "draft-ietf-cbor-edn-literals#R-0152", "draft-ietf-cbor-edn-literals#R-0153", "draft-ietf-cbor-edn-literals#R-0154", "draft-ietf-cbor-edn-literals#R-0155", "draft-ietf-cbor-edn-literals#R-0203"]
+  - name: 'Diagnostic Notation Ellipsis Tag (CPA888)'
+    locator: '§5.2, §3.5, §7.5'
+    encoding: CDN-text
+    denotes: 'material deliberately elided from a CDN document'
+    layout: 'CPA888(null) for a whole subtree; CPA888([...]) for a partly elided string'
+    cbor: '[1, 2, 888(null), 3] elides an array element; 888(["Herewith I buy", 888(null), "gned: Alice & Bob"]) elides the middle of a text string; 888([h''4711'', 888(null), h''0815'']) elides bytes.'
+    fields:
+      - name: 'content'
+        type: 'null OR an array'
+        required: true
+        layout: 'null means a data item entirely replaced by an ellipsis. An array alternates between parts of a string and the elisions themselves, each represented as an ellipsis carrying null.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0157", "draft-ietf-cbor-edn-literals#R-0158"]
+    notes: 'ONE ELIDED MAP MEMBER ONLY: "the tag-based representation form defined here does not allow multiple key/value pairs with an ellipsis as a key: the CBOR data item would not be valid." Validators that accept partially specified items "need to require explicit configuration to do so". Tag number is a placeholder, as for CPA999.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0113", "draft-ietf-cbor-edn-literals#R-0156", "draft-ietf-cbor-edn-literals#R-0157", "draft-ietf-cbor-edn-literals#R-0158", "draft-ietf-cbor-edn-literals#R-0159", "draft-ietf-cbor-edn-literals#R-0160", "draft-ietf-cbor-edn-literals#R-0161", "draft-ietf-cbor-edn-literals#R-0162", "draft-ietf-cbor-edn-literals#R-0163", "draft-ietf-cbor-edn-literals#R-0203", "draft-ietf-cbor-edn-literals#R-0209"]
+  - name: 'App-Extension Identifiers registry entry'
+    locator: '§7.1 (Table 8)'
+    encoding: CDN-text
+    denotes: 'one allocation in the IANA "App-Extension Identifiers" registry of the new "Concise Diagnostic Notation" group'
+    layout: 'four fields; registration policy EXPERT REVIEW (RFC 8126 §4.5)'
+    cbor: 'not a CBOR structure.'
+    fields:
+      - name: 'App-Extension Identifier'
+        type: '[a-z][a-z0-9-]*'
+        required: true
+        layout: 'UNIQUE: "No other entry in the registry can have the same app-extension identifier."'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0194"]
+      - name: 'Description'
+        type: 'text'
+        required: true
+        layout: 'A brief description.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0193"]
+      - name: 'Change Controller'
+        type: 'per RFC 8126 §2.3'
+        required: true
+        layout: 'All 16 initial entries are "IETF".'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0195"]
+      - name: 'Reference'
+        type: 'a document'
+        required: true
+        layout: 'The experts are instructed to require a specification, but "can make exceptions".'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0192"]
+    notes: 'Sixteen initial entries (Table 8). h, b32, h32 and b64 are listed "Reserved | RFC8949"; false, true, null, undefined and pragma are reserved against this document. Reserved is a REGISTRY state, not a notation state -- h and b64 carry the same row and only they have meanings.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0190", "draft-ietf-cbor-edn-literals#R-0191", "draft-ietf-cbor-edn-literals#R-0192", "draft-ietf-cbor-edn-literals#R-0193", "draft-ietf-cbor-edn-literals#R-0194", "draft-ietf-cbor-edn-literals#R-0195"]
+  - name: 'Encoding Indicators registry entry'
+    locator: '§7.2 (Table 9)'
+    encoding: CDN-text
+    denotes: 'one allocation in the IANA "Encoding Indicators" registry'
+    layout: 'four fields; registration policy SPECIFICATION REQUIRED (RFC 8126 §4.6) -- a DIFFERENT policy from §7.1'
+    cbor: 'not a CBOR structure.'
+    fields:
+      - name: 'Encoding Indicator'
+        type: '_[_A-Za-z0-9]*'
+        required: true
+        layout: 'UNIQUE. Starts with an underscore.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0197"]
+      - name: 'Description'
+        type: 'text, may use the ai=nn form'
+        required: true
+        layout: 'ai is the low-order 5 bits of the initial byte.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0197"]
+      - name: 'Change Controller'
+        type: 'per RFC 8126 §2.3'
+        required: true
+        layout: 'All ten initial entries are "IETF".'
+        constrained_by: []   # warranted by the ABNF alone, or OURS; no requirement id applies
+      - name: 'Reference'
+        type: 'a document'
+        required: true
+        layout: ''
+        constrained_by: []   # warranted by the ABNF alone, or OURS; no requirement id applies
+    notes: 'Ten initial entries (Table 9): _, _i, _0.._3 defined, _4.._7 reserved. ALL BUT _i are already in RFC 8949 §8.1; _i is this draft''s one addition.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0196", "draft-ietf-cbor-edn-literals#R-0197", "draft-ietf-cbor-edn-literals#R-0198"]
+  - name: 'media type application/cdn'
+    locator: '§7.3 (Table 10)'
+    encoding: CDN-text
+    denotes: 'the IANA media type for a CDN document'
+    layout: 'the full registration template is fenced in ../normative.md §7.3'
+    cbor: 'not a CBOR structure.'
+    fields:
+      - name: 'Encoding considerations'
+        type: 'binary (UTF-8)'
+        required: true
+        layout: ''
+        constrained_by: []   # warranted by the ABNF alone, or OURS; no requirement id applies
+      - name: 'File extension'
+        type: '.cdn'
+        required: false
+        layout: ''
+        constrained_by: []   # warranted by the ABNF alone, or OURS; no requirement id applies
+      - name: 'Fragment identifiers'
+        type: 'as for application/cbor'
+        required: true
+        layout: 'And application/cbor has none defined, so this defers to an empty target.'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0201"]
+      - name: 'Intended usage'
+        type: 'LIMITED USE'
+        required: true
+        layout: '"Concise diagnostic notation represents CBOR data items, which are the format intended for actual interchange."'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0200"]
+    notes: 'Registering a media type "does not elevate its status as an interchange format". OURS: for RFCs the sourcecode type name cbor-diag, not this media type, is the usual label.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0199", "draft-ietf-cbor-edn-literals#R-0200", "draft-ietf-cbor-edn-literals#R-0201"]
+  - name: 'CoAP Content-Format for application/cdn'
+    locator: '§7.4 (Table 11)'
+    encoding: CDN-text
+    denotes: 'a numeric Content-Format in the CoRE Parameters registry'
+    layout: 'application/cdn, no content coding, ID = TBD1'
+    cbor: 'not a CBOR structure.'
+    fields:
+      - name: 'ID'
+        type: 'TBD1'
+        required: true
+        layout: 'To be assigned from 256..9999 by IETF Review or IESG Approval, "preferably a number less than 1000".'
+        constrained_by: ["draft-ietf-cbor-edn-literals#R-0202"]
+    notes: 'UNASSIGNED. Do not hard-code a value.'
+    constrained_by: ["draft-ietf-cbor-edn-literals#R-0202"]

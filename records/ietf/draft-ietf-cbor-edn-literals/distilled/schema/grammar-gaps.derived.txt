@@ -1,0 +1,458 @@
+=====================================================================
+grammar-gaps.derived.txt
+
+DERIVED -- NOT verbatim.  The enumeration, the verdicts and every line
+not inside a quotation are this library's.  Quoted fragments are the
+draft's own bytes, copied from the verbatim files beside this one.
+
+WHAT THIS IS.  draft-ietf-cbor-edn-literals-27 ships 14 ABNF figures and
+10 BCP 14 keywords.  The grammar is therefore where almost all of its
+normative content lives -- and a grammar under-determines a notation.
+This file enumerates every side condition a conforming CDN tool has to
+carry BEYOND the ABNF, every place the prose and the grammar disagree,
+and every defect found in the figures themselves.  Each entry has a
+locator and a verdict: STATIC (checkable while parsing), INSTANCE
+(checkable only against a data item), NOT-CHECKABLE (a convention or a
+statement about tools), or DEFECT (a flaw in the source, reported never
+repaired -- docs/extraction.md).
+
+READING THE GRAMMAR DISPLAYS BELOW.  An ABNF display is the source's own
+line, reproduced from the verbatim file the entry's Locator names, UNLESS
+it contains "..." standing in for elided alternatives or a trailing "<-"
+arrow.  Both of those are this library's abridgement and annotation, not
+the draft's text; such displays are illustrations and the bytes are in
+cdn.abnf, app-string-h.abnf and their siblings.  The three-column left
+margin the source carries is not reproduced in any display here.
+
+Source: "Concise Diagnostic Notation (CDN)",
+        draft-ietf-cbor-edn-literals-27, C. Bormann, 20 July 2026.
+        cached source sha256
+        43cfb1236435a9de62d3c202b7ee653b0f5adbd40d3800bbb9379379dbdbf7e9
+=====================================================================
+
+
+A.  THE GRAMMAR IS NOT SELF-CONTAINED, AND SAYS SO
+---------------------------------------------------------------------
+
+G-01  Raw-string delimiter widths are carried by ABNF COMMENTS, not by
+      ABNF.  Figure 1 gives three rules with the SAME right-hand side:
+
+          rawdelim        = 1*"`"
+          startrawdelim   = rawdelim
+          alikerawdelim   = rawdelim ; width == previous startrawdelim
+          shortrawdelim   = rawdelim ; width < previous startrawdelim
+
+      Nothing in the notation distinguishes them.  Section 6.1 item 7
+      concedes it outright -- "The ABNF grammar for raw strings is
+      lenient; a parser needs to implement the ABNF comments on
+      alikerawdelim and shortrawdelim as well" -- and then prints PEG
+      predicate pseudo-code for the three.  A tool generated from the
+      ABNF alone WILL mis-parse raw strings: every ``...`` would close at
+      the first backquote run of any width.
+      Locator: Section 6.1 (Figure 1), Section 6.1 item 7.
+      Requirement: draft-ietf-cbor-edn-literals#R-0176
+      Verdict: STATIC, but not expressible in ABNF.
+
+G-02  Raw-string content is POST-PROCESSED after parsing, by two rules
+      the grammar cannot carry: one leading newline (LF or CRLF) is
+      removed; failing that, if the inner string both starts and ends
+      with a space, exactly one space is removed from each end; failing
+      both, the inner string is used unchanged.  `raw-inner` matches the
+      undecorated text and says nothing about any of it.
+      Locator: Section 2.3.3.
+      Requirements: draft-ietf-cbor-edn-literals#R-0052,
+      draft-ietf-cbor-edn-literals#R-0053, draft-ietf-cbor-edn-literals#R-0054
+      Verdict: STATIC (a transformation, not a check).
+
+G-03  streamstring chunk types are a SEMANTIC side condition, flagged in
+      the grammar by two comments and nothing else:
+
+          ; check semantically that strings are either all text or all bytes
+          ; note that there must be at least one string to distinguish
+          streamstring    = "(_" MS string *(MSC string) SOC ")"
+
+      So (_ h'01', "foo") parses and is not a CBOR data item.
+      Locator: Section 6.1 (Figure 1), Section 4.3.
+      Requirement: draft-ietf-cbor-edn-literals#R-0146
+      Verdict: INSTANCE.
+
+G-04  Prefix REGISTRATION is not a syntactic property.
+      `app-prefix = lcalpha *lcldh` admits any [a-z][a-z0-9-]* string, so
+      b32'MZXW6===', nosuch'x' and pragma'y' are all well-formed
+      `app-string`s.  What rejects them is Section 5.1 -- an app-extension
+      "not known or not implemented by the ingesting process" is "usually
+      an error and processing has to stop" -- which is a resolution rule,
+      one layer above the parse.  Do NOT use an ABNF check as a prefix
+      allowlist.
+      Locator: Section 6.1 (Figure 1), Section 3, Section 5.1.
+      Requirements: draft-ietf-cbor-edn-literals#R-0079,
+      draft-ietf-cbor-edn-literals#R-0151
+      Verdict: INSTANCE.  See byte-string-prefixes.derived.yaml.
+
+G-05  The four reserved words are a side condition too.  Section 3 says
+      false, true, null and undefined "cannot be used as such identifiers
+      and are reserved", but `app-prefix` would match every one of them.
+      What keeps `true'x'` from parsing as an app-string is the ORDER of
+      `item = map / array / tagged / number / simple / string /
+      streamstring` under a PEG reading: `simple` is tried first and
+      `%s"true"` matches.  Under a backtracking ABNF reading the two
+      parses compete.  The reservation exists to make the question moot.
+      Locator: Section 3, Section 6.1 (Figure 1).
+      Requirement: draft-ietf-cbor-edn-literals#R-0080
+      Verdict: STATIC, by convention rather than by grammar.
+
+G-06  Encoding-indicator VALUES are unconstrained by the grammar.
+      `spec = ["_" *wordchar]` and `wordchar = "_" / ALPHA / DIGIT`, so
+      _zzz, _9, _hello and _______ all parse.  Which indicators mean
+      anything is the Section 7.2 registry's business; _4, _5, _6 and _7
+      are reserved by Section 4.1.  The grammar enforces none of it.
+      Locator: Section 6.1 (Figure 1), Section 4.1, Section 7.2.
+      Requirements: draft-ietf-cbor-edn-literals#R-0132,
+      draft-ietf-cbor-edn-literals#R-0138,
+      draft-ietf-cbor-edn-literals#R-0142
+      Verdict: STATIC, against the registry.
+
+G-07  An encoding indicator may be too small for its data item, and that
+      is an ERROR with no grammatical expression: "encountering an
+      encoding indicator that does not provide enough space to correctly
+      encode the unchanged data item given is an error; there is no
+      truncation or rounding that would change the data item encoded."
+      Section 2.2's Table 2 shows the case: 1.1_1 and 1.1_2 are "(error)"
+      while 1.1_3 is fb 3ff199999999999a.
+      Locator: Section 4.1, Section 2.2 Table 2.
+      Requirement: draft-ietf-cbor-edn-literals#R-0135
+      Verdict: INSTANCE.
+
+G-08  PEG, not BNF.  Section 6 states that the figures "are intended to
+      be useful in a Parsing Expression Grammar (PEG) parser
+      interpretation".  ABNF notation cannot express ordered choice, and
+      several rules depend on it: `number = hexfloat / hexint / octint /
+      binint / decnumber / nonfin` only reaches hexfloat first because it
+      is written first; `item` must try `tagged` before `number` or
+      1(2) parses as 1; `simple-number`'s eight alternatives are a
+      hand-ordered longest-match ladder.  A tool reading these as plain
+      ABNF may order them differently and accept a different language.
+      Locator: Section 6, Section 6.1 (Figure 1).
+      Requirement: draft-ietf-cbor-edn-literals#R-0166
+      Verdict: NOT-CHECKABLE from the grammar alone.
+
+G-09  The Section 6.2 grammars describe DECODED content, i.e. text that
+      two transformations have already been applied to: string-literal
+      escape processing, and the Section 1.3.5 removal of carriage
+      returns.  Section 6.2 states the first.  The second is stated only
+      inside an ABNF comment, in Figure 2:
+
+          lblank          = %x0A / %x20  ; Not HT or CR (gone)
+
+      "(gone)" is the whole statement.  Feed one of these grammars raw
+      source text and it will reject input the notation accepts.
+      Locator: Section 6.2 (Figure 2), Section 1.3.5.
+      Requirements: draft-ietf-cbor-edn-literals#R-0177,
+      draft-ietf-cbor-edn-literals#R-0012
+      Verdict: NOT-CHECKABLE; a precondition on the input.
+
+
+B.  WHERE THE PROSE AND THE GRAMMAR DISAGREE
+---------------------------------------------------------------------
+
+G-10  simple() -- THE PROSE IS WIDER THAN THE GRAMMAR.
+      Section 2.6: "These and all other simple values can be given as
+      "simple()" with the appropriate decimal unsigned integer
+      (0|[1-9][0-9]*) in the parentheses."  That regexp admits 25, 31 and
+      1000.  `simple-number` admits 0-23 and 32-255 and nothing else; its
+      own comment says ";; there are no simple values between 24-31".
+      The grammar is right -- CBOR has no simple values 24-31 and none
+      above 255 -- and the prose is not narrowed anywhere.  simple(25)
+      and simple(1000) are admitted by the sentence and rejected by the
+      figure.
+      Locator: Section 2.6, Section 6.1 (Figure 1).
+      Requirement: draft-ietf-cbor-edn-literals#R-0074
+      Verdict: DEFECT (prose/grammar mismatch).
+
+G-11  The bare _ on a string -- THE GRAMMAR IS WIDER THAN THE PROSE.
+      `string1 = (tstr / bstr) spec` and `spec = ["_" *wordchar]`, so
+      h'00'_ , 'A'_ and "A"_ all parse.  Section 4.1 restricts the bare
+      underscore: it "is only available behind the opening brace/bracket
+      for map and array (Section 4.2)", with ''_ and ""_ reserved for the
+      no-chunks case only.  Digit forms such as 'A'_1 and "A"_1 ARE legal
+      and Table 6 shows them; it is the BARE _ that the prose withholds
+      and the grammar grants.
+      Locator: Section 4.1, Section 4.3, Section 6.1 (Figure 1).
+      Requirements: draft-ietf-cbor-edn-literals#R-0139,
+      draft-ietf-cbor-edn-literals#R-0147
+      Verdict: DEFECT (grammar/prose mismatch).
+
+G-12  The deprecated syntax is still fully grammatical.  Section 4.3
+      deprecates streamstring, yet `item` still lists it and Figure 1
+      still defines it, unmarked.  A parser built from Figure 1 accepts
+      (_ "foo", "bar") with no signal that it is deprecated.
+      Locator: Section 4.3, Section 6.1 (Figure 1).
+      Requirement: draft-ietf-cbor-edn-literals#R-0148
+      Verdict: NOT-CHECKABLE.
+
+G-13  CASE SENSITIVITY IS MIXED, and only partly flagged.  In ABNF a
+      double-quoted literal is case-INsensitive; %s"..." is case-
+      sensitive.  Figure 1 uses both:
+
+          hexint          = [sign] "0x" 1*HEXDIG        <- 0X1267 parses
+          decnumber       = ... ["e" [sign] 1*DIGIT]    <- 1E5 parses
+          hexfloat        = ... "p" [sign] 1*DIGIT      <- 0x1.8P0 parses
+          nonfin          = %s"Infinity"
+                          / %s"-Infinity"
+                          / %s"NaN"
+          simple          = %s"false" / %s"true" / ...
+
+      So 0X1267, 0O11147, 0B1001 and 1E5 are legal CDN while NAN, TRUE
+      and INFINITY are not.  The figure carries exactly one note about
+      this, and it is about hex digits:
+      "; Note: double-quoted strings as in "A" are case-insensitive in ABNF".
+      No sentence of prose addresses the number prefixes.
+      Locator: Section 6.1 (Figure 1), Section 2.2.
+      Verdict: DEFECT (under-documented), STATIC.
+
+G-14  Horizontal tab is legal BETWEEN tokens and illegal INSIDE a string
+      literal, and the only statement of it is an ABNF comment:
+
+          ; We allow %x09 HT in prose, but not in string literals
+          blank           = %x09 / %x0A / %x0D / %x20
+
+      `unescaped` indeed omits %x09.  No sentence of prose says so.
+      Locator: Section 6.1 (Figure 1).
+      Verdict: DEFECT (under-documented), STATIC.
+
+G-15  DEL (U+007F) is admitted unescaped in a quoted string and excluded
+      from a raw string:
+
+          unescaped       = ... / %x5D-7F / NONASCII     <- includes 7F
+          rawchars        = 1*(%x0a/%x0d / %x20-5f / %x61-7e / NONASCII)
+
+      %x61-7e stops one short of 7F.  We found this stated nowhere.
+      (The sibling record rfc-8610 carries the same class of finding as
+      its G-31; unlike RFC 8610, this draft gets the SURROGATE range
+      right -- NONASCII = %x80-D7FF / %xE000-10FFFF correctly excludes
+      U+D800-U+DFFF.)
+      Locator: Section 6.1 (Figure 1).
+      Verdict: DEFECT (under-documented), STATIC.
+
+
+C.  DEFECTS IN THE FIGURES
+---------------------------------------------------------------------
+
+G-16  FIGURE 8 SILENTLY DROPS TWO ALTERNATIVES FROM `bstr`.
+      This is the sharpest finding in this file.  Section 6.3 introduces
+      Figure 8 as an instruction to "add an alternative to bstr that
+      points to a rule for prefixed single-quoted string literals".  What
+      Figure 8 actually prints is a full redefinition:
+
+          Figure 1 (source lines 2423-2425):
+              bstr            = app-string / sqstr / app-rstring / rawstring
+                              / app-sequence / embedded
+                                ; note: rawstring is text; app-... can be any type
+
+          Figure 8 (source lines 3092-3093):
+              bstr            = sq-app-string-dt /
+                                app-string / sqstr / app-sequence / embedded
+
+      `app-rstring` and `rawstring` are GONE.  A parser assembled as
+      Figure 8 instructs loses raw string literals -- ``...`` and
+      h`...` -- entirely, and loses them silently, because the result is
+      still a complete, closed grammar.  Raw strings are a headline
+      feature of this draft (Section 2.3.3) and Table 3 shows dt`` as an
+      equivalent form.
+      Locator: Section 6.3 (Figure 8) against Section 6.1 (Figure 1).
+      Verdict: DEFECT.  Add `app-rstring / rawstring` back when building
+      an integrated parser from Figure 8.
+
+G-17  SECTION 6.3 UNDERSTATES ITS OWN DEPENDENCIES.  Section 6.3 says
+      the integrated grammars need "common definitions in Figures 2 and
+      9" (Figures 2, 9 and 10 for the raw-string pair).  Checked
+      mechanically, that is not enough:
+
+        Figure 9 references DIGIT1, HEXDIG1 and ODIGIT.  Figure 2 defines
+        ALPHA, DIGIT, HEXDIG, HEXDIGA, lblank, non-lf and NONASCII -- not
+        those three.  They exist only in Figure 1.
+
+        Figures 11-14 reference startrawdelim, alikerawdelim and
+        shortrawdelim, also only in Figure 1, plus `ellipsis` and
+        `eol-comment`.
+
+      So every integrated parser depends on Figure 1 as well, and no
+      sentence says so.  An implementer given only the "common
+      definitions in Figures 2 and 9" cannot assemble a closed grammar.
+      Locator: Section 6.3, Sections 6.3.1-6.3.4.
+      Verdict: DEFECT (incomplete dependency statement).
+
+G-18  NINE RULE NAMES ARE DEFINED MORE THAN ONCE WITH DIFFERENT RIGHT-
+      HAND SIDES, across figures that a reader is told to combine.
+      Twenty-four names are defined in more than one figure; fifteen
+      identically.  The nine that differ:
+
+        ALPHA            Fig 1: lcalpha / ucalpha
+                         Fig 2: %x41-5a / %x61-7a          (same set, respelt)
+        ellipsis         Fig 1 and Fig 3 differ only in an ABNF comment
+        comment          Fig 1 = Fig 3; Fig 4 is "#" *non-lf %x0A
+        S                Fig 1: *blank *(comment *blank)
+                         Fig 3: *lblank *(comment *lblank)
+        non-lf           Fig 1: %x09 / %x0D / %x20-7F / NONASCII
+                         Fig 2 and Fig 3: %x20-7f / NONASCII
+        non-slash        Fig 1 uses `blank`; Fig 3 uses `lblank`
+        non-slash-star   as non-slash
+        non-star         as non-slash
+        bstr             see G-16
+
+      The blank/lblank family (S, non-lf, non-slash, non-slash-star,
+      non-star) is DELIBERATE and correct: Figure 1 parses source text
+      where HT and CR may appear, the Section 6.2 grammars parse decoded
+      content where they cannot.  The hazard is that the draft never
+      namespaces the two sets, so an instruction to use the "common
+      definitions in Figures 2 and 9" leaves the implementer to notice
+      which `non-lf` is meant.
+      Locator: Figures 1, 2, 3, 4, 8.
+      Verdict: DEFECT (name collision across combinable grammars).
+
+G-19  THREE RULES IN FIGURE 1 ARE DEFINED AND NEVER REFERENCED:
+        one-item   -- an alternative START SYMBOL.  Figure 1 has two
+                      plausible roots, `seq` and `one-item`, and no
+                      sentence says which is the start symbol or when to
+                      use which.
+        newline    -- `newline = [%x0D] %x0A`, referenced nowhere in any
+                      of the 14 figures.  Dead rule.
+        lblank     -- belongs to the Section 6.2 grammars, where Figure 2
+                      defines it identically.  Figure 1 carries a copy it
+                      does not use.
+      Otherwise Figure 1 is CLOSED: 85 productions, no duplicate names,
+      82 distinct names referenced, every one defined there or an RFC
+      5234 core rule.
+      Locator: Section 6.1 (Figure 1).
+      Verdict: DEFECT (dead rules); the closure result is a positive.
+
+G-20  ELLIPSES WORK INSIDE h'' AND NOT INSIDE b64''.
+          app-string-h    = S *(HEXDIG S HEXDIG S / ellipsis S) ...
+          app-string-b64  = B *(4(b64dig B)) ...
+      Figure 3 admits `ellipsis`; Figure 4 does not.  Section 5.2's
+      worked example relies on it -- "signature": h'4711...0815' -- and
+      says the h'' form "uses special syntax that allows the use of
+      ellipses between the bytes notated _inside_ h'' literals", without
+      noting that b64'' has no such syntax.
+      Locator: Sections 6.2.1, 6.2.2, 5.2.
+      Verdict: DEFECT (asymmetry, undocumented), STATIC.
+
+G-21  b64 MIXES BOTH RFC 4648 ALPHABETS IN ONE RULE.
+          b64dig          = ALPHA / DIGIT / "-" / "_" / "+" / "/"
+      "-" and "_" are base64url; "+" and "/" are base64 classic.  One
+      rule admits both in the SAME literal, so b64'-_+/' parses.
+      Section 3.1 justifies accepting either alphabet because "the actual
+      encodings of the latter two have the same meaning where they
+      overlap" -- but these four characters are exactly where they do NOT
+      overlap.  Nothing forbids a mixed literal or says how to read one.
+      Locator: Section 6.2.2 (Figure 4), Section 3.1.
+      Verdict: DEFECT, INSTANCE.
+
+G-22  FIGURE 7 CARRIES A TYPO AND AN UNFILLED PLACEHOLDER, inside ABNF
+      comments copied into the grammar:
+          ; Use IPv6address, h16, ls32, IPv4adress, dec-octet as re-arranged
+          ; for PEG Compatibility in Figure 6 of [RFC XXXX]:
+      "IPv4adress" is missing a d; the rule is `IPv4address`.  "[RFC
+      XXXX]" is an RFC-Editor placeholder that has reached the grammar.
+      Locator: Section 6.2.5 (Figure 7).
+      Verdict: DEFECT (cosmetic).
+
+G-23  FIGURE 7 USES RFC 5234 PROSE-VALUE NOTATION: `path-empty =
+      0<pchar>`.  Angle-bracket prose values are legal ABNF and are
+      rejected by several real ABNF tools.  Figure 7 also carries four
+      rules defined and never referenced -- absolute-URI, path, reserved
+      and the start symbol app-string-cri -- all inherited from RFC 3986.
+      Locator: Section 6.2.5 (Figure 7).
+      Verdict: DEFECT (tooling hazard).
+
+G-24  A PRODUCTION IS CUT IN HALF BY A PAGE FRAME.  `hexscalar-s` begins
+      at source line 2514 and its last two alternatives, `/ "7F"` and
+      `/ HEXDIG1`, fall after the page 45/46 frame at lines 2525-2526.
+      Read one page and the rule is truncated.  cdn.abnf keeps both
+      halves (regions 3 and 4) and cdn-dedented.derived.abnf joins them.
+      Locator: Section 6.1 (Figure 1), source lines 2514-2526.
+      Verdict: DEFECT of the plain-text rendering, not of the grammar.
+
+G-25  `bstr` HOLDS TEXT-STRING FORMS.  `rawstring` and `app-rstring`
+      denote TEXT strings and live under a nonterminal named `bstr`.  The
+      draft knows: the rule carries "; note: rawstring is text; app-...
+      can be any type".  The name is load-bearing for a reader and wrong.
+      Locator: Section 6.1 (Figure 1).
+      Verdict: DEFECT (naming), NOT-CHECKABLE.
+
+
+D.  WHAT IS NOT A GRAMMAR QUESTION AT ALL
+---------------------------------------------------------------------
+
+G-26  NO DETERMINISTIC FORM, NO ROUND TRIP.  "Because of this, a
+      deterministic representation is not defined for CDN", and
+      "Converting CDN to binary CBOR and back to CDN will generally not
+      achieve exactly the same result as the original input CDN."  Any
+      test that compares two CDN texts for equality is testing something
+      the draft declines to define.  Compare the ENCODED CBOR instead.
+      Locator: Section 1.3.2.
+      Requirements: draft-ietf-cbor-edn-literals#R-0002,
+      draft-ietf-cbor-edn-literals#R-0003
+      Verdict: NOT-CHECKABLE, and decisive for the test-vector role.
+
+G-27  THE CONFORMANCE FLOOR IS SIX PREFIXES, not eighteen.  "Of these,
+      the app-extensions h, b64, t1, b1, dt and ip are mandatory to
+      implement."  hash, cri, float, ilbs and ilts are defined and
+      OPTIONAL, so a vector using them may be rejected by a conforming
+      tool.  float is the sharp case: it is the only way to write a NaN
+      payload other than the one CDN calls NaN, and it is optional.
+      Locator: Section 3.
+      Requirement: draft-ietf-cbor-edn-literals#R-0088
+      Verdict: INSTANCE, against a tool's declared capabilities.
+
+G-28  TWO TAG NUMBERS ARE UNASSIGNED.  CPA888 and CPA999 are placeholders
+      under the CPA code-point-allocation convention; Section 7.5 asks
+      IANA for the "specification required" space with "suggested
+      assignments: 888 and 999", and an RFC-Editor note instructs that
+      the "CPA" prefix be stripped and the residue replaced.  Do not
+      hard-code 888/999.
+      Locator: Section 5.1, Section 5.2, Section 7.5.
+      Verdict: NOT-CHECKABLE until publication.
+
+G-29  TWO APP-EXTENSION NAMES ARE PROVISIONAL.  Section 3.5 opens with a
+      cref marked for removal before publication: "This section uses the
+      placeholders t1 and b1 as provisional app-extension identifiers,
+      allowing the text to stabilize while the actual names are still
+      being decided by the WG."  Both are in the mandatory-to-implement
+      set.  The document's own opening cref says the CDN name itself and
+      the b1/t1 names have no WG input yet.
+      Locator: Section 3.5, editorial cref before Section 1.
+      Verdict: NOT-CHECKABLE; a stability risk, not a gap.
+
+G-30  THE DRAFT IS AN INTERNET-DRAFT.  "Updates: 8610, 8949 (if
+      approved)".  Everything it obsoletes -- RFC 8949 Section 8 and RFC
+      8610 Appendix G -- remains in force until it is published.  See
+      byte-string-prefixes.derived.yaml, which turns on exactly this.
+      Locator: header, Abstract, Section 1.
+      Verdict: NOT-CHECKABLE.
+
+
+---------------------------------------------------------------------
+WHAT WAS CHECKED MECHANICALLY, AND WHAT WAS NOT
+
+Checked by script against the cached source and the verbatim files:
+  - all 23 verbatim regions in this directory are byte-identical to the
+    source lines their headers name, and each region's sha256 is in its
+    file header;
+  - Figure 1 holds 85 productions with no duplicate name; 82 distinct
+    names are referenced and every one resolves inside the figure or to
+    an RFC 5234 core rule.  Closure holds ACROSS the three page frames,
+    which is an independent proof that no rule was lost at a frame;
+  - the per-figure production counts: Fig 2 = 7, Fig 3 = 10, Fig 4 = 4,
+    Fig 5 = 14, Fig 6 = 9, Fig 7 = 37, Figs 8-10 = 12, Figs 11-14 = 26;
+  - the cross-figure name collisions of G-18 (24 names redefined, 15
+    identically, 9 differently);
+  - the unresolved-name lists behind G-17;
+  - cdn-dedented.derived.abnf round-trips: re-indenting it by three
+    columns reproduces the four verbatim regions of cdn.abnf line for
+    line, and the generator aborts if it does not.
+
+NOT checked: nothing here has been run through a real ABNF or PEG
+parser, and no CDN implementation was used.  No conformance claim is
+made about any tool.  G-10, G-11, G-13 and G-21 are reasoned from the
+grammar text, not observed from a parse.
