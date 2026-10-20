@@ -18,18 +18,157 @@ content:
   retrieved: "2026-09-22"
   local: false
 relations:
-  see_also: []
+  # Added 2026-10-20 while settling `bears_on` (library#39 Tier 2).
+  #   rfc-9679 — the load-bearing edge, and it is the RFC 8230 situation
+  #     again. RFC 9679 §4.5 requires `pub` (label -1, bstr) for an HSS-LMS
+  #     thumbprint and cites NEITHER RFC 8778 NOR RFC 8554 — 0 occurrences of
+  #     each in the document. RFC 8778 §6.3 is the registry entry that defines
+  #     that label, and §2.1/§2.2 are the only specification of what the
+  #     octets are. rfc-9679's open question 4 settled HSS-LMS by calling
+  #     `pub` an opaque byte string "with no numeric interpretation, so there
+  #     is nothing to normalise". That conclusion is right and the reason is
+  #     not: `pub` is not opaque, it is a fixed-width structure, and THAT is
+  #     why it needs no normalisation. This edge is what makes the citation
+  #     reachable.
+  #   rfc-8554 — [HASHSIG], the normative reference. Every parameter, registry
+  #     and state rule this document relies on is defined there; the record is
+  #     a stub.
+  #   rfc-9964 — the other post-quantum COSE signature binding. See `bears_on`
+  #     below: this document supplies a second independent instance of
+  #     rfc-9964's Cut B and refutes that cut's escape clause.
+  see_also:
+    - rfc-8554
+    - rfc-9679
+    - rfc-9964
   part_of:
     - ietf-cose-wg
-bears_on: []
+bears_on:
+  # Resolved 2026-10-20 (library#39 Tier 2), from `bears_on: []` + verdict
+  # `marginal`. The old reason — "algorithm suite is deferred by NG3; relevant
+  # if post-quantum signing is admitted" — is true about the SUITE and is the
+  # wrong axis. NG3 defers which algorithm we pick; it does not defer what a
+  # key IS or how long a principal lives, and this document constrains both.
+  # Each identifier is evidenced by locator:
+  #   DEC-002 — a SECOND, INDEPENDENT instance of rfc-9964's Cut B, by a
+  #     different mechanism, and it refutes that cut's escape clause. rfc-9964
+  #     found that a post-quantum KeyId contains an IANA allocation (COSE `alg`
+  #     -48/-49/-50) inside the digest preimage, and concluded that "a raw
+  #     `pub` is `alg`-independent, so DEC-003 option 1 is immune to this
+  #     hazard and option 2 ('COSE key thumbprint') is not". **For HSS/LMS the
+  #     raw `pub` is not parameter-independent.** §2.2: the LMS public key is
+  #     "u32str(lms_algorithm_type) || u32str(otstype) || I || T[1]", and §2.1
+  #     makes that the HSS public key — "The public key for the topmost LMS
+  #     tree is the public key of the HSS system." Both leading u32 values are
+  #     IANA code points: §2.2 and §2.3 say [HASHSIG] "establishes an IANA
+  #     registry to permit the registration of additional hash functions and
+  #     additional tree sizes" and of "additional parameter sets". So the
+  #     allocation sits in the KEY MATERIAL, where no choice of digest input
+  #     can remove it — option 1 carries it, option 2 (RFC 9679 §4.5's
+  #     `{kty: 5, pub}`) digests it, and rfc-9964's "digest (kty, pub) alone"
+  #     escape digests it too. Registry-independence is unavailable for this
+  #     principal under EVERY option, and for a harder reason than for ML-DSA.
+  #     And the BOUND, which matters as much: the mechanism rfc-9964 named does
+  #     NOT occur here. §3 makes `alg` conditional — "If the 'alg' field is
+  #     present, it MUST be 'HSS-LMS'" — and RFC 9679 §4.5 requires only `kty`
+  #     and `pub`, so the COSE Algorithms value -46 is not in the preimage. The
+  #     dependence arrives from the LMS and LM-OTS parameter registries through
+  #     the key octets, not from the COSE Algorithms registry through a map
+  #     entry. rfc-9964's general proposition reproduces; its stated mechanism
+  #     is AKP-specific.
+  #     [Not byte-verifiable from this source: the document prints NO COSE_Key
+  #     and no `pub` value — `kty` occurs exactly once, in §3's checklist. The
+  #     layout is from §2.1/§2.2; the u32str type-code convention is confirmed
+  #     in the printed signatures, whose octets 8..11 are `00000003` =
+  #     LMOTS_SHA256_N32_W8 in both Appendix A examples.]
+  #     Separately NOT claimed under DEC-002: both examples are tagged (98 and
+  #     18) with the untagged form never printed. That is a third instance of
+  #     rfc-9964's Cut A, not a new finding.
+  #   DEC-003 — §3's fifth bullet is a sixth answer to "what is a KeyId", and
+  #     the only one in the library where the identifier is a FIELD OF the key
+  #     rather than a function of it: "If the 'kid' field is present, it MAY be
+  #     used to identify the top of the HSS tree. In [HASHSIG], this identifier
+  #     is called 'I', and it is the 16-byte identifier of the LMS public key
+  #     for the tree." §2.2 puts `I` inside the public key and says "the same I
+  #     value is used for all computations with the same LMS tree. The value I
+  #     is also available in the public key." No digest, no canonicalisation,
+  #     no agreement needed — and no binding either, since nothing proves the
+  #     `kid` is this key's `I`. DEC-003's mandatory clause is "Must specify:
+  #     canonical key bytes before hashing"; §2.1 + §2.2 ARE that
+  #     specification for HSS/LMS — "u32str(lms_algorithm_type) ||
+  #     u32str(otstype) || I || T[1]", with "The public key for the topmost LMS
+  #     tree is the public key of the HSS system" — and RFC 9679 §4.5 requires
+  #     those bytes without citing them (see `relations`).
+  #   R-M-02 — "A principal MAY be identified solely by key or key digest."
+  #     rfc-9964 made this a size trade: 1312-2592 octets to carry an ML-DSA
+  #     key against 32 for its thumbprint. **For HSS/LMS the trade collapses.**
+  #     §2.2's layout with m=32 ("supports only SHA-256 with m=32") and §3's
+  #     16-byte `I` give a 56-octet public key (4 + 4 + 16 + 32) — 24 octets
+  #     more than its own SHA-256 thumbprint. §1 says it in words: "The
+  #     HSS/LMS signature algorithm uses small public keys, and it has low
+  #     computational cost; however, the signatures are quite large", and
+  #     Appendix A.2 measures the other side at 2512 octets of signature for a
+  #     20-octet payload. So rfc-9964's "carry the Key, not the KeyId" is
+  #     nearly free for this key type and the expense moves to the signature.
+  #     [derived: the 56 is computed from §2.1/§2.2/§3, not printed — the
+  #     document contains no COSE_Key example at all; `kty` occurs exactly
+  #     once, in §3's checklist.]
+  #   ARCH-0002 P1 — the finding no other record in this lane supplies, and
+  #     the one that matters most. P1 roots every name in a key. §5 gives that
+  #     root a COUNTED lifetime: "the number of signatures that can be
+  #     generated is bounded by the size of the overall HSS set of trees. When
+  #     all of the LM-OTS signatures have been used to produce a signature,
+  #     then the establishment of a new trust anchor is required" — and the
+  #     budget is not even exactly knowable, because "nodes are sacrificed to
+  #     ensure that none are used more than once. As a result, the total number
+  #     of signatures that can be generated might be less than the overall HSS
+  #     set of trees." §5 then refuses to define a serialisation for the
+  #     private key and its state, on purpose: "A COSE Key Type Parameter for
+  #     encoding the HSS/LMS private key and the state about which tree nodes
+  #     have been used is deliberately not defined. It was not defined to avoid
+  #     creating the ability to save the private key and state, generate one or
+  #     more signatures, and then restore the private key and state. Such a
+  #     restoration operation provides disastrous opportunities for tree node
+  #     reuse." A namespace root that cannot be backed up, replicated or
+  #     migrated, and that retires by exhaustion rather than by policy.
+  #     rfc-9964's open question — whether `KeyId` means "this key, now" or
+  #     "this principal, across changes" — is deferrable for ML-DSA and is
+  #     FORCED here.
+  #   R-O-01 — "Every signed object SHALL have an issuer key that can be
+  #     specified as KeyId." Under this algorithm that SHALL has a per-object
+  #     price that no other candidate carries: §4, "An implementation MUST
+  #     ensure that an LM-OTS private key is used to generate a signature only
+  #     one time and ensure that it cannot be used for any other purpose", and
+  #     "Along with the private key, the implementation MUST keep track of
+  #     which leaf nodes in the tree have been used. Loss of integrity of this
+  #     tracking data can cause a one-time key to be used more than once" —
+  #     with "failed writes, virtual machine snapshotting or cloning" named as
+  #     the ways it is lost. Every signed object consumes one leaf,
+  #     irreversibly, and a crash between signing and state commit is a
+  #     forgery risk rather than a retry.
+  #   DEC-005 — §6.1 registers HSS-LMS as COSE `alg` -46 with "Recommended:
+  #     Yes", so a stateful one-time-signature scheme is a RECOMMENDED COSE
+  #     algorithm, and §3 states the COSE integration in five key checks and
+  #     nothing more. Appendix A gives both a COSE_Sign (tag 98) and a
+  #     COSE_Sign1 (tag 18) example, so both envelope shapes are exercised.
+  #     The cost side is operational rather than cryptographic and is in §5:
+  #     admitting this algorithm means a signer that cannot be backed up,
+  #     replicated or migrated, and a finite signature budget per key.
+  - DEC-002
+  - DEC-003
+  - DEC-005
+  - R-M-02
+  - R-O-01
+  - ARCH-0002 P1
 topic: cbor-implementation
 tags:
   - signatures
+  - key-management
   - ietf
-status: fetched
+  - evidence
+status: summarized
 usefulness:
-  verdict: marginal
-  reason: "Stateful hash-based signatures in COSE. Algorithm suite is deferred by NG3; relevant if post-quantum signing is admitted."
-  assessed: "2026-09-22"
+  verdict: useful
+  reason: "Upgraded from marginal 2026-10-20. Not read for the suite choice NG3 defers, but for what it says about keys: §2.1/§2.2 specify the HSS-LMS public-key octets that RFC 9679 §4.5 requires and does not cite; §3 offers a `kid` that is a field of the key (`I`); and §5 describes a namespace root with a counted lifetime and, deliberately, no private-key serialisation at all. It is also the second document to put an IANA allocation inside a post-quantum KeyId preimage, and it bounds rfc-9964's claim that DEC-003 option 1 escapes that — the HSS/LMS public key begins with two IANA parameter-set code points."
+  assessed: "2026-10-20"
 confidence: medium
 owner: S1

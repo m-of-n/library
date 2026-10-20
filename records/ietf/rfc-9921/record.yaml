@@ -20,19 +20,103 @@ content:
   retrieved: "2026-09-22"
   local: false
 relations:
-  see_also: []
+  # Added 2026-10-20 while settling `bears_on` (library#39 Tier 2). §1.1's
+  # second use case — "the notarization of a signed document by registering it
+  # with a transparency service", "statements", the "append-only log", and a
+  # "transparent statement" — is written in SCITT's vocabulary word for word,
+  # and the document cites RFC 9943 nowhere (0 occurrences of "SCITT" and of
+  # "9943"). The TTC mode exists for that architecture: §1.1 says the TST
+  # "must be included in the signed statement" precisely so registration does
+  # not lose it. The dependency is real and unreachable from the document's own
+  # references, so the edge is made from here — the same move rfc-9679 needed
+  # for RFC 8230.
+  see_also:
+    - rfc-9943
   part_of:
     - ietf-cose-wg
-bears_on: []
+bears_on:
+  # Resolved 2026-10-20 (library#39 Tier 2), from `bears_on: []` + verdict
+  # `marginal`. The old reason — "relevant only if we need third-party time
+  # attestation" — scoped the record by whether we want the FEATURE. What the
+  # document is actually evidence about is what a COSE header parameter costs
+  # a reduced-CBOR profile, and that holds whether or not we ever timestamp
+  # anything. Each identifier is evidenced by locator:
+  #   DEC-002 — the hardest finding, and it is a cost MD-3's premise does not
+  #     price. §3.1 and §3.2 each place "a DER-encoded TST [RFC3161] wrapped
+  #     in a CBOR byte string (Major type 2)" in a COSE header; §6 allocates
+  #     label 269 (`3161-ttc`) and 270 (`3161-ctt`) with Value Type `bstr` and
+  #     Value Registry "-", i.e. no CBOR-side schema is imposed at all.
+  #     Appendix A.1 measures it: 5453 octets of ASN.1 DER, carrying a
+  #     two-certificate X.509 chain, inside ONE protected-header parameter,
+  #     against a 20-octet payload. **A reduced-CBOR profile reduces the CBOR;
+  #     it does not reduce what is inside a byte string** — so the canonical
+  #     encoding stops at the bstr boundary, and §4 makes it the COSE
+  #     receiver's own obligation to go past it: "the receiver MUST make sure
+  #     that the MessageImprint in the embedded timestamp token matches a hash
+  #     of either the payload, signature, or signature fields", with CMS
+  #     [RFC5652] named as where that verification is defined. A CBOR verifier
+  #     acquires an ASN.1/CMS/X.509 stack and a clock. Option 5 separately
+  #     forbids "native use of COSE header parameters", so the capability is
+  #     unreachable natively and reachable only on export.
+  #     And the half that cuts the other way, recorded with equal weight:
+  #     §3.1.1 computes the CTT MessageImprint over "the bstr-wrapped
+  #     signature... (including the heading bytes 0x5840)". The CBOR HEAD of
+  #     the `signature` field is in a third party's digest preimage, and the
+  #     COSE signature does not cover it. So a TSA authenticates an encoding
+  #     choice the envelope itself leaves free, and the ambiguity closes only
+  #     under RFC 8949 §4.2.1 determinism. That is an argument for requiring
+  #     deterministic encoding on the EXPORT path, not only natively.
+  #   R-M-12 — an extension point must be a (key, local label) pair. This is
+  #     the cleanest available demonstration that making the LABEL
+  #     key-relative buys nothing when the VALUE is a foreign format. The
+  #     whole capability is two centrally allocated COSE header labels (§6),
+  #     and the 5453 octets they carry are registry-rooted end to end — OIDs,
+  #     X.509 names, CMS content types. Relabel it `(our key,
+  #     "rfc3161-timestamp")` and every identifier inside the value is still
+  #     IANA/ITU-allocated. ADR-0001's "escape from a registry, not a
+  #     namespace", arrived at from the value side rather than the label side.
+  #   R-O-05 — two findings, one adopt and one hazard.
+  #     ADOPT: §3.2's TTC imprint is "the hash of the payload of the COSE
+  #     Signed Message. This does not include the bstr wrapping -- only the
+  #     payload bytes", while §3.1's CTT imprint deliberately DOES include the
+  #     wrapper. Two digests in one document, two answers to "does the wrapper
+  #     count", each written down; and §4 has the verifier hash the bytes as
+  #     received and compare, never re-serialise. R-O-05's ordering, arrived
+  #     at independently, and the citation that the wrapper question must be
+  #     settled per digest rather than once.
+  #     HAZARD: §5.1 says "each mode has its own separate verification
+  #     algorithm", and the only discriminator between them is which header
+  #     label carries the TST — one of which, `3161-ctt` (270), is in the
+  #     UNPROTECTED bucket. §5 concedes it: "an attacker could manipulate the
+  #     unprotected header by removing or replacing the timestamp. To avoid
+  #     that, the COSE Signed Message should be integrity protected during
+  #     transit and at rest" — lowercase, and it pushes the integrity
+  #     requirement outside the envelope. An unauthenticated type indicator
+  #     selecting a verification algorithm is exactly the shape R-O-05 exists
+  #     to forbid, and §5.1 names the consequence: "incorrectly accepting
+  #     signatures created after key revocation based on older payload-only
+  #     timestamps."
+  #   NOT CLAIMED, deliberately: DEC-005. RFC 9921 is COSE-only by
+  #     construction (§3.1/§3.2 define the imprint over the CBOR-encoded
+  #     `signature`/`signatures` field or the payload of a COSE Signed
+  #     Message), so time attestation is available to one DEC-005 option and
+  #     not the other — the same asymmetry as rfc-9964's Cut D. Establishing
+  #     it needs the DSSE record as well as this one, so it is left to the
+  #     extraction rather than asserted from this document alone.
+  - DEC-002
+  - R-M-12
+  - R-O-05
 topic: cbor-implementation
 tags:
   - signatures
+  - encoding
   - ietf
+  - evidence
   - prior-art
-status: fetched
+status: summarized
 usefulness:
-  verdict: marginal
-  reason: "Carries an RFC 3161 timestamp in a COSE header. Relevant only if we need third-party time attestation."
-  assessed: "2026-09-22"
+  verdict: useful
+  reason: "Upgraded from marginal 2026-10-20. Read for the encoding question rather than for timestamps: §3.1/§3.2 put 5453 octets of ASN.1 DER (Appendix A.1) inside a bstr in a COSE header with no value registry (§6), which is the measured demonstration that a reduced-CBOR profile does not reduce what is inside a byte string. Also §3.1.1's imprint over the CBOR head bytes of the `signature` field, and §5/§5.1's unprotected mode discriminator."
+  assessed: "2026-10-20"
 confidence: medium
 owner: S1

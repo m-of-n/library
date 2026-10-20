@@ -3,54 +3,158 @@ schema: "library-summary/v1"
 id: rfc-9921
 record: rfc-9921
 type: summary
-updated: "2026-09-22"
+updated: "2026-10-20"
 ---
 
 # CBOR Object Signing and Encryption (COSE) Header Parameter for Timestamp Tokens as Defined in RFC 3161
 
 |  |  |
 |---|---|
-| **Type** | rfc |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | rfc: 9921 |
-| **Source** | https://www.rfc-editor.org/rfc/rfc9921.html |
-| **Digest** | `not fetched` |
+| **Type** | rfc (IETF, Standards Track) |
+| **Maturity** | `standard` — "This is an Internet Standards Track document", IESG-approved. **Not an STD**; it builds on STD 96 (RFC 9052) |
+| **Authors** | H. Birkholz (Fraunhofer SIT), T. Fossati (Linaro), M. Riechert (Microsoft) |
+| **Published** | 2026-02 |
+| **Identifier** | RFC 9921 · DOI 10.17487/RFC9921 |
+| **Source** | https://www.rfc-editor.org/rfc/rfc9921.txt |
+| **Digest** | `sha256:ba1c4dbb…` — full value in `record.yaml`, recomputed from `.cache/rfc-9921.txt` and re-verified 2026-10-20 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+Two COSE header parameters, each carrying an RFC 3161 TimeStampToken, and the
+document's real content is the distinction between them. §2.1's "COSE, Then
+Timestamp" digests the finished COSE signature and puts the TSA's token back
+into the **unprotected** header (`3161-ctt`, label 270): evidence that the
+*signature* existed at a time. §2.2's "Timestamp, Then COSE" digests the datum
+first and puts the token into the **protected** header (`3161-ttc`, label 269),
+so the signature covers it: evidence that the *payload* existed at a time, and
+nothing about the signature. §5.1 is emphatic that confusing the two is a
+vulnerability — "incorrectly accepting signatures created after key revocation
+based on older payload-only timestamps" — and that "each mode has its own
+separate verification algorithm".
+
+In both modes the token is "a DER-encoded TST [RFC3161] wrapped in a CBOR byte
+string (Major type 2)" (§3.1, §3.2), §6 registers both labels with Value Type
+`bstr` and **no value registry**, and §4 makes the COSE receiver's own
+obligation to look inside: "the receiver MUST make sure that the MessageImprint
+in the embedded timestamp token matches a hash of either the payload,
+signature, or signature fields", with CMS [RFC5652] named as where that
+verification is defined. Appendix A.1 measures what that means: **5453 octets**
+of ASN.1 DER, carrying a two-certificate X.509 chain, inside one
+protected-header parameter, against a 20-octet payload.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | **`core`** | §5 and §5.1 are the substance: an unprotected-header timestamp an attacker can strip, and two modes whose confusion §5.1 names as a revocation bypass |
+| Cryptography | `none` | Invents nothing. Every primitive and every verification rule is RFC 3161's, RFC 5652's or RFC 9052's |
+| This project | **`adjacent`** | We may never want third-party time. The measurement is decision-bearing now: this is what one COSE header parameter costs a reduced-CBOR profile |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+`bears_on` reads as follows; the full warrant for each, with the quoted text,
+is the comment block above `bears_on` in `record.yaml`.
+
+- **DEC-002** — the hardest finding, and it is a cost MD-3's premise does not
+  price. **A reduced-CBOR profile reduces the CBOR; it does not reduce what is
+  inside a byte string.** The canonical encoding stops at the bstr boundary,
+  §6 declines a value registry so nothing CBOR-side constrains the contents,
+  and §4 obliges a CBOR verifier to acquire an ASN.1/CMS/X.509 stack and a
+  clock. Option 5 separately forbids "native use of COSE header parameters", so
+  the capability is unreachable natively and reachable only on export. Recorded
+  with equal weight, the half that cuts the other way: §3.1.1 computes the CTT
+  MessageImprint over "the bstr-wrapped signature… (including the heading bytes
+  0x5840)", so the CBOR *head* of the `signature` field sits in a third party's
+  digest preimage while the COSE signature does not cover it — an argument for
+  requiring RFC 8949 §4.2.1 determinism on the **export** path, not only
+  natively.
+- **R-M-12** — the cleanest available demonstration that making the *label*
+  key-relative buys nothing when the *value* is a foreign format. The whole
+  capability is two centrally allocated labels (§6), and the 5453 octets they
+  carry are registry-rooted end to end: OIDs, X.509 names, CMS content types.
+  Relabel it `(our key, "rfc3161-timestamp")` and every identifier inside the
+  value is still allocated by someone else.
+- **R-O-05** — one adopt and one hazard. *Adopt:* §3.2's TTC imprint is "the
+  hash of the payload… This does not include the bstr wrapping -- only the
+  payload bytes", while §3.1's CTT imprint deliberately does include the
+  wrapper; two digests in one document, two answers to "does the wrapper
+  count", each written down — and §4 has the verifier hash the bytes as
+  received rather than re-serialise. *Hazard:* the only discriminator between
+  the two verification algorithms is which header label carries the token, and
+  one of those labels is in the unprotected bucket. An unauthenticated type
+  indicator selecting a verification algorithm is the shape R-O-05 exists to
+  forbid.
+
+**Not claimed, deliberately: DEC-005.** RFC 9921 is COSE-only by construction
+(§3.1/§3.2 define the imprint over the CBOR-encoded `signature`/`signatures`
+field or the payload of a *COSE* Signed Message), so time attestation is
+available to one DEC-005 option and not the other — the same asymmetry as
+`rfc-9964`'s Cut D. Establishing it needs the DSSE record as well as this one,
+so it is left to the extraction rather than asserted from this document alone.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
+**Searched 2026-10-20: none found.** No library, SDK or reference
+implementation of either header parameter surfaced, which is unsurprising eight
+months after publication but is recorded as a result rather than an omission.
 
 | Name | Kind | License | URL |
 |---|---|---|---|
 
-## Artifacts in this record
+Two notes stand in for the empty table:
 
-_Everything else in this directory and what it is for._
+- **The document ships no reference code.** Unlike RFC 8778, whose Appendix A
+  names its generator, Appendix A here gives bytes with no pointer to the
+  tooling that produced them.
+- **The example token is from a public demo TSA.** Decoding the ASCII inside
+  the Appendix A DER gives `Free TSA` and `www.freetsa.org`, with a
+  `freetsa.org` CPS URL and a CRL distribution point. Worth knowing before
+  anyone treats the Appendix A bytes as a conformance fixture: it is one
+  volunteer TSA's certificate chain, and it expires.
+
+## Artifacts in this record
 
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, and the locator-by-locator warrant for each `bears_on` id |
+| `summary.md` | this document |
+
+**No `distilled/`, deliberately.** Settled 2026-10-20 (library#39 Tier 2): the
+record was unblocked from `bears_on: []` by reading the source, and the
+findings fit in `record.yaml`'s comment block. If FX-1 is ever owed here the
+work is larger than the document's 8 BCP 14 keywords suggest, because
+`normative.md` would have to decide how much of RFC 3161 and RFC 5652 counts as
+in-scope — and **neither is in this library**, which is the first thing the
+extraction would have to report.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+- **Protection and evidence are inverted, and the document does not say so.**
+  The mode that proves something about the *signature* (`3161-ctt`, 270) lives
+  in the bucket nothing signs; the mode in the protected bucket (`3161-ttc`,
+  269) proves only that the payload existed. §5 concedes the first — "an
+  attacker could manipulate the unprotected header by removing or replacing the
+  timestamp" — and answers with "the COSE Signed Message should be integrity
+  protected during transit and at rest": lowercase, and at a layer this
+  document does not define. The stronger evidence is the more fragile carrier.
+- **No value registry and no CDDL.** §6 gives both parameters Value Type `bstr`
+  and Value Registry "-", and the document contains no CDDL at all. There is
+  nothing a CBOR validator can check about those 5453 octets, by design.
+- **Nothing about deterministic encoding.** §3.1.1's imprint includes the
+  `0x5840` head bytes and the document never requires RFC 8949 §4.2.1, so a
+  CTT timestamp is bound to one serialisation that COSE itself does not pin.
+  Re-encode the object and the COSE signature still verifies while the
+  timestamp no longer matches.
+- **TSA trust distribution is out of scope.** §4 defers verification to RFC
+  5652 and RFC 3161; §5 simply assumes "the TSA is a trusted third party" and
+  says nothing about how a verifier comes to trust one, or what happens when a
+  TSA certificate expires — which, for "long-term signatures" (§1.1), is the
+  whole problem recursing one level up.
+- **Privacy in TTC mode is deferred to a mechanism that does not exist here.**
+  §5: the TSA receives "an opaque identifier (a cryptographic hash value) for
+  the payload", and preventing comparison against known payloads "would need"
+  armoring with a shared nonce — "Such a mechanism is out of scope for this
+  document."
+- **§1.1's second use case is SCITT's, in SCITT's words, with no citation.**
+  "Transparency service", "statements", "append-only log", "transparent
+  statement" — and zero occurrences of "SCITT" or "9943". The edge to
+  [`rfc-9943`] is made from this library because the document does not make it;
+  see `relations` in `record.yaml`.
