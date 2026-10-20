@@ -17,6 +17,30 @@ reviewed_by: ""
 - **[correction]** marks a working assumption of the project, or a claim in one
   of our own artifacts, that the source does not support.
 
+**[correction, pass 3, 2026-10-20] Which quotations below are checkable here,
+and which are not.** This library is **standalone by design** — independently
+cloneable and citable by projects that are not `mofn` (`CLAUDE.md`). So the
+`mofn` documents this file quotes are **not present in this repository**:
+`ARCH-0001`, `ARCH-0001-PROPOSAL-v0.2.0`, `ARCH-0002` (P1–P5), `ADR-0001`,
+`MD-3`, `PLAN-0001`, `DECISIONS-0001`, and the `R-O-*` / `R-I-*` / `R-M-*`
+rules. A `find` over the worktree returns none of them. **Every quotation of
+those documents in this file, in `summary.md` and in `distilled/README.md` is
+therefore reproduced from the extracting agent's context and cannot be verified
+from this repository** — pass 2 flagged them rather than passing them, and pass
+3 marks them rather than claiming a check it cannot run. Treat each as a
+citation to be re-checked against `mofn` before it is relied on. What *is*
+checkable here, and was checked mechanically at pass 3, is everything quoted
+from the library itself: `topics/canonical-encoding.yaml`'s condition (6);
+`rfc-8610` §3.1 and §3.8.6 (against `.cache/rfc-8610.txt`); `rfc-8610`'s
+`grammar-gaps.derived.txt` **G-35** text and the `registry_state_is_not_rfc_8610`
+replacement in its `control-operators.derived.yaml` (with the false sentence
+confirmed **gone**);
+`records/ietf/rfc-9165/distilled/schema/abnf-in-cddl.cddl` carrying
+`text .abnf date-time`, and that record logging G-35; and
+`records/community/draft-mcnally-deterministic-cbor`'s *"the only answer to
+condition (6) any document we hold supplies"*. All verified present. Note that
+the dCBOR record lives under `records/community/`, not `records/ietf/`.
+
 **Decision status, stated plainly.** DEC-002 in `ARCH-0001` §7 lists **four**
 options. "Option 5" exists only as *proposed* text in
 `ARCH-0001-PROPOSAL-v0.2.0` §3.3; that proposal is unmerged. `ADR-0001`

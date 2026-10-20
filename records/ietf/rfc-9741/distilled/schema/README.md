@@ -37,6 +37,17 @@ joined by `\n` with **no trailing newline**; pass 2 recovered it by brute force
 because no file stated it, and it is stated here now so the next pass does not
 have to.
 
+**Pass 3 verified the convention as stated, not just the digests.** All 13
+regions are byte-identical to their declared source line ranges and all 13
+declared `sha256` values verify under exactly that convention — and under
+**none** of the alternatives: for every one of the 13, the digest of the same
+lines *with* a trailing newline differs. So the convention documented above is
+the one every region in both files actually uses, and a tool may rely on it.
+Pass 3 also re-ran the dedent round-trip (6/6, F06's caption correctly dropped
+from the derived file and kept in the verbatim one) and confirmed the
+derived/verbatim convention on all six files: every `.derived.` infix agrees
+with its header claim, and the three unmarked names claim VERBATIM.
+
 - each of the **13 verbatim regions** (6 CDDL + 7 tables) is byte-identical to
   its declared source line range, and each declared per-region sha256 verifies;
 - a **completeness sweep** over every source line outside the claimed regions

@@ -11,9 +11,11 @@ reviewed_by: ""
 FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what it
 does not.
 
-**State: passes 1 and 2 of 3 complete (extract, verify). No `profile` is
-declared.** Both at effort max, each reading only `.cache/rfc-9741.txt`. Pass 3
-(cross-check) has not run, and **no `reviewed_by` is signed**.
+**State: all three passes complete (extract, verify, cross-check).
+`distillation.profile: full`.** Each at effort max, each reading only
+`.cache/rfc-9741.txt`. **No `reviewed_by` is signed** — a human signs per
+artifact, and until then these artifacts are readable and citable but not
+buildable-on.
 
 Pass 2 upheld the central negative and the `.join` finding, re-derived every
 count, and re-verified every mechanical claim (61/61 requirement texts, 74/74
@@ -29,6 +31,28 @@ rfc-9741/rfc-9165/rfc-9090; the `messages.yaml` join count (48/13, not 50/11,
 with two requirements unaccounted for); and `.hex`'s 2ⁿ arithmetic. Also
 narrowed one sentence of the central negative's evidence 2, which the source
 contradicts in its own words.
+
+Pass 3 (cross-check) re-derived the four cross-check deliverables of
+`.claude/skills/extract` §3 from the cache with its own scripts and **confirmed
+all four**: every field a requirement names exists in `messages.yaml` or
+`schema/` (48 of 61 cited by a named field, the other 13 each with a reason that
+holds); `protocol` and `state-machine` remain correctly `not_applicable`;
+and all 8 examples validate against the schema — the `.printf` renderings
+executed (`printf("0x%04x", 19) == "0x0013"`, `0x0001` for 1, and `0x1234` is
+form-valid but out of `1..20`, so the one negative is negative for the stated
+reason), the `.base10` I-Regexp run over seven accept/reject cases, and
+Figure 1's `.join` over `.base10` over `0..255` executed. It re-derived the
+locator join independently (**48 cited / 13 uncited**, agreeing with pass 2 and
+with the declared list exactly, no dangling ids), all 74 normative spans, all 61
+requirement texts, the BCP 14 count (3 / 3, 3 stated / 58 inferred) and all 13
+region digests. It made **five corrections**, all to our own text and none to a
+source defect: the `.regexp`-only claim that pass 2 retracted in `summary.md`
+but which survived in `schema/control-operators.derived.yaml`; two
+strictly-invalid YAML scalars (N-02, N-03); two base-encoding operators missing
+`padding` and `strict`; the absence of any marking that the `mofn` quotations
+are unverifiable in this standalone repository; and `summary.md` presenting
+C-`printf` behaviour as checked where `schema/printf-profile.derived.txt` marks
+it `[unverified]`.
 
 Source: RFC 9741, *Concise Data Definition Language (CDDL): Additional Control
 Operators for the Conversion and Processing of Text*, Standards Track, March

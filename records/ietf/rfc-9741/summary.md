@@ -130,6 +130,14 @@ no named implementation in the document.*
   the locale, so `1.5` and `1,5` are both conforming output of one format
   string, and two conforming validators can disagree. This is the sharpest
   defect because it is *silent* — a format string looks deterministic.
+  *[pass 3: the half of this that is about **C** rather than about RFC 9741 is
+  **unverified**, and so is every other claim in this section about what C's
+  `printf` actually does — the default argument type in the next bullet, and
+  `%c` writing one byte two bullets down. `[C]` is ISO/IEC 9899:2024, paywalled
+  and **not in `.cache/`**, so none of them has been checked against the
+  standard; `schema/printf-profile.derived.txt` marks each `[unverified]` and
+  these bullets inherit that status. What **is** checked is what RFC 9741 says:
+  it fixes no locale, and `locale` occurs **zero** times in the source.]*
 - **The ban on length modifiers caps `.printf`'s integer range with no overflow
   rule.** The document's only two `MUST NOT`s forbid length modifiers, so each
   conversion carries C's default argument type. §2.2's own example reaches
@@ -138,7 +146,9 @@ no named implementation in the document.*
 - **`%c` is redefined away from C and the deviation is not labelled.** In C
   `%c` writes one byte and the wide form needs `%lc` — a length modifier the
   same paragraph forbids, so the redefinition is forced. A reader who knows C
-  and skims takes the opposite meaning.
+  and skims takes the opposite meaning. *[pass 3: the C half is `[unverified]`
+  for the reason above; what the source says is checked —
+  `rfc-9741#R-0032`.]*
 - **Three names are traps.** `.hex` admits **either case**, so it is *not*
   injective — 2^*k* texts for an encoding with *k* of its digits in `a`–`f`
   (*[pass 2: pass 1 wrote 2ⁿ, which is the all-letters worst case, not the
@@ -163,9 +173,18 @@ no named implementation in the document.*
   read this as a verdict on RFC 9741 alone. `rfc-9165` partially closes G-35 —
   its `.abnf` controllers are case-insensitive by default — and pass 1 wrote the
   contrary into `rfc-8610`'s artifact. Corrected there.]*
-- The extraction is at **pass 2 of 3** — cross-check has not run, and nothing
-  carries a human sign-off, so these artifacts are readable but not
-  buildable-on.
+- The extraction is at **pass 3 of 3 complete** — extract, verify, cross-check,
+  each at effort max, each reading only `.cache/rfc-9741.txt`. The record is at
+  `distillation.profile: full`. **Nothing carries a human sign-off** (every
+  `reviewed_by` is empty), so these artifacts are readable and citable but not
+  yet buildable-on.
+- **Two quotation classes, and only one of them is checkable here.** The
+  `ARCH-0001` / `ARCH-0002` / `ADR-0001` / `MD-3` / `PLAN-0001` /
+  `DECISIONS-0001` / `R-O-*` / `R-I-*` quotations above are **not verifiable
+  from this repository** — the library is standalone by design and holds none
+  of those files. Re-check them against `mofn` before relying on them.
+  `distilled/design-notes.md`'s provenance block has the full list and the
+  list of in-library quotations that pass 3 *did* verify.
 
 ## What this corrected in a completed record
 
