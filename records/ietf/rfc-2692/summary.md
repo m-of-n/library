@@ -147,9 +147,13 @@ than copying that survey, which would drift.
 | File | What it is |
 |---|---|
 | `record.yaml` | metadata, relations, `bears_on` |
-| `summary.md` | this file — the only written artifact |
+| `summary.md` | this file |
+| `distilled/` | the FX-1 artifact set: normative, requirements, schema, messages, protocol, state machine, examples, design notes — start at `distilled/README.md` |
 
-No `distilled/`. Summary bar, not FX-1; full extraction is owned by **#45**.
+**The FX-1 artifacts under `distilled/` have landed** — extract, verify and
+cross-check complete, `record.yaml` declares `distillation.standard: FX-1`,
+`profile: full` — and they, not this summary, are the citable detail. Where
+the two differ, the artifacts win. Extraction was owned by **#45**.
 
 ## Limits
 

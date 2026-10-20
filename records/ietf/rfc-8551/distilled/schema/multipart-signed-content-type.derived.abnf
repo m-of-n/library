@@ -1,0 +1,74 @@
+; DERIVED, not verbatim. Written by this library; RFC 8551 prints no ABNF.
+; Derived from RFC 8551 section 3.5.3.2 (source .cache/rfc-8551.txt, sha256
+; dac39f749a08d3422bd78d4e492195067e7bc03f5fc2d0dac515f0d7ed884ae2), lines
+; 1876-1938, and the micalg table copied in inline.verbatim.txt (I-05).
+; Notation: ABNF, RFC 5234. Quoted literals are case-insensitive (RFC 5234
+; section 2.3), which is the intent here: media type and parameter names
+; compare case-insensitively in MIME (inferred from RFC 2045, not stated in
+; RFC 8551).
+; The same RFC 5234 rule makes the literal VALUES below case-insensitive
+; too ("application/pkcs7-signature", the micalg-table-name values). RFC 8551
+; states no case rule for parameter values. smime-media-types.derived.schema.json
+; compares micalg values case-sensitively in #should, so micalg=SHA-256
+; matches micalg-table-name here and warns there (inferred both ways; found
+; by the pass 3 cross-check, left open).
+;
+; SCOPE. Only the two parameters RFC 8551 constrains on a multipart/signed
+; Content-Type: protocol and micalg. Not defined here, and IMPORTED by name:
+;   token, quoted-string, parameter   -- RFC 2045 section 5.1
+;   DQUOTE                            -- RFC 5234 appendix B.1
+; The rest of the field (type "/" subtype, boundary, other parameters, their
+; order, folding whitespace) is RFC 2045 / RFC 1847, not RFC 8551.
+;
+; PRESENCE RULE (prose; ABNF cannot say "both, in any order"): a
+; multipart/signed Content-Type used for S/MIME carries one smime-protocol-param
+; and one micalg-param among its parameters. Source: lines 1876-1877, "The
+; multipart/signed Content-Type has two required parameters: the protocol
+; parameter and the micalg parameter." (stated; no BCP 14 keyword, no R-id).
+; "one", rather than "at least one", is inferred.
+
+smime-protocol-param = "protocol" "=" DQUOTE "application/pkcs7-signature" DQUOTE
+        ; rfc-8551#R-0116, section 3.5.3.2 line 1879: 'The protocol parameter
+        ;   MUST be "application/pkcs7-signature".'
+        ; rfc-8551#R-0117, lines 1879-1882: 'Note that quotation marks are
+        ;   required around the protocol parameter because MIME requires that
+        ;   the "/" character in the parameter value MUST be quoted.'
+        ; So the unquoted form protocol=application/pkcs7-signature does NOT
+        ; match this rule. Quoted-pair escapes inside the value are not
+        ; admitted (inferred: the value contains no character needing one).
+
+micalg-param = "micalg" "=" micalg-value
+
+micalg-value = micalg-name
+             / DQUOTE micalg-name *( "," micalg-name ) DQUOTE
+        ; rfc-8551#R-0118, lines 1914-1915: 'If multiple message digest
+        ;   algorithms are used, they MUST be separated by commas per
+        ;   [RFC1847].'
+        ; INFERRED: a list is shown inside DQUOTEs because "," is a MIME
+        ;   tspecial (RFC 2045 section 5.1), so a comma-bearing value cannot be
+        ;   a bare token. RFC 8551 does not say this. The single-value form is
+        ;   the one the section 3.5.3.3 sample uses: micalg=sha-256 (line 1970).
+        ; INFERRED: no whitespace around the commas; RFC 8551 is silent.
+
+micalg-name = micalg-table-name / token
+        ; The token alternative carries the table's "Any other" row (lines
+        ;   1927-1928: 'defined separately in the algorithm profile or
+        ;   "unknown" if not defined') and future values from the IANA "Hash
+        ;   Function Textual Names" registry (lines 1936-1938). Because of it,
+        ;   this grammar accepts any token: it checks shape (R-0117, R-0118),
+        ;   and the SHOULD of R-0119 is checked by micalg-table-name alone.
+        ; RFC 2045 token excludes "," and DQUOTE, so it cannot swallow the
+        ;   list separator.
+
+micalg-table-name = "md5" / "sha-1" / "sha-224" / "sha-256" / "sha-384"
+                  / "sha-512" / "unknown"
+        ; rfc-8551#R-0119, lines 1916-1928: 'The values to be placed in the
+        ;   micalg parameter SHOULD be from the following:' (table I-05).
+        ; "md5" and "sha-1" are marked * in the table: 'MD5 and SHA-1 are
+        ;   historical and no longer considered secure.' (line 1930).
+        ; NOT admitted as table names, though the source names them: the
+        ;   historical values "rsa-md5", "rsa-sha1" and "sha1" that 'Some early
+        ;   implementations of S/MIME emitted and expected' (lines 1933-1934).
+        ;   They match token. A receiving agent SHOULD be able to recover
+        ;   gracefully from a micalg value it does not recognize
+        ;   (rfc-8551#R-0120, lines 1935-1936).

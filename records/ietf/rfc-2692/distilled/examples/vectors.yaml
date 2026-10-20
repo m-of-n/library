@@ -1,0 +1,4062 @@
+schema: "library-examples/v1"
+record: rfc-2692
+kind: examples
+title: "RFC 2692 (SPKI Requirements) -- complete example and test vector set"
+source_version: "RFC 2692"
+source_digest: "6a88c1563590e8094bb37cda5c5d29ef70f8384e5a3a0528bce29c501826976d"
+source_file: ".cache/rfc-2692.txt (787 lines)"
+extracted: "2026-10-18"
+pass: 1
+cross_checked: "2026-10-18"
+cross_checked_by: "claude, FX-1 pass 3 (cross-check), examples quarter: instances validated against the derived schema, constructed outcomes checked against their rules, constrained_by wired"
+reviewed_by: ""
+vector_count: 140
+source_vector_count: 95
+constructed_vector_count: 45
+count_reconciliation: "140 = 95 source examples + 45 constructed vectors. The 95 source examples by section: Charter 1, Background 1, General Requirements 4, Validity and CRLs 4, Implementation of Certificates 4 (14 body illustrations); List of Certificate Uses 75; Open Questions 6. The 75 List vectors are: 62 top-level items (every line in lines 262-587 that begins with six spaces and a hyphen: 14 items from 'I need a certificate to give me permission' to '..a digital Voter Registration Card?', the wallet-card item, the 33-item run after it from 'health insurance card' to 'permission to issue nuclear launch codes', 8 items from 'I'm a sysadmin' to the rfc822 template, and 6 items from 'Encryption keys' to 'Service authentication'); 3 sub-items of 'I need certificates to bind names to public keys' ([traditional certificate], [direct certificate], [personal binding]); 6 sub-items of 'Other requirements'; 1 indented paragraph that prints its own example certificate (the audit-identity paragraph under the ephemeral-root item); and 3 vectors split from bracketed commentary (the smart-card login case and the 'delegation-allowed' bit from the delegation template's commentary, and the 'I own this address' certificate from the address-space template's commentary). The 6 Open Questions vectors are the 4 questions, each with its answer, and the 2 quoted attributes printed in the answer to question 3 ('not already married', 'not registered as a voter in any other district'). The 45 constructed vectors by the section of the rule they rest on: Validity and CRLs 17, General Requirements 11, Implementation of Certificates 10, List of Certificate Uses 7. Sections with no vector of either kind are listed, with reasons, in README.md."
+
+# ====================================================================
+# What this file is
+# ====================================================================
+#
+# RFC 2692 prints NO test vector: no byte string, no hex, no S-expression,
+# no encoded certificate, and it specifies no encoding. Its examples are in
+# prose: a brainstorming List of Certificate Uses, four Open Questions with
+# answers, and illustrative cases in the body. PART 1 carries every one of
+# them. PART 2 is constructed: deterministic tests a harness can run against
+# a design claiming to meet RFC 2692, built only from rules the source states.
+#
+# ====================================================================
+# Conventions
+# ====================================================================
+#
+# IDS. SR-<section>-NN for source examples, SR-<section>-CNN for
+# constructed vectors, never reused. Sections: CH Charter, BG Background,
+# GEN General Requirements, VAL Validity and CRLs, IMP Implementation of
+# Certificates, USE List of Certificate Uses, OQ Open Questions.
+#
+# LOCATORS. RFC 2692 has unnumbered sections. A locator names the section
+# title, then a paragraph (counted from 1 within the section), item or
+# question, then the printed page. Items are named by a verbatim prefix,
+# normally their first six words: the whole item when it is shorter, fewer
+# words for some Other requirements sub-items, more where six words would not
+# tell two items apart. source_lines gives the line span in .cache/rfc-2692.txt.
+#
+# body_rules. The requirement sentences of the body that vectors cite, each
+# quoted verbatim once, plus three that no vector can test (CH-2, IMP-2b,
+# IMP-2c: no criterion or threshold), kept so the gap is visible. Key: <section>-<paragraph>[letter]. LIST-* entries
+# are statements from the List of Certificate Uses (body: false) that
+# constructed vectors rest on; the List is "a brainstorming list" and is not
+# a body requirement. requirement_ids lists the requirements.yaml entries
+# whose text the rule quotes. It is empty for BG-2a, BG-2b and VAL-2a, which
+# requirements.yaml leaves out on purpose (its reconciliation: Background's
+# argument, and the description of the minimal CRL the section rules out).
+#
+# Every vector carries:
+#   id, locator, source_lines (source examples only), kind
+#   group           list sub-structure, where there is one: name-binding,
+#                   wallet-card-run, other-requirements
+#   notation        prose          -- the example is running prose
+#                   quoted-text    -- the example is a sentence or phrase
+#                                     the source prints in quotation marks;
+#                                     the marks are part of the input
+#                   abstract-model -- constructed input: a YAML mapping in
+#                                     the notation below
+#   fidelity        verbatim    -- the whole item, sub-item or paragraph,
+#                                  bullet marker and margin removed. Where an
+#                                  item ends in bracketed commentary, the
+#                                  input is the item before the commentary
+#                                  and the commentary is carried verbatim
+#                                  in source_annotation_lines
+#                   split       -- a contiguous run taken out of a larger
+#                                  item or paragraph; every character is the
+#                                  source's
+#                   constructed -- built for this file
+#   input           the example
+#   crosses_page_break  true when the input runs across a page break
+#   expected / expected_paragraphs
+#                   SOURCE EXAMPLES: what a conforming SPKI certificate design
+#                   must be able to express for the example. For an Open
+#                   Question, the source's own answer. expected_paragraphs
+#                   replaces expected when the answer is more than one
+#                   paragraph (one string per paragraph, source order).
+#                   CONSTRUCTED: the result, in words.
+#   expected_basis  (source examples)
+#                   stated      -- the source states the outcome for this
+#                                  example; expected is a verbatim quote
+#                   rule-quoted -- expected is this extraction's statement;
+#                                  the body rules it rests on are listed in
+#                                  `exercises` and quoted in body_rules
+#                   uncovered   -- no body requirement covers the example;
+#                                  expected says so, and why, and no rule is
+#                                  invented for it
+#   exercises       body_rules keys the example exercises (source examples)
+#   rests_on        (constructed) the rules the vector rests on, each with
+#                   rule (its body_rules key), locator and text (a verbatim
+#                   quote, which may be a narrower run of the body_rules
+#                   entry)
+#   outcome         (constructed) accept | reject | conforms | violation |
+#                   permitted | expressible | undetermined
+#                     accept/reject  -- a verifier's decision on the input
+#                     conforms/violation -- the input (a design, a CRL
+#                                        sequence, a certificate) meets or
+#                                        breaks the rule
+#                     permitted      -- the source allows it; a conforming
+#                                        implementation may do it
+#                     expressible    -- a conforming design must be able to
+#                                        express the input
+#                     undetermined   -- the source does not decide the case
+#   modal           (constructed) the source's own modal wording for the rule
+#                   ("must", "should", "if possible, ... should", ...; "..."
+#                   marks omitted words). RFC 2692 has no BCP 14 keywords;
+#                   all are lower case and carry their ordinary meaning.
+#   soft            (constructed) true when the source qualifies the rule
+#                   ("if possible", "may imply", "usually", "we assume"): a
+#                   violation is a finding, not a hard failure
+#   inferred        (constructed) true when the outcome is not literally
+#                   stated by the source; `inference` says what was read in
+#   outcome_quote   (Open Questions) the decisive clause of the answer, split
+#                   verbatim from it
+#   source_text     further verbatim quotes that ground the vector
+#   source_annotation_lines  bracketed commentary printed with an item, one
+#                   contiguous run per entry, with its own line span
+#   source_issue    a defect or ambiguity in the SOURCE, recorded and not
+#                   repaired
+#   related, notes  cross-links and commentary; never consumed as values
+#   constrained_by  requirement ids (rfc-2692#R-NNNN), in id order, wired by
+#                   pass 3. Two sources, and nothing else: (1) the entries
+#                   whose text the vector itself carries, in input,
+#                   source_annotation_lines, a stated expected, outcome_quote
+#                   or source_text (a List vector's own item, an Open
+#                   Question's answer, a body sentence used as input); (2) the
+#                   entries for every rule in exercises or rests_on, as
+#                   matched to requirement texts, sentence by sentence (a
+#                   narrower rests_on quote cites only the entries it
+#                   quotes). Every vector has at least one. BG-2a, BG-2b and
+#                   VAL-2a have no entry (see body_rules), so SR-BG-01,
+#                   SR-USE-08 and SR-VAL-C06 cite only their other rules.
+#
+# QUOTING. Every verbatim string is one contiguous run of source characters
+# with RFC line wrapping undone: a line break and the next line's margin read
+# as one space, page header and footer lines are not text, and a line-final
+# hyphen in a hyphenated compound joins with no space ("collision-" +
+# "free" reads collision-free, the only such case quoted). In-line spacing is
+# kept, including two spaces after a full stop. Nothing is spliced or
+# paraphrased. Every string in this file is a YAML single-quoted scalar (an
+# apostrophe is written twice); the source contains no backslash.
+#
+# ABSTRACT-MODEL NOTATION (constructed inputs). Synthetic, obviously not real
+# values; never bytes or S-expression syntax, since RFC 2692 defines no
+# encoding:
+#   key-A, key-B, ...       public keys (key-blinded-1: a blinded signature
+#                           key); hash(key-B) is a hash of key-B
+#   cert-1, crl-1, reval-1  certificate, CRL, revalidation instrument ids
+#   auth-X, purpose-1, attr-*  opaque authorization, purpose, attribute labels
+#   name-1, crl-loc-1       opaque names and CRL locations
+#   form-T(...), form-S(...), text-T(...)  two different byte layouts of the
+#                           same certificate, and a text-format layout
+#   times                   ISO 8601 UTC timestamps; validity periods are
+#                           not_before / not_after pairs. RFC 2692 does not
+#                           say whether an end date is inclusive; vectors
+#                           avoid shared endpoints except SR-VAL-C03, which
+#                           tests exactly that ambiguity
+#   certificate fields      id, issuer, subject, grants, validity, uses_crl,
+#                           crl_location (null = absent); optional attributes,
+#                           names, binds_name, subject_form, resolves_to,
+#                           issued
+#   crl fields              id, signer, location, sequence, validity (null =
+#                           absent), lists (certificate ids)
+#   revalidation_instrument fields  id, kind, certificate, validity (null =
+#                           absent) or lifetime ('one-use'), lifetime_seconds,
+#                           delivered_in (null = absent)
+#   delegation template     id, certifying_key, signed_key, purposes, expires
+#   certification_right     holder, expires
+#   design                  properties of a certificate design under test
+
+# ====================================================================
+# Schema check (pass 3)
+# ====================================================================
+#
+# Every vector that carries or implies a structured instance was rendered
+# as JSON (rendering, below) and validated, by reference to one $defs
+# entry, against schema/spki-requirements.derived.schema.json. README.md,
+# "Schema check", gives each vector's entry and result. without_instance
+# lists the vectors that carry no instance, and none is forced on them.
+# decided_by says what decides every constructed reject, violation or
+# undetermined outcome: the schema, a NOT-EXPRESSIBLE constraint (RC-nn),
+# the derived schema read as the design under test, or none of these.
+
+schema_check:
+  date: '2026-10-18'
+  schema: 'schema/spki-requirements.derived.schema.json'
+  validator: 'python jsonschema 4.10.3, Draft 2020-12. Each instance is validated by {"$ref": "urn:library:rfc-2692:spki-requirements.derived#/$defs/<entry>"}.'
+  rendering: 'abstract-model to JSON. A key label becomes {public-key: label}, hash(key-X) becomes {public-key-hash: hash(key-X)}, and a name label becomes {name: label}. grants, attributes, names and binds_name become attributes: an authorization becomes {authorization: label} and a name becomes {name: label}. validity {not_before, not_after} becomes validity {not-before, not-after}. uses_crl true becomes online-validation [{kind: crl, location: crl_location}], with location left out when crl_location is null. A signature label is added, since the notation leaves signing implicit. A CRL: lists becomes revoked, sequence becomes sequence-number, validity becomes validity; id, signer and location are not CRL members (who signs, and how a CRL is tied to its certificates, is gap G-11). A revalidation instrument: certificate becomes validates, validity or lifetime one-use becomes lifetime, delivered_in becomes challenge; id, kind and lifetime_seconds are labels. A delegation template becomes a key-equivalence-certificate: certifying_key is the issuer, signed_key the subject, each purpose an authorization, expires the not-after. A certificate''s id, subject_form, resolves_to and issued are not certificate members: id is how a CRL names the certificate (certificate-identifier), subject_form is carried by the subject''s form, resolves_to is resolution (RC-16), and an issue time has no member (gap G-14). Source examples that imply an instance are rendered the same way from their own words, with labels for keys and authorizations. Context (check_time, uses, request, use, job) stays outside the instance.'
+  vectors_with_instances: 101
+  instances: 135
+  result: '135 instances over 101 vectors (72 source, 29 constructed). 8 must not validate and none does: SR-VAL-01 (the minimal CRL has no validity dates), SR-VAL-C04 (a CRL pointer with no location), SR-VAL-C05 (a CRL with no validity dates), SR-VAL-C11 (an instrument with no lifetime), and four probes built from a vector''s own words (SR-GEN-C03''s certificate is not anonymous; a direct certificate with two names, SR-USE-09; the purchasing agent''s certificate with a name, SR-USE-56; a key-equivalence certificate with no validity, SR-USE-57). 127 must validate, and all do. SR-USE-57 and SR-USE-C01 to -C03 rendered as written (the template gives only an expiry, "until this certificate expires") failed at first, because validity-period required not-before; pass 3 relaxed validity-period to either bound (schema finding 1, applied), and they now validate as written. The List uses validate trivially, because authorization is opaque (G-01): they show that the certificate shape carries each use, and nothing more.'
+  without_instance_reason: 'No instance is forced on these. Source: scope (SR-CH-01); distribution (SR-GEN-02); implementation and encoding constraints that no JSON instance can show (SR-IMP-01 to -04, RC-08 to RC-12); List items that are uncovered (SR-USE-06, -11, -12, -66, -67, -71, -74, -75), that name a service or a policy rather than a structure (SR-USE-65, -68, -69, -70, -72), or that the schema does not model (SR-USE-73, gap G-14; its certificate is exercised by SR-USE-C04 and -C05); and the Open Questions whose answer is a limit, not a structure (SR-OQ-01, -02, -06). Constructed: design properties, wire-level rules and processes (SR-VAL-C15 to -C17, SR-GEN-C01, -C02, -C05, -C11, SR-IMP-C01 to -C07, -C09, -C10). Where a design-level vector can be put to the derived schema itself, the schema passes it (decided_by).'
+  without_instance:
+    - 'SR-CH-01'
+    - 'SR-GEN-02'
+    - 'SR-IMP-01'
+    - 'SR-IMP-02'
+    - 'SR-IMP-03'
+    - 'SR-IMP-04'
+    - 'SR-USE-06'
+    - 'SR-USE-11'
+    - 'SR-USE-12'
+    - 'SR-USE-65'
+    - 'SR-USE-66'
+    - 'SR-USE-67'
+    - 'SR-USE-68'
+    - 'SR-USE-69'
+    - 'SR-USE-70'
+    - 'SR-USE-71'
+    - 'SR-USE-72'
+    - 'SR-USE-73'
+    - 'SR-USE-74'
+    - 'SR-USE-75'
+    - 'SR-OQ-01'
+    - 'SR-OQ-02'
+    - 'SR-OQ-06'
+    - 'SR-VAL-C15'
+    - 'SR-VAL-C16'
+    - 'SR-VAL-C17'
+    - 'SR-GEN-C01'
+    - 'SR-GEN-C02'
+    - 'SR-GEN-C05'
+    - 'SR-GEN-C11'
+    - 'SR-IMP-C01'
+    - 'SR-IMP-C02'
+    - 'SR-IMP-C03'
+    - 'SR-IMP-C04'
+    - 'SR-IMP-C05'
+    - 'SR-IMP-C06'
+    - 'SR-IMP-C07'
+    - 'SR-IMP-C09'
+    - 'SR-IMP-C10'
+  decided_by:
+    - vector: 'SR-VAL-01'
+      by: 'schema: crl requires validity; the minimal CRL as described has no dates (RC-06 lists the rule)'
+    - vector: 'SR-VAL-C01'
+      by: 'RC-03: the dates overlap under either end-date reading; every instance is schema-valid'
+    - vector: 'SR-VAL-C03'
+      by: 'RC-03 with gap G-08: overlap if end dates are inclusive, none if exclusive; the RC-03 check returns undetermined on a shared endpoint (schema finding 2, applied)'
+    - vector: 'SR-VAL-C04'
+      by: 'schema: crl-pointer requires location, so the pointer fails online-validation; with the pointer left out the certificate is schema-valid and only RC-05 catches it'
+    - vector: 'SR-VAL-C05'
+      by: 'schema: crl requires validity (RC-06)'
+    - vector: 'SR-VAL-C06'
+      by: 'no RC: the effect of being listed (VAL-2a) is not a NOT-EXPRESSIBLE constraint; instances are schema-valid; state-machine M03 revoked'
+    - vector: 'SR-VAL-C08'
+      by: 'no RC: a check time outside the validity period; instance is schema-valid; state-machine M02 expired, M03 outside-validity-period'
+    - vector: 'SR-VAL-C09'
+      by: 'no RC: as SR-VAL-C08, before not-before; state-machine M02 not-yet-valid'
+    - vector: 'SR-VAL-C10'
+      by: 'RC-02: date_lt(not-before, not-after) is false; instance is schema-valid'
+    - vector: 'SR-VAL-C11'
+      by: 'schema: revalidation-instrument requires lifetime'
+    - vector: 'SR-VAL-C12'
+      by: 'RC-07 (used once); instance is schema-valid'
+    - vector: 'SR-VAL-C14'
+      by: 'RC-07 (delivered only inside challenge/response); challenge is optional (G-07), so the instance is schema-valid'
+    - vector: 'SR-VAL-C15'
+      by: 'design-level, no instance; the derived schema itself defines both a negative and a positive instrument'
+    - vector: 'SR-VAL-C16'
+      by: 'design-level, no instance; as SR-VAL-C15'
+    - vector: 'SR-VAL-C17'
+      by: 'design-level, no instance; the derived schema itself lets a certificate carry validity'
+    - vector: 'SR-GEN-C01'
+      by: 'RC-14 (no registry or other party for a new authorization); no instance'
+    - vector: 'SR-GEN-C03'
+      by: 'RC-13 (minimum information); the over-informative certificate is schema-valid'
+    - vector: 'SR-GEN-C05'
+      by: 'design-level, no instance; the derived schema itself requires no name, and anonymous-certificate exists'
+    - vector: 'SR-GEN-C11'
+      by: 'design-level, no instance; distribution is deliberately not modelled (schema README)'
+    - vector: 'SR-IMP-C01'
+      by: 'RC-08 (signed exactly as transmitted); wire-level, no instance'
+    - vector: 'SR-IMP-C03'
+      by: 'RC-11 (no ASN.1); wire-level, no instance'
+    - vector: 'SR-IMP-C04'
+      by: 'RC-11 (no library code); no instance'
+    - vector: 'SR-IMP-C05'
+      by: 'RC-09 (LR(0), no scan); wire-level, no instance'
+    - vector: 'SR-IMP-C06'
+      by: 'RC-10 (no recursion); wire-level, no instance'
+    - vector: 'SR-IMP-C09'
+      by: 'RC-21 (any empowered keyholder generates); design-level, no instance'
+    - vector: 'SR-USE-C02'
+      by: 'no RC: a use after expiry; state-machine M11 expired'
+    - vector: 'SR-USE-C03'
+      by: 'no RC states it: purpose matching is authorization content, which RC-14 leaves to the code author; state-machine M11'
+    - vector: 'SR-USE-C04'
+      by: 'no RC: gap G-14 (certification right expiration is not modelled, and the certificate has no issue-time member); state-machine M14 rejected-issued-after; soft'
+    - vector: 'SR-USE-C07'
+      by: 'no RC states it: the amount comparison is authorization content (RC-14)'
+
+body_rules:
+  - key: 'CH-2'
+    body: true
+    locator: 'RFC 2692 §Charter of the SPKI working group ¶2, p. 2'
+    source_lines: '71-73'
+    text: 'The key certificate format and associated protocols are to be simple to understand, implement, and use.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0002'
+  - key: 'CH-3a'
+    body: true
+    locator: 'RFC 2692 §Charter of the SPKI working group ¶3, p. 2'
+    source_lines: '77-81'
+    text: 'The SPKI is intended to provide mechanisms to support security in a wide range of Internet applications, including IPSEC protocols, encrypted electronic mail and WWW documents, payment protocols, and any other application which will require the use of public key certificates and the ability to access them.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0003'
+  - key: 'CH-3b'
+    body: true
+    locator: 'RFC 2692 §Charter of the SPKI working group ¶3, p. 2'
+    source_lines: '81-83'
+    text: 'It is intended that the Simple Public Key Infrastructure will support a range of trust models.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0004'
+  - key: 'BG-2a'
+    body: true
+    locator: 'RFC 2692 §Background ¶2, p. 2'
+    source_lines: '103-105'
+    text: 'The SPKI team directly addressed the issue of <name,key> bindings and realized that such certificates are of extremely limited use for trust management.'
+    crosses_page_break: false
+    requirement_ids: []
+  - key: 'BG-2b'
+    body: true
+    locator: 'RFC 2692 §Background ¶2, p. 2'
+    source_lines: '105-107'
+    text: 'A keyholder''s name is one attribute of the keyholder, but as can be seen in the list of needs in this document, a person''s name is rarely of security interest.'
+    crosses_page_break: false
+    requirement_ids: []
+  - key: 'BG-2c'
+    body: true
+    locator: 'RFC 2692 §Background ¶2, p. 2'
+    source_lines: '107-109'
+    text: 'A user of a certificate needs to know whether a given keyholder has been granted some specific authorization.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0005'
+  - key: 'GEN-1'
+    body: true
+    locator: 'RFC 2692 §General Requirements ¶1, p. 3'
+    source_lines: '121-122'
+    text: 'We define the term KEYHOLDER of a public key to refer to the person or other entity that controls the corresponding private key.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0006'
+  - key: 'GEN-2'
+    body: true
+    locator: 'RFC 2692 §General Requirements ¶2, p. 3'
+    source_lines: '124-125'
+    text: 'The main purpose of an SPKI certificate is to authorize some action, give permission, grant a capability, etc. to or for a keyholder.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0007'
+  - key: 'GEN-3'
+    body: true
+    locator: 'RFC 2692 §General Requirements ¶3, p. 3'
+    source_lines: '127-131'
+    text: 'The keyholder is most directly identified by the public key itself, although for convenience or other purposes some indirection (delayed binding) may be employed.  That indirection can be via a collision-free hash of the public key or via a name, later to be resolved into a key.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0008'
+      - 'rfc-2692#R-0009'
+  - key: 'GEN-4a'
+    body: true
+    locator: 'RFC 2692 §General Requirements ¶4, p. 3'
+    source_lines: '133-134'
+    text: 'The definition of attributes or authorizations in a certificate is up to the author of code which uses the certificate.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0010'
+  - key: 'GEN-4b'
+    body: true
+    locator: 'RFC 2692 §General Requirements ¶4, p. 3'
+    source_lines: '134-137'
+    text: 'The creation of new authorizations should not require interaction with any other person or organization but rather be under the total control of the author of the code using the certificate.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0011'
+  - key: 'GEN-5a'
+    body: true
+    locator: 'RFC 2692 §General Requirements ¶5, p. 3'
+    source_lines: '139-141'
+    text: 'Because SPKI certificates might carry information that the keyholder might not want to publish, we assume that certificates will be distributed directly by the keyholder to the verifier.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0012'
+  - key: 'GEN-5b'
+    body: true
+    locator: 'RFC 2692 §General Requirements ¶5, p. 3'
+    source_lines: '141-144'
+    text: 'If the keyholder wishes to use a global repository, such as LDAP, the global PGP key server or the DNS database, that is up to the keyholder and not for the SPKI WG to specify.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0013'
+  - key: 'GEN-6a'
+    body: true
+    locator: 'RFC 2692 §General Requirements ¶6, p. 3'
+    source_lines: '146-149'
+    text: 'Because SPKI certificates will carry information that, taken together over all certificates, might constitute a dossier and therefore a privacy violation, each SPKI certificate should carry the minimum information necessary to get a job done.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0014'
+  - key: 'GEN-6b'
+    body: true
+    locator: 'RFC 2692 §General Requirements ¶6, p. 3'
+    source_lines: '151-153'
+    text: 'The keyholder should be able to release a minimum of information in order to prove his or her permission to act.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0016'
+  - key: 'GEN-7'
+    body: true
+    locator: 'RFC 2692 §General Requirements ¶7, p. 3'
+    source_lines: '155-155'
+    text: 'It is necessary for at least some certificates to be anonymous.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0017'
+  - key: 'GEN-8'
+    body: true
+    locator: 'RFC 2692 §General Requirements ¶8, p. 3'
+    source_lines: '157-159'
+    text: 'Because one use of SPKI certificates is in secret balloting and similar applications, an SPKI certificate must be able to assign an attribute to a blinded signature key.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0018'
+  - key: 'GEN-9a'
+    body: true
+    locator: 'RFC 2692 §General Requirements ¶9, p. 3'
+    source_lines: '161-164'
+    text: 'There are names the keyholder prefers to be called and there are names by which the keyholder is known to various other keyholders.  An SPKI certificate must be able to bind a key to such names.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0019'
+      - 'rfc-2692#R-0020'
+  - key: 'GEN-9b'
+    body: true
+    locator: 'RFC 2692 §General Requirements ¶9, pp. 3-4'
+    source_lines: '164-175'
+    text: 'The SDSI work of Rivest and Lampson has done an especially good job of defining and using local name spaces, therefore if possible SPKI should support the SDSI name construct.'
+    crosses_page_break: true
+    requirement_ids:
+      - 'rfc-2692#R-0021'
+  - key: 'VAL-1a'
+    body: true
+    locator: 'RFC 2692 §Validity and CRLs ¶1, p. 4'
+    source_lines: '179-180'
+    text: 'An SPKI certificate, like any other, should be able to carry a validity period: dates within which it is valid.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0022'
+  - key: 'VAL-1b'
+    body: true
+    locator: 'RFC 2692 §Validity and CRLs ¶1, p. 4'
+    source_lines: '180-181'
+    text: 'It may also be necessary to have on-line refinement of validity.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0023'
+  - key: 'VAL-2a'
+    body: true
+    locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
+    source_lines: '185-190'
+    text: 'A minimal CRL contains a list of revoked certificates, identified uniquely, a sequence number and a signature.  Its method of transmission is not specified.  If it encounters some certificate that it lists, then it annihilates that certificate.  If it encounters a previous CRL, as indicated by sequence number, then it annihilates that previous CRL.'
+    crosses_page_break: false
+    requirement_ids: []
+  - key: 'VAL-2b'
+    body: true
+    locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
+    source_lines: '190-191'
+    text: 'Such a CRL leads to non-deterministic program behavior.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0024'
+  - key: 'VAL-2c'
+    body: true
+    locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
+    source_lines: '191-194'
+    text: 'Therefore, we take as a requirement that if SPKI uses CRLs, then the certificate that uses it must explicitly tell the verifier where to find the CRL, the CRL must carry explicit validity dates and the dates of a sequence of CRLs must not overlap.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0025'
+      - 'rfc-2692#R-0026'
+      - 'rfc-2692#R-0027'
+  - key: 'VAL-2d'
+    body: true
+    locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
+    source_lines: '194-196'
+    text: 'Under this set of requirements, behavior of certificate validation is deterministic (aside from the question of clock skew).'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0028'
+  - key: 'VAL-4'
+    body: true
+    locator: 'RFC 2692 §Validity and CRLs ¶4, p. 4'
+    source_lines: '204-204'
+    text: 'SPKI should support both positive and negative on-line validations.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0030'
+  - key: 'VAL-5a'
+    body: true
+    locator: 'RFC 2692 §Validity and CRLs ¶5, p. 4'
+    source_lines: '206-206'
+    text: 'Any CRL or revalidation instrument must have its own lifetime.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0031'
+  - key: 'VAL-5b'
+    body: true
+    locator: 'RFC 2692 §Validity and CRLs ¶5, p. 4'
+    source_lines: '206-210'
+    text: 'A lifetime of 0 is not possible because of communication delays and clock skews, although one can consider an instrument whose lifetime is "one use" and which is delivered only as part of a challenge/response protocol.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0032'
+  - key: 'IMP-1a'
+    body: true
+    locator: 'RFC 2692 §Implementation of Certificates ¶1, p. 4'
+    source_lines: '214-217'
+    text: 'The authorization certificates that are envisioned for SPKI (and needed to meet the demands of the list given at the end of this document) should be generated by any keyholder empowered to grant or delegate the authorization in question.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0033'
+  - key: 'IMP-1b'
+    body: true
+    locator: 'RFC 2692 §Implementation of Certificates ¶1, pp. 4-5'
+    source_lines: '221-231'
+    text: 'In addition, SPKI certificates should be usable in very constrained environments, such as smart cards or small embedded systems.'
+    crosses_page_break: true
+    requirement_ids:
+      - 'rfc-2692#R-0035'
+  - key: 'IMP-1c'
+    body: true
+    locator: 'RFC 2692 §Implementation of Certificates ¶1, p. 5'
+    source_lines: '231-232'
+    text: 'The code to process them and the memory to store them should both be as small as possible.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0036'
+  - key: 'IMP-2a'
+    body: true
+    locator: 'RFC 2692 §Implementation of Certificates ¶2, p. 5'
+    source_lines: '234-234'
+    text: 'An SPKI certificate should be as simple as possible.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0037'
+  - key: 'IMP-2b'
+    body: true
+    locator: 'RFC 2692 §Implementation of Certificates ¶2, p. 5'
+    source_lines: '234-236'
+    text: 'There should be a bare minimum of fields necessary to get the job done and there should be an absolute minimum of optional fields.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0038'
+      - 'rfc-2692#R-0039'
+  - key: 'IMP-2c'
+    body: true
+    locator: 'RFC 2692 §Implementation of Certificates ¶2, p. 5'
+    source_lines: '236-239'
+    text: 'In particular, the structure should be specific enough that the creator of a certificate is constrained by the structure definition, not by complaints (or error messages) from the reader of a certificate.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0040'
+  - key: 'IMP-3'
+    body: true
+    locator: 'RFC 2692 §Implementation of Certificates ¶3, p. 5'
+    source_lines: '241-243'
+    text: 'An SPKI certificate should be described in as simple a method as possible, relating directly to the kind of structures a C or PASCAL programmer would normally write.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0041'
+  - key: 'IMP-4a'
+    body: true
+    locator: 'RFC 2692 §Implementation of Certificates ¶4, p. 5'
+    source_lines: '245-246'
+    text: 'No library code should be required for the packing or parsing of SPKI certificates.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0042'
+  - key: 'IMP-4b'
+    body: true
+    locator: 'RFC 2692 §Implementation of Certificates ¶4, p. 5'
+    source_lines: '246-246'
+    text: 'In particular, ASN.1 is not to be used.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0043'
+  - key: 'IMP-5a'
+    body: true
+    locator: 'RFC 2692 §Implementation of Certificates ¶5, p. 5'
+    source_lines: '248-248'
+    text: 'A certificate should be signed exactly as it is transmitted.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0044'
+  - key: 'IMP-5b'
+    body: true
+    locator: 'RFC 2692 §Implementation of Certificates ¶5, p. 5'
+    source_lines: '248-251'
+    text: 'There should be no reformatting called for in the process of checking a certificate''s signature (although one might canonicalize white space during certificate input, for example, if the format is text).'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0045'
+  - key: 'IMP-6'
+    body: true
+    locator: 'RFC 2692 §Implementation of Certificates ¶6, p. 5'
+    source_lines: '253-257'
+    text: 'For efficiency, if possible, an SPKI certificate should be encoded in an LR(0) grammar.  That is, neither packing nor parsing of the structure should require a scan of the data.  Data should be read into the kind of structure a programmer would want to use without touching the incoming bytes more than once.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0046'
+      - 'rfc-2692#R-0047'
+      - 'rfc-2692#R-0048'
+  - key: 'IMP-7'
+    body: true
+    locator: 'RFC 2692 §Implementation of Certificates ¶7, p. 5'
+    source_lines: '259-260'
+    text: 'For efficiency, if possible, an SPKI certificate should be packed and parsed without any recursion.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0049'
+  - key: 'OQ-0'
+    body: true
+    locator: 'RFC 2692 §Open Questions ¶1 (intro), p. 11'
+    source_lines: '592-593'
+    text: 'These do not have answers provided by certificate definition or issuing alone.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0151'
+  - key: 'LIST-DELEG'
+    body: false
+    locator: 'RFC 2692 §List of Certificate Uses, item ''"This signed-key should be considered equivalent'', p. 9'
+    source_lines: '488-490'
+    text: '"This signed-key should be considered equivalent to the certifying-key until this certificate expires for the following purposes ..."'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0122'
+  - key: 'LIST-OR4a'
+    body: false
+    locator: 'RFC 2692 §List of Certificate Uses, ''Other requirements'', item ''Especially in lower-end applications'', p. 11'
+    source_lines: '568-572'
+    text: 'the people generating the keys (e.g., administrators) will change, and you will no longer want them to be able to certify.  On the other hand, you will usually also not want all keys they have generated to expire.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0143'
+      - 'rfc-2692#R-0144'
+  - key: 'LIST-OR4b'
+    body: false
+    locator: 'RFC 2692 §List of Certificate Uses, ''Other requirements'', item ''Especially in lower-end applications'', p. 11'
+    source_lines: '572-574'
+    text: 'This may imply a "certification right expiration" certificate requirement, probably to be implemented together with notary services.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0145'
+  - key: 'LIST-PURCH'
+    body: false
+    locator: 'RFC 2692 §List of Certificate Uses, item ''I''m the a purchasing agent'', p. 9'
+    source_lines: '480-482'
+    text: 'I want to posses a certificate that tells our suppliers that I''m authorized to make purchases up to $15,000.'
+    crosses_page_break: false
+    requirement_ids:
+      - 'rfc-2692#R-0119'
+
+vectors:
+
+  # ====================================================================
+  # PART 1 -- SOURCE EXAMPLES
+  # Charter of the SPKI working group (p. 2)
+  # ====================================================================
+
+  - id: 'SR-CH-01'
+    locator: 'RFC 2692 §Charter of the SPKI working group ¶3, p. 2'
+    source_lines: '77-81'
+    kind: 'application-scope'
+    notation: 'prose'
+    fidelity: 'split'
+    input: 'The SPKI is intended to provide mechanisms to support security in a wide range of Internet applications, including IPSEC protocols, encrypted electronic mail and WWW documents, payment protocols, and any other application which will require the use of public key certificates and the ability to access them.'
+    expected: 'The certificate design is intended to be usable by each application the sentence names: IPSEC protocols, encrypted electronic mail and WWW documents, and payment protocols. The source states no application-specific requirement, so the list scopes the design and is not itself a test.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'CH-3a'
+    constrained_by:
+      - 'rfc-2692#R-0003'
+    related:
+      - 'SR-USE-60'
+      - 'SR-USE-64'
+    notes: 'Split: the paragraph''s only other sentence is CH-3b (trust models).'
+
+  # ====================================================================
+  # Background (p. 2)
+  # ====================================================================
+
+  - id: 'SR-BG-01'
+    locator: 'RFC 2692 §Background ¶1, p. 2'
+    source_lines: '92-99'
+    kind: 'historical-example'
+    notation: 'prose'
+    fidelity: 'split'
+    input: 'Instead, they suggested, one can publish a modified telephone book -- one with public keys in place of telephone numbers. One could then look up his or her desired communication partner in the directory, find that person''s public key and open a secure channel to that person.  Kohnfelder took that suggestion and noted that an on-line service has the disadvantage of being a performance bottleneck.  To replace it, he proposed creation of digitally signed directory entries which he called certificates.'
+    expected: 'A design can express a binding between a name and a key (GEN-9a), but the paragraph that follows judges such <name,key> certificates of extremely limited use for trust management (BG-2a): what a verifier needs is whether a keyholder has been granted a specific authorization (BG-2c).'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'BG-2a'
+      - 'BG-2c'
+      - 'GEN-9a'
+    constrained_by:
+      - 'rfc-2692#R-0005'
+      - 'rfc-2692#R-0019'
+      - 'rfc-2692#R-0020'
+    related:
+      - 'SR-USE-08'
+    notes: 'The telephone book with public keys in place of numbers (Diffie and Hellman) and the digitally signed directory entry (Kohnfelder) are the origin of the <name,key> certificate the document argues against.'
+
+  # ====================================================================
+  # General Requirements (p. 3)
+  # ====================================================================
+
+  - id: 'SR-GEN-01'
+    locator: 'RFC 2692 §General Requirements ¶3, p. 3'
+    source_lines: '129-131'
+    kind: 'subject-identification'
+    notation: 'prose'
+    fidelity: 'split'
+    input: 'That indirection can be via a collision-free hash of the public key or via a name, later to be resolved into a key.'
+    expected: 'A certificate''s keyholder may be identified by the public key itself, by a collision-free hash of the key, or by a name later resolved into a key.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-3'
+    constrained_by:
+      - 'rfc-2692#R-0008'
+      - 'rfc-2692#R-0009'
+    related:
+      - 'SR-GEN-C08'
+      - 'SR-GEN-C09'
+    notes: 'The two indirection forms are permitted ("may be employed"), not required; the direct form is the key itself.'
+
+  - id: 'SR-GEN-02'
+    locator: 'RFC 2692 §General Requirements ¶5, p. 3'
+    source_lines: '141-144'
+    kind: 'distribution-example'
+    notation: 'prose'
+    fidelity: 'split'
+    input: 'If the keyholder wishes to use a global repository, such as LDAP, the global PGP key server or the DNS database, that is up to the keyholder and not for the SPKI WG to specify.'
+    expected: 'The design is assumed not to depend on a global repository: certificates are assumed to travel directly from keyholder to verifier (GEN-5a), and LDAP, the global PGP key server or the DNS database is the keyholder''s choice, outside what SPKI specifies.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-5a'
+      - 'GEN-5b'
+    constrained_by:
+      - 'rfc-2692#R-0012'
+      - 'rfc-2692#R-0013'
+    related:
+      - 'SR-GEN-C11'
+      - 'SR-USE-74'
+
+  - id: 'SR-GEN-03'
+    locator: 'RFC 2692 §General Requirements ¶6, p. 3'
+    source_lines: '149-151'
+    kind: 'minimum-information-analogy'
+    notation: 'prose'
+    fidelity: 'split'
+    input: 'The SPKI certificate is then to be like a single key rather than a key ring or a single credit card rather than a whole wallet.'
+    expected: 'Each certificate should carry only the minimum information a job needs, like a single key rather than a key ring, or a single credit card rather than a whole wallet, so that the keyholder can release only what one act needs. The source sets no number of authorizations per certificate.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-6a'
+      - 'GEN-6b'
+    constrained_by:
+      - 'rfc-2692#R-0014'
+      - 'rfc-2692#R-0015'
+      - 'rfc-2692#R-0016'
+    related:
+      - 'SR-USE-18'
+      - 'SR-USE-27'
+      - 'SR-GEN-C03'
+      - 'SR-GEN-C04'
+
+  - id: 'SR-GEN-04'
+    locator: 'RFC 2692 §General Requirements ¶8, p. 3'
+    source_lines: '157-159'
+    kind: 'blinded-key-example'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Because one use of SPKI certificates is in secret balloting and similar applications, an SPKI certificate must be able to assign an attribute to a blinded signature key.'
+    expected: 'A certificate must be able to assign an attribute to a blinded signature key.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-8'
+    constrained_by:
+      - 'rfc-2692#R-0018'
+    related:
+      - 'SR-GEN-C07'
+      - 'SR-USE-17'
+    notes: 'The paragraph is both the example (secret balloting) and the requirement it motivates. The source does not define a blinded signature key or say what attribute a ballot would carry.'
+
+  # ====================================================================
+  # Validity and CRLs (p. 4)
+  # ====================================================================
+
+  - id: 'SR-VAL-01'
+    locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
+    source_lines: '185-190'
+    kind: 'crl-counter-example'
+    notation: 'prose'
+    fidelity: 'split'
+    input: 'A minimal CRL contains a list of revoked certificates, identified uniquely, a sequence number and a signature.  Its method of transmission is not specified.  If it encounters some certificate that it lists, then it annihilates that certificate.  If it encounters a previous CRL, as indicated by sequence number, then it annihilates that previous CRL.'
+    expected: 'Such a CRL leads to non-deterministic program behavior.'
+    expected_basis: 'stated'
+    exercises:
+      - 'VAL-2b'
+      - 'VAL-2c'
+      - 'VAL-2d'
+    constrained_by:
+      - 'rfc-2692#R-0024'
+      - 'rfc-2692#R-0025'
+      - 'rfc-2692#R-0026'
+      - 'rfc-2692#R-0027'
+      - 'rfc-2692#R-0028'
+    related:
+      - 'SR-VAL-C01'
+      - 'SR-VAL-C06'
+    notes: 'The source''s own negative example. The three conditions that follow it (CRL location in the certificate, explicit CRL validity dates, no overlap in a CRL sequence) are what make validation deterministic "(aside from the question of clock skew)". The pronoun "it" in "If it encounters some certificate that it lists" refers to the CRL as processed by a verifier; the source does not say who encounters.'
+
+  - id: 'SR-VAL-02'
+    locator: 'RFC 2692 §Validity and CRLs ¶3, p. 4'
+    source_lines: '198-200'
+    kind: 'negative-validation-example'
+    notation: 'prose'
+    fidelity: 'split'
+    input: 'A CRL is a negative statement.  It is the digital equivalent of the little paper books of bad checks or bad credit cards that were distributed to cashiers in the 1970''s and before.'
+    expected: 'Negative on-line validation (a CRL) should be supported.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'VAL-4'
+    constrained_by:
+      - 'rfc-2692#R-0029'
+      - 'rfc-2692#R-0030'
+    related:
+      - 'SR-VAL-03'
+      - 'SR-VAL-C15'
+
+  - id: 'SR-VAL-03'
+    locator: 'RFC 2692 §Validity and CRLs ¶3, p. 4'
+    source_lines: '200-202'
+    kind: 'positive-validation-example'
+    notation: 'prose'
+    fidelity: 'split'
+    input: 'These have been replaced in the retail world by positive statements -- on-line validation of a single check, ATM card or credit card.'
+    expected: 'Positive on-line validation (validation of a single instrument) should be supported.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'VAL-4'
+    constrained_by:
+      - 'rfc-2692#R-0030'
+    related:
+      - 'SR-VAL-02'
+      - 'SR-VAL-C16'
+      - 'SR-USE-24'
+      - 'SR-USE-26'
+      - 'SR-USE-27'
+
+  - id: 'SR-VAL-04'
+    locator: 'RFC 2692 §Validity and CRLs ¶5, p. 4'
+    source_lines: '208-210'
+    kind: 'one-use-instrument-example'
+    notation: 'prose'
+    fidelity: 'split'
+    input: 'although one can consider an instrument whose lifetime is "one use" and which is delivered only as part of a challenge/response protocol.'
+    expected: 'A revalidation instrument whose lifetime is one use, delivered only inside a challenge/response protocol, is the source''s stated alternative to the impossible lifetime of 0.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'VAL-5a'
+      - 'VAL-5b'
+    constrained_by:
+      - 'rfc-2692#R-0031'
+      - 'rfc-2692#R-0032'
+    related:
+      - 'SR-VAL-C10'
+      - 'SR-VAL-C12'
+      - 'SR-VAL-C13'
+      - 'SR-VAL-C14'
+    notes: 'The source says "one can consider": it allows the instrument, it does not require it.'
+
+  # ====================================================================
+  # Implementation of Certificates (pp. 4-5)
+  # ====================================================================
+
+  - id: 'SR-IMP-01'
+    locator: 'RFC 2692 §Implementation of Certificates ¶1, p. 4'
+    source_lines: '217-221'
+    kind: 'developer-population-example'
+    notation: 'prose'
+    fidelity: 'split'
+    input: 'The code to generate certificates should be written by many different developers, frequently persons acting alone, operating out of garages or dorm rooms.  This leads to a number of constraints on the structure and encoding of certificates.'
+    expected: 'The certificate structure and encoding should be implementable by a lone developer: simple (IMP-2a), described in plain C or PASCAL structures (IMP-3), and packed and parsed without library code (IMP-4a, IMP-4b).'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'IMP-2a'
+      - 'IMP-3'
+      - 'IMP-4a'
+      - 'IMP-4b'
+    constrained_by:
+      - 'rfc-2692#R-0034'
+      - 'rfc-2692#R-0037'
+      - 'rfc-2692#R-0041'
+      - 'rfc-2692#R-0042'
+      - 'rfc-2692#R-0043'
+    notes: 'The source says only that the scenario "leads to a number of constraints"; it does not tie each later constraint to it one by one. The mapping in `exercises` is this extraction''s reading.'
+
+  - id: 'SR-IMP-02'
+    locator: 'RFC 2692 §Implementation of Certificates ¶1, pp. 4-5'
+    source_lines: '221-232'
+    kind: 'constrained-environment-example'
+    notation: 'prose'
+    fidelity: 'split'
+    input: 'In addition, SPKI certificates should be usable in very constrained environments, such as smart cards or small embedded systems.  The code to process them and the memory to store them should both be as small as possible.'
+    crosses_page_break: true
+    expected: 'Certificates should be usable on smart cards and small embedded systems; the processing code and the storage both as small as possible.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'IMP-1b'
+      - 'IMP-1c'
+    constrained_by:
+      - 'rfc-2692#R-0035'
+      - 'rfc-2692#R-0036'
+    related:
+      - 'SR-USE-58'
+    notes: 'Crosses the page 4 / page 5 break between "small" and "embedded systems".'
+
+  - id: 'SR-IMP-03'
+    locator: 'RFC 2692 §Implementation of Certificates ¶3, p. 5'
+    source_lines: '241-243'
+    kind: 'description-style-example'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'An SPKI certificate should be described in as simple a method as possible, relating directly to the kind of structures a C or PASCAL programmer would normally write.'
+    expected: 'The certificate description should map directly onto the structures a C or PASCAL programmer would write.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'IMP-3'
+    constrained_by:
+      - 'rfc-2692#R-0041'
+    notes: 'Not mechanically testable: there is no criterion for "relating directly".'
+
+  - id: 'SR-IMP-04'
+    locator: 'RFC 2692 §Implementation of Certificates ¶5, p. 5'
+    source_lines: '250-251'
+    kind: 'canonicalization-example'
+    notation: 'prose'
+    fidelity: 'split'
+    input: '(although one might canonicalize white space during certificate input, for example, if the format is text)'
+    expected: 'White-space canonicalization during certificate input, for a text format, is the adjustment the source names as compatible with checking a signature without reformatting. The source introduces it with "for example" and names no other.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'IMP-5a'
+      - 'IMP-5b'
+    constrained_by:
+      - 'rfc-2692#R-0044'
+      - 'rfc-2692#R-0045'
+    related:
+      - 'SR-IMP-C01'
+      - 'SR-IMP-C02'
+
+  # ====================================================================
+  # List of Certificate Uses (pp. 5-11): items before the wallet-card item
+  # ====================================================================
+
+  - id: 'SR-USE-01'
+    locator: 'RFC 2692 §List of Certificate Uses, item "I need a certificate to give", p. 5'
+    source_lines: '267-268'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'I need a certificate to give me permission to write electronic checks.'
+    expected: 'A permission (to write electronic checks) granted to the holder''s key.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0050'
+    related:
+      - 'SR-USE-02'
+
+  - id: 'SR-USE-02'
+    locator: 'RFC 2692 §List of Certificate Uses, item "My bank would need a certificate,", p. 5'
+    source_lines: '270-272'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'My bank would need a certificate, proving to others that it is a bank capable of cashing electronic checks and permitted to give permission to people to write electronic checks.'
+    expected: 'Two things about the bank''s key: an attribute (a bank able to cash electronic checks) and a right to grant the check-writing permission to others. The second needs a holder empowered to grant, which IMP-1a names as the issuer of authorization certificates.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+      - 'GEN-4a'
+      - 'IMP-1a'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0033'
+      - 'rfc-2692#R-0051'
+    related:
+      - 'SR-USE-01'
+      - 'SR-USE-03'
+
+  - id: 'SR-USE-03'
+    locator: 'RFC 2692 §List of Certificate Uses, item "My bank would issue a certificate", p. 6'
+    source_lines: '287-291'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'My bank would issue a certificate signing the key of a master bank certifier -- perhaps NACHA -- so that I could follow a certificate chain from a key I know (my bank''s) to the key of any other bank in the US and, similarly, to any other bank in the world.'
+    expected: 'A certificate in which one key (the bank''s) signs another key (a master bank certifier''s), so that a verifier can follow a chain of certificates from a key it already knows to a key it does not. The body allows any empowered keyholder to issue (IMP-1a) and a range of trust models (CH-3b); no body requirement states how a verifier follows a chain.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'IMP-1a'
+      - 'CH-3b'
+    constrained_by:
+      - 'rfc-2692#R-0004'
+      - 'rfc-2692#R-0033'
+      - 'rfc-2692#R-0052'
+    related:
+      - 'SR-USE-02'
+      - 'SR-USE-70'
+    notes: '"perhaps NACHA" is the source''s own hedge; nothing in the document depends on the name.'
+
+  - id: 'SR-USE-04'
+    locator: 'RFC 2692 §List of Certificate Uses, item "I might generate a certificate (a", p. 6'
+    source_lines: '293-297'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'I might generate a certificate (a "reputation voucher") for a friend to introduce him to another friend -- in which certificate I could testify to my friend''s political opinion (e.g., libertarian cypherpunk) or physical characteristics or anything else of interest.'
+    expected: 'An attribute statement issued by one keyholder about another (a testimony to a friend''s opinion or characteristics). The attribute is application-defined (GEN-4a) and is exactly the kind of information a keyholder might not want published (GEN-5a).'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+      - 'GEN-5a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0012'
+      - 'rfc-2692#R-0053'
+    notes: 'The source names the certificate in quotes: "reputation voucher".'
+
+  - id: 'SR-USE-05'
+    locator: 'RFC 2692 §List of Certificate Uses, item "I might have a certificate giving", p. 6'
+    source_lines: '299-300'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'I might have a certificate giving my security clearance, signed by a governmental issuing authority.'
+    expected: 'An attribute (a security clearance) bound to the holder''s key by an issuing authority.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0054'
+
+  - id: 'SR-USE-06'
+    locator: 'RFC 2692 §List of Certificate Uses, item "I want a certificate for some", p. 6'
+    source_lines: '302-305'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'I want a certificate for some software I have downloaded and am considering running on my computer -- to make sure it hasn''t changed and that some reputable company or person stands behind it.'
+    expected: 'No body requirement covers this use. The certificate''s subject is a piece of software, and every body requirement speaks of a keyholder: GEN-2 makes the main purpose to authorize "to or for a keyholder". Covering it would need a subject that is the software itself (for example a hash of it), which the body does not mention.'
+    expected_basis: 'uncovered'
+    exercises: []
+    constrained_by:
+      - 'rfc-2692#R-0055'
+    notes: 'The two properties asked for are integrity ("hasn''t changed") and endorsement ("some reputable company or person stands behind it").'
+
+  - id: 'SR-USE-07'
+    locator: 'RFC 2692 §List of Certificate Uses, item "I need certificates to bind names", p. 6'
+    source_lines: '307-307'
+    kind: 'certificate-use'
+    group: 'name-binding'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'I need certificates to bind names to public keys:'
+    expected: 'Names and keys can be bound to each other; the three sub-items say in which direction and by whom.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-9a'
+    constrained_by:
+      - 'rfc-2692#R-0019'
+      - 'rfc-2692#R-0020'
+      - 'rfc-2692#R-0056'
+    related:
+      - 'SR-USE-08'
+      - 'SR-USE-09'
+      - 'SR-USE-10'
+    notes: 'The item''s own text ends in a colon and introduces the three bracketed sub-items, each carried as its own vector.'
+
+  - id: 'SR-USE-08'
+    locator: 'RFC 2692 §List of Certificate Uses, item "I need certificates to bind names to public keys", sub-item "[traditional certificate]", p. 6'
+    source_lines: '309-316'
+    kind: 'certificate-use-sub'
+    group: 'name-binding'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: '[traditional certificate] binding a key to a name, implying "all the attributes of the real person having this name are transferred to this key by this certificate".  This requires unique identification of a person (which is difficult in non-digital space, as it is) and someone trustworthy binding that unique name to the key in question.  In this model, a key starts out naked and acquires attributes, permissions and authority from the person bound to it.'
+    expected: 'The key-to-name binding is expressible (GEN-9a). The transfer of "all the attributes of the real person" to the key is not something any body requirement asks for, and Background ¶2 judges such <name,key> certificates of extremely limited use for trust management (BG-2a, BG-2b).'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-9a'
+      - 'BG-2a'
+      - 'BG-2b'
+    constrained_by:
+      - 'rfc-2692#R-0019'
+      - 'rfc-2692#R-0020'
+      - 'rfc-2692#R-0057'
+      - 'rfc-2692#R-0058'
+      - 'rfc-2692#R-0059'
+    related:
+      - 'SR-BG-01'
+      - 'SR-USE-09'
+
+  - id: 'SR-USE-09'
+    locator: 'RFC 2692 §List of Certificate Uses, item "I need certificates to bind names to public keys", sub-item "[direct certificate]", p. 6'
+    source_lines: '318-328'
+    kind: 'certificate-use-sub'
+    group: 'name-binding'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: '[direct certificate] binding a name to a key, implying "I (the person who is able to use the associated private key to make this signature) declare that I go by the name of XXXXXXX."  The unique identification of the key is automatic -- from the key itself or a cryptographic hash of the key. The binding is done by the key itself -- in a self-signed certificate.  In this model, a key is loaded with attributes, permissions and authority directly by other certificates, not indirectly through some person''s name, and this certificate declares only a name or nickname by which the key''s owner likes to be addressed.'
+    expected: 'A self-signed certificate in which a key declares the name it prefers to be called: issuer and subject are the same key. GEN-9a requires binding a key to "names the keyholder prefers to be called"; GEN-3 allows the key to be identified by itself or by its hash, as the item says.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-9a'
+      - 'GEN-3'
+    constrained_by:
+      - 'rfc-2692#R-0008'
+      - 'rfc-2692#R-0009'
+      - 'rfc-2692#R-0019'
+      - 'rfc-2692#R-0020'
+      - 'rfc-2692#R-0060'
+      - 'rfc-2692#R-0061'
+      - 'rfc-2692#R-0062'
+      - 'rfc-2692#R-0063'
+      - 'rfc-2692#R-0064'
+    related:
+      - 'SR-USE-08'
+      - 'SR-USE-10'
+    notes: 'XXXXXXX is the source''s placeholder for the declared name.'
+
+  - id: 'SR-USE-10'
+    locator: 'RFC 2692 §List of Certificate Uses, item "I need certificates to bind names to public keys", sub-item "[personal binding]", pp. 6-7'
+    source_lines: '330-345'
+    kind: 'certificate-use-sub'
+    group: 'name-binding'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: '[personal binding] binding a key to a nickname.  This kind of certificate is signed by me, singing someone else''s key and binding it to a nickname by which I know that person. It is for my use only -- never given out -- and is a signed certificate to prevent tampering with my own private directory of keys.  It says nothing about how I certified the binding to my own satisfaction between the key and my friend.'
+    crosses_page_break: true
+    expected: 'A certificate signed by me that binds someone else''s key to the nickname by which I know that person, kept private. GEN-9a requires binding a key to "names by which the keyholder is known to various other keyholders"; GEN-9b asks, if possible, for SDSI local name spaces, which is what a nickname in my own directory is.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-9a'
+      - 'GEN-9b'
+    constrained_by:
+      - 'rfc-2692#R-0019'
+      - 'rfc-2692#R-0020'
+      - 'rfc-2692#R-0021'
+      - 'rfc-2692#R-0065'
+      - 'rfc-2692#R-0066'
+      - 'rfc-2692#R-0067'
+      - 'rfc-2692#R-0068'
+    related:
+      - 'SR-USE-09'
+    source_issue:
+      type: 'typo'
+      text: '"singing someone else''s key" reads as "signing". Kept verbatim.'
+    notes: 'Crosses the page 6 / page 7 break between "my own private" and "directory of keys".'
+
+  - id: 'SR-USE-11'
+    locator: 'RFC 2692 §List of Certificate Uses, item "I might be doing genealogy and", p. 7'
+    source_lines: '347-354'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'I might be doing genealogy and be collecting what amounts to 3x5 cards with facts to be linked together.  Some of these links would be from one content to another reference [e.g., indexing and cross-referencing].  Others might be links to the researcher who collected the fact.  By rights, the fact should be signed by that researcher.  Viewing only the signature on the fact and the link to the researcher, this electronic 3x5 card becomes a certificate.'
+    expected: 'No body requirement covers this use. The signed object is a fact or a link between facts, not an authorization or attribute of a keyholder (GEN-2). The item itself says the card becomes a certificate only when one views just the researcher''s signature and the link to the researcher.'
+    expected_basis: 'uncovered'
+    exercises: []
+    constrained_by:
+      - 'rfc-2692#R-0069'
+      - 'rfc-2692#R-0070'
+      - 'rfc-2692#R-0071'
+
+  - id: 'SR-USE-12'
+    locator: 'RFC 2692 §List of Certificate Uses, item "I want to sign a contract", p. 7'
+    source_lines: '356-357'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'I want to sign a contract to buy a house.  What kind of certificate do I need?'
+    expected: 'No body requirement covers this use, and the source does not answer its own question. Signing a contract is a signature by the buyer''s key, not a certificate about it. The related Open Question on a house title scan is answered as outside certificate structure (SR-OQ-02).'
+    expected_basis: 'uncovered'
+    exercises: []
+    constrained_by:
+      - 'rfc-2692#R-0072'
+    related:
+      - 'SR-OQ-02'
+
+  - id: 'SR-USE-13'
+    locator: 'RFC 2692 §List of Certificate Uses, item "I have found someone on the", p. 7'
+    source_lines: '359-361'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'I have found someone on the net and she sounds really nice. Things are leading up to cybersex.  How do I make sure she''s not really some 80-year-old man in a nursing home?'
+    expected: 'An attribute statement about the other keyholder, from an issuer the relying user trusts, that rules out the impersonation the item fears. The holder should be able to prove it while releasing nothing else (GEN-6b).'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+      - 'GEN-6b'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0016'
+      - 'rfc-2692#R-0073'
+    related:
+      - 'SR-USE-14'
+
+  - id: 'SR-USE-14'
+    locator: 'RFC 2692 §List of Certificate Uses, item "I have met someone on the", p. 7'
+    source_lines: '363-365'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'I have met someone on the net and would like a picture of her and her height, weight and other measurements from a trustworthy source.'
+    expected: 'Attributes about a keyholder (a picture and physical measurements) from an issuer the relying user trusts ("a trustworthy source").'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0074'
+    related:
+      - 'SR-USE-13'
+
+  - id: 'SR-USE-15'
+    locator: 'RFC 2692 §List of Certificate Uses, item "Can I have a digital marriage", p. 7'
+    source_lines: '367-367'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Can I have a digital marriage license?'
+    expected: 'An attribute or permission (a marriage license) bound to a keyholder. The precondition (not already married) is the subject of an Open Question, answered in SR-OQ-03 and SR-OQ-04.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0075'
+    related:
+      - 'SR-OQ-03'
+      - 'SR-OQ-04'
+      - 'SR-USE-16'
+
+  - id: 'SR-USE-16'
+    locator: 'RFC 2692 §List of Certificate Uses, item "Can I have a digital divorce", p. 7'
+    source_lines: '369-369'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Can I have a digital divorce decree?'
+    expected: 'An attribute (a divorce decree) bound to a keyholder.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0076'
+    related:
+      - 'SR-USE-15'
+
+  - id: 'SR-USE-17'
+    locator: 'RFC 2692 §List of Certificate Uses, item "..a digital Voter Registration Card?", p. 7'
+    source_lines: '371-371'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: '..a digital Voter Registration Card?'
+    expected: 'A permission (to vote, as a registered voter) granted to a keyholder.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0077'
+    related:
+      - 'SR-GEN-04'
+      - 'SR-OQ-05'
+    notes: 'The source does not connect voter registration to the secret balloting of GEN-8 or to the voter-registration attribute in the answer to Open Question 3. The leading ".." is printed: the item continues the two "Can I have a digital ..." questions before it.'
+
+  # ====================================================================
+  # List of Certificate Uses: the wallet-card item and the 33-item run after it
+  # ====================================================================
+
+  - id: 'SR-USE-18'
+    locator: 'RFC 2692 §List of Certificate Uses, item "There are a number of cards", p. 7'
+    source_lines: '373-374'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'There are a number of cards one carries in a typical wallet which could become certificates attached to a public key:'
+    expected: 'Each card becomes its own certificate attached to the holder''s public key, the "single credit card rather than a whole wallet" of GEN-6a''s paragraph.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-6a'
+    constrained_by:
+      - 'rfc-2692#R-0014'
+      - 'rfc-2692#R-0078'
+    related:
+      - 'SR-GEN-03'
+    source_issue:
+      type: 'structure'
+      text: 'The item introduces a list (it ends in a colon), but the cards are printed at the same indent as top-level items, not as sub-items, and nothing marks where the card list ends. This file treats the 33 items from "health insurance card" (line 376) to "permission to issue nuclear launch codes" (line 457) as the run that follows it, since the next item returns to the first person; several of them (a deed, a stock option, nuclear launch codes) are not cards carried in a wallet.'
+
+  - id: 'SR-USE-19'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "health insurance card", p. 7'
+    source_lines: '376-376'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'health insurance card'
+    expected: 'An attribute (health insurance coverage) bound to the holder''s key.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0079'
+
+  - id: 'SR-USE-20'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "prescription drug card", p. 7'
+    source_lines: '378-378'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'prescription drug card'
+    expected: 'An attribute (prescription drug coverage) bound to the holder''s key.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0080'
+
+  - id: 'SR-USE-21'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "driver''s license (for permission to drive)", p. 7'
+    source_lines: '380-380'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'driver''s license (for permission to drive)'
+    expected: 'A permission (to drive) bound to the holder''s key, separately from the next item: the source lists one license twice, once per permission, which is the one-certificate-per-job split GEN-6a asks for.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+      - 'GEN-6a'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0014'
+      - 'rfc-2692#R-0081'
+    related:
+      - 'SR-USE-22'
+
+  - id: 'SR-USE-22'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "driver''s license (for permission to buy", p. 7'
+    source_lines: '382-382'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'driver''s license (for permission to buy alcohol)'
+    expected: 'A permission (to buy alcohol) bound to the holder''s key, provable without releasing what the driving permission carries (GEN-6b).'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+      - 'GEN-6b'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0016'
+      - 'rfc-2692#R-0082'
+    related:
+      - 'SR-USE-21'
+      - 'SR-OQ-06'
+
+  - id: 'SR-USE-23'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "supermarket discount card", p. 7'
+    source_lines: '384-384'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'supermarket discount card'
+    expected: 'An entitlement (a supermarket discount) bound to the holder''s key.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0083'
+
+  - id: 'SR-USE-24'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "supermarket check-cashing card [I know --", p. 7'
+    source_lines: '386-386'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'supermarket check-cashing card [I know -- anachronism]'
+    expected: 'A permission (to cash checks at the supermarket) bound to the holder''s key.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0084'
+    related:
+      - 'SR-VAL-03'
+    notes: 'The bracketed "[I know -- anachronism]" is the author''s aside and is part of the printed item.'
+
+  - id: 'SR-USE-25'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "Blockbuster Video rental card", p. 7'
+    source_lines: '388-388'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Blockbuster Video rental card'
+    expected: 'A permission (to rent videos) bound to the holder''s key.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0085'
+
+  - id: 'SR-USE-26'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "ATM card", p. 7'
+    source_lines: '390-390'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'ATM card'
+    expected: 'A permission (to use an ATM) bound to the holder''s key; Validity ¶3 cites on-line validation of an ATM card as a positive statement, the kind of on-line validation VAL-4 says SPKI should support.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+      - 'VAL-4'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0030'
+      - 'rfc-2692#R-0086'
+    related:
+      - 'SR-VAL-03'
+
+  - id: 'SR-USE-27'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "Credit card", p. 8'
+    source_lines: '399-399'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Credit card'
+    expected: 'A permission (to charge purchases) bound to the holder''s key: the "single credit card" of GEN-6a''s paragraph, and one of Validity ¶3''s examples of on-line validation.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+      - 'GEN-6a'
+      - 'VAL-4'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0014'
+      - 'rfc-2692#R-0030'
+      - 'rfc-2692#R-0087'
+    related:
+      - 'SR-GEN-03'
+      - 'SR-VAL-02'
+      - 'SR-VAL-03'
+
+  - id: 'SR-USE-28'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "membership card in the ACLU, NRA,", p. 8'
+    source_lines: '401-402'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'membership card in the ACLU, NRA, Republican party, Operation Rescue, NARAL, ACM, IEEE, ICAR....'
+    expected: 'An attribute (membership in a named organization) bound to the holder''s key. The organizations named are political, advocacy and professional ones: memberships taken together are the dossier GEN-6a warns of.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+      - 'GEN-6a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0014'
+      - 'rfc-2692#R-0088'
+    notes: 'The trailing "...." (four full stops) is printed.'
+
+  - id: 'SR-USE-29'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "Red Cross blood donor card", p. 8'
+    source_lines: '404-404'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Red Cross blood donor card'
+    expected: 'An attribute (blood donor) bound to the holder''s key.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0089'
+
+  - id: 'SR-USE-30'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "Starbuck''s Coffee buy-10-get-1-free card", p. 8'
+    source_lines: '406-406'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Starbuck''s Coffee buy-10-get-1-free card'
+    expected: 'An entitlement (buy 10, get 1 free) bound to the holder''s key. The item implies counting purchases; no body requirement covers a certificate that counts uses.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0090'
+
+  - id: 'SR-USE-31'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "DC Metro fare card", p. 8'
+    source_lines: '408-408'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'DC Metro fare card'
+    expected: 'A permission (to ride the DC Metro) bound to the holder''s key. The source does not say what the card records beyond that.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0091'
+
+  - id: 'SR-USE-32'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "Phone calling card", p. 8'
+    source_lines: '410-410'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Phone calling card'
+    expected: 'A permission (to place calls charged to an account) bound to the holder''s key.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0092'
+
+  - id: 'SR-USE-33'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "Alumni Association card", p. 8'
+    source_lines: '412-412'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Alumni Association card'
+    expected: 'An attribute (alumni association membership) bound to the holder''s key.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0093'
+
+  - id: 'SR-USE-34'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "REI Membership card", p. 8'
+    source_lines: '414-414'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'REI Membership card'
+    expected: 'An attribute (REI membership) bound to the holder''s key.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0094'
+
+  - id: 'SR-USE-35'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "Car insurance card", p. 8'
+    source_lines: '416-416'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Car insurance card'
+    expected: 'An attribute (car insurance coverage) bound to the holder''s key.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0095'
+
+  - id: 'SR-USE-36'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "claim check for a suitcase", p. 8'
+    source_lines: '418-418'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'claim check for a suitcase'
+    expected: 'A permission (to collect a suitcase) bound to the holder''s key. No body requirement covers passing such a permission to another key.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0096'
+    related:
+      - 'SR-USE-37'
+
+  - id: 'SR-USE-37'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "claim check for a pawned radio", p. 8'
+    source_lines: '420-420'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'claim check for a pawned radio'
+    expected: 'A permission (to redeem a pawned radio) bound to the holder''s key. As with the suitcase, passing it to another key is not covered by any body requirement.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0097'
+    related:
+      - 'SR-USE-36'
+
+  - id: 'SR-USE-38'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "authorization for followup visits to a", p. 8'
+    source_lines: '422-422'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'authorization for followup visits to a doctor, after surgery'
+    expected: 'A permission (to follow-up doctor visits after surgery) bound to the holder''s key. The source gives no time limit or visit count.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0098'
+
+  - id: 'SR-USE-39'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "Better Business Bureau [BBB] style reputation", p. 8'
+    source_lines: '424-425'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Better Business Bureau [BBB] style reputation certificates [testimonies from satisfied customers]'
+    expected: 'Attribute statements (testimonies from satisfied customers) about a business''s key, in the manner of the Better Business Bureau.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0099'
+    related:
+      - 'SR-USE-40'
+      - 'SR-USE-04'
+
+  - id: 'SR-USE-40'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "BBB-style certificate that no complaints exist", p. 8'
+    source_lines: '427-428'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'BBB-style certificate that no complaints exist against a business or doctor or dentist, etc.'
+    expected: 'A statement that no complaints exist against a business or professional, bound to its key. It certifies an absence; the Open Question answer in SR-OQ-03 says a certificate can communicate such a negative fact as a ''positive'' attribute, provided some organization can determine it.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0100'
+    related:
+      - 'SR-OQ-03'
+      - 'SR-USE-39'
+
+  - id: 'SR-USE-41'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "LDS Temple Recommend", p. 8'
+    source_lines: '430-430'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'LDS Temple Recommend'
+    expected: 'An attribute (an LDS temple recommend) bound to the holder''s key. The source does not say what it grants.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0101'
+
+  - id: 'SR-USE-42'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "Stock certificate", p. 8'
+    source_lines: '432-432'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Stock certificate'
+    expected: 'An ownership attribute (of shares) bound to the holder''s key. No body requirement covers transferring ownership from one key to another.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0102'
+
+  - id: 'SR-USE-43'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "Stock option", p. 8'
+    source_lines: '434-434'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Stock option'
+    expected: 'A right (a stock option) bound to the holder''s key. The source gives no terms.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0103'
+
+  - id: 'SR-USE-44'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "Car title", p. 8'
+    source_lines: '436-436'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Car title'
+    expected: 'An ownership attribute (of a car) bound to the holder''s key. Transfer is not covered by any body requirement.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0104'
+
+  - id: 'SR-USE-45'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "deed to land", p. 8'
+    source_lines: '438-438'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'deed to land'
+    expected: 'An ownership attribute (of land) bound to the holder''s key. Transfer is not covered by any body requirement.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0105'
+
+  - id: 'SR-USE-46'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "proof of ownership of electronic equipment", p. 8'
+    source_lines: '440-440'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'proof of ownership of electronic equipment with an ID number'
+    expected: 'An ownership attribute bound to the holder''s key, naming an object by its ID number.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0106'
+
+  - id: 'SR-USE-47'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "time card certificate [activating a digital", p. 8'
+    source_lines: '442-442'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'time card certificate [activating a digital time clock]'
+    expected: 'A permission (to activate a digital time clock) bound to the holder''s key.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0107'
+
+  - id: 'SR-USE-48'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "proof of degree earned [PhD, LLD,", p. 8'
+    source_lines: '444-444'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'proof of degree earned [PhD, LLD, MD, ...]'
+    expected: 'An attribute (a degree earned) bound to the holder''s key.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0108'
+
+  - id: 'SR-USE-49'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "permission to write digitally signed prescriptions", p. 8'
+    source_lines: '446-446'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'permission to write digitally signed prescriptions for drugs'
+    expected: 'A permission (to write digitally signed prescriptions) bound to the holder''s key.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0109'
+    related:
+      - 'SR-OQ-06'
+
+  - id: 'SR-USE-50'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "permission to spend up to $X", p. 9'
+    source_lines: '455-455'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'permission to spend up to $X of a company''s money'
+    expected: 'A permission bounded by an amount (spend up to $X of a company''s money) bound to the holder''s key. GEN-4a leaves the definition of such an authorization to the author of the code that uses it; no body requirement says how a limit is expressed or compared.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0110'
+    related:
+      - 'SR-USE-56'
+
+  - id: 'SR-USE-51'
+    locator: 'RFC 2692 §List of Certificate Uses, wallet-card run, item "permission to issue nuclear launch codes", p. 9'
+    source_lines: '457-457'
+    kind: 'certificate-use'
+    group: 'wallet-card-run'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'permission to issue nuclear launch codes'
+    expected: 'A permission (to issue nuclear launch codes) bound to the holder''s key.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0111'
+
+  # ====================================================================
+  # List of Certificate Uses: first-person items and templates
+  # ====================================================================
+
+  - id: 'SR-USE-52'
+    locator: 'RFC 2692 §List of Certificate Uses, item "I''m a sysadmin, I want to", p. 9'
+    source_lines: '459-460'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'I''m a sysadmin, I want to carry a certificate, signed by SAGE, that says I''m good at the things sysadmins are good at.'
+    expected: 'An attribute (competence as a system administrator) bound to the holder''s key, issued by a professional body.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0112'
+
+  - id: 'SR-USE-53'
+    locator: 'RFC 2692 §List of Certificate Uses, item "I''m that same sysadmin, I want", p. 9'
+    source_lines: '462-464'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'I''m that same sysadmin, I want an ephemeral certificate that grants me root access to certain systems for the day, or the week, or...'
+    expected: 'A permission (root access to named systems) bound to the holder''s key with a short validity period (a day, a week).'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+      - 'VAL-1a'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0022'
+      - 'rfc-2692#R-0113'
+    related:
+      - 'SR-USE-54'
+    notes: 'The trailing "or..." is printed.'
+
+  - id: 'SR-USE-54'
+    locator: 'RFC 2692 §List of Certificate Uses, paragraph following item "I''m that same sysadmin", p. 9'
+    source_lines: '466-471'
+    kind: 'certificate-use-commentary'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Certain applications *will* want some form of auditing, but the audit identity should be in the domain of the particular application...  For instance an "is a system administrator of this host" certificate would probably want to include an audit identity, so you can figure out which of your multiple admins screwed something up.'
+    expected: 'An application-defined audit identity carried in an authorization certificate (here the "is a system administrator of this host" certificate). That the audit identity belongs to the application''s domain matches GEN-4a: what a certificate carries is defined by the code that uses it.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0114'
+      - 'rfc-2692#R-0115'
+    related:
+      - 'SR-USE-53'
+    notes: 'Not a bullet: an indented paragraph under the ephemeral-root item, carried as its own vector because it prints its own example certificate. The source does not reconcile an audit identity with GEN-7 (some certificates anonymous); there is no conflict as written, since GEN-7 says only "at least some". The "..." after "application" is printed.'
+
+  - id: 'SR-USE-55'
+    locator: 'RFC 2692 §List of Certificate Uses, item "I''m an amateur radio operator.  I", p. 9'
+    source_lines: '473-478'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'I''m an amateur radio operator.  I want a signed certificate that says I''m allowed to engage in amateur radio, issued by the DOC.  [I currently have a paper version of one].  This would be useful in enforcing access policies to the amateur spectrum; and in tracking abuse of that same spectrum.  Heck!  extend this concept to all licensed spectrum users.'
+    expected: 'A permission (to engage in amateur radio) bound to the holder''s key, issued by the DOC.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0116'
+      - 'rfc-2692#R-0117'
+      - 'rfc-2692#R-0118'
+    notes: 'The item wants the certificate for enforcing access and for tracking abuse; tracking abuse implies a traceable holder, which the source does not set against GEN-6a or GEN-7.'
+
+  - id: 'SR-USE-56'
+    locator: 'RFC 2692 §List of Certificate Uses, item "I''m the a purchasing agent for", p. 9'
+    source_lines: '480-486'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'I''m the a purchasing agent for a large corporation.  I want to posses a certificate that tells our suppliers that I''m authorized to make purchases up to $15,000.  I don''t want the suppliers to know my name, lest their sales people bug me too much.  I don''t want to have to share a single "Megacorp Purchasing Department Certificate" with others doing the same job [the private key would need to be shared--yuck!].'
+    expected: 'A permission bounded by an amount (purchases up to $15,000) bound to the agent''s own key, presentable to suppliers without the agent''s name (GEN-7, GEN-6b), and issued per agent so that no private key is shared. A design that can express this example meets the minimum-information and anonymity requirements together.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-2'
+      - 'GEN-6a'
+      - 'GEN-6b'
+      - 'GEN-7'
+      - 'GEN-1'
+    constrained_by:
+      - 'rfc-2692#R-0006'
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0014'
+      - 'rfc-2692#R-0016'
+      - 'rfc-2692#R-0017'
+      - 'rfc-2692#R-0119'
+      - 'rfc-2692#R-0120'
+      - 'rfc-2692#R-0121'
+    related:
+      - 'SR-USE-50'
+      - 'SR-USE-C06'
+      - 'SR-USE-C07'
+    source_issue:
+      type: 'typo'
+      text: '"I''m the a purchasing agent" and "posses" (for "possess"). Kept verbatim.'
+    notes: 'GEN-1 is cited because a shared "Megacorp Purchasing Department Certificate" would make every agent a holder of one private key, which the item rejects.'
+
+  - id: 'SR-USE-57'
+    locator: 'RFC 2692 §List of Certificate Uses, item ''"This signed-key should be considered equivalent'', p. 9'
+    source_lines: '488-490'
+    kind: 'certificate-use-template'
+    notation: 'quoted-text'
+    fidelity: 'verbatim'
+    input: '"This signed-key should be considered equivalent to the certifying-key until this certificate expires for the following purposes ..."'
+    source_annotation_lines:
+      - text: '[This is desirable when you wish to reduce the exposure of long-term keys.  One way to do this is to use smart cards, but those typically have slow processors and are connected through low-bandwidth links; however, if you only use the smart card at "login" time to certify a short-term key pair, you get high performance and low exposure of the long term key.'
+        source_lines: '491-497'
+        page: 'p. 9'
+        crosses_page_break: false
+      - text: 'I''ll note here that this flies in the face of attempts to prevent delegation of certain rights.  Maybe we need a "delegation-allowed" bit -- but there''s nothing to stop someone who wishes to delegate against the rules from also loaning out their private key.].'
+        source_lines: '511-515'
+        page: 'p. 10'
+        crosses_page_break: false
+    expected: 'A delegation certificate: the certifying key makes the signed key equivalent to itself, for listed purposes, until the certificate expires. It needs a delegating issuer (IMP-1a, "empowered to grant or delegate"), a purpose list (GEN-2) and a validity period (VAL-1a).'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'IMP-1a'
+      - 'GEN-2'
+      - 'VAL-1a'
+    constrained_by:
+      - 'rfc-2692#R-0007'
+      - 'rfc-2692#R-0022'
+      - 'rfc-2692#R-0033'
+      - 'rfc-2692#R-0122'
+      - 'rfc-2692#R-0123'
+      - 'rfc-2692#R-0124'
+      - 'rfc-2692#R-0125'
+    related:
+      - 'SR-USE-58'
+      - 'SR-USE-59'
+      - 'SR-USE-C01'
+      - 'SR-USE-C02'
+      - 'SR-USE-C03'
+    notes: 'The input is the quoted template sentence as printed, quotation marks included; "..." stands for the purpose list. The bracketed commentary is carried as two runs in source_annotation_lines: it is interrupted by the page 9 / page 10 break, and whether a paragraph break also falls there cannot be told from the layout, so the two runs are not joined.'
+
+  - id: 'SR-USE-58'
+    locator: 'RFC 2692 §List of Certificate Uses, item ''"This signed-key should be considered equivalent'', bracketed commentary, p. 9'
+    source_lines: '492-497'
+    kind: 'certificate-use-commentary'
+    notation: 'prose'
+    fidelity: 'split'
+    input: 'One way to do this is to use smart cards, but those typically have slow processors and are connected through low-bandwidth links; however, if you only use the smart card at "login" time to certify a short-term key pair, you get high performance and low exposure of the long term key.'
+    expected: 'A short-term key pair certified at login by a long-term key held on a smart card, so the slow card is used once and the long-term key is exposed little. The constrained environment is the one IMP-1b names.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'IMP-1b'
+      - 'VAL-1a'
+    constrained_by:
+      - 'rfc-2692#R-0022'
+      - 'rfc-2692#R-0035'
+      - 'rfc-2692#R-0123'
+    related:
+      - 'SR-USE-57'
+      - 'SR-IMP-02'
+
+  - id: 'SR-USE-59'
+    locator: 'RFC 2692 §List of Certificate Uses, item ''"This signed-key should be considered equivalent'', bracketed commentary, p. 10'
+    source_lines: '512-515'
+    kind: 'certificate-use-commentary'
+    notation: 'prose'
+    fidelity: 'split'
+    input: 'Maybe we need a "delegation-allowed" bit -- but there''s nothing to stop someone who wishes to delegate against the rules from also loaning out their private key.'
+    expected: 'The source floats a "delegation-allowed" bit ("Maybe") and immediately notes it cannot stop a holder who loans out the private key. No body requirement mandates or forbids such a bit; IMP-1a only says certificates are generated by keyholders "empowered to grant or delegate".'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'IMP-1a'
+    constrained_by:
+      - 'rfc-2692#R-0033'
+      - 'rfc-2692#R-0125'
+    related:
+      - 'SR-USE-57'
+      - 'SR-OQ-06'
+    notes: 'The quote ends at "private key."; the closing "]." of the bracket follows it in the source.'
+
+  - id: 'SR-USE-60'
+    locator: 'RFC 2692 §List of Certificate Uses, item ''"I am the current legitimate owner of a particular'', p. 10'
+    source_lines: '517-518'
+    kind: 'certificate-use-template'
+    notation: 'quoted-text'
+    fidelity: 'verbatim'
+    input: '"I am the current legitimate owner of a particular chunk of Internet address space."'
+    source_annotation_lines:
+      - text: '[I''d like to see IPSEC eventually become usable, at least for privacy, without need for prior arrangement between sites, but I think there''s a need for a "I own this address"/"I own this address range" certificate in order for IPSEC to coexist with existing ip-address-based firewalls.]'
+        source_lines: '519-523'
+        page: 'p. 10'
+        crosses_page_break: false
+    expected: 'An ownership assertion (of a range of Internet address space) about a key. The source does not say who signs it. The annotation ties it to IPSEC, which the charter names (CH-3a).'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+      - 'CH-3a'
+    constrained_by:
+      - 'rfc-2692#R-0003'
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0126'
+      - 'rfc-2692#R-0127'
+    related:
+      - 'SR-USE-61'
+      - 'SR-USE-62'
+      - 'SR-CH-01'
+
+  - id: 'SR-USE-61'
+    locator: 'RFC 2692 §List of Certificate Uses, item ''"I am the current legitimate owner of a particular chunk'', bracketed commentary, p. 10'
+    source_lines: '521-522'
+    kind: 'certificate-use-template'
+    notation: 'prose'
+    fidelity: 'split'
+    input: 'a "I own this address"/"I own this address range" certificate'
+    expected: 'An address-ownership certificate, for a single address or a range, that lets IPSEC coexist with firewalls keyed on IP addresses.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+      - 'CH-3a'
+    constrained_by:
+      - 'rfc-2692#R-0003'
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0127'
+    related:
+      - 'SR-USE-60'
+    notes: 'Split from the bracket; the input begins at the article "a" so that both quoted names and the word "certificate" are carried as one run.'
+
+  - id: 'SR-USE-62'
+    locator: 'RFC 2692 §List of Certificate Uses, item ''"I am the current legitimate owner of a this'', p. 10'
+    source_lines: '525-526'
+    kind: 'certificate-use-template'
+    notation: 'quoted-text'
+    fidelity: 'verbatim'
+    input: '"I am the current legitimate owner of a this DNS name or subtree."'
+    expected: 'An ownership assertion (of a DNS name or subtree) about a key.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0128'
+    related:
+      - 'SR-USE-60'
+      - 'SR-USE-63'
+    source_issue:
+      type: 'typo'
+      text: '"owner of a this DNS name": a stray "a". Kept verbatim.'
+
+  - id: 'SR-USE-63'
+    locator: 'RFC 2692 §List of Certificate Uses, item ''"I am the legitimate receiver of'', p. 10'
+    source_lines: '528-531'
+    kind: 'certificate-use-template'
+    notation: 'quoted-text'
+    fidelity: 'verbatim'
+    input: '"I am the legitimate receiver of mail sent to this rfc822 email address.  [this might need to be signed by a key which itself had been certified by the appropriate "DNS name owner" certificate]."'
+    source_annotation_lines:
+      - text: '[This is in case I know someone owns a particular e-mail address but I don''t know their key.]'
+        source_lines: '532-533'
+        page: 'p. 10'
+        crosses_page_break: false
+    expected: 'A binding of an rfc822 address to a key, possibly signed by a key that a "DNS name owner" certificate has itself certified: a two-link chain whose first link the DNS name owner grants (IMP-1a).'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4a'
+      - 'IMP-1a'
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0033'
+      - 'rfc-2692#R-0129'
+      - 'rfc-2692#R-0130'
+      - 'rfc-2692#R-0131'
+    related:
+      - 'SR-USE-62'
+    source_issue:
+      type: 'quotation'
+      text: 'The opening double quote before "I am the legitimate receiver" is closed only after the bracket ("].""), and the bracket itself contains the double-quoted "DNS name owner". With one kind of quotation mark the nesting is ambiguous: the bracket reads as part of the template sentence. Kept verbatim.'
+
+  # ====================================================================
+  # List of Certificate Uses: the closing noun-phrase items
+  # ====================================================================
+
+  - id: 'SR-USE-64'
+    locator: 'RFC 2692 §List of Certificate Uses, item "Encryption keys for E-mail and file", p. 10'
+    source_lines: '535-535'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Encryption keys for E-mail and file encryption'
+    expected: 'A certificate that marks a key as an encryption key for mail and files. No General Requirement addresses key usage; the charter names encrypted electronic mail among the applications (CH-3a).'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'CH-3a'
+    constrained_by:
+      - 'rfc-2692#R-0003'
+      - 'rfc-2692#R-0132'
+    related:
+      - 'SR-CH-01'
+
+  - id: 'SR-USE-65'
+    locator: 'RFC 2692 §List of Certificate Uses, item "Authentication of people or other entities", p. 10'
+    source_lines: '537-537'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Authentication of people or other entities'
+    expected: 'Authentication of a keyholder, which GEN-1 defines as a person "or other entity", identified most directly by its key (GEN-3).'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-1'
+      - 'GEN-3'
+    constrained_by:
+      - 'rfc-2692#R-0006'
+      - 'rfc-2692#R-0008'
+      - 'rfc-2692#R-0009'
+      - 'rfc-2692#R-0133'
+    related:
+      - 'SR-USE-68'
+      - 'SR-USE-69'
+
+  - id: 'SR-USE-66'
+    locator: 'RFC 2692 §List of Certificate Uses, item "Digital signatures (unforgeability)", p. 10'
+    source_lines: '539-539'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Digital signatures (unforgeability)'
+    expected: 'No body requirement covers this use. The item names a service (digital signatures, unforgeability), not a kind of certificate; the body''s only signature rules (IMP-5a, IMP-5b) are about how a certificate is signed and its signature checked.'
+    expected_basis: 'uncovered'
+    exercises: []
+    constrained_by:
+      - 'rfc-2692#R-0134'
+
+  - id: 'SR-USE-67'
+    locator: 'RFC 2692 §List of Certificate Uses, item "Timestamping / notary services", p. 10'
+    source_lines: '541-541'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Timestamping / notary services'
+    expected: 'No body requirement covers this use. Notary services appear again only in the Other requirements (SR-USE-71, SR-USE-73); timestamping does not appear again.'
+    expected_basis: 'uncovered'
+    exercises: []
+    constrained_by:
+      - 'rfc-2692#R-0135'
+    related:
+      - 'SR-USE-71'
+      - 'SR-USE-73'
+
+  - id: 'SR-USE-68'
+    locator: 'RFC 2692 §List of Certificate Uses, item "Host authentication", p. 10'
+    source_lines: '543-543'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Host authentication'
+    expected: 'Authentication of a host as a keyholder ("other entity", GEN-1). The Other requirements add that host authentication needs light bureaucracy (SR-USE-72) and a way to retire a certifier (SR-USE-73).'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-1'
+    constrained_by:
+      - 'rfc-2692#R-0006'
+      - 'rfc-2692#R-0136'
+    related:
+      - 'SR-USE-72'
+      - 'SR-USE-73'
+
+  - id: 'SR-USE-69'
+    locator: 'RFC 2692 §List of Certificate Uses, item "Service authentication", p. 10'
+    source_lines: '545-545'
+    kind: 'certificate-use'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Service authentication'
+    expected: 'Authentication of a service as a keyholder ("other entity", GEN-1).'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-1'
+    constrained_by:
+      - 'rfc-2692#R-0006'
+      - 'rfc-2692#R-0137'
+    notes: 'The "Other requirements:" label (line 547) is printed indented under this item, as if it belonged to it; its six sub-items are general and are carried as SR-USE-70 to SR-USE-75.'
+
+  # ====================================================================
+  # List of Certificate Uses: "Other requirements" (6 sub-items)
+  # ====================================================================
+
+  - id: 'SR-USE-70'
+    locator: 'RFC 2692 §List of Certificate Uses, "Other requirements", item "Trust model must be a web", p. 10'
+    source_lines: '549-551'
+    kind: 'other-requirement'
+    group: 'other-requirements'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Trust model must be a web (people want to choose whom they trust).  People must be able to choose whom they trust or consider reliable roots (maybe with varying reliabilities).'
+    expected: 'The verifier chooses its own roots, possibly with varying reliability; the design must not fix a single root. The charter''s "range of trust models" (CH-3b) is the body statement nearest to it.'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'CH-3b'
+    constrained_by:
+      - 'rfc-2692#R-0004'
+      - 'rfc-2692#R-0138'
+      - 'rfc-2692#R-0139'
+    related:
+      - 'SR-USE-03'
+    notes: '"must" here is lower case in a brainstorming list; RFC 2692 has no BCP 14 keywords.'
+
+  - id: 'SR-USE-71'
+    locator: 'RFC 2692 §List of Certificate Uses, "Other requirements", item "Some applications (e.g., notary services)", p. 10'
+    source_lines: '553-554'
+    kind: 'other-requirement'
+    group: 'other-requirements'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Some applications (e.g., notary services) require highly trusted keys; generation complexity is not an issue here.'
+    expected: 'No body requirement covers this use: key generation and key assurance levels are outside every body section.'
+    expected_basis: 'uncovered'
+    exercises: []
+    constrained_by:
+      - 'rfc-2692#R-0140'
+    related:
+      - 'SR-USE-67'
+
+  - id: 'SR-USE-72'
+    locator: 'RFC 2692 §List of Certificate Uses, "Other requirements", item "Some applications (e.g., host authentication)", p. 10'
+    source_lines: '556-558'
+    kind: 'other-requirement'
+    group: 'other-requirements'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Some applications (e.g., host authentication) require extremely light (or no) bureaucracy.  Even communication with the central administrator may be a problem.'
+    expected: 'Certificates should be creatable without a central administrator: any empowered keyholder issues (IMP-1a), and a new authorization needs no other person or organization (GEN-4b).'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'GEN-4b'
+      - 'IMP-1a'
+    constrained_by:
+      - 'rfc-2692#R-0011'
+      - 'rfc-2692#R-0033'
+      - 'rfc-2692#R-0141'
+      - 'rfc-2692#R-0142'
+    related:
+      - 'SR-USE-68'
+      - 'SR-GEN-C01'
+
+  - id: 'SR-USE-73'
+    locator: 'RFC 2692 §List of Certificate Uses, "Other requirements", item "Especially in lower-end applications", p. 11'
+    source_lines: '567-574'
+    kind: 'other-requirement'
+    group: 'other-requirements'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Especially in lower-end applications (e.g. host authentication) the people generating the keys (e.g., administrators) will change, and you will no longer want them to be able to certify.  On the other hand, you will usually also not want all keys they have generated to expire.  This may imply a "certification right expiration" certificate requirement, probably to be implemented together with notary services.'
+    expected: 'A certifier''s right to certify can end without ending the certificates it already issued. Validity periods (VAL-1a) bound a certificate''s own life; no body requirement separates a right to certify from the validity of what was certified, which is what this item asks for ("This may imply").'
+    expected_basis: 'rule-quoted'
+    exercises:
+      - 'VAL-1a'
+    constrained_by:
+      - 'rfc-2692#R-0022'
+      - 'rfc-2692#R-0143'
+      - 'rfc-2692#R-0144'
+      - 'rfc-2692#R-0145'
+    related:
+      - 'SR-USE-C04'
+      - 'SR-USE-C05'
+      - 'SR-USE-75'
+    notes: 'Starts on page 11 (line 567); the preceding items end on page 10.'
+
+  - id: 'SR-USE-74'
+    locator: 'RFC 2692 §List of Certificate Uses, "Other requirements", item "Keys will need to be cached", p. 11'
+    source_lines: '576-580'
+    kind: 'other-requirement'
+    group: 'other-requirements'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Keys will need to be cached locally to avoid long delays fetching frequently used keys.  Cf. current name servers. The key infrastructure may in future get used almost as often as the name server.  The caching and performance requirements are similar.'
+    expected: 'No body requirement covers caching. The body assumes certificates go directly from keyholder to verifier (GEN-5a), which this item''s name-server model of fetching keys does not match; the source does not reconcile the two.'
+    expected_basis: 'uncovered'
+    exercises: []
+    constrained_by:
+      - 'rfc-2692#R-0146'
+      - 'rfc-2692#R-0147'
+    related:
+      - 'SR-GEN-02'
+      - 'SR-USE-75'
+
+  - id: 'SR-USE-75'
+    locator: 'RFC 2692 §List of Certificate Uses, "Other requirements", item "Reliable distribution of key revocations", p. 11'
+    source_lines: '582-586'
+    kind: 'other-requirement'
+    group: 'other-requirements'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Reliable distribution of key revocations and other certificates (e.g., the ceasing of the right to make new certificates).  May involve goals like "will have spread everywhere in 24 hours" or something like that.  This interacts with caching.'
+    expected: 'No body requirement covers distribution. Validity ¶1 says on-line refinement of validity may also be necessary (VAL-1b) and Validity ¶2 says of the minimal CRL that "Its method of transmission is not specified"; the item''s "24 hours" goal is not taken up.'
+    expected_basis: 'uncovered'
+    exercises: []
+    constrained_by:
+      - 'rfc-2692#R-0148'
+      - 'rfc-2692#R-0149'
+      - 'rfc-2692#R-0150'
+    related:
+      - 'SR-USE-73'
+      - 'SR-USE-74'
+    notes: '"the ceasing of the right to make new certificates" ties this item to SR-USE-73.'
+
+  # ====================================================================
+  # Open Questions (pp. 11-12)
+  # ====================================================================
+
+  - id: 'SR-OQ-01'
+    locator: 'RFC 2692 §Open Questions, question 1 ("Someone digitally signs a threatening e-mail message"), p. 11'
+    source_lines: '595-598'
+    kind: 'open-question'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Someone digitally signs a threatening e-mail message with my private key and sends it to president@whitehouse.gov.  How do I prove that I didn''t compose and send the message?  What kind of certificate characteristic might help me in this?'
+    expected: 'This is an issue of (non-)repudiation and therefore a matter of private key protection.  Although this is of interest to the user of certificates, certificate format, contents or issuing machinery can not ensure the protection of a user''s private key or prove whether or not a private key has been stolen or misused.'
+    expected_basis: 'stated'
+    exercises:
+      - 'OQ-0'
+    constrained_by:
+      - 'rfc-2692#R-0151'
+      - 'rfc-2692#R-0152'
+    outcome_quote: 'certificate format, contents or issuing machinery can not ensure the protection of a user''s private key or prove whether or not a private key has been stolen or misused.'
+    related:
+      - 'SR-OQ-06'
+    source_text:
+      - 'These do not have answers provided by certificate definition or issuing alone.'
+
+  - id: 'SR-OQ-02'
+    locator: 'RFC 2692 §Open Questions, question 2 ("Can certificates help do a title scan"), p. 11'
+    source_lines: '607-607'
+    kind: 'open-question'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Can certificates help do a title scan for purchase of a house?'
+    expected: 'Certificates might be employed to carry information in a tamper-proof way, but building the database necessary to record all house titles and all liens is a project not related to certificate structure.'
+    expected_basis: 'stated'
+    exercises:
+      - 'OQ-0'
+    constrained_by:
+      - 'rfc-2692#R-0151'
+      - 'rfc-2692#R-0153'
+    outcome_quote: 'building the database necessary to record all house titles and all liens is a project not related to certificate structure.'
+    related:
+      - 'SR-USE-12'
+    source_text:
+      - 'These do not have answers provided by certificate definition or issuing alone.'
+
+  - id: 'SR-OQ-03'
+    locator: 'RFC 2692 §Open Questions, question 3 ("Can a certificate be issued to guarantee that I am not already married"), p. 12'
+    source_lines: '623-624'
+    kind: 'open-question'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'Can a certificate be issued to guarantee that I am not already married, so that I can then get a digital marriage license?'
+    expected_paragraphs:
+      - 'The absence of attributes can be determined only if all relevant records are digitized and all parties have inescapable IDs.  The former is not likely to happen in our lifetimes and the latter receives political resistance.'
+      - 'A certificate can communicate the ''positive'' attribute "not already married" or "not registered as a voter in any other district".  That assumes that some organization is capable of determining that fact for a given keyholder.  The method of determining such a negative fact is not part of the certificate definition.'
+    expected_basis: 'stated'
+    exercises:
+      - 'OQ-0'
+    constrained_by:
+      - 'rfc-2692#R-0151'
+      - 'rfc-2692#R-0154'
+      - 'rfc-2692#R-0155'
+      - 'rfc-2692#R-0156'
+      - 'rfc-2692#R-0157'
+    outcome_quote: 'The method of determining such a negative fact is not part of the certificate definition.'
+    related:
+      - 'SR-OQ-04'
+      - 'SR-OQ-05'
+      - 'SR-USE-15'
+      - 'SR-USE-40'
+    notes: 'The answer is two paragraphs, carried as expected_paragraphs in source order. Together: a certificate cannot itself establish an absence, but can carry a negative fact as a ''positive'' attribute once an organization has determined it.'
+    source_text:
+      - 'These do not have answers provided by certificate definition or issuing alone.'
+
+  - id: 'SR-OQ-04'
+    locator: 'RFC 2692 §Open Questions, answer to question 3, p. 12'
+    source_lines: '631-632'
+    kind: 'quoted-attribute'
+    notation: 'quoted-text'
+    fidelity: 'split'
+    input: '"not already married"'
+    expected: 'A certificate can communicate the ''positive'' attribute "not already married" or "not registered as a voter in any other district".  That assumes that some organization is capable of determining that fact for a given keyholder.'
+    expected_basis: 'stated'
+    exercises:
+      - 'OQ-0'
+    constrained_by:
+      - 'rfc-2692#R-0151'
+      - 'rfc-2692#R-0155'
+      - 'rfc-2692#R-0156'
+    related:
+      - 'SR-OQ-03'
+      - 'SR-OQ-05'
+      - 'SR-USE-15'
+    source_text:
+      - 'These do not have answers provided by certificate definition or issuing alone.'
+
+  - id: 'SR-OQ-05'
+    locator: 'RFC 2692 §Open Questions, answer to question 3, p. 12'
+    source_lines: '632-633'
+    kind: 'quoted-attribute'
+    notation: 'quoted-text'
+    fidelity: 'split'
+    input: '"not registered as a voter in any other district"'
+    expected: 'A certificate can communicate the ''positive'' attribute "not already married" or "not registered as a voter in any other district".  That assumes that some organization is capable of determining that fact for a given keyholder.'
+    expected_basis: 'stated'
+    exercises:
+      - 'OQ-0'
+    constrained_by:
+      - 'rfc-2692#R-0151'
+      - 'rfc-2692#R-0155'
+      - 'rfc-2692#R-0156'
+    related:
+      - 'SR-OQ-03'
+      - 'SR-OQ-04'
+      - 'SR-USE-17'
+    source_text:
+      - 'These do not have answers provided by certificate definition or issuing alone.'
+
+  - id: 'SR-OQ-06'
+    locator: 'RFC 2692 §Open Questions, question 4 ("What is to prevent the holder of such a certificate from loaning out his private key?"), p. 12'
+    source_lines: '638-643'
+    kind: 'open-question'
+    notation: 'prose'
+    fidelity: 'verbatim'
+    input: 'The assumption in most certificates is that the proper user will protect his private key very well, to prevent anyone else from accessing his funds.  However, in some cases the certificate itself might have monetary value [permission to prescribe drugs, permission to buy alcohol, ...].  What is to prevent the holder of such a certificate from loaning out his private key?'
+    expected: 'This is a potential flaw in any system providing authorization and an interesting topic for study.  What prevents a doctor or dentist from selling prescriptions for controlled substances to drug abusers?'
+    expected_basis: 'stated'
+    exercises:
+      - 'OQ-0'
+    constrained_by:
+      - 'rfc-2692#R-0151'
+      - 'rfc-2692#R-0158'
+    outcome_quote: 'This is a potential flaw in any system providing authorization and an interesting topic for study.'
+    related:
+      - 'SR-OQ-01'
+      - 'SR-USE-22'
+      - 'SR-USE-49'
+      - 'SR-USE-59'
+    notes: 'The answer ends with a counter-question (a doctor or dentist selling prescriptions), which is part of the quoted answer, not a separate example.'
+    source_text:
+      - 'These do not have answers provided by certificate definition or issuing alone.'
+
+  # ====================================================================
+  # PART 2 -- CONSTRUCTED VECTORS
+  # Validity and CRLs
+  # ====================================================================
+
+  - id: 'SR-VAL-C01'
+    locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
+    kind: 'crl-sequence-overlap'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate:
+        id: 'cert-1'
+        issuer: 'key-A'
+        subject: 'key-B'
+        grants: 'auth-X'
+        validity:
+          not_before: '2026-01-01T00:00:00Z'
+          not_after: '2026-12-31T23:59:59Z'
+        uses_crl: true
+        crl_location: 'crl-loc-1'
+      crl_sequence:
+        - id: 'crl-1'
+          signer: 'key-R'
+          location: 'crl-loc-1'
+          sequence: 1
+          validity:
+            not_before: '2026-03-01T00:00:00Z'
+            not_after: '2026-03-08T00:00:00Z'
+          lists: []
+        - id: 'crl-2'
+          signer: 'key-R'
+          location: 'crl-loc-1'
+          sequence: 2
+          validity:
+            not_before: '2026-03-05T00:00:00Z'
+            not_after: '2026-03-12T00:00:00Z'
+          lists:
+            - 'cert-1'
+      check_time: '2026-03-06T12:00:00Z'
+    outcome: 'violation'
+    expected: 'The CRL sequence violates the requirement: crl-1 and crl-2 are both within their dates from 2026-03-05T00:00:00Z to 2026-03-08T00:00:00Z. At the check time one lists cert-1 and the other does not, so the result would depend on which CRL the verifier holds: the non-determinism the requirement exists to remove.'
+    rests_on:
+      - rule: 'VAL-2c'
+        locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
+        text: 'the dates of a sequence of CRLs must not overlap.'
+      - rule: 'VAL-2d'
+        locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
+        text: 'Under this set of requirements, behavior of certificate validation is deterministic (aside from the question of clock skew).'
+    modal: 'must not'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0027'
+      - 'rfc-2692#R-0028'
+    related:
+      - 'SR-VAL-01'
+      - 'SR-VAL-C02'
+      - 'SR-VAL-C03'
+
+  - id: 'SR-VAL-C02'
+    locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
+    kind: 'crl-sequence-adjacent'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate:
+        id: 'cert-1'
+        issuer: 'key-A'
+        subject: 'key-B'
+        grants: 'auth-X'
+        validity:
+          not_before: '2026-01-01T00:00:00Z'
+          not_after: '2026-12-31T23:59:59Z'
+        uses_crl: true
+        crl_location: 'crl-loc-1'
+      crl_sequence:
+        - id: 'crl-1'
+          signer: 'key-R'
+          location: 'crl-loc-1'
+          sequence: 1
+          validity:
+            not_before: '2026-03-01T00:00:00Z'
+            not_after: '2026-03-07T23:59:59Z'
+          lists: []
+        - id: 'crl-2'
+          signer: 'key-R'
+          location: 'crl-loc-1'
+          sequence: 2
+          validity:
+            not_before: '2026-03-08T00:00:00Z'
+            not_after: '2026-03-14T23:59:59Z'
+          lists: []
+      check_time: '2026-03-10T12:00:00Z'
+    outcome: 'conforms'
+    expected: 'The sequence meets the requirement: the two CRLs share no instant under any reading of the endpoints, and at the check time exactly one CRL (crl-2) is current.'
+    rests_on:
+      - rule: 'VAL-2c'
+        locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
+        text: 'the dates of a sequence of CRLs must not overlap.'
+      - rule: 'VAL-2d'
+        locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
+        text: 'Under this set of requirements, behavior of certificate validation is deterministic (aside from the question of clock skew).'
+    modal: 'must not'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0027'
+      - 'rfc-2692#R-0028'
+    related:
+      - 'SR-VAL-C01'
+      - 'SR-VAL-C03'
+    notes: 'The one-second gap keeps the vector clear of the endpoint question in SR-VAL-C03. The source does not say whether a gap between CRLs is allowed or what a verifier does during one.'
+
+  - id: 'SR-VAL-C03'
+    locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
+    kind: 'crl-sequence-shared-endpoint'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate:
+        id: 'cert-1'
+        issuer: 'key-A'
+        subject: 'key-B'
+        grants: 'auth-X'
+        validity:
+          not_before: '2026-01-01T00:00:00Z'
+          not_after: '2026-12-31T23:59:59Z'
+        uses_crl: true
+        crl_location: 'crl-loc-1'
+      crl_sequence:
+        - id: 'crl-1'
+          signer: 'key-R'
+          location: 'crl-loc-1'
+          sequence: 1
+          validity:
+            not_before: '2026-03-01T00:00:00Z'
+            not_after: '2026-03-08T00:00:00Z'
+          lists: []
+        - id: 'crl-2'
+          signer: 'key-R'
+          location: 'crl-loc-1'
+          sequence: 2
+          validity:
+            not_before: '2026-03-08T00:00:00Z'
+            not_after: '2026-03-15T00:00:00Z'
+          lists: []
+      check_time: '2026-03-08T00:00:00Z'
+    outcome: 'undetermined'
+    expected: 'The source does not decide this case. If validity dates include their endpoints, both CRLs are valid at 2026-03-08T00:00:00Z and the dates overlap (violation); if the end date is exclusive, they do not (conforms). RFC 2692 does not say which.'
+    rests_on:
+      - rule: 'VAL-2c'
+        locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
+        text: 'the dates of a sequence of CRLs must not overlap.'
+      - rule: 'VAL-1a'
+        locator: 'RFC 2692 §Validity and CRLs ¶1, p. 4'
+        text: 'An SPKI certificate, like any other, should be able to carry a validity period: dates within which it is valid.'
+    modal: 'must not'
+    soft: false
+    inferred: true
+    inference: 'Both possible outcomes are derived; the source states neither.'
+    constrained_by:
+      - 'rfc-2692#R-0022'
+      - 'rfc-2692#R-0027'
+    source_issue:
+      type: 'ambiguity'
+      text: '"dates within which it is valid" and "must not overlap" leave open whether a validity period includes its end date, so two CRLs that meet at one instant cannot be classified.'
+    related:
+      - 'SR-VAL-C01'
+      - 'SR-VAL-C02'
+
+  - id: 'SR-VAL-C04'
+    locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
+    kind: 'crl-location-missing'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate:
+        id: 'cert-1'
+        issuer: 'key-A'
+        subject: 'key-B'
+        grants: 'auth-X'
+        validity:
+          not_before: '2026-01-01T00:00:00Z'
+          not_after: '2026-12-31T23:59:59Z'
+        uses_crl: true
+        crl_location: null
+    outcome: 'violation'
+    expected: 'The certificate uses a CRL but does not tell the verifier where to find it.'
+    rests_on:
+      - rule: 'VAL-2c'
+        locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
+        text: 'the certificate that uses it must explicitly tell the verifier where to find the CRL'
+    modal: 'must'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0025'
+    notes: 'crl_location: null with uses_crl: true is the case under test.'
+
+  - id: 'SR-VAL-C05'
+    locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
+    kind: 'crl-validity-missing'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate:
+        id: 'cert-1'
+        issuer: 'key-A'
+        subject: 'key-B'
+        grants: 'auth-X'
+        validity:
+          not_before: '2026-01-01T00:00:00Z'
+          not_after: '2026-12-31T23:59:59Z'
+        uses_crl: true
+        crl_location: 'crl-loc-1'
+      crl_sequence:
+        - id: 'crl-1'
+          signer: 'key-R'
+          location: 'crl-loc-1'
+          sequence: 1
+          validity: null
+          lists: []
+    outcome: 'violation'
+    expected: 'The CRL carries no explicit validity dates.'
+    rests_on:
+      - rule: 'VAL-2c'
+        locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
+        text: 'the CRL must carry explicit validity dates'
+      - rule: 'VAL-5a'
+        locator: 'RFC 2692 §Validity and CRLs ¶5, p. 4'
+        text: 'Any CRL or revalidation instrument must have its own lifetime.'
+    modal: 'must'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0026'
+      - 'rfc-2692#R-0031'
+    notes: 'VAL-5a ("must have its own lifetime") reaches the same result for any CRL or revalidation instrument.'
+
+  - id: 'SR-VAL-C06'
+    locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
+    kind: 'crl-lists-certificate'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate:
+        id: 'cert-1'
+        issuer: 'key-A'
+        subject: 'key-B'
+        grants: 'auth-X'
+        validity:
+          not_before: '2026-01-01T00:00:00Z'
+          not_after: '2026-12-31T23:59:59Z'
+        uses_crl: true
+        crl_location: 'crl-loc-1'
+      crl_sequence:
+        - id: 'crl-1'
+          signer: 'key-R'
+          location: 'crl-loc-1'
+          sequence: 1
+          validity:
+            not_before: '2026-03-01T00:00:00Z'
+            not_after: '2026-03-07T23:59:59Z'
+          lists:
+            - 'cert-1'
+      check_time: '2026-03-04T12:00:00Z'
+    outcome: 'reject'
+    expected: 'cert-1 is listed in the CRL that is current at the check time, so it is not accepted.'
+    rests_on:
+      - rule: 'VAL-2a'
+        locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
+        text: 'If it encounters some certificate that it lists, then it annihilates that certificate.'
+      - rule: 'VAL-1b'
+        locator: 'RFC 2692 §Validity and CRLs ¶1, p. 4'
+        text: 'It may also be necessary to have on-line refinement of validity.'
+    modal: '(none: descriptive)'
+    soft: false
+    inferred: true
+    inference: 'The source says a listed certificate is annihilated only in its description of a minimal CRL (VAL-2a); the requirements that follow keep that function and add conditions, but do not restate it. Rejection is the reading of "annihilates".'
+    constrained_by:
+      - 'rfc-2692#R-0023'
+    related:
+      - 'SR-VAL-01'
+      - 'SR-VAL-C07'
+
+  - id: 'SR-VAL-C07'
+    locator: 'RFC 2692 §Validity and CRLs ¶1, p. 4'
+    kind: 'crl-does-not-list-certificate'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate:
+        id: 'cert-1'
+        issuer: 'key-A'
+        subject: 'key-B'
+        grants: 'auth-X'
+        validity:
+          not_before: '2026-01-01T00:00:00Z'
+          not_after: '2026-12-31T23:59:59Z'
+        uses_crl: true
+        crl_location: 'crl-loc-1'
+      crl_sequence:
+        - id: 'crl-1'
+          signer: 'key-R'
+          location: 'crl-loc-1'
+          sequence: 1
+          validity:
+            not_before: '2026-03-01T00:00:00Z'
+            not_after: '2026-03-07T23:59:59Z'
+          lists:
+            - 'cert-9'
+      check_time: '2026-03-04T12:00:00Z'
+    outcome: 'accept'
+    expected: 'cert-1 is within its validity period, names its CRL location, and the current CRL (which has explicit dates) does not list it, so it passes the validity checks.'
+    rests_on:
+      - rule: 'VAL-1a'
+        locator: 'RFC 2692 §Validity and CRLs ¶1, p. 4'
+        text: 'An SPKI certificate, like any other, should be able to carry a validity period: dates within which it is valid.'
+      - rule: 'VAL-2d'
+        locator: 'RFC 2692 §Validity and CRLs ¶2, p. 4'
+        text: 'Under this set of requirements, behavior of certificate validation is deterministic (aside from the question of clock skew).'
+    modal: 'should'
+    soft: false
+    inferred: true
+    inference: 'The source never states an acceptance rule; this is the baseline the other CRL vectors vary. It tests only validity, not whether the certificate grants what is asked.'
+    constrained_by:
+      - 'rfc-2692#R-0022'
+      - 'rfc-2692#R-0028'
+    related:
+      - 'SR-VAL-C06'
+
+  - id: 'SR-VAL-C08'
+    locator: 'RFC 2692 §Validity and CRLs ¶1, p. 4'
+    kind: 'validity-expired'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate:
+        id: 'cert-1'
+        issuer: 'key-A'
+        subject: 'key-B'
+        grants: 'auth-X'
+        validity:
+          not_before: '2026-01-01T00:00:00Z'
+          not_after: '2026-12-31T23:59:59Z'
+        uses_crl: false
+      check_time: '2027-01-15T12:00:00Z'
+    outcome: 'reject'
+    expected: 'The check time is after the certificate''s not_after, outside the dates within which it is valid.'
+    rests_on:
+      - rule: 'VAL-1a'
+        locator: 'RFC 2692 §Validity and CRLs ¶1, p. 4'
+        text: 'An SPKI certificate, like any other, should be able to carry a validity period: dates within which it is valid.'
+    modal: 'should'
+    soft: false
+    inferred: true
+    inference: 'VAL-1a defines a validity period as "dates within which it is valid"; that a certificate is invalid outside them, and is rejected, is the reading, not a sentence of the source.'
+    constrained_by:
+      - 'rfc-2692#R-0022'
+    related:
+      - 'SR-VAL-C09'
+
+  - id: 'SR-VAL-C09'
+    locator: 'RFC 2692 §Validity and CRLs ¶1, p. 4'
+    kind: 'validity-not-yet'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate:
+        id: 'cert-1'
+        issuer: 'key-A'
+        subject: 'key-B'
+        grants: 'auth-X'
+        validity:
+          not_before: '2026-01-01T00:00:00Z'
+          not_after: '2026-12-31T23:59:59Z'
+        uses_crl: false
+      check_time: '2025-12-15T12:00:00Z'
+    outcome: 'reject'
+    expected: 'The check time is before the certificate''s not_before, outside the dates within which it is valid.'
+    rests_on:
+      - rule: 'VAL-1a'
+        locator: 'RFC 2692 §Validity and CRLs ¶1, p. 4'
+        text: 'An SPKI certificate, like any other, should be able to carry a validity period: dates within which it is valid.'
+    modal: 'should'
+    soft: false
+    inferred: true
+    inference: 'As SR-VAL-C08, for the start of the period.'
+    constrained_by:
+      - 'rfc-2692#R-0022'
+    related:
+      - 'SR-VAL-C08'
+
+  - id: 'SR-VAL-C10'
+    locator: 'RFC 2692 §Validity and CRLs ¶5, p. 4'
+    kind: 'revalidation-lifetime-zero'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      revalidation_instrument:
+        id: 'reval-1'
+        kind: 'positive'
+        certificate: 'cert-1'
+        validity:
+          not_before: '2026-03-04T12:00:00Z'
+          not_after: '2026-03-04T12:00:00Z'
+        lifetime_seconds: 0
+    outcome: 'violation'
+    expected: 'An instrument with a lifetime of 0 is not possible.'
+    rests_on:
+      - rule: 'VAL-5b'
+        locator: 'RFC 2692 §Validity and CRLs ¶5, p. 4'
+        text: 'A lifetime of 0 is not possible because of communication delays and clock skews'
+    modal: 'is not possible'
+    soft: false
+    inferred: true
+    inference: 'The source says a lifetime of 0 "is not possible because of communication delays and clock skews": a statement of fact, not a prohibition. Treating such an instrument as non-conforming is the reading.'
+    constrained_by:
+      - 'rfc-2692#R-0032'
+    related:
+      - 'SR-VAL-04'
+      - 'SR-VAL-C12'
+
+  - id: 'SR-VAL-C11'
+    locator: 'RFC 2692 §Validity and CRLs ¶5, p. 4'
+    kind: 'revalidation-lifetime-missing'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      revalidation_instrument:
+        id: 'reval-1'
+        kind: 'positive'
+        certificate: 'cert-1'
+        validity: null
+    outcome: 'violation'
+    expected: 'The revalidation instrument has no lifetime of its own.'
+    rests_on:
+      - rule: 'VAL-5a'
+        locator: 'RFC 2692 §Validity and CRLs ¶5, p. 4'
+        text: 'Any CRL or revalidation instrument must have its own lifetime.'
+    modal: 'must'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0031'
+    related:
+      - 'SR-VAL-C05'
+
+  - id: 'SR-VAL-C12'
+    locator: 'RFC 2692 §Validity and CRLs ¶5, p. 4'
+    kind: 'one-use-instrument-reused'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      revalidation_instrument:
+        id: 'reval-1'
+        kind: 'positive'
+        certificate: 'cert-1'
+        lifetime: 'one-use'
+        delivered_in: 'challenge-response-1'
+      uses:
+        - exchange: 'challenge-response-1'
+          time: '2026-03-04T12:00:00Z'
+        - exchange: 'challenge-response-2'
+          time: '2026-03-04T12:05:00Z'
+    outcome: 'reject'
+    expected: 'The second use is rejected: the instrument''s lifetime is one use and that use was made in challenge-response-1.'
+    rests_on:
+      - rule: 'VAL-5b'
+        locator: 'RFC 2692 §Validity and CRLs ¶5, p. 4'
+        text: 'one can consider an instrument whose lifetime is "one use" and which is delivered only as part of a challenge/response protocol.'
+    modal: 'one can consider'
+    soft: false
+    inferred: true
+    inference: 'The source describes an instrument whose lifetime is "one use"; it does not say that a second use is rejected. Rejection is what an expired lifetime means elsewhere (SR-VAL-C08).'
+    constrained_by:
+      - 'rfc-2692#R-0032'
+    related:
+      - 'SR-VAL-04'
+      - 'SR-VAL-C13'
+      - 'SR-VAL-C14'
+
+  - id: 'SR-VAL-C13'
+    locator: 'RFC 2692 §Validity and CRLs ¶5, p. 4'
+    kind: 'one-use-instrument-single-use'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      revalidation_instrument:
+        id: 'reval-1'
+        kind: 'positive'
+        certificate: 'cert-1'
+        lifetime: 'one-use'
+        delivered_in: 'challenge-response-1'
+      uses:
+        - exchange: 'challenge-response-1'
+          time: '2026-03-04T12:00:00Z'
+    outcome: 'accept'
+    expected: 'A single use inside the challenge/response exchange that delivered the instrument is the case the source considers.'
+    rests_on:
+      - rule: 'VAL-5b'
+        locator: 'RFC 2692 §Validity and CRLs ¶5, p. 4'
+        text: 'one can consider an instrument whose lifetime is "one use" and which is delivered only as part of a challenge/response protocol.'
+    modal: 'one can consider'
+    soft: false
+    inferred: true
+    inference: 'The source allows the instrument ("one can consider"); acceptance of its one use is the reading.'
+    constrained_by:
+      - 'rfc-2692#R-0032'
+    related:
+      - 'SR-VAL-C12'
+      - 'SR-VAL-C14'
+
+  - id: 'SR-VAL-C14'
+    locator: 'RFC 2692 §Validity and CRLs ¶5, p. 4'
+    kind: 'one-use-instrument-outside-challenge'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      revalidation_instrument:
+        id: 'reval-1'
+        kind: 'positive'
+        certificate: 'cert-1'
+        lifetime: 'one-use'
+        delivered_in: null
+    outcome: 'violation'
+    expected: 'A one-use instrument delivered outside a challenge/response protocol is not the instrument the source allows in place of a lifetime: it is "delivered only as part of a challenge/response protocol".'
+    rests_on:
+      - rule: 'VAL-5b'
+        locator: 'RFC 2692 §Validity and CRLs ¶5, p. 4'
+        text: 'one can consider an instrument whose lifetime is "one use" and which is delivered only as part of a challenge/response protocol.'
+    modal: 'only'
+    soft: false
+    inferred: true
+    inference: 'The source names the condition ("delivered only as part of a challenge/response protocol") but not the consequence of breaking it.'
+    constrained_by:
+      - 'rfc-2692#R-0032'
+    related:
+      - 'SR-VAL-C12'
+      - 'SR-VAL-C13'
+
+  - id: 'SR-VAL-C15'
+    locator: 'RFC 2692 §Validity and CRLs ¶4, p. 4'
+    kind: 'online-validation-negative-only'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      design:
+        negative_online_validation: true
+        positive_online_validation: false
+    outcome: 'violation'
+    expected: 'A design that offers CRLs but no positive on-line validation does not support both kinds.'
+    rests_on:
+      - rule: 'VAL-4'
+        locator: 'RFC 2692 §Validity and CRLs ¶4, p. 4'
+        text: 'SPKI should support both positive and negative on-line validations.'
+    modal: 'should'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0030'
+    related:
+      - 'SR-VAL-02'
+      - 'SR-VAL-C16'
+
+  - id: 'SR-VAL-C16'
+    locator: 'RFC 2692 §Validity and CRLs ¶4, p. 4'
+    kind: 'online-validation-positive-only'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      design:
+        negative_online_validation: false
+        positive_online_validation: true
+    outcome: 'violation'
+    expected: 'A design that offers positive on-line validation but no CRL does not support both kinds.'
+    rests_on:
+      - rule: 'VAL-4'
+        locator: 'RFC 2692 §Validity and CRLs ¶4, p. 4'
+        text: 'SPKI should support both positive and negative on-line validations.'
+    modal: 'should'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0030'
+    related:
+      - 'SR-VAL-03'
+      - 'SR-VAL-C15'
+
+  - id: 'SR-VAL-C17'
+    locator: 'RFC 2692 §Validity and CRLs ¶1, p. 4'
+    kind: 'validity-period-not-expressible'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      design:
+        certificate_fields:
+          - 'issuer'
+          - 'subject'
+          - 'grants'
+        validity_period: false
+    outcome: 'violation'
+    expected: 'A certificate design with no way to carry a validity period does not meet the requirement.'
+    rests_on:
+      - rule: 'VAL-1a'
+        locator: 'RFC 2692 §Validity and CRLs ¶1, p. 4'
+        text: 'An SPKI certificate, like any other, should be able to carry a validity period: dates within which it is valid.'
+    modal: 'should be able to'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0022'
+    related:
+      - 'SR-VAL-C08'
+
+  # ====================================================================
+  # General Requirements
+  # ====================================================================
+
+  - id: 'SR-GEN-C01'
+    locator: 'RFC 2692 §General Requirements ¶4, p. 3'
+    kind: 'new-authorization-third-party'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      author: 'code-author-1'
+      new_authorization: 'auth-Y'
+      steps_before_first_certificate:
+        - 'register auth-Y with registry-1 and wait for approval'
+    outcome: 'violation'
+    expected: 'Creating auth-Y requires interaction with another organization (registry-1).'
+    rests_on:
+      - rule: 'GEN-4b'
+        locator: 'RFC 2692 §General Requirements ¶4, p. 3'
+        text: 'The creation of new authorizations should not require interaction with any other person or organization but rather be under the total control of the author of the code using the certificate.'
+    modal: 'should not'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0011'
+    related:
+      - 'SR-GEN-C02'
+      - 'SR-USE-72'
+
+  - id: 'SR-GEN-C02'
+    locator: 'RFC 2692 §General Requirements ¶4, p. 3'
+    kind: 'new-authorization-local'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      author: 'code-author-1'
+      new_authorization: 'auth-Y'
+      steps_before_first_certificate: []
+    outcome: 'permitted'
+    expected: 'The code author defines auth-Y alone and certificates can carry it at once.'
+    rests_on:
+      - rule: 'GEN-4a'
+        locator: 'RFC 2692 §General Requirements ¶4, p. 3'
+        text: 'The definition of attributes or authorizations in a certificate is up to the author of code which uses the certificate.'
+      - rule: 'GEN-4b'
+        locator: 'RFC 2692 §General Requirements ¶4, p. 3'
+        text: 'The creation of new authorizations should not require interaction with any other person or organization but rather be under the total control of the author of the code using the certificate.'
+    modal: 'should not'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0010'
+      - 'rfc-2692#R-0011'
+    related:
+      - 'SR-GEN-C01'
+
+  - id: 'SR-GEN-C03'
+    locator: 'RFC 2692 §General Requirements ¶6, p. 3'
+    kind: 'minimum-information-exceeded'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      job: 'verifier-1 checks that key-B may perform auth-X'
+      certificate:
+        id: 'cert-1'
+        issuer: 'key-A'
+        subject: 'key-B'
+        grants: 'auth-X'
+        validity:
+          not_before: '2026-01-01T00:00:00Z'
+          not_after: '2026-12-31T23:59:59Z'
+        uses_crl: false
+        attributes:
+          - 'holder-name: name-1'
+          - 'postal-address: address-1'
+          - 'attr-unrelated-1'
+    outcome: 'violation'
+    expected: 'The certificate carries three items the job does not need; it should carry the minimum information necessary to get the job done.'
+    rests_on:
+      - rule: 'GEN-6a'
+        locator: 'RFC 2692 §General Requirements ¶6, p. 3'
+        text: 'Because SPKI certificates will carry information that, taken together over all certificates, might constitute a dossier and therefore a privacy violation, each SPKI certificate should carry the minimum information necessary to get a job done.'
+      - rule: 'GEN-6b'
+        locator: 'RFC 2692 §General Requirements ¶6, p. 3'
+        text: 'The keyholder should be able to release a minimum of information in order to prove his or her permission to act.'
+    modal: 'should'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0014'
+      - 'rfc-2692#R-0016'
+    related:
+      - 'SR-GEN-C04'
+      - 'SR-GEN-03'
+      - 'SR-USE-56'
+    notes: 'The job is stated in the input so that "necessary" is decidable: only key-B, auth-X, the issuer and the validity period are needed for it.'
+
+  - id: 'SR-GEN-C04'
+    locator: 'RFC 2692 §General Requirements ¶6, p. 3'
+    kind: 'minimum-information-met'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      job: 'verifier-1 checks that key-B may perform auth-X'
+      certificate:
+        id: 'cert-1'
+        issuer: 'key-A'
+        subject: 'key-B'
+        grants: 'auth-X'
+        validity:
+          not_before: '2026-01-01T00:00:00Z'
+          not_after: '2026-12-31T23:59:59Z'
+        uses_crl: false
+    outcome: 'conforms'
+    expected: 'The certificate carries only what the job needs.'
+    rests_on:
+      - rule: 'GEN-6a'
+        locator: 'RFC 2692 §General Requirements ¶6, p. 3'
+        text: 'Because SPKI certificates will carry information that, taken together over all certificates, might constitute a dossier and therefore a privacy violation, each SPKI certificate should carry the minimum information necessary to get a job done.'
+    modal: 'should'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0014'
+    related:
+      - 'SR-GEN-C03'
+
+  - id: 'SR-GEN-C05'
+    locator: 'RFC 2692 §General Requirements ¶7, p. 3'
+    kind: 'anonymity-impossible'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      design:
+        certificate_fields_required:
+          - 'issuer'
+          - 'subject'
+          - 'grants'
+          - 'holder-name'
+    outcome: 'violation'
+    expected: 'If every certificate must name its holder, no certificate can be anonymous.'
+    rests_on:
+      - rule: 'GEN-7'
+        locator: 'RFC 2692 §General Requirements ¶7, p. 3'
+        text: 'It is necessary for at least some certificates to be anonymous.'
+    modal: 'It is necessary'
+    soft: false
+    inferred: true
+    inference: 'The source does not define "anonymous"; this vector reads it as a certificate that identifies the holder by key alone, with no name.'
+    constrained_by:
+      - 'rfc-2692#R-0017'
+    related:
+      - 'SR-GEN-C06'
+      - 'SR-USE-56'
+
+  - id: 'SR-GEN-C06'
+    locator: 'RFC 2692 §General Requirements ¶7, p. 3'
+    kind: 'anonymous-certificate'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate:
+        id: 'cert-1'
+        issuer: 'key-A'
+        subject: 'key-B'
+        grants: 'auth-X'
+        validity:
+          not_before: '2026-01-01T00:00:00Z'
+          not_after: '2026-12-31T23:59:59Z'
+        uses_crl: false
+        names: []
+    outcome: 'expressible'
+    expected: 'A certificate that grants auth-X to key-B and carries no name must be expressible.'
+    rests_on:
+      - rule: 'GEN-7'
+        locator: 'RFC 2692 §General Requirements ¶7, p. 3'
+        text: 'It is necessary for at least some certificates to be anonymous.'
+      - rule: 'GEN-3'
+        locator: 'RFC 2692 §General Requirements ¶3, p. 3'
+        text: 'The keyholder is most directly identified by the public key itself'
+    modal: 'It is necessary'
+    soft: false
+    inferred: true
+    inference: 'As SR-GEN-C05: "anonymous" read as identified by key alone.'
+    constrained_by:
+      - 'rfc-2692#R-0008'
+      - 'rfc-2692#R-0017'
+    related:
+      - 'SR-GEN-C05'
+
+  - id: 'SR-GEN-C07'
+    locator: 'RFC 2692 §General Requirements ¶8, p. 3'
+    kind: 'blinded-key-attribute'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate:
+        id: 'cert-1'
+        issuer: 'key-A'
+        subject: 'key-blinded-1'
+        grants: 'attr-ballot-1'
+        validity:
+          not_before: '2026-01-01T00:00:00Z'
+          not_after: '2026-12-31T23:59:59Z'
+        uses_crl: false
+    outcome: 'expressible'
+    expected: 'A certificate that assigns an attribute to a blinded signature key must be expressible; a design that cannot express it violates the requirement.'
+    rests_on:
+      - rule: 'GEN-8'
+        locator: 'RFC 2692 §General Requirements ¶8, p. 3'
+        text: 'Because one use of SPKI certificates is in secret balloting and similar applications, an SPKI certificate must be able to assign an attribute to a blinded signature key.'
+    modal: 'must be able to'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0018'
+    related:
+      - 'SR-GEN-04'
+    notes: 'key-blinded-1 stands for a blinded signature key; the source does not define the blinding scheme, so nothing about the key''s form is tested.'
+
+  - id: 'SR-GEN-C08'
+    locator: 'RFC 2692 §General Requirements ¶3, p. 3'
+    kind: 'subject-by-key-hash'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate:
+        id: 'cert-1'
+        issuer: 'key-A'
+        subject: 'hash(key-B)'
+        grants: 'auth-X'
+        validity:
+          not_before: '2026-01-01T00:00:00Z'
+          not_after: '2026-12-31T23:59:59Z'
+        uses_crl: false
+        subject_form: 'key-hash'
+    outcome: 'permitted'
+    expected: 'Identifying the keyholder by a collision-free hash of its public key is permitted.'
+    rests_on:
+      - rule: 'GEN-3'
+        locator: 'RFC 2692 §General Requirements ¶3, p. 3'
+        text: 'The keyholder is most directly identified by the public key itself, although for convenience or other purposes some indirection (delayed binding) may be employed.  That indirection can be via a collision-free hash of the public key or via a name, later to be resolved into a key.'
+    modal: 'may'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0008'
+      - 'rfc-2692#R-0009'
+    related:
+      - 'SR-GEN-01'
+      - 'SR-GEN-C09'
+
+  - id: 'SR-GEN-C09'
+    locator: 'RFC 2692 §General Requirements ¶3, p. 3'
+    kind: 'subject-by-name'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate:
+        id: 'cert-1'
+        issuer: 'key-A'
+        subject: 'name-1'
+        grants: 'auth-X'
+        validity:
+          not_before: '2026-01-01T00:00:00Z'
+          not_after: '2026-12-31T23:59:59Z'
+        uses_crl: false
+        subject_form: 'name'
+        resolves_to: 'key-B'
+    outcome: 'permitted'
+    expected: 'Identifying the keyholder by a name later resolved into a key is permitted.'
+    rests_on:
+      - rule: 'GEN-3'
+        locator: 'RFC 2692 §General Requirements ¶3, p. 3'
+        text: 'The keyholder is most directly identified by the public key itself, although for convenience or other purposes some indirection (delayed binding) may be employed.  That indirection can be via a collision-free hash of the public key or via a name, later to be resolved into a key.'
+    modal: 'may'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0008'
+      - 'rfc-2692#R-0009'
+    related:
+      - 'SR-GEN-01'
+      - 'SR-GEN-C08'
+
+  - id: 'SR-GEN-C10'
+    locator: 'RFC 2692 §General Requirements ¶9, p. 3'
+    kind: 'name-binding'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificates:
+        - id: 'cert-n1'
+          issuer: 'key-B'
+          subject: 'key-B'
+          binds_name: 'name-preferred-1'
+        - id: 'cert-n2'
+          issuer: 'key-A'
+          subject: 'key-B'
+          binds_name: 'name-known-by-A-1'
+    outcome: 'expressible'
+    expected: 'Both bindings must be expressible: a name the keyholder prefers (self-issued, cert-n1) and a name by which another keyholder knows it (cert-n2).'
+    rests_on:
+      - rule: 'GEN-9a'
+        locator: 'RFC 2692 §General Requirements ¶9, p. 3'
+        text: 'There are names the keyholder prefers to be called and there are names by which the keyholder is known to various other keyholders.  An SPKI certificate must be able to bind a key to such names.'
+    modal: 'must be able to'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0019'
+      - 'rfc-2692#R-0020'
+    related:
+      - 'SR-USE-09'
+      - 'SR-USE-10'
+
+  - id: 'SR-GEN-C11'
+    locator: 'RFC 2692 §General Requirements ¶5, p. 3'
+    kind: 'repository-required'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      design:
+        certificate_delivery: 'verifier fetches from repository-1 only; keyholder cannot present certificates'
+    outcome: 'violation'
+    expected: 'A design that requires a global repository cannot work on the source''s assumption that certificates go directly from keyholder to verifier, and takes from the keyholder a choice the source leaves to the keyholder.'
+    rests_on:
+      - rule: 'GEN-5a'
+        locator: 'RFC 2692 §General Requirements ¶5, p. 3'
+        text: 'Because SPKI certificates might carry information that the keyholder might not want to publish, we assume that certificates will be distributed directly by the keyholder to the verifier.'
+      - rule: 'GEN-5b'
+        locator: 'RFC 2692 §General Requirements ¶5, p. 3'
+        text: 'If the keyholder wishes to use a global repository, such as LDAP, the global PGP key server or the DNS database, that is up to the keyholder and not for the SPKI WG to specify.'
+    modal: 'we assume'
+    soft: true
+    inferred: true
+    inference: 'GEN-5a is stated as an assumption ("we assume"), and GEN-5b leaves repository use "up to the keyholder"; neither is phrased as a requirement on the design.'
+    constrained_by:
+      - 'rfc-2692#R-0012'
+      - 'rfc-2692#R-0013'
+    related:
+      - 'SR-GEN-02'
+
+  # ====================================================================
+  # Implementation of Certificates
+  # ====================================================================
+
+  - id: 'SR-IMP-C01'
+    locator: 'RFC 2692 §Implementation of Certificates ¶5, p. 5'
+    kind: 'signature-requires-reformatting'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate_as_transmitted: 'form-T(cert-1)'
+      signature_covers: 'form-S(cert-1)'
+      verifier_steps:
+        - 'decode form-T'
+        - 're-encode as form-S'
+        - 'check signature over form-S'
+    outcome: 'violation'
+    expected: 'Checking the signature requires reformatting the certificate from the transmitted form into another one.'
+    rests_on:
+      - rule: 'IMP-5a'
+        locator: 'RFC 2692 §Implementation of Certificates ¶5, p. 5'
+        text: 'A certificate should be signed exactly as it is transmitted.'
+      - rule: 'IMP-5b'
+        locator: 'RFC 2692 §Implementation of Certificates ¶5, p. 5'
+        text: 'There should be no reformatting called for in the process of checking a certificate''s signature'
+    modal: 'should'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0044'
+      - 'rfc-2692#R-0045'
+    related:
+      - 'SR-IMP-C02'
+      - 'SR-IMP-C10'
+
+  - id: 'SR-IMP-C02'
+    locator: 'RFC 2692 §Implementation of Certificates ¶5, p. 5'
+    kind: 'signature-whitespace-canonicalized'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate_format: 'text'
+      certificate_as_transmitted: 'text-T(cert-1)'
+      verifier_steps:
+        - 'canonicalize white space during certificate input'
+        - 'check signature'
+    outcome: 'permitted'
+    expected: 'Canonicalizing white space during input of a text-format certificate is the adjustment the source allows.'
+    rests_on:
+      - rule: 'IMP-5b'
+        locator: 'RFC 2692 §Implementation of Certificates ¶5, p. 5'
+        text: '(although one might canonicalize white space during certificate input, for example, if the format is text)'
+    modal: 'one might'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0045'
+    related:
+      - 'SR-IMP-04'
+      - 'SR-IMP-C01'
+    notes: 'The source does not say what canonical white space is, nor whether the signer signed the canonical or the transmitted form; a harness can test only that the step is allowed.'
+
+  - id: 'SR-IMP-C03'
+    locator: 'RFC 2692 §Implementation of Certificates ¶4, p. 5'
+    kind: 'asn1-encoding'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate_encoding: 'ASN.1'
+    outcome: 'violation'
+    expected: 'ASN.1 is not to be used.'
+    rests_on:
+      - rule: 'IMP-4b'
+        locator: 'RFC 2692 §Implementation of Certificates ¶4, p. 5'
+        text: 'In particular, ASN.1 is not to be used.'
+    modal: 'is not to be used'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0043'
+    related:
+      - 'SR-IMP-C04'
+
+  - id: 'SR-IMP-C04'
+    locator: 'RFC 2692 §Implementation of Certificates ¶4, p. 5'
+    kind: 'library-required'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      design:
+        parse_requires: 'library-1'
+        pack_requires: 'library-1'
+    outcome: 'violation'
+    expected: 'Packing and parsing the certificate require library code.'
+    rests_on:
+      - rule: 'IMP-4a'
+        locator: 'RFC 2692 §Implementation of Certificates ¶4, p. 5'
+        text: 'No library code should be required for the packing or parsing of SPKI certificates.'
+    modal: 'should'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0042'
+    related:
+      - 'SR-IMP-C03'
+    notes: 'library-1 stands for any library the implementer did not write; the source does not define "library code" more closely.'
+
+  - id: 'SR-IMP-C05'
+    locator: 'RFC 2692 §Implementation of Certificates ¶6, p. 5'
+    kind: 'parse-requires-scan'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      design:
+        parse_passes_over_input: 2
+        reason: 'field boundaries are known only after scanning the whole input once'
+    outcome: 'violation'
+    expected: 'Parsing requires a scan of the data and touches the incoming bytes more than once, against the LR(0) efficiency goal.'
+    rests_on:
+      - rule: 'IMP-6'
+        locator: 'RFC 2692 §Implementation of Certificates ¶6, p. 5'
+        text: 'For efficiency, if possible, an SPKI certificate should be encoded in an LR(0) grammar.  That is, neither packing nor parsing of the structure should require a scan of the data.  Data should be read into the kind of structure a programmer would want to use without touching the incoming bytes more than once.'
+    modal: 'if possible, ... should'
+    soft: true
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0046'
+      - 'rfc-2692#R-0047'
+      - 'rfc-2692#R-0048'
+    related:
+      - 'SR-IMP-C06'
+      - 'SR-IMP-C07'
+    notes: 'Soft: the goal is qualified "if possible". The source equates LR(0) with "neither packing nor parsing of the structure should require a scan of the data"; that is its own gloss, not the parsing-theory definition.'
+
+  - id: 'SR-IMP-C06'
+    locator: 'RFC 2692 §Implementation of Certificates ¶7, p. 5'
+    kind: 'parse-requires-recursion'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      design:
+        parser: 'recursive descent over nested elements'
+        recursion: true
+    outcome: 'violation'
+    expected: 'Packing or parsing uses recursion, against the efficiency goal.'
+    rests_on:
+      - rule: 'IMP-7'
+        locator: 'RFC 2692 §Implementation of Certificates ¶7, p. 5'
+        text: 'For efficiency, if possible, an SPKI certificate should be packed and parsed without any recursion.'
+    modal: 'if possible, ... should'
+    soft: true
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0049'
+    related:
+      - 'SR-IMP-C05'
+      - 'SR-IMP-C07'
+    notes: 'Soft: qualified "if possible".'
+
+  - id: 'SR-IMP-C07'
+    locator: 'RFC 2692 §Implementation of Certificates ¶6, p. 5'
+    kind: 'parse-single-pass-no-recursion'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      design:
+        parse_passes_over_input: 1
+        recursion: false
+    outcome: 'conforms'
+    expected: 'Packing and parsing read each incoming byte once, without a scan and without recursion.'
+    rests_on:
+      - rule: 'IMP-6'
+        locator: 'RFC 2692 §Implementation of Certificates ¶6, p. 5'
+        text: 'For efficiency, if possible, an SPKI certificate should be encoded in an LR(0) grammar.  That is, neither packing nor parsing of the structure should require a scan of the data.  Data should be read into the kind of structure a programmer would want to use without touching the incoming bytes more than once.'
+      - rule: 'IMP-7'
+        locator: 'RFC 2692 §Implementation of Certificates ¶7, p. 5'
+        text: 'For efficiency, if possible, an SPKI certificate should be packed and parsed without any recursion.'
+    modal: 'if possible, ... should'
+    soft: true
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0046'
+      - 'rfc-2692#R-0047'
+      - 'rfc-2692#R-0048'
+      - 'rfc-2692#R-0049'
+    related:
+      - 'SR-IMP-C05'
+      - 'SR-IMP-C06'
+
+  - id: 'SR-IMP-C08'
+    locator: 'RFC 2692 §Implementation of Certificates ¶1, p. 4'
+    kind: 'issuer-empowered-keyholder'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      key-A: 'holds auth-X and is empowered to delegate it'
+      certificate:
+        id: 'cert-1'
+        issuer: 'key-A'
+        subject: 'key-B'
+        grants: 'auth-X'
+        validity:
+          not_before: '2026-01-01T00:00:00Z'
+          not_after: '2026-12-31T23:59:59Z'
+        uses_crl: false
+      other_parties_involved: []
+    outcome: 'permitted'
+    expected: 'key-A, empowered to delegate auth-X, generates the certificate itself.'
+    rests_on:
+      - rule: 'IMP-1a'
+        locator: 'RFC 2692 §Implementation of Certificates ¶1, p. 4'
+        text: 'The authorization certificates that are envisioned for SPKI (and needed to meet the demands of the list given at the end of this document) should be generated by any keyholder empowered to grant or delegate the authorization in question.'
+    modal: 'should'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0033'
+    related:
+      - 'SR-IMP-C09'
+
+  - id: 'SR-IMP-C09'
+    locator: 'RFC 2692 §Implementation of Certificates ¶1, p. 4'
+    kind: 'issuer-must-be-authority'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      key-A: 'holds auth-X and is empowered to delegate it'
+      design:
+        certificate_issuers_allowed:
+          - 'authority-1'
+    outcome: 'violation'
+    expected: 'Only authority-1 may generate certificates, so key-A, though empowered to delegate auth-X, cannot.'
+    rests_on:
+      - rule: 'IMP-1a'
+        locator: 'RFC 2692 §Implementation of Certificates ¶1, p. 4'
+        text: 'The authorization certificates that are envisioned for SPKI (and needed to meet the demands of the list given at the end of this document) should be generated by any keyholder empowered to grant or delegate the authorization in question.'
+    modal: 'should'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0033'
+    related:
+      - 'SR-IMP-C08'
+      - 'SR-GEN-C01'
+
+  - id: 'SR-IMP-C10'
+    locator: 'RFC 2692 §Implementation of Certificates ¶5, p. 5'
+    kind: 'signature-as-transmitted'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate_as_transmitted: 'form-T(cert-1)'
+      signature_covers: 'form-T(cert-1)'
+      verifier_steps:
+        - 'check signature over the received form-T'
+    outcome: 'conforms'
+    expected: 'The certificate is signed exactly as it is transmitted, and the check needs no reformatting.'
+    rests_on:
+      - rule: 'IMP-5a'
+        locator: 'RFC 2692 §Implementation of Certificates ¶5, p. 5'
+        text: 'A certificate should be signed exactly as it is transmitted.'
+    modal: 'should'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0044'
+    related:
+      - 'SR-IMP-C01'
+
+  # ====================================================================
+  # List of Certificate Uses (rules from the brainstorming list; body_requirement: false)
+  # ====================================================================
+
+  - id: 'SR-USE-C01'
+    locator: 'RFC 2692 §List of Certificate Uses, item ''"This signed-key should be considered equivalent'', p. 9'
+    kind: 'delegation-before-expiry'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate:
+        id: 'cert-d1'
+        certifying_key: 'key-L'
+        signed_key: 'key-S'
+        purposes:
+          - 'purpose-1'
+        expires: '2026-03-01T18:00:00Z'
+      use:
+        key: 'key-S'
+        purpose: 'purpose-1'
+        time: '2026-03-01T12:00:00Z'
+    outcome: 'accept'
+    expected: 'Before expiry and for a listed purpose, key-S is equivalent to key-L.'
+    rests_on:
+      - rule: 'LIST-DELEG'
+        locator: 'RFC 2692 §List of Certificate Uses, item ''"This signed-key should be considered equivalent'', p. 9'
+        text: '"This signed-key should be considered equivalent to the certifying-key until this certificate expires for the following purposes ..."'
+        body_requirement: false
+    modal: 'should be considered'
+    soft: false
+    inferred: false
+    constrained_by:
+      - 'rfc-2692#R-0122'
+    related:
+      - 'SR-USE-57'
+      - 'SR-USE-C02'
+      - 'SR-USE-C03'
+    notes: 'Rests on a template sentence from the brainstorming list, not on a body requirement.'
+
+  - id: 'SR-USE-C02'
+    locator: 'RFC 2692 §List of Certificate Uses, item ''"This signed-key should be considered equivalent'', p. 9'
+    kind: 'delegation-after-expiry'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate:
+        id: 'cert-d1'
+        certifying_key: 'key-L'
+        signed_key: 'key-S'
+        purposes:
+          - 'purpose-1'
+        expires: '2026-03-01T18:00:00Z'
+      use:
+        key: 'key-S'
+        purpose: 'purpose-1'
+        time: '2026-03-01T19:00:00Z'
+    outcome: 'reject'
+    expected: 'After the certificate expires, key-S is no longer equivalent to key-L.'
+    rests_on:
+      - rule: 'LIST-DELEG'
+        locator: 'RFC 2692 §List of Certificate Uses, item ''"This signed-key should be considered equivalent'', p. 9'
+        text: '"This signed-key should be considered equivalent to the certifying-key until this certificate expires for the following purposes ..."'
+        body_requirement: false
+      - rule: 'VAL-1a'
+        locator: 'RFC 2692 §Validity and CRLs ¶1, p. 4'
+        text: 'An SPKI certificate, like any other, should be able to carry a validity period: dates within which it is valid.'
+    modal: 'should be considered ... until'
+    soft: false
+    inferred: true
+    inference: 'The template grants equivalence "until this certificate expires"; it does not say a later use is rejected, but nothing else grants it.'
+    constrained_by:
+      - 'rfc-2692#R-0022'
+      - 'rfc-2692#R-0122'
+    related:
+      - 'SR-USE-57'
+      - 'SR-USE-C01'
+
+  - id: 'SR-USE-C03'
+    locator: 'RFC 2692 §List of Certificate Uses, item ''"This signed-key should be considered equivalent'', p. 9'
+    kind: 'delegation-unlisted-purpose'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate:
+        id: 'cert-d1'
+        certifying_key: 'key-L'
+        signed_key: 'key-S'
+        purposes:
+          - 'purpose-1'
+        expires: '2026-03-01T18:00:00Z'
+      use:
+        key: 'key-S'
+        purpose: 'purpose-2'
+        time: '2026-03-01T12:00:00Z'
+    outcome: 'reject'
+    expected: 'purpose-2 is not among "the following purposes", so the delegation does not cover it.'
+    rests_on:
+      - rule: 'LIST-DELEG'
+        locator: 'RFC 2692 §List of Certificate Uses, item ''"This signed-key should be considered equivalent'', p. 9'
+        text: '"This signed-key should be considered equivalent to the certifying-key until this certificate expires for the following purposes ..."'
+        body_requirement: false
+    modal: 'should be considered ... for the following purposes'
+    soft: false
+    inferred: true
+    inference: 'The template limits equivalence to listed purposes; rejection of an unlisted one is the reading.'
+    constrained_by:
+      - 'rfc-2692#R-0122'
+    related:
+      - 'SR-USE-57'
+      - 'SR-USE-C01'
+
+  - id: 'SR-USE-C04'
+    locator: 'RFC 2692 §List of Certificate Uses, ''Other requirements'', item ''Especially in lower-end applications'', p. 11'
+    kind: 'certification-right-expired-new-certificate'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certification_right:
+        holder: 'key-H'
+        expires: '2026-06-30T23:59:59Z'
+      certificate:
+        id: 'cert-h2'
+        issuer: 'key-H'
+        subject: 'key-C'
+        grants: 'auth-X'
+        validity:
+          not_before: '2026-01-01T00:00:00Z'
+          not_after: '2026-12-31T23:59:59Z'
+        uses_crl: false
+        issued: '2026-07-15T00:00:00Z'
+      check_time: '2026-07-20T00:00:00Z'
+    outcome: 'reject'
+    expected: 'key-H issued cert-h2 after its right to certify ended, so cert-h2 is not accepted.'
+    rests_on:
+      - rule: 'LIST-OR4a'
+        locator: 'RFC 2692 §List of Certificate Uses, ''Other requirements'', item ''Especially in lower-end applications'', p. 11'
+        text: 'the people generating the keys (e.g., administrators) will change, and you will no longer want them to be able to certify.  On the other hand, you will usually also not want all keys they have generated to expire.'
+        body_requirement: false
+      - rule: 'LIST-OR4b'
+        locator: 'RFC 2692 §List of Certificate Uses, ''Other requirements'', item ''Especially in lower-end applications'', p. 11'
+        text: 'This may imply a "certification right expiration" certificate requirement, probably to be implemented together with notary services.'
+        body_requirement: false
+    modal: 'you will no longer want them to be able to certify'
+    soft: true
+    inferred: true
+    inference: 'The source states a want and says it "may imply" a certification-right-expiration certificate; it defines no such certificate and no rejection rule. The vector also needs an issue time on the certificate, which the source does not mention.'
+    constrained_by:
+      - 'rfc-2692#R-0143'
+      - 'rfc-2692#R-0144'
+      - 'rfc-2692#R-0145'
+    related:
+      - 'SR-USE-73'
+      - 'SR-USE-C05'
+
+  - id: 'SR-USE-C05'
+    locator: 'RFC 2692 §List of Certificate Uses, ''Other requirements'', item ''Especially in lower-end applications'', p. 11'
+    kind: 'certification-right-expired-earlier-certificate'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certification_right:
+        holder: 'key-H'
+        expires: '2026-06-30T23:59:59Z'
+      certificate:
+        id: 'cert-h1'
+        issuer: 'key-H'
+        subject: 'key-C'
+        grants: 'auth-X'
+        validity:
+          not_before: '2026-01-01T00:00:00Z'
+          not_after: '2026-12-31T23:59:59Z'
+        uses_crl: false
+        issued: '2026-02-01T00:00:00Z'
+      check_time: '2026-07-20T00:00:00Z'
+    outcome: 'accept'
+    expected: 'cert-h1 was issued while key-H could certify and is inside its own validity period, so it remains valid after key-H''s right ends.'
+    rests_on:
+      - rule: 'LIST-OR4a'
+        locator: 'RFC 2692 §List of Certificate Uses, ''Other requirements'', item ''Especially in lower-end applications'', p. 11'
+        text: 'the people generating the keys (e.g., administrators) will change, and you will no longer want them to be able to certify.  On the other hand, you will usually also not want all keys they have generated to expire.'
+        body_requirement: false
+      - rule: 'LIST-OR4b'
+        locator: 'RFC 2692 §List of Certificate Uses, ''Other requirements'', item ''Especially in lower-end applications'', p. 11'
+        text: 'This may imply a "certification right expiration" certificate requirement, probably to be implemented together with notary services.'
+        body_requirement: false
+    modal: 'you will usually also not want all keys they have generated to expire'
+    soft: true
+    inferred: true
+    inference: 'As SR-USE-C04; the source says only that one will "usually" not want earlier keys to expire.'
+    constrained_by:
+      - 'rfc-2692#R-0143'
+      - 'rfc-2692#R-0144'
+      - 'rfc-2692#R-0145'
+    related:
+      - 'SR-USE-73'
+      - 'SR-USE-C04'
+
+  - id: 'SR-USE-C06'
+    locator: 'RFC 2692 §List of Certificate Uses, item ''I''m the a purchasing agent'', p. 9'
+    kind: 'purchase-within-limit'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate:
+        id: 'cert-1'
+        issuer: 'key-Corp'
+        subject: 'key-Agent1'
+        grants: 'purchase, limit 15000 USD'
+        validity:
+          not_before: '2026-01-01T00:00:00Z'
+          not_after: '2026-12-31T23:59:59Z'
+        uses_crl: false
+        names: []
+      request:
+        key: 'key-Agent1'
+        purchase_usd: 12000
+        time: '2026-05-01T12:00:00Z'
+    outcome: 'accept'
+    expected: 'A purchase of 12000 USD is within the authorized "up to $15,000", and the supplier learns no name.'
+    rests_on:
+      - rule: 'LIST-PURCH'
+        locator: 'RFC 2692 §List of Certificate Uses, item ''I''m the a purchasing agent'', p. 9'
+        text: 'I want to posses a certificate that tells our suppliers that I''m authorized to make purchases up to $15,000.'
+        body_requirement: false
+      - rule: 'GEN-7'
+        locator: 'RFC 2692 §General Requirements ¶7, p. 3'
+        text: 'It is necessary for at least some certificates to be anonymous.'
+      - rule: 'GEN-6b'
+        locator: 'RFC 2692 §General Requirements ¶6, p. 3'
+        text: 'The keyholder should be able to release a minimum of information in order to prove his or her permission to act.'
+    modal: '(none: brainstorming list)'
+    soft: false
+    inferred: true
+    inference: 'The source states the authorization, not how a verifier compares amounts.'
+    constrained_by:
+      - 'rfc-2692#R-0016'
+      - 'rfc-2692#R-0017'
+      - 'rfc-2692#R-0119'
+    related:
+      - 'SR-USE-56'
+      - 'SR-USE-C07'
+    notes: 'The limit is the source''s own figure. An amount of exactly 15000 is not tested: the source does not say whether "up to" includes the limit.'
+
+  - id: 'SR-USE-C07'
+    locator: 'RFC 2692 §List of Certificate Uses, item ''I''m the a purchasing agent'', p. 9'
+    kind: 'purchase-over-limit'
+    notation: 'abstract-model'
+    fidelity: 'constructed'
+    input:
+      certificate:
+        id: 'cert-1'
+        issuer: 'key-Corp'
+        subject: 'key-Agent1'
+        grants: 'purchase, limit 15000 USD'
+        validity:
+          not_before: '2026-01-01T00:00:00Z'
+          not_after: '2026-12-31T23:59:59Z'
+        uses_crl: false
+        names: []
+      request:
+        key: 'key-Agent1'
+        purchase_usd: 16000
+        time: '2026-05-01T12:00:00Z'
+    outcome: 'reject'
+    expected: 'A purchase of 16000 USD exceeds the authorized "up to $15,000".'
+    rests_on:
+      - rule: 'LIST-PURCH'
+        locator: 'RFC 2692 §List of Certificate Uses, item ''I''m the a purchasing agent'', p. 9'
+        text: 'I want to posses a certificate that tells our suppliers that I''m authorized to make purchases up to $15,000.'
+        body_requirement: false
+    modal: '(none: brainstorming list)'
+    soft: false
+    inferred: true
+    inference: 'As SR-USE-C06.'
+    constrained_by:
+      - 'rfc-2692#R-0119'
+    related:
+      - 'SR-USE-56'
+      - 'SR-USE-C06'
