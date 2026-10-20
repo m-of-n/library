@@ -1,0 +1,521 @@
+record: rfc-8392
+reviewed_by: ""
+
+# Every structure RFC 8392 defines, constrains or exhibits, with the actual code
+# points and octet-level layouts. Section numbers are RFC 8392's unless another
+# document is named.
+#
+# ---------------------------------------------------------------------------
+# PROVENANCE OF EVERY BYTE LAYOUT
+# ---------------------------------------------------------------------------
+# Decoded with a CBOR decoder written for this pass from RFC 8949 §3. NO CBOR,
+# COSE or CWT LIBRARY WAS USED, so a shared library bug cannot hide here. Every
+# octet count below was re-derived by the generator at write time and asserted
+# against the value printed in this file, so a stale number cannot survive.
+#
+# The cryptography was closed too, in the same pass and with the same rule:
+# ECDSA P-256 verification, HMAC-SHA-256 and AES-128-CCM were implemented over
+# `hashlib` alone (the AES was gated on FIPS 197 C.1 before use). ALL FIVE
+# APPENDIX A CWTs VERIFY. See ../examples/vectors.yaml for what reproduced.
+#
+# ---------------------------------------------------------------------------
+# `constrained_by` IS WIRED, and this pass could wire it because ONE agent
+# wrote both this file and ../requirements.yaml. (rfc-9964's pass 1 had to
+# leave it empty because a parallel agent owned the ids.) Matching rule,
+# applied in order: (1) the requirement whose text this field's `note` or
+# `layout` quotes; (2) failing that, the requirement at this field's own
+# `locator` whose subject is this field. A requirement is wired only where it
+# constrains the field's PRESENCE, VALUE, TYPE, LENGTH or ENCODING - never
+# where it merely mentions it.
+#
+# `constrained_by: []` IS A FINDING, NOT AN OMISSION. Every empty list below
+# belongs to RFC 9052 (RFC 8152 as RFC 8392 cites it): RFC 8392 defines no COSE
+# header parameter, no COSE structure and no algorithm, and §7.1 step 4 says so
+# three times - "all steps specified in [RFC8152] ... MUST be followed".
+#
+# ---------------------------------------------------------------------------
+# WHAT THIS DOCUMENT DOES NOT DEFINE, STATED UP FRONT
+# ---------------------------------------------------------------------------
+# NO COSE HEADER PARAMETER. RFC 8392 registers a claim registry (§9.1), a media
+# type (§9.2), a CoAP Content-Format (§9.3) and a CBOR tag (§9.4). The "COSE
+# Header Parameters" registry is not among them. `kid`, `alg` and `iv` appear
+# in this file only because Appendix A instantiates them, and they are labelled
+# as RFC 9052's throughout. The two documents that DO register a COSE header
+# parameter for this purpose are rfc-9597 (label 15, CWT Claims) and rfc-9596
+# (label 16, typ) - both in this lane.
+#
+# NO ALGORITHM. The only algorithm identifiers in the document (-7, 4, 10) are
+# inside Appendix A's examples. No normative sentence names one.
+#
+# NO CANONICAL FORM. §7.1 step 2 is "Let the Message be the binary
+# representation of the CWT Claims Set" and names none; `canonical` and
+# `deterministic` occur zero times in the source. MEASURED CONSEQUENCE, from
+# decoding Appendix A: all five printed CWTs ARE in RFC 8949 §4.2.1
+# deterministic map order and all three printed COSE_Keys are NOT - their keys
+# run -1, 1, 2, 3 where §4.2.1 sorts 1, 2, 3, -1.
+
+messages:
+
+  # =========================================================================
+  - name: CWT_Claims_Set
+    locator: "§2 (definition), §3.1.1-§3.1.7, §4 Table 1, §9.1.2"
+    encoding: "CBOR map"
+    summary: >-
+      THE PAYLOAD. §2: "The CBOR map that contains the claims conveyed by the
+      CWT." A map, not an array and not a tagged item. §3 puts the mandatory
+      claim set out of scope and §3.1 declines to make any claim mandatory, so
+      the empty map {} is conformant and every field below is optional - that
+      is the source's position, not a modelling choice. §3 also requires that
+      unknown claims be IGNORED, so the extension socket is wide open and
+      collision is silent.
+    layout: >-
+      Appendix A.1 Figure 2, source lines 923-925, 80 octets, decoded by this
+      pass: a7 (map, 7 pairs) then 01 75 "coap://as.example.com" / 02 65
+      "erikw" / 03 7818 "coap://light.example.com" / 04 1a5612aeb0 / 05
+      1a5610d9f0 / 06 1a5610d9f0 / 07 42 0b71. In RFC 8949 §4.2.1
+      deterministic map order (keys 01..07 ascending), and it re-encodes
+      byte-identically under a §4.2.1 encoder - checked.
+    fields:
+      - name: iss
+        label: 1
+        type: "tstr (StringOrURI, §2)"
+        required: false
+        encoding: "0x01 => tstr"
+        locator: "§3.1.1, §4 Table 1, §9.1.2"
+        constrained_by:
+          - "rfc-8392#R-0005"
+          - "rfc-8392#R-0017"
+          - "rfc-8392#R-0018"
+          - "rfc-8392#R-0032"
+          - "rfc-8392#R-0093"
+        note: >-
+          THE DEC-003 SLOT, AND THE TYPE IS THE OBSTACLE. §2 defines
+          StringOrURI as "represented as a CBOR text string instead of a JSON
+          text string", so a bare COSE Key Thumbprint - a byte string - cannot
+          be an iss value. rfc-9679 §5.7's URN form is the only encoding of a
+          thumbprint that fits, and it names the hash function H in the wire
+          format. See ../design-notes.md §2.
+      - name: sub
+        label: 2
+        type: "tstr (StringOrURI, §2)"
+        required: false
+        encoding: "0x02 => tstr"
+        locator: "§3.1.2, §4 Table 1, §9.1.2"
+        constrained_by:
+          - "rfc-8392#R-0005"
+          - "rfc-8392#R-0019"
+          - "rfc-8392#R-0020"
+          - "rfc-8392#R-0033"
+          - "rfc-8392#R-0094"
+      - name: aud
+        label: 3
+        type: "tstr, or [+ tstr] per §3.1.3 only"
+        required: false
+        encoding: "0x03 => tstr (every printed example); the array form is never printed"
+        locator: "§3.1.3, §4 Table 1, §9.1.2"
+        constrained_by:
+          - "rfc-8392#R-0021"
+          - "rfc-8392#R-0022"
+          - "rfc-8392#R-0023"
+          - "rfc-8392#R-0034"
+          - "rfc-8392#R-0095"
+        note: >-
+          THE ONE FIELD WHOSE TYPE THE DOCUMENT STATES TWICE AND DIFFERENTLY.
+          §3.1.3 permits an array of StringOrURI; §4 Table 1 says "text
+          string" and §9.1.2's registry entry says "Claim Value Type(s): text
+          string". All three printed examples use the scalar. A validator
+          generated from the table or the registry - which is what a code
+          generator reads - REJECTS a CWT §3.1.3 permits.
+          ../design-notes.md defect D-3.
+      - name: exp
+        label: 4
+        type: "int / float (NumericDate, §2; §4 Table 1 says integer or floating-point number)"
+        required: false
+        encoding: "0x04 => int or float; NO tag 1, per §2 and §5"
+        locator: "§3.1.4, §4 Table 1, §9.1.2"
+        constrained_by:
+          - "rfc-8392#R-0006"
+          - "rfc-8392#R-0007"
+          - "rfc-8392#R-0024"
+          - "rfc-8392#R-0025"
+          - "rfc-8392#R-0035"
+          - "rfc-8392#R-0039"
+          - "rfc-8392#R-0096"
+      - name: nbf
+        label: 5
+        type: "int / float (NumericDate)"
+        required: false
+        encoding: "0x05 => int or float; no tag 1"
+        locator: "§3.1.5, §4 Table 1, §9.1.2"
+        constrained_by:
+          - "rfc-8392#R-0006"
+          - "rfc-8392#R-0007"
+          - "rfc-8392#R-0026"
+          - "rfc-8392#R-0027"
+          - "rfc-8392#R-0036"
+          - "rfc-8392#R-0039"
+          - "rfc-8392#R-0097"
+      - name: iat
+        label: 6
+        type: "int / float (NumericDate)"
+        required: false
+        encoding: "0x06 => int or float; no tag 1"
+        locator: "§3.1.6, §4 Table 1, §9.1.2"
+        constrained_by:
+          - "rfc-8392#R-0006"
+          - "rfc-8392#R-0007"
+          - "rfc-8392#R-0028"
+          - "rfc-8392#R-0029"
+          - "rfc-8392#R-0037"
+          - "rfc-8392#R-0039"
+          - "rfc-8392#R-0098"
+        note: >-
+          THE FLOAT CASE IS NOT HYPOTHETICAL. Appendix A.7 prints iat as
+          1443944944.5, encoded fb 41d584367c200000 - a float64. This
+          extraction measured that float32 round-trips that value to
+          1443944960.0, so the width is load-bearing and a re-encoder that
+          narrows it breaks the MAC. ../examples/vectors.yaml V-0009.
+      - name: cti
+        label: 7
+        type: bstr
+        required: false
+        encoding: "0x07 => bstr"
+        locator: "§3.1.7, §4 Table 1, §9.1.2"
+        constrained_by:
+          - "rfc-8392#R-0030"
+          - "rfc-8392#R-0031"
+          - "rfc-8392#R-0038"
+          - "rfc-8392#R-0099"
+        note: >-
+          The ONLY byte-string claim slot, and so the only one a bare digest
+          fits without re-encoding. Wrong slot: §3.1.7 makes it the jti
+          equivalent, an identifier OF THE TOKEN, and §9.1.2 records "JWT
+          Claim Name: jti".
+      - name: "(RESERVED)"
+        label: 0
+        type: "N/A"
+        required: false
+        encoding: "0x00 => (nothing may be carried)"
+        locator: "§9.1.2"
+        constrained_by:
+          - "rfc-8392#R-0092"
+        note: >-
+          Registered as "This registration reserves the key value 0", with JWT
+          Claim Name N/A and Claim Value Type(s) N/A. It can never carry a
+          value. Note that 0 is the CHEAPEST possible claim key at 1 octet, and
+          it is spent on a reservation.
+      - name: "any other claim key"
+        label: "int / tstr"
+        type: any
+        required: false
+        encoding: "int (1..9 octets) or tstr (1 + length octets)"
+        locator: "§3, §9.1.1"
+        constrained_by:
+          - "rfc-8392#R-0013"
+          - "rfc-8392#R-0014"
+          - "rfc-8392#R-0084"
+          - "rfc-8392#R-0085"
+          - "rfc-8392#R-0086"
+          - "rfc-8392#R-0087"
+          - "rfc-8392#R-0088"
+        note: >-
+          THE EXTENSION POINT, AND IT IS A FLAT GLOBAL SPACE WITH NO KEY
+          COMPONENT. §9.1.1's four policy tiers are the only structure over it
+          and they are registration policy, not type. The only policy-free
+          range is integer < -65536, which costs 5 octets against 1 for the
+          cheapest - see schema/claim-key-policy.derived.yaml for every tier
+          priced from RFC 8949 §3. And §3 makes a collision in that range
+          SILENT: "all claims that are not understood by implementations MUST
+          be ignored". ../design-notes.md, R-M-12.
+
+  # =========================================================================
+  - name: CWT_Tagged
+    locator: "§6, §9.4.1, Figure 1"
+    encoding: "CBOR tag 61 wrapping a COSE-tagged object"
+    summary: >-
+      The CWT CBOR tag. §6: "Its use is optional and is intended for use in
+      cases in which this information would not otherwise be known." §9.4.1
+      registers tag 61 with Data Item "CBOR Web Token (CWT)".
+    layout: >-
+      d8 3d (tag 61) followed by one of the COSE tags. Figure 1 shows the shape
+      and Appendix A.4 is the only printed instance: Figure 12, source lines
+      1107-1110, 114 octets, beginning d83dd184... = 61(17([...])). 2 octets of
+      tag 61 head plus the inner COSE tag.
+    fields:
+      - name: "tag number"
+        label: 61
+        type: "CBOR tag"
+        required: true
+        encoding: "0xd8 0x3d"
+        locator: "§9.4.1"
+        constrained_by:
+          - "rfc-8392#R-0104"
+          - "rfc-8392#R-0105"
+      - name: "tagged content"
+        type: "one of COSE_Sign_Tagged / COSE_Sign1_Tagged / COSE_Mac_Tagged / COSE_Mac0_Tagged / COSE_Encrypt_Tagged / COSE_Encrypt0_Tagged"
+        required: true
+        encoding: "a COSE CBOR tag, never a bare COSE array"
+        locator: "§6"
+        constrained_by:
+          - "rfc-8392#R-0046"
+        note: >-
+          THE PAIRING RULE: "If present, the CWT tag MUST prefix a tagged
+          object using one of the COSE CBOR tags." So CWT tagging and COSE
+          tagging come as a pair - 61(COSE_Sign1) with no inner tag is
+          forbidden. One of the document's nine BCP 14 keywords.
+    not_authenticated: >-
+      NEITHER TAG LAYER IS INSIDE ANY SIGNATURE, and the document's own step
+      order proves it rather than the proof being ours: §7.1 step 6 prepends
+      both tags AFTER the COSE object exists, and §7.2 steps 2-3 strip them
+      BEFORE validation begins. RFC 9052 §4.4's Sig_structure is [context,
+      body_protected, external_aad, payload] and no tag is an input - confirmed
+      here by reproducing A.3's signature from exactly those four fields. So an
+      attacker can add or remove tag 61 or tag 18 without touching a signature,
+      and dropping tag 61 under MD-3 costs no AUTHENTICATED information.
+
+  # =========================================================================
+  - name: CWT_Envelope_variants
+    locator: "§7.1 step 4, §7.2 steps 3 and 5, Appendix A"
+    encoding: "COSE_Sign / COSE_Sign1 / COSE_Mac / COSE_Mac0 / COSE_Encrypt / COSE_Encrypt0, per RFC 9052"
+    summary: >-
+      RFC 8392 names six COSE structures and defines none of them. §7.1 step 4
+      and §7.2 step 5 each enumerate the same three cases (signed, MACed,
+      encrypted) over the two COSE forms, and both delegate every step to RFC
+      8152. §7.2 step 3 adds the untagged case.
+    layout: >-
+      WHAT APPENDIX A ACTUALLY PRINTS, decoded by this pass: A.3 is 18(...) =
+      COSE_Sign1_Tagged, 175 octets. A.4 is 61(17(...)) = CWT tag over
+      COSE_Mac0_Tagged, 114 octets. A.5 is 16(...) = COSE_Encrypt0_Tagged, 126
+      octets. A.6 is 16(...) whose plaintext is the 175-octet A.3 object
+      verbatim, 221 octets. A.7 is 17(...) = COSE_Mac0_Tagged, 42 octets. FOUR
+      OF THE FIVE CARRY A COSE TAG AND NO TAG 61; ONE CARRIES BOTH; NOT ONE IS
+      UNTAGGED. The fully untagged form MD-3 option 5 requires is permitted by
+      §7.2 step 3 and demonstrated nowhere in the defining document - so a
+      D5 fixture package has no reference bytes in RFC 8392 to check itself
+      against.
+    fields:
+      - name: protected
+        type: "bstr .cbor header_map (RFC 9052 §3)"
+        required: true
+        encoding: "bstr; A.3 is 43 a10126 = << {1: -7} >>"
+        locator: "§7.1 step 3, §7.2 step 4"
+        constrained_by:
+          - "rfc-8392#R-0050"
+          - "rfc-8392#R-0062"
+        note: >-
+          RFC 8392 constrains this only by reference - "The COSE Header MUST be
+          valid per the [RFC8152] specification" - and by §7.2 step 4's
+          understood-and-supported rule. The bucket itself is RFC 9052's.
+      - name: unprotected
+        type: "header_map (RFC 9052 §3)"
+        required: true
+        encoding: "map; A.3 is a1 04 52 ... = {4: 'AsymmetricECDSA256'}"
+        locator: "§7.2 step 4"
+        constrained_by:
+          - "rfc-8392#R-0062"
+        note: >-
+          WHERE EVERY PRINTED EXAMPLE PUTS THE KEY IDENTIFIER. Decoded here:
+          all five Appendix A CWTs carry kid (RFC 9052 label 4) in the
+          UNPROTECTED bucket and nothing in the protected bucket but alg. RFC
+          9052 §4.4's Sig_structure takes body_protected only, so the key
+          identifier in RFC 8392's reference signed CWT is OUTSIDE the
+          signature. COSE-conformant, and under R-O-01 it means the statement
+          does not bind its own issuer key. ../design-notes.md §3.
+      - name: payload
+        type: "bstr .cbor CWT_Claims_Set, or bstr .cbor a tagged COSE object when nested"
+        required: true
+        encoding: "bstr; A.3 is 5850 <80 octets> = the Figure 2 claims set byte for byte"
+        locator: "§7.1 step 2, §7.2 step 7, Appendix A.1"
+        constrained_by:
+          - "rfc-8392#R-0049"
+          - "rfc-8392#R-0068"
+          - "rfc-8392#R-0109"
+        note: >-
+          §7.1 step 2 names NO canonical form, so the payload travels as opaque
+          bytes and determinism is sidestepped rather than solved: copying the
+          bytes works and re-encoding them does not. Verified here - A.3's
+          payload is byte-identical to Figure 2's independently decoded hex.
+      - name: signature / tag / ciphertext
+        type: "bstr"
+        required: true
+        encoding: "A.3 5840 <64 octets> ECDSA r||s; A.4 48 <8 octets> truncated HMAC; A.5 5858 <88 octets> CCM ciphertext+tag"
+        locator: "§7.1 step 4, §7.2 step 5"
+        constrained_by:
+          - "rfc-8392#R-0052"
+          - "rfc-8392#R-0053"
+          - "rfc-8392#R-0054"
+          - "rfc-8392#R-0064"
+          - "rfc-8392#R-0065"
+          - "rfc-8392#R-0066"
+        note: >-
+          Entirely RFC 8152's. The three bullets of §7.1 step 4 carry three of
+          the document's nine keywords and all three say the same thing: "all
+          steps specified in [RFC8152] ... MUST be followed".
+
+  # =========================================================================
+  - name: COSE_Key_examples
+    locator: "Appendix A.2.1, A.2.2, A.2.3"
+    encoding: "CBOR map (COSE_Key, RFC 9052 §7)"
+    summary: >-
+      RFC 8392 defines no key structure. These three are RFC 9052 §7 COSE_Keys
+      as Appendix A.2 instantiates them, and they are here for two reasons: the
+      examples cannot be used without them, and TWO OF THE THREE CARRY A SOURCE
+      DEFECT this pass confirmed by decoding.
+    layout: >-
+      Decoded by this pass. A.2.1 Figure 4, lines 961-962, 37 octets:
+      {-1: h'231f...b383' (16), 1: 4 Symmetric, 2: h'Symmetric128', 3: 10
+      AES-CCM-16-64-128}. A.2.2 Figure 6, lines 977-978, 54 octets:
+      {-1: h'4036...9388' (32), 1: 4, 2: h'Symmetric256', 3: 10}. A.2.3
+      Figure 8, lines 1018-1022, 132 octets: {-4: d, -3: y, -2: x, -1: 1
+      P-256, 1: 2 EC2, 2: h'AsymmetricECDSA256', 3: -7 ES256}.
+      ALL THREE ARE IN NON-DETERMINISTIC MAP ORDER: their keys run -1 (0x20)
+      before 1 (0x01), where RFC 8949 §4.2.1 sorts by encoded key bytes and so
+      requires 1, 2, 3, -1. Every one of the five CWT structures in the same
+      appendix IS in §4.2.1 order. Measured here by re-encoding each under a
+      §4.2.1 encoder: 5 of 5 CWTs byte-identical, 0 of 3 keys.
+    fields:
+      - name: kty
+        label: 1
+        type: int
+        required: true
+        encoding: "0x01 => 0x04 (Symmetric) in A.2.1/A.2.2, 0x02 (EC2) in A.2.3"
+        locator: "RFC 9052 §7"
+        constrained_by: []
+      - name: kid
+        label: 2
+        type: bstr
+        required: false
+        encoding: "0x02 => bstr in all three sets of BYTES"
+        locator: "RFC 9052 §7"
+        constrained_by: []
+        note: >-
+          SOURCE DEFECT, CONFIRMED BY DECODING. Figure 6's hex puts kid at
+          label 2, as Figures 4 and 8 do; Figure 7's diagnostic notation prints
+          it at label 4 - which is the COSE HEADER label for kid, not the
+          COSE_Key label. Erratum 7982 (status Reported) says the label should
+          be 2, i.e. believe the hex. ../design-notes.md defect D-1.
+      - name: alg
+        label: 3
+        type: int
+        required: false
+        encoding: "0x03 => 0x0a (10) in A.2.1 and A.2.2, 0x26 (-7) in A.2.3"
+        locator: "RFC 9052 §7"
+        constrained_by: []
+        note: >-
+          THE SECOND HALF OF THE SAME DEFECT, AND IT PUSHES THE OTHER WAY.
+          Figure 6's hex gives alg 10 (AES-CCM-16-64-128); Figure 7's
+          diagnostic prints "3: 4 / HMAC 256/64 /". Erratum 8655 (status
+          Reported) says the value should be 4, i.e. believe the diagnostic. So
+          the two errata on one figure contradict each other about which
+          rendering is authoritative. As printed in the hex, this key declares
+          AES-CCM and is then used to MAC Figures 12 and 18, whose protected
+          headers both declare alg 4 - which RFC 9053 §3.1 forbids. BUT THE
+          KEY MATERIAL IS FINE: this pass reproduced both MAC tags from Figure
+          6's own k bytes. ../design-notes.md defect D-1.
+      - name: "k / crv, x, y, d"
+        label: "-1 / -1, -2, -3, -4"
+        type: "bstr / int and bstr"
+        required: true
+        encoding: "0x20 => bstr (k, 16 or 32 octets); for EC2, 0x20 => 1 (P-256) and 0x21/0x22/0x23 => 32-octet bstr"
+        locator: "RFC 9053 §4.3, §2.1"
+        constrained_by: []
+        note: >-
+          A.2.3 is internally consistent and was checked: the public point
+          (x, y) is on P-256 and equals d*G, and A.3's signature verifies under
+          it. That is why ../examples/vectors.yaml recommends A.2.3 + Figure 10
+          as the fixture to build on.
+
+  # =========================================================================
+  - name: COSE_signing_and_MAC_inputs
+    locator: "§7.1 step 4, §7.2 step 5 (both by reference to RFC 8152)"
+    encoding: "CBOR array, per RFC 9052 §4.4 / §6.3 / §5.3"
+    summary: >-
+      NOT DEFINED BY RFC 8392 AT ALL, and reconstructed here because the
+      document's examples cannot be verified without it and because WHAT IS
+      NOT IN IT is the whole of the tag argument. Reproduced by this pass from
+      RFC 9052's definitions and confirmed by the three cryptographic checks
+      below.
+    layout: >-
+      Sig_structure for A.3: 84 6a "Signature1" 43 a10126 40 5850 <80-octet
+      payload>, 99 octets, and ECDSA-P256/SHA-256 over those 99 octets with
+      A.2.3's public key VERIFIES A.3's 64-octet signature. MAC_structure for
+      A.4: 84 64 "MAC0" 43 a10104 40 5850 <80-octet payload>, and
+      HMAC-SHA-256(A.2.2's k, that)[:8] EQUALS A.4's printed tag
+      093101ef6d789200. Same for A.7's tag b8816f34c0542892 over the 11-octet
+      float payload. Enc_structure for A.5 and A.6: 83 68 "Encrypt0" 43 a1010a
+      40, 15 octets, and AES-128-CCM with the 13-octet iv DECRYPTS both with a
+      valid tag.
+    fields:
+      - name: context
+        type: tstr
+        required: true
+        encoding: '"Signature1" / "MAC0" / "Encrypt0"'
+        locator: "RFC 9052 §4.4, §6.3, §5.3"
+        constrained_by: []
+      - name: body_protected
+        type: bstr
+        required: true
+        encoding: "the protected bucket's serialised bytes"
+        locator: "RFC 9052 §4.4"
+        constrained_by: []
+      - name: external_aad
+        type: bstr
+        required: true
+        encoding: "0x40 (empty) in every Appendix A case"
+        locator: "RFC 9052 §4.4"
+        constrained_by: []
+      - name: payload
+        type: bstr
+        required: true
+        encoding: "the claims-set bytes; absent from Enc_structure"
+        locator: "RFC 9052 §4.4"
+        constrained_by: []
+    what_is_absent: >-
+      NO TAG AND NO UNPROTECTED HEADER IS AN INPUT TO ANY OF THE THREE. That is
+      the single most load-bearing fact in this file for MD-3: it makes CBOR
+      tag 61 and the COSE tags unauthenticated, and it makes the kid that all
+      five Appendix A CWTs carry in the unprotected bucket unauthenticated too.
+      Demonstrated here rather than argued: the signature and both MAC tags
+      reproduce from exactly the four fields above, with the tags and the
+      unprotected map excluded.
+
+# ===========================================================================
+coverage:
+  structures: 5
+  fields: 23
+  fields_with_constrained_by: 15
+  requirements_cited: 55
+  requirements_total: 110
+  dangling_ids: 0
+  method: >-
+    Recomputed by the generator at write time against ../requirements.yaml,
+    not asserted. Every id in this file resolves to an entry there.
+  unwired_and_why: >-
+    FIFTY-FIVE OF THE 110 REQUIREMENTS CONSTRAIN NO FIELD, and the grouping is
+    the finding rather than the gap. By locator: §1 and §1.1 (R-0001 to
+    R-0004) are scope and motive; §2 (R-0008 to R-0011) are the four
+    definitional terms, which the structures quote in `summary` rather than
+    any field carrying; §3 and §3.1 (R-0012, R-0015, R-0016) are the
+    out-of-scope statement and the duty to profile - they constrain the WHOLE
+    claims set, not a field, and CWT_Claims_Set.summary quotes them; §5
+    (R-0040, R-0041) are the rationale for the tag prohibition and its escape
+    hatch, neither of which binds bytes, while R-0039, which does, IS wired to
+    exp, nbf and iat; §6 (R-0042 to R-0045) are the three ways to recognise a
+    CWT and the optionality statement - facts about knowledge, not about
+    octets; every procedural step of §7.1 and §7.2 except the four that fix a
+    field (R-0049, R-0050, R-0062, R-0068) belongs to ../protocol.yaml and
+    ../state-machine.yaml, which cite them; §8 (R-0069 to R-0072) are security
+    considerations; §9.1 (R-0073 to R-0080) is registry PROCESS - review
+    periods, mailing lists, expert composition - which binds IANA and
+    registrants, not a wire field; §9.1.1's six non-tier template fields
+    (R-0081 to R-0083, R-0089 to R-0091) are what a REGISTRATION must contain,
+    not what a CWT must contain; §9.2, §9.2.1, §9.3 and §9.3.1 are the
+    media-type and Content-Format registrations, which name the type from
+    OUTSIDE the structure; and Appendix A's four presentation rules (R-0106 to
+    R-0108, R-0110) bind a fixture builder and are cited by
+    ../examples/vectors.yaml instead.
+
+    THE SHAPE OF THAT LIST IS THE POINT. A document whose normative content is
+    a registry policy, two procedures and a type table has most of its
+    requirements land outside its own wire format: only 55 of 110 touch a
+    byte.

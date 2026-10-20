@@ -1,0 +1,81 @@
+; rfc-9596 — the COSE "typ" (type) header parameter, as a grammar
+; DERIVED - not verbatim. RFC 9596 SHIPS NO GRAMMAR AT ALL: CDDL, ABNF, ASN.1
+; and JSON Schema each occur zero times in its 232 lines, and the word `syntax`
+; occurs three times as the English word. So every rule below is this library's
+; rendering of §1's and §2's prose and §4.1's Table 1, written for FX-1. Cite
+; RFC 9596's prose, never this file.
+;
+; Locators are RFC 9596's. CDDL per RFC 8610. The COSE header buckets are RFC
+; 9052 §3's and are named here, not redefined.
+
+typ-label = 16                        ; §4.1 Table 1
+
+; §2: "The syntax of this header parameter value is the same as the content
+; type header parameter defined in Section 3.1 of [RFC9052]; it is either an
+; unsigned integer as registered in the "CoAP Content-Formats" registry
+; [CoAP.ContentFormats] or a string content type value."
+;
+; BOTH BRANCHES ARE GLOBAL IANA REGISTRIES WITH NO KEY COMPONENT, which is the
+; shape ARCH-0002 P1 and R-M-12 reject. There is no way to spell a
+; (defining key, label) type name here except by burying it inside a media type
+; string - itself a global allocation - or inside the unconstrained media type
+; parameters the next rule admits.
+typ-value = coap-content-format / content-type-string
+
+coap-content-format = uint            ; [CoAP.ContentFormats]
+content-type-string = tstr            ; [MediaTypes], plus §2's parameters
+
+; §2: "Content type values have a media type name [MediaTypes] and MAY include
+; media type parameters."
+;
+; THE PARAMETERS ARE UNCONSTRAINED BY THIS DOCUMENT. CDDL cannot express
+; "a media type name optionally followed by parameters" without an .abnf or
+; .regexp controller, and RFC 9596 supplies neither a grammar nor a reference to
+; one, so this library does not invent one here (R-O-03). The equality problem
+; this creates is named at the bottom of this file.
+
+; THE PLACEMENT RULE, WHICH IS THE DOCUMENT'S ONLY OBLIGATION.
+;
+;   §2: "The "typ" parameter MUST NOT be present in unprotected headers."
+;
+; RFC 9052 §4.4's Sig_structure is
+; [context, body_protected, external_aad, payload], so this prohibition puts
+; typ INSIDE the signature. It is the strongest placement rule in this lane:
+; rfc-9597 §2 only RECOMMENDS protected placement for its own label 15.
+
+cose-header-with-typ = [
+  protected: bstr .cbor {? typ-label => typ-value, * label => any},
+  unprotected: {* nontyp-label => any}        ; §2 MUST NOT
+]
+
+label = int / tstr                    ; RFC 9052 §1.4
+nontyp-label = label .ne 16           ; this library's rule, from §2's MUST NOT
+
+; `? typ-label` and not `typ-label`: §2 says "Use of this header parameter is
+; OPTIONAL." Nothing in RFC 9596, rfc-9597 or rfc-9942 ever requires it.
+
+; WHAT CANNOT BE EXPRESSED HERE, AND IS THEREFORE A PROFILE'S JOB:
+;
+;   1. EQUALITY. The same type has two wire spellings - typ: 61 (CoAP
+;      Content-Format, rfc-8392 §9.3.1) and typ: "application/cwt" (media type,
+;      rfc-8392 §9.2.1) - and they compare unequal under any byte comparison.
+;      Media type names are case-insensitive (RFC 2045 §5.1, a document this
+;      library does not hold) while a CBOR tstr is not, and §2 permits media
+;      type parameters unconstrained, so "application/cwt", "Application/CWT"
+;      and "application/cwt; v=1" are three values and one type. §3's only
+;      guidance is to reject a value "different than values that they expect",
+;      and "different" is undefined. A CONFUSION-RESISTANCE MECHANISM WITH AN
+;      UNSPECIFIED EQUALITY RELATION CAN BE DEFEATED BY RESPELLING THE TYPE.
+;      Our rule is one line: map both spellings to a single canonical form
+;      before comparing, and state which form is canonical.
+;
+;   2. CONSISTENCY WITH CONTENT TYPE. typ (16) and content type (3) have the
+;      same syntax and overlapping value spaces, and §2 distinguishes them only
+;      by scope - complete object versus payload. NOTHING requires them to
+;      agree, and a verifier reading one and not the other is conformant.
+;
+;   3. ANY CHECK AT ALL. §2: "The "typ" (type) header parameter is ignored by
+;      COSE implementations ... other than being passed through to applications
+;      using those implementations." §3's two reject rules are LOWER CASE. So
+;      the mechanism is a label with no check attached anywhere in the
+;      specification stack, and a schema cannot supply one.

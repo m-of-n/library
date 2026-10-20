@@ -1,0 +1,67 @@
+; rfc-8392 — CWT Claims Set
+; DERIVED - not verbatim. RFC 8392 ships no CDDL (the string "CDDL" occurs zero
+; times in it), so every rule below is this library's rendering of §2, §3,
+; §3.1.1-§3.1.7, §4 Table 1 and §9.1.2, written for FX-1. Cite RFC 8392's
+; prose, never this file, as the standard's own grammar.
+;
+; Locators are RFC 8392's. CDDL per RFC 8610.
+;
+; WHAT THE SOURCE FIXES AND WHAT IT LEAVES OPEN, so the choices below are
+; visible rather than silent:
+;   - §2 fixes the claims set as "The CBOR map that contains the claims
+;     conveyed by the CWT" -> a map, not an array.
+;   - §3 puts the MANDATORY claim set out of scope and §3.1 declines to make
+;     any claim mandatory, so EVERY member below is optional and the empty map
+;     {} is conformant. That is the source's position, not a modelling choice.
+;   - §3 requires unknown claims to be IGNORED, so the extension socket is
+;     wide open and failure is silent.
+;   - §4 Table 1 gives the value types. §3.1.3 ALSO permits an array for aud,
+;     which Table 1 and §9.1.2 both exclude; both forms appear below and the
+;     disagreement is recorded, not resolved. See design-notes.md defect D-3.
+;   - §9.1.1 fixes the claim-key SPACE as int / tstr of any length. Nothing in
+;     the document narrows it further.
+
+cwt-claims-set = {
+  ? iss => StringOrURI            ; §3.1.1, claim key 1
+  ? sub => StringOrURI            ; §3.1.2, claim key 2
+  ? aud => aud-value              ; §3.1.3, claim key 3
+  ? exp => NumericDate            ; §3.1.4, claim key 4
+  ? nbf => NumericDate            ; §3.1.5, claim key 5
+  ? iat => NumericDate            ; §3.1.6, claim key 6
+  ? cti => bstr                   ; §3.1.7, claim key 7
+  * other-claim-key => any        ; §3: unknown claims MUST be ignored
+}
+
+iss = 1
+sub = 2
+aud = 3
+exp = 4
+nbf = 5
+iat = 6
+cti = 7
+
+; §3.1.3 against §4 Table 1 and §9.1.2. The prose admits both; the table and
+; the IANA entry admit only the first. A validator generated from the registry
+; REJECTS a CWT this section permits.
+aud-value = StringOrURI / [+ StringOrURI]
+
+; §2: "represented as a CBOR text string instead of a JSON text string".
+; THE TYPE THAT DECIDES DEC-003: a bare COSE Key Thumbprint is a byte string
+; and cannot be an iss or sub value. See design-notes.md §2.
+StringOrURI = tstr
+
+; §2: "a CBOR numeric date (from Section 2.4.1 of [RFC7049])", "modified so
+; that the leading tag 1 (epoch-based date/time) MUST be omitted". §4 Table 1
+; widens this to "integer or floating-point number", which is the form
+; Appendix A.7 actually prints.
+NumericDate = int / float
+
+; §9.1.1's Claim Key field. The four allocation policy tiers are a REGISTRY
+; policy over this space, not a type constraint, so they cannot be expressed
+; here; schema/claim-key-policy.derived.yaml carries them as data with the
+; CBOR encoding cost of each tier.
+claim-key = int / tstr
+other-claim-key = claim-key       ; any key not one of 1..7; key 0 is RESERVED
+
+; §0 is reserved by §9.1.2 and can never carry a value.
+reserved-claim-key = 0

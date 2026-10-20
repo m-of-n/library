@@ -166,8 +166,12 @@ Table 1), so this parameter does not merely permit that dependence — it names
 the registry as the definition of its own value space. Nesting a registry inside
 a header parameter removes the tag dependence and installs a claim-key
 dependence in its place. `rfc-9052`'s formulation holds and is now confirmed one
-layer down: **"no tags" and "no registry dependence" are different rules, and
-MD-3 states only the first.**
+layer down. **[quotation corrected 2026-10-20 by the FX-1 extraction's own quote
+audit]** It reads, exactly: *`"No tags"` and `"no registry dependence"` are
+different rules, and MD-3 states the first.* This summary had it with **`only`
+inserted** — *"MD-3 states only the first"* — which `distilled/design-notes.md`
+now adds in its own voice, marked `[analysis]`, rather than attributing it to
+that record.
 
 Two further costs, both measurable:
 
@@ -206,23 +210,40 @@ implementation and has no implementation-status section.
 
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata, relations, `bears_on` |
+| `record.yaml` | metadata, relations, `bears_on` (widened to six ids by the extraction) |
 | `summary.md` | this document |
 | `summary.html` | GENERATED and untracked — `bin/render-html`, see `docs/generated-views.md` |
+| `distilled/` | **the FX-1 artifact set — five artifacts, three declared not-applicable with measured reasons** |
 
-**No `distilled/`.** Nothing has been added to a `distilled/` directory, so
-FX-1 does not fire (`docs/extraction.md`, CLAUDE.md "Extracting, not
-touching"); library#39 Tier 2 owns the eventual extraction. This is the
-*smallest* of the three records in the lane — the whole document is 265 lines
-and its body holds **8 capitalised BCP 14 keywords** (2 MUST, 1 MUST NOT,
-2 RECOMMENDED, 3 MAY, all in §1 and §2; counted here, boilerplate excluded).
-An FX-1 pass on it would be short but not empty: a `requirements.yaml` of 8
-stated plus the lowercase inferred ones, a `schema/` holding the four CDDL lines
-(verbatim, and declared non-normative by the source), one `messages.yaml` entry
-for label 15, and `design-notes.md`. There are **no test vectors to extract** —
-the document prints not one byte, no hex, no diagnostic-notation example and no
-complete COSE object, which is itself the finding an `examples/` artifact would
-have to record.
+**The extraction has landed, and `distilled/README.md` is its index.** Added
+2026-10-20 by library#39 Tier 2: `normative.md` (16 verbatim regions with
+per-region digests), `requirements.yaml` (**28 entries, counts reconciling
+8 = 8**), `schema/` (1 verbatim + 2 derived), `messages.yaml` (3 structures,
+`constrained_by` wired — and **all eight wired ids are §2's**, because §2 is
+the only section that says anything about bytes) and `design-notes.md`.
+`distillation.standard: FX-1` is declared and **no `profile`** is: passes 2 and
+3 have not run and no `reviewed_by` is signed.
+
+**`protocol`, `state-machine` and `examples` are `not_applicable`, each with
+the measurement written out** rather than asserted — the word sweeps are in
+`record.yaml` and in each artifact's own file. The prediction in this section's
+earlier wording held: the FX-1 pass was short and not empty, and the keyword
+census above was confirmed exactly, keyword by keyword and line by line
+(102, 105, 107, 108 in §1; 148, 152, 154, 157 in §2).
+
+**There are no test vectors to extract** — the document prints not one byte, no
+hex, no diagnostic-notation example and no complete COSE object.
+`distilled/examples/README.md` records that as the finding, with the counts, and
+draws the consequence: **every fixture for label 15 would be ours**, with
+nothing to cite under `R-O-03`. In the same lane `rfc-8392` prints five complete
+CWTs and the extraction **verified all five cryptographically**, so the base
+document supplies reference bytes for the envelope and neither of the two header
+parameters we would actually rely on supplies any.
+
+One finding this summary did not have, from the sibling extraction: the
+coverage boundary above is now **demonstrated rather than read off RFC 9052
+§4.4**. `rfc-8392`'s A.3 signature was rebuilt from `Sig_structure`'s four
+fields and **verifies**, so an unprotected header map is provably not an input.
 
 No `contradicts` edge is set. `rfc-9596` makes protected placement a MUST NOT
 violation for `typ` where this document only RECOMMENDS it for label 15, which

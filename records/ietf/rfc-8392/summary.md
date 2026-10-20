@@ -203,7 +203,15 @@ price it:
 | > 65535, strings longer than 2 | Expert Review | 5 bytes |
 | < −65536 | **Private Use** | **5 bytes** |
 
-Computed here from RFC 8949 §3.1 head encodings, not quoted. **The policy-free
+Computed here from RFC 8949 §3.1 head encodings, not quoted.
+**[narrowed 2026-10-20 by the FX-1 extraction, pass 1.]** The Expert Review row
+flattens two different costs: an integer above 65535 is **5** octets and a
+three-character text key is **4** (`1 + n` thereafter). The Expert Review and
+Private Use integer rows also become **9** octets beyond ±2³². And there is
+**no Private Use range for text keys at all**, so "pick a URI-ish label and
+avoid the registry" is not an option either. The 5× headline and the 35-vs-7
+arithmetic below survive unchanged; `distilled/schema/claim-key-policy.derived.yaml`
+carries every tier priced over the boundary values of each range. **The policy-free
 range costs five times the cheapest range**, in a format whose stated reason to
 exist is byte efficiency on low-power radio. Seven claims of our own in Private
 Use pay 35 bytes of keys against 7 for the registered set; the only way to buy
@@ -215,9 +223,13 @@ named — *the namespace that gets consumed is the one the policy subsidises* �
 and it arrives from a different registry, under a different allocation policy,
 in a document from a different working group. One sample was an observation; two
 is a pattern worth writing into the `DEC-002` ADR when it is finally written.
-The honest framing remains `rfc-9052`'s: "no tags" and "no registry dependence"
-are different rules, and MD-3 states only the first. Adopting CWT trades the tag
-registry for a bigger one.
+The honest framing remains `rfc-9052`'s, and **[quotation corrected 2026-10-20
+by the FX-1 extraction's own quote audit]** it reads, exactly: *`"No tags"` and
+`"no registry dependence"` are different rules, and MD-3 states the first.* This
+summary had it with **`only` inserted** — *"MD-3 states only the first"* — which
+is the word the three design notes in this lane now add in their own voice,
+marked `[analysis]`, rather than attributing it to that record. Adopting CWT
+trades the tag registry for a bigger one.
 
 ## Implementations
 
@@ -241,25 +253,36 @@ suite was found for any of them, and none of the four was run here.
 
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata, relations, `bears_on` |
+| `record.yaml` | metadata, relations, `bears_on` (widened to seven ids by the extraction) |
 | `summary.md` | this document |
 | `summary.html` | GENERATED and untracked — `bin/render-html`, see `docs/generated-views.md` |
+| `distilled/` | **the FX-1 artifact set — all eight artifacts, pass 1 of 3 complete** |
 
-**No `distilled/`.** This record is at the summary bar, not FX-1: nothing has
-been added to a `distilled/` directory, so FX-1 does not fire
-(`docs/extraction.md`, CLAUDE.md "Extracting, not touching"). What would
-trigger one is library#39 Tier 2's eventual extraction, and this is the record
-in the CWT lane that most needs it — 25 pages with seven claim definitions,
-four IANA registrations, two numbered procedures and five complete test vectors
-is a full FX-1 artifact set, `examples/` included (the vectors decode, and two
-of them are wrong — see Limits). The verbatim normative text is **not** here by
-design; the §-locators above are the contract, and `distilled/normative.md` is
-where the verbatim check can reach it.
+**The extraction has landed, and `distilled/README.md` is its index.** Added
+2026-10-20 by library#39 Tier 2: `normative.md` (37 verbatim regions,
+per-region digests), `requirements.yaml` (110 entries, counts reconciling
+9 = 9), `schema/` (1 verbatim + 4 derived, including §9.1.1's four allocation
+tiers priced in octets), `messages.yaml` (5 structures, 23 fields,
+`constrained_by` wired), `protocol.yaml` + `protocol.md` (three flows with
+Mermaid diagrams — **applicable here**, unlike the lane's other two records),
+`state-machine.yaml` (two loops, written out), `examples/` (12 vectors) and
+`design-notes.md`. `distillation.standard: FX-1` is declared and **no
+`profile`** is: passes 2 and 3 have not run and no `reviewed_by` is signed, so
+the artifacts are readable and citable but not buildable-on.
 
-Also absent, deliberately: no CDDL. RFC 8392 contains none — the claim types
-live in §4's prose table and in the IANA entries — so any CDDL here would be
-ours, and writing it before the extraction would put a derived schema somewhere
-the derived-naming check (#44) does not look.
+**The one result to take from it:** all five of Appendix A's CWTs **verify
+cryptographically** — A.3's ECDSA signature verifies, A.4's and A.7's MAC tags
+reproduce, A.5 and A.6 decrypt with valid CCM tags, and A.6's plaintext is the
+A.3 object byte for byte. The three primitives were implemented for that pass
+over `hashlib` alone, with no CBOR, COSE, CWT, EC or AES library. That result
+narrows two claims in this summary; both narrowings are recorded in Limits
+below rather than edited away.
+
+The CDDL this summary said would have to be ours is now in
+`distilled/schema/`, correctly carrying `.derived.` in every filename —
+RFC 8392 still contains none of its own, and the extraction measured it:
+`CDDL`, `ABNF`, `ASN.1`, `JSON Schema`, `schema` and `grammar` each occur
+**zero** times in the source.
 
 ## Limits
 
@@ -276,11 +299,22 @@ the derived-naming check (#44) does not look.
 - **And as printed, that key fails a conformance check.** It declares `alg` 10
   (AES-CCM-16-64-128) and is then used to MAC Figures 12 and 18, both of which
   declare `alg` 4 (HMAC 256/64) in their protected headers. RFC 9053 §3.1: *"If
-  the "alg" field is present, it MUST match the HMAC algorithm being used."* So
-  **two of the five Appendix A CWTs are not reproducible from the printed key
-  without applying two unverified errata** — decisive for anyone planning to use
-  RFC 8392's vectors as fixtures. Use A.2.3's ECDSA key and Figure 10 instead;
-  that one decodes cleanly and self-consistently.
+  the "alg" field is present, it MUST match the HMAC algorithm being used."*
+  **[narrowed 2026-10-20 by the FX-1 extraction, pass 1.]** This bullet
+  continued: *"So **two of the five Appendix A CWTs are not reproducible from
+  the printed key without applying two unverified errata** — decisive for
+  anyone planning to use RFC 8392's vectors as fixtures."* **They are
+  reproducible.** Both MAC tags — A.4's `093101ef6d789200` and A.7's
+  `b8816f34c0542892` — reproduce exactly from Figure 6's own 32 octets of `k`
+  under HMAC-SHA-256 truncated to 64 bits (`distilled/examples/vectors.yaml`
+  V-0003, V-0006, V-0009). The two errata concern the key's **metadata** — the
+  `kid` *label* and the `alg` *value* — and nothing in an HMAC computation reads
+  either. So the finding is narrower and sharper: **A.2.2 is a working fixture
+  that fails a conformance check on its own `alg` declaration.** The practical
+  advice stands unchanged — use A.2.3's ECDSA key and Figure 10 instead,
+  because that fixture is self-consistent **as well as** working, and the
+  extraction confirmed both (`d*G == (x, y)`, the point is on P-256, and the
+  signature verifies).
 - **An `aud` array is permitted by the prose and excluded by both summaries of
   it.** §3.1.3 allows *"each of the audience array element values"* to be a
   StringOrURI *"when the audience claim value is an array"*. §4's Table 1 says

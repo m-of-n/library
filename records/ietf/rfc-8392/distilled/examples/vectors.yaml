@@ -1,0 +1,497 @@
+record: rfc-8392
+reviewed_by: ""
+vector_count: 12
+source_digest: "9021ff7c4d274cf34873fe4f4fb17c4fe323247dd0f96bfcab54909bfcdc5f13"
+
+# RFC 8392 PRINTS FIVE COMPLETE CWTs, AND ALL FIVE VERIFY CRYPTOGRAPHICALLY.
+#
+# That is the headline of this file and it was not a foregone conclusion: the
+# summary this record carries warned that two of the five "are not reproducible
+# from the printed key". They are. See V-0005 and the correction note below -
+# what fails is a CONFORMANCE CHECK on the key's metadata, not the key material,
+# and the distinction is worth having because it decides whether A.4 and A.7 can
+# be used as fixtures. They can.
+#
+# WHAT WAS DONE, AND WITH WHAT. A CBOR decoder/encoder (RFC 8949 §3 and §4.2.1),
+# ECDSA P-256 verification (RFC 9053 §2.1), HMAC-SHA-256 and AES-128-CCM with
+# L=2 and an 8-octet tag (RFC 9053 §3.1 and §4.2), ALL WRITTEN FOR THIS PASS
+# over `hashlib` alone. NO CBOR, COSE, CWT, EC OR AES LIBRARY WAS USED, so a
+# shared library bug cannot hide here. The AES core was gated on FIPS 197 C.1
+# (69c4e0d86a7b0430d8cdb78070b4c55a) before it was used for anything.
+#
+# PROVENANCE CONVENTION, as rfc-9964's vectors use it:
+#   source: printed   - every byte of every value in the vector appears in
+#                       RFC 8392 itself. `reproduced` says what this extraction
+#                       recomputed from those bytes and whether it matched.
+#   source: derived   - every byte is printed by the source, but the ASSERTION
+#                       the vector makes is this extraction's.
+# NOTHING IN THIS FILE IS COMPUTED-AND-PRESENTED-AS-PRINTED. There are no
+# invented keys and no invented CWTs: the document supplies enough that none
+# was needed.
+#
+# `locator` gives the section AND the exact line range in .cache/rfc-8392.txt,
+# plus the sha256 of that run of lines, so any value here can be re-cut from the
+# source without trusting this file. The RFC hard-wraps its hex blocks for
+# display - "Line breaks are for display purposes only" (A.2, R-0110) - and the
+# only transformation applied is joining those lines; nothing else is altered.
+#
+# PAGE DECORATION is never inside a quoted range, so no hex run here contains a
+# running footer. Checked by the region machinery, which refuses such a range.
+
+vectors:
+
+  # =========================================================================
+  - id: V-0001
+    name: "A.1 CWT Claims Set - the payload every other vector carries"
+    locator: "Appendix A.1, Figures 2 and 3; source lines 923-925"
+    region_sha256: "3d6621914ecb3bdc554fd44f1916228146f9ffcf4f8890860d1c1ad45a880e7a"
+    source: printed
+    octets: 80
+    hex: "a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b71"
+    decoded:
+      1: "coap://as.example.com"
+      2: "erikw"
+      3: "coap://light.example.com"
+      4: 1444064944
+      5: 1443944944
+      6: 1443944944
+      7: "h'0b71'"
+    expected:
+      decodes_as: "CBOR map, 7 pairs, keys 1 to 7"
+      claim_types: "iss/sub/aud are tstr; exp/nbf/iat are unsigned int; cti is a 2-octet bstr"
+      no_tags: "no CBOR tag anywhere in the item, as §5 and §2 require"
+      deterministic_map_order: true
+    reproduced: >-
+      Decoded with this pass's own decoder: {1: 'coap://as.example.com',
+      2: 'erikw', 3: 'coap://light.example.com', 4: 1444064944, 5: 1443944944,
+      6: 1443944944, 7: h'0b71'}, matching Figure 3's diagnostic notation
+      exactly. Re-encoded under an RFC 8949 §4.2.1 encoder: BYTE-IDENTICAL, so
+      the printed claims set is already in deterministic map order.
+    constrains:
+      - "rfc-8392#R-0011"
+      - "rfc-8392#R-0032"
+      - "rfc-8392#R-0033"
+      - "rfc-8392#R-0034"
+      - "rfc-8392#R-0035"
+      - "rfc-8392#R-0036"
+      - "rfc-8392#R-0037"
+      - "rfc-8392#R-0038"
+      - "rfc-8392#R-0039"
+      - "rfc-8392#R-0109"
+    note: >-
+      aud is the SCALAR form here, as in all three places the claims set is
+      printed. The array form §3.1.3 permits appears nowhere in the document,
+      so a fixture for it would be ours. See ../design-notes.md defect D-3.
+
+  # =========================================================================
+  - id: V-0002
+    name: "A.2.1 128-bit symmetric COSE_Key"
+    locator: "Appendix A.2.1, Figures 4 and 5; source lines 961-962"
+    region_sha256: "8dcdf9ebe433a079bbc23f686ea90a0f714a9e020cb4226743e90b4b3622240c"
+    source: printed
+    octets: 37
+    hex: "a42050231f4c4d4d3051fdc2ec0a3851d5b3830104024c53796d6d6574726963313238030a"
+    decoded:
+      "-1 (k)": "h'231f4c4d4d3051fdc2ec0a3851d5b383' (16 octets)"
+      "1 (kty)": "4 (Symmetric)"
+      "2 (kid)": "h'53796d6d6574726963313238' = 'Symmetric128'"
+      "3 (alg)": "10 (AES-CCM-16-64-128)"
+    expected:
+      clean: true
+      kid_label: 2
+      alg: 10
+      usable_for: "V-0006 (A.5 encrypted) and V-0007 (A.6 nested)"
+    reproduced: >-
+      Decoded here. THE HEX AND FIGURE 5's DIAGNOSTIC NOTATION AGREE
+      COMPLETELY: both put kid at label 2 and alg at 10. This is the key A.2.2
+      should have looked like, and the contrast is what makes A.2.2's defect a
+      defect rather than a convention.
+    reproduced_failure_mode: >-
+      NOT in RFC 8949 §4.2.1 deterministic map order: the keys run -1, 1, 2, 3,
+      i.e. 0x20 before 0x01, where §4.2.1 sorts by encoded key bytes and
+      requires 1, 2, 3, -1. Re-encoding changes the bytes. Measured, not
+      assumed. Harmless for this key - nothing digests it - and recorded
+      because all three printed COSE_Keys share it while none of the five
+      printed CWTs does.
+    constrains: []
+    note: >-
+      constrains is EMPTY and that is a finding: RFC 8392 defines no key
+      structure at all. This is RFC 9052 §7's COSE_Key with RFC 9053 §4.3's
+      Symmetric parameters, instantiated by RFC 8392's appendix.
+
+  # =========================================================================
+  - id: V-0003
+    name: "A.2.2 256-bit symmetric COSE_Key - THE KEY WITH TWO DEFECTS"
+    locator: "Appendix A.2.2, Figures 6 and 7; source lines 977-978"
+    region_sha256: "ef4fa0994382e9156914838ea4329399c9e77fc88542582420eaf99d7ce8445a"
+    source: printed
+    octets: 54
+    hex: "a4205820403697de87af64611c1d32a05dab0fe1fcb715a86ab435f1ec99192d795693880104024c53796d6d6574726963323536030a"
+    decoded_from_the_hex:
+      "-1 (k)": "h'403697de87af64611c1d32a05dab0fe1fcb715a86ab435f1ec99192d79569388' (32 octets)"
+      "1 (kty)": "4 (Symmetric)"
+      "2 (kid)": "h'53796d6d6574726963323536' = 'Symmetric256'"
+      "3 (alg)": "10 (AES-CCM-16-64-128)"
+    printed_in_figure_7:
+      kid_label: 4
+      alg: "4 / HMAC 256/64 /"
+    expected:
+      hex_and_diagnostic_disagree_twice: true
+      errata: >-
+        7982 says the kid label should be 2 (believe the hex); 8655 says the alg
+        value should be 4 (believe the diagnostic). BOTH ARE STATUS 'Reported'
+        and they point in OPPOSITE DIRECTIONS about which rendering is
+        authoritative.
+      conformance: >-
+        As the hex prints it, this key declares alg 10 and is then used to MAC
+        V-0005 and V-0008, whose protected headers both declare alg 4. RFC 9053
+        §3.1: "If the "alg" field is present, it MUST match the HMAC algorithm
+        being used." So the key as printed FAILS that check.
+      usable_as_a_fixture: true
+    reproduced: >-
+      Decoded here with this pass's own decoder, confirming both discrepancies
+      mechanically rather than by eye: the bytes 0104024c53796d6d65747269633235
+      36030a place kty=4 at 01, kid at 02 and alg=10 at 03, while Figure 7
+      prints "/ kid / 4:" and "/ alg / 3: 4". Figures 5 and 9 both print kid at
+      label 2, so Figure 7 is the outlier among the three.
+    constrains: []
+    note: >-
+      [CORRECTION TO THIS RECORD'S OWN summary.md] That summary says "two of the
+      five Appendix A CWTs are not reproducible from the printed key without
+      applying two unverified errata". THEY ARE REPRODUCIBLE. Both MAC tags
+      reproduce from THIS key's own `k` bytes - see V-0005 and V-0008, where
+      HMAC-SHA-256(k, MAC_structure)[:8] equals the printed tag exactly. The two
+      errata concern the key's METADATA (the kid label and the alg value), not
+      its key material, and nothing in the MAC computation reads either. So the
+      finding is narrower and sharper than the summary made it: A.2.2 is a
+      WORKING fixture that fails a conformance check on its own `alg`
+      declaration. The summary's practical advice - prefer A.2.3 + Figure 10 -
+      still holds, because that one is self-consistent as well as working.
+
+  # =========================================================================
+  - id: V-0004
+    name: "A.2.3 ECDSA P-256 COSE_Key - the clean asymmetric fixture"
+    locator: "Appendix A.2.3, Figures 8 and 9; source lines 1018-1022"
+    region_sha256: "d369f9802d054191e12da62d71716b700d5dc3aedf0b039c35cd49babc10fad3"
+    source: printed
+    octets: 132
+    hex: "a72358206c1382765aec5358f117733d281c1c7bdc39884d04a45a1e6c67c858bc206c1922582060f7f1a780d8a783bfb7a2dd6b2796e8128dbbcef9d3d168db9529971a36e7b9215820143329cce7868e416927599cf65a34f3ce2ffda55a7eca69ed8919a394d42f0f2001010202524173796d6d657472696345434453413235360326"
+    decoded:
+      "-4 (d)": "h'6c1382765aec5358f117733d281c1c7bdc39884d04a45a1e6c67c858bc206c19'"
+      "-3 (y)": "h'60f7f1a780d8a783bfb7a2dd6b2796e8128dbbcef9d3d168db9529971a36e7b9'"
+      "-2 (x)": "h'143329cce7868e416927599cf65a34f3ce2ffda55a7eca69ed8919a394d42f0f'"
+      "-1 (crv)": "1 (P-256)"
+      "1 (kty)": "2 (EC2)"
+      "2 (kid)": "h'4173796d6d65747269634543445341323536' = 'AsymmetricECDSA256'"
+      "3 (alg)": "-7 (ES256)"
+    expected:
+      point_on_curve: true
+      private_matches_public: true
+      kid_label: 2
+      hex_and_diagnostic_agree: true
+    reproduced: >-
+      THREE CHECKS, ALL PASSING, with P-256 arithmetic implemented for this
+      pass. (1) The public point satisfies y^2 = x^3 - 3x + b over the P-256
+      prime. (2) d*G EQUALS (x, y) - so the printed private key really is the
+      private key for the printed public key. (3) A.3's signature verifies
+      under it; see V-0005. The hex and Figure 9 agree throughout, including
+      kid at label 2.
+    reproduced_failure_mode: >-
+      Same non-deterministic map order as V-0002 and V-0003: keys run
+      -4, -3, -2, -1, 1, 2, 3.
+    constrains: []
+    note: >-
+      THIS IS THE FIXTURE TO BUILD ON. It is the only key in the appendix that
+      is internally consistent, agrees with its own diagnostic rendering, and
+      has had its private/public relationship verified.
+
+  # =========================================================================
+  - id: V-0005
+    name: "A.3 signed CWT - tag 18 COSE_Sign1, SIGNATURE VERIFIED"
+    locator: "Appendix A.3, Figures 10 and 11; source lines 1051-1056"
+    region_sha256: "47705e21938a0ba312e299133ba71a7dc94d0b051288c06f4c91cb924622f9bd"
+    source: printed
+    octets: 175
+    hex: "d28443a10126a104524173796d6d657472696345434453413235365850a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b7158405427c1ff28d23fbad1f29c4c7c6a555e601d6fa29f9179bc3d7438bacaca5acd08c8d4d4f96131680c429a01f85951ecee743a52b9b63632c57209120e1c9e30"
+    key: "V-0004 (A.2.3)"
+    decoded:
+      tag: 18
+      protected: "h'a10126' = << {1: -7} >> (alg ES256)"
+      unprotected: "{4: h'4173796d6d65747269634543445341323536'} (kid, 18 octets)"
+      payload: "<< the 80-octet V-0001 claims set >>"
+      signature: "64 octets, r||s"
+    expected:
+      verifies: true
+      sig_structure_octets: 99
+      sig_structure_hex: "846a5369676e61747572653143a10126405850a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b71"
+      kid_is_protected: false
+      deterministic_map_order: true
+    reproduced: >-
+      THE SIGNATURE VERIFIES. Sig_structure was built as RFC 9052 §4.4 defines
+      it - ["Signature1", body_protected, external_aad, payload] with an empty
+      external_aad - encoded to 99 octets, and
+      ECDSA-P256/SHA-256 verification against A.2.3's public point returns
+      TRUE. The payload bstr is byte-identical to V-0001's independently cut
+      hex. Re-encodes byte-identically under RFC 8949 §4.2.1.
+    finding: >-
+      THE KEY IDENTIFIER IS OUTSIDE THE SIGNATURE, and this vector is the proof
+      rather than the claim: Sig_structure takes body_protected and the payload
+      and NOTHING ELSE, and the signature verifies from exactly those - so the
+      {4: kid} map is provably not an input. The document's only signed CWT
+      puts the key identifier where a signature cannot reach it. Under R-O-01
+      that means the statement does not bind its own issuer key.
+    constrains:
+      - "rfc-8392#R-0049"
+      - "rfc-8392#R-0050"
+      - "rfc-8392#R-0052"
+      - "rfc-8392#R-0064"
+      - "rfc-8392#R-0109"
+
+  # =========================================================================
+  - id: V-0006
+    name: "A.4 MACed CWT with the CWT tag - MAC TAG REPRODUCED"
+    locator: "Appendix A.4, Figures 12 and 13; source lines 1107-1110"
+    region_sha256: "7bfbae9435d1589c88a1fbacc560d2f44d9e94c65826ffa471c2a348e7dac18f"
+    source: printed
+    octets: 114
+    hex: "d83dd18443a10104a1044c53796d6d65747269633235365850a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b7148093101ef6d789200"
+    key: "V-0003 (A.2.2) - the 32 octets of `k`, not its metadata"
+    decoded:
+      outer_tag: 61
+      inner_tag: 17
+      protected: "h'a10104' = << {1: 4} >> (HMAC 256/64)"
+      unprotected: "{4: h'53796d6d6574726963323536'} (kid 'Symmetric256')"
+      payload: "<< the 80-octet V-0001 claims set >>"
+      tag: "h'093101ef6d789200' (8 octets)"
+    expected:
+      mac_reproduces: true
+      mac_structure_octets: 93
+      mac_structure_hex: "84644d41433043a10104405850a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b71"
+      full_hmac: "093101ef6d7892001e3ce5a58d782f3eb6a3b9b31ade5aea661868bd3c21d475"
+      truncation: "the first 8 octets of the 32-octet HMAC"
+    reproduced: >-
+      HMAC-SHA-256 over MAC_structure = ["MAC0", h'a10104', h'', << claims >>],
+      93 octets, under A.2.2's 32-octet `k`, gives
+      093101ef6d7892001e3ce5a58d782f3eb6a3b9b31ade5aea661868bd3c21d475; its first 8 octets are 093101ef6d789200, WHICH IS THE
+      PRINTED TAG. So the "64-bit truncation" A.4's prose names is a plain
+      prefix truncation, and the key material in Figure 6 is correct.
+    finding: >-
+      THE ONLY CWT IN THE DOCUMENT THAT CARRIES TAG 61, and it carries it
+      OUTSIDE tag 17, which is exactly what §6's pairing rule requires. Four of
+      the five printed CWTs have no tag 61 and not one of the five is untagged.
+    constrains:
+      - "rfc-8392#R-0046"
+      - "rfc-8392#R-0053"
+      - "rfc-8392#R-0065"
+      - "rfc-8392#R-0104"
+      - "rfc-8392#R-0105"
+
+  # =========================================================================
+  - id: V-0007
+    name: "A.5 encrypted CWT - DECRYPTED, CCM TAG VALID"
+    locator: "Appendix A.5, Figures 14 and 15; source lines 1161-1164"
+    region_sha256: "e099632f5af242e1ab1babf71fc81680929aae1234cf5fece6dd1b73b9577208"
+    source: printed
+    octets: 126
+    hex: "d08343a1010aa2044c53796d6d6574726963313238054d99a0d7846e762c49ffe8a63e0b5858b918a11fd81e438b7f973d9e2e119bcb22424ba0f38a80f27562f400ee1d0d6c0fdb559c02421fd384fc2ebe22d7071378b0ea7428fff157444d45f7e6afcda1aae5f6495830c58627087fc5b4974f319a8707a635dd643b"
+    key: "V-0002 (A.2.1)"
+    decoded:
+      tag: 16
+      protected: "h'a1010a' = << {1: 10} >> (AES-CCM-16-64-128)"
+      unprotected: "{4: h'53796d6d6574726963313238' (kid 'Symmetric128'), 5: h'99a0d7846e762c49ffe8a63e0b' (13-octet iv)}"
+      ciphertext: "88 octets = 80 plaintext + 8 CCM tag"
+    expected:
+      decrypts: true
+      ccm_tag_valid: true
+      enc_structure_hex: "8368456e63727970743043a1010a40"
+      plaintext_equals: "V-0001, byte for byte"
+    reproduced: >-
+      AES-128-CCM with L=2, a 13-octet nonce and an 8-octet tag (COSE
+      AES-CCM-16-64-128), with Enc_structure = ["Encrypt0", h'a1010a', h''] as
+      the AAD: the 88-octet ciphertext decrypts to the 80 octets of V-0001 AND
+      the CCM authentication tag is valid. The AES core was checked against
+      FIPS 197 C.1 first.
+    constrains:
+      - "rfc-8392#R-0054"
+      - "rfc-8392#R-0066"
+
+  # =========================================================================
+  - id: V-0008
+    name: "A.6 nested CWT - DECRYPTED to the A.3 object byte for byte"
+    locator: "Appendix A.6, Figures 16 and 17; source lines 1219-1225"
+    region_sha256: "c638a86c933c10fb865c838d1abea8a69f0be3f9691d6fbc32a2c7187773d3a9"
+    source: printed
+    octets: 221
+    hex: "d08343a1010aa2044c53796d6d6574726963313238054d4a0694c0e69ee6b5956655c7b258b7f6b0914f993de822cc47e5e57a188d7960b528a747446fe12f0e7de05650dec74724366763f167a29c002dfd15b34d8993391cf49bc91127f545dba8703d66f5b7f1ae91237503d371e6333df9708d78c4fb8a8386c8ff09dc49af768b23179deab78d96490a66d5724fb33900c60799d9872fac6da3bdb89043d67c2a05414ce331b5b8f1ed8ff7138f45905db2c4d5bc8045ab372bff142631610a7e0f677b7e9b0bc73adefdcee16d9d5d284c616abeab5d8c291ce0"
+    key: "V-0002 (A.2.1) for the encryption, V-0004 (A.2.3) for the inner signature"
+    decoded:
+      tag: 16
+      protected: "h'a1010a' = << {1: 10} >>"
+      unprotected: "{4: kid 'Symmetric128', 5: h'4a0694c0e69ee6b5956655c7b2'}"
+      ciphertext: "183 octets = 175 plaintext + 8 CCM tag"
+    expected:
+      decrypts: true
+      ccm_tag_valid: true
+      plaintext_equals: "V-0005 (the A.3 signed CWT), byte for byte, tag 18 included"
+      inner_signature_verifies: true
+    reproduced: >-
+      Decrypts to 175 octets that are BYTE-IDENTICAL to the independently cut
+      Figure 10 hex, tag 18 and all, and the inner signature then verifies
+      under A.2.3 exactly as in V-0005. So the nested vector is a true
+      two-layer fixture and the layers compose.
+    finding: >-
+      A SOURCE DEFECT THIS PASS FOUND AND NO ERRATUM COVERS. A.6's prose says
+      "The content type is set to CWT to indicate that there are multiple
+      layers of COSE protection before finding the CWT Claims Set." THERE IS NO
+      CONTENT TYPE HEADER IN THE OBJECT. Decoded here: the protected bucket is
+      {1: 10} and the unprotected bucket is {4: kid, 5: iv}; RFC 9052 label
+      3 (content type) is absent from both. The sentence describes a parameter
+      the figure does not carry, so the multi-layer signal in the one nested
+      example is §7.2 step 6's tag check and nothing else.
+      ../design-notes.md defect D-4.
+    constrains:
+      - "rfc-8392#R-0055"
+      - "rfc-8392#R-0067"
+      - "rfc-8392#R-0054"
+
+  # =========================================================================
+  - id: V-0009
+    name: "A.7 MACed CWT with a floating-point iat - MAC TAG REPRODUCED"
+    locator: "Appendix A.7, Figures 18 and 19; source lines 1271-1272"
+    region_sha256: "1b8d58da8255b6515eff6050336551253ef4fd82abc2a4a169c70429de5494ac"
+    source: printed
+    octets: 42
+    hex: "d18443a10104a1044c53796d6d65747269633235364ba106fb41d584367c20000048b8816f34c0542892"
+    key: "V-0003 (A.2.2)"
+    decoded:
+      tag: 17
+      protected: "h'a10104' = << {1: 4} >>"
+      unprotected: "{4: h'53796d6d6574726963323536'}"
+      payload: "h'a106fb41d584367c200000' = << {6: 1443944944.5} >>"
+      tag_value: "h'b8816f34c0542892'"
+    expected:
+      mac_reproduces: true
+      mac_structure_hex: "84644d41433043a10104404ba106fb41d584367c200000"
+      full_hmac: "b8816f34c05428920ede68e312865170baefc1cd7153864335ee857555a78bc0"
+      iat_encoding: "0xfb + 8 octets = float64"
+      float32_is_lossy: true
+    reproduced: >-
+      HMAC-SHA-256 over ["MAC0", h'a10104', h'', h'a106fb41d584367c200000']
+      gives b8816f34c05428920ede68e312865170baefc1cd7153864335ee857555a78bc0; its first 8 octets are b8816f34c0542892, the
+      printed tag. The iat value decodes as exactly 1443944944.5.
+    finding: >-
+      THE WIDTH IS LOAD-BEARING AND THE DOCUMENT NEVER SAYS SO. Measured here:
+      round-tripping 1443944944.5 through binary32 gives 1443944960.0, so
+      float64 is the ONLY IEEE width that holds this value and the RFC 8949
+      §4.2.2 "shortest floating-point" rule happens to agree. But §4's Table 1
+      says only "integer or floating-point number" and §9.1.2 says the same, so
+      a re-encoder that narrows a float claim is conformant to RFC 8392 and
+      destroys the MAC. This is the claim shape most likely to re-encode
+      differently, and it is the one the document chose to exhibit.
+    constrains:
+      - "rfc-8392#R-0006"
+      - "rfc-8392#R-0028"
+      - "rfc-8392#R-0037"
+      - "rfc-8392#R-0053"
+
+  # =========================================================================
+  - id: V-0010
+    name: "DERIVED - the tag census over all five printed CWTs"
+    locator: "Appendix A.3 to A.7; source lines 1051-1272"
+    source: derived
+    assertion: >-
+      FOUR OF THE FIVE PRINTED CWTs CARRY A COSE TAG AND NO TAG 61; ONE CARRIES
+      BOTH; NOT ONE IS UNTAGGED.
+    measured:
+      A_3_signed: "18(...)"
+      A_4_maced: "61(17(...))"
+      A_5_encrypted: "16(...)"
+      A_6_nested: "16(...)"
+      A_7_float: "17(...)"
+      untagged_examples: 0
+      tag_61_examples: 1
+    method: >-
+      The first octets of each figure's joined hex, decoded by this pass: d2 =
+      tag 18, d83dd1 = tag 61 over tag 17, d0 = tag 16, d0 = tag 16, d1 = tag
+      17.
+    finding: >-
+      THE FULLY UNTAGGED FORM MD-3 OPTION 5 REQUIRES IS PERMITTED BY §7.2 STEP
+      3 AND DEMONSTRATED NOWHERE IN THE DEFINING DOCUMENT. So an option-5
+      fixture package has no reference bytes in RFC 8392 to check itself
+      against, and the first untagged CWT any of us produces is unvalidated
+      against the standard's own examples. That is a real cost of option 5 and
+      it is a tooling cost rather than a security one.
+    constrains:
+      - "rfc-8392#R-0045"
+      - "rfc-8392#R-0046"
+      - "rfc-8392#R-0061"
+
+  # =========================================================================
+  - id: V-0011
+    name: "DERIVED - the deterministic-map-order census, and where it splits"
+    locator: "Appendix A.1 to A.7"
+    source: derived
+    assertion: >-
+      ALL FIVE PRINTED CWTs AND THE PRINTED CLAIMS SET ARE IN RFC 8949 §4.2.1
+      DETERMINISTIC MAP ORDER. ALL THREE PRINTED COSE_KEYS ARE NOT.
+    measured:
+      claims_set_A_1: "byte-identical after re-encoding"
+      signed_A_3: "byte-identical"
+      maced_A_4: "byte-identical"
+      encrypted_A_5: "byte-identical"
+      nested_A_6: "byte-identical"
+      float_A_7: "byte-identical"
+      key_A_2_1: "DIFFERS - keys printed -1, 1, 2, 3; §4.2.1 requires 1, 2, 3, -1"
+      key_A_2_2: "DIFFERS - same reason"
+      key_A_2_3: "DIFFERS - keys printed -4, -3, -2, -1, 1, 2, 3"
+    method: >-
+      Each figure was decoded and re-encoded with an RFC 8949 §4.2.1 encoder
+      written for this pass (shortest argument, definite lengths, map keys
+      sorted by the bytewise lexicographic order of their encoded forms) and the
+      result compared octet for octet with the source bytes. 6 of 6 CWT-side
+      structures identical, 0 of 3 keys.
+    finding: >-
+      RFC 8392 PREDATES RFC 8949 AND MENTIONS NO CANONICAL FORM AT ALL -
+      `canonical` and `deterministic` occur zero times - so this is a property
+      of the examples rather than a rule the document states, and the split is
+      not a defect. It matters for two reasons. FIRST, the structures we would
+      sign are already deterministic in the one worked set the standard
+      supplies, so a §4.2.1 profile costs nothing against these vectors.
+      SECOND, the keys are not, so a COSE Key Thumbprint computed over the
+      printed bytes of A.2.1, A.2.2 or A.2.3 differs from one computed over
+      their §4.2.1 re-encoding - which is a DEC-003 trap, and the reason
+      rfc-9679's "canonical key bytes before hashing" clause is not pedantry.
+      Note that RFC 7049 §3.9's canonical order, which is what RFC 8392 could
+      have cited, sorts these keys the same way, so the split does not come
+      from the vintage of the rule.
+    constrains: []
+
+  # =========================================================================
+  - id: V-0012
+    name: "DERIVED - the five diagnostic-notation renderings as fixture inputs, and their three syntax defects"
+    locator: "Appendix A, Figures 3, 5, 7, 9, 11, 13, 15, 17, 19"
+    source: derived
+    assertion: >-
+      THE HEX IS THE AUTHORITY AND THE DIAGNOSTIC NOTATION IS NOT MACHINE-SAFE.
+      Three of the nine diagnostic figures cannot be parsed as CBOR diagnostic
+      notation as printed.
+    measured:
+      figure_5: "MISSING COMMA after the `k` entry (source lines 967-968): the `-1` value is followed by a newline and then `/ kty /  1: 4` with no separator"
+      figure_7: "MISSING COMMA after the `k` entry (source lines 983-985), same shape"
+      figure_19: "TRAILING COMMA inside a one-entry map (source lines 1301-1302): `/ kid / 4: h'...' / 'Symmetric256' /,` immediately before the closing brace"
+      figures_3_9_11_13_15_17: "parse cleanly"
+    method: >-
+      Read off the cached source by line number. The appendix figures are NOT
+      in schema/source-renderings.txt - that file captures §4's table, §6's
+      figure and the IANA entries - so these are cited by line range here
+      instead, which is where the appendix belongs.
+    finding: >-
+      Cosmetic, and worth recording for one practical reason: anyone building
+      fixtures by parsing the RFC's diagnostic notation rather than its hex
+      hits three parse errors in a nine-figure appendix. Use the hex. This
+      extraction did, which is why it found them - the hex of all nine figures
+      decodes cleanly and reproduces every cryptographic expectation above.
+      ../design-notes.md defect D-7.
+    constrains:
+      - "rfc-8392#R-0107"
+      - "rfc-8392#R-0110"

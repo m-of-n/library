@@ -1,0 +1,230 @@
+record: rfc-8392
+reviewed_by: ""
+source_version: "RFC 8392 (May 2018)"
+source_digest: "9021ff7c4d274cf34873fe4f4fb17c4fe323247dd0f96bfcab54909bfcdc5f13"
+source_lines_total: 1403
+applicability: "APPLICABLE, and deliberately SMALL"
+
+note: >-
+  WHAT IS HERE AND WHY. RFC 8392 has no lifecycle - `state`, `states`,
+  `lifecycle`, `revoke`, `revocation`, `rotate`, `rotation`, `expire` and
+  `expiry` each occur ZERO times in its 1403 lines, measured whole-word and
+  case-insensitively, and `expiration` occurs 4 times and every one of them
+  names the `exp` CLAIM rather than an event. So there is no key lifecycle, no
+  token lifecycle and no revocation machine to model, and a reader looking for
+  one should stop here.
+
+  WHAT THERE IS, AND IT IS NOT NOTHING: §7.2's validation procedure is a
+  transition system with a REAL LOOP and ONE terminal failure. Step 6 says
+  "return to Step 1"; §7.1 step 5 says "return to Step 3". Those two
+  sentences, plus §7.2's single rejection condition, are the whole of the state
+  content in the document, and they are modelled below exactly and no further.
+  THE LOOP IS THE REASON THIS FILE IS NOT A not_applicable DECLARATION: a
+  procedure that can re-enter itself an unbounded number of times is not a
+  checklist, and an implementer needs the re-entry point, the guard and the
+  termination condition written down. §8 confirms the unboundedness in
+  passing - A.6's prose says "there is no limitation to the number of layers".
+
+  THE TWO LOOPS RE-ENTER AT DIFFERENT POINTS, which is the finding this file
+  exists to make legible. Creation returns to step 3 (build a header);
+  validation returns to step 1 (check CBOR validity, then strip tags). So
+  validation re-runs BOTH tag-stripping steps on every inner layer, which means
+  an inner layer may legally carry its own tag 61 and the nesting depth is
+  bounded only by the parser; creation never re-creates the claims set.
+
+  WHAT THE MACHINE DOES NOT DECIDE. Nothing here checks a claim. §7.2's accept
+  state is "the Message is a valid CBOR map", and §3 puts "the set of claims
+  that a CWT must contain to be considered valid" outside the document's
+  scope. SO A CONFORMANT VALIDATOR ACCEPTS AN EXPIRED CWT: `exp` is defined in
+  §3.1.4 and no state transition anywhere reads it. That is the single largest
+  gap between this machine and a usable one, and closing it is a profile's job.
+
+machines:
+  - name: cwt-validation
+    locator: "§7.2"
+    initial: received
+    states:
+      - name: received
+        description: "candidate bytes in hand; nothing checked"
+      - name: cbor-valid
+        description: "step 1 passed: a valid CBOR object"
+      - name: cwt-tag-resolved
+        description: "step 2 passed: tag 61 absent, or present, removed, and a COSE tag follows it"
+      - name: type-known
+        description: >-
+          step 3 passed: the COSE message type is known, either from a COSE tag
+          that has now been removed or from the application context
+      - name: header-acceptable
+        description: "step 4 passed: the COSE Header carries only understood and supported parameters, or ignorable ones"
+      - name: protection-validated
+        description: "step 5 passed: signature verified, MAC verified or ciphertext decrypted; Message in hand"
+      - name: claims-set-obtained
+        description: "step 7 passed: the Message is a valid CBOR map, and that map IS the CWT Claims Set"
+        terminal: true
+        accepting: true
+      - name: rejected
+        description: >-
+          "the CWT MUST be rejected -- that is, treated by the application as
+          invalid input" (§7.2). What that DOES is the application's; the
+          document specifies no error code and no reporting duty.
+        terminal: true
+        accepting: false
+    transitions:
+      - from: received
+        to: cbor-valid
+        trigger: "§7.2 step 1"
+        guard: "the CWT is a valid CBOR object"
+        constrained_by:
+          - "rfc-8392#R-0059"
+      - from: cbor-valid
+        to: cwt-tag-resolved
+        trigger: "§7.2 step 2"
+        guard: >-
+          either the object does not begin with tag 61, or it does and one of
+          the COSE CBOR tags follows it
+        constrained_by:
+          - "rfc-8392#R-0060"
+          - "rfc-8392#R-0046"
+      - from: cwt-tag-resolved
+        to: type-known
+        trigger: "§7.2 step 3"
+        guard: >-
+          a COSE CBOR tag is present and names the type, OR no COSE tag is
+          present and the application context supplies the type
+        constrained_by:
+          - "rfc-8392#R-0061"
+        note: >-
+          THE SECOND BRANCH LEAVES THE MACHINE. "the COSE message type is
+          determined from the application context" is a transition whose guard
+          is outside the document, so a verifier can reach `type-known` on a
+          belief rather than on a byte. This is precisely the gap rfc-9596's
+          protected-header `typ` closes INSIDE the signature.
+      - from: type-known
+        to: header-acceptable
+        trigger: "§7.2 step 4"
+        guard: >-
+          every header parameter and value is understood and supported, or is
+          specified as being ignored when not understood
+        constrained_by:
+          - "rfc-8392#R-0062"
+      - from: header-acceptable
+        to: protection-validated
+        trigger: "§7.2 step 5"
+        guard: "the RFC 8152 validation steps for the determined type succeed"
+        constrained_by: ["rfc-8392#R-0063", "rfc-8392#R-0064",
+                         "rfc-8392#R-0065", "rfc-8392#R-0066"]
+        external_dependency: "RFC 8152 §4 / §5 / §6, now RFC 9052 §4 / §5 / §6"
+      - from: protection-validated
+        to: received
+        trigger: "§7.2 step 6 — THE LOOP"
+        guard: "the Message begins with a COSE CBOR tag"
+        constrained_by:
+          - "rfc-8392#R-0067"
+        note: >-
+          Re-enters at step 1 with the Message as the CWT. Unbounded: A.6's
+          prose says "there is no limitation to the number of layers". An
+          implementation needs a depth limit the document does not give it,
+          and reaching `received` again means the inner layer's own tag 61 is
+          stripped by step 2 like any other.
+      - from: protection-validated
+        to: claims-set-obtained
+        trigger: "§7.2 step 7"
+        guard: "the Message does not begin with a COSE CBOR tag AND is a valid CBOR map"
+        constrained_by:
+          - "rfc-8392#R-0068"
+      - from: "any non-terminal state"
+        to: rejected
+        trigger: "the step for that state fails"
+        guard: "any of the listed steps fail"
+        constrained_by:
+          - "rfc-8392#R-0058"
+        note: >-
+          ONE edge for seven steps. The document gives no way to tell which
+          step failed, and no requirement that anyone be told.
+    error_states:
+      - "rejected"
+
+  - name: cwt-creation
+    locator: "§7.1"
+    initial: claims-chosen
+    states:
+      - name: claims-chosen
+        description: "step 1: a CWT Claims Set exists"
+      - name: message-serialised
+        description: "step 2: the Message is the binary representation of the claims set. NO canonical form is named"
+      - name: header-built
+        description: "step 3: a COSE Header exists and is valid per RFC 8152"
+      - name: protected
+        description: "step 4: a COSE_Sign/Sign1, Mac/Mac0 or Encrypt/Encrypt0 object exists over the Message"
+      - name: tagged
+        description: "step 6: the COSE CBOR tag and/or the CWT CBOR tag have been prepended"
+        terminal: true
+      - name: untagged-output
+        description: >-
+          step 6 declined: both tags are conditional on "If needed by the
+          application", so this is a conformant terminal state. IT IS THE ONE
+          MD-3 OPTION 5 REQUIRES, and Appendix A never prints an instance of
+          it - all five printed CWTs carry at least one tag.
+        terminal: true
+    transitions:
+      - from: claims-chosen
+        to: message-serialised
+        trigger: "§7.1 step 2"
+        constrained_by:
+          - "rfc-8392#R-0049"
+      - from: message-serialised
+        to: header-built
+        trigger: "§7.1 step 3"
+        guard: "the COSE Header MUST be valid per the [RFC8152] specification"
+        constrained_by:
+          - "rfc-8392#R-0050"
+      - from: header-built
+        to: protected
+        trigger: "§7.1 step 4"
+        guard: "all steps specified in [RFC8152] for creating the object MUST be followed"
+        constrained_by:
+          - "rfc-8392#R-0052"
+          - "rfc-8392#R-0053"
+          - "rfc-8392#R-0054"
+      - from: protected
+        to: header-built
+        trigger: "§7.1 step 5 — THE LOOP"
+        guard: "a nested signing, MACing or encryption operation will be performed"
+        constrained_by:
+          - "rfc-8392#R-0055"
+        note: >-
+          Re-enters at step 3, NOT step 1: the Message becomes the tagged COSE
+          object and the claims set is never rebuilt. Note that the inner
+          object is TAGGED at this point even if the outermost one will not be,
+          because §7.2 step 6 reads that tag as the nesting signal. So MD-3
+          option 5's untagged export is available only at the OUTERMOST layer
+          of a nested CWT.
+      - from: protected
+        to: tagged
+        trigger: "§7.1 step 6"
+        guard: "the application needs the tag"
+        constrained_by:
+          - "rfc-8392#R-0056"
+          - "rfc-8392#R-0046"
+      - from: protected
+        to: untagged-output
+        trigger: "§7.1 step 6 declined"
+        guard: "the application does not need the tag"
+        constrained_by:
+          - "rfc-8392#R-0056"
+    error_states: []
+    note: >-
+      No error state at all: §7.1 specifies no failure action anywhere. A
+      producer that cannot complete a step is outside the document.
+
+absent:
+  - "No key lifecycle: no issuance, rotation, revocation or expiry of a key.
+     `rotate`, `revoke` and `revocation` occur zero times."
+  - "No token lifecycle: nothing in the document reads `exp` or `nbf`, so there
+     is no valid/expired distinction and a conformant validator accepts an
+     expired CWT."
+  - "No states a CWT can be in between creation and validation; the format
+     carries no status."
+  - "No nesting depth bound. §7.1 step 5 and §7.2 step 6 are both unbounded and
+     A.6's prose says so: "there is no limitation to the number of layers"."
+  - "No distinguishable error states: one `rejected` for seven failing steps."

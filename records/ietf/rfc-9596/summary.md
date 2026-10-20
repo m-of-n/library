@@ -173,9 +173,13 @@ allocation — or inside the "MAY include media type parameters" clause, which
 the document does not constrain at all. **So the mechanism that saves option
 5's no-tags clause can only name types the way option 5's P1 clause forbids.**
 
-The honest conclusion is `rfc-9052`'s and it holds again: "no tags" and "no
-registry dependence" are different rules, and MD-3 states only the first. Our
-export would carry a type name we do not control.
+The honest conclusion is `rfc-9052`'s and it holds again. **[quotation corrected
+2026-10-20 by the FX-1 extraction's own quote audit]** It reads, exactly:
+*`"No tags"` and `"no registry dependence"` are different rules, and MD-3 states
+the first.* This summary had it with **`only` inserted** — *"MD-3 states only
+the first"* — which `distilled/design-notes.md` now adds in its own voice,
+marked `[analysis]`, rather than attributing it to that record. Our export would
+carry a type name we do not control.
 
 **One concrete consequence for our own linting**, in the same register as
 `rfc-9165`'s `any .feature` note: a lint rule enforcing option 5's no-tags
@@ -214,19 +218,44 @@ defence is available everywhere and required nowhere.
 
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata, relations, `bears_on` |
+| `record.yaml` | metadata, relations, `bears_on` (widened to five ids by the extraction) |
 | `summary.md` | this document |
 | `summary.html` | GENERATED and untracked — `bin/render-html`, see `docs/generated-views.md` |
+| `distilled/` | **the FX-1 artifact set — five artifacts, three declared not-applicable with measured reasons** |
 
-**No `distilled/`.** Nothing has been added to a `distilled/` directory, so
-FX-1 does not fire (`docs/extraction.md`, CLAUDE.md "Extracting, not
-touching"); library#39 Tier 2 owns the eventual extraction. This is the thinnest
-record in the lane and an FX-1 pass would mostly document absences: three
-stated requirements, one `messages.yaml` entry, one IANA registration table,
-**no CDDL**, **no examples and not one byte of hex**, no state machine and no
-protocol. The honest FX-1 shape is `normative.md` + `requirements.yaml` +
-`design-notes.md` with four `not_applicable` declarations — which is worth
-doing precisely because the absences are the content.
+**The extraction has landed, and `distilled/README.md` is its index.** Added
+2026-10-20 by library#39 Tier 2. The prediction in this section's earlier
+wording held almost exactly: *"an FX-1 pass would mostly document absences:
+three stated requirements, one `messages.yaml` entry, one IANA registration
+table, no CDDL, no examples and not one byte of hex, no state machine and no
+protocol"* — all of that is confirmed, with **three** `not_applicable`
+declarations rather than four, because `schema/` earns its place: the verbatim
+capture of Table 1 and the four prose sentences that fix the value space and the
+placement is worth having, and the derived CDDL's value is the list of **three
+things it cannot express** — equality, consistency with content type, and any
+check at all.
+
+`distillation.standard: FX-1` is declared and **no `profile`** is: passes 2 and
+3 have not run and no `reviewed_by` is signed.
+
+**One claim below is scoped rather than refuted by the source**, and the
+scoping is recorded in place:
+
+> **[scoped 2026-10-20 by the FX-1 extraction, pass 1.]** The argument that
+> `typ` is the in-band replacement for the CBOR tag MD-3 removes is sound and
+> it is **ours**. Measured over all 232 lines, **`tag` and `tags` occur zero
+> times in RFC 9596.** The document makes no claim about CBOR tags, does not
+> mention them, and does not present itself as a replacement for one. The
+> argument is assembled from §2's `MUST NOT`, RFC 9052 §4.4's `Sig_structure`
+> and `rfc-8392` §7.1/§7.2's step order, and `distilled/design-notes.md` marks
+> it `[analysis]` so the `DEC-002` ADR cites it that way rather than
+> attributing it to the RFC.
+
+And one is strengthened: the `Sig_structure` coverage boundary this summary
+argues from RFC 9052 §4.4 is now **demonstrated** — the sibling `rfc-8392`
+extraction rebuilt `Sig_structure` and **verified RFC 8392's A.3 signature from
+exactly its four fields**, so an unprotected header map is provably not an
+input.
 
 Also absent and worth acting on: **`RFC 8725` ("JSON Web Token Best Current
 Practices", BCP 225) is not in this library.** §1 and §3 rest the entire

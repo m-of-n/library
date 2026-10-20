@@ -1,0 +1,86 @@
+; rfc-9597 — the CWT Claims header parameter, as a usable grammar
+; DERIVED - not verbatim. The source's own four lines of CDDL are in
+; schema/source-renderings.txt, and THE SOURCE DECLARES THEM NON-NORMATIVE in
+; the sentence immediately before them: "The following is a non-normative
+; description for the value type of the CWT claim header parameter using CDDL
+; [RFC8610]." (§2). So that fragment constrains nothing, and this file is the
+; library's rendering of what §1 and §2's NORMATIVE sentences actually fix.
+; Cite RFC 9597's prose, never this file.
+;
+; WHAT THE SOURCE'S OWN CDDL SAYS, FOR COMPARISON (verbatim, §2):
+;     CWT-Claims = {
+;      * Claim-Label => any
+;     }
+;     Claim-Label = int / text
+; That admits the EMPTY MAP, admits any label type the `int / text` union
+; covers, and forbids nothing. The rules below add only what a normative
+; sentence of RFC 9597 states, and each carries its locator.
+
+; The COSE header buckets are RFC 9052 §3's, named here and not redefined.
+; RFC 9597 adds ONE label to them.
+cwt-claims-label = 15                 ; §2 Table 1
+
+; §2 Table 1: Value Type `map`. §2's CDDL names the value type CWT-Claims.
+CWT-Claims = {* Claim-Label => any}   ; §2, NON-NORMATIVE in the source
+Claim-Label = int / text              ; §2, NON-NORMATIVE in the source
+
+; THE PLACEMENT RULES, WHICH ARE THE NORMATIVE PART AND ARE NOT IN THE SOURCE'S
+; CDDL AT ALL.
+;
+;   §2: "It is RECOMMENDED that the CWT Claims header parameter only be used in
+;        a protected header to avoid the contents being malleable."
+;   §2: "The header parameter MUST only occur once in either the protected or
+;        unprotected header of a COSE structure."
+;
+; The MUST bars label 15 from appearing in BOTH buckets. It PERMITS it in the
+; unprotected one. RFC 9052 §4.4's Sig_structure is
+; [context, body_protected, external_aad, payload], so a conformant producer can
+; emit CWT claims that no signature covers. CDDL cannot express "at most once
+; across two maps", so the three shapes are enumerated and the socket a profile
+; must close is named.
+
+cose-header-with-cwt-claims =
+      cwt-claims-protected-only       ; the §2 RECOMMENDED shape
+    / cwt-claims-unprotected-only     ; CONFORMANT and unsigned - see above
+    / cwt-claims-absent               ; label 15 is optional; §2 adds no MUST
+
+cwt-claims-protected-only = [
+  protected: bstr .cbor {cwt-claims-label => CWT-Claims, * label => any},
+  unprotected: {* nonclaims-label => any}
+]
+
+cwt-claims-unprotected-only = [
+  protected: bstr .cbor {* nonclaims-label => any},
+  unprotected: {cwt-claims-label => CWT-Claims, * nonclaims-label => any}
+]
+
+cwt-claims-absent = [
+  protected: bstr .cbor {* nonclaims-label => any},
+  unprotected: {* nonclaims-label => any}
+]
+
+label = int / tstr                    ; RFC 9052 §1.4
+nonclaims-label = label .ne 15        ; this library's rule, not the source's
+
+; WHAT CANNOT BE EXPRESSED HERE, AND IS THEREFORE A PROFILE'S JOB:
+;
+;   1. §2's duplication MUST - "In cases where CWT claims are present both in
+;      the payload and the header of a CWT, an application receiving such a
+;      structure MUST verify that their values are identical, unless the
+;      application defines other specific processing rules for these claims."
+;      A cross-structure equality predicate is outside CDDL, AND the rule is
+;      scoped to "a CWT", which rfc-8392 §6 declines to define: "How to
+;      determine that a CBOR data structure is a CWT is application dependent."
+;      AND "identical" is undefined - byte equality of the encoded items, or
+;      equality of the CBOR data items? A preferred and a non-preferred encoding
+;      of the same integer are one value and two byte strings.
+;
+;   2. §1's MUST NOT - "Recipients of the CWT Claims header parameter MUST NOT
+;      use the information in the CWT Claims header parameter beyond the
+;      integrity protection or authentication afforded to the CWT Claims header
+;      and the information used to derive its intended interpretation." That is
+;      a constraint on USE, not on bytes.
+;
+;   3. Which claims must be present. RFC 9597 requires none. rfc-9943 §6 is the
+;      only ratified profile the library holds that does: label 15 in the
+;      protected header with iss (1) and sub (2).

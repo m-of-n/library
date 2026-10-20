@@ -1,0 +1,68 @@
+; rfc-8392 — the CWT envelope and its tag layers
+; DERIVED - not verbatim. RFC 8392 ships no CDDL. This file renders §5, §6,
+; §7.1 and §7.2, plus the shapes Appendix A actually exhibits, as a grammar.
+; The COSE structures themselves belong to RFC 9052 (RFC 8152 as RFC 8392
+; cites it) and are named here, not redefined.
+;
+; THE WHOLE POINT OF THIS FILE is that RFC 8392 never states the envelope as a
+; grammar, only as two numbered procedures, and the procedures permit shapes
+; Appendix A never prints and print shapes the procedures make optional.
+;
+; SOURCE OF EACH RULE:
+;   §6     "If present, the CWT tag MUST prefix a tagged object using one of
+;          the COSE CBOR tags." -> tag 61 may only wrap a COSE-TAGGED object,
+;          never a bare COSE array. This is the pairing rule.
+;   §6     "Its use is optional" -> every tag layer below is optional.
+;   §7.2.3 "If the object does not have a COSE CBOR tag, the COSE message type
+;          is determined from the application context." -> the fully untagged
+;          form is permitted.
+;   §7.1.5 / §7.2.6 -> nesting is unbounded in both directions.
+;
+; MEASURED AGAINST APPENDIX A, by decoding all five printed CWTs: four of the
+; five carry a COSE tag and no tag 61 (18, 17, 16, 17); one carries both
+; (61(17(...))). NOT ONE of the five is untagged. So `cwt-untagged`, the form
+; MD-3 option 5 requires, is permitted by §7.2 step 3 and demonstrated nowhere
+; in the defining document.
+
+cwt = cwt-tagged / cose-tagged / cwt-untagged
+
+; §6 + §9.4.1: tag 61 outside one of the COSE tags. The pairing rule forbids
+; 61(COSE_Sign1) with no inner tag.
+cwt-tagged = #6.61(cose-tagged)
+
+cose-tagged = COSE_Sign_Tagged
+            / COSE_Sign1_Tagged
+            / COSE_Mac_Tagged
+            / COSE_Mac0_Tagged
+            / COSE_Encrypt_Tagged
+            / COSE_Encrypt0_Tagged
+
+; §7.2 step 3's untagged case. Permitted, never printed by this document.
+cwt-untagged = COSE_Sign / COSE_Sign1 / COSE_Mac / COSE_Mac0
+             / COSE_Encrypt / COSE_Encrypt0
+
+; RFC 9052 §4.2, §6.2, §5.2 and the tag numbers of its §2. Named, not
+; redefined: RFC 8392 defines none of them and delegates every step.
+COSE_Sign_Tagged     = #6.98(COSE_Sign)
+COSE_Sign1_Tagged    = #6.18(COSE_Sign1)
+COSE_Mac_Tagged      = #6.97(COSE_Mac)
+COSE_Mac0_Tagged     = #6.17(COSE_Mac0)
+COSE_Encrypt_Tagged  = #6.96(COSE_Encrypt)
+COSE_Encrypt0_Tagged = #6.16(COSE_Encrypt0)
+
+COSE_Sign     = any   ; RFC 9052 §4.1
+COSE_Sign1    = any   ; RFC 9052 §4.2
+COSE_Mac      = any   ; RFC 9052 §6.1
+COSE_Mac0     = any   ; RFC 9052 §6.2
+COSE_Encrypt  = any   ; RFC 9052 §5.1
+COSE_Encrypt0 = any   ; RFC 9052 §5.2
+
+; §7.1 step 2: "Let the Message be the binary representation of the CWT Claims
+; Set." The payload travels as an opaque bstr, so determinism is SIDESTEPPED,
+; not solved: copying the bytes works and re-encoding them does not. See
+; design-notes.md, R-O-03.
+cwt-payload = bstr .cbor cwt-claims-set
+
+; §7.1 step 5 / §7.2 step 6: a nested CWT's payload is itself a tagged COSE
+; object. Appendix A.6 is the one printed instance.
+nested-cwt-payload = bstr .cbor cose-tagged
