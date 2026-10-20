@@ -130,7 +130,13 @@ Reported, never repaired. The first is concrete for our test vectors:
 7. **`CRLF` is redefined as `%x0A / %x0D.0A`**, admitting a bare LF where
    RFC 5234's core rule is `%x0D %x0A` — and it hides in plain sight, because
    `ALPHA`, `DIGIT`, `HEXDIG` and `SP` are redefined *identically* in the same
-   block, so the whole thing reads as a restatement.
+   block, so the whole thing reads as a restatement. **Narrowed 2026-10-20:**
+   the *substance* is deliberate community practice — `rfc-9165` §3 makes the
+   identical redefinition, declares it, scopes it exactly and calls it
+   "customary for ABNF", by one of this document's own authors — so the defect
+   here is that it is **undeclared**, a documentation defect and not a grammar
+   one. Full reasoning and the corrected tally of undeclared instances (**two**,
+   not three) are in `schema/README.md` under *Defects*.
 8. Surrogates U+D800–DFFF are admitted by `SCHAR`/`BCHAR`/`PCHAR`/`SESC`
    although §3.1 mandates UTF-8; `SCHAR` and `BCHAR` are not parallel and
    nothing says so; and **no horizontal tab exists anywhere in CDDL**, not even

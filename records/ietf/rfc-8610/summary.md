@@ -124,7 +124,11 @@ side conditions reject it.
   current CDDL until those four are read. They are library#39 Tier 2.
 - **`CRLF` is redefined to admit a bare LF** (`%x0A / %x0D.0A`, against
   RFC 5234's `%x0D %x0A`), and it hides among four core rules redefined
-  *identically*, so the block reads as a harmless restatement.
+  *identically*, so the block reads as a harmless restatement. **Narrowed
+  2026-10-20:** the relaxation itself is deliberate community practice —
+  `rfc-9165` §3 declares and scopes the identical redefinition, by one of this
+  document's own authors — so what is defective here is that it is
+  **undeclared**. See `distilled/schema/README.md`.
 - **Appendix G.2 names four EDN byte-string prefixes while §3.1 and the ABNF
   admit two.** Both normative, never reconciled — and since #39 assigns EDN the
   test-vector role, a vector written `b32'…'` is valid EDN that will not parse

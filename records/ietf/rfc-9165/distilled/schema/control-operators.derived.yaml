@@ -109,14 +109,41 @@ syntax:
       the same reason. So the answer to "type or group control?" is the
       same for all twenty operators these two documents define, and it is
       forced by the grammar rather than chosen per operator.
+    verify_pass_check: >-
+      CONFIRMED by counting occurrences, not by reading. `ctlop` appears in
+      exactly ONE production of RFC 8610 Appendix B -- `type1` -- and once
+      more as its own definition `ctlop = "." id`; two occurrences in 47
+      productions. It appears in exactly the same two places in RFC 9682's
+      REPLACEMENT grammar (records/ietf/rfc-9682, cddl-updated.abnf), whose
+      8 new rules add no `ctlop` position and whose 6 changed right-hand
+      sides are `cddl`, `type2`, `SCHAR`, `SESC`, `BCHAR` and `PCHAR` --
+      `type1` and `ctlop` are among the 41 carried over unchanged. So the
+      inference survives the grammar's own replacement, which is the only
+      way it could have been overturned. TWO QUALIFICATIONS. First, "forced"
+      means forced by the grammar THIS DOCUMENT LEAVES UNTOUCHED: a document
+      that wanted a group control would have to add a production, as
+      RFC 9682 shows is possible, and RFC 9165 adds none. Second, RFC 9165
+      never uses the phrase "type control" and never cites Appendix B, so
+      this remains our inference from another document's grammar.
     positions_this_document_actually_uses: >-
-      All four type positions, which is worth recording because it shows
-      the operators are not restricted to a bare type rule: as a MEMBER KEY
-      computed from a generic parameter (Figure 1, `(BASE .plus 1) => int`);
-      as the TARGET OF A TAG (Figure 5, `#6.0(text .abnf date-time)`); as a
-      MAP-KEY TYPE under an occurrence indicator (Figure 7,
-      `* (text .feature "further-person-extension") => any`); and as a
-      member of a TYPE CHOICE (Figure 8, Figure 9).
+      Five distinct type positions, not one. The plainest is a BARE RULE
+      RIGHT-HAND SIDE (Figure 5, `full-date = "full-date" .cat rfc3339`;
+      Figure 3, `oid = bytes .abnfb (...)`). The other four are worth
+      recording because they show the operators are not restricted to it:
+      as a MEMBER KEY computed from a generic parameter (Figure 1,
+      `(BASE .plus 1) => int`); as the CONTENT TYPE OF A TAG (Figure 5,
+      `#6.0(text .abnf date-time)`); as a MAP-KEY TYPE under an occurrence
+      indicator (Figure 7, `* (text .feature "further-person-extension")
+      => any`); and as a member of a TYPE CHOICE (Figure 8, Figure 9).
+      Pass 1 called this "all four type positions", which both miscounted
+      and implied CDDL has only four; it has more, and the grammar admits at
+      least one the document never uses -- a GENERIC ARGUMENT, since
+      `genericarg = "<" S type1 S *("," S type1 S ) ">"` is a `type1`
+      position, and `a = b<1 .plus 1>` parses. Pass 1 also wrote "TARGET OF
+      A TAG", which collides with Section 1.1's own definition of "target"
+      as the left-hand operand; the tag's content type is what was meant.
+      All five positions, and the genericarg, were EXECUTED against
+      Appendix B by the verify pass rather than read off it.
   precedence_untouched:
     verdict: >-
       OURS. RFC 9165 never mentions operator precedence and never cites
@@ -153,6 +180,15 @@ syntax:
       G-44 stands, strengthened. A second independent document, by one of
       RFC 8610's own authors, parenthesises or names every nested control
       and never once chains two in a single type1.
+    now_executed_not_inferred: >-
+      OURS, by the verify pass. G-44's rule was EXECUTED against Appendix B
+      with an Earley recogniser written for this pass (no third-party CDDL
+      tool is installed here), and it holds: `a = 1 .plus 2 .cat 3` does
+      NOT parse, `a = (1 .plus 2) .cat 3` does, `a = 1 .plus 2 / 3 .cat 4`
+      does, and the same pattern holds for a rangeop -- `a = 1 .. 2 .cat 3`
+      fails, `a = (1 .. 2) .cat 3` parses. So the chaining Table 1's
+      precedence 7 implies is not merely unexercised by this document; the
+      grammar rejects it. G-44 is no longer an inference.
 
 # ---------------------------------------------------------------------
 # A classification this library needs and the registry does not record.
@@ -164,18 +200,41 @@ operator_classes:
     implements these twenty operators as a single uniform
     "narrow the target" interface will get three of them wrong and one of
     them backwards.
+  partition_criterion: >-
+    OURS, and the verify pass tightened it. The three classes are a PARTITION
+    by the relation between the result type and the target type, and the test
+    that separates them is "can this operator reject an instance the target
+    alone would accept?" -- restrictive YES, annotative NO, constructive the
+    question does not arise because the result is not related to the target
+    by inclusion at all. Stated as bare set inclusion the first two overlap,
+    since equality is a subset; "proper" below is what keeps the partition
+    disjoint.
   classes:
     restrictive: >-
-      The result is a SUBSET of the target type. The operator narrows.
-      All fourteen of RFC 8610's are restrictive, and so are .abnf and
-      .abnfb. 16 of the 20 these two documents define.
+      The result is a SUBSET of the target type, and in general a PROPER
+      one. The operator narrows. All fourteen of RFC 8610's are restrictive,
+      and so are .abnf and .abnfb. 16 of the 20 these two documents define.
+      CHECKED BY THE VERIFY PASS against RFC 8610's own text, because two of
+      the fourteen look annotative and are not: .within "expresses an
+      additional intent" but RFC 8610 Section 3.8.5 says "both forms have
+      the identical formal semantics (intersection)", and .default carries
+      an IMPLIED .ne -- Section 3.8.6: "the implied .ne control is there to
+      prevent this value from being sent over the wire" -- so each of them
+      CAN reject an instance the target alone admits. The claim held.
     constructive: >-
       The result is COMPUTED and is in general DISJOINT from the target
       type. .plus, .cat and .det. 3 of those 20, all new in this document, and
       the first of their kind in CDDL. `(BASE .plus 1)` where `BASE = 0` is
       the type `1`, which is not a subset of `0`. The source states the
       frame itself: "The resulting type is therefore formally a function of
-      the elements of the cross-product of the two types."
+      the elements of the cross-product of the two types." AND IT STATES THE
+      ARITHMETIC TOO, which pass 1 left as our inference: Figure 1 binds
+      `X = 0` and Section 2.1 says "The rule rect combines two of these
+      interval groups into a map, one group for the X dimension (using 0, 1,
+      and 2 as labels) and one for the Y dimension (using 3, 4, and 5 as
+      labels)". So `(BASE .plus 1)` with `BASE = 0` being the label `1` is
+      the document's own result, not ours; only the observation that `{1}` is
+      no subset of `{0}` is ours.
     annotative: >-
       The result EQUALS the target type. The operator constrains nothing
       and only attaches a name for a tool to report. .feature alone,
@@ -627,18 +686,36 @@ cross_field_constraints:
     ../design-notes.md.
   grammar_gaps_touched:
     closes: ["G-35 (partially) -- case insensitivity, via ABNF's case-insensitive quoted strings; see .abnf above"]
-    extends: ["G-11 -- per-operator target/controller side conditions. G-11 is headed \"all fourteen operators\"; these six add six more sets of side conditions, and the grammar constrains none of them. The true count is higher still, since rfc-9741 and rfc-9090 add their own"]
+    extends: ["G-11 -- per-operator target/controller side conditions. G-11 is headed \"all fourteen operators\"; these six add six more sets of side conditions, and the grammar constrains none of them. The true count is higher still, since rfc-9741 and rfc-9090 add their own",
+              "G-28 -- ADDED BY THE VERIFY PASS, and it is the mechanism of this record's headline finding. G-28 records that case sensitivity is already \"split between two notations in one grammar\" (RFC 8610 Appendix B's own preamble: the quoted literals are ABNF-case-insensitive while CDDL names and string values are case sensitive). RFC 9165 adds a THIRD notation with a THIRD rule -- an embedded RFC 5234 + RFC 7405 ABNF whose quoted strings are case INSENSITIVE by default -- reachable from inside a CDDL text-string type. So the split G-28 names is widened by exactly the operator that partially closes G-35, and the record said the second without the first"]
     corroborates: ["G-44 -- controls do not chain; six independent parenthesisations and two named-rule compositions, and not one chain"]
     does_not_touch: ["G-42, G-43 -- Table 1's comma row and the omitted cut; RFC 9165 never mentions precedence or Table 1"]
     adds_new_ones_of_its_own: >-
-      OURS, five, and they belong in any successor to
+      OURS, six, and they belong in any successor to
       grammar-gaps.derived.txt: (1) the `element` versus `elements`
       production mismatch in the ABNF controller rule; (2) ABNF rule
       CLOSURE, which the grammar cannot check and which no CDDL construct
       expresses; (3) the floor-versus-truncation conversion in `.plus`;
       (4) `.cat`'s type asymmetry, so operand order is semantic; (5)
       `.feature`'s untestability -- no instance can reveal a tool that
-      ignores it.
+      ignores it; and (6) ADDED BY THE VERIFY PASS, which found it by
+      EXECUTING Appendix B rather than reading it -- AN OPERATOR NAME IS NOT
+      MAXIMALLY MUNCHED. `ctlop = "." id` with a nullable `S` makes every
+      multi-letter control-operator name decomposable into a shorter ctlop
+      plus a typename, so `a = 1 .plus` PARSES: `.p` applied to target `1`
+      with controller the (undefined) type `lus`, which is exactly what
+      `a = 1 .p lus` parses as. The same holds for all six names this
+      document registers and for RFC 8610's multi-letter fourteen; only a
+      single-letter name is safe (`a = 1 .x` correctly fails). This is the
+      MIRROR of G-27, which records the trap on the TARGET side -- "space
+      may be needed before the operator if type2 ends in a name", the one
+      comment Appendix B carries -- and nothing anywhere warns about this
+      side. The practical bite is small, because a controller after a space
+      disambiguates, but a tool that reports "unknown control operator .p"
+      for a mistyped `.plus` is behaving correctly and the diagnostic is
+      useless. It belongs to RFC 8610's grammar, not to this document, and
+      rfc-8610 is at profile: full, so it is recorded here and not repaired
+      there.
 
 counts:
   operators: 6

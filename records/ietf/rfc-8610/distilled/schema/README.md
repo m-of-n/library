@@ -91,10 +91,33 @@ six classes are:
 Reported here because `docs/extraction.md` forbids repairing them in a verbatim
 file. Full detail and locators in `grammar-gaps.derived.txt`.
 
-- **`CRLF` is redefined.** `CRLF = %x0A / %x0D.0A` admits a bare LF; RFC 5234's
-  own `CRLF` is `%x0D %x0A`. `ALPHA`, `DIGIT`, `HEXDIG` and `SP` are redefined
-  *identically* to RFC 5234, so a reader may reasonably take the whole block as
-  a restatement of the core rules — and then get `CRLF` wrong. (G-29)
+- **`CRLF` is redefined, and the defect is that it is *undeclared*.**
+  `CRLF = %x0A / %x0D.0A` admits a bare LF; RFC 5234's own `CRLF` is
+  `%x0D %x0A`. `ALPHA`, `DIGIT`, `HEXDIG` and `SP` are redefined *identically*
+  to RFC 5234, so a reader may reasonably take the whole block as a restatement
+  of the core rules — and then get `CRLF` wrong. (G-29)
+
+  **Narrowed 2026-10-20 by the `rfc-9165` verify pass, which is what `cddl.abnf`'s
+  header already says happened here.** The *substance* of the relaxation is
+  deliberate community practice, not an error: `rfc-9165` §3 makes the
+  **identical** redefinition, in its own voice, *declares* it, scopes it
+  exactly — "As is customary for ABNF, the syntax of ABNF itself (_not_ the
+  syntax expressed in ABNF!) is relaxed to allow a single line feed as a
+  newline" — and is written by one of this document's own three authors. So what
+  is defective **here** is only that RFC 8610 does it silently, camouflaged
+  among four core rules it redefines identically. **A documentation defect, not
+  a grammar one.** The finding is narrowed, not withdrawn.
+
+  **The honest tally of undeclared instances is two.** `rfc-9682` carries the
+  rule byte-identical into its own normative Appendix A while rewriting `PCHAR`
+  two lines above it and saying nothing in prose; `draft-ietf-cbor-cddl-modules`
+  reproduces it with no declaration anywhere. `rfc-9165` declares and scopes it,
+  so it is not an instance. And **RFC 8610's Appendix B is itself replaced by
+  RFC 9682's Appendix A** ("the updated collected ABNF syntax in Figure 11 in
+  Appendix A replaces the collected ABNF syntax in Appendix B of [RFC8610]"), so
+  counting this document separately double-counts the same production. An
+  earlier framing said "three current CDDL documents"; it is two, and that
+  phrase should not be reintroduced.
 - **The surrogate range is admitted.** `SCHAR`, `BCHAR`, `PCHAR` and `SESC` all
   span `%x80-10FFFD`, which includes U+D800–U+DFFF — not Unicode scalar values,
   and not encodable in the UTF-8 that §3.1 mandates. (G-32)

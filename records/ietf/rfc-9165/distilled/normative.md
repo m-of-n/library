@@ -19,7 +19,7 @@ extension**: it adds six entries to CDDL's one declared extension point, and its
 normativity is carried by *operator definitions and matching rules*, exactly as
 RFC 8610's is. The precedent is this library's `rfc-8610` extraction (2 keywords
 in 125 KB, 137 of 139 requirements `inferred`) and
-`draft-ietf-cbor-edn-literals` (10 in 100 KB, 216 of 226 `inferred`). This file
+`draft-ietf-cbor-edn-literals` (10 in 164 KB, 216 of 226 `inferred`). This file
 therefore records the **definitional-normative** material — what each operator
 means, what its target and controller may be, what the resulting type is, and
 what the document says CDDL still cannot do — at the same grain another record
@@ -42,6 +42,28 @@ would use for MUST statements.
   a quote are the RFC's rendering, not emphasis added here.
 - The source's `--` for an em dash and its doubled sentence spacing are its own
   bytes and are reproduced.
+- **What is deliberately not quoted, stated so the omissions are auditable.**
+  The verify pass walked §1–§6 sentence by sentence against this file, the
+  requirement texts and the fenced blocks. Of 88 body sentences, 85 are held
+  verbatim somewhere in the record. The three that are not, and why:
+  **(a)** §1.1's BCP 14 boilerplate (lines 102–106) — quoting it would add 11
+  phantom keywords, as the paragraph below explains; **(b)** the §4 sentence
+  severed by hyphenation (lines 369–371), handled under *Conventions* above and
+  at the §4 bullet; **(c)** §2.3's naming aside (lines 245–247), *"(The name
+  .det is a shortcut for "dedenting cat". The maybe more obvious name .dedcat
+  has not been chosen as it is longer and may invoke unpleasant images.)"* —
+  motivation rather than normative content, which this file drops by its own
+  convention, but recorded here because it is the document's **stated reason
+  for a registered name's form** and `design-notes.md` makes a finding about
+  exactly that.
+- **The Abstract is not quoted anywhere in this record**, and it is the only
+  part of the document that carries wording the body never uses: it calls
+  `.plus`/`.cat`/`.det` operators "for the **construction of constants**" and
+  `.feature` one "for indicating the use of a **non-basic feature** in an
+  instance". §2 says "compute literals", not construct constants, and the term
+  **"non-basic feature" appears nowhere else in the document and is never
+  defined.** Front matter is non-normative, so nothing turns on it; it is
+  recorded because it is a term of art with no definition behind it.
 
 ---
 

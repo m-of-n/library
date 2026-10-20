@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-9165
 record: rfc-9165
 type: summary
-updated: "2026-10-19"
+updated: "2026-10-20"
 ---
 
 # Additional Control Operators for the Concise Data Definition Language (CDDL)
@@ -27,8 +27,9 @@ fourteen — and this document redefines none of them.
 **The useful way to read them is by what they do to the target**, a split this
 record names and the registry does not:
 
-- **restrictive** — the result is a subset of the target. All fourteen of
-  RFC 8610's, plus `.abnf` and `.abnfb`.
+- **restrictive** — the result is a subset of the target, and in general a
+  *proper* one: the operator can reject an instance the target alone admits.
+  All fourteen of RFC 8610's, plus `.abnf` and `.abnfb`.
 - **constructive** — the result is *computed* and generally **disjoint** from
   the target. `.plus`, `.cat` and `.det`, the first of their kind in CDDL:
   `(BASE .plus 1)` where `BASE = 0` is the type `1`.
@@ -42,7 +43,10 @@ carries the five-phase evaluation order this implies.
 
 All six are type controls, and that is forced rather than chosen: `ctlop`
 appears only inside `type1`, so **CDDL has no group-control syntax at all** —
-equally true of RFC 8610's fourteen.
+equally true of RFC 8610's fourteen, and still true of RFC 9682's replacement
+grammar, which carries `type1` and `ctlop` over unchanged. The document uses
+five distinct type positions for them, from a bare rule right-hand side to a
+map key under an occurrence indicator.
 
 ## Applicability
 
@@ -91,8 +95,8 @@ conformant, and `V-0018` is the document's own demonstration of that.
 The RFC names none. Its own evidence of practice is that the operators "were
 not yet ready at the time [RFC8610] was completed". *Searched on 2026-10-19; no
 named implementation in the document, and no third-party CDDL or ABNF
-implementation is installed here* — so this record's dedent, closure checker
-and case-sensitivity census settle structure, not conformance.
+implementation is installed here* — so this record's dedent, closure checker,
+case-sensitivity census and CDDL recogniser settle structure, not conformance.
 
 ## Limits
 
@@ -108,9 +112,13 @@ and case-sensitivity census settle structure, not conformance.
   newline is \n, is the same string as:"*. A CRLF checkout silently changes
   what a `.cat`-computed fixture admits — a repository hazard for us, and
   `content.sha256` cannot catch it, because the file would be ours.
-- **Figure 6 does not parse as CDDL.** `bar = ...` uses `...` as a prose
-  placeholder, but `rangeop = "..." / ".."` and no `type2` begins with a dot.
-  Held as `V-0013` with `expect: indeterminate`.
+- **Figure 6 does not parse as CDDL** — *executed, not argued*. `bar = ...`
+  uses `...` as a prose placeholder, but `rangeop = "..." / ".."` and no `type2`
+  begins with a dot. An Earley recogniser built from RFC 8610's Appendix B (this
+  library's own; no third-party CDDL tool is installed here) rejects the figure
+  and stalls at the first `.` of `bar = ...`, while accepting the other eight
+  figures and ~11 KB of RFC 8610's own CDDL. Held as `V-0013` with
+  `expect: indeterminate`.
 - **`.feature`'s controller has no admissibility rule** — only the 2-element
   array form is defined — and `.feature` is the only registered control
   operator no instance can test.
@@ -119,11 +127,19 @@ and case-sensitivity census settle structure, not conformance.
   offered as alternatives but are **not** equivalent (`"" .det rhs` yields text
   and invokes the UTF-8 `MUST`; `rhs .det ""` does not). §2.3's dedent counts
   leading **space** characters only, so a tab-indented literal dedents by zero.
-- The extraction is at **pass 1 of 3**. Four claims in it are ours rather than
-  the source's and are flagged for attack: that all six are type controls
-  (grammatical, inferred), the `element`/`elements` reading, the operator-class
-  taxonomy, and that Figure 6 does not parse — argued from RFC 8610's grammar
-  rather than executed against it.
+- The extraction is at **passes 1 and 2 of 3** — extract and verify; cross-check
+  has not run and no `profile` is declared. The four claims pass 1 flagged as
+  ours rather than the source's **all survived the verify pass**, and three are
+  now executed against RFC 8610's grammar rather than argued from it: all six
+  are type controls (`ctlop` occurs in exactly one production in both
+  Appendix B *and* RFC 9682's replacement grammar); the `element`/`elements`
+  reading; the operator-class taxonomy (the two assignments genuinely at risk,
+  `.within` and `.default`, are restrictive on RFC 8610's own words —
+  "the identical formal semantics (intersection)" and "the implied .ne
+  control"); and Figure 6's non-parse. **One limit is worth carrying forward:**
+  this library holds no `rfc-5234` record and no cached RFC 5234, so the
+  `element`/`elements` productions are the record's one load-bearing claim that
+  cannot be checked against a source here.
 
 ## What this did to `rfc-8610`, which is at `profile: full`
 

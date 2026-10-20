@@ -202,6 +202,16 @@ Zero internal dots. Zero namespaced names. `schema/registry-tables.txt` holds
 Table 2 verbatim, and `schema/control-operators.derived.yaml` records the count
 as `registry_names_with_an_internal_dot: 0`.
 
+And the document states a *reason* for one of the six names, which is the only
+naming rationale it gives: *"(The name .det is a shortcut for "dedenting cat".
+The maybe more obvious name .dedcat has not been chosen as it is longer and may
+invoke unpleasant images.)"* (§2.3). **Brevity and euphony.** Added by the
+verify pass, which found it was the one §1–§6 sentence the extraction had
+dropped without declaring. It is not a requirement and it carries no force —
+but in a record whose finding is that §6.1's policy subsidises the flat global
+name, the author's own stated criterion for choosing between two candidate
+names is evidence, and it mentions neither scoping nor a defining principal.
+
 > **[analysis]** This is the pattern `ADR-0001` is about, observed rather than
 > predicted. §6.1 made the global name cheap and the scoped name dear, and the
 > very first document through the door took six global names and no scoped ones.
@@ -213,14 +223,28 @@ as `registry_names_with_an_internal_dot: 0`.
 > sharpens rather than softens it. §3a treated registration as our escape hatch
 > from CDDL's expressiveness gap. RFC 9165 shows what taking that hatch actually
 > costs: it is **Standards Track**, authored by one of RFC 8610's own three
-> authors, and it spent four years in the working group — the abstract says the
-> operators "were not yet ready at the time [RFC8610] was completed". That is
+> authors, and it arrived **two and a half years** after RFC 8610 (June 2019 to
+> December 2021, both dates from this document's own reference list and masthead)
+> for operators that §1 says "were not yet ready at the time [RFC8610] was
+> completed". That is
 > the demonstrated path for a new control operator. Our realistic options are
 > therefore an IETF document on an IETF timescale, or prose. **Prose breaches
 > nothing and reproduces RFC 9052 §1.4's split; registration breaches R-M-12's
 > spirit at the schema layer and takes years.** The ADR must choose between
 > those two, and `rfc-8610`'s §3a is right that it currently does not know it
 > has to.
+
+> **[correction]** Pass 1 wrote that RFC 9165 "spent four years in the working
+> group" and attributed "were not yet ready at the time [RFC8610] was completed"
+> to the **abstract**. Both are wrong and the verify pass fixed them. The source
+> carries no drafting history at all — no I-D name, no working-group adoption
+> date, nothing from which four years could be read; the only interval it
+> supports is June 2019 (its own `[RFC8610]` reference) to December 2021 (its
+> masthead), two and a half years. And the bracketed spelling `[RFC8610]` is
+> **§1's**; the abstract writes "RFC 8610" unbracketed (source line 21), so the
+> quotation as given was never the abstract's bytes. The *argument* survives
+> intact — the path to a new control operator is a Standards Track RFC on an
+> IETF timescale — but it must not be propped up by a number nobody measured.
 
 **Against `R-M-12` and `ARCH-0002 P1` specifically.** `R-M-12` and `ADR-0001`
 require that native extension points "SHALL be identified relative to a defining

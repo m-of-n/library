@@ -11,11 +11,15 @@ reviewed_by: ""
 FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what it
 does not.
 
-**State: pass 1 (extract) complete. NO `profile` is declared.** Verify and
-cross-check have not run, and under `docs/extraction.md` an unfinished
-extraction is neither `full` nor `partial`. `record.yaml` carries
-`distillation.standard: FX-1` with one `passes` entry. **No `reviewed_by` is
-signed anywhere.**
+**State: passes 1 and 2 of 3 complete — extract and verify. NO `profile` is
+declared.** Cross-check has not run, and under `docs/extraction.md` an
+unfinished extraction is neither `full` nor `partial`. `record.yaml` carries
+`distillation.standard: FX-1` with two `passes` entries. **No `reviewed_by` is
+signed anywhere.** The verify pass upheld all four of pass 1's self-flagged
+claims, executed three of them against RFC 8610's grammar rather than arguing
+them, and fixed six defects of our own — the largest being a blank line the
+`.det` join produces that three derived blocks omitted while their own prose
+asserted it. `record.yaml`'s `passes[1].note` is the full account.
 
 Source: RFC 9165, *Additional Control Operators for the Concise Data Definition
 Language (CDDL)*, C. Bormann, Standards Track, December 2021.
@@ -29,7 +33,7 @@ extension**: it adds six entries to CDDL's one declared extension point, and
 its normativity is carried by *operator definitions and matching rules*, exactly
 as RFC 8610's is. The siblings are the calibration: `rfc-8610` carries 2
 keywords in 125 KB with 137 of 139 requirements `inferred`, and
-`draft-ietf-cbor-edn-literals` carries 10 in 100 KB with 216 of 226 `inferred`.
+`draft-ietf-cbor-edn-literals` carries 10 in 164 KB with 216 of 226 `inferred`.
 Here it is **79 of 84 inferred**, each naming in its `field` the phrase,
 algorithm step, grammar production or stated absence that carries the force.
 
@@ -45,9 +49,9 @@ closes **the operator-set quarter of that gate and nothing more.**
 |---|---|---|
 | normative | `normative.md` | **78 verbatim bullets and 13 reproduced blocks** across 9 locators (§1, §1.1, §2, §2.1, §2.2, §2.3, §3, §4, §5, §6). All 78 confirmed contiguous substrings of the whitespace-normalised source **and** inside the locator's own section range, by section map rather than document-wide; all 13 fenced blocks byte-identical to their declared source line ranges. The 13 blocks are both tables, all nine figures, the dedenting definition and the `CRLF` production |
 | requirements | `requirements.yaml` | **84 entries, `R-0001`–`R-0084`, source order, no gaps: 5 stated, 79 inferred.** `source_keyword_count` and `extracted_keyword_count` both 5, with a reconciliation that states the real baseline — a grammar extension's normativity is in its operator definitions — and names what was counted instead. Every `text` was **sliced out of the cache by line range and boundary marker, never retyped.** §1.1's boilerplate is deliberately never quoted: `bin/validate` counts texts with stripping off, so quoting it would add 11 phantom keywords |
-| schema | `schema/` | **8 verbatim files in 15 regions, 2 derived.** The central artifact is `control-operators.derived.yaml`: all six operators as data, in Table 2's registry order, with target, controller, result type, predicate, control kind, class and per-operator gaps — written with `rfc-8610`'s field names so the two read as one table of twenty operators. All 15 verbatim regions re-verified byte-for-byte with per-region `sha256`, and for all 15 the digest equals that of the same lines `rstrip`ped, proving no trailing whitespace. See `schema/README.md` |
+| schema | `schema/` | **8 verbatim files in 15 regions, 2 derived.** The central artifact is `control-operators.derived.yaml`: all six operators as data, in Table 2's registry order, with target, controller, result type, predicate, control kind, class and per-operator gaps — written with `rfc-8610`'s field names so the two read as one table of twenty operators. All 15 verbatim regions re-verified byte-for-byte with per-region `sha256`, independently again by the verify pass, and for all 15 the digest equals that of the same lines `rstrip`ped, proving no trailing whitespace. Three of the 15 are nested inside two others by source line range — A-2 in F-3, A-3 and A-4 in F-5 — because the ABNF lives inside the CDDL literals. See `schema/README.md` |
 | messages | `messages.yaml` | **13 constructs** — the 6 operators, 3 string structures, 1 operation, 3 idioms — and a **5-phase evaluation order**, which is the part a tool gets wrong. `constrained_by` **is** populated here, unlike in `rfc-8610` where the file header states it is omitted throughout: 62 distinct requirement ids referenced, **0 dangling** |
-| examples | `examples/` | **18 vectors, `V-0001`–`V-0018`, source order, no gaps.** 17 `valid`, 1 `indeterminate`, 0 `invalid`. Provenance is explicit per vector: 14 the source's own bytes by line range, 3 `COMPUTED BY US` from the document's **own** §2.3 dedent and §2.2 concatenation, 1 `OURS`. 10 of 10 declared ranges re-slice byte-identically; 3 of 3 computed blocks re-derive exactly. See `examples/README.md` |
+| examples | `examples/` | **18 vectors, `V-0001`–`V-0018`, source order, no gaps.** 17 `valid`, 1 `indeterminate`, 0 `invalid`. Provenance is explicit per vector: 14 the source's own bytes by line range, 3 `COMPUTED BY US` from the document's **own** §2.3 dedent and §2.2 concatenation, 1 `OURS`. 10 of 10 declared ranges re-slice byte-identically; 3 of 3 computed blocks re-derive exactly — after the verify pass found `V-0011` and `V-0012` one line short, the `.det` join's blank line before `DIGIT`, and fixed them. See `examples/README.md` |
 | design-notes | `design-notes.md` | the operator set as the real target; the cross-field verdict; **eight numbered mappings onto our decisions**, of which five cut against MD-3 and one — `.feature` as a way to declare an invariant the schema cannot check — is the first finding in this library's CDDL chain that goes MD-3's way; 11 source defects; and what this invalidates in `rfc-8610` |
 
 ## Not applicable
@@ -64,7 +68,9 @@ closes **the operator-set quarter of that gate and nothing more.**
   accept certain features and reject others (enable/disable)" — is tool
   *configuration*, is explicitly imagined rather than specified, and is
   withdrawn from in the next paragraph. There is no message, no error path
-  between parties, and no second role that acts. §6 adds nothing: it
+  between parties, no encoding or framing, and no second role that acts **on the
+  data** — the requesting process asks and is told, which is an invocation
+  contract, not a peer exchange. §6 adds nothing: it
   incorporates RFC 8610's security considerations, whose own §5 says a content
   rules language "does not bring any security issues on itself".
 - **state-machine** — no states and no transitions. Matching is a predicate
@@ -152,19 +158,29 @@ that a reader of `statement.cddl` cannot tell the invariant is unchecked.
 - **G-11 extends** — per-operator target and controller side conditions the
   grammar cannot express. G-11 is headed "all fourteen operators"; these six add
   six further sets of side conditions, and the grammar constrains none of them.
-- **G-44 is corroborated six times over.** It is `rfc-8610`'s *inference* that
-  `type1` admits at most one range-or-control operator, so controls do not
-  chain, against RFC 8610's own Table 1 implying they do. RFC 9165 never states
-  the rule and obeys it everywhere: `(BASE .plus 1)`, `("oid" .det
-  cbor-tags-oid)`, `lhs .cat ("" .det rhs)`, `(text .feature "…")`,
-  `(any .feature "…")`, and Figure 5's composition through the named rule
-  `rfc3339`. The two apparent counter-examples, Figures 6 and 9, put their
-  controls in separate `type1`s across a `/`.
+- **G-28 extends too** — *added by the verify pass*, and it is the mechanism of
+  the case-insensitivity finding above. G-28 records that case sensitivity is
+  already split between two notations in one grammar; embedded ABNF is a
+  **third**, with a third rule. The record stated the consequence (G-35) without
+  the cause (G-28).
+- **G-44 is corroborated six times over — and is now executed, not inferred.**
+  It is `rfc-8610`'s *inference* that `type1` admits at most one
+  range-or-control operator, so controls do not chain, against RFC 8610's own
+  Table 1 implying they do. RFC 9165 never states the rule and obeys it
+  everywhere: `(BASE .plus 1)`, `("oid" .det cbor-tags-oid)`,
+  `lhs .cat ("" .det rhs)`, `(text .feature "…")`, `(any .feature "…")`, and
+  Figure 5's composition through the named rule `rfc3339`. The two apparent
+  counter-examples, Figures 6 and 9, put their controls in separate `type1`s
+  across a `/`. The verify pass then **ran** the rule against Appendix B:
+  `a = 1 .plus 2 .cat 3` does not parse and `a = (1 .plus 2) .cat 3` does.
 - **G-42 and G-43 are untouched.** This document never mentions operator
   precedence, never cites Table 1, and does not touch the cut `^`.
-- **Five new gaps**, listed in `schema/control-operators.derived.yaml` under
+- **Six new gaps**, listed in `schema/control-operators.derived.yaml` under
   `cross_field_constraints.grammar_gaps_touched`, for any successor to
-  `grammar-gaps.derived.txt`.
+  `grammar-gaps.derived.txt`. The sixth is the verify pass's: an operator name
+  is **not maximally munched**, so `a = 1 .plus` parses as `.p` applied to a
+  type called `lus`. That is G-27's trap on the other side of the operator, and
+  it belongs to RFC 8610's grammar rather than to this document.
 
 ## Source defects found
 

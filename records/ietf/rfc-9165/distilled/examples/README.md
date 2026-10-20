@@ -122,25 +122,47 @@ default and this document forbids relying on them.
 
 ## Mechanical state
 
-Pass 1 only. All of the following were checked by script against
-`.cache/rfc-9165.txt`:
+Passes 1 and 2 of 3 — extract and verify. Cross-check has not run. All of the
+following were checked by script against `.cache/rfc-9165.txt`, and every one
+was **recomputed by the verify pass with its own implementation** rather than by
+re-running pass 1's:
 
 - 18 vectors, ids `V-0001`–`V-0018` contiguous with no gaps, parsing identically
   under both `bin/_record_yaml` and `bin/_yaml`.
 - 10 of 10 declared source ranges re-slice byte-identically after margin
   removal, and every range is contiguous in the raw source.
 - 3 of 3 `COMPUTED BY US` blocks re-derive exactly from the source by the
-  document's own §2.3 dedent and §2.2 concatenation.
+  document's own §2.3 dedent and §2.2 concatenation. **The verify pass found
+  V-0011 and V-0012 one line short** — the `.det` join of Figure 5's two
+  literals produces a blank line before `DIGIT`, which both blocks omitted
+  although V-0011's own `notes` asserted it. Fixed; all three now re-derive
+  byte-for-byte against an independent dedent.
 - V-0004's literal content equals our computation of `"oid" .det cbor-tags-oid`,
   which checks our reading of the algorithm against the source's own result.
+  **The verify pass made the condition explicit:** the equality holds only once
+  the RFC's three-column body margin is removed from Figure 4 as well as from
+  Figure 3. Dedenting is margin-invariant in its *operand* — which is what makes
+  Figure 3 a correct example — but not in its *result*, which is flush left by
+  construction, so Figure 4 as printed is not literally its own answer.
 - The 3 prose-quoted one-liners (V-0006, V-0007, V-0008) are each present in the
   whitespace-normalised source.
 - 25 further quotations in `notes` fields hand-enumerated and verified contiguous
   (the automated pass cannot resolve them: the source's own text is full of
   nested quotation marks).
 - ABNF closure re-derived for every controller: `cbor-tags-oid` 4 rules / 0
-  undefined / closed from both selectors; Figure 5's composition 14 rules / 0
-  undefined / closed from both selectors, **across the `.det` join**.
+  undefined / closed from both selectors (3 of the 4 reachable from each);
+  Figure 5's composition 14 rules / 0 undefined / closed from both selectors,
+  **across the `.det` join** — 5 of the 14 reachable from `full-date`
+  (`full-date`, `date-fullyear`, `date-month`, `date-mday`, `DIGIT`) and all 14
+  from `date-time`. Pass 1 recorded the first of those two as 4, counting it
+  exclusively while counting the second inclusively; corrected.
+- The case-insensitivity census re-derived, and then **executed**: the composed
+  `date-time` rule-list loaded into an Earley recogniser matches
+  `1990-12-31t23:59:60z` and rejects `1990-12-31x23:59:60Z`, so the acceptance
+  is case folding and not a permissive parser.
+- **Figure 6's non-parse executed** rather than argued. The recogniser stalls at
+  the first `.` of `bar = ...`, source line 382 column 9, and accepts the other
+  eight figures — so `V-0013`'s `indeterminate` stands on a run, not a reading.
 
 **Nothing here has been run through a third-party CDDL or ABNF implementation** —
 none is installed in this environment. The dedent implementation, the closure
