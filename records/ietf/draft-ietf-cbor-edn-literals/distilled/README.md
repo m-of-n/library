@@ -242,8 +242,10 @@ Like `rfc-8610`, this is a **notation**: its normativity is a grammar and a set
 of literal meanings, not obligations on an actor. §6 is 340 lines of ABNF in 14
 figures and carries **no BCP 14 keyword at all**. Only two of the ten are
 obligations and both are narrow; the single MUST NOT bounds an *optional*
-feature; and four of the five MAYs are one permission restated in four
-contexts. **No keyword in this document constrains the notation itself.** The
+feature; and **three** of the five MAYs are one permission restated in three
+contexts, while a fourth (`R-0062`) is a separate permission conditional on it
+and the fifth (`R-0082`) licenses an app-extension's uppercase prefix variant.
+**No keyword in this document constrains the notation itself.** The
 reconciliation says what was counted instead — literal forms, grammar side
 conditions, explicit disclaimers of capability, the removals relative to
 RFC 8610 Appendix G and RFC 8949 §8, registry rules, and the lower-case force
