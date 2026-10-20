@@ -99,7 +99,24 @@ JOSE library was used, so a shared library bug cannot hide here.
    > not sloppy**: a CDDL file must define every rule it references, so each
    > file standing alone has to carry them. Re-derived: all nine pairs are
    > **byte-identical** after comment and whitespace normalisation — zero
-   > divergent definitions — and no file duplicates a rule internally. Also
+   > divergent definitions — and no file duplicates a rule internally.
+   >
+   > **[correction] 2026-10-20, pass 3 (cross-check).** The whole census above
+   > re-derives exactly — 45 per-file (23 + 6 + 16), 36 distinct, 9 defined
+   > twice, all 9 byte-identical, 45 − 36 = 9, no rule duplicated inside a file.
+   > One clause is over-general and is narrowed here: *"a CDDL file must define
+   > every rule it references, so each file standing alone has to carry them"*
+   > is the reason for **eight** of the nine, not all nine. Measured per file,
+   > `ml-dsa-alg` is referenced by `ml-dsa-protected-header` in
+   > `ml-dsa-cose-sign1.derived.cddl` but by **no other rule** in
+   > `akp-key.derived.cddl`, where it is an unreferenced **entry-point** rule
+   > that the file's own §4(f) commentary cites ("`ml-dsa-alg` admits exactly
+   > -48, -49, -50"). So its duplication is justified as named vocabulary for a
+   > file read on its own, not by reference closure. The other eight are
+   > referenced in both files — `label` by 8 rules and `values` by 8 in
+   > `akp-key.derived.cddl`, by 2 and 3 respectively in
+   > `ml-dsa-cose-sign1.derived.cddl`; `ml-dsa-44/65/87` and the three
+   > `ML-DSA-nn-Signature` rules by 1 to 3 each in both. Also
    > re-checked: the seven bare names in `ml-dsa-cose-sign1.derived.cddl` that
    > look like dangling references (`protected`, `unprotected`, `payload`,
    > `signature`, `context`, `body_protected`, `external_aad`) are **member

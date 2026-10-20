@@ -12,6 +12,36 @@ Voice markers, as `rfc-8949`: **unmarked** is the source or our own decisions as
 cited; **[analysis]** is this extraction's reasoning; **[correction]** is a
 project assumption the sources do not support.
 
+**[correction] 2026-10-20, pass 3 (cross-check). Which quotations here are
+checkable from this repository, and which are not.** This library is
+**standalone by design** — independently cloneable, forkable and citable by
+projects that are not `mofn` (`CLAUDE.md`). So the `mofn` documents this record
+quotes are **not present in this repository**: `ARCH-0001`,
+`ARCH-0001-PROPOSAL-v0.2.0`, `ARCH-0002` (P1), `ADR-0001`, `DECISIONS-0001`,
+`MD-3`, and the `DEC-00n` / `R-M-*` / `R-O-*` / `R-I-*` rules. A `find` over the
+worktree returns none of them. **Every quotation of those documents — here, in
+`summary.md`, in `distilled/README.md` and in `record.yaml`'s `bears_on`
+commentary — is reproduced from the extracting agent's context and cannot be
+verified from this repository.** Treat each as a citation to re-check against
+`mofn` before relying on it; that includes the seven identifiers `bears_on`
+names (`R-M-02`, `R-M-12`, `R-O-01`, `R-O-03`, `DEC-002`, `DEC-003`, `DEC-005`).
+Nothing in the record's *findings* rests on them: every finding is measured
+against `.cache/rfc-9964.txt`, and the `mofn` ids say which of our decisions a
+measured finding bears on. Pass 1 and pass 2 did not mark this class; pass 3
+marks it rather than claiming a check it cannot run, following
+`records/ietf/rfc-9741`, which adopted the convention on 2026-10-20 and is so
+far the only other record carrying it.
+
+What **is** checkable here was re-checked mechanically at pass 3 and all of it
+holds: the RFC 9679 §4 `kty` sentence and the §5.5 `ckt`-versus-`jkt` sentence
+against `.cache/rfc-9679.txt` (sha256 `f6b460e38ba1…`, confirmed); RFC 8778
+§2.2's `u32str(lms_algorithm_type) || u32str(otstype) || I || T[1]` and §3's
+conditional `alg` against `.cache/rfc-8778.txt`; and the existence and state of
+every record this file names — `records/ietf/rfc-9679` (`FX-1`, `profile: full`),
+`records/ietf/rfc-8778` (which authors the `see_also` edge back to this record),
+`records/ietf/rfc-9052`, `records/community/secure-systems-lab-dsse` and
+`topics/cbor-implementation.yaml`.
+
 RFC 9964 is a small document — 2906 lines, of which 2249 are Appendix A — with
 one load-bearing section. §6 is the answer to a question RFC 9679 §4.6 asks and
 declines to answer, and `records/ietf/rfc-9679` is at `profile: full` with that
@@ -646,7 +676,7 @@ Reported, never repaired (`docs/extraction.md`).
    the note immediately below it, which most readers of a table will not reach
    before sizing a field.
 5. **The two halves of Appendix A are not a matched pair.** The JOSE examples
-   sign "It's a dangerous business, Frodo, going out your door." (56 octets);
+   sign "It’s a dangerous business, Frodo, going out your door." (56 octets);
    the COSE examples sign "hello post quantum signatures" (29 octets). Same
    keys, different payloads, so no JOSE↔COSE round-trip fixture can be built
    from this document — which is a missed opportunity in a document whose §6

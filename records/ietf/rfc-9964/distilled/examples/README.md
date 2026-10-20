@@ -241,9 +241,23 @@ statement. Recorded in `../schema/akp-parameters.derived.json` as
 
 ### The two halves of Appendix A are not a matched pair
 
-The JOSE examples sign `"It's a dangerous business, Frodo, going out your
+The JOSE examples sign `"It’s a dangerous business, Frodo, going out your
 door."` (56 octets — 54 characters, because U+2019 encodes as `e2 80 99`); the
-COSE examples sign `"hello post quantum signatures"` (29 octets). Same keys,
+COSE examples sign `"hello post quantum signatures"` (29 octets).
+
+> **[correction] 2026-10-20, cross-check pass.** The record carried this one
+> 56-octet payload in **three different spellings**, and only one of them was
+> right. `messages.yaml` had the character, U+2019. `vectors.yaml`'s three
+> `jws_payload_utf8` fields had the YAML escape `"It’s …"` — and **neither
+> of the library's two YAML readers decodes a `\u` + four-hex-digit escape** (`bin/_record_yaml.py`
+> handles `\n`, `\t`, `\"`, `\\` and no more), so the fixture read back as a
+> 59-character string with a literal backslash, not as the payload. This
+> sentence and `design-notes.md`'s defect 5 quoted it with an **ASCII**
+> apostrophe, which is 54 octets — in the same breath as asserting 56. All five
+> now carry the character, so the quotation and `jws_payload_hex` agree under
+> both readers. `jws_payload_hex` was correct throughout and remains the
+> authority. Found by sweeping every artifact that states a value another
+> artifact also states, which is how this class of defect surfaces. Same keys,
 different payloads, so the signatures cannot be compared across the two halves
 and a JOSE↔COSE round-trip fixture cannot be built from this document. Only the
 keys are shared.
@@ -261,6 +275,19 @@ and `sign1_diag` CBOR diagnostic strings, which run to thousands of characters
 and are a human rendering of bytes carried here in full as `key_hex` and
 `sign1_hex`. Nothing testable is lost — the hex is the authority, and
 `vectors.yaml` says so.
+
+> **[correction] 2026-10-20, cross-check pass.** The six counts were each **one
+> too high** — 2632 / 4839, 3912 / 6617, 5192 / 9253 where the measured counts
+> are 2631 / 4838, 3911 / 6616, 5191 / 9252 — and are corrected in
+> `vectors.yaml`. In all six the kept prefix is the printed diagnostic's first
+> **91** characters and the kept suffix its last **70**, so the marker replaces
+> `len(printed) − 161`: for V-0007's `key_diag`, 2792 − 161 = **2631**. The old
+> numbers describe a cut one character longer than the file exhibits. Stating
+> the count removed is the whole content of this convention, so off-by-one
+> falsified it. Also recorded there: the space before each marker's retained
+> suffix is this extraction's separator, not a source character, and because the
+> elided span ends inside the last entry's key (`-2`), `key_diagnostic_elided`
+> is **not** parseable as CBOR diagnostic notation. `key_hex` is the authority.
 
 The thumbprint inputs are carried as `thumbprint_input_head_hex` plus a
 statement that the full input is that head concatenated with `pub_hex`, which
