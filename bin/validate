@@ -120,6 +120,47 @@ def check_derived_naming(recdir, where, errs, warns):
                             f"urn:library:<record>:<artifact> — docs/extraction.md, Schema $id")
 
 
+ID_DEF = re.compile(r'^\s*-?\s*id:\s*["\']?([a-z0-9][a-z0-9.\-]*)#((?:R|V|G|N)-[0-9]+)', re.M)
+# The lookbehind makes the match start at a real identifier head. Without it,
+# a record id broken across a line — `…-cbor#V-0001` — matches on its tail and
+# reads as a *foreign* reference, which is how this check first mis-flagged
+# draft-mcnally-deterministic-cbor's own paragraph warning about that very wrap.
+ID_REF = re.compile(r'(?<![\w.\-…])([a-z0-9][a-z0-9.\-]*?)#((?:R|V|G|N)-[0-9]+)\b')
+ID_FILES = {".yaml", ".md", ".txt", ".cddl", ".abnf", ".json"}
+
+
+def check_id_collisions(recdir, rid, where, warns):
+    """Warn where a cited foreign id's bare form is also one of this record's.
+
+    Ids are *defined* record-qualified (`rfc-8949#R-0001`) but prose cites them
+    bare. So a record that cites `rfc-8610#R-0079` while also defining its own
+    `R-0079` has a bare `R-0079` that resolves two ways, and a prefix-blind
+    reader — human or script — silently gets the wrong requirement. Nothing
+    else catches it: both ids exist, so no reference is dangling.
+
+    Found by draft-ietf-cbor-cddl-modules' cross-check (#39), whose own
+    README listed two of its four cross-record refs and missed both of the
+    colliding ones. A warning rather than an error: the collisions predate the
+    check and some sit in records already at profile: full.
+    """
+    own, foreign = set(), {}
+    for f in sorted(x for x in recdir.rglob("*") if x.is_file()):
+        if f.suffix not in ID_FILES:
+            continue
+        try:
+            text = f.read_text(errors="ignore")
+        except OSError:
+            continue
+        own |= {i for who, i in ID_DEF.findall(text) if who == rid}
+        for who, i in ID_REF.findall(text):
+            if who != rid:
+                foreign.setdefault((who, i), f.relative_to(recdir))
+    for (who, i), rel in sorted(foreign.items()):
+        if i in own:
+            warns.append(f"{where}: cites {who}#{i} while defining its own {i} "
+                         f"({rel}) — a bare '{i}' in prose resolves two ways")
+
+
 def check_full(recdir, d, where, errs):
     """Enforce FX-1 on a record that declares distillation.profile: full."""
     dist = d.get("distillation") or {}
@@ -303,6 +344,7 @@ def main():
         # Not gated on profile: full — the drift this catches (#44) happens
         # the moment a schema/ directory exists, not when the record finishes.
         check_derived_naming(rec.parent, where, errs, warns)
+        check_id_collisions(rec.parent, rid, where, warns)
         if (rec.parent / "distilled.md").exists():
             errs.append(f"{where}: distilled.md is superseded by distilled/ (schema v5)")
         # A summary must not declare the absence of a distilled/ the record
