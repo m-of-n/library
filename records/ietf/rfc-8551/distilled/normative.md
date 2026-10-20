@@ -2663,7 +2663,7 @@ an entry and none is counted twice. Per section: §1.1 1; §1.3 14; §1.5 6;
 N-071, N-082, N-093, N-094, N-097, N-098, N-117, N-118, N-156, N-158, N-159,
 N-164, N-165, N-170, N-177, N-179, N-183, N-184. The other lowercase
 occurrences inside entries are descriptive (`may have changed`, N-008,
-N-009; `optional features`, N-040; `other required data`, N-102, N-105,
+N-009; `optional features`, N-040; `header is required`, N-068; `other required data`, N-102, N-105,
 N-111, N-122; `no private key material is required`, N-126; `may issue
 documents`, N-153; `necessarily required`, N-169; `recommended
 algorithms` ×2, N-175).

@@ -145,8 +145,12 @@ is a delegation or trust model. `record.yaml` says so, and §4 tests the claim.
    wallet that shows a speaker's label from the envelope, or sorts a presentation
    by speaker, before V9 is the §6 ¶15 failure. **Consequence:** a wallet renders
    no speaker, kind or claim from an envelope that has not reached V9. Test: an
-   envelope whose `says` names a trusted key over a TBS signed by another key
-   renders only `envelope-mismatch` (SPEC-0002 vector N-3 is the byte-level form).
+   envelope whose outer `says` names one key while the TBS it carries, validly
+   signed by that key, names another as its `says` renders no speaker, only
+   `envelope-mismatch` at V6 (SPEC-0002 vector N-3 is the byte-level form:
+   *"outer says (Bob) does not equal inner says (Alice)."*). A TBS signed by a
+   key other than the one the envelope names fails earlier, at V4, as
+   `signature` (SPEC-0002 §9.2).
 
    §6 ¶15 goes on: *"Visual indicators on messages may need to have the signature
    validation code checked periodically if the indicator is supposed to give
@@ -166,7 +170,10 @@ is a delegation or trust model. `record.yaml` says so, and §4 tests the claim.
 
    Ours: SPEC-0001 §8.1, *"A presentation without a proof of possession is still
    evaluable: every statement in it protects itself."*; SPEC-0004 §10.3, where
-   `because` *"MUST name: the digests of the statements used"*.
+   `because` *"MUST name: the digests of the statements used"*. In the design
+   record: ARCH-0002 P2 (provisional, MD-2), where **says** is the signature,
+   *"not metadata about the statement — the cryptographic act is the saying"*, so
+   a sentence belongs only to the key whose signature made it.
 
    **A presentation is S/MIME's multipart/mixed (inferred):** statements by
    different speakers, and unsigned presentation fields, in one container.
@@ -216,7 +223,11 @@ is a delegation or trust model. `record.yaml` says so, and §4 tests the claim.
    Ours: SPEC-0004 §7.2, *"`issued` is the speaker's own claim. It orders a key's
    statements relative to its rotation; it is not evidence of when a statement
    existed."*; SPEC-0001 §11, *"`valid.issued` is the speaker's own claim and is
-   not such evidence."*
+   not such evidence."* **No ARCH, ADR, DEC or MD text at 643fba2 maps here.**
+   ARCH-0003 §3.7 carries `issued: Time` with no stated semantics, and R-M-09
+   (*"Validity intersection SHALL be defined (time window ∩ optional online
+   checks)."*) concerns validity windows, not the signer's own time. The rule
+   lives only in the SPECs.
 
    **Same design, same limit.** SPEC-0004 orders a key's statements around a
    rotation by `issued` exactly as S/MIME orders its caches by signingTime, and
@@ -265,7 +276,9 @@ is a delegation or trust model. `record.yaml` says so, and §4 tests the claim.
    understand statements using these definitions."*; SPEC-0002 §10, *"A key MUST
    NOT be added because a statement merely names it, because it appears as an
    envelope `pub` on a statement of another kind, or because a `rotate` names
-   it."*
+   it."* Keying by key rather than by name is G1, *"Key-centric principals; names
+   are not globally unique identifiers."*, and R-M-02, *"A principal MAY be
+   identified solely by key or key digest."*
 
    **Consequence:** what a wallet records about what a persona speaks comes only
    from verified `speaks` statements, keyed by kid. A later one, by `issued` and
@@ -327,7 +340,11 @@ is a delegation or trust model. `record.yaml` says so, and §4 tests the claim.
    and nesting depth of at least 16, and MAY reject larger or deeper inputs as
    `encoding`. It MUST bound the work it performs on any input before V4
    succeeds."*; and every suite fixes its key length (§6.3, *"the 32-octet
-   encoding"*; §6.5, *"the 1952-octet encoding"*).
+   encoding"*; §6.5, *"the 1952-octet encoding"*). **No ARCH, ADR, DEC or MD text
+   at 643fba2 bounds a verifier's work on unauthenticated input.** The nearest,
+   ARCH-0003 W-22 (process criteria *"total, bounded, side-effect-free,
+   unprivileged"*, within DEC-008's boundary), bounds process evaluation, not
+   decoding or verification. The rule lives only in SPEC-0002 §13.6.
 
    **Consequence:** KSA already states the numbers RFC 8551 leaves to
    "reasonable", and §6 ¶8's oversized-key attack has no KSA form: a key of the
@@ -349,7 +366,11 @@ is a delegation or trust model. `record.yaml` says so, and §4 tests the claim.
     Ours: SPEC-0002 has the same split. A target `[2, digest-alg, bytes]` names its
     own digest (§12.5: SHA-256, SHA-384, SHA-512), separate from the suite's
     `digest`. And SPEC-0001 §11: *"For such statements a wallet SHOULD use a
-    post-quantum suite, or obtain an independent timestamp"*.
+    post-quantum suite, or obtain an independent timestamp"*. In the design
+    record: ARCH-0003 §3.3, *"A wallet supports several suites — classical and
+    post-quantum side by side"*, for *"ML-DSA where verification is decades
+    away"*; and MD-1's archives target, *"in-scope targets: software supply chain
+    + archives/library."*, which is where verification decades later matters.
 
     **Two rules SPEC-0002 lacks (inferred).** (a) R-0002's. Nothing relates a
     target's `digest-alg` to the statement's suite. A suite-8 attestation about a
@@ -445,6 +466,11 @@ change a later engineer would make.
      a rotation (§7.2) links count as one member."* SPEC-0005 §4.3: *"A party that
      controls two unlinked keys is two members unless the panel's author prevents
      it"*. A reviewer who holds parallel suite keys, both delegated, counts twice.
+     The design record says otherwise for panels: ARCH-0003 W-24, *"`distinct:
+     speaker` counts keys, and keys delegated from the same identity key count
+     once"*. ARCH-0003 is a draft (*"Nothing here is accepted."*) and SPEC-0005
+     governs under ADR-0003, so as specified the reviewer counts twice; W-24 is
+     route (b) below already written down.
    - In CMS, parallel signers are linked by their certificates' subject name,
      which we reject (reject 3). The link has to be explicit.
 
@@ -503,7 +529,11 @@ change a later engineer would make.
    KSA's rfc822 header. They sit outside every statement's signature and are
    covered only when the presenter adds `presented`. As written, SPEC-0001 §8.1
    makes the nonce check mandatory and the proof of possession optional, so a
-   relying party can "check" a nonce that anyone could have inserted.
+   relying party can "check" a nonce that anyone could have inserted. The gap is
+   inherited from the design record, not introduced by SPEC-0001: ARCH-0003 §3.8's
+   `Presentation` already has `audience: ? KeyId`, `nonce: ? Bytes` and
+   `proof: ? Signature`, all optional and independent. No ARCH, ADR, DEC or MD
+   text at 643fba2 ties the nonce to the proof.
    **Adaptation:** a relying party that supplied a nonce requires `presented` and
    verifies its `sig` before it checks `nonce` or `audience`. Without `presented`,
    those fields are rendered as unprotected, as R-0083 asks of the outer header.
@@ -560,7 +590,11 @@ change a later engineer would make.
    question 11.
 
 7. **Mailbox encryption, when it is specified.** This collects what §3 and §6
-   teach about the envelope we do not yet have (SPEC-0001 §8.2, provisional).
+   teach about the envelope we do not yet have (SPEC-0001 §8.2, provisional). The
+   design record is ARCH-0003 §7: a mailbox with messages *"encrypted to the
+   recipient persona's key"* (HPKE) and *"the suite's `key_exchange` part becomes
+   non-empty"*, under W-19, *"The verdict is independent of transport. Channel
+   encryption provides confidentiality only, never trust."*
    - **AEAD only.** §3.3 ¶1 (N-101): *"Thus, it is possible to replace ciphertext
      in such a way that the processed message will still be valid, but the meaning
      can be altered."* §6 ¶24's Efail paragraph shows the CBC case. HPKE is
@@ -809,8 +843,11 @@ was tested against `.cache/rfc-8551.txt`, not assumed.
 - **No delegation: holds.** Searched for *delegat*, *on behalf*, *proxy* and
   *authori*. *delegat* occurs twice, both in the IANA templates: *"Change
   Controller: LAMPS working group delegated from the IESG"* (N-149, N-150).
-  *authori* occurs only as certification authorities and as *"unauthorized
-  parties"* (§6 ¶5). Nothing in the source lets one key grant another anything.
+  *authori* occurs only as certification and certificate authorities (§3.9,
+  B.2), in the §1.2 definitions of data integrity and data confidentiality
+  (*"unauthorized changes"*, *"authorized to know the data"*), and as
+  *"unauthorized parties"* (§6 ¶5). Nothing in the source lets one key grant
+  another anything.
 - **No trust model: holds.** Outside the copyright notice, *trust* occurs three
   times: the signing time is *"only as trustworthy as that signer"* (§2.5.1);
   *"a trusted gateway might remove the envelope"* (§3.1.2); and §6 ¶8 advises
@@ -822,7 +859,8 @@ was tested against `.cache/rfc-8551.txt`, not assumed.
   been validated or rejected"*, but it does not defer depending on certificates. A signer must have
   one (R-0124). A receiving agent must be able to retrieve them (R-0125) and should
   store them (R-0126). Signers are identified only through certificates (R-0061 to
-  R-0063). The referenced certificate is included (R-0052, R-0053). Recipient keys
+  R-0063). The certificate an SMIMEEncryptionKeyPreference attribute references
+  is included unless already available (R-0052, R-0053). Recipient keys
   are chosen by certificate, including by subject name (R-0058 to R-0060). There is
   a certs-only message (§3.8, R-0122, R-0123). And §6 ¶8 advises validating to an
   anchor before using large keys. S/MIME's identity model is X.509's, and these are
@@ -848,7 +886,8 @@ proposed only; `record.yaml` is not edited here.
 ## 5. Mapping to our decisions
 
 Verdicts: **supports**, **narrows** (ours or the source restricts the other),
-**contradicts**, **silent**. "Adopt n", "adapt n" and "reject n" point into §1 to
+**contradicts**, **silent**, and, where none of those fits, **applies**
+(R-I-01), **contrast** (R-M-02) and **scope** (MD-1). "Adopt n", "adapt n" and "reject n" point into §1 to
 §3. The first two rows are the record's `bears_on`.
 
 | Ours (quoted) | RFC 8551 (quoted, R-id) | Verdict |
@@ -865,7 +904,7 @@ Verdicts: **supports**, **narrows** (ours or the source restricts the other),
 | **R-O-02** *"Short-lived validity preferred over revocation-heavy design; revocation still representable."* | B.2, CRLs not kept *"beyond one update after a certificate has expired"* | **Silent on the preference.** Supports keeping revocation evidence with archived statements (adapt 6). |
 | **R-O-03** *"Canonicalization algorithm for each concrete encoding SHALL be cited, not invented silently."* | §3.1.1 ¶2, *"are not described here"*; R-0087 | **Contradicted by the source**: canonicalisation is delegated per media type (adapt 8). |
 | **R-O-05 (proposed)** *"A verifier SHALL verify the signature before decoding and SHALL NOT canonicalize input as part of verification."* | §6 ¶15, §6 ¶24; micalg (N-119); R-0027 | **Supports** (adopt 1, adopt 11). The optional content-type attribute falls short of its *"authenticated type indicator"* (reject 4). |
-| **R-M-12 / ARCH-0002 P1 / ADR-0001** *"The native model depends on no centrally allocated registry for their meaning."* | OID arcs, R-0045 | **Contradicted natively**; OIDs are foreign labels at import. Adds a precision to ADR-0001's lineage (reject 5). |
+| **R-M-12 / ARCH-0002 P1 / ADR-0001** *"The native model depends on no centrally allocated registry for their meaning."* (ADR-0001's wording; proposal §7's R-M-12 row reads *"The native model SHALL NOT depend on a centrally allocated registry for their meaning."*) | OID arcs, R-0045 | **Contradicted natively**; OIDs are foreign labels at import. Adds a precision to ADR-0001's lineage (reject 5). |
 | **ARCH-0002 P5** *"an unknown field in a signed payload is an error, not something to skip."* | R-0030, R-0047, R-0120 | **Contradicted by the source; we reject it** (reject 1). |
 | **G1** *"Key-centric principals; names are not globally unique identifiers."*; **ARCH-0002 P6** (provisional) | R-0060 | **Contradicted by the source** (reject 3). |
 | **NG5** *"Treat email addresses as globally secure names."* (a non-goal) | none | **Silent.** RFC 8551 never binds an address to a key; that is RFC 8550's, held as a stub. |
@@ -1181,10 +1220,14 @@ record's artifacts. This file only collects them.
 - **Requirement tensions:** R-0037 and R-0049, *"MUST include a single
   instance"* against *"If present"* (TEN-02; protocol
   `if-present-vs-must-include`); R-0022, *"the media type MUST be stored"* in
-  eContent (TEN-03); R-0080, an AES-128 CBC fallback argued from AES-GCM (protocol
-  `rule2-fallback-reasoning`); R-0108 against §3.10's identification by suffix
+  eContent (TEN-03); R-0108 against §3.10's identification by suffix
   (protocol `extensions-vs-identification`); R-0125 puts a sending-side need on a
   receiving agent (protocol `retrieval-actor`).
+- **A reason that does not match its rule:** R-0080's AES-128 CBC fallback is
+  argued from a presumption about AES-GCM implementations (protocol
+  `rule2-fallback-reasoning`, an ambiguity). The requirement itself is
+  unambiguous and testable (`requirements.yaml`: `testable: yes`); only its
+  stated reason is in question.
 - **The NULL rule against its own example:** TEN-01, S-10, ENC-06.
 - **Registrations and names:** application/pkcs7-signature registers no
   optional parameters, yet the §3.5.3.3 sample sends `name=smime.p7s` (TEN-07,
@@ -1204,7 +1247,8 @@ record's artifacts. This file only collects them.
   OpenPGP packet (S-09).
 - **Module:** `usa(840)` against `us(840)`, the misspelled `receipentKeyId`, an
   empty OID list, a capability comment narrower than §2.5.2, and the RC2
-  parameter type that survives (schema findings 3, 4, 6, 7 and 8; TEN-10).
+  parameter type that survives (schema findings 3, 4, 6, 7 and 8; TEN-09 for
+  `usa(840)`, TEN-10 for the OID list and the comment).
 - **Cross-references and gaps:** §3.1 cites §3.2 and §3.5 for content that is in
   §3.3, §3.4 and §3.6 (protocol `cross-reference-3.1`; TEN-06). The source leaves
   undefined: how several signers combine (`multiple-signers-undefined`),

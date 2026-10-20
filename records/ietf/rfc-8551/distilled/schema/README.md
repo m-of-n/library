@@ -23,7 +23,7 @@ library's machine-checkable rendering of prose, named `*.derived.*`.
 | `inline.verbatim.txt` | **verbatim** | 13 regions, §1.3 – §5.3; region table below | per region | none: no region crosses a page break; margin kept | prose; the sample messages (examples lane); the Step lists (protocol lane) |
 | `smime-media-types.derived.schema.json` | **derived** (JSON Schema 2020-12, `$id` `urn:library:rfc-8551:smime-media-types.derived`) | §3.2, §3.2.1, §3.2.2, §3.3–§3.8, §3.5.3.2, §3.10, §5.1, §5.2 | — | — | raw header syntax (quoting, folding, case): see the ABNF; CMS content inside the entity (eContent absent, signerInfos empty, content-type OIDs: R-0021–R-0024, R-0115, R-0122, R-0123), which is ASN.1/CMS and belongs to `messages.yaml`; the inner MIME entity (canonicalization, transfer encoding §3.1) |
 | `multipart-signed-content-type.derived.abnf` | **derived** (ABNF, RFC 5234) | §3.5.3.2, lines 1876–1938 | — | — | the rest of the multipart/signed Content-Type (RFC 2045 / RFC 1847 rules `token`, `quoted-string`, `parameter` are imported by name, not defined); parameter order and the presence rule (stated in a comment) |
-| `algorithm-requirements.derived.yaml` | **derived** (YAML table) | §1.3, §2.1–§2.3, §2.7, §2.7.1.2, §4.1–§4.5, §6 | — | — | algorithm OIDs (the source prints only one, AES-128 CBC, line 1559); Appendix B historic algorithms (informative); §2.4–§2.6 content-type, attribute and SignerIdentifier rules (in `requirements.yaml`) |
+| `algorithm-requirements.derived.yaml` | **derived** (YAML table) | §1.3, §2.1–§2.3, §2.7, §2.7.1.2, §4.1–§4.5, §6, §B.2 | — | — | algorithm OIDs (the source prints only one, AES-128 CBC, line 1559); the Appendix B historic algorithm lists, which carry no BCP 14 keyword except R-0151 (included); §2.4–§2.6 content-type, attribute and SignerIdentifier rules (in `requirements.yaml`) |
 
 Source: `.cache/rfc-8551.txt`, sha256
 `dac39f749a08d3422bd78d4e492195067e7bc03f5fc2d0dac515f0d7ed884ae2`,
@@ -108,18 +108,25 @@ for below. Mechanically: every line of the source containing `::=` lies inside
 | 119–202 | ToC | table of contents | not formal; not copied |
 | 320–379 | §1.2 | definitions list | prose definitions → `normative.md`; not formal syntax |
 | 383–387 | §1.3 | BCP 14 boilerplate | not copied |
+| 427–440 | §1.4 | prior-version list | prose → `normative.md`; not formal |
+| 462–607 | §1.5–§1.7 | change-log lists | change logs; bind nothing (see `requirements.yaml` reconciliation); not copied |
 | 401–414 | §1.3 | requirement levels SHOULD+, SHOULD-, MUST- | **I-01**; used as the `levels` of `algorithm-requirements.derived.yaml` |
 | 643–647, 659–668, 679–687, 693–705, 1037–1046 | §2.1, §2.2, §2.3, §2.7 | algorithm bullet lists | prose lists → `algorithm-requirements.derived.yaml` (each entry's text verbatim) |
 | 805–813 | §2.5 | list of signed attributes | prose list → `requirements.yaml` R-0027; not formal |
 | 852–853 | §2.5.1 | UTCTime year rule | **I-02** |
+| 993–1017 | §2.5.3.1 | recipient key-management certificate selection list | prose → `requirements.yaml`; not formal |
+| 1071–1084, 1127–1131 | §2.7.1, §2.7.1.2 | capability-list processing; Rule 2 conditions | prose → `requirements.yaml`; the conditions gate `algorithm-requirements.derived.yaml` `selection` |
 | 1243–1249, 1589–1603, 1645–1658, 1770–1779, 1857–1874, 2008–2027, 2095–2104 | §3.1, §3.3, §3.4, §3.5.2, §3.5.3.2, §3.6, §3.8 | Step 1–n procedures | procedures → protocol lane; not formal syntax |
+| 1375–1382 | §3.1.3 | options for an agent that cannot transmit 8-bit data | prose; not formal |
 | 1409–1437 | §3.1.4 | sample canonical MIME entity | examples lane |
 | 1488–1496 | §3.2.1 | media type → file extension table | **I-03**; `smime-media-types.derived.schema.json` |
 | 1535–1541 | §3.2.2 | smime-type table | **I-04**; `smime-media-types.derived.schema.json` `$defs/smimeTypeDefined` |
 | 1547–1559 | §3.2.2 | smime-type assignment guidelines 1–3 | prose → `requirements.yaml` R-0109–R-0111 |
 | 1611–1621, 1689–1713, 1801–1824, 2035–2040 | §3.3, §3.4, §3.5.2, §3.6 | sample application/pkcs7-mime messages | examples lane; their headers are the positive test instances of the JSON Schema (see *Checks*) |
+| 1719–1721 | §3.5 | the two signed-message formats | prose; the formats are `smime-media-types.derived.schema.json` |
 | 1919–1931 | §3.5.3.2 | micalg table and footnote | **I-05**; JSON Schema and ABNF |
 | 1969–1992, 1997–1998 | §3.5.3.3 | sample multipart/signed message; digested bytes in hex | examples lane; its headers are test instances of the JSON Schema and the ABNF |
+| 2081–2087 | §3.7 | compression guidelines | prose; not formal |
 | 2149–2157 | §3.10 | S/MIME identification table | **I-06**; JSON Schema `$defs/identifiesAsSmime` |
 | 2212–2217, 2226–2231, 2253–2258, 2268–2273 | §4.2–§4.5 | RSA key-size tables | **I-07–I-10**; `algorithm-requirements.derived.yaml` `key_sizes` |
 | 2305–2342 | §5.1 | media type template, application/pkcs7-mime | **I-11** |
@@ -128,7 +135,7 @@ for below. Mechanically: every line of the source containing `::=` lies inside
 | 2438–2444, 2567–2596 | §6 | attack list; preconditions list | prose → `normative.md`; not formal |
 | 2671–3130 | §7 | reference conventions and references | not formal; not copied |
 | 3152–3243 | App. A | ASN.1 module | **`SecureMimeMessageV3dot1.asn1`** |
-| 3269–3437 | App. B | historic algorithm lists | informative prose; not copied (R-0151 is in `requirements.yaml`) |
+| 3269–3437 | App. B | historic algorithm lists | prose (the RFC does not label Appendix B informative); not copied; its one BCP 14 statement, R-0151 (lines 3382–3383), is an entry of `algorithm-requirements.derived.yaml` |
 
 ## Derived artifacts — how to use them
 
@@ -244,9 +251,23 @@ check its digest first).
   (line 1970 `micalg=sha-256`, line 1972
   `protocol="application/pkcs7-signature"`) and against the unquoted
   protocol and the unquoted comma list, which are rejected.
-- **YAML table.** Parses. Each of its 26 `text` values equals the text of
+- **YAML table.** Parses. Each of its 27 `text` values equals the text of
   the requirement it names in `requirements.yaml` and is a substring of the
   unwrapped source; each key-size row's source line equals its
-  requirement's text; every R-id cited in a derived file exists (39 cited
+  requirement's text; every R-id cited in a derived file exists (40 cited
   in the table).
 - **ASN.1 compile.** Not run: no compiler available (see *The module*).
+- **Pass 2 (verify), 2026-10-19.** Re-ran all of the above independently
+  (`jsonschema` 4.10.3: metaschema, the six samples, the three MUST and
+  five SHOULD negatives, `#should`/`#identifies` resolved by anchor and by
+  JSON pointer alike). ABNF: parsed against the RFC 5234 rule syntax with
+  `pyparsing` 3.1.1; every rule reference is defined or one of the declared
+  imports (`token`, `DQUOTE` used); six instance strings as above. ASN.1:
+  lexical and structural check only (braces, header, `IMPORTS ... ;`, the 10
+  assignments, every type and OID-value reference defined or imported); still
+  no compiler. Fixes made: `minLength` removed from the root's
+  application/pkcs7-mime parameters (no MUST in the source); two locators
+  corrected (§3.10 quote 2141–2142, IANA registry sentence 1936–1938);
+  Appendix B no longer called informative and R-0151 added to the table;
+  RECOMMENDED added to `levels`; the R-0016 unwrap exception stated; eight
+  uncovered lists added to the coverage reconciliation.

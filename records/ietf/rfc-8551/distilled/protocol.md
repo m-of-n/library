@@ -32,7 +32,7 @@ Every creation flow has the same shape: “The data to be secured is always a ca
 | `framing` | 5 statements of what kind of document this is, quoted |
 | `roles` | 13 roles with the source's names for them, locators and quotes |
 | `message_names_used` | every message name a step uses, with where the source defines it; `in_source: no` marks names the source uses but never defines as a structure (registration request, certificate request message, signed return message, returned message). For the cross-check pass to reconcile with `messages.yaml` |
-| `flows` | 22 flows, 123 steps. Each step has `from`, `to`, `message`, `action`, `locator`, `quotes`, `constrained_by`, `on_error` and `on_error_basis`; where needed also `condition`, `invokes`, `inferred` / `inferred_reason`, `on_error_inferred`, `on_error_quotes` and `on_error_constrained_by` |
+| `flows` | 22 flows, 124 steps. Each step has `from`, `to`, `message`, `action`, `locator`, `quotes`, `constrained_by`, `on_error` and `on_error_basis`; where needed also `condition`, `invokes`, `inferred` / `inferred_reason`, `on_error_inferred`, `on_error_quotes` and `on_error_constrained_by` |
 | `error_paths` | 36 error paths: trigger, detecting role, flow steps, outcome, basis |
 | `source_defects_and_tensions` | 17 entries, recorded and not repaired |
 | `not_defined` | 10 things an implementer will not find in RFC 8551 |
@@ -45,7 +45,7 @@ Every creation flow has the same shape: “The data to be secured is always a ca
 
 | role | kind | source names | locators |
 |---|---|---|---|
-| `sending-agent` | party | sending agent, sender, sending client, originator, S/MIME agent, interactive sending agent | §1.2, §1.1, §2.7.1, §3 |
+| `sending-agent` | party | sending agent, sender, sending client, originator, S/MIME agent, interactive sending agent | §1.2, §1.1, §2.7.1, §3, §3.1.1 |
 | `receiving-agent` | party | receiving agent, recipient, receiver, receiving client, client, recipient computer | §1.2, §1.1, §3.1, §3.7 |
 | `user` | party | user, human sender | §2.5, §2.7.2, §4, §6 |
 | `cms-processing` | component | CMS processing facilities, CMS generating process | §3, §3.5.3.2, §3.8 |
@@ -235,7 +235,7 @@ sequenceDiagram
   participant G as gateway
   participant RA as receiving-agent
   participant MUA as mime-user-agent
-  SA->>SA: Step 1 prepare entity, 7-bit for clear-signing
+  SA->>SA: Step 1 prepare entity, 7-bit if it may cross a 7-bit transport (R-0097)
   SA->>CMS: Step 2 SignedData, eContent absent (R-0115)
   SA->>SA: Step 3 entity as first part
   SA->>SA: Step 4 application/pkcs7-signature, smime.p7s
@@ -263,6 +263,7 @@ sequenceDiagram
   participant RA as receiving-agent
   Note over MTA: 8-bit or binary first part, MTA cannot carry it
   alt option 1, change transfer encoding (RFC 1847 prohibits)
+    MTA->>MTA: change the transfer encoding
     MTA->>RA: multipart/signed, signature invalid
   else option 2, transmit anyway
     MTA->>RA: multipart/signed, 8th bit corrupted, signature invalid
@@ -313,7 +314,7 @@ sequenceDiagram
     SA->>SA: enveloped-only, then signed (signers exposed, verifiable without key)
   end
   opt compression
-    SA->>SA: compress before encrypting, lossy: compress then sign
+    SA->>SA: binary-transferred ciphertext: compression discouraged, lossy: compress then sign
     X->>T: compression oracle on adaptive input
   end
   SA->>T: outermost entity
@@ -367,7 +368,7 @@ sequenceDiagram
   SA->>SA: key pair: good randomness, protected key, RSA at least 2048 (4.1)
   SA->>CA: registration request (mechanism not required by v4.0)
   Note over SA,CA: v2 application/pkcs10 is historic, PKIX methods referenced only
-  CA-->>SA: smime-type=certs-only (e.g.)
+  CA-->>SA: smime-type=certs-only (e.g., inferred)
 ```
 
 ### `certificate-request-by-signed-return`
@@ -475,7 +476,7 @@ sequenceDiagram
   participant RA as receiving-agent
   participant MUA as mime-user-agent
   participant U as user
-  RA->>RA: do not act on content before the integrity check finishes
+  RA->>RA: recommended (lowercase): do not act on content before the integrity check finishes
   opt top-level protected entity is message/rfc822
     RA->>MUA: present as top-level message, distinguish inner/outer headers (R-0083, R-0084)
   end
@@ -634,3 +635,4 @@ These are recorded in `protocol.yaml` under `source_defects_and_tensions` and ar
 - How to handle a decryption failure: uniform errors, timing, oracle resistance.
 - Any limit on nesting depth or on oversized keys, and any value for clock skew.
 - Triple wrapping and the other ESS structures (RFC 2634, RFC 5035).
+- The algorithm rule when the recipient's version is known but its capabilities are not.

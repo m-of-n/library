@@ -51,7 +51,7 @@ R-0089, R-0098), so a harness must convert LF to CRLF before parsing or
 digesting. No CRLF copy is kept.
 
 **Derived hex** is lowercase, 32 octets per line, made by `sed | cut -c4- |
-base64 -d | od -An -tx1 -v -w32`. **Dumps** are the output of `openssl
+base64 -d | od -An -tx1 -v -w32 | tr -d ' '`. **Dumps** are the output of `openssl
 asn1parse -inform DER -i` (OpenSSL 3.0.13) with one edit: the raw CR LF that
 OpenSSL prints inside the 3.5.2 eContent line is written as `\r\n`.
 
@@ -61,7 +61,7 @@ OpenSSL prints inside the 3.5.2 eContent line is written as `\r\n`.
   margin removal. All 6 hex files equal the decoded base64. Every sha256 in
   `vectors.yaml` matches its file. `vectors.yaml` parses (PyYAML), the
   counts in its header match the entries, and the ids are unique.
-- All 95 R-ids cited exist in `requirements.yaml`.
+- All 96 R-ids cited exist in `requirements.yaml`.
 - Of the 53 distinct quotes, 52 are verbatim substrings of the
   line-normalised source. The remaining one is the `content-`/`encryption`
   line-break rejoin, the same exception `requirements.yaml` makes.
@@ -72,6 +72,13 @@ OpenSSL prints inside the 3.5.2 eContent line is written as `\r\n`.
   TLVs. All four bodies are complete DER whose outer length equals the
   decoded length.
 
+Pass 2 (verify, independent) re-ran all of the above from the source: the
+fixture diffs, the hex decodes, the four `asn1parse` dumps (identical apart
+from the stated `\r\n` edit), `cms -verify` on §3.5.2 with its bit-flip
+control, the §3.6 inflate, and the `email` parse. It fixed the key-size
+table padding, the §3.2.2-C01 and §3.5.3.2-C02 locators, and the obligation
+wording on SHOULD-level results, and it widened S-05.
+
 ## Findings (recorded, not repaired)
 
 | id | where | finding |
@@ -80,7 +87,7 @@ OpenSSL prints inside the 3.5.2 eContent line is written as `\r\n`.
 | S-02 | §3.5.3.3 | The **messageDigest** (`b1c29646…`) is not SHA-256 of the printed digested bytes (`17a0cf82…`), nor of 9 other readings of part 1. The signature cannot belong to the printed content. |
 | S-03 | §3.5.3.3 | The printed digested bytes are text+CRLF. Under RFC 2046, part 1 as printed is CRLF+text (an empty header block, and the CRLF before the boundary belongs to the boundary). Marked ambiguous. |
 | S-04 | §3.5.3.3 | SignerInfo **version 2** with an issuerAndSerialNumber sid. RFC 5652 requires 1. External rule. |
-| S-05 | §3.5.3.3 | signedAttrs holds messageDigest only, with **no content-type**. RFC 5652 requires both. External rule. |
+| S-05 | §3.5.3.3 | signedAttrs holds messageDigest only, with **no content-type**. RFC 5652 requires both (external rule). It also departs from §2.5's own SHOULDs (R-0027, R-0029: signing time, capabilities, key preference, digest, content type, signingCertificate). §3.5.2 has no signed attributes at all. |
 | S-06 | §3.4 | GCMParameters omits aes-ICVlen (DEFAULT 12), but the **mac is 16 octets**. RFC 5084. |
 | S-07 | §3.4 | rsaEncryption has **no NULL parameters**, while §3.3's has NULL. RFC 3370 requires NULL. |
 | S-08 | §3.3–§3.5.3.3 | The samples use what this document no longer requires or has dropped: 1024-bit RSA, DES-EDE3-CBC, SHA-1, DSA-with-SHA1, 1024-bit DSA. Lines 3455–3457 say some examples were copied from RFC 4134. |

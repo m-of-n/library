@@ -5,6 +5,8 @@ source: 'RFC 8551, Secure/Multipurpose Internet Mail Extensions (S/MIME) Version
 source_digest: 'dac39f749a08d3422bd78d4e492195067e7bc03f5fc2d0dac515f0d7ed884ae2'
 extracted: '2026-10-19'
 extracted_by: 'FX-1 pass 1 (extract), state-machine agent, effort high, from the source text only'
+verified: '2026-10-19'
+verified_by: 'FX-1 pass 2 (verify), independent state-machine verifier, from the source text only: every quote an exact run of the unwrapped source (spacing kept, no blank-line or page-break crossing), every locator naming the section that holds its quote, every constrained_by id resolving, reachability and exits checked per machine. 11 machines, 89 states, 129 transitions (38 states and 41 transitions inferred), 38 triggers (15 messages, 23 events), 13 source tensions, 10 not_modelled. Pass 2 added terminal_states, M04-T17, M11-T11 to M11-T13 and ST-13, made M03-T12 inferred, made the guards out of M04 checking-key-size, M04 checking-attributes and M06 rule-1-applies mutually exclusive, and fixed the ST-03 locator.'
 note: >-
   Every lifecycle RFC 8551 describes or implies, as machines an
   implementation or a test harness can drive. RFC 8551 is mostly a format
@@ -46,7 +48,9 @@ note: >-
   cross-check pass to reconcile against messages.yaml. completion is the UML
   completion event: the activity of the source state has finished and the
   guards pick the branch. error_states are states in which the machine yields
-  no usable result. A guard of always means the transition is taken whenever
+  no usable result. terminal_states are the states with no exit, where one run
+  of the machine ends (pass 2: they were marked nowhere); an empty list means
+  the machine has none. A guard of always means the transition is taken whenever
   its trigger occurs. constrained_by lists rfc-8551#R-NNNN entries of
   requirements.yaml whose text is quoted by, or governs, the transition; it
   was checked mechanically to name only ids that exist. unspecified entries
@@ -587,6 +591,7 @@ machines:
         inferred: true
         inferred_reason: 'The hand-off to transport is ours; the 7-bit condition is stated.'
     error_states: ['not-creatable']
+    terminal_states: ['ready-to-send', 'not-creatable']
     unspecified:
       - 'Which of the two signed-only formats to use: §3.5.1 says there are no hard-and-fast rules.'
       - 'The order of nested operations: §3.7 leaves it to the implementer and the user, giving only the security trade-offs and the lossy-compression rule.'
@@ -656,6 +661,7 @@ machines:
         constrained_by: ['rfc-8551#R-0097']
         inferred: false
     error_states: ['signature-invalidated-reencoded', 'signature-invalidated-corrupted', 'returned-to-sender']
+    terminal_states: ['delivered-intact', 'signature-invalidated-reencoded', 'signature-invalidated-corrupted', 'returned-to-sender']
     note: 'The application/pkcs7-mime signed-data format is not subject to this machine: the SignedData format protects the message content from being changed by benign intermediate agents (§3.5.1).'
 
   # ======================================================================
@@ -826,7 +832,8 @@ machines:
         quote: 'When an S/MIME message is received, the security services on the message are processed, and the result is the MIME entity.'
         locator: '§3.1'
         constrained_by: []
-        inferred: false
+        inferred: true
+        inferred_reason: 'Requiring every SignerInfo to verify is our combination rule; the source does not say how several SignerInfo outcomes combine (NM-02). M03-T15 is its complement. (pass 2: was inferred: false)'
       - id: 'M03-T13'
         from: 'decrypting'
         to: 'inner-entity-obtained'
@@ -913,8 +920,10 @@ machines:
         constrained_by: ['rfc-8551#R-0147', 'rfc-8551#R-0148', 'rfc-8551#R-0149']
         inferred: false
     error_states: ['layer-failed', 'resource-limit-exceeded']
+    terminal_states: ['not-smime', 'identified-detached-signature', 'certificates-imported', 'presented', 'layer-failed', 'resource-limit-exceeded']
     unspecified:
-      - 'Processing of a stand-alone p7s object (identified-detached-signature): see M03-T04.'
+      - 'Processing of a stand-alone p7s object (identified-detached-signature): see M03-T04. The state is a dead end because the source gives it no processing, not because processing is complete.'
+      - 'An application/pkcs7-mime entity whose smime-type is not one of the five in §3.2.2, or whose eContentType is not id-data: Other contents MAY be carried when the eContentType contains different values (§3.2, R-0099), and other documents define additional CMS content types (§3.1). identified-pkcs7-mime has no exit for it (pass 2).'
       - 'Failure to decompress a CompressedData: the source defines no failure for it.'
       - 'Whether a failed layer stops presentation of the content or only its protected status (M03-T15, M03-T16).'
 
@@ -959,6 +968,10 @@ machines:
       - name: 'signature-failed'
         meaning: 'The signature is treated as failing because an SMIMECapabilities or SMIMEEncryptionKeyPreference attribute violates its encoding rules.'
         inferred: false
+        kind: 'error'
+      - name: 'signature-algorithm-unsupported'
+        meaning: 'The signature or digest algorithm of the SignerInfo is not one the agent implements (for example a historic one it dropped). Added in pass 2: M05 had the decryption counterpart, M04 had none.'
+        inferred: true
         kind: 'error'
     transitions:
       - id: 'M04-T01'
@@ -1011,7 +1024,7 @@ machines:
         from: 'checking-key-size'
         to: 'trying-candidate'
         trigger: 'completion'
-        guard: 'RSA or DSA with key size <= 2047 and the agent supports verifying such keys (old messages, Appendix B). Set warn_user when the key is under 1024 bits.'
+        guard: 'RSA or DSA with key size <= 2047, the agent supports verifying such keys (old messages, Appendix B), and it is not a server implementation where user warnings are not appropriate (M04-T07). Set warn_user when the key is under 1024 bits.'
         quote: 'If an implementation supports verification of digital signatures generated with RSA and DSA keys of less than 1024 bits, it MUST warn the user.'
         locator: '§6'
         constrained_by: ['rfc-8551#R-0133', 'rfc-8551#R-0143']
@@ -1068,7 +1081,7 @@ machines:
         from: 'checking-attributes'
         to: 'signature-valid'
         trigger: 'completion'
-        guard: 'Attributes well formed; zero or one of each listed signed attribute; signingTime decoded from UTCTime or GeneralizedTime; unrecognised attributes and capability values handled gracefully; warn_user not set; no historic algorithm.'
+        guard: 'Attributes well formed; zero or one of each listed signed attribute; signingTime decoded from UTCTime or GeneralizedTime; unrecognised attributes and capability values handled gracefully; warn_user not set; no historic algorithm; the key is not 1024 to 2047 bits (M04-T14).'
         quote: 'Receiving agents MUST be able to handle zero or one instance of each of the signed attributes listed here.'
         locator: '§2.5'
         constrained_by: ['rfc-8551#R-0026', 'rfc-8551#R-0028', 'rfc-8551#R-0030', 'rfc-8551#R-0034', 'rfc-8551#R-0035', 'rfc-8551#R-0047']
@@ -1114,11 +1127,24 @@ machines:
         constrained_by: []
         inferred: true
         inferred_reason: 'As M04-T15.'
-    error_states: ['no-signer-certificate', 'weak-signature-rejected', 'signature-failed']
+      - id: 'M04-T17'
+        from: 'checking-key-size'
+        to: 'signature-algorithm-unsupported'
+        trigger: 'completion'
+        guard: 'The signature or digest algorithm is not implemented by the agent.'
+        quote: 'This means that if a user has historic emails and their user agent has been updated to only support the current set of recommended algorithms, some of those old emails will no longer be accessible.'
+        locator: 'Appendix B'
+        constrained_by: []
+        inferred: true
+        inferred_reason: 'The source describes the consequence, not a state; as M05-T12. Added in pass 2.'
+    error_states: ['no-signer-certificate', 'weak-signature-rejected', 'signature-failed', 'signature-algorithm-unsupported']
+    terminal_states: ['no-signer-certificate', 'weak-signature-rejected', 'signature-failed', 'signature-algorithm-unsupported']
     unspecified:
       - 'RSA or DSA keys of 1024 to 2047 bits that an agent does verify: R-0143 requires a warning only below 1024, while §4.3 says SHOULD NOT verify at or below 2047 (ST-11).'
       - 'How the outcomes of several SignerInfos combine into the layer outcome (NM-02).'
       - 'A signingTime far in the future does not fail the signature; it only stops the cache update (M08, M09).'
+      - 'DSA keys of 2048 bits or more: the §4.3 table covers RSA and RSASSA-PSS only, and DSA with SHA-256 was dropped (§B.2), so checking-key-size has no stated branch for them (pass 2).'
+      - 'signature-valid and signature-valid-flagged are not terminal: they leave by status_indicator_refresh (M04-T15, M04-T16).'
 
   # ======================================================================
   - id: 'M05'
@@ -1287,7 +1313,9 @@ machines:
         inferred: true
         inferred_reason: 'The source describes the consequence, not a state.'
     error_states: ['no-recipient-key', 'key-size-refused', 'key-wrap-mismatch-refused', 'algorithm-unsupported', 'integrity-check-failed']
+    terminal_states: ['plaintext-authenticated', 'plaintext-unauthenticated', 'no-recipient-key', 'key-size-refused', 'key-wrap-mismatch-refused', 'algorithm-unsupported', 'integrity-check-failed']
     unspecified:
+      - 'An EnvelopedData with an implemented algorithm that is neither AES-128 CBC nor historic, such as AES-192 or AES-256 CBC (SHOULD+ in v3.2, §1.6; absent from §2.7): no transition out of key-established names it (pass 2; see ST-13).'
       - 'Uniform error reporting or timing behaviour against decryption oracles: §6 cites only the Million Message Attack (RFC 3218) as an example of the state of the art (NM-03).'
       - 'An EnvelopedData carrying an authenticated algorithm or an AuthEnvelopedData carrying CBC: §3.3 says the enveloped-only structure does not support authenticated symmetric algorithms, and says no more.'
 
@@ -1366,7 +1394,7 @@ machines:
         from: 'rule-1-applies'
         to: 'algorithm-selected'
         trigger: 'completion'
-        guard: 'The first listed capability the agent knows how to encrypt, which the agent reasonably expects the recipient to decrypt, and which is not weak when weak encryption is unacceptable.'
+        guard: 'The first listed capability the agent knows how to encrypt, which the agent reasonably expects the recipient to decrypt, and which is not weak when weak encryption is unacceptable; if it is a weaker algorithm, the agent is not controlled by a human (otherwise M06-T06).'
         quote: 'The sending agent SHOULD use one of the capabilities in the list if the agent reasonably expects the recipient to be able to decrypt the message.'
         locator: '§2.7.1.1'
         constrained_by: ['rfc-8551#R-0074', 'rfc-8551#R-0077', 'rfc-8551#R-0078']
@@ -1448,6 +1476,7 @@ machines:
         inferred: true
         inferred_reason: 'The rules do not cover this state; out-of-band information is the only basis the source names.'
     error_states: ['no-algorithm']
+    terminal_states: ['algorithm-selected', 'no-algorithm']
     note: 'The decision to use or not use weak encryption overrides any other decision in this section about which encryption algorithm to use (§2.7.1). Using algorithms such as RC2 is never recommended unless the only alternative is no cryptography (§6).'
 
   # ======================================================================
@@ -1513,6 +1542,7 @@ machines:
         constrained_by: ['rfc-8551#R-0146']
         inferred: false
     error_states: ['strong-content-exposed']
+    terminal_states: ['single-message', 'copies-sent', 'strong-content-exposed']
     unspecified:
       - 'What to do when a split is forced and one subgroup supports only weaker algorithms: §2.7.3 forces a split while R-0146 discourages the weaker copy (ST-06).'
 
@@ -1580,6 +1610,7 @@ machines:
         inferred: true
         inferred_reason: 'The source gives the update condition; that an older or equal signing time leaves the list unchanged is its complement.'
     error_states: []
+    terminal_states: []
     note: 'No error state: a refused update leaves the stored state as it was, modelled as a self-loop. A signed message with no SMIMECapabilities attribute does not trigger this machine; the source does not say whether it should clear or age the list (NM-06).'
 
   # ======================================================================
@@ -1645,6 +1676,7 @@ machines:
         inferred: true
         inferred_reason: 'Complement of the stated store condition.'
     error_states: []
+    terminal_states: []
     note: 'Section 2.5.3 points to 2.7.1 for the caching strategy, which describes only capabilities (ST-04). The stored preference is only a preference: the receiving agent can use any certificate in replying to the sender that is valid (§2.5.3, R-0057).'
 
   # ======================================================================
@@ -1736,12 +1768,13 @@ machines:
         constrained_by: ['rfc-8551#R-0125']
         inferred: false
     error_states: ['no-key-management-certificate']
+    terminal_states: ['certificate-chosen', 'no-key-management-certificate']
     note: 'The procedure is stated for a future CMS EnvelopedData; AuthEnvelopedData needs the same choice (§2.4.4) and is not named (ST-05).'
 
   # ======================================================================
   - id: 'M11'
     name: 'algorithm-requirement-level'
-    locator: '§1.3, §1.5, §1.6, §1.7, Appendix B, §B.1, §B.2, §B.3, §B.4'
+    locator: '§1.3, §1.5, §1.6, §1.7, §2.2, §2.3, §2.7, Appendix B, §B.1, §B.2, §B.3, §B.4'
     actor: 'the S/MIME Message Specification across its revisions; consumed by an implementation''s algorithm policy table'
     purpose: 'The requirement level an algorithm holds, the moves §1.3 says the authors expect, and the drop to historic that Appendix B records.'
     scope_note: 'This is a lifecycle of a requirement level across versions of the document, not of runtime agent state. It is modelled because §1.3 defines the levels by their expected next transition and Appendix B records actual ones, and an implementation''s policy moves along it at each revision. The §1.3 transitions are expectations of the authors and bind nobody; the dropped transitions are history. requirements.yaml treats SHOULD+ as SHOULD and MUST- as MUST for testing.'
@@ -1832,7 +1865,7 @@ machines:
         from: 'SHOULD-'
         to: 'dropped'
         trigger: 'specification_revision'
-        guard: 'Observed: tripleDES, SHA-1, MD5 and DH were SHOULD- in v3.2 (§1.6) and dropped in v4.0 (§B.1, §B.3, §B.4), skipping the expected MAY (ST-07).'
+        guard: 'Observed: tripleDES, SHA-1, MD5, DH, and RSA with SHA-1, DSA with SHA-1 and RSA with MD5 were SHOULD- in v3.2 (§1.6) and dropped in v4.0 (§B.1, §B.2, §B.3, §B.4), skipping the expected MAY (ST-07).'
         quote: 'DES EDE3 CBC [TripleDES], also known as "tripleDES", was dropped in [SMIMEv4].'
         locator: '§B.3'
         constrained_by: []
@@ -1846,6 +1879,7 @@ machines:
         locator: '§B.2'
         constrained_by: []
         inferred: false
+        note: 'AES-192 CBC also left the set from SHOULD+ (§1.6): v4.0 removed mention of AES-192 Cipher Block Chaining (CBC) (§1.7), though §B.3 does not list it as dropped. AES-256 CBC, also SHOULD+ in v3.2, disappears without mention (ST-13).'
       - id: 'M11-T09'
         from: 'SHOULD+'
         to: 'SHOULD'
@@ -1859,13 +1893,44 @@ machines:
         from: 'MUST'
         to: 'MUST-'
         trigger: 'specification_revision'
-        guard: 'Observed: AES-128 CBC was added as MUST in v3.2 (§1.6) and is MUST- in v4.0 (§2.7, R-0065); RSA PKCS #1 v1.5 with SHA-256 likewise (§1.6, §2.2).'
+        guard: 'Observed: AES-128 CBC was added as MUST in v3.2 (§1.6) and is MUST- in v4.0 (§2.7, R-0065); RSA PKCS #1 v1.5 with SHA-256 likewise (§1.6, §2.2, R-0007, R-0010); RSA encryption was changed to a MUST implement in v3.1 (§1.5) and is MUST- in v4.0 (§2.3, R-0014).'
         quote: 'MUST- support encryption and decryption with AES-128 CBC [RFC3565].'
         locator: '§2.7'
         constrained_by: ['rfc-8551#R-0065']
         inferred: false
+      - id: 'M11-T11'
+        from: 'SHOULD'
+        to: 'SHOULD-'
+        trigger: 'specification_revision'
+        guard: 'Observed: DH was changed to a SHOULD implement in v3.1 (§1.5) and to SHOULD- in v3.2 (§1.6), before it was dropped in v4.0 (M11-T07, §B.4). §1.3 defines no expected move out of SHOULD.'
+        quote: 'Section 2.3 (key encryption): DH changed to SHOULD-'
+        locator: '§1.6'
+        constrained_by: []
+        inferred: false
+        note: 'The from-level is §1.5: The key wrap algorithm and the Diffie-Hellman (DH) algorithm [RFC2631] were changed to a SHOULD implement. Added in pass 2; SHOULD had no exit.'
+      - id: 'M11-T12'
+        from: 'SHOULD'
+        to: 'MUST'
+        trigger: 'specification_revision'
+        guard: 'AES CBC was included as a SHOULD implement in v3.1 (§1.5); AES-128 CBC is MUST in v3.2 (§1.6).'
+        quote: 'Section 2.7 (content encryption): AES-128 CBC added as MUST, AES-192 and AES-256 CBC SHOULD+, and tripleDES now SHOULD-.'
+        locator: '§1.6'
+        constrained_by: []
+        inferred: true
+        inferred_reason: '§1.5 names the AES symmetric encryption algorithm without key size and §1.6 says added rather than changed; reading the two as one algorithm moving from SHOULD is ours. Added in pass 2.'
+      - id: 'M11-T13'
+        from: 'SHOULD'
+        to: 'SHOULD+'
+        trigger: 'specification_revision'
+        guard: 'As M11-T12, for AES-192 and AES-256 CBC, SHOULD+ in v3.2 (§1.6).'
+        quote: 'Section 2.7 (content encryption): AES-128 CBC added as MUST, AES-192 and AES-256 CBC SHOULD+, and tripleDES now SHOULD-.'
+        locator: '§1.6'
+        constrained_by: []
+        inferred: true
+        inferred_reason: 'As M11-T12. Added in pass 2.'
     error_states: []
-    note: 'A dropped algorithm keeps a use: if supported, should only be used to decrypt existing email (§B.3, RC2/40), and decrypting old mail with smaller key sizes is reasonable (§B.4). M04-T14 and M05-T11 are where a dropped algorithm is met at runtime.'
+    terminal_states: ['dropped']
+    note: 'A dropped algorithm keeps a use: if supported, should only be used to decrypt existing email (§B.3, RC2/40), and decrypting old mail with smaller key sizes is reasonable (§B.4). M04-T14 and M05-T11 are where a dropped algorithm is met at runtime. MAY has no stated or observed exit in this document; it is open, not terminal (pass 2 flag). RC2/40 was dropped in v3.2 (§B.3) from a level this document does not state, so it has no transition here.'
 
 source_tensions:
   - id: 'ST-01'
@@ -1879,7 +1944,7 @@ source_tensions:
     note: 'The presumption is about AES-GCM key sizes, which would point to AES-128 GCM; the conclusion is AES-128 CBC, the malleable mode §6 says mail systems should migrate away from (It is therefore recommended that mail systems migrate to using AES-GCM as quickly as possible). The fallback also changes the structure from AuthEnvelopedData to EnvelopedData.'
     affects: ['M06-T09']
   - id: 'ST-03'
-    locator: '§2.7.1.1, §2.7.1.2'
+    locator: '§2.7.1, §2.7.1.1, §2.7.1.2'
     quote: 'These rules are ordered, so the sending agent SHOULD make its decision in the order given.'
     note: 'Two cases fall outside both rules: capabilities unknown but S/MIME version known (Rule 2 needs both conditions), and a capabilities list none of whose entries the agent can use. Modelled as outside-rules and no-algorithm, both inferred.'
     affects: ['M06-T04', 'M06-T07', 'M06-T13']
@@ -1928,6 +1993,11 @@ source_tensions:
     quote: 'The SignedAttributes in a signerInfo MUST include a single instance of the SMIMECapabilities attribute.'
     note: 'Read literally the attribute becomes mandatory in every signerInfo, contradicting If present in the sentence before it and the SHOULD generate of §2.5 (R-0027). M04-T11 reads it as at most one instance. The same holds for SMIMEEncryptionKeyPreference (R-0049).'
     affects: ['M04-T11']
+  - id: 'ST-13'
+    locator: '§1.6, §1.7, §2.7'
+    quote: 'removed mention of AES-192 Cipher Block Chaining (CBC)'
+    note: 'v3.2 made AES-192 and AES-256 CBC SHOULD+ (§1.6). The v4.0 change list removes mention of AES-192 CBC only, yet §2.7 lists neither, and §B.3 records neither as dropped. AES-256 CBC leaves the set without a word, while §2.3 calls 256-bit AES modes mandatory to implement and §2.7.2 still offers AES CBC as the stronger choice. Its v4.0 level is undetermined.'
+    affects: ['M11-T08', 'M11-T13']
 
 not_modelled:
   - id: 'NM-01'
