@@ -12,12 +12,19 @@ reviewed_by: ""
      Table of Contents, the List of Figures and Tables, the references and
      the Author's Address are dropped.
 
-     RELATION TO requirements.yaml. The bullets below are the SAME 215
+     RELATION TO requirements.yaml. The bullets below are the SAME 226
      verbatim spans that requirements.yaml carries, regrouped for reading
      rather than for querying: every bullet is one `text` field and every
      `text` field appears once here. The id is given so the two can be
      cross-checked mechanically, and `field`, `verb`, `actor`, `kind` and
      `testable` live only in requirements.yaml.
+
+     IDS R-0216 TO R-0226 were appended by the verify pass (pass 2) for
+     statements the extract pass dropped. Ids are never reused, so they
+     could not be interleaved in requirements.yaml; here they ARE in their
+     document positions, which is what this file is for. The consequence is
+     that bullet order tracks the source, not the id number, from §2.3.2
+     onwards.
 
      CONTIGUITY. Each span was checked by script against the cached source
      after removing exactly two classes of plain-text page decoration: the
@@ -192,6 +199,7 @@ _Reproduced with the draft's aside gutter (`|`) intact._
 ## §2.3.2  Single-Quoted String Literals
 
 - (§2.3.2) [`R-0041`] “Analogously to text-string literals delimited by double quotes, CDN allows the use of single quotes (without a prefix) to express byte- string literals with UTF-8 text; for instance, the following are equivalent:”
+- (§2.3.2) [`R-0216`] “The escaping rules of JSON strings are applied equivalently for text- based byte-string literals, e.g., \\ stands for a single backslash and \' stands for a single quote. However, to facilitate parsing, in single-quoted strings CDN excludes certain escaping mechanisms available for double-quoted strings:”
 - (§2.3.2) [`R-0042`] “\/ is an escape in JSON that is available for double-quoted CDN text strings as well to ensure all JSON texts are CDN literals. Since CDN's single-quoted strings do not occur in JSON, this legacy compatibility feature is not available for them.”
 - (§2.3.2) [`R-0043`] “\u-based escapes are not available for characters in the range from U+0020 through U+007E (essentially, printable ASCII).”
 - (§2.3.2) [`R-0044`] “All other escaping mechanisms that are available in double-quoted string literals are available in single-quoted string literals.”
@@ -212,7 +220,9 @@ _Reproduced with the draft's aside gutter (`|`) intact._
 ## §2.3.4  CBOR Sequence Literals
 
 - (§2.3.4) [`R-0055`] “In diagnostic notation, a sequence of zero or more CBOR data item literals can be enclosed in << and >> and separated by comma or blank space, optionally prefixed by an app-extension prefix; this specification speaks of _sequence literals_.”
+- (§2.3.4) [`R-0217`] “CDN mainly deals with individual data items, not with CBOR sequences [RFC8742], so the CBOR sequence represented by the sequence literal needs to be further processed to obtain the value of the literal.”
 - (§2.3.4) [`R-0056`] “Prefixed sequence literals refer to the app-extension (see Section 3) identified by the prefix and apply the extension to its sequence content, resulting in a single data item.”
+- (§2.3.4) [`R-0218`] “This data item may be a string or not (always), depending on the definition of the app- extension.”
 - (§2.3.4) [`R-0057`] “An unprefixed sequence literal applies CBOR encoding to the data items in its content, taken as a CBOR sequence. The value of the literal thus is a byte string with the encoded content; this is commonly referred to as _embedded CBOR_.”
 - (§2.3.4) [`R-0058`] “A diagnostic implementation is expected to honor encoding indicators (please see Section 4) on the individual items in the supplied sequence before assembling them into an encoded CBOR sequence.”
 - (§2.3.4) [`R-0059`] “Encoding indicators on the arguments are ignored if the app-extension does not define special handling of encoding variants.”
@@ -262,6 +272,7 @@ _Reproduced with the draft's aside gutter (`|`) intact._
 - (§3) [`R-0082`] “An app-extension (such as dt) MAY also define the meaning of one additional prefix derived from its app-extension identifier by replacing each lowercase character by its uppercase counterpart (such as DT).”
 - (§3) [`R-0083`] “As a convention, using the all-uppercase variant implies making use of a CBOR tag appropriate for this app-extension (such as tag number 1 for DT, where in contrast the prefix dt stands for the unwrapped tag content).”
 - (§3) [`R-0084`] “In summary, an app-extension identifier gives rise to one or two prefixes, one that is lexically identical to the identifier (i.e., all lowercase), and potentially another one that is an all-uppercase variation of it.”
+- (§3) [`R-0219`] “In addition to specifying which of these two variations exhibits which specific semantics, the app-extension specifies what input the extension takes.”
 - (§3) [`R-0085`] “When the prefix is used immediately in front of a single-quoted or a raw string, the input takes the form of a single text string CBOR data item (this is useful only if the app-extension is designed to receive a text string as input).”
 - (§3) [`R-0086`] “When used immediately in front of a sequence literal, the input is a CBOR sequence of elements of the sequence literal as input.”
 - (§3) [`R-0087`] “The app-extension can provide behavior that depends on the number of items supplied as input to it and their data types; it cannot distinguish between its prefix being used with a single-quoted string, a raw string, or a CBOR sequence composed of a single text string data item (as illustrated for instance in Tables 3, 4, and 5).”
@@ -420,12 +431,15 @@ _Reproduced with the draft's aside gutter (`|`) intact._
 
 - (§4.1) [`R-0132`] “Encoding indicators start with an underscore and comprise all immediately following characters that are alphanumeric or underscore.”
 - (§4.1) [`R-0133`] “Encoding indicators are placed immediately to the right of the data item or of a syntactic feature that can stand for the data item the encoding of which the encoding indicator is controlling.”
+- (§4.1) [`R-0220`] “Encoding indicators can be ignored by anyone not interested in this information.”
 - (§4.1) [`R-0134`] “An underscore followed by a decimal digit n indicates that the item was or is to be encoded with an additional information value of ai=24+n.”
+- (§4.1) [`R-0221`] “For an example involving floating point values (Section 3.3 of RFC 8949 [STD94]), 1.5_1 is a half-precision floating-point number (2^1 = 2 additional bytes or 16 bits), while 1.5_3 is encoded as double precision (2^3 = 8 additional bytes or 64 bits).”
 - (§4.1) [`R-0135`] “For a tool consuming CDN in a diagnostic mode, encountering an encoding indicator that does not provide enough space to correctly encode the unchanged data item given is an error; there is no truncation or rounding that would change the data item encoded.”
 - (§4.1) [`R-0136`] “Truncation or rounding semantics imply performing changes at the data model level, which is outside the scope of encoding indicators. Such operations can be provided by app-extensions.”
 - (§4.1) [`R-0137`] “The encoding indicator _ (an underscore on its own) is used to indicate indefinite-length encoding.”
 - (§4.1) [`R-0138`] “Indefinite-length encoding uses ai=31, which could have been indicated by _7, which is therefore not used and marked as reserved (as are _4, _5, and _6, which would stand for ai=28 to ai=30, values currently not in use in CBOR; these encoding indicators will be available if and when CBOR is extended to make use of them).”
 - (§4.1) [`R-0139`] “Note that the encoding indicator _ is only available behind the opening brace/bracket for map and array (Section 4.2): strings originally had a now deprecated special syntax streamstring for indefinite-length encoding except for the special cases”
+- (§4.1) [`R-0222`] “Section 8.1 of RFC 8949 [STD94] does not address ai=0 to ai=23 — the assumption seems to have been that Preferred Serialization (Section 4.1 of RFC 8949 [STD94]) will be used when converting CBOR diagnostic notation to an encoded CBOR data item, so leaving out the encoding indicator for a data item with a Preferred Serialization will implicitly use ai=0 to ai=23 if that is possible.”
 - (§4.1) [`R-0140`] “The encoding indicators _0 to _3 indicate ai=24 to ai=27, respectively; they therefore stand for 1, 2, 4, and 8 bytes of additional information (ai) following the initial byte in the head of the data item.”
 - (§4.1) [`R-0141`] “_i ("immediate") stands for encoding with ai=0 to ai=23, i.e., it indicates that the argument is encoded directly in the initial byte of the CBOR item.”
 - (§4.1) [`R-0142`] “Encoding indicators are an extension point for CDN; Section 7.2 defines a registry for additional values.”
@@ -494,6 +508,7 @@ _Reproduced with the draft's aside gutter (`|`) intact._
 - (§5.2) [`R-0162`] “(Note that the tag-based representation form defined here does not allow multiple key/value pairs with an ellipsis as a key: the CBOR data item would not be valid.)”
 - (§5.2) [`R-0163`] “String elisions can be represented in a CBOR data item by a tag CPA888 that wraps an array containing string parts alternating with ellipsis indicators:”
 - (§5.2) [`R-0164`] “The consumer of this CDN will ignore the comments and therefore will have no idea after ingestion that some information has been elided; validation steps may then simply fail instead of being informed about the elisions.”
+- (§5.2) [`R-0223`] “The example "signature" uses special syntax that allows the use of ellipses between the bytes notated _inside_ h'' literals.”
 
 ## §6  ABNF Definitions
 
@@ -1229,6 +1244,7 @@ _This redefinition DROPS `app-rstring` and `rawstring` from `bstr`; compare Figu
 - (§7.1) [`R-0190`] “IANA is requested to create an "App-Extension Identifiers" registry in a new "Concise Diagnostic Notation" registry group [IANA.concise- diagnostic-notation], with the policy "expert review" (Section 4.5 of RFC 8126 [BCP26]).”
 - (§7.1) [`R-0191`] “The experts are instructed to be frugal in the allocation of app- extension identifiers that are suggestive of generally applicable semantics, keeping them in reserve for app-extensions that are likely to enjoy wide use and can make good use of their conciseness.”
 - (§7.1) [`R-0192`] “The experts are also instructed to direct the registrant to provide a specification (Section 4.6 of RFC 8126 [BCP26]), but can make exceptions, for instance when a specification is not available at the time of registration but is likely forthcoming.”
+- (§7.1) [`R-0224`] “If the experts become aware of app-extension identifiers that are deployed and in use, they may also initiate a registration on their own if they deem such a registration can avert potential future collisions.”
 - (§7.1) [`R-0193`] “Each entry in the registry must include:”
 - (§7.1) [`R-0194`] “a lowercase ASCII [STD80] string that starts with a letter and can contain letters, digits, and hyphens after that ([a-z][a-z0-9-]*). No other entry in the registry can have the same app-extension identifier.”
 - (§7.1) [`R-0195`] “The initial content of the registry is shown in Table 8; all initial entries have the Change Controller "IETF".”
@@ -1309,6 +1325,8 @@ _`b32` and `h32` appear here, and only here, as Reserved against RFC8949. Reserv
 ## §7.2  Encoding Indicators
 
 - (§7.2) [`R-0196`] “IANA is requested to create an "Encoding Indicators" registry in the newly created "Concise Diagnostic Notation" registry group [IANA.concise-diagnostic-notation], with the policy "specification required" (Section 4.6 of RFC 8126 [BCP26]).”
+- (§7.2) [`R-0225`] “The experts are instructed to be frugal in the allocation of encoding indicators that are suggestive of generally applicable semantics, keeping them in reserve for encoding indicator registrations that are likely to enjoy wide use and can make good use of their conciseness.”
+- (§7.2) [`R-0226`] “If the experts become aware of encoding indicators that are deployed and in use, they may also solicit a specification and initiate a registration on their own if they deem such a registration can avert potential future collisions.”
 - (§7.2) [`R-0197`] “an ASCII [STD80] string that starts with an underscore letter and can contain zero or more underscores, letters and digits after that (_[_A-Za-z0-9]*). No other entry in the registry can have the same Encoding Indicator.”
 - (§7.2) [`R-0198`] “As the "Reference" column reflects, all the encoding indicators initially registered are already defined in Section 8.1 of RFC 8949 [STD94], with the exception of _i, which is defined in Section 6.1 of the present document.”
 
@@ -1495,7 +1513,7 @@ Reproduced because two of them bear on stability, not because they are
 normative. The draft writes each as a `//` cref. They will not be in the
 published RFC.
 
-<!-- source lines 29-33, sha256 aacca21dc5a732f023a72ca8161f19b3b7a7894e97880dd86a3718298e5c5a3b -->
+<!-- source lines 29-33 (5 lines), sha256 aacca21dc5a732f023a72ca8161f19b3b7a7894e97880dd86a3718298e5c5a3b -->
 **Opening editorial cref, before Section 1**
 
 ```
@@ -1506,7 +1524,7 @@ published RFC.
    // Rohan's suggestion to fix the questionable figure in 3.8.
 ```
 
-<!-- source lines 1688-1690, sha256 53997f06f8851acbcaa3bca280bde7cc980224c392c272379f6432154c0dff66 -->
+<!-- source lines 1688-1690 (3 lines), sha256 53997f06f8851acbcaa3bca280bde7cc980224c392c272379f6432154c0dff66 -->
 **Section 3.5**
 
 ```
@@ -1515,7 +1533,7 @@ published RFC.
    // actual names are still being decided by the WG.
 ```
 
-<!-- source lines 2195-2201, sha256 7bc2c8ee3399785aa545f573ad2b3429f0dd9524dd7bf30a0aadbefc3254f940 -->
+<!-- source lines 2195-2201 (7 lines), sha256 7bc2c8ee3399785aa545f573ad2b3429f0dd9524dd7bf30a0aadbefc3254f940 -->
 **Section 5.1 (CPA code point allocation convention)**
 
 ```
@@ -1528,7 +1546,7 @@ published RFC.
    // remove this note.
 ```
 
-<!-- source lines 2567-2569, sha256 309e068b1f17d17d03fcce6501b2559d6fb452713ec9f3505a1cb64362e9655e -->
+<!-- source lines 2567-2569 (3 lines), sha256 309e068b1f17d17d03fcce6501b2559d6fb452713ec9f3505a1cb64362e9655e -->
 **Section 6.1**
 
 ```
@@ -1537,7 +1555,7 @@ published RFC.
    // information.
 ```
 
-<!-- source lines 3258-3260, sha256 7eee8e88d35a9edffa0513dbc61ca9f155294bd89cafc570abc9214aa63cbc9d -->
+<!-- source lines 3258-3260 (3 lines), sha256 7eee8e88d35a9edffa0513dbc61ca9f155294bd89cafc570abc9214aa63cbc9d -->
 **Section 7**
 
 ```
@@ -1546,7 +1564,7 @@ published RFC.
    // new registry group, and remove this note.
 ```
 
-<!-- source lines 3555-3561, sha256 7bc2c8ee3399785aa545f573ad2b3429f0dd9524dd7bf30a0aadbefc3254f940 -->
+<!-- source lines 3555-3561 (7 lines), sha256 7bc2c8ee3399785aa545f573ad2b3429f0dd9524dd7bf30a0aadbefc3254f940 -->
 **Section 7.5 (CPA, repeated verbatim from Section 5.1)**
 
 ```

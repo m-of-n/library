@@ -43,16 +43,24 @@ record, so it is machine-greppable:
 
 | marker | count | meaning |
 | --- | --- | --- |
-| `SOURCE HEX.` | **50** | the document prints these bytes. This extraction **decoded them and confirmed they denote the `edn`**. |
+| `SOURCE HEX.` | **52** | the document prints these bytes. This extraction **decoded them and confirmed they denote the `edn`**. |
 | `SOURCE HEX CORRECTED.` | **1** | the document prints bytes that **do not** denote the `edn`. `hex` carries *our* corrected bytes; `notes` quotes the document's and shows the arithmetic. |
-| `COMPUTED HEX.` | **174** | the document prints only the EDN. The bytes are this extraction's encoding of it, in RFC 8949 Preferred Serialization unless an encoding indicator says otherwise. |
+| `COMPUTED HEX.` | **172** | the document prints only the EDN. The bytes are this extraction's encoding of it, in RFC 8949 Preferred Serialization unless an encoding indicator says otherwise — which is the document's own assumption, `R-0222` (§4.1). |
 | `NO HEX.` | **26** | no bytes, and the reason is stated — almost always an unassigned `CPA888`/`CPA999` tag number, occasionally a value the document declines to fix. |
 
-**61 byte sequences printed by the document were independently re-encoded from
-the EDN and compared; 59 matched and 2 did not** — the 2 are both cells of one
-Table 6 row (below). The comparison covers every `hex` the source prints,
-including the second ("ignoring e.i.") column of Table 6, which is checked even
-though it is not a vector of its own.
+**63 byte sequences printed by the document were independently re-encoded from
+the EDN and compared; 61 matched and 2 did not** — the 2 are both cells of one
+Table 6 row (below). The 63 are the 52 `SOURCE HEX.` vectors, the one
+`SOURCE HEX CORRECTED.` vector, and the ten "ignoring e.i." cells of Table 6,
+which are checked even though they are not vectors of their own. Every printed
+byte sequence in the document is covered: Table 1 (8 cells), Table 2 (14),
+§2.5's pretty dump, §3.6's five `ilbs` lines, §3.8's pretty dump,
+Table 6 (10 rows × 2 columns), §4.2's `98 02 f4 f5` and §4.3's
+`5f ff` / `7f ff`.
+
+> Pass 1 put this at **61 compared, 59 matched**, having left §4.3's two out:
+> `''_` and `""_` (`V-0212`, `V-0213`) were marked `COMPUTED HEX.` although
+> §4.3 prints their bytes. Both agree, so only the arithmetic moved.
 
 > A byte string this extraction derived is **never** presented as one the
 > document printed. Where the two disagree, both appear and the disagreement is
@@ -78,6 +86,17 @@ major-type-2 row `'A'_1 | 59000141 | 4141`, a one-byte byte string's head is
 major type 3 the head is `0x61` and the content is still `0x41`, and the row was
 written as though they coincided too. `V-0206` carries the corrected bytes and
 quotes the document's. Every other cell of Table 6 was decoded and confirmed.
+
+**Two vectors of our own were wrong, and the verify pass corrected them.**
+`V-0131` (`dt'1969-07-21T02:56:16.0Z'`) and `V-0139` (`-14159024.0`) carried
+`fbc16b019600000000`, the binary64 encoding. −14159024 is `0xD80CB0`, which
+needs 20 significant bits, so binary32 holds −14159024.0 exactly and RFC 8949
+Preferred Serialization — the convention this file states, and the one
+§4.1 itself assumes for a literal with no encoding indicator (`R-0222`) —
+requires the shortest form that preserves the value. Both now carry
+**`facb580cb0`**. `V-0132`/`V-0140` (−14159023.5) need 25 significant bits and
+keep binary64, which is why the error was easy to miss: the neighbouring rows
+of the same table are right.
 
 Two further source defects are recorded as vectors rather than fixed:
 

@@ -136,10 +136,10 @@ ready-made negative fixture for the duplicate-key rule P5 requires us to state.
 equality test.** §1.3.2 is unambiguous and is the single most important sentence
 in the document for `library#39`:
 
-> "Because of this, a deterministic representation is not defined for CDN. More
-> generally speaking, there is no expectation for 'roundtripping': Converting
+> “Because of this, a deterministic representation is not defined for CDN. More
+> generally speaking, there is no expectation for "roundtripping": Converting
 > CDN to binary CBOR and back to CDN will generally not achieve exactly the same
-> result as the original input CDN."
+> result as the original input CDN.”
 
 **[analysis]** Our vector sets pair a notation with bytes. That is sound only if
 the notation→bytes direction is a function and the bytes are the authority. It
@@ -160,8 +160,8 @@ CDE / dCBOR / serialization vector sets are about. But §4 undercuts it:
 > for each encoding indicator value that is encountered but not further
 > processed."
 
-and "Implementations of CDN generally do not need to provide this functionality
-in full; if they do, they can be called 'diagnostic implementations'."
+and “Implementations of CDN generally do not need to provide this functionality
+in full; if they do, they can be called "diagnostic implementations".”
 
 **[analysis]** "Accept" is defined as *process **or ignore***. So a conforming
 non-diagnostic CDN consumer may discard `_0` and emit Preferred Serialization

@@ -11,21 +11,23 @@ reviewed_by: ""
 FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what
 it does not.
 
-**State: pass 1 of 3 complete.** Two agents in parallel at effort max, each
-reading only `.cache/draft-ietf-cbor-edn-literals.txt`. **The verify and
-cross-check passes have NOT run**, so this record carries no `profile`.
-Readable; nothing may be built on it. library#39 owns finishing it.
+**State: passes 1 and 2 of 3 complete.** Extract by two agents in parallel at
+effort max, then an independent verify pass at effort max, each reading only
+`.cache/draft-ietf-cbor-edn-literals.txt`. **The cross-check pass has NOT run**,
+so this record carries no `profile`. library#39 owns finishing it.
+
+What the verify pass changed is listed under *What pass 2 found* below.
 
 Source: *Concise Diagnostic Notation (CDN)*, `draft-ietf-cbor-edn-literals-27`.
 Header: `Updates: 8610, 8949 (if approved)`.
 
 | kind | file | coverage |
 |---|---|---|
-| normative | `normative.md` | 215 verbatim bullets and 31 fenced blocks in 37 exact source line runs — 14 ABNF figures, 12 tables, §6.1's numbered items, both registry field blocks, the media-type template. 37/37 fences byte-identical by per-fence sha256; 215/215 bullets contiguous; 0 locator failures; and bullets reconciled one-to-one against `requirements.yaml` for text, locator, order and completeness |
-| requirements | `requirements.yaml` | 215 entries, `R-0001`–`R-0215`, source order, no gaps: **10 stated, 205 inferred**. Counts reconcile 10 = 10. A 5.8 KB reconciliation states the real baseline — see below |
-| schema | `schema/` | **13 verbatim across 23 regions, 3 derived.** Every verbatim region re-read and compared byte-for-byte with its line range and sha256 in the file header. Figure 1's closure verified: 85 productions, 0 duplicates, 82 names referenced and all resolving — and it **holds across all three page frames**. `cdn-dedented.derived.abnf` round-trips exactly |
+| normative | `normative.md` | 226 verbatim bullets and 37 fenced blocks in 43 exact source line runs — 14 ABNF figures, 12 tables, §6.1's numbered items, both registry field blocks, the media-type template and the six editorial crefs marked for removal. 43/43 fences byte-identical by per-fence sha256; 226/226 bullets contiguous; 0 locator failures by section range; and bullets reconciled one-to-one against `requirements.yaml` for text, locator and completeness. Bullet order follows the SOURCE, not the id number, because `R-0216`–`R-0226` were appended rather than renumbered |
+| requirements | `requirements.yaml` | 226 entries, `R-0001`–`R-0226`, no gaps: **10 stated, 216 inferred**. Counts reconcile 10 = 10, and each of the ten keyword occurrences was matched to exactly one entry by normalised offset — a bijection, not a tally. `R-0001`–`R-0215` are in source order; `R-0216`–`R-0226` were appended by the verify pass. The reconciliation states the real baseline — see below |
+| schema | `schema/` | **13 verbatim across 23 regions, 3 derived.** All 23 regions re-read in the verify pass and compared byte-for-byte against their declared line range and sha256: 23/23 exact. Figure 1's closure re-derived independently: 85 productions, 0 duplicates, 0 incremental `=/`, 82 distinct names referenced and all resolving — and it **holds across all three page frames**, with exactly one rule (`hexscalar-s`) straddling one. `cdn-dedented.derived.abnf` round-trips exactly in both directions |
 | messages | `messages.yaml` | 35 literal forms, 84 fields, 290 requirement references, 0 dangling |
-| examples | `examples/` | **251 vectors**, 242 valid / 9 invalid. 50 hex sequences the document printed were decoded and confirmed; **1 was printed and is wrong**; 174 are ours and marked `COMPUTED HEX.`; 26 carry no hex with a stated reason. 61 printed byte sequences were independently re-encoded from the EDN — 59 matched, 2 did not |
+| examples | `examples/` | **251 vectors**, 242 valid / 9 invalid. 52 hex sequences the document printed were decoded and confirmed; **1 was printed and is wrong**; 172 are ours and marked `COMPUTED HEX.`; 26 carry no hex with a stated reason. 63 printed byte sequences were independently re-encoded from the EDN — 61 matched, 2 did not, and both are cells of one Table 6 row. The verify pass re-encoded all 223 hex-carrying vectors from their EDN with its own codec and **corrected two of ours** (`V-0131`, `V-0139`) |
 | design-notes | `design-notes.md` | the byte-string prefix disposition, ten further EDN/CDDL divergences, the verdict on EDN as our test-vector format, and the MD-3 section |
 
 ## Not applicable
@@ -67,8 +69,8 @@ conflict, and both survivors are mandatory to implement.
 
 Four things keep that from being structural, and they matter for us:
 
-1. **`b32'…'` still parses.** `app-prefix = lcalpha *lcldh` admits any
-   `[a-z][a-z0-9-]*`, so it is a well-formed `app-string`; what rejects it is
+1. **`b32'…'` still parses.** `app-prefix = lcalpha *lcldh / ucalpha *ucldh` (Figure 1 — the lowercase alternative admits any
+   `[a-z][a-z0-9-]*`), so it is a well-formed `app-string`; what rejects it is
    §5.1's *resolution* rule, one layer above the grammar. **Do not use an ABNF
    check as a prefix allowlist.** In CDDL the same text is a syntax error — so
    the two languages fail differently, not identically.
@@ -89,6 +91,57 @@ Four things keep that from being structural, and they matter for us:
 4. **It is an Internet-Draft.** `(if approved)`. Until it publishes, RFC 8610
    Appendix G.2 is still in force and the conflict is still live. `{h, b64}`
    is the intersection and is safe under both readings.
+
+## What pass 2 found
+
+The verify pass re-derived every number in this file from the cached source with
+its own tools — its own normaliser, its own section map, its own ABNF
+analyser, its own CBOR codec and CDN parser. **Everything structural held.** The
+ten keywords, the 85-production closure across three page frames, all 23 schema
+regions, the 43 fence sha256s, the Table 6 defect, Figure 8's two dropped
+alternatives, the byte-string-prefix disposition, and the verdict that EDN cannot
+carry our vectors: all confirmed, none weakened. What it changed:
+
+- **Two of our own computed vectors were wrong.** `V-0131` and `V-0139` encoded
+  −14159024.0 as binary64. It fits binary32 exactly, so Preferred
+  Serialization requires `facb580cb0`. Both corrected; `examples/README.md`
+  shows the arithmetic.
+- **Eleven dropped normative statements were added** as `R-0216`–`R-0226`:
+  §2.3.2's escaping rule, two §2.3.4 statements about a sequence
+  literal's value, §3's statement of what an app-extension specification
+  fixes, three §4.1 statements, §5.2's licence for ellipses inside
+  `h''`, and four §7.1/§7.2 expert-policy rules. The most consequential
+  is `R-0222`: §4.1's own statement that an absent encoding indicator implies
+  Preferred Serialization, which is the authority our vector files rest on and is
+  what settles `V-0131`.
+- **Fifteen quotations in `vectors.yaml` had silently healed a source defect.**
+  Nine (the §3.5 `t1`/`b1` cref), four (§3.1's "single- quoted"), one
+  (§2.3.2's "byte- string") and one (§5.1's "app- sequence" and
+  "App- Extension") repaired a line-break hyphenation, and the cref quotation
+  also dropped the source's own `//` markers. All now carry the source's bytes.
+  Nine more quotations ended in a full stop the source does not have there —
+  eight of them §2.4.1's trailing-comma sentence, clipped before its
+  ", enabling …", and one §3.8's, where the period replaced a dropped
+  `[STD94]` — and one was spliced across a `*` list marker.
+- **`V-0212` and `V-0213` were reclassified** `COMPUTED HEX.` →
+  `SOURCE HEX.`: §4.3 prints `5f ff` and `7f ff`, so "the document prints
+  only the EDN" was false of them. Both agree with our encoding. That is why the
+  printed-sequence tally moved from 61/59 to 63/61.
+- **Counts corrected:** 31 fenced blocks in 37 runs → 37 in 43 (the six
+  editorial crefs were verbatim with sha256 and uncounted); nine differing rule
+  redefinitions → eight; six undeclared Figure 1 dependencies → eight;
+  `cdn.abnf`'s header said Figure 1 had 97 productions where it has 85.
+- **One `field` carried a mid-edit trace.** `R-0011`'s said the sentence was
+  "SEVERED BY A PAGE FRAME between 'there' ... no — between 'CDN MUST' ...".
+  No page frame cuts it; it runs over lines 518–521 with ordinary line breaks.
+  Rewritten.
+- **One reasoning defect in the reconciliation.** It called four of the five MAYs
+  "one permission restated in four contexts". Three are (the §2 sentence and
+  its two explicit back-references); the fourth, `R-0062`, is a separate
+  permission conditional on the first — relaxing UTF-8 validity for text
+  strings. It also now records the one place where the claim that *no keyword
+  constrains the notation itself* is strained: `R-0011`'s grammatical subject is
+  "CDN", not an implementation.
 
 ## Why 10 keywords in 168 KB is the right answer
 
@@ -114,8 +167,12 @@ that would bite an implementer:
    raw string literals entirely and silently**, because the result is still a
    closed grammar — and raw strings are a headline feature of §2.3.3.
 2. **§6.3 understates its own dependencies**, naming Figures 2 and 9 as the
-   common definitions when six referenced names (`DIGIT1`, `HEXDIG1`, `ODIGIT`,
-   `startrawdelim`, `alikerawdelim`, `shortrawdelim`) appear only in Figure 1.
+   common definitions when **eight** referenced names appear only in Figure 1:
+   `DIGIT1`, `HEXDIG1`, `ODIGIT` (needed by Figure 9) and `alikerawdelim`,
+   `ellipsis`, `eol-comment`, `shortrawdelim`, `startrawdelim` (by Figures
+   11–14). §6.3.4 is the one subsection that does declare an out-of-set
+   dependency — "the rule b64dig from Figure 12" — so the omission in the
+   other three is an oversight, not a convention.
 3. **§4.1 Table 6's major-type-3 row prints the wrong bytes.** `"A"_1` is given
    as `79000161` / `6161`; `0x79` is mt3 with a two-byte length, so with
    content `"A"` (`0x41`) the correct bytes are **`79000141` / `6141`**. The
@@ -125,10 +182,12 @@ that would bite an implementer:
 4. **A production is cut in half by a page frame**: `hexscalar-s` loses
    `/ "7F"` and `/ HEXDIG1` across the page 45/46 boundary. Read one page, get
    a truncated rule.
-5. Nine rule names are redefined with differing right-hand sides across figures
-   a reader is told to combine; three rules in Figure 1 are dead, one of them
-   (`one-item`) a **second plausible start symbol** with no sentence saying
-   which is the root.
+5. **Eight** rule names are redefined with differing right-hand sides across
+   figures a reader is told to combine (pass 1 said nine and counted
+   `ellipsis`, whose two definitions differ only in an ABNF comment); three
+   rules in Figure 1 are dead — `newline`, `lblank` and `one-item` — the
+   last a **second plausible start symbol** with no sentence saying which is
+   the root.
 6. `b64dig` mixes both RFC 4648 alphabets in one rule, justified because they
    "have the same meaning where they overlap" — and `-_+/` is exactly where
    they do not.
