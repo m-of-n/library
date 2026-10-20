@@ -11,6 +11,11 @@ reviewed_by: ""
 FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what it
 does not.
 
+**State: passes 1 and 2 of 3.** Extract (2026-10-19, two parallel agents) and
+verify (2026-10-20, one adversarial agent, independent). **Cross-check has not
+run, and no `profile` is claimed.** No human has reviewed any of it — every
+`reviewed_by` in this directory is empty, deliberately.
+
 RFC 9964 is a short document with one load-bearing section. **§6 answers a
 question RFC 9679 §4.6 asks and declines to answer** — which parameters are
 required for an AKP COSE Key Thumbprint — and `records/ietf/rfc-9679` is at
@@ -25,7 +30,7 @@ the consequence measurable rather than argued. It is.
 | messages | `messages.yaml` | 9 structures, 36 fields, with the actual code points and octet-level layouts: the AKP and ML-DSA `COSE_Key`, **both §6 thumbprint inputs**, the JWK, the tag-18 `COSE_Sign1`, the `Sig_structure`, the header parameters and the JWS. `constrained_by` is **deliberately absent everywhere** — the requirement ids belong to the parallel pass and R-O-03 forbids guessing them; every field carries `locator` instead, which is what a later pass needs to add the links mechanically. |
 | protocol | `protocol.yaml`, `protocol.md` | **NOT APPLICABLE — stubs, deliberately.** RFC 9964 defines no protocol: `verifier`, `sender`, `recipient`, `protocol` and `exchange` each occur **zero** times, `signer` once (in a §7.1 sentence about impersonation) and `request` once (the RFC masthead). §5 defers the envelope outright: "When producing COSE signatures, no encoding is needed; see Section 4 of [RFC9052] for more details on how COSE signatures are created." The signing protocol is RFC 9052's; see `records/ietf/rfc-9052`. |
 | state-machine | `state-machine.yaml` | **NOT APPLICABLE — stub, deliberately.** `state`, `lifecycle`, `revoke` and `revocation` each occur **zero** times. The only ordered procedure is §7.3's key validation (seed length check, then `pkDecode`/`skDecode` range checks) and it is a precondition list, not a lifecycle: no states, no transitions, no terminal condition. |
-| examples | `examples/` | **12 vectors, and the document prints real cryptographic test vectors** — six complete worked examples (Appendix A, Figures 3–8) with real FIPS 204 keys of 1312/1952/2592 octets, real signatures of 2420/3309/4627 octets, the exact signed bytes, and `kid` values that all six reproduce. Plus the hazard fixture: three `KeyId`s from one byte-identical `pub`, one leg printed by the RFC itself. These are the library's **first post-quantum fixtures**. Signatures are **not** verified cryptographically — no FIPS 204 implementation was available; every vector says so. |
+| examples | `examples/` | **12 vectors, and the document prints real cryptographic test vectors** — six complete worked examples (Appendix A, Figures 3–8) with real FIPS 204 keys of 1312/1952/2592 octets, real signatures of 2420/3309/4627 octets, the exact signed bytes, and `kid` values that all six reproduce. Plus the hazard fixture: three `KeyId`s from one byte-identical `pub`, one leg printed by the RFC itself. These are the library's **first post-quantum fixtures**. **All six signatures verify cryptographically and all six public keys re-derive from the all-zeros seed** — closed by the verify pass with a FIPS 204 implementation gated on 75/75 ACVP keyGen and 90/90 ACVP sigVer vectors. |
 | design-notes | `design-notes.md` | what our post-quantum export must carry with code points; **the `KeyId` consequence** and the four mitigations that exist; six cuts against `MD-3` naming `DEC-002` options 1–5, `DEC-003` and `DEC-005`; five open questions; the sibling records' claims checked; six source defects and ambiguities. |
 
 ## The one result
@@ -40,13 +45,14 @@ one byte-identical 1312-octet ML-DSA-44 public key:
 | −49 | `f507c417…f187315d` | computed by this extraction |
 | −50 | `de68d5ec…e128f62b` | computed by this extraction |
 
-Three 1322-octet inputs differing in two octets; three digests sharing no
-prefix. Under `ARCH-0002` P1 (accepted by `ADR-0001`) a post-quantum parameter
-change is therefore a **namespace rename**, not a re-signing.
+Three 1322-octet inputs differing in **one octet** (offset 5: `2f`, `30`, `31`);
+three digests sharing no prefix. Under `ARCH-0002` P1 (accepted by `ADR-0001`) a
+post-quantum parameter change is therefore a **namespace rename**, not a
+re-signing.
 
-## Verification in pass 1
+## Verification
 
-A CBOR encoder/decoder written for this pass (RFC 8949 §4.2.1) plus
+**Pass 1.** A CBOR encoder/decoder written for that pass (RFC 8949 §4.2.1) plus
 `hashlib.sha256`. **No CBOR, COSE, JOSE or JWT library was used.** All three
 COSE Key Thumbprints and all three JWK Thumbprints reproduce the printed `kid`
 values exactly; `vectors.yaml` round-trips through the library's own YAML reader
@@ -54,10 +60,45 @@ under 121 re-derived assertions with zero failures; 45 CDDL rules close with no
 undefined reference and no prelude collision. Details in
 `schema/README.md` and `examples/README.md`.
 
+**Pass 2 (verify), re-derived independently rather than re-read.** A *second*
+CBOR codec, written from RFC 8949 without reference to pass 1's:
+
+- **All six thumbprints reproduce again** — three COSE Key Thumbprints as
+  `sha256(enc({1:7, 3:alg, -1:pub}))` over inputs of 1322 / 1962 / 2602 octets,
+  three JWK Thumbprints over inputs of 1790 / 2643 / 3496 octets.
+- **The hazard fixture reproduces**, including both computed legs, and neither
+  computed digest occurs anywhere in the source. One correction: the three
+  inputs differ in **one** octet, not two (see below).
+- **The signature gap is closed.** FIPS 204 `KeyGen_internal` and
+  `Verify_internal`, implemented for this pass and **gated on NIST ACVP known
+  answers before being used** (75/75 keyGen, 90/90 sigVer of which 72
+  expected-reject): all six printed public keys re-derive from the all-zeros
+  seed and all six printed signatures verify.
+- **88/88 requirement texts** are contiguous substrings of the
+  whitespace-normalised source and **88/88 locators** resolve inside their
+  stated section; **79/79** `normative.md` quotations likewise; **18/18** fences
+  are byte-exact runs of source lines. The 9 BCP 14 keywords each map to exactly
+  one `stated` entry, and **none of the 9 is in §6 or §8**.
+
+## Corrections made by the verify pass
+
+One, and it is a byte-level claim rather than a judgement. The hazard fixture's
+three thumbprint inputs were described as differing in "**two octets**,
+`382f`/`3830`/`3831` at offset 4". They differ in **one** octet, at offset 5:
+`0x38` at offset 4 is the shared major-type-1 one-byte-argument head of all
+three `alg` values. The finding is thereby **stronger** — a single octet of
+algorithm identifier relocates the whole digest. Corrected in place in
+`design-notes.md`, `examples/README.md` and above, with the falsified wording
+recorded rather than silently replaced.
+
 ## Source defects found
 
 Reported, never repaired. Six, in `design-notes.md`; the two that cost a reader
 something are **Figure 2's `pub` prefix differing from the key it illustrates**
-(19th hex digit `9` where the key has `f`) and **§6 naming no hash function**
-(the string `SHA-256` occurs zero times in RFC 9964; SHA-256 is established only
-by the Appendix A `kid` values reproducing under it).
+(19th hex digit `9` where the key has `f` — **now confirmed against FIPS 204
+itself**, since `KeyGen_internal(0^32)` yields `ba71f9f64e11baeb58fa…`, so
+Appendix A is right and Figure 2 alone is wrong) and **§6 naming no hash
+function** (the string `SHA-256` occurs zero times in RFC 9964 — re-counted;
+`SHA256`, `SHA-2` and `sha256` are zero too, and the word "hash" occurs six
+times, none of them in §6. SHA-256 is established only by the Appendix A `kid`
+values reproducing under it, which this pass reproduced twice).

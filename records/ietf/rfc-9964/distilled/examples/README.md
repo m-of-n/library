@@ -53,8 +53,19 @@ a value RFC 9964 itself prints.** Produced, and better than hoped:
 | −49 (ML-DSA-65) | `f507c41723160cdec5f245a8f6b6c0cd8144f1febae70df0c24fa4fcf187315d` | computed by this extraction |
 | −50 (ML-DSA-87) | `de68d5ecb9465cd4c06dd1b246a20f50d0b928bdff52433e53e4d387e128f62b` | computed by this extraction |
 
-The three inputs are 1322 octets each and differ in **exactly two octets** —
-`382f`, `3830`, `3831` at offset 4. They share no digest prefix.
+The three inputs are 1322 octets each and differ in **exactly one octet** —
+offset 5, which holds `2f`, `30`, `31`. They share no digest prefix.
+
+> **[corrected by the verify pass, 2026-10-20.]** This previously read "differ
+> in **exactly two octets** — `382f`, `3830`, `3831` at offset 4". The
+> two-octet *span* at offsets 4–5 does read `382f` / `3830` / `3831`, but
+> offset 4 is `0x38` in all three inputs and only offset 5 differs: −48, −49
+> and −50 all encode as major type 1 with a one-byte argument, so they share
+> the head `0x38` and differ only in the argument byte (`2f`, `30`, `31`).
+> Re-derived: the three 1322-octet inputs begin `a3010703382f2059`,
+> `a301070338302059`, `a301070338312059`. The correction makes the finding
+> *stronger* — a **single octet** of algorithm identifier relocates the whole
+> digest.
 
 This is the fixture `rfc-9679`'s `V-0004`/`V-0005`/`V-0006` could not build.
 Those used 32 zero octets as a stand-in `pub`, so all three legs of their
@@ -116,21 +127,48 @@ COSE, JOSE or JWT library was used**, so a shared library bug cannot hide here.
 6. **Both YAML readers agree**: 12 vectors under `_record_yaml.load_yaml` and
    under `_yaml.parse`.
 
-### What was NOT verified, said plainly
+### The signature gap — closed by the verify pass, 2026-10-20
 
-**The ML-DSA signatures were not verified cryptographically.** No FIPS 204
-implementation was available to this pass. Every signature is carried at its
-printed value, its length checked against Table 1, and its position in the
-structure confirmed by decoding; whether it verifies under its public key is
-unchecked, and `signature_verified: unchecked` says so on every vector carrying
-one. **A cross-check pass with an ML-DSA implementation should close this** —
-and it is worth doing, because the seed is all zeros, so `KeyGen_internal` is
-deterministic and the `pub` values are themselves checkable.
+Pass 1 recorded that it could not verify the signatures, and said so on every
+vector: no FIPS 204 implementation was available to it. **That gap is now
+closed.** ML-DSA `KeyGen_internal` and `Verify_internal` were implemented from
+FIPS 204 (August 2024) in pure Python over `hashlib`'s SHAKE128/256 — NTT with
+ζ = 1753, `ExpandA`/`ExpandS` rejection sampling, `Power2Round`,
+`SimpleBitPack`, `Decompose`, `UseHint`, `SampleInBall`, `sigDecode`.
 
-The internal consistency check that *was* available is strong: for each
-algorithm the JOSE and COSE halves carry the same `pub` byte for byte, which
-means both were produced from the same all-zeros seed by two independent code
-paths in the authors' tooling.
+**It was gated against NIST's own known answers before being pointed at this
+document.** That order matters: a hand-rolled lattice implementation
+disagreeing with an RFC is indistinguishable from a defect in the RFC, which is
+the worst outcome available — reporting our own bug as the source's.
+
+| gate | vectors | result |
+|---|---|---|
+| `ML-DSA-keyGen-FIPS204` (ACVP) | 75 (25 per parameter set) | **75/75 public keys reproduce exactly** |
+| `ML-DSA-sigVer-FIPS204` (ACVP) | 90, of which **72 expected-reject** | **90/90 verdicts agree** |
+
+The reject majority is the point: a verifier that always returned true would
+score 18/90 on gate 2.
+
+Both gates passed, and only then:
+
+7. **All six printed public keys re-derive from the all-zeros seed.**
+   `KeyGen_internal(0^32)` reproduces the 1312 / 1952 / 2592-octet `pub` of
+   Figures 3–8 byte for byte. Pass 1 could only infer the seed-to-key relation
+   from the two halves of Appendix A agreeing; it is now measured against
+   FIPS 204 itself.
+8. **All six printed signatures verify cryptographically.**
+   `ML-DSA.Verify(pk, M, σ, ctx="")` accepts all six, with
+   `M' = 0x00 ‖ 0x00 ‖ M` per FIPS 204 Algorithm 3 and the empty `ctx` that §5
+   requires (`R-0034`) — which also makes `R-0034` the one requirement in this
+   record whose *satisfaction* is now demonstrated rather than asserted.
+   Flipping a single bit of each message is rejected, as a control.
+
+`signature_verified: verified` now says so on all six vectors that carry a
+signature. The six that carry none keep `n/a`.
+
+The internal consistency check pass 1 relied on also holds: for each algorithm
+the JOSE and COSE halves carry the same `pub` byte for byte — and the derivation
+above now explains why, since both come from the same all-zeros seed.
 
 ## Source findings
 
@@ -157,6 +195,14 @@ truncated using "..." for readability."
 
 Located mechanically, by comparing against the reassembled Appendix A JSON, not
 by eye.
+
+> **[verify pass, 2026-10-20] The defect is now confirmed against FIPS 204
+> itself, not just against Appendix A.** Pass 1 could show only that Figure 2
+> disagrees with the *other two renderings in the same document* — which,
+> alone, leaves open the possibility that Figure 2 is right and Appendix A is
+> wrong twice. `KeyGen_internal(0^32)` for ML-DSA-44 produces a `pub` beginning
+> `ba71f9f64e11baeb58fa`, so the 19th hex digit is **`f`** in the real key and
+> Figure 2's `9` is the error. Appendix A is correct; Figure 2 alone is wrong.
 
 ### The printed `COSE_Key` bytes are not in deterministic map order
 

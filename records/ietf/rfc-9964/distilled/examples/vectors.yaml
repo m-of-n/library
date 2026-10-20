@@ -59,14 +59,37 @@ digest_of_source: "8c42035b948301b197d431de8b3f40019bdaa3bb40150dc523306923948f3
 # base64.urlsafe_b64encode. No CBOR, COSE, JOSE or JWT library was used, so a
 # shared library bug cannot hide here.
 #
-# WHAT WAS NOT VERIFIED, SAID PLAINLY
+# [VERIFY PASS, 2026-10-20] THE SIGNATURE GAP IS CLOSED.
 #
-# THE ML-DSA SIGNATURES WERE NOT VERIFIED CRYPTOGRAPHICALLY. No FIPS 204
-# implementation was available to this pass. Every signature is carried at its
-# printed value, its length checked against Table 1, and its position in the
-# structure confirmed by decoding. Whether each one verifies under its public
-# key is unchecked, and `signature_verified: unchecked` says so on every vector
-# that carries one. Internal consistency was checked instead and is strong: the
+# Pass 1 recorded, correctly, that it could not verify the signatures: no FIPS
+# 204 implementation was available to it. The verify pass closed this. ML-DSA
+# KeyGen_internal and Verify_internal were implemented from FIPS 204 (August
+# 2024) in pure Python over `hashlib`'s SHAKE128/256 — NTT with zeta = 1753,
+# ExpandA/ExpandS rejection sampling, Power2Round, SimpleBitPack, Decompose,
+# UseHint, SampleInBall, sigDecode — and then GATED against NIST's own
+# published known answers BEFORE being pointed at this document, because an
+# unvalidated implementation disagreeing with an RFC would be indistinguishable
+# from a defect in the RFC:
+#
+#   gate 1  ML-DSA-keyGen-FIPS204 ACVP vectors : 75 of 75 public keys
+#           reproduced exactly (25 each at ML-DSA-44/-65/-87).
+#   gate 2  ML-DSA-sigVer-FIPS204 ACVP vectors : 90 of 90 verdicts agreed,
+#           of which 72 are expected-REJECT cases, so the verifier
+#           discriminates and does not merely return true.
+#
+# Both gates passed, and only then:
+#
+#   * ALL SIX PRINTED PUBLIC KEYS RE-DERIVE FROM THE ALL-ZEROS SEED.
+#     KeyGen_internal(0^32) reproduces the 1312/1952/2592-octet `pub` of
+#     Figures 3-8 byte for byte. The seed-to-key claim is now measured, not
+#     inferred from the two halves agreeing.
+#   * ALL SIX PRINTED SIGNATURES VERIFY. ML-DSA.Verify(pk, M, sigma, ctx="")
+#     accepts all six, with M' = 0x00 || 0x00 || M per FIPS 204 Algorithm 3 and
+#     the empty `ctx` that §5 requires (R-0034). A one-bit flip of each message
+#     is rejected, as a control.
+#
+# `signature_verified: verified` now says so on every vector carrying a
+# signature. Internal consistency, checked by pass 1, also holds: the
 # JOSE and COSE halves of Appendix A use the SAME public key for each algorithm
 # (byte-identical), which means both were generated from the same all-zeros
 # seed by two independent code paths.
@@ -237,7 +260,7 @@ vectors:
       printed `raw_signature` byte-for-byte; "header.payload" as ASCII gives
       the printed `raw_to_be_signed` byte-for-byte; and `raw_public_key`
       equals base64url-decoded `pub` byte-for-byte.
-    signature_verified: unchecked
+    signature_verified: verified   # verify pass 2026-10-20, FIPS 204 Verify gated on 75/75 keyGen + 90/90 sigVer ACVP vectors
     pair_with: "rfc-9964#V-0007"
     notes: >-
       The `pub` here is byte-identical to V-0007's, the COSE example for
@@ -287,7 +310,7 @@ vectors:
       printed `raw_signature` byte-for-byte; "header.payload" as ASCII gives
       the printed `raw_to_be_signed` byte-for-byte; and `raw_public_key`
       equals base64url-decoded `pub` byte-for-byte.
-    signature_verified: unchecked
+    signature_verified: verified   # verify pass 2026-10-20, FIPS 204 Verify gated on 75/75 keyGen + 90/90 sigVer ACVP vectors
     pair_with: "rfc-9964#V-0008"
     notes: >-
       The `pub` here is byte-identical to V-0008's, the COSE example for
@@ -337,7 +360,7 @@ vectors:
       printed `raw_signature` byte-for-byte; "header.payload" as ASCII gives
       the printed `raw_to_be_signed` byte-for-byte; and `raw_public_key`
       equals base64url-decoded `pub` byte-for-byte.
-    signature_verified: unchecked
+    signature_verified: verified   # verify pass 2026-10-20, FIPS 204 Verify gated on 75/75 keyGen + 90/90 sigVer ACVP vectors
     pair_with: "rfc-9964#V-0009"
     notes: >-
       The `pub` here is byte-identical to V-0009's, the COSE example for
@@ -400,7 +423,7 @@ vectors:
       `raw_signature` equals the COSE_Sign1's fourth element; the
       Sig_structure decodes to ["Signature1", bstr(39), bstr(0), bstr(29)]
       with the same 39 protected octets as the COSE_Sign1 carries.
-    signature_verified: unchecked
+    signature_verified: verified   # verify pass 2026-10-20, FIPS 204 Verify gated on 75/75 keyGen + 90/90 sigVer ACVP vectors
     pair_with: "rfc-9964#V-0004"
     notes: >-
       THE SUBSETTING TRAP, CHECKED. An implementation that walks the printed
@@ -466,7 +489,7 @@ vectors:
       `raw_signature` equals the COSE_Sign1's fourth element; the
       Sig_structure decodes to ["Signature1", bstr(39), bstr(0), bstr(29)]
       with the same 39 protected octets as the COSE_Sign1 carries.
-    signature_verified: unchecked
+    signature_verified: verified   # verify pass 2026-10-20, FIPS 204 Verify gated on 75/75 keyGen + 90/90 sigVer ACVP vectors
     pair_with: "rfc-9964#V-0005"
     notes: >-
       THE SUBSETTING TRAP, CHECKED. An implementation that walks the printed
@@ -532,7 +555,7 @@ vectors:
       `raw_signature` equals the COSE_Sign1's fourth element; the
       Sig_structure decodes to ["Signature1", bstr(39), bstr(0), bstr(29)]
       with the same 39 protected octets as the COSE_Sign1 carries.
-    signature_verified: unchecked
+    signature_verified: verified   # verify pass 2026-10-20, FIPS 204 Verify gated on 75/75 keyGen + 90/90 sigVer ACVP vectors
     pair_with: "rfc-9964#V-0006"
     notes: >-
       THE SUBSETTING TRAP, CHECKED. An implementation that walks the printed

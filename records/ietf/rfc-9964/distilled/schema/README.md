@@ -83,11 +83,28 @@ JOSE library was used, so a shared library bug cannot hide here.
    1.** `pub` 1312/1952/2592 bytes = 1750/2603/3456 base64url chars =
    2624/3904/5184 hex chars; signatures 2420/3309/4627 bytes; `priv` 32 bytes =
    43 base64url chars. All six figures agree with Table 1.
-4. **CDDL rule closure.** 45 rules across three files (23 + 6 + 16); no duplicate
-   definition, no reference that is neither defined locally nor an RFC 8610
-   Appendix D prelude name, no name colliding with a prelude name (the RFC 8785
-   defect), braces, brackets and parens balanced. Prelude names used: `int`,
-   `bstr`, `tstr`, `nil`, `any`.
+4. **CDDL rule closure.** 45 rules across three files (23 + 6 + 16); no
+   duplicate definition **within any one file**, no reference that is neither
+   defined locally nor an RFC 8610 Appendix D prelude name, no name colliding
+   with a prelude name (the RFC 8785 defect), braces, brackets and parens
+   balanced. Prelude names used: `int`, `bstr`, `tstr`, `nil`, `any`.
+
+   > **[clarified by the verify pass, 2026-10-20.]** This said "no duplicate
+   > definition" without qualification, which a reader checking it across the
+   > whole directory would falsify: 45 is the **sum of per-file counts** and
+   > there are **36 distinct rule names**, because **nine** are defined in both
+   > `akp-key.derived.cddl` and `ml-dsa-cose-sign1.derived.cddl` —
+   > `ml-dsa-alg`, `ml-dsa-44`, `ml-dsa-65`, `ml-dsa-87`, `label`, `values`,
+   > and the three `ML-DSA-nn-Signature` rules. That repetition is **required,
+   > not sloppy**: a CDDL file must define every rule it references, so each
+   > file standing alone has to carry them. Re-derived: all nine pairs are
+   > **byte-identical** after comment and whitespace normalisation — zero
+   > divergent definitions — and no file duplicates a rule internally. Also
+   > re-checked: the seven bare names in `ml-dsa-cose-sign1.derived.cddl` that
+   > look like dangling references (`protected`, `unprotected`, `payload`,
+   > `signature`, `context`, `body_protected`, `external_aad`) are **member
+   > keys of array groups**, written `name: type`, not rule references — RFC
+   > 9052's own field names, carried so the array positions are readable.
 5. **JSON Schema integrity.** Both `.json` files parse; six internal `$ref`s all
    resolve; both `$id`s are `urn:library:rfc-9964:*`.
 6. **The verbatim excerpts re-cut.** Each excerpt in

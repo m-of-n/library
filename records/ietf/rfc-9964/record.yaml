@@ -64,6 +64,97 @@ topic: cbor-implementation
 tags:
   - signatures
   - ietf
+distillation:
+  standard: "FX-1"
+  # NO `profile` IS CLAIMED. Passes 1 and 2 of 3 have run; cross-check has not.
+  # Declaring `full` here would make bin/validate check an artifact set against
+  # a standard this extraction has not yet finished meeting, and `partial` would
+  # claim a deliberate reduced scope, which this is not — it is unfinished.
+  # docs/extraction.md: "An unfinished extraction has no profile at all."
+  not_applicable:
+    - kind: protocol
+      reason: >-
+        RFC 9964 defines a key type, three algorithm identifiers and a
+        thumbprint parameter set. It defines no protocol: `verifier`, `sender`,
+        `recipient`, `protocol` and `exchange` each occur ZERO times in its 2906
+        lines, `signer` once (§7.1, line 298, in a sentence about impersonation)
+        and `request` once (line 6, the RFC masthead). §5 defers the envelope
+        outright: "When producing COSE signatures, no encoding is needed; see
+        Section 4 of [RFC9052] for more details on how COSE signatures are
+        created." The signing protocol is RFC 9052's; see records/ietf/rfc-9052.
+        Re-attacked by the verify pass, which re-counted every one of those
+        words by source line and additionally confirmed that no VERIFICATION
+        algorithm is named anywhere in the document — §5 cites FIPS 204
+        Algorithm 2 for signing and nothing cites Algorithm 3 — so there is not
+        even a one-sided procedure to model. The six §8 registries are IANA
+        actions completed by this document, not steps between parties.
+    - kind: state-machine
+      reason: >-
+        No lifecycle. `state`, `lifecycle`, `revoke`, `revocation`,
+        `handshake`, `negotiate`, `rotate` and `expire` each occur ZERO times,
+        re-counted by the verify pass. The only ordered procedure is §7.3's key
+        validation — the 32-byte seed length check, then `pkDecode`/`skDecode`
+        range checks — and it is a precondition list, not a lifecycle: no
+        states, no transitions, no terminal condition, and nothing that can be
+        in one state rather than another. An AKP key's thumbprint is a pure
+        function of (`kty`, `alg`, `pub`), which the verify pass demonstrated by
+        re-deriving all six printed `kid` values; a pure function has no states.
+  passes:
+    - pass: extract
+      by: "claude-opus-5 (2 parallel agents: normative+requirements; schema+messages+examples+design-notes)"
+      effort: max
+      date: "2026-10-19"
+      note: >-
+        88 requirements (9 stated / 79 inferred, 9 = 9 reconciled), 79 quoted
+        statements, 18 fences cut programmatically from source line runs, 12
+        vectors, 45 CDDL rules. Built the hazard fixture the tier asked for:
+        three COSE Key Thumbprints over one byte-identical 1312-octet `pub`,
+        with the −48 leg being RFC 9964's own printed `kid`. Found and fixed a
+        spliced quotation inside sibling record rfc-9679, which is at
+        `profile: full` — a string in quotation marks that is not in RFC 9964,
+        in a paragraph asserting the sections were "verified verbatim".
+    - pass: verify
+      by: "claude-opus-5 (single adversarial agent, independent of the extract pass)"
+      effort: max
+      date: "2026-10-20"
+      note: >-
+        Adversarial re-derivation, not a re-read: every count, quotation,
+        locator, code point and digest recomputed from .cache/rfc-9964.txt with
+        a SECOND hand-written CBOR codec rather than checked against pass 1's
+        working. CONFIRMED — all three COSE Key Thumbprints (inputs 1322/1962/
+        2602 octets) and all three JWK Thumbprints (1790/2643/3496 octets)
+        reproduce the printed `kid` values; the hazard fixture reproduces
+        including both computed legs, and neither computed digest occurs
+        anywhere in the source; the 9 BCP 14 keywords (6 MUST, 2 REQUIRED, 1
+        MUST NOT) enumerate by source line to §3 x3, §4 x2, §5 x1, §7.3 x3 and
+        map one-to-one onto the 9 `stated` entries, so NOT ONE of the 9 is in §6
+        or §8 — the two sections carrying the operative content; 88/88
+        requirement texts are contiguous substrings of the whitespace-normalised
+        source and 88/88 locators resolve inside their stated section, as do
+        79/79 normative.md quotations; 18/18 fences are byte-exact source line
+        runs; all three line-break severances are declared and NO span heals a
+        break (structurally — a healed token is not a substring of the
+        normalised source, and all 167 quoted items are); all six code points
+        verify three ways; `crv`/`curve`/`OKP`/`EdDSA`/`Ed25519`/`Ed448` are
+        zero; `SHA-256` is zero and §6 names no hash function; Figure 2's `pub`
+        prefix defect holds. CLOSED THE RECORD'S LARGEST GAP — the printed
+        signatures and public keys, which pass 1 correctly recorded as
+        unverifiable to it. FIPS 204 KeyGen_internal and Verify_internal were
+        implemented in pure Python and GATED ON NIST ACVP KNOWN ANSWERS BEFORE
+        BEING POINTED AT THIS DOCUMENT (75/75 keyGen public keys reproduced;
+        90/90 sigVer verdicts agreed, 72 of them expected-reject, so the
+        verifier discriminates), because an unvalidated lattice implementation
+        disagreeing with an RFC is indistinguishable from a defect in the RFC.
+        Both gates passed, and then: all six printed public keys re-derive from
+        the all-zeros seed byte for byte, and all six printed signatures verify.
+        This also upgrades the Figure 2 finding from "disagrees with Appendix A"
+        to "disagrees with FIPS 204", settling which rendering is wrong.
+        CORRECTED ONE THING, a byte-level claim: the hazard fixture's three
+        1322-octet inputs differ in ONE octet, at offset 5, not "two octets at
+        offset 4" — `0x38` at offset 4 is the shared major-type-1 one-byte-
+        argument head of all three `alg` values. The finding is stronger for it:
+        a single octet relocates the whole digest. The falsified wording is
+        recorded in place, not silently replaced.
 status: summarized
 usefulness:
   verdict: useful

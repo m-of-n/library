@@ -215,8 +215,13 @@ the key is AKP, then for one byte-identical 1312-octet `pub`:
 | −49 | `f507c41723160cdec5f245a8f6b6c0cd8144f1febae70df0c24fa4fcf187315d` | computed by this extraction |
 | −50 | `de68d5ecb9465cd4c06dd1b246a20f50d0b928bdff52433e53e4d387e128f62b` | computed by this extraction |
 
-Three 1322-octet inputs differing in **two octets**, three digests sharing **no
-prefix**. One leg is the document's own printed value and reproduces exactly,
+Three 1322-octet inputs differing in **one octet** — offset 5, holding `2f`,
+`30`, `31` — and three digests sharing **no prefix**. (Corrected by the verify
+pass from "two octets": `0x38` at offset 4 is the shared major-type-1
+one-byte-argument head of all three `alg` values, so only the argument byte
+differs. The inputs begin `a3010703382f2059`, `a301070338302059`,
+`a301070338312059`. A single octet relocates the whole digest.)
+One leg is the document's own printed value and reproduces exactly,
 which anchors the method before the other two are computed with it
 (`examples/vectors.yaml` V-0007, V-0010, V-0011). `rfc-9679` V-0004/5/6 argued
 this with 32 zero octets standing in for a key; this measures it on a real one.
@@ -353,7 +358,8 @@ layer, and this is the finding that cuts hardest.** Option 5 exists to keep
 rejects private-use ranges because they give "escape from a registry, not a
 namespace". But a `KeyId` over a post-quantum key **contains an IANA
 allocation**: −48, −49 or −50 from the COSE Algorithms registry, inside the
-preimage, two octets at offset 4. **[analysis] The namespace root that P1 says
+preimage, in the two-octet span at offsets 4–5 of which **one octet — offset 5 —
+is the allocation itself** (`2f`, `30`, `31` for −48, −49, −50). **[analysis] The namespace root that P1 says
 needs no permission from a registry has a registry number baked into its
 bytes.** And unlike `rfc-9679`'s Cut A, where the registry dependence was in the
 *labels* of the digested map, here it is in a **value that changes the digest** —
@@ -374,9 +380,12 @@ rather than inherit it.
 **Cut C — option 4 is eliminated again, and this time with numbers.**
 `rfc-9679`'s Cut B eliminated **option 4** ("Dual canonical (CBOR and JSON) with
 a documented bijection") on §5.5's rule that `ckt` and `jkt` differ. This record
-supplies the measurement: three keys, six digests, **zero shared octets** in
-every pair, all six printed by this one document as those keys' `kid`
-(`examples/vectors.yaml` V-0012). **[analysis] And one point sharper than the
+supplies the measurement: three keys, six digests, and in every pair **not one
+of the 32 octet positions agrees** — re-derived by the verify pass, which
+measured positional agreement rather than only the shared prefix: 0 of 32 for
+all three pairs. (A handful of octet *values* recur at different positions, as
+chance requires; no position matches.) All six are printed by this one document
+as those keys' `kid` (`examples/vectors.yaml` V-0012). **[analysis] And one point sharper than the
 rule.** §6 defines the two required sets **in the same section, over the same
 three parameters, in the same document** — and still yields two values. So the
 divergence is not an artefact of different parameter sets; it is purely the
@@ -445,11 +454,23 @@ for it, because they work without it.
    has to be that the thumbprint is an interchange construct we adopt whole, not
    a native one we parameterise. Worth stating in the ADR, because adopting §6
    *is* accepting one registry-allocated integer into the native namespace root.
-4. **Do the printed signatures verify?** Unchecked — no FIPS 204 implementation
-   was available to this pass, and `examples/vectors.yaml` says so on every
-   vector. The seed is all zeros, so `KeyGen_internal` is deterministic and the
-   `pub` values are themselves checkable. A cross-check pass with an ML-DSA
-   implementation would close the record's one remaining unverified claim.
+4. ~~**Do the printed signatures verify?**~~ **ANSWERED — yes, all six, closed
+   by the verify pass 2026-10-20.** FIPS 204 `KeyGen_internal` and
+   `Verify_internal` were implemented for that pass and **gated on NIST ACVP
+   known answers before being pointed at this document** (75/75 `keyGen`
+   public keys reproduced; 90/90 `sigVer` verdicts agreed, 72 of them
+   expected-reject). Then: all six printed public keys re-derive from the
+   all-zeros seed byte for byte, and all six printed signatures verify under
+   `ML-DSA.Verify(pk, M, σ, ctx="")`. Two consequences worth carrying into the
+   ADR. First, **`R-0034` — "the `ctx` parameter MUST be the empty string" — is
+   now the one requirement in this record whose satisfaction is demonstrated
+   rather than asserted**, because the signatures only verify with
+   `M' = 0x00 ‖ 0x00 ‖ M`; the MUST is still unverifiable *from a received
+   object*, which was the original finding, but it is no longer unverifiable
+   in principle. Second, **the authors' tooling is confirmed correct against
+   FIPS 204**, so the Figure 2 prefix defect is a transcription slip in one
+   figure and not a key-generation discrepancy. The record now has no
+   unverified cryptographic claim.
 5. **Which `DEC-003` option does the size budget actually permit?** §5's warning
    plus threshold principals gives 12 960 octets for a 3-of-5 subject at
    ML-DSA-87 carried as keys. **[analysis]** Nobody has costed it. The nearest
