@@ -277,9 +277,40 @@ Three things block a plain adoption. Two are ours to fix; the third is not.
 is cited" is true of RFC 9679, but **RFC 8230 §4** pins the RSA case for us —
 numeric key parameters are unsigned big-endian and "The octet sequence MUST
 utilize the minimum number of octets needed to represent the value" — and
-Symmetric `k` and HSS-LMS `pub` are opaque byte strings with nothing to
-normalise. So blocker 2 is discharged by adding one citation, not by restricting
-the key types. Blockers 1 and 3 are unaffected.
+**RFC 8778 §2.1/§2.2** pins the HSS-LMS case the same way. Symmetric `k` is the
+one of the three with nothing to cite, and nothing to normalise either: it is
+raw secret material with no structure and no numeric reading. So blocker 2 is
+discharged by adding **two** citations, not by restricting the key types.
+Blockers 1 and 3 are unaffected.
+
+> **[correction] 2026-10-20, maintenance pass on this `profile: full` record
+> (library#39 Tier 2), prompted by the `rfc-8778` record.** The sentence above
+> read: "and Symmetric `k` and HSS-LMS `pub` are opaque byte strings with
+> nothing to normalise. So blocker 2 is discharged by adding one citation". The
+> conclusion for HSS-LMS was right and **the reason was wrong, and it was wrong
+> in the one way this library cares about: it argued from absence of challenge
+> rather than from a citation.** HSS-LMS `pub` is **not** opaque. RFC 8778 §2.2:
+> "The LMS public key can be summarized as: u32str(lms_algorithm_type) ||
+> u32str(otstype) || I || T[1]", and RFC 8778 §2.1 makes that the HSS public key
+> too — "The public key for the topmost LMS tree is the public key of the HSS
+> system." The right reason is that this structure contains **no variable-length
+> integer and no optional field**, so there is no representation choice for a
+> normalisation rule to settle: two u32 type codes, then `I`, "the 16-byte
+> identifier of the LMS public key for the tree" (RFC 8778 §3), then `T[1]`,
+> "the m-byte string associated with the root of the LMS tree" with "[HASHSIG]
+> ... supports only SHA-256 with m=32" (RFC 8778 §2.2) — 4 + 4 + 16 + 32 = 56
+> octets, every field fixed-width, nothing length-prefixed, nothing omittable.
+> That is provable by citation; "opaque" was provable only by nobody having
+> looked. (`[HASHSIG]` is RFC 8778's own label for RFC 8554, which supplies the
+> `u32str` convention and the registries the two type codes index.)
+>
+> Two other artifacts of this record had it right all along and the design notes
+> contradicted them: `messages.yaml`'s `hss-lms-thumbprint-input` says `pub` is
+> "the LMS public key as RFC 8778 defines it, which itself begins with the LMS
+> and LM-OTS typecodes", and `requirements.yaml` R-0034's note says the same.
+> The three now agree. Nothing moves in the verdict — blocker 2 is still
+> discharged by citation rather than by restriction — but the count of citations
+> is two, not one.
 
 What it buys if adopted: the one thing `DEC-003` demands ("canonical key bytes
 before hashing"), a citation rather than an invention under `R-O-03`, a
@@ -647,12 +678,60 @@ where this extraction had to reason past both RFC 9679 and our own documents.
    representation as an octet sequence using the CBOR byte string type (major
    type 2). The octet sequence MUST utilize the minimum number of octets needed
    to represent the value." RFC 9679 never cites it, but we may, and under
-   `R-O-03` citing RFC 8230 §4 is a citation rather than an invention. Symmetric
-   (`k`) and HSS-LMS (`pub`) are opaque byte strings with no numeric
-   interpretation, so there is nothing to normalise for them and the precondition
-   is met by the bytes themselves. That leaves restriction unnecessary for all
-   five key types, and the open question narrows to whether we *want* the RSA
-   dependency. *DEC-003.*
+   `R-O-03` citing RFC 8230 §4 is a citation rather than an invention. **For
+   HSS-LMS the cheaper answer is the same answer, from a different document:**
+   **RFC 8778 §2.1/§2.2** specifies the octets of `pub`, and they need no
+   normalisation because the structure admits no representation choice — see
+   below. Symmetric (`k`) is the one remaining case where the argument really is
+   from absence: it is raw secret material with no structure and no numeric
+   reading, so there is nothing to normalise and no document to cite. That
+   leaves restriction unnecessary for all five key types, and the open question
+   narrows to whether we *want* the RSA and HSS-LMS dependencies. *DEC-003.*
+
+   > **[correction] 2026-10-20, maintenance pass on this `profile: full` record
+   > (library#39 Tier 2).** This item used to settle HSS-LMS with: "Symmetric
+   > (`k`) and HSS-LMS (`pub`) are opaque byte strings with no numeric
+   > interpretation, so there is nothing to normalise for them and the
+   > precondition is met by the bytes themselves." **Right conclusion, wrong
+   > reason, for HSS-LMS.** RFC 8778 §2.2 gives `pub` a structure: "The LMS
+   > public key can be summarized as: u32str(lms_algorithm_type) ||
+   > u32str(otstype) || I || T[1]", which RFC 8778 §2.1 makes the HSS public key
+   > as well ("The public key for the topmost LMS tree is the public key of the
+   > HSS system"). It is a **fixed-width** structure, not an opaque blob: two u32
+   > type codes, `I` at "the 16-byte identifier of the LMS public key for the
+   > tree" (RFC 8778 §3), and `T[1]` the m-byte Merkle root with "[HASHSIG] ...
+   > supports only SHA-256 with m=32" (RFC 8778 §2.2) — 56 octets in total for
+   > every parameter set RFC 8778 admits, since all five LMS tree sizes are
+   > `LMS_SHA256_M32_*`. **The correct reason it needs no normalisation is that it
+   > contains no variable-length integer and no optional field**, which is
+   > exactly what RSA `n`/`e` do contain and exactly why RFC 8230 §4 is needed
+   > there. That reason is provable by citation; the old one was provable only by
+   > nobody having challenged it, and under `R-O-03` the difference is the whole
+   > point.
+   >
+   > **And the second half, which is this record's own RFC 8230 defect a second
+   > time.** §4.5 requires `pub` for an HSS-LMS thumbprint and cites **neither
+   > RFC 8778 nor RFC 8554 — zero occurrences of each in the document**,
+   > re-verified here by grep against `.cache/rfc-9679.txt` (digest
+   > `f6b460e38ba1…`); neither appears in RFC 9679 §9.1 or §9.2. RFC 8778 §6.3
+   > is the registering entry for the label — "Key Type: 5 / Name: pub /
+   > Label: -1 / CBOR Type: bstr / Reference: RFC 8778" — and RFC 8778
+   > §2.1/§2.2 are the only
+   > specification of the octets, with RFC 8554 (`[HASHSIG]`) supplying the
+   > `u32str` convention and the parameter registries the two type codes index.
+   > So the defect is the missing citation, not a missing rule, in the same shape
+   > as §4.3's. See defect 12 below and `record.yaml`'s `relations` note.
+   >
+   > **Honest limit, and it bounds what we may claim.** RFC 8778 prints **no
+   > `COSE_Key` and no `pub` value anywhere** — `kty` occurs exactly once in the
+   > whole document, in RFC 8778 §3's key checklist, and `pub` exactly once, in
+   > RFC 8778 §6.3's registry entry; its Appendix A gives signatures only, with
+   > `kid: 'ItsBig'` rather than the 16-byte `I` its own §3 suggests. **So no HSS-LMS
+   > thumbprint is computable from any document this library holds**, and the
+   > 56-octet layout above is read off prose rather than measured off bytes.
+   > `examples/` carries no HSS-LMS vector and this pass did not synthesise one:
+   > a constructed `pub` would be our invention wearing a test vector's clothes.
+   > `records/ietf/rfc-8778` records the same limit from the other side.
 5. **Condition (0) — where is the key representation pinned?** **[beyond
    source]** §4.2's Note is the only instance RFC 9679 supplies. Our profile
    needs the general rule, and the `canonical-encoding` topic's six conditions do
@@ -701,6 +780,26 @@ implementer has to choose. Recorded rather than papered over.
     everything RFC 9679 says. **RFC 9679 never cites RFC 8230 — zero
     occurrences in the document** — so the defect is the missing citation, not a
     missing rule. *Open question 4.*
+
+    **[correction] 2026-10-20 — §4.5 is the same defect a second time, and the
+    verify pass recorded only the first instance.** The paragraph above is
+    written as though RSA were the only case where the rule "exists elsewhere".
+    It is not. **RFC 9679 §4.5 requires `pub` and cites neither RFC 8778 nor
+    RFC 8554 — zero occurrences of each in the document**, re-verified by grep
+    against `.cache/rfc-9679.txt` and against both reference subsections.
+    RFC 8778 §6.3 is the registering entry for key type 5's label −1 ("Name:
+    pub / Label: -1 / CBOR Type: bstr / Reference: RFC 8778") and RFC 8778
+    §2.1/§2.2 the
+    only specification of what the octets are; RFC 8554 (`[HASHSIG]`) defines
+    the `u32str` convention and the LMS / LM-OTS registries whose code points
+    occupy the first eight of them. **The two instances differ in consequence,
+    which is why both belong here.** For RSA the uncited rule is load-bearing —
+    without RFC 8230 §4, `V-0002`/`V-0003` are a real thumbprint divergence. For
+    HSS-LMS the uncited structure turns out to need no normalisation rule at all
+    (no variable-length integer, no optional field: open question 4), so the
+    missing citation costs an implementer a search rather than a divergence.
+    §4.4 (Symmetric `k`) remains the one subsection with nothing to cite. *Open
+    question 4; `record.yaml`'s `relations` note.*
 13. **No defined thumbprint discriminates §4.2.1 from §4.2.3 ordering.** Every
     required label lies in −24..23. An implementation can get §4.2.1's map
     sorting wrong and pass every value in this document, and that changes with

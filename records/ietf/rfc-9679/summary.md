@@ -108,6 +108,22 @@ encoder and no CBOR or COSE library, and all of it reproduces.
   represent the value" — but **RFC 9679 never cites RFC 8230, 0 occurrences**,
   and §4.3/§4.4/§4.5 cite nothing. The rule exists and is unreachable from this
   document. A `see_also` edge to `rfc-8230` now records it.
+- **§4.5 is the same missing citation a second time, and it costs less.**
+  Recorded 2026-10-20. §4.5 requires `pub` for an HSS-LMS thumbprint and cites
+  **neither RFC 8778 nor RFC 8554 — 0 occurrences of each**. RFC 8778 §6.3 is
+  the registry entry that defines label −1 for key type 5, and RFC 8778
+  §2.1/§2.2 the
+  only specification of the octets: "u32str(lms_algorithm_type) ||
+  u32str(otstype) || I || T[1]", 56 octets, every field fixed-width. Unlike
+  RSA, **no normalisation rule is owed** — there is no variable-length integer
+  and no optional field for one to settle — so the cost is a reader's search
+  rather than a thumbprint divergence. The `see_also` edge is authored on
+  `rfc-8778`'s side, which is where its warrant is written out;
+  `docs/references.md` derives the inverse rather than having both sides author
+  it. **Honest limit: no HSS-LMS thumbprint is computable from any document
+  this library holds** — RFC 8778 prints no `COSE_Key` and no `pub` value at
+  all, `kty` occurring exactly once in it — so `examples/` carries no vector
+  for this key type and none was synthesised.
 - **The `ckt` registration pins SHA-256 while §3 does not.** §8 registers "COSE
   Key SHA-256 Thumbprint" and the value is a bare binary string with nowhere to
   name H, so a SHA-384 `ckt` is indistinguishable on the wire from a SHA-256

@@ -266,15 +266,62 @@ mismatch — `pub` against `priv`, not `alg` against key.
    is a construct our documents do not have and `ARCH-0001` §4.2's table does
    not list.
 
-2. **Carry the `Key`, not the `KeyId`.** `R-M-02` is permissive: "A principal
-   MAY be identified solely by key or key digest." **MAY.** And `DEC-003`'s
-   first listed option is literally "raw COSE key". A raw `pub` is
-   `alg`-independent, so **`DEC-003` option 1 is immune to this hazard and
-   option 2 ("COSE key thumbprint") is not.** The cost is §5's: 1312–2592 octets
-   per principal, multiplied by threshold membership. **[analysis] That is the
-   real shape of `DEC-003`: not five equally-weighted options, but a size/identity
-   trade in which exactly one option is stable under post-quantum parameter
-   change and it is the expensive one.** `ARCH-0001` §7 lists the five flat.
+2. **Carry the `Key`, not the `KeyId` — for AKP.** `R-M-02` is permissive: "A
+   principal MAY be identified solely by key or key digest." **MAY.** And
+   `DEC-003`'s first listed option is literally "raw COSE key". **An AKP `pub`
+   is `alg`-independent** — FIPS 204's public key is a seed and a packed vector,
+   with the parameter set showing only in the *length* (1312 / 1952 / 2592, §3's
+   table), never as a code point in the octets — **so for AKP keys `DEC-003`
+   option 1 is immune to this hazard and option 2 ("COSE key thumbprint") is
+   not.** The cost is §5's: 1312–2592 octets per principal, multiplied by
+   threshold membership. **[analysis] That is the real shape of `DEC-003` for
+   AKP: not five equally-weighted options, but a size/identity trade in which
+   exactly one option is stable under post-quantum parameter change and it is
+   the expensive one.** `ARCH-0001` §7 lists the five flat.
+
+   > **[correction] 2026-10-20, maintenance pass on this record (library#39
+   > Tier 2), found by the `rfc-8778` record.** This item used to begin "A raw
+   > `pub` is `alg`-independent, so **`DEC-003` option 1 is immune to this
+   > hazard**", with no key type named, and the paragraph after it said "exactly
+   > one option is stable under post-quantum parameter change". **The premise is
+   > AKP-specific and was stated as general.** It is **false for HSS-LMS**, the
+   > library's other post-quantum COSE signature binding, where the raw `pub` is
+   > precisely the thing carrying the parameter code points. RFC 8778 §2.2: "The
+   > LMS public key can be summarized as: u32str(lms_algorithm_type) ||
+   > u32str(otstype) || I || T[1]", and RFC 8778 §2.1 makes that the HSS public
+   > key — "The public key for the topmost LMS tree is the public key of the HSS
+   > system." Both leading u32 values index registries RFC 8554 established:
+   > RFC 8778 §2.2 and §2.3 say `[HASHSIG]` "establishes an IANA registry to
+   > permit the registration of additional hash functions and additional tree
+   > sizes" and of "additional parameter sets". **Note which registry: the LMS
+   > and LM-OTS parameter registries, not COSE Algorithms.** RFC 8778 §3 makes
+   > `alg` conditional ("If the 'alg' field is present, it MUST be 'HSS-LMS'")
+   > and RFC 9679 §4.5 requires only `kty` and `pub`, so the COSE Algorithms
+   > value −46 is *not* in that preimage; the dependence arrives through the key
+   > octets instead. So option 1's immunity is not a property of
+   > option 1; **it is a property of each key type's public-key encoding**, and
+   > it holds exactly when that encoding carries no parameter code point. AKP
+   > qualifies. HSS-LMS does not.
+   >
+   > **What does NOT change, and is strengthened.** The *mechanism* measured
+   > above — COSE `alg` −48/−49/−50 inside the preimage, at offset 5 — is
+   > AKP-specific. The *general proposition* is not, and HSS-LMS makes it
+   > stronger rather than weaker: there the allocation sits in the **key
+   > material**, so no choice of digest input removes it. Option 1 carries those
+   > eight octets, option 2 (RFC 9679 §4.5's `{kty: 5, pub}`) digests them, and
+   > Cut B's proposed `(kty, pub)` escape digests them too. **Registry-independence
+   > is unavailable for post-quantum principals under every candidate option —
+   > now on two independent instances, by two different mechanisms, with the
+   > escape clause refuted by the second.** See
+   > `records/ietf/rfc-8778` and Cut B below.
+   >
+   > One bound worth keeping straight: the hazard measured above — one
+   > byte-identical `pub`, three `KeyId`s — **cannot arise for HSS-LMS at all**,
+   > because relabelling the parameter set changes `lms_algorithm_type` and the
+   > Merkle root `T[1]` with it, so there is no "same key material under two
+   > algorithms". HSS-LMS is a counter-instance to the *reason*, not to the
+   > *measurement*, and it refutes a different claim: that any option yields an
+   > allocation-free identifier.
 
    **[analysis] One measured detail makes the expensive option cheaper than it
    looks, under one condition.** A **minimal** AKP public COSE_Key — `kty`,
@@ -361,21 +408,68 @@ allocation**: −48, −49 or −50 from the COSE Algorithms registry, inside th
 preimage, in the two-octet span at offsets 4–5 of which **one octet — offset 5 —
 is the allocation itself** (`2f`, `30`, `31` for −48, −49, −50). **[analysis] The namespace root that P1 says
 needs no permission from a registry has a registry number baked into its
-bytes.** And unlike `rfc-9679`'s Cut A, where the registry dependence was in the
-*labels* of the digested map, here it is in a **value that changes the digest** —
-so it is not merely a dependence, it is a dependence with semantics.
+bytes.** The distinction from `rfc-9679`'s Cut A is **not** labels against
+values — Cut A names a value too, and §4 of RFC 9679 requires it of *every* key
+type: "The "kty" (label: 1) element MUST be present for all key types, and the
+integer value specified in the IANA "COSE Key Types" registry MUST be used."
+**[analysis] The real distinction is coarse-and-constant against
+fine-and-varying.** `kty`'s allocation is one number per key *type*, identical
+for every key of that type and not reachable by any choice its holder makes;
+`alg`'s allocation varies **within** one key type over **identical key
+material**, which is what turns one `pub` into three principals. Both change the
+digest. Only the second makes the *same key* name two namespaces.
 
-Which options escape? **None.** §6's JWK set also requires `alg`, whose value is
-the IANA JOSE Algorithms name `"ML-DSA-44"`, so **option 3** (JCS + DSSE) and
-**option 4** inherit it; **option 1** (canonical S-expressions) would have to
-digest some key representation, and the only ones FIPS 204 and RFC 9964 define
-are these. The only escape is to digest `(kty, pub)` alone, which cites no
-document and is therefore an invention under `R-O-03`. **[analysis] So this does
-not reorder the options — it removes a claim option 5 makes for itself.** `MD-3`
+Which options escape? **None, and the escape clause fails twice.** §6's JWK set
+also requires `alg`, whose value is the IANA JOSE Algorithms name
+`"ML-DSA-44"`, so **option 3** (JCS + DSSE) and **option 4** inherit it;
+**option 1** (canonical S-expressions) would have to digest some key
+representation, and the only ones FIPS 204 and RFC 9964 define are these. The
+nearest thing to an escape is to digest `(kty, pub)` alone — and it is not one.
+First, it cites no document and is therefore an invention under `R-O-03`.
+Second, **`kty` is itself an IANA "COSE Key Types" allocation, by RFC 9679 §4's
+MUST**, so `(kty, pub)` has not left the registry; and third, for HSS-LMS even
+`pub` alone would not, because RFC 8778 §2.2 puts two parameter-registry code
+points in its first eight octets (`records/ietf/rfc-8778`). **[analysis] So this does not
+reorder the options — it removes a claim option 5 makes for itself.** `MD-3`
 narrowed on the strength of registry-independence; registry-independence is
 not available for post-quantum principals under any candidate. That is a
 material correction to the premise of the narrowing, and the ADR must state it
 rather than inherit it.
+
+> **[correction] 2026-10-20, maintenance pass on this record (library#39
+> Tier 2). Verdict on Cut B: it NARROWS, and the narrowing strengthens it.**
+> The cut used to read: "And unlike `rfc-9679`'s Cut A, where the registry
+> dependence was in the *labels* of the digested map, here it is in a **value
+> that changes the digest** — so it is not merely a dependence, it is a
+> dependence with semantics." **That sentence is false twice over**, and it was
+> the only thing in the cut that claimed novelty.
+>
+> First, it misreports Cut A. `rfc-9679`'s Cut A does not confine itself to
+> labels; its own text reads "It uses the IANA "COSE **Key** Types" registry
+> (§4, MUST) and the "COSE Key Type Parameters" / "COSE Key Common Parameters"
+> registries (the labels)" — the Key Types registry named first, as a MUST on a
+> value. Second, and independently, the labels/values line is false of RFC 9679
+> §4 itself, which requires the IANA `kty` **value** for every key type, in a
+> map that is then hashed. Verified against `.cache/rfc-9679.txt` §4 (digest
+> `f6b460e38ba1…`): the sentence quoted above is verbatim, and `kty` appears as
+> a required parameter with an IANA integer value in every one of RFC 9679
+> §4.1–§4.5.
+>
+> **So every COSE Key Thumbprint contains an IANA allocation in a
+> digest-changing value — post-quantum or not.** That is strictly more than the
+> cut originally claimed, and it is why the verdict is "narrows" rather than
+> "fails": what must go is the *novelty* claim, not the *conclusion*. The
+> conclusion — option 5's stated rationale of a native model free of central
+> allocation is unachievable at the identity layer — survives intact and now
+> rests on two facts instead of one: `kty` puts an allocation in **every**
+> thumbprint, and `alg` adds a second, finer one that varies over fixed key
+> material. The escape clause is corrected in the same move: `(kty, pub)` was
+> never registry-free, because `kty` is the allocation.
+>
+> Had the labels/values distinction been the cut's load, it would have failed.
+> It was decoration on a sound argument, and this is what it cost: a reader
+> could have concluded that a non-AKP thumbprint escapes, which is the opposite
+> of the truth.
 
 **Cut C — option 4 is eliminated again, and this time with numbers.**
 `rfc-9679`'s Cut B eliminated **option 4** ("Dual canonical (CBOR and JSON) with
@@ -507,6 +601,17 @@ record is the one positioned to extend.
 
 **`rfc-9053`'s quotation of §7.2 is accurate** and its conclusion ("COSE
 declines pre-hash variants") is supported by the text as printed.
+
+**[correction] 2026-10-20 — this record's own claim ABOUT `rfc-9679`'s Cut A was
+the one that failed the check.** Cut B above asserted that in Cut A "the
+registry dependence was in the *labels* of the digested map", in contrast to a
+value here. Checked against `rfc-9679`'s Cut A text and against
+`.cache/rfc-9679.txt` §4: false on both. Cut A names the "COSE **Key** Types"
+registry first and as a MUST on a value, and RFC 9679 §4 requires that IANA
+`kty` **value** for every key type it defines. **Cut B narrows and its
+conclusion strengthens** — the correction is written out under Cut B. Recorded
+here because a cross-record claim that was never checked is exactly what this
+section exists to catch, and this pass is the first to check it.
 
 **[correction] One assumption in this extraction's own brief needs correcting,
 and it is worth recording because it would have weakened the central fixture.**

@@ -91,6 +91,36 @@ algorithm identifier relocates the whole digest. Corrected in place in
 `design-notes.md`, `examples/README.md` and above, with the falsified wording
 recorded rather than silently replaced.
 
+## Corrections made by later maintenance
+
+**2026-10-20, a maintenance pass (library#39 Tier 2), prompted by
+`records/ietf/rfc-8778`.** Two judgements in `design-notes.md`, both **narrowed,
+neither deleted**; no file was added to this directory, no pass was recorded and
+no `profile` is claimed by it.
+
+1. **§2 item 2's option-1 immunity claim was AKP-specific and stated as
+   general.** It read "A raw `pub` is `alg`-independent, so `DEC-003` option 1
+   is immune to this hazard". True for AKP, where FIPS 204's public key carries
+   no code point and the parameter set shows only in its length. **False for
+   HSS-LMS**, whose `pub` *begins* with two parameter-registry code points
+   (RFC 8778 §2.2, `u32str(lms_algorithm_type) || u32str(otstype)`). The
+   immunity is a property of a key type's public-key encoding, not of option 1.
+   **The record's general proposition is strengthened by this, not weakened** —
+   for HSS-LMS the allocation sits in the key material, where no digest-input
+   choice removes it, so registry-independence now fails on two independent
+   instances by two different mechanisms.
+2. **Cut B's labels-against-values distinction from `rfc-9679`'s Cut A does not
+   hold, and Cut B NARROWS rather than fails.** RFC 9679 §4 requires the IANA
+   `kty` **value** for every key type, so every COSE Key Thumbprint already
+   contains a digest-changing allocation; Cut A's own text names that registry
+   first. The surviving distinction is coarse-and-constant (`kty`) against
+   fine-and-varying (`alg`, varying over identical key material). Cut B's
+   conclusion survives intact and its `(kty, pub)` escape clause is refuted
+   twice over.
+
+Both are written out in place in `design-notes.md` with the falsified wording
+quoted, as the verify pass's correction is.
+
 ## Source defects found
 
 Reported, never repaired. Six, in `design-notes.md`; the two that cost a reader

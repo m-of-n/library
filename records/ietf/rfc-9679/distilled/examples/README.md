@@ -126,6 +126,17 @@ Each one covers a rule RFC 9679 states and does not demonstrate.
    `V-0003`'s spelling non-conforming under RFC 8230 even though it conforms to
    everything RFC 9679 says. `expect: ambiguous` is therefore scoped to RFC 9679
    and is not a claim about COSE as a whole.
+   **[maintenance 2026-10-20]** The parallel case for §4.5 needs **no** vector,
+   and that is a finding rather than a gap: RFC 8778 §2.1/§2.2 is the document
+   RFC 9679 §4.5 does not name (0 occurrences of RFC 8778 and of RFC 8554), and
+   the structure it specifies —
+   `u32str(lms_algorithm_type) || u32str(otstype) || I || T[1]`, 56 fixed-width
+   octets — admits **no** representation choice, so there is no `V-0002`/`V-0003`
+   pair to build for it. A vector could not be built in any case: RFC 8778
+   prints no `COSE_Key` and no `pub` value anywhere, so **no HSS-LMS thumbprint
+   is computable from any document this library holds**, and a synthesised `pub`
+   would be our invention wearing a fixture's clothes. §4.4 (Symmetric `k`) is
+   the one subsection with nothing to cite at all.
 3. **`V-0004` / `V-0005` / `V-0006` — the `alg`-inside-the-digest hazard, as
    hex.** §4.6 delegates the required-parameter set to each key type's defining
    specification. RFC 9964 §6 is the one concrete exercise of that clause, and
