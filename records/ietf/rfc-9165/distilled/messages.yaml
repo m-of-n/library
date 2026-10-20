@@ -1,0 +1,438 @@
+# =====================================================================
+# rfc-9165 messages -- for a grammar EXTENSION, the messages are the
+# syntactic constructs it adds and the strings those constructs carry.
+# Each entry below is one construct, its parts, its concrete syntax, and
+# the requirements that constrain it.
+#
+# `constrained_by` IS POPULATED HERE, unlike in rfc-9165's parent record
+# rfc-8610, where the file header states it is omitted throughout. The
+# difference is honest rather than stylistic: RFC 8610 carries two BCP 14
+# occurrences across 125 KB and its constructs cannot be tied to
+# requirement ids without inventing them. RFC 9165 carries five, AND --
+# more to the point -- 84 requirements across only 9 sections, so every
+# construct below has named, located requirements that constrain it. No
+# id appears here that is not in ../requirements.yaml.
+#
+# Quoted sentences are RFC 9165's own words. Anything marked OURS is this
+# library's reading, not the document's.
+#
+# Source: RFC 9165, cached source sha256
+#   94f86116c04fde0f11d54576465181090ec33983d78db82527c0703a41976774
+# =====================================================================
+record: rfc-9165
+reviewed_by: ""
+
+# ---------------------------------------------------------------------
+# No wire format. Said plainly, because the FX-1 `messages` artifact is
+# normally a byte layout and here it cannot be.
+# ---------------------------------------------------------------------
+scope:
+  adds_no_encoding: >-
+    OURS. RFC 9165 defines no bytes. It adds nothing to CBOR, nothing to
+    JSON, no tag, no header, no media type and no registry other than six
+    names in the CDDL Control Operators registry. Everything below is
+    SPECIFICATION-TIME syntax and the strings it manipulates. The
+    byte-level question - what an instance looks like - is answered by
+    RFC 8949 and RFC 8610, not here.
+  adds_no_grammar: >-
+    OURS. Every construct below parses under RFC 8610's existing
+    productions, unchanged: `type1 = type2 [S (rangeop / ctlop) S type2]`
+    with `ctlop = "." id`. There is no new production anywhere in this
+    document, and no change to precedence. The ONE production the document
+    states in its own voice is an ABNF rule, not a CDDL one, and it belongs
+    to the embedded metalanguage: `CRLF = %x0A / %x0D.0A`.
+  what_a_tool_must_add: >-
+    OURS. Three things, in three different places in a toolchain: an
+    arithmetic and string-concatenation evaluator that runs BEFORE matching
+    (.plus, .cat, .det); an RFC 5234 + RFC 7405 ABNF parser and recognizer
+    invoked DURING matching (.abnf, .abnfb); and a feature-reporting channel
+    on the OUTPUT side (.feature). See `evaluation_order`.
+
+# ---------------------------------------------------------------------
+# Evaluation order -- the part a tool gets wrong if it treats all control
+# operators uniformly.
+# ---------------------------------------------------------------------
+evaluation_order:
+  basis: >-
+    OURS, derived from the operators' own definitions and from the two
+    compositions the document prints. The document never states an
+    evaluation order; it demonstrates one.
+  phases:
+    - phase: 1
+      name: "generic instantiation"
+      what: >-
+        Generic arguments are bound to parameters (RFC 8610 Section 3.10).
+        This must precede phase 2 because the document's only .plus example
+        has a GENERIC PARAMETER as its target: `interval<BASE>` with
+        `X = 0` and `Y = 3`.
+      constrained_by: ["rfc-9165#R-0019", "rfc-9165#R-0020"]
+    - phase: 2
+      name: "literal computation"
+      what: >-
+        .plus, .cat and .det are evaluated, innermost first, yielding
+        types. Innermost-first is forced: in `lhs .cat ("" .det rhs)` the
+        inner result is the outer controller, and in Figure 5 the named rule
+        `rfc3339` must be computed before `"date-time" .cat rfc3339` can be.
+        Nothing here sees an instance.
+      constrained_by: ["rfc-9165#R-0011", "rfc-9165#R-0012", "rfc-9165#R-0015", "rfc-9165#R-0022", "rfc-9165#R-0031", "rfc-9165#R-0037"]
+    - phase: 3
+      name: "ABNF controller parsing"
+      what: >-
+        Each .abnf / .abnfb controller string -- now a computed literal, not
+        a source literal -- is parsed as one `element` plus a rule-list, and
+        checked for rule closure. Statically decidable; no instance needed.
+      constrained_by: ["rfc-9165#R-0047", "rfc-9165#R-0048", "rfc-9165#R-0050", "rfc-9165#R-0053", "rfc-9165#R-0055"]
+    - phase: 4
+      name: "matching"
+      what: >-
+        The instance is matched. .abnf / .abnfb are recognizers here;
+        .plus / .cat / .det contribute only the types phase 2 computed;
+        .feature contributes nothing at all.
+      constrained_by: ["rfc-9165#R-0045", "rfc-9165#R-0046", "rfc-9165#R-0061"]
+    - phase: 5
+      name: "feature reporting"
+      what: >-
+        Features annotated on matched types are emitted to the caller.
+        "A CDDL tool may simply report the set of features being used; the
+        control then only provides information to the process requesting the
+        validation." This is an output channel, not a validation step, and
+        it is wholly optional.
+      constrained_by: ["rfc-9165#R-0063", "rfc-9165#R-0064", "rfc-9165#R-0070", "rfc-9165#R-0074"]
+  consequence: >-
+    OURS. A tool that implements RFC 8610's fourteen and these six as
+    one uniform `evaluate this predicate against the instance` interface
+    will place .plus, .cat and .det in phase 4, where their operands are no
+    longer available as types, and will have nowhere to put .feature at all.
+    That is the practical content of this record for a tool author.
+
+constructs:
+
+  - name: "plus-control"
+    locator: "§2.1"
+    kind: "type control expression"
+    syntax: "type2 .plus type2"
+    parses_as: "ctlop within type1 (RFC 8610 Appendix B, unchanged)"
+    class: constructive
+    fields:
+      - name: target
+        type: "a numeric type"
+        required: true
+        note: "MUST be numeric. Also the position that fixes the result's numeric type."
+        constrained_by: ["rfc-9165#R-0016", "rfc-9165#R-0017"]
+      - name: controller
+        type: "a numeric type"
+        required: true
+        note: "MUST be numeric."
+        constrained_by: ["rfc-9165#R-0016"]
+    produces:
+      type: "a numeric type -- that of the TARGET"
+      members: "OURS: { floor_if_needed(t + c) } over the cross-product of target and controller"
+    constrained_by: ["rfc-9165#R-0014", "rfc-9165#R-0015", "rfc-9165#R-0016", "rfc-9165#R-0017", "rfc-9165#R-0019", "rfc-9165#R-0020"]
+    example_source: "../schema/computed-literals.cddl region F-1"
+
+  - name: "cat-control"
+    locator: "§2.2"
+    kind: "type control expression"
+    syntax: "type2 .cat type2"
+    parses_as: "ctlop within type1"
+    class: constructive
+    fields:
+      - name: target
+        type: "a string type, text or byte"
+        required: true
+        note: >-
+          MUST be a string. Fixes the result's string type, so operand order
+          is semantic and not stylistic.
+        constrained_by: ["rfc-9165#R-0023", "rfc-9165#R-0024"]
+      - name: controller
+        type: "a string type, text or byte -- need not match the target's"
+        required: true
+        note: "MUST be a string. Nothing requires the two operands to share a type."
+        constrained_by: ["rfc-9165#R-0023"]
+    produces:
+      type: "the TARGET's string type"
+      members: "OURS: { bytes(t) || bytes(c) } over the cross-product"
+      wellformedness: >-
+        OURS, a restatement and not a quotation: if the target is a text
+        string, the result must be valid UTF-8. The source's exact sentence
+        is rfc-9165#R-0026 in ../requirements.yaml and `utf8_rule_quote` in
+        ../schema/control-operators.derived.yaml.
+    constrained_by: ["rfc-9165#R-0021", "rfc-9165#R-0022", "rfc-9165#R-0023", "rfc-9165#R-0024", "rfc-9165#R-0025", "rfc-9165#R-0026", "rfc-9165#R-0027", "rfc-9165#R-0028"]
+    example_source: "../schema/computed-literals.cddl region F-2"
+
+  - name: "det-control"
+    locator: "§2.3"
+    kind: "type control expression"
+    syntax: "type2 .det type2"
+    parses_as: "ctlop within type1"
+    class: constructive
+    fields:
+      - name: target
+        type: "a string type"
+        required: true
+        note: "operand rules inherited from .cat by 'works like .cat'; dedented before concatenation"
+        constrained_by: ["rfc-9165#R-0031"]
+      - name: controller
+        type: "a string type"
+        required: true
+        note: "dedented INDEPENDENTLY of the target"
+        constrained_by: ["rfc-9165#R-0031"]
+    produces:
+      type: "the TARGET's string type"
+      members: "OURS: { bytes(dedent(t)) || bytes(dedent(c)) } over the cross-product"
+    constrained_by: ["rfc-9165#R-0029", "rfc-9165#R-0030", "rfc-9165#R-0031", "rfc-9165#R-0032", "rfc-9165#R-0033", "rfc-9165#R-0034", "rfc-9165#R-0035", "rfc-9165#R-0036", "rfc-9165#R-0037"]
+    example_source: "../schema/dedenting.cddl F-3, ../schema/dedenting-result.cddl F-4"
+
+  - name: "dedent-operation"
+    locator: "§2.3"
+    kind: "string operation (not a syntactic construct)"
+    syntax: "n/a -- invoked by .det on each operand"
+    algorithm:
+      step_1: "determine the smallest number of leading SPACE characters over all NON-BLANK lines"
+      step_2: "remove exactly that number from each line; a blank line loses all leading space"
+      alphabet_note: >-
+        OURS. The source parenthesises "blank space" as "number of leading
+        space characters", so a HORIZONTAL TAB is not blank space. A
+        tab-indented literal therefore dedents by zero. RFC 8610's grammar
+        agrees that no tab exists in CDDL (SP = %x20, and SCHAR begins at
+        %x20), but neither document tells an author that a tab-indented
+        embedded ABNF will silently stay indented.
+      exactness_note: >-
+        OURS. "removing exactly that number" preserves relative indentation,
+        which is load-bearing: an ABNF continuation line is a continuation
+        only because it is more indented than its rule. Figure 5 depends on
+        it for `partial-time`.
+      margin_invariance: >-
+        OURS. Under a uniform margin every line shifts equally, so step 1's
+        minimum shifts with it and the result is identical. This is why a
+        figure printed inside an RFC's body margin is a correct example.
+    constrained_by: ["rfc-9165#R-0033", "rfc-9165#R-0034", "rfc-9165#R-0035"]
+    rendering: "../schema/embedded-abnf-dedented.derived.abnf"
+
+  - name: "abnf-control"
+    locator: "§3"
+    kind: "type control expression"
+    syntax: "type2 .abnf type2"
+    parses_as: "ctlop within type1"
+    class: restrictive
+    fields:
+      - name: target
+        type: "either string type"
+        required: true
+        note: >-
+          "usually text or some restriction on it", but either string type
+          is admitted. The target's type does NOT decide the alphabet.
+        constrained_by: ["rfc-9165#R-0042", "rfc-9165#R-0046"]
+      - name: controller
+        type: "a string -- an abnf-controller-string (below)"
+        required: true
+        note: "MUST be a string; a byte string MUST be valid UTF-8 and is reinterpreted as text"
+        constrained_by: ["rfc-9165#R-0047", "rfc-9165#R-0048"]
+    matches:
+      alphabet: "Unicode scalar values (code points), from the target's bytes decoded as UTF-8"
+      grammar: "RFC 5234 together with RFC 7405"
+    constrained_by: ["rfc-9165#R-0008", "rfc-9165#R-0041", "rfc-9165#R-0042", "rfc-9165#R-0045", "rfc-9165#R-0046", "rfc-9165#R-0047", "rfc-9165#R-0048"]
+    example_source: "../schema/abnf-in-cddl.cddl region F-5"
+
+  - name: "abnfb-control"
+    locator: "§3"
+    kind: "type control expression"
+    syntax: "type2 .abnfb type2"
+    parses_as: "ctlop within type1"
+    class: restrictive
+    fields:
+      - name: target
+        type: "either string type"
+        required: true
+        note: "same admissibility statement as .abnf; the operator, not the target, picks the alphabet"
+        constrained_by: ["rfc-9165#R-0046"]
+      - name: controller
+        type: "a string -- an abnf-controller-string (below)"
+        required: true
+        note: "same MUST and same UTF-8 coercion as .abnf"
+        constrained_by: ["rfc-9165#R-0047", "rfc-9165#R-0048"]
+    matches:
+      alphabet: "bytes, taken directly from the target's byte sequence"
+      grammar: "RFC 5234 together with RFC 7405"
+    constrained_by: ["rfc-9165#R-0044", "rfc-9165#R-0045", "rfc-9165#R-0046", "rfc-9165#R-0047", "rfc-9165#R-0048"]
+    example_source: "../schema/dedenting.cddl region F-3"
+
+  - name: "abnf-controller-string"
+    locator: "§3"
+    kind: "string structure (the payload of .abnf / .abnfb)"
+    syntax: "<element> NEWLINE *( <rule> )"
+    layout:
+      - part: "selector"
+        what: >-
+          one valid ABNF "element", which selects from the rule-list that
+          follows. Both of this document's selectors are bare rulenames
+          (`full-date`, `date-time`, `oid`, `roid`).
+        constrained_by: ["rfc-9165#R-0050"]
+      - part: "newline"
+        what: >-
+          separates the selector from the rule-list. The document's own
+          idiom is to put it FIRST in the appended literal, so the
+          concatenation produces it: "; Note the trick of idiomatically
+          starting with a newline, separating ; off the element in the
+          concatenations above from the rule-list" is the source's own
+          comment in Figure 5, with the second `;` it sets at the line break
+          kept as the source has it.
+        constrained_by: ["rfc-9165#R-0050", "rfc-9165#R-0051", "rfc-9165#R-0052"]
+      - part: "rule-list"
+        what: "zero or more valid ABNF rules, which MUST be rule-closed"
+        constrained_by: ["rfc-9165#R-0054", "rfc-9165#R-0055", "rfc-9165#R-0056"]
+    newline_definition:
+      production: "CRLF = %x0A / %x0D.0A"
+      scope: >-
+        the syntax of ABNF ITSELF, not the syntax expressed in it. The
+        document states the scope explicitly, in cursive, with an
+        exclamation mark.
+      constrained_by: ["rfc-9165#R-0053"]
+    closure: >-
+      "(Note that all rules referenced need to be defined in each ABNF
+      operator controller string -- there is no implicit import of core ABNF
+      rules from [RFC5234] or other rules.)" OURS, checked by script: both
+      of this document's controllers are closed. cbor-tags-oid holds 4 rules
+      with 0 undefined and is closed from both `oid` and `roid`; the Figure 5
+      composition holds 14 rules with 0 undefined and is closed from both
+      `full-date` and `date-time`, ACROSS the .det join.
+    constrained_by: ["rfc-9165#R-0049", "rfc-9165#R-0050", "rfc-9165#R-0051", "rfc-9165#R-0052", "rfc-9165#R-0053", "rfc-9165#R-0055", "rfc-9165#R-0056"]
+    source_defect: >-
+      OURS. The structure rule requires one valid "element" (singular) while
+      the sentence before it names RFC 5234's `elements` (plural). The
+      productions differ in strength and no example in the document
+      distinguishes them. See ../schema/README.md.
+
+  - name: "text-in-byte-string carrier"
+    locator: "§3"
+    kind: "RFC 8610 literal, used here as the multi-line carrier"
+    syntax: "'...multiple lines...'"
+    why_it_is_needed: >-
+      "The workaround employs the .cat operator introduced in Section 2.2
+      and the syntax for text in byte strings." OURS: RFC 8610's grammar
+      admits CRLF inside BCHAR and not inside SCHAR, so a byte-string
+      literal may span lines and a text-string literal may not. ABNF needs
+      newlines, so every multi-line ABNF literal in this document is a byte
+      string -- and rfc-9165#R-0048 is what makes that legitimate, by
+      reinterpreting it as text.
+    constrained_by: ["rfc-9165#R-0048", "rfc-9165#R-0051", "rfc-9165#R-0052"]
+
+  - name: "feature-control"
+    locator: "§4"
+    kind: "type control expression"
+    syntax: "type2 .feature type2"
+    parses_as: "ctlop within type1"
+    class: annotative
+    fields:
+      - name: target
+        type: "any type. No admissibility rule is stated"
+        required: true
+        note: "becomes the feature DETAIL in a tool's diagnostic output"
+        constrained_by: ["rfc-9165#R-0061", "rfc-9165#R-0064"]
+      - name: controller
+        type: "unconstrained. 'will usually be a string'; a 2-element array is the sanctioned alternative"
+        required: true
+        note: "becomes the feature NAME"
+        constrained_by: ["rfc-9165#R-0062", "rfc-9165#R-0064", "rfc-9165#R-0066"]
+    matches: >-
+      exactly what the target matches. OURS: the operator narrows nothing,
+      so no instance can distinguish a tool that implements it from one that
+      ignores it.
+    emits:
+      channel: "the tool's diagnostic output / the validation result"
+      feature_name: "the controller, or its first array element"
+      feature_detail: "the target, or the controller's second array element"
+      optionality: >-
+        OURS. Wholly optional. Every statement is hedged - "may mark",
+        "might contain", "may simply report" - and there is no MUST, no
+        SHOULD and no output format.
+      constrained_by: ["rfc-9165#R-0063", "rfc-9165#R-0064", "rfc-9165#R-0065", "rfc-9165#R-0066", "rfc-9165#R-0074"]
+    constrained_by: ["rfc-9165#R-0058", "rfc-9165#R-0059", "rfc-9165#R-0060", "rfc-9165#R-0061", "rfc-9165#R-0062", "rfc-9165#R-0063", "rfc-9165#R-0064", "rfc-9165#R-0065", "rfc-9165#R-0066", "rfc-9165#R-0074", "rfc-9165#R-0075", "rfc-9165#R-0077", "rfc-9165#R-0078"]
+    example_source: "../schema/features.cddl regions F-6 .. F-9"
+
+  - name: "feature-detail-array"
+    locator: "§4"
+    kind: "controller shape (the only shape-semantic controller in CDDL)"
+    syntax: '(["<feature-name>", "<feature-detail>"])'
+    layout:
+      - part: "element 0"
+        what: "the feature name, 'that would otherwise be the entire controller'"
+      - part: "element 1"
+        what: "the detail, 'usually another string'"
+    undefined_cases: >-
+      OURS. The document gives the 2-element form and nothing else. A
+      1-element array, a 3-element array and a non-array non-string
+      controller are all grammatical and all undefined. Nothing in the
+      grammar or the type system distinguishes them.
+    constrained_by: ["rfc-9165#R-0065", "rfc-9165#R-0066"]
+    example_source: "../schema/features.cddl region F-6"
+
+  - name: "feature-extension-point idiom"
+    locator: "§4"
+    kind: "composite idiom (not a construct)"
+    syntax: "$$socket  +  * (type .feature \"name\") => any"
+    parts:
+      - "an RFC 8610 socket/plug for the extensions already known: 'Extensions that are known at the time this definition is written can be collected into $$person-extensions.'"
+      - "a wildcard entry that ADMITS the unknown ones -- without it nothing works"
+      - "a .feature annotation on the wildcard's KEY type, which MARKS them"
+    the_wildcard_is_the_load_bearing_part: >-
+      "However, future extensions would be deemed invalid unless the
+      wildcard at the end of the map is added." OURS: RFC 8610's map
+      matching is exhaustive in both directions, so .feature alone changes
+      nothing. The wildcard makes the extension point; .feature only names
+      it.
+    the_price: >-
+      "Leaving the extension point in but not marking its use as special
+      would render mistakes (such as using the label "organisation" instead
+      of "organization") invisible." OURS: so the wildcard buys
+      extensibility at the cost of silently accepting typos, and .feature
+      buys back only the ability to SEE them, not to reject them.
+    constrained_by: ["rfc-9165#R-0067", "rfc-9165#R-0068", "rfc-9165#R-0069", "rfc-9165#R-0070", "rfc-9165#R-0071", "rfc-9165#R-0072"]
+    example_source: "../schema/features.cddl region F-7"
+
+  - name: "named-intermediate-rule composition"
+    locator: "§2.3, §3"
+    kind: "composition idiom (not a construct)"
+    syntax: "a = X .ctl1 Y   /   b = a .ctl2 Z"
+    why_it_exists: >-
+      OURS. RFC 8610's `type1 = type2 [S (rangeop / ctlop) S type2]` admits
+      at most ONE control per type1, so controls do not chain. Two ways out,
+      and this document uses both: parenthesise the inner control to make it
+      a `type2` (`("oid" .det cbor-tags-oid)`, `lhs .cat ("" .det rhs)`), or
+      name it as a rule and reference the name (Figure 5's `rfc3339`, used
+      as the controller of two separate .cat rules).
+    corroborates: >-
+      rfc-8610's grammar-gaps.derived.txt G-44, which INFERS the
+      one-control-per-type1 rule and records that RFC 8610's own Table 1
+      implies otherwise. RFC 9165 never states the rule and obeys it six
+      times. See ../schema/control-operators.derived.yaml,
+      syntax.precedence_untouched.
+    constrained_by: ["rfc-9165#R-0037", "rfc-9165#R-0056", "rfc-9165#R-0057"]
+    example_source: "../schema/abnf-in-cddl.cddl region F-5"
+
+  - name: "generic-parameter operand"
+    locator: "§2.1"
+    kind: "composition idiom (not a construct)"
+    syntax: "rule<PARAM> = ( PARAM => t, (PARAM .plus 1) => t )"
+    what_it_buys: >-
+      "The parameter BASE allows the non-conflicting use of a multiple of
+      these interval groups in one map by assigning different labels to the
+      entries of the interval."
+    what_it_does_not_buy: >-
+      OURS, and this is the finding the record exists for. The operand is a
+      PARAMETER, bound at instantiation -- specification-expansion time.
+      What .plus computes here are MAP LABELS, not relations between map
+      VALUES. See ../schema/control-operators.derived.yaml,
+      cross_field_constraints.
+    constrained_by: ["rfc-9165#R-0011", "rfc-9165#R-0018", "rfc-9165#R-0019", "rfc-9165#R-0020"]
+    example_source: "../schema/computed-literals.cddl region F-1"
+
+counts:
+  constructs: 13
+  type_control_expressions: 6
+  string_structures: 3      # abnf-controller-string, feature-detail-array, text-in-byte-string carrier
+  operations: 1             # dedent
+  idioms: 3                 # extension point, named-rule composition, generic-parameter operand
+  evaluation_phases: 5
+  distinct_requirement_ids_referenced: 62
+  dangling_requirement_ids: 0
