@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-9682
 record: rfc-9682
 type: summary
-updated: "2026-10-19"
+updated: "2026-10-20"
 ---
 
 # Updates to the Concise Data Definition Language (CDDL) Grammar
@@ -82,9 +82,19 @@ does not. *Searched on 2026-10-19; no named implementation in the document.*
   into the normative appendix **byte-identical**, in a document titled *Updates
   to the CDDL Grammar* which lists RFC 5234 as a normative reference and
   **rewrites `PCHAR` two lines above it in the same block**. It says nothing.
-  The new `HEXDIG1` makes the camouflage one rule thicker. With
-  `draft-ietf-cbor-cddl-modules` reproducing it as well, the defect now sits in
-  **three current CDDL documents**.
+  The new `HEXDIG1` makes the camouflage one rule thicker. **The charge is that
+  the relaxation is *undeclared*, not that it is wrong.** RFC 9165 §3 makes the
+  identical redefinition and declares and scopes it — [PROVENANCE: RFC 9165's
+  sentence, not RFC 9682's] "As is customary for ABNF, the syntax of ABNF itself
+  (_not_ the syntax expressed in ABNF!) is relaxed to allow a single line feed
+  as a newline" — so the substance is deliberate community practice and that
+  instance is no defect. Counting **undeclared** instances, the current ones are
+  **two**: this document's own normative Appendix A, which supersedes RFC 8610's
+  copy, and `draft-ietf-cbor-cddl-modules`, whose directive grammar reproduces
+  the rule with no declaration anywhere in the draft. *(Adjudicated by pass 2
+  from the three sources; an earlier draft of this line said "three current CDDL
+  documents", which counted the superseded copy and did not separate the
+  declared instance from the undeclared ones.)*
 - **`bsqual = "h" / "b64"` is unchanged at two prefixes.** Appendix B.2 says
   only that "the approach taken lends support to extending bsqual in CDDL
   similar to the way this is done for CBOR diagnostic notation in
@@ -106,15 +116,25 @@ does not. *Searched on 2026-10-19; no named implementation in the document.*
 - **§2 narrows the language and never says so.** §3's backward-compatibility
   claim is scoped to §3 by its own opening words, and §2 claims only to mirror
   implementations. Six one-line CDDL files valid under RFC 8610 and invalid
-  under RFC 9682 are listed in `distilled/README.md`.
+  under RFC 9682 are listed in
+  `distilled/schema/grammar-gaps-status.derived.txt`, NEW-OBS-2.
 - **Appendix A *drops* two sentences of RFC 8610 Appendix B** rather than
   changing them, and the second's substance reappears in Appendix B.2 — which
   declares itself informative. A normative caveat became informative prose.
 - Smaller: one curly closing quotation mark at line 355 where the same phrase
   is correctly paired at line 333; a byte order mark at the head of line 1.
-- The extraction is at **pass 1 of 3**; verify and cross-check have not run, no
-  ABNF recognizer was loaded with Figure 11, and the 15 vectors' expectations
-  are asserted branch by branch by hand. Readable; not buildable-on.
+- The extraction is at **passes 1 and 2 of 3**; cross-check has not run. Pass 2
+  **built the recognizer pass 1 lacked** — an RFC 5234 engine with ABNF's
+  symmetric alternation, loaded with Figure 11 and with RFC 8610's Appendix B —
+  and re-derived the change table from both sources independently. It confirmed
+  the table, the three code-point counts, the silent disagreement, the
+  behaviour split, all four `hexscalar` branches and the dead alternative, and
+  every one of the 15 vectors' `expect` verdicts. It **falsified five claims**, each now
+  corrected and marked in place; the sharpest was that four artifacts stated
+  this record's own central hazard with the escape `\uD83C\uDC73` silently
+  resolved into the character it denotes, which is the very failure the hazard
+  describes. Readable and now checked; still not cross-checked against the
+  sibling records.
 
 ## What this changed in `rfc-8610`
 
@@ -128,6 +148,11 @@ What changed is **currency, not correctness** — so `rfc-8610`'s
 superseded productions, the two closed gaps, and the silent-disagreement
 hazard. Its three verbatim regions remain byte-exact and its own defect list is
 unchanged on `CRLF`, `bsqual` and Table 1, because RFC 9682 fixes none of them.
+Pass 2 re-derived that header against both sources and **corrected its
+arithmetic**: it had said "2 closed, 1 half-closed, 1 amended, the other 38
+stand", which omits the **2 restated** (G-12, G-28) and sums to 42 rather than
+44. It also now carries the three code-point counts and the `"\'"` alternative
+`BCHAR` gains back, which the first version of the table elided.
 
 ## Where it cuts against MD-3
 

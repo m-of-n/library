@@ -59,10 +59,11 @@ dedented exact source line run.
 escape syntax. **Both parse under RFC 8610's grammar as well, and mean something
 else.** RFC 8610's `SESC = "\" (%x20-7E / %x80-10FFFD)` consumes `\u`, after
 which `{`, `6`, `f`, `}` are each ordinary `SCHAR`s — U+007B and U+007D lie in
-`%x5D-7E`, `6` in `%x23-5B`, `f` in `%x5D-7E` — so `"D\u{6f}mino"` is a nine-
-character string beginning `D`, `u`, `{`, `6`, `f`, `}` under the old grammar
-and `Domino` under the new one. **No diagnostic is produced on either side.**
-`"🁳"` diverges the same way.
+`%x5D-7E`, `6` in `%x23-5B`, `f` in `%x5D-7E` — so `"D\u{6f}mino"` is the ten
+characters `D`, `u`, `{`, `6`, `f`, `}`, `m`, `i`, `n`, `o` under the old
+grammar and the six characters `Domino` under the new one. **No diagnostic is
+produced on either side.**
+`"\uD83C\uDC73"` diverges the same way.
 
 That is the concrete instance of the class §4 names and does not name:
 "Attackers may want to exploit such potential confusion by crafting CDDL models

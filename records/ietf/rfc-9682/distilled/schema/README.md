@@ -50,6 +50,22 @@ The dedented file round-trips: re-adding three spaces to every non-blank line
 reproduces source lines 482–591 byte-for-byte, and that identity is asserted by
 the generator rather than claimed here.
 
+**And as of pass 2 (verify, 2026-10-20) a recognizer has actually been loaded
+with it.** Pass 1 stated it had not built one; pass 2 wrote an RFC 5234 / RFC
+7405 engine with ABNF's *symmetric* alternation — every node returns the set of
+reachable end positions, so ambiguity is visible instead of being hidden by
+PEG-style ordering — and loaded it with Figure 11 and, separately, with
+RFC 8610's Appendix B. Both grammars load with no dangling reference (55 and 47
+rules); all 55 of Figure 11's rules are reachable from `cddl`; `non-surrogate`
+rejects **exactly** U+D800–U+DFFF over an exhaustive sweep of all 65 536
+four-digit values; a lone surrogate is unreachable through `hexchar` in every
+spelling (`D800`, `{D800}`, `{0D800}`, `{00D800}`, `DFFF`, `{DFFF}`, `D83C`,
+`{D83C}` all refused) while the full pair is accepted; `\u{110000}` is refused
+and `\u{10FFFF}` accepted, which is the residue recorded below; and the new
+`type2` ambiguity is real — `#7`, `#7.0`, `#7.25` and `#7.200` each match both
+`"#" "7" ["." head-number]` and `"#" DIGIT ["." uint]`, while `#6`, `#6.1` and
+`#3.4` match only the latter.
+
 ## There are no page frames in this document
 
 Worth stating because the sibling record's equivalent capture needed three
@@ -143,5 +159,13 @@ The one amendment the `rfc-8610` record needs is additive and is a pointer, not
 a correction: its `cddl.abnf` header and its `grammar-gaps.derived.txt` should
 say that `SCHAR`, `BCHAR`, `PCHAR`, `SESC`, `cddl` and `type2` are **superseded
 by RFC 9682 Figure 11**, and that G-32 and G-33 are closed there. The precise
-list is in `production-changes.derived.txt`. Making that edit is maintenance on
-another record and is not done from here.
+list is in `production-changes.derived.txt`.
+
+**Done for `cddl.abnf` as of 2026-10-20**, as an additive CURRENCY block above
+its verbatim regions — written from pass 1's report, then re-derived and
+corrected by pass 2, which found its side-condition arithmetic summed to 42
+rather than 44 (the two *restated* conditions were missing) and its `BCHAR` row
+silent about the `"\'"` alternative the new grammar adds back. Its three
+verbatim regions and all three region digests were re-verified unchanged
+afterwards. `grammar-gaps.derived.txt` has **not** had the pointer added; that
+is still maintenance on another record and is not done from here.

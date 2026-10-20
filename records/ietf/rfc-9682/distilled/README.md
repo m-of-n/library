@@ -11,10 +11,19 @@ reviewed_by: ""
 FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what
 it does not.
 
-**State: pass 1 of three complete. `distillation.standard: FX-1` and NO
+**State: passes 1 and 2 of 3 complete. `distillation.standard: FX-1` and NO
 `profile`** — an unfinished extraction is neither `full` nor `partial` and the
 gate says so. Pass 1 (extract, effort max, 2026-10-19): one agent reading only
-`.cache/rfc-9682.txt`. **Verify and cross-check have not run.** No
+`.cache/rfc-9682.txt`. Pass 2 (verify, effort max, 2026-10-20): an independent
+agent that did not extract, which re-derived the change table from both sources
+and **built the ABNF recognizer pass 1 said it had not built** — an RFC 5234
+engine with ABNF's symmetric alternation, loaded with Figure 11 and with
+RFC 8610's Appendix B. It confirmed the table, the three code-point counts, the
+silent-disagreement claim, the three-way behaviour split, all four `hexscalar`
+branches and the new dead alternative, and it **falsified five claims, each now
+corrected and marked** (`record.yaml`, `distillation.passes`, the `verify`
+entry). **Cross-check has not run**; nothing here has yet been read against the
+sibling records by an agent that had not already read this one. No
 `reviewed_by` is signed.
 
 Source: RFC 9682, *Updates to the Concise Data Definition Language (CDDL)
@@ -45,7 +54,7 @@ exactly where they were.
 | kind | file | coverage |
 |---|---|---|
 | normative | `normative.md` | 77 verbatim bullets across 18 distinct locators, plus 18 reproduced blocks — every figure in the document and both aside blocks. All 75 plain bullets confirmed contiguous substrings of the whitespace-normalised source **and** confirmed by section range (both ends of every span inside the locator's own line range); all 18 blocks confirmed exact source line runs. The 2 remaining bullets are the declared-severed quotes, whose halves pass the same two checks |
-| requirements | `requirements.yaml` | 87 entries, `R-0001`–`R-0087`, source order, no gaps: **0 stated, 87 inferred**, because the document has no BCP 14 keyword to state one with. `source_keyword_count` and `extracted_keyword_count` both **0**, with a 7000-character `reconciliation` giving the full eight-occurrence census of BCP-14-shaped words in the source (all lower case, each inspected) and stating what was counted instead. Every one of the 33 requirement ids the reconciliation cites was re-checked against the entry it names |
+| requirements | `requirements.yaml` | 87 entries, `R-0001`–`R-0087`, source order, no gaps: **0 stated, 87 inferred**, because the document has no BCP 14 keyword to state one with. `source_keyword_count` and `extracted_keyword_count` both **0**, with an 8350-character `reconciliation` giving the full **thirteen**-occurrence census of BCP-14-shaped words in the source (all lower case, each inspected — pass 2 corrected this from eight, which had omitted the five lower-case `may`) and stating what was counted instead. Every one of the 33 requirement ids the reconciliation cites was re-checked against the entry it names |
 | schema | `schema/` | **4 verbatim, 3 derived.** Figure 11 entire — 55 productions, one unbroken region, source lines 482–591, per-region sha256, the RFC's three-column margin intact; the four delta figures; this document's own six quotations of the RFC 8610 text it replaces; and the declined Erratum 6543 proposal. Derived: a dedented tool-readable companion that round-trips, **the production-by-production change table**, and the status of RFC 8610's 44 side conditions. See `schema/README.md` |
 | messages | `messages.yaml` | 18 constructs — 6 changed, 8 new, 4 unchanged-but-load-bearing — with parts, concrete syntax, and an `old_parser_behaviour` line for each. **`constrained_by` is omitted throughout, deliberately and stated in the file header**: with zero keyword occurrences there is no honest way to tie a construct to a requirement id, and inventing one is the failure FX-1 exists to prevent. The honest join is by section and is in `locator_join` |
 | examples | `examples/` | 15 vectors `V-0001`–`V-0015`: 14 valid, 1 invalid, 0 indeterminate. **The one negative is the source's own.** Every `cddl` field verbatim by line range; all 6 multi-line blocks independently re-derived as exact source line runs; **0 span a page frame and 0 join non-adjacent ranges**, because this document has no page frames. The 6 one-line `instance` values are declared **ours** in the file's own header |
