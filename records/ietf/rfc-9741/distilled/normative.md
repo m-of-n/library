@@ -9,7 +9,7 @@ reviewed_by: ""
 <!-- Every normative statement, VERBATIM, with its locator. Keep the source's
 section structure as headings. Drop motivation, history, acknowledgements. -->
 
-Source: RFC 9741, "Concise Data Definition Language (CDDL): Additional Control Operators for the Conversion and Processing of Text", Standards Track, March 2025. sha256 `3234aeea39d01b7c1c8e9c70d4d7dc8745852e0b6edbea167a3e55b91e7a9ee3` (602 lines, 28550 bytes, plain text). Quotations are verbatim from the plain-text RFC. Blocks that reproduce tables, figures or CDDL preserve the source's own line breaks and indentation — including the RFC's left margin — inside fenced blocks.
+Source: RFC 9741, "Concise Data Definition Language (CDDL): Additional Control Operators for the Conversion and Processing of Text", Standards Track, March 2025. sha256 `3234aeea39d01b7c1c8e9c70d4d7dc8745852e0b6edbea167a3e55b91e7a9ee3` (602 lines, 28559 bytes, plain text). Quotations are verbatim from the plain-text RFC. Blocks that reproduce tables, figures or CDDL preserve the source's own line breaks and indentation — including the RFC's left margin — inside fenced blocks.
 
 **Why this file is mostly definitions.** `bin/bcp14-count` reports **3** BCP 14
 keyword occurrences in 28 KB: two `MUST NOT`s in §2.3 forbidding three C `printf`

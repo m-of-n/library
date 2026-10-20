@@ -71,9 +71,21 @@ evidence, in increasing order of force:
 2. **By enumeration.** All fourteen operators are in Table 1 with their target
    and controller types. Ten convert text ↔ bytes, one text ↔ int, one text ↔
    a printf argument list, one text ↔ a JSON value, one concatenates strings.
-   **Not one takes a text target and imposes a predicate about the text's own
-   form as text.** The nearest thing is `.hexlc`/`.hexuc`, which constrain
-   *case* over a 16-character ASCII alphabet.
+   **Not one imposes a predicate over *general* text.** [correction, pass 2]
+   This evidence previously read "Not one takes a text target and imposes a
+   predicate about the text's own form as text", which the source contradicts
+   in its own words two sections later — §2.1: *"Note that this also means that
+   .b64u and .b64c only match text strings composed of the set of characters
+   defined for each of them, respectively."* That **is** a predicate about the
+   text's own form, and so are `.base10`'s no-leading-zeros rule and
+   `.hexlc`/`.hexuc`'s case rule. The claim that survives, and it carries all
+   the weight the old one did: **every form constraint here arrives as a side
+   effect of fixing a conversion** to a byte string or an integer, and so
+   confines the text to an ASCII subset of 16, 32, 45 or 64 characters, or to
+   the ten digits and a minus sign. Within such a repertoire all four
+   normalisation forms coincide and the normalisation question is *vacuous*
+   rather than answered. Nothing here reaches a text string that is simply
+   text.
 3. **The only text-identity property any operator here imposes is UTF-8
    validity**, in §3.1: *"If the result of the concatenation is a text string,
    the resulting sequence of bytes only matches the target data item if that
@@ -117,8 +129,16 @@ invent one. That is a real `R-O-03` win and it lands on two of our fields
 directly (§5).
 
 **The three traps are all in the default-looking names.** `.hex` is the name a
-person reaches for and it is the wrong one — Table 2 says "either case", so an
-*n*-digit value has 2ⁿ matching texts. `.b64u-sloppy` and `.b64c-sloppy` are
+person reaches for and it is the wrong one — Table 2 says "either case", so a
+value whose encoding has *k* of its digits in `a`–`f` has 2^*k* matching texts
+(2ⁿ for an *n*-digit value only if every digit is a letter; pass 1 wrote 2ⁿ
+flatly, which is the worst case, not the number). "Either case" is itself
+ambiguous in the source between *case-insensitive, mixing allowed* and *one of
+the two uniform forms*; under the second reading `.hex` admits exactly two
+texts. Either way it is not injective, which is all that matters here — but the
+fork is the document's and is recorded in
+`schema/control-operators.derived.yaml` → `.hex` → `source_ambiguity`.
+`.b64u-sloppy` and `.b64c-sloppy` are
 non-injective by definition (§2.1: *"not validated for any additional bits
 being zero"*). Where text is hashed or signed, use `.hexlc`, `.hexuc`, `.b64u`,
 `.b64c`.
@@ -283,11 +303,46 @@ first is useful at an `R-I-01` boundary. The second does not exist.
 [analysis] `Validity` is `{ not_before?, not_after?, online_check? }`, and the
 obvious text form is RFC 3339. **`.base10` cannot model it**, because RFC 3339
 requires fixed-width two-digit components (`01`) and `.base10`'s canonical form
-*forbids leading zeros*. The one numeral operator's canonical form is exactly
-wrong for the commonest fixed-width text format we would want. The route the
-document offers is `.printf (["%02d", 1..12])` — which drags in §4's objections.
-So: carry timestamps as integers, or as text validated outside CDDL, and say
-which in the ADR. This is a concrete D4 input, due 2026-10-21.
+*forbids leading zeros* — the I-Regexp is `0|-?[1-9][0-9]*`. The one numeral
+operator's canonical form is exactly wrong for the commonest fixed-width text
+format we would want, and the route *this document* offers instead is
+`.printf (["%02d", 1..12])`, which drags in §4's objections.
+
+> **[correction] pass 2.** This section previously concluded that `Validity`
+> therefore "has no usable text form in CDDL" and that "the only other route is
+> `.printf`". **Both are false**, and the counter-example is a record this
+> library already holds. CDDL constrains text shape two ways that have nothing
+> to do with RFC 9741:
+>
+> - **`.regexp`** — RFC 8610 §3.8.3, an XSD regular expression over a text
+>   target (`records/ietf/rfc-8610/distilled/schema/control-operators.derived.yaml`);
+> - **`.abnf`** — RFC 9165 §3. And **RFC 9165's own Figure 5 is an RFC 3339
+>   `date-time`**: `Tag0 = #6.0(text .abnf date-time)` over RFC 3339's ABNF
+>   embedded in the CDDL, held verbatim at
+>   `records/ietf/rfc-9165/distilled/schema/abnf-in-cddl.cddl`. The thing this
+>   section called impossible is the worked example of a document in the same
+>   gate.
+>
+> **What survives, and it is sharper than what it replaces.** CDDL can
+> constrain an RFC 3339 field's *lexical shape*; what no operator can do is tie
+> that text to an **integer value**. `.base10` is the only operator that
+> relates text to a number, and its canonical form forbids the fixed-width
+> components RFC 3339 requires. So a schema can say "this looks like a
+> timestamp" and cannot say "this is the decimal rendering of *these* integer
+> fields" — the gap is value-linkage, not expressibility.
+>
+> **One caveat to carry into the ADR, and it is not small.** `rfc-9165`'s
+> extraction found that `.abnf` controllers are **case-insensitive by default**
+> (RFC 9165 §1.1 brings RFC 7405 into scope; in RFC 5234 a quoted string is
+> case-insensitive unless marked `%s`), so `text .abnf date-time` admits
+> `1990-12-31t23:59:60z`. That agrees with RFC 3339, which permits lower case —
+> but for text that is load-bearing for identity under `ARCH-0002` P1 a
+> case-folded match is the collision that record flags. So the route exists and
+> is citable; it is not automatically safe.
+
+So: carry timestamps as integers, or as `text .abnf date-time` with the case
+question settled explicitly, and say which in the ADR. This is a concrete D4
+input, due 2026-10-21.
 
 ---
 
@@ -338,7 +393,7 @@ mapping; this document has no headers, so the mapping is operator-to-field.
 | `Name.labels` (P1 local labels) | array of text | the rendered name chain | `.join` | **rendered form only** (§1.3, §3.1) |
 | `Threshold.k`, `.n` | int | `.base10` if ever text | `.base10` | adopt for the text form; **the `1 ≤ k ≤ n` constraint is still inexpressible** |
 | `Threshold.members` | array | — | — | nothing applies; the set/sequence problem is untouched |
-| `Validity.not_before`/`not_after` | int or RFC 3339 text | RFC 3339 | **none usable** | §3.3 |
+| `Validity.not_before`/`not_after` | int or RFC 3339 text | RFC 3339 | **none in *this* document**; `.abnf` (RFC 9165) or `.regexp` (RFC 8610) outside it | §3.3 |
 | `Tag` | opaque byte string | — | — | nothing applies |
 | `PredicateType` (URI) | text | — | — | a *global* identifier, which P1 rejects natively |
 | export envelope (`R-I-03`) | COSE_Sign1 bytes | base64url text | `.b64u` + `.cbor` | **adopt** (§2.1) |
@@ -432,16 +487,22 @@ it safe where `-sloppy` would not.
   parses CDDL needs no parser change for these fourteen operators — it needs
   fourteen semantic cases.
 - **Registry: the count is wrong.** §9.
-- **The 44 side conditions: none is closed.** Full verdicts in
+- **The 44 side conditions: none is closed *by this document*.** Full verdicts in
   `schema/control-operators.derived.yaml` → `gap_effects`. Summary:
   **G-11 extended** (fourteen more
   target/controller admissibility conditions, three of a shape G-11 did not
   anticipate); **G-12 confirmed by a newer normative source** (RFC 9741 states
   in its own words that the `b64` *literal prefix* "simply accepts characters
   from either alphabet", and that this differs from the operators — so the
-  operators do not fix G-12, they sit beside it); **G-35 partially relieved**
-  (hex case is now pinnable by name instead of by regexp, though
-  case-insensitive matching remains impossible); **G-44 refined** (controls
+  operators do not fix G-12, they sit beside it); **G-35 partially relieved in
+  both directions** (hex case is now pinnable by name instead of by regexp,
+  *and* `.hex` is the first CDDL operator whose matching relation is
+  intrinsically case-insensitive rather than case-insensitive because an author
+  wrote out `[Cc]` — pass 1 recorded `.hex` only as a trap and missed that it
+  is also a G-35 data point; [correction, pass 2] pass 1 added "though
+  case-insensitive matching remains impossible", which is **false** —
+  `rfc-9165`'s `.abnf` matches case-insensitively by default and that record
+  logs G-35 as the one of the 44 it partially closes); **G-44 refined** (controls
   still do not chain; they nest through rule names, and this document makes
   that the idiom); **G-36 and G-38 reinforced** one layer up; **G-39 worsened**
   (this is the first CDDL document to state a *partial* validator coverage
@@ -470,7 +531,17 @@ Reported, never repaired. Numbered; `requirements.yaml` cites defect 1.
    because it is silent: the format string *looks* deterministic.
 2. **The ban on length modifiers caps `.printf`'s integer range, and the
    document gives no rule for overflow.** §4 reason 3;
-   `schema/printf-profile.derived.txt` U-2.
+   `schema/printf-profile.derived.txt` U-2. The words `overflow` and `locale`
+   each occur **zero** times in the source. [analysis, pass 2 — this is
+   stronger than pass 1 put it] **The document's own cross-reference walks into
+   the hole.** §2.2 bounds its SID example at `9223372036854775807` and then
+   says, in the next paragraph: *"See Section 2.3 for more flexibility and for
+   other numeric bases such as octal, hexadecimal, or binary conversions."* A
+   reader who follows that instruction to render a 2⁶³−1 SID in hex needs
+   `%llx`; §2.3 forbids every length modifier with one of its two `MUST NOT`s.
+   So the defect is not only an inference about C's default argument types — the
+   document routes its own largest worked value to an operator that cannot
+   accept it.
 3. **`%c` is redefined away from C and the deviation is not labelled.** §2.3
    says `%c` *"represents a single Unicode scalar value as a UTF-8
    character"*. [analysis] In C, `%c` writes one byte; the wide form `%lc`
@@ -488,14 +559,27 @@ Reported, never repaired. Numbered; `requirements.yaml` cites defect 1.
 5. **One hyphenation break makes a normative sentence unquotable whole.**
    Source lines 133/134 sever `left-hand-side`. Carried as two requirement
    entries, `rfc-9741#R-0007` and `R-0008`, and not healed.
-6. **"Table 1" is ambiguous across two documents in the sentence that needs it
+6. **"Table 1" collides across two documents in the sentence that needs it
    most.** §2.1 defines "sloppy" as a variance from *"the paragraph that
    follows Table 1 in Section 4 of [RFC4648]"*. That is RFC 4648's Table 1;
    this document has its own Table 1 two pages earlier, which is the summary of
-   all fourteen operators.
-7. **The same fourteen names appear in three different orders** — Table 1
-   (grouped by purpose), Table 2 (hex last), Table 7 (the registry's). Not an
-   error, but a diff of any two of them is noise.
+   all fourteen operators. [correction, pass 2] Pass 1 called this *ambiguous*;
+   it is not — the sentence says "in Section 4 of [RFC4648]" and so names the
+   document. Downgraded to what it is: a reader's stumble, not a defect in the
+   specification.
+7. **Three different orders across Tables 1, 2 and 7.** [correction, pass 2]
+   Pass 1 wrote "the same fourteen names appear in three different orders —
+   Table 1 (grouped by purpose), Table 2 (hex last), Table 7 (the registry's)",
+   and both halves of that are wrong. **Table 2 holds only the ten
+   byte-string operators**, not fourteen — `.base10`, `.printf`, `.json` and
+   `.join` are not in it — so the *fourteen* appear in two orders (Tables 1 and
+   7) and the *ten* in three. And `.hex` is not last in Table 2: `.b45` is, in
+   both tables. What actually distinguishes Table 2's order is that the
+   `-sloppy` variants are **interleaved** with their strict partners (`.b64u`,
+   `.b64u-sloppy`, `.b64c`, `.b64c-sloppy`) where Table 1 groups them
+   (`.b64u`, `.b64c`, then the two sloppies), and the hex trio moves from
+   before `.b32`/`.h32` to after. Not an error in the document, but a diff of
+   any two of them is noise.
 8. **`COSE_Sign1` is used and never defined** (§2.1), and §2.3's `%b`/`%B` note
    leaves it unstated whether they are in the profile.
 9. **The `RECOMMENDED` is inside an aside.** §3.1's implementation note is set
@@ -504,12 +588,14 @@ Reported, never repaired. Numbered; `requirements.yaml` cites defect 1.
 
 ---
 
-## 9. Corrections owed to records already at `profile: full`
+## 9. Corrections made to records already at `profile: full`
 
-**[correction] `rfc-8610` — one factual claim is now false.**
-`records/ietf/rfc-8610/distilled/schema/control-operators.derived.yaml` says,
+**[correction] `rfc-8610` — one factual claim was false, and the fix is
+applied.** Pass 1 wrote this section as a correction *owed*; it was made in the
+same commit (9adcb8d) and pass 2 re-verified it.
+`records/ietf/rfc-8610/distilled/schema/control-operators.derived.yaml` **said**,
 under `extension_point.policy_note`: *"All names other than the fourteen below
-are Unassigned."* That wording is **ours**, not RFC 8610's. RFC 9741 §4
+are Unassigned."* That wording was **ours**, not RFC 8610's. RFC 9741 §4
 registers fourteen further names, and RFC 9741 §1 states that RFC 9090 and
 RFC 9165 had already added others. The registry holds **at least 28** and
 strictly more. The same file's `counts.operators: 14` is correct as "the
@@ -553,6 +639,14 @@ disturbs anything in that record.
    nobody has written it down; the ADR should.
 4. **Do we need `.b45` for a QR demo?** §5. Cheap to answer, and the only
    reason to care about an operator we would otherwise ignore.
-5. **Is a `profile: partial` schema acceptable for D4 given §3.3?** `Validity`
-   has no usable text form in CDDL after this document. D4 is "encoding-neutral
-   schema"; a schema that cannot state its timestamps has to say so.
+5. **Does `Validity` go out as an integer or as `text .abnf date-time`?**
+   [correction, pass 2] This question previously read "Is a `profile: partial`
+   schema acceptable for D4 given §3.3?", resting on the claim that `Validity`
+   "has no usable text form in CDDL after this document" — which §3.3 now
+   records as false: RFC 9165's Figure 5 *is* an RFC 3339 `date-time` in CDDL.
+   The live question is narrower and actually decidable. A text form exists and
+   is citable; it constrains **shape but not value**, and it is
+   **case-insensitive by default**. So D4 chooses between an integer (no text
+   form, no case question, no shape check) and `text .abnf date-time` (shape
+   checked, value unlinked, case to be pinned deliberately). Owner: D4
+   (2026-10-21).

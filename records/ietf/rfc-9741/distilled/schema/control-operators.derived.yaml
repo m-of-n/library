@@ -44,6 +44,7 @@ headline:
     - 'OURS, mechanical: the strings "normaliz", "normalis", "NFC", "NFD", "NFKC" and "NFKD" do not occur anywhere in the cached source. "Unicode" occurs once, in Section 2.3''s definition of %c. So do "canonical", "identity", "hash" and "digest" - zero occurrences each - which is why every `text_identity` verdict in this file is OURS and must be cited as ours.'
     - 'The document''s own statement of the absence, Section 2.4: "This control operator provides no way to constrain the use of blank space or other serialization variants in the JSON representation of the data items; restrictions on the serialization to specific variants (e.g., not providing for the addition of any insignificant blank space and prescribing an order in which map entries are serialized) could be defined in future control operators."'
     - 'The only text-identity property any operator here imposes on a text result, Section 3.1: "If the result of the concatenation is a text string, the resulting sequence of bytes only matches the target data item if that result is a valid text string (i.e., valid UTF-8)." UTF-8 VALIDITY, not a normalisation form.'
+    - 'OURS, pass 2 -- the statement of the negative that survives attack. These operators DO constrain the form of their text target, and Section 2.1 says so in the document''s own words: ".b64u and .b64c only match text strings composed of the set of characters defined for each of them, respectively." .base10 likewise fixes a text form (no leading zeros, no "+", no "-0"), and .hexlc/.hexuc fix case. So the negative is NOT "no operator constrains text form". It is this: EVERY form constraint in this document arrives as a side effect of fixing a conversion to a byte string or to an integer, and therefore confines the text to an ASCII subset of 16, 32, 45 or 64 characters, or to the ten digits and a minus sign. Not one is a predicate over GENERAL text, and not one says anything about a text string''s normalisation form, its combining marks, or its equality with another text. That is why condition (6) is answerable for a hex digest -- the repertoire is ASCII, so all four normalisation forms coincide and the question is vacuous -- and unanswerable for a label.'
 
 syntax:
   form: "target .control-operator controller"
@@ -237,10 +238,25 @@ operators:
       OURS. The target is a base16 encoding (RFC 4648 §8) of a byte string
       that is a member of the controller type, in either case, and may mix
       cases within one string -- nothing in the document forbids "aB".
+    source_ambiguity: >-
+      OURS, pass 2. Table 2's "either case" is ambiguous and the document never
+      resolves it. Reading A (taken above, and the natural one once .hexlc and
+      .hexuc exist for the uniform cases): .hex is CASE-INSENSITIVE, each digit
+      independently, so "aB" matches. Reading B: .hex admits exactly the two
+      UNIFORM forms, all-lower or all-upper. The readings disagree about the
+      size of the match set -- 2**k under A, exactly 2 under B -- and so about
+      how badly .hex fails injectivity. Both make it non-injective, so nothing
+      downstream in this record turns on the choice, but the fork is the
+      source's and is recorded rather than hidden.
     text_identity: >-
-      NOT injective. "Either case" means 2**n distinct texts for an n-hex-digit
-      value. THIS IS THE DEFAULT-LOOKING NAME AND IT IS THE WRONG ONE where
-      text is load-bearing for identity; use .hexlc or .hexuc.
+      NOT injective. [correction, pass 2] This read "2**n distinct texts for an
+      n-hex-digit value", which is wrong: only the digits a-f have case, so an
+      n-digit encoding with k of its digits in a-f has 2**k matching texts
+      under reading A, and 2**n only in the all-letters worst case. For a
+      SHA-256 digest (64 hex digits) k is 24 on average, not 64. The conclusion
+      is unchanged and the arithmetic now is not: THIS IS THE DEFAULT-LOOKING
+      NAME AND IT IS THE WRONG ONE where text is load-bearing for identity;
+      use .hexlc or .hexuc.
 
   - name: ".hexlc"
     locator: "§2.1"
@@ -502,12 +518,17 @@ registry_state:
       The document names RFC 9090 and RFC 9165 as having added operators but
       does not enumerate them, so this file does not either. This extraction
       read only RFC 9741.
-  correction_owed_to_rfc_8610:
+  correction_made_to_rfc_8610:
+    status: "APPLIED (commit 9adcb8d), not owed. Re-verified at pass 2."
     file: "records/ietf/rfc-8610/distilled/schema/control-operators.derived.yaml"
     wrong_claim: >-
-      That file (OURS, not RFC 8610's) says under `extension_point.policy_note`
+      That file (OURS, not RFC 8610's) SAID under `extension_point.policy_note`
       that "All names other than the fourteen below are Unassigned", and its
-      `counts.operators: 14` reads as a count of REGISTERED operators.
+      `counts.operators: 14` read as a count of REGISTERED operators. The
+      sentence is gone and `registry_state_is_not_rfc_8610` replaces it; pass 2
+      confirmed the replacement is accurate and that the fourteen there remain
+      exactly right as a statement about RFC 8610 (the two operator sets are
+      disjoint -- checked set-wise, overlap empty).
     why_it_is_wrong: >-
       RFC 9741 §4 registers fourteen further names, and RFC 9741 §1 states
       that RFC 9090 and RFC 9165 had already added others. The registry
@@ -526,10 +547,14 @@ registry_state:
 # ALL VERDICTS OURS.
 # ---------------------------------------------------------------------
 gap_effects:
-  closed: 0
+  closed_by_this_document: 0
   closed_note: >-
-    Not one of the 44 is closed. A grammar extension that adds operators
-    cannot close a gap between the grammar and the type system; it widens it.
+    Not one of the 44 is closed BY RFC 9741. A grammar extension that adds
+    operators cannot close a gap between the grammar and the type system; it
+    widens it. SCOPE, added at pass 2: this is a verdict on RFC 9741 and on
+    nothing else. G-35 is partially closed by rfc-9165, whose `.abnf`
+    controllers are case-insensitive by default; that record owns the finding
+    and this file must not be read as denying it.
   per_gap:
     - gap: "G-11"
       verdict: "EXTENDED, not closed"
@@ -559,9 +584,19 @@ gap_effects:
         G-35 records §3.1's "there is no support in CDDL for the concept of
         case insensitivity in text strings; if necessary, regular expressions
         can be used". Hex case can now be pinned BY NAME (.hexlc, .hexuc)
-        instead of by an XSD character-class regexp, and .hex deliberately
-        admits either. Case-insensitive MATCHING of arbitrary text remains
-        impossible.
+        instead of by an XSD character-class regexp. RELIEVED IN BOTH
+        DIRECTIONS, which pass 1 missed: .hex deliberately admits either case,
+        so .hex is the first CDDL control operator whose MATCHING RELATION is
+        intrinsically case-insensitive, rather than case-insensitive because an
+        author wrote out "[Cc]". That is a G-35 data point and not only a trap.
+        It is still not closed, because the relief reaches only the 16-character
+        hex alphabet. [correction, pass 2] This entry previously ended "Case-
+        insensitive MATCHING of arbitrary text remains impossible." That is
+        FALSE: rfc-9165's .abnf matches case-insensitively by default (RFC 9165
+        §1.1 brings RFC 7405 into scope; in RFC 5234 a quoted string is
+        case-insensitive unless marked %s), and rfc-9165's extraction records
+        G-35 as the one of the 44 it partially closes. RFC 9741 is not the only
+        document bearing on G-35 and this file may not speak for the others.
     - gap: "G-44"
       verdict: "REFINED; not closed"
       detail: >-
@@ -655,9 +690,15 @@ counts:
   controller_any: 1        # .json
   type_controls: 14
   group_controls: 0
-  strict_variants: 10
+  # [correction, pass 2] `strict_variants: 10` sat next to `sloppy_variants: 2`
+  # and read as 12 base-encoding operators. There are TEN, of which 8 are
+  # strict-only and 2 are the sloppy variants. §2.1's "These control operators
+  # are "strict" in their matching" covers all ten; "sloppy" then relaxes the
+  # trailing-bit rule for two of them, and only that rule.
+  base_encoding_operators: 10
+  strict_only_variants: 8
   sloppy_variants: 2
   carry_a_bcp14_keyword: 2  # .printf (two MUST NOTs), .join (one RECOMMENDED)
   injective_text_form: 8
   new_side_conditions: 10
-  rfc_8610_gaps_closed: 0
+  rfc_8610_gaps_closed_by_this_document: 0   # G-35 is partially closed by rfc-9165, not here

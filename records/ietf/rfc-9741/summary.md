@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-9741
 record: rfc-9741
 type: summary
-updated: "2026-10-19"
+updated: "2026-10-20"
 ---
 
 # CDDL: Additional Control Operators for the Conversion and Processing of Text
@@ -33,8 +33,13 @@ holds the document's CDDL and tables verbatim rather than a grammar.
 
 The genuinely new expressive power is one sentence, §2.3: *"The data items in
 the controller array do not need to be literals"*. A text field's content can
-now be tied to a CDDL **type** rather than to a constant — before this, text
-could only be constrained by `.regexp` against a literal pattern.
+now be tied to a CDDL **type** rather than to a constant: `hexlabel<1..20>`
+matches the printf rendering of *any* value in a range. *[corrected at pass 2:
+this said "before this, text could only be constrained by `.regexp` against a
+literal pattern", which is false — RFC 8610 also gives `.size` and `.eq`, and
+RFC 9165's `.abnf` had already constrained text against a whole grammar, with
+`.cat`/`.det` to compose the controller.]* What is new is the *shape* of the
+relation, not the mere existence of a non-literal constraint.
 
 All 14 are **type** controls. CDDL has no group controls at all, which the
 document never says.
@@ -54,9 +59,16 @@ stronger than absence:
 - `normaliz`, `normalis`, `NFC`, `NFD`, `NFKC`, `NFKD` occur **zero** times in
   the source. So do `canonical`, `identity`, `hash` and `digest` — a document
   defining eight injective text forms never calls one canonical.
-- None of the 14 takes a text target and imposes a predicate about the text's
-  own form *as text*. The only text-identity property any of them imposes is
-  UTF-8 validity, in §3.1.
+- None of the 14 imposes a predicate over *general* text. Every form
+  constraint here is a side effect of fixing a conversion to a byte string or
+  an integer, so it confines the text to an ASCII subset of 16, 32, 45 or 64
+  characters, or to the digits and a minus sign — a repertoire in which all
+  four normalisation forms coincide and the question is *vacuous* rather than
+  answered. The only text-identity property any operator imposes is UTF-8
+  validity, in §3.1. *[narrowed at pass 2: this said "none takes a text target
+  and imposes a predicate about the text's own form as text", which §2.1
+  contradicts in the document's own words — `.b64u` and `.b64c` "only match
+  text strings composed of the set of characters defined for each of them".]*
 - §2.4 names the missing operator class and defers it: restrictions on
   serialisation variants "could be defined in future control operators".
 
@@ -89,8 +101,19 @@ for the export envelope — which is §2.1's own first example and is MD-3's
   is one line: *a name chain must be normalised after joining, never per
   label.* No document of ours states it.
 - **`.base10` forbids leading zeros**, so it cannot model an RFC 3339
-  timestamp. After this document `Validity` has no usable text form in CDDL —
-  the only other route is `.printf`, which the Limits below rule out.
+  timestamp — RFC 3339 needs `01`, and the I-Regexp is `0|-?[1-9][0-9]*`.
+  *[corrected at pass 2: this bullet went on to say `Validity` "has no usable
+  text form in CDDL" and that "the only other route is `.printf`". Both are
+  false — `.regexp` (RFC 8610 §3.8.3) and `.abnf` (RFC 9165 §3) constrain text
+  shape, and RFC 9165's own Figure 5 is an RFC 3339 `date-time`, held at
+  `records/ietf/rfc-9165/distilled/schema/abnf-in-cddl.cddl`.]* The finding
+  that survives is narrower and sharper: CDDL can say *"this looks like a
+  timestamp"* and cannot say *"this is the decimal rendering of these integer
+  fields"*. `.base10` is the only operator relating text to a number, and its
+  canonical form forbids the fixed-width components RFC 3339 requires — the gap
+  is **value-linkage, not expressibility**. And the route that does exist is
+  case-insensitive by default, which for identity-bearing text is its own
+  hazard.
 
 ## Implementations
 
@@ -117,22 +140,31 @@ no named implementation in the document.*
   same paragraph forbids, so the redefinition is forced. A reader who knows C
   and skims takes the opposite meaning.
 - **Three names are traps.** `.hex` admits **either case**, so it is *not*
-  injective — 2ⁿ texts per value. Both `-sloppy` operators are non-injective by
-  definition. Pick `.hexlc` or `.hexuc` by name and never `.hex`.
+  injective — 2^*k* texts for an encoding with *k* of its digits in `a`–`f`
+  (*[pass 2: pass 1 wrote 2ⁿ, which is the all-letters worst case, not the
+  number; and Table 2's "either case" is itself undecided between
+  case-insensitive-with-mixing and the two uniform forms]*). Both `-sloppy`
+  operators are non-injective by definition. Pick `.hexlc` or `.hexuc` by name
+  and never `.hex`.
 - **A normative dependency we cannot freely read.** The `[C]` reference is
   ISO/IEC 9899:2024, and the one free route printed in the source is **broken
   across lines 485/486 with a space in the URL as rendered**. Under `R-O-03` a
   citation we cannot read is barely better than an invention.
-- **The 14 names appear in three different orders** across Tables 1, 2 and 7;
-  "Table 1" is ambiguous across two documents in the sentence defining
-  "sloppy"; `COSE_Sign1` is used and never defined; and the document's single
-  `RECOMMENDED` sits inside an RFC v3 aside and concedes false negatives in the
-  same sentence.
+- **The names appear in different orders** across Tables 1, 2 and 7 — the
+  *fourteen* in two (Tables 1 and 7), the *ten* byte-string operators in three,
+  since Table 2 holds only those ten. *[pass 2: pass 1 said "the same fourteen
+  names ... three different orders, Table 2 (hex last)"; Table 2 has ten names
+  and `.b45` is last in it, not `.hex`.]* Also: `COSE_Sign1` is used and never
+  defined, and the document's single `RECOMMENDED` sits inside an RFC v3 aside
+  and concedes false negatives in the same sentence.
 - **It closes none of the 44 side conditions** `rfc-8610`'s extraction
   enumerated, and adds ten more (`N-01`–`N-10`). A grammar extension that adds
-  operators cannot close a grammar or type-system gap; it widens it.
-- The extraction is at **pass 1 of 3** — verify and cross-check have not run,
-  and nothing carries a human sign-off, so these artifacts are readable but not
+  operators cannot close a grammar or type-system gap; it widens it. *[pass 2:
+  read this as a verdict on RFC 9741 alone. `rfc-9165` partially closes G-35 —
+  its `.abnf` controllers are case-insensitive by default — and pass 1 wrote the
+  contrary into `rfc-8610`'s artifact. Corrected there.]*
+- The extraction is at **pass 2 of 3** — cross-check has not run, and nothing
+  carries a human sign-off, so these artifacts are readable but not
   buildable-on.
 
 ## What this corrected in a completed record
@@ -147,6 +179,16 @@ extension point "in both an application-specific [RFC9090] and a more general
 [RFC9165] way", and §4 then registers 14 more. **The registry holds at least 28
 and strictly more.** The claim has been corrected in place, with the
 falsification recorded rather than overwritten.
+
+**And the correction needed correcting.** *[pass 2]* The sentence pass 1 put in
+its place ended "None of the 44 side conditions in `grammar-gaps.derived.txt`
+is closed by **any of them**" — *them* being RFC 9741, RFC 9165 and RFC 9090,
+two of which pass 1 had not read. `rfc-9165` closes **G-35, partially**: its
+`.abnf` controllers are case-insensitive by default, because RFC 9165 §1.1
+brings RFC 7405 into scope and in RFC 5234 a quoted string is case-insensitive
+unless marked `%s`. The claim is now scoped per document. The lesson is the
+first one again: a pass correcting a `profile: full` record may not assert
+anything about documents it did not read.
 
 Nothing else in `rfc-8610` moved: no syntax changed, all six items of its
 "What CDDL cannot express that we need" stand, and item 4 — Unicode

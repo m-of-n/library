@@ -11,15 +11,29 @@ reviewed_by: ""
 FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what it
 does not.
 
-**State: pass 1 (extract) complete. No `profile` is declared.** One agent at
-effort max, reading only `.cache/rfc-9741.txt`. Pass 2 (verify) and pass 3
-(cross-check) have not run, and **no `reviewed_by` is signed**. The artifact set
-is complete; the claim that it is *correct* is one pass short.
+**State: passes 1 and 2 of 3 complete (extract, verify). No `profile` is
+declared.** Both at effort max, each reading only `.cache/rfc-9741.txt`. Pass 3
+(cross-check) has not run, and **no `reviewed_by` is signed**.
+
+Pass 2 upheld the central negative and the `.join` finding, re-derived every
+count, and re-verified every mechanical claim (61/61 requirement texts, 74/74
+normative spans, 13/13 regions and digests, 6/6 dedent round-trips, 8/8
+vectors, 0 uncaptured rows). It **falsified five claims**, all corrected in
+place with the falsification recorded: the `.base10`/RFC 3339 conclusion that
+`Validity` has "no usable text form in CDDL" (RFC 9165's own Figure 5 is an
+RFC 3339 `date-time`); that case-insensitive matching remains impossible
+(`rfc-9165`'s `.abnf` is case-insensitive by default, and `.hex` here is itself
+a case-insensitive relation); the sentence this record wrote into `rfc-8610`
+asserting that none of the 44 side conditions is closed by *any* of
+rfc-9741/rfc-9165/rfc-9090; the `messages.yaml` join count (48/13, not 50/11,
+with two requirements unaccounted for); and `.hex`'s 2ⁿ arithmetic. Also
+narrowed one sentence of the central negative's evidence 2, which the source
+contradicts in its own words.
 
 Source: RFC 9741, *Concise Data Definition Language (CDDL): Additional Control
 Operators for the Conversion and Processing of Text*, Standards Track, March
 2025. sha256 `3234aeea39d01b7c1c8e9c70d4d7dc8745852e0b6edbea167a3e55b91e7a9ee3`,
-602 lines, 28550 bytes.
+602 lines, 28559 bytes.
 
 ## The answer this record was extracted for
 
@@ -57,7 +71,7 @@ inferred) and `draft-ietf-cbor-edn-literals`.
 | normative | `normative.md` | 74 verbatim spans across 10 locators, plus all 7 tables, the 1 figure and all 6 CDDL fragments reproduced in fenced blocks with their source line ranges. All 74 confirmed contiguous substrings of the whitespace-normalised source inside their locator's section, 0 failures. **Two declared exceptions, neither healed:** one hyphenation break (`left-hand-side`, source lines 133/134) quoted as two halves, and §3.1's aside (lines 416–428) quoted with its leading `\|` bar removed and nothing else |
 | requirements | `requirements.yaml` | 61 entries, `R-0001`–`R-0061`, source order, no gaps: **3 stated, 58 inferred**. `source_keyword_count` and `extracted_keyword_count` both **3**, agreeing, with a 3217-character `reconciliation` that states the real normative baseline and what was counted instead — every operator definition, every matching rule, every explicit absence or disclaimer of capability, the registry facts, and the lower-case force words the document does use (`need to be`, `needs to be reflected`, `recommended`, `should not be confused`, `cannot`, `may be useful`, `will use`, `apply`). §1.1's boilerplate is deliberately never quoted here: `bin/validate` counts texts with stripping off, so quoting it would add 11 phantom keywords and make the extraction read 14 against a source of 3 |
 | schema | `schema/` | **3 verbatim, 3 derived.** Verbatim: all 6 CDDL fragments and all 7 tables, margin intact, each region with its own sha256; and the one I-Regexp the document prints. Derived: a dedented, tool-readable CDDL companion that round-trips; **all 14 operators as data** — target, controller, predicate, IANA entry, injectivity, and the effect on rfc-8610's 44 side conditions; and the exact C `printf` profile §2.3 adopts. 52 mechanical checks, all passing. See `schema/README.md` |
-| messages | `messages.yaml` | 5 constructs covering all 14 operators (the ten base encodings differ only in four per-operator field values), 29 fields, with `constrained_by` **used** — 50 of the 61 requirements are cited by a field, and the 11 that are not are listed with a reason each in `locator_join`. Unlike rfc-8610, the join is honest here: 61 entries at 10 locators and one construct per section |
+| messages | `messages.yaml` | 5 constructs covering all 14 operators (the ten base encodings differ only in four per-operator field values), 29 fields, with `constrained_by` **used** — **48** of the 61 requirements are cited by a field, and the **13** that are not are listed with a reason each in `locator_join`. (Pass 1 said 50/11 and its list omitted `R-0001` and `R-0058`; recounted mechanically and both added at pass 2.) Unlike rfc-8610, the join is honest here: 61 entries at 10 locators and one construct per section |
 | examples | `examples/` | 8 vectors, `V-0001`–`V-0008`, source order, no gaps: every example the document prints — 6 CDDL fragments and 4 instances (3 valid, 1 invalid). The one negative is the source's own. Every `cddl` block re-verified as a dedented contiguous slice of the cache at its declared line range, and every instance confirmed present in the source. **The document prints not one instance of any base encoding it defines** — see `examples/README.md` |
 | design-notes | `design-notes.md` | the normalisation answer with its four pieces of evidence; the `.join` non-compositionality finding and the one-line rule it produces for SDSI name chains; an operator-to-field mapping over all of `ARCH-0001` §4.1; **six named cuts against MD-3**, five of them naming the DEC-002 option they favour and one stated in option 5's favour; 9 source defects; and the correction `rfc-8610` is owed |
 
@@ -87,16 +101,32 @@ settles:
 - **No syntax changed.** RFC 9741 adds no grammar. `rfc-8610`'s `cddl.abnf` is
   still the whole of CDDL's syntax; a tool that parses CDDL needs no parser
   change for these fourteen operators, only fourteen semantic cases.
-- **None of the 44 side conditions is closed.** G-11 is *extended*, G-12
-  *confirmed by a newer normative source*, G-35 *partially relieved*, G-44
-  *refined*, G-36 and G-38 *reinforced*, G-39 *worsened*. Ten new side
-  conditions (`N-01`–`N-10`) are added in
-  `schema/control-operators.derived.yaml`.
-- **[correction] One claim in an `rfc-8610` artifact of ours is now false.**
-  Its `control-operators.derived.yaml` says "All names other than the fourteen
-  below are Unassigned" — our wording, not RFC 8610's. This document registers
-  fourteen more and names RFC 9090 and RFC 9165 as having registered others, so
-  the registry holds **at least 28**. `design-notes.md` §9 states the fix.
+- **None of the 44 side conditions is closed *by this document*.** G-11 is
+  *extended*, G-12 *confirmed by a newer normative source*, G-35 *partially
+  relieved in both directions* — hex case is pinnable by name, and `.hex` is
+  the first CDDL operator whose matching relation is intrinsically
+  case-insensitive — G-44 *refined*, G-36 and G-38 *reinforced*, G-39
+  *worsened*. Ten new side conditions (`N-01`–`N-10`) are added in
+  `schema/control-operators.derived.yaml`. **Scope, corrected at pass 2:** this
+  is a verdict on RFC 9741 only. `rfc-9165` partially closes G-35, and pass 1
+  wrote the contrary into `rfc-8610` — see below.
+- **[correction] One claim in an `rfc-8610` artifact of ours was false, and the
+  fix is applied.** Its `control-operators.derived.yaml` **said** "All names
+  other than the fourteen below are Unassigned" — our wording, not RFC 8610's.
+  This document registers fourteen more and names RFC 9090 and RFC 9165 as
+  having registered others, so the registry holds **at least 28** and strictly
+  more. The sentence is replaced by `registry_state_is_not_rfc_8610`;
+  `design-notes.md` §9 records it.
+- **[correction, pass 2] And the replacement itself carried a false sentence,
+  which this pass removed.** Pass 1's replacement text ended "None of the 44
+  side conditions in `grammar-gaps.derived.txt` is closed by **any of them**",
+  where *them* was rfc-9741, rfc-9165 and rfc-9090 — two documents pass 1 had
+  not read. `rfc-9165` closes **G-35, partially**: its `.abnf` controllers are
+  case-insensitive by default, because RFC 9165 §1.1 brings RFC 7405 into scope
+  and in RFC 5234 a quoted string is case-insensitive unless marked `%s`. The
+  claim is now scoped to what each document was actually read for. A pass that
+  corrects a `profile: full` record is not licensed to assert anything about
+  documents it did not read, which is the first lesson repeated.
 - **All six items of `rfc-8610`'s "What CDDL cannot express that we need"
   stand.** Item 4, Unicode normalisation of labels, is *strengthened*: not
   merely absent, but declined by the document that was best placed to add it.

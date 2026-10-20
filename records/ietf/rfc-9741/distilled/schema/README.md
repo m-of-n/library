@@ -25,12 +25,17 @@ verbatim*: an unmarked filename asserts the source's own bytes.
 | `tables.txt` | **verbatim** | all seven tables with their caption lines, same treatment, seven regions with per-region digests. Table 1 is the whole document on one page; Table 7 is the IANA registration |
 | `base10-numeral.iregexp` | **verbatim** | the one regular expression the document prints, `0\|-?[1-9][0-9]*`, quoted from inline §2.2 prose at source line 252. Its dialect is **I-Regexp (RFC 9485)** per §1.1, *not* the XSD dialect RFC 8610 §3.8.3 gives `.regexp` |
 | `cddl-fragments-dedented.derived.cddl` | **derived** | the same six regions with the margin removed so a CDDL tool can read them. The removal round-trips in both directions |
-| `control-operators.derived.yaml` | **derived** | **the central artifact.** All fourteen operators as data: target, controller, the predicate each imposes, its IANA entry, its injectivity as a text form, and its effect on rfc-8610's 44 side conditions |
+| `control-operators.derived.yaml` | **derived** | **the central artifact.** All fourteen operators as data: target, controller, the predicate each imposes, its IANA entry, its injectivity as a text form, and its effect on rfc-8610's 44 side conditions — **none of which RFC 9741 closes**; G-35 is partially closed by `rfc-9165`, not here |
 | `printf-profile.derived.txt` | **derived** | the exact C `printf` profile §2.3 adopts — what is excluded, what is redefined, and four under-specifications that let two conforming validators disagree |
 
 ## Mechanically checked, not asserted
 
-52 checks, all passing, re-derived from `.cache/rfc-9741.txt`:
+52 checks, all passing, re-derived from `.cache/rfc-9741.txt` — and **re-run
+independently at pass 2** from the cache, with its own scripts, all still
+passing. The per-region digest convention is `sha256` of the region's lines
+joined by `\n` with **no trailing newline**; pass 2 recovered it by brute force
+because no file stated it, and it is stated here now so the next pass does not
+have to.
 
 - each of the **13 verbatim regions** (6 CDDL + 7 tables) is byte-identical to
   its declared source line range, and each declared per-region sha256 verifies;
