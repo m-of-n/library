@@ -1,0 +1,159 @@
+=====================================================================
+printf-profile.derived.txt
+
+DERIVED -- NOT verbatim. This is this library's statement of the exact
+C printf profile RFC 9741 adopts for .printf, assembled from the four
+sentences of §2.3 that say anything about it. Do not cite it as the
+standard's text. Lines in "double quotes" are RFC 9741's own words; the
+headings, the verdicts and everything marked OURS are ours.
+
+READ THIS FIRST. This extraction did NOT read [C]. ISO/IEC 9899:2024 is
+a paid ISO standard; RFC 9741 §6.1 lists it as a NORMATIVE reference and
+points at a "technically equivalent" open-std draft. Everything below
+about what C's printf actually does is therefore OURS, from general
+knowledge of the C standard library, UNVERIFIED against [C], and marked
+[unverified]. Under R-O-03 that is the honest state: .printf's matching
+relation is defined by a document this library does not hold.
+
+Source: RFC 9741 §2.3, cached source sha256
+  3234aeea39d01b7c1c8e9c70d4d7dc8745852e0b6edbea167a3e55b91e7a9ee3
+=====================================================================
+
+
+-- 1. THE WHOLE OF WHAT THE DOCUMENT SAYS ---------------------------
+
+Four sentences carry the profile. They are quoted here in full because
+there is nothing else:
+
+  (a) "The control operator .printf allows the modeling of text strings
+      that carry various formatted information, as long as the format can
+      be represented in printf-style formatting strings as they are used
+      in the C language (see Section 7.23.6.1 of [C]; note that the "C23"
+      standard includes %b and %B for formatting into binary digits)."
+
+  (b) "The controller (right-hand side) of the .printf control is an
+      array of one printf-style format string and zero or more data items
+      that fit the individual conversion specifications in the format
+      string."
+
+  (c) "The construct matches a text string representing the textual
+      output of an equivalent C-language printf function call that
+      receives as arguments the format string and the data items following
+      it in the array."
+
+  (d) The exclusions and redefinitions, four sentences in one paragraph:
+
+      "Out of the functionality described for printf formatting in
+      Section 7.23.6.1 of the C language specification [C], length
+      modifiers (paragraph 7) are not used and MUST NOT be included in
+      the format string."
+      "The "s" conversion specifier (paragraph 8) is used to interpolate
+      a text string in UTF-8 form."
+      "The "c" conversion specifier (paragraph 8) represents a single
+      Unicode scalar value as a UTF-8 character."
+      "The "p" and "n" conversion specifiers (paragraph 8) are not used
+      and MUST NOT be included in the format string."
+
+Two of the document's three BCP 14 keywords are in (d). Both are MUST
+NOTs, and both bind the AUTHOR of a format string, not a validator.
+
+
+-- 2. THE PROFILE, AS A TOOL NEEDS IT -------------------------------
+
+Paragraph numbers are the document's own references into C §7.23.6.1.
+
+  EXCLUDED, stated with MUST NOT:
+    - every length modifier         (paragraph 7)   rfc-9741#R-0030
+    - the "p" conversion specifier  (paragraph 8)   rfc-9741#R-0033
+    - the "n" conversion specifier  (paragraph 8)   rfc-9741#R-0033
+
+  REDEFINED, stated as definitions and NOT labelled as deviations:
+    - "s"  interpolates a text string in UTF-8 form      rfc-9741#R-0031
+    - "c"  represents a single Unicode scalar value as a
+           UTF-8 character                               rfc-9741#R-0032
+
+  ADMITTED BY SILENCE -- everything else in paragraph 8, and all of
+  paragraphs 5 and 6 (flags, minimum field width, precision):
+    d i o u x X f F e E g G a A % and, per (a), C23's b and B.
+
+  OURS: the document mentions %b and %B only parenthetically, as a note
+  that C23 has them. It does not say they are in or out of the profile.
+  Read with (a)'s "as they are used in the C language" and a 2024 edition
+  of [C], they are in.
+
+
+-- 3. WHAT THE REDEFINITIONS COST -----------------------------------
+
+OURS. [unverified] In C, "%c" converts an int argument to unsigned char
+and writes ONE BYTE; a wide character needs "%lc", which is a length
+modifier. §2.3 forbids length modifiers and then redefines "%c" to mean
+a Unicode scalar value emitted as UTF-8 -- so the redefinition is not a
+convenience, it is FORCED by the exclusion in the same paragraph. The
+document does not say that "%c" deviates from C, and a reader who knows
+C and skims the paragraph will take the opposite meaning. The same goes
+for "%s": C's precision on "%s" ("%.3s") counts BYTES, and the document
+says nothing about whether a precision that falls inside a multi-byte
+UTF-8 sequence is an error, truncates, or is forbidden.
+
+
+-- 4. FOUR UNDER-SPECIFICATIONS -------------------------------------
+
+OURS, all four. Each is a place where two tools can both conform to
+§2.3 and disagree about whether an instance matches.
+
+  U-1  NO LOCALE IS FIXED.  [unverified] C's "%f", "%e", "%g" and "%a"
+       emit a decimal-point character taken from the current locale
+       (LC_NUMERIC) rather than a fixed one. A validator running under a locale
+       whose decimal point is a comma matches "1,5" where another
+       matches "1.5". §2.3 says only "an equivalent C-language printf
+       function call" and names no locale, not even the C locale. This is
+       the sharpest of the four, because it is silent rather than
+       debatable: the format string looks deterministic and is not.
+
+  U-2  INTEGER WIDTH IS CAPPED BY THE EXCLUSION OF LENGTH MODIFIERS.
+       [unverified] Without a length modifier, "%d" takes int and "%x"
+       takes unsigned int -- typically 32 bits. CDDL integers run to
+       2**64-1, and §2.2's own example reaches 9223372036854775807. The
+       document gives no rule for what "an equivalent C-language printf
+       function call" means when the data item does not fit the default
+       argument type. Either .printf cannot format a large CDDL integer
+       at all, or "equivalent" has to be read as "as if the argument had
+       a wide enough type" -- which is the reading every sane tool will
+       take, and which the document does not authorise. OUR USE CASE IS
+       EXACTLY THIS: a 256-bit digest cannot be rendered by .printf under
+       the literal reading, and a 64-bit one cannot either.
+
+  U-3  ROUNDING IS NOT FIXED.  [unverified] C's floating-point
+       conversions round according to the current rounding direction, and
+       "%a" is permitted a choice of hexadecimal mantissa normalisation.
+       Nothing in §2.3 pins either.
+
+  U-4  ARITY AND TYPE-FIT ARE PROSE.  (b) requires data items "that fit
+       the individual conversion specifications", and nothing in CDDL's
+       grammar checks the count or the kinds. A controller array with
+       too few elements is syntactically fine. In C the corresponding
+       call is undefined behaviour; here it is an unstated error.
+
+
+-- 5. WHAT IT IS GOOD FOR, AND WHAT IT IS NOT -----------------------
+
+OURS.
+
+  GOOD FOR: a fixed-width integer rendering over a bounded range, which
+  is the document's own example -- `hexlabel<K> = text .printf
+  (["0x%04x", K])` with `K` a literal or a range. That is a real new
+  capability: the TEXT is tied to a CDDL TYPE, not to a pattern.
+
+  NOT A NORMALISATION CONSTRAINT, and not a general text predicate.
+  `text .printf (["%s", tstr])` is VACUOUS: "%s" interpolates any text
+  string in UTF-8 form, so the construct matches every text string. There
+  is no format string whose output set is "the NFC strings", because the
+  conversion specifiers interpolate what they are given. .printf can pin
+  an EXACT code point sequence -- `["%c%c", 97, 0x0301]` is "a" followed
+  by COMBINING ACUTE, i.e. the NFD form of "á", and `["%c", 0x00E1]` is
+  the NFC form -- but a CDDL text literal already does that, and neither
+  is a predicate over an open set of strings.
+
+  NOT SAFE FOR IDENTITY. U-1 alone disqualifies it for any text whose
+  bytes are hashed or signed, and U-2 disqualifies it for digests and key
+  identifiers specifically. See ../design-notes.md §4.
