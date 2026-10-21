@@ -1,0 +1,252 @@
+# =====================================================================
+# rfc-8742 state machine -- DERIVED. RFC 8742 DEFINES NO STATE MACHINE.
+#
+# READ THIS BEFORE THE MACHINE. The words "state", "transition",
+# "lifecycle", "phase", "step", "event", "verify", "register" (as an
+# operation on an object), "revoke", "expire" and "rotate" occur ZERO
+# times in RFC 8742; measured over the whole 462-line source at this
+# pass. Nothing in the document registers, issues, rotates, revokes or
+# expires anything. So this file is NOT a transcription and no element
+# of it may be quoted as the source's own model.
+#
+# WHY IT IS HERE RATHER THAN DECLARED not_applicable, which was the
+# expected verdict and is the alternative pass 2 should weigh. The test
+# applied: does the document distinguish two or more conditions of a
+# thing over time, and name at least one transition between them? It
+# does, in one sentence, and that sentence is the record's headline
+# finding in its sharpest form -- section 2, rfc-8742#R-0025:
+#
+#   "A CBOR Sequence decoder that is used for consuming streaming CBOR
+#    Sequence data may simply pause for more data (e.g., by suspending
+#    and later resuming decoding) in case a truncated final item is
+#    being received."
+#
+# PAUSE, SUSPEND, LATER RESUME. That is a condition over time with a
+# named transition, and the five states below are each anchored to a
+# quoted sentence of section 2. What the machine then makes mechanical
+# is the thing three separate sentences of section 2 say and no field of
+# ../messages.yaml can hold: TWO OF ITS STATES ARE INDISTINGUISHABLE
+# FROM THE BYTES. An N/A verdict here would have been defensible and
+# would have lost that.
+#
+# The contrast is deliberate. ../protocol.yaml IS absent and the record
+# declares protocol not_applicable with its own measurement: this
+# document defines no exchange, no role and no message.
+#
+# Every `quote` is RFC 8742's own words, contiguous and mechanically
+# checked. Everything marked OURS is this library's reading.
+#
+# Source: RFC 8742, cached source sha256
+#   4462966836b60f42ebae9b5f1d2a479c328e16f0380a3434311a083bccbce30e
+# =====================================================================
+record: rfc-8742
+reviewed_by: ""
+derived: true
+derived_from: "§2 only. §1, §3, §4 and §6 contribute no state; §5 contributes one error disposition."
+
+machines:
+  - name: 'streaming-sequence-decoder'
+    locator: "§2"
+    derived: true
+    subject: 'a decoder consuming the bytes of one CBOR Sequence left to right'
+    initial: 'at-item-boundary'
+    states:
+      - name: 'at-item-boundary'
+        meaning: 'zero bytes of the next element have been consumed; every element so far decoded has been emitted'
+        quote: 'Decoding a CBOR Sequence works as follows:'
+        requirement: 'rfc-8742#R-0017'
+        note_ours: >-
+          OURS: this is the only state the recursive definition ever returns to,
+          and it is also the INITIAL state, because "an empty (zero-length)
+          sequence of bytes" is a valid sequence. So a zero-length input is
+          accepted without leaving the initial state.
+      - name: 'mid-item'
+        meaning: 'some but not all bytes of the current element have been consumed; the element''s length is known from its head, or is still being accumulated'
+        quote: 'This is possible because CBOR-encoded data items are self delimiting and the end can always be calculated.'
+        requirement: 'rfc-8742#R-0016'
+        note_ours: >-
+          OURS: the document never names this state. It is implied by
+          "self delimiting and the end can always be calculated", which is a
+          claim that FROM INSIDE an item the decoder knows how far to go. RFC
+          8742 contributes no byte-level rule of its own here; the head widths
+          are RFC 8949's, enumerated in
+          records/ietf/rfc-8949/distilled/schema/cbor-head.derived.abnf.
+      - name: 'input-exhausted-at-boundary'
+        meaning: 'no bytes remain AND the decoder is at an item boundary'
+        quote: 'If the CBOR Sequence is an empty sequence of bytes, the result is an empty sequence of CBOR data model values.'
+        requirement: 'rfc-8742#R-0018'
+        terminal: true
+        accepting: true
+        note_ours: >-
+          OURS, and THIS IS THE FINDING: the document gives this state no name
+          and gives the decoder no way to tell it apart from
+          `input-exhausted-mid-item-paused`. See `indistinguishable_pairs`
+          below. It is reached by the empty input, by a complete sequence, and
+          by a sequence truncated exactly at an item boundary, and the three are
+          the same state.
+      - name: 'input-exhausted-mid-item-paused'
+        meaning: 'no bytes remain AND the current element is incomplete; the decoder is suspended, waiting for more'
+        quote: 'A CBOR Sequence decoder that is used for consuming streaming CBOR Sequence data may simply pause for more data (e.g., by suspending and later resuming decoding) in case a truncated final item is being received.'
+        requirement: 'rfc-8742#R-0025'
+        terminal: false
+        accepting: false
+        note_ours: >-
+          OURS: the only state the document describes explicitly as a condition
+          over time, and the permission to be in it is a LOWER-CASE "may". The
+          document gives NO RULE for when a paused decoder should stop waiting
+          and fail -- no timeout, no bound, no end-of-input signal, because
+          rfc-8742#R-0013 says "There is no end-of-sequence indicator."
+      - name: 'malformed'
+        meaning: 'the current element is not well formed; the remainder of the sequence is unrecoverable'
+        quote: 'This means that if any data item in the sequence is not well formed, it is not possible to reliably decode the rest of the sequence.'
+        requirement: 'rfc-8742#R-0021'
+        terminal: true
+        accepting: false
+        absorbing: true
+        note_ours: >-
+          OURS: absorbing, because there is no marker to resynchronise on
+          (rfc-8742#R-0015) and therefore no transition out of it in the
+          general case. ONE CORRUPT ENTRY COSTS THE TAIL. The document offers
+          exactly two qualifications and neither is a transition: a lower-case
+          "An implementation may be able to recover from some errors in a
+          sequence of bytes that is almost, but not entirely, a well-formed
+          encoded CBOR data item" (rfc-8742#R-0022), immediately followed by
+          "Handling malformed data is outside the scope of this
+          specification.)" (rfc-8742#R-0023).
+
+    transitions:
+      - from: 'at-item-boundary'
+        to: 'mid-item'
+        trigger: 'the next byte of input arrives'
+        guard: 'at least one byte remains'
+        quote: 'Otherwise, one must decode a single CBOR data item from the bytes of the CBOR Sequence and insert the resulting CBOR data model value at the start of the result of repeating this decoding process recursively with the remaining bytes.'
+        requirement: 'rfc-8742#R-0019'
+        note_ours: 'OURS: the force word in that sentence is a LOWER-CASE "must", so the one statement of how to decode the format carries no BCP 14 force. §1.1 binds keywords "when, and only when, they appear in all capitals".'
+      - from: 'mid-item'
+        to: 'at-item-boundary'
+        trigger: 'the last byte of the current element arrives'
+        guard: 'the element is well formed'
+        action: 'emit the decoded CBOR data model value'
+        quote: '(A streaming decoder would therefore simply deliver zero or more CBOR data model values, each as soon as the bytes making it up are available.)'
+        requirement: 'rfc-8742#R-0020'
+      - from: 'mid-item'
+        to: 'malformed'
+        trigger: 'a byte arrives that cannot begin or continue a well-formed encoded CBOR data item'
+        guard: 'none'
+        quote: 'This means that if any data item in the sequence is not well formed, it is not possible to reliably decode the rest of the sequence.'
+        requirement: 'rfc-8742#R-0021'
+        note_ours: >-
+          OURS: well-formedness is RFC 8949 Appendix C's predicate, not this
+          document's. RFC 8742 contributes the CONSEQUENCE (the tail is lost)
+          and not the test.
+      - from: 'at-item-boundary'
+        to: 'input-exhausted-at-boundary'
+        trigger: 'input ends'
+        guard: 'zero bytes of a next element have been consumed'
+        quote: 'If the CBOR Sequence is an empty sequence of bytes, the result is an empty sequence of CBOR data model values.'
+        requirement: 'rfc-8742#R-0018'
+      - from: 'mid-item'
+        to: 'input-exhausted-mid-item-paused'
+        trigger: 'input ends'
+        guard: 'the current element is incomplete'
+        quote: 'This also means that the CBOR Sequence format can reliably detect truncation of the bytes making up the last CBOR data item in the sequence, but it cannot detect entirely missing CBOR data items at the end.'
+        requirement: 'rfc-8742#R-0024'
+        note_ours: 'OURS: the FIRST half of that sentence is what makes this transition detectable. The second half is what makes the previous one undetectable.'
+      - from: 'input-exhausted-mid-item-paused'
+        to: 'mid-item'
+        trigger: 'more data arrives'
+        guard: 'none'
+        action: 'resume decoding'
+        quote: 'may simply pause for more data (e.g., by suspending and later resuming decoding)'
+        requirement: 'rfc-8742#R-0025'
+      - from: 'at-item-boundary'
+        to: 'at-item-boundary'
+        trigger: 'another CBOR Sequence is appended to the input'
+        guard: 'the decoder is at an item boundary'
+        quote: '(Consequently, concatenating zero or more CBOR Sequences also results in a CBOR Sequence.)'
+        requirement: 'rfc-8742#R-0012'
+        note_ours: >-
+          OURS, and this is the transition rfc-9277 Appendix A.2 QUALIFIES. A
+          self-loop: `cat a.seq b.seq > c.seq` is in spec and changes no state.
+          RFC 9277's Labeled CBOR Sequence puts a 12-byte label at the front of
+          a file, and concatenating two labelled files therefore yields a file
+          with a label in the middle -- which RFC 9277 says "care must be taken"
+          over and leaves to each protocol. The two documents are each right on
+          their own ground: this one is about well-formedness, that one about
+          interpretation. See records/ietf/rfc-9277/distilled/state-machine.yaml,
+          where the same operation is a transition into a state the document
+          declines to define.
+
+    error_states: ['malformed']
+
+    # ------------------------------------------------------------------
+    # THE PART OF THIS FILE THAT IS WORTH HAVING
+    # ------------------------------------------------------------------
+    indistinguishable_pairs:
+      - pair: ['input-exhausted-at-boundary', 'input-exhausted-mid-item-paused']
+        distinguishable: true
+        how: >-
+          By the decoder's own position only: it knows whether the element it
+          was reading is complete. "the CBOR Sequence format can reliably
+          detect truncation of the bytes making up the last CBOR data item"
+          (rfc-8742#R-0024). This is the one case the format DOES catch.
+      - pair: ['complete log', 'log truncated at an item boundary']
+        distinguishable: false
+        how: >-
+          NOT AT ALL. Both are `input-exhausted-at-boundary`, and the document
+          says so three separate times: "There is no end-of-sequence indicator."
+          (rfc-8742#R-0013); the format "cannot detect entirely missing CBOR
+          data items at the end" (rfc-8742#R-0024); and "an empty (zero-length)
+          sequence of bytes" is itself a valid sequence (rfc-8742#R-0009), so a
+          log truncated to NOTHING is a valid empty log.
+        consequence_ours: >-
+          OURS. TRUNCATING AN APPEND-ONLY LOG AT AN ITEM BOUNDARY IS IN SPEC AND
+          UNDETECTABLE, and so is truncating it to zero length. Under R-O-01 the
+          sequence has no issuer key, because the sequence is not a signed
+          object; under R-M-11 at least one content digest must be bound, and
+          nothing here is a content to digest. The fix is one sentence in the
+          export profile -- a count, a chain or a root, INSIDE the signed bytes
+          -- and nothing in RFC 8742 supplies it or asks for it. §2's own
+          parenthetical names the cheapest version: a definite-length array,
+          whose head states n and which uses no tag
+          (schema/cbor-seq-container.derived.cddl C3).
+      - pair: ['a sequence that was never written', 'a sequence written and fully truncated']
+        distinguishable: false
+        how: 'Both are the empty byte string, which rfc-8742#R-0009 makes a valid CBOR Sequence. §4.2 concedes the notational half: "Note that it is somewhat difficult to discuss zero-length CBOR Sequences in the latter form." (rfc-8742#R-0036).'
+
+    what_the_machine_cannot_decide:
+      - 'how many elements SHOULD be present -- n is nowhere in the bytes'
+      - 'whether the elements are in a particular order -- the format binds no order'
+      - 'whether any element was removed from the END -- rfc-8742#R-0024'
+      - 'when a paused decoder should give up -- no timeout and no end-of-input signal is defined'
+      - 'whether the relationship between elements is protected -- rfc-8742#R-0042 names the need and no mechanism'
+
+    guards_the_source_does_not_supply:
+      - guard: 'a maximum element size'
+        note: 'absent. A decoder in `mid-item` may be asked to buffer an element of any length; no bound is stated anywhere in RFC 8742.'
+      - guard: 'a maximum element count'
+        note: 'absent, and unstateable: there is no count field.'
+      - guard: 'a timeout on `input-exhausted-mid-item-paused`'
+        note: 'absent. The only disposition the document offers for hostile input is §5''s one BCP 14 MUST, "decoders MUST fail gracefully in the face of malicious inputs" (rfc-8742#R-0044), which names no failure mode and no bound. An unbounded pause on a never-completed element is the obvious denial of service and the document does not address it.'
+
+    byte_string_wrapped_variant:
+      note_ours: >-
+        OURS. §4.3's wrapper (rfc-8742#R-0038) changes the machine in exactly
+        one way: `mid-item` splits into `mid-byte-string-head` and
+        `inside-wrapped-element`, and a malformed INNER item no longer reaches
+        `malformed` for the whole sequence -- the decoder can skip to the next
+        byte string using the length it already read. That is the document's own
+        bound: "the limitation is that the sequence of byte strings does need to
+        be well formed as such" (rfc-8742#R-0039). So the wrapper makes
+        `malformed` non-absorbing for inner corruption and leaves it absorbing
+        for a corrupt byte-string head. It does NOT touch any of the three
+        indistinguishable pairs above: the count is still nowhere.
+
+counts:
+  machines: 1
+  states: 5
+  transitions: 7
+  error_states: 1
+  states_named_by_the_source: 0
+  sentences_the_states_are_anchored_to: 8
+  occurrences_of_the_word_state_in_the_source: 0

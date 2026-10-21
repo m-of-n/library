@@ -1,0 +1,99 @@
+; =====================================================================
+; cbor-seq.derived.abnf
+;
+; DERIVED - not verbatim. RFC 8742 ships NO grammar of any kind: no
+; ABNF, no CDDL rule for the format itself, no JSON Schema. Its three
+; CDDL fragments (cddl-fragments.cddl, verbatim) are about what goes
+; INSIDE a byte string or INSIDE an array; two of them are array rules
+; standing in for the sequence rule the language cannot write. The two
+; productions below were written for this record from the prose of
+; section 2 and MUST NEVER be quoted as the source's own grammar.
+;
+; Derived from RFC 8742:
+;   section 2, the recursive definition  (rfc-8742#R-0008, #R-0009,
+;              #R-0010) - the ONLY formal content in the document
+;   section 2, "In short, concatenating zero or more encoded CBOR data
+;              items generates a CBOR Sequence." (rfc-8742#R-0011)
+;   section 2, "There is no end-of-sequence indicator." (#R-0013)
+;   section 2, "CBOR Sequences, unlike JSON Text Sequences [RFC7464],
+;              do not use a marker between items." (#R-0015)
+;   section 1.1, "byte" is a synonym for "octet" (#R-0007)
+;
+; The language is ABNF (RFC 5234). Terminals are single bytes. No RFC
+; 5234 core rule is used or redefined.
+;
+; ---------------------------------------------------------------------
+; THE WHOLE GRAMMAR
+; ---------------------------------------------------------------------
+
+cbor-sequence   = *encoded-cbor-data-item
+
+encoded-cbor-data-item = 1*OCTET
+                ; NOT a grammar rule in any useful sense. See SCOPE.
+
+; ---------------------------------------------------------------------
+; SCOPE - and this is the finding, not a disclaimer
+; ---------------------------------------------------------------------
+; The first production is EXACT and COMPLETE. Section 2's definition is
+; recursive with two cases - "an empty (zero-length) sequence of bytes"
+; and "the sequence of bytes making up an encoded CBOR data item
+; [RFC7049] followed by a CBOR Sequence" - and `*element` is precisely
+; that recursion. Nothing is lost in the translation, because there is
+; nothing else in the format: no separator, no length prefix, no
+; terminator, no marker, no end-of-sequence indicator.
+;
+; The second production is a PLACEHOLDER and is marked so. ABNF cannot
+; define an encoded CBOR data item: the number of content bytes of a
+; byte or text string, and the number of enclosed items of an array or
+; map, are given by the argument just parsed, which is a
+; context-sensitive dependency no ABNF can express. That is not this
+; record's finding - it is already established in
+; records/ietf/rfc-8949/distilled/schema/cbor-head.derived.abnf, which
+; covers exactly the HEAD of a data item for that reason and refers the
+; rest to RFC 8949 Appendix C's pseudocode (held verbatim in that
+; record as well-formed.pseudocode.txt). Use those two files; do not
+; try to extend this one.
+;
+; SO THE HONEST STATEMENT OF WHAT A GRAMMAR CAN SAY ABOUT THIS FORMAT IS
+; ONE LINE LONG, AND IT IS `*item`. Three consequences follow, and all
+; three are load-bearing for us:
+;
+;   (1) THE CONTAINER IS NOT SCHEMA-CHECKABLE, in ABNF or in CDDL.
+;       Section 4.1 states the CDDL half in the document's own words.
+;       This file states the ABNF half. A multi-statement file's
+;       top-level rule is therefore specified in prose under every
+;       candidate, which is what design-notes.md Cut 2 costs.
+;
+;   (2) EVERY BYTE STRING IS A PREFIX OF A VALID CBOR SEQUENCE OR
+;       CONTAINS A MALFORMED ITEM, and no third category exists. `*item`
+;       accepts the empty string, so a file truncated to nothing is
+;       valid; it has no final-element rule, so a file truncated at an
+;       item boundary is valid; and since the recursion consumes items
+;       left to right, a malformed item strands everything after it
+;       (#R-0021). A grammar cannot distinguish "complete" from
+;       "truncated at a boundary" because the distinction is not in the
+;       bytes.
+;
+;   (3) A LINT RULE HAS NOTHING TO TARGET. There is no production here
+;       whose violation is a conformance error, which is the same thing
+;       as saying section 2 carries no BCP 14 keyword (it does not: all
+;       four are in sections 3, 5 and 6.3). "We use RFC 8742" cites a
+;       definition, not a conformance target.
+;
+; ---------------------------------------------------------------------
+; WHAT A CONTAINER THAT *IS* EXPRESSIBLE LOOKS LIKE
+; ---------------------------------------------------------------------
+; Section 2 names the alternative itself, in a parenthesis: "(If one is
+; desired, CBOR encoding an array of the CBOR data model values being
+; encoded, employing either a definite or an indefinite length encoding,
+; as a single CBOR data item may actually be the more appropriate
+; representation.)" (#R-0014). A definite-length array head states the
+; element count, is self-delimiting, and uses NO TAG - so it is exactly
+; as tag-free as the sequence is, and it has a CDDL rule. The three
+; candidate containers, side by side with what each one costs, are in
+; cbor-seq-container.derived.cddl. The byte-level difference is ONE
+; BYTE for up to 23 elements: examples/vectors.yaml V-0004 and V-0005.
+;
+; Source: RFC 8742, cached source sha256
+;   4462966836b60f42ebae9b5f1d2a479c328e16f0380a3434311a083bccbce30e
+; =====================================================================

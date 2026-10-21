@@ -1,0 +1,504 @@
+# =====================================================================
+# rfc-9277 messages -- this document defines no message and no exchange.
+# It defines THREE BYTE LAYOUTS and FOUR REGISTRY RECORDS, so, as in
+# records/ietf/rfc-9741/distilled/messages.yaml, the "messages" here are
+# the structures the document actually defines.
+#
+# THE FINDING THIS FILE EXISTS TO MAKE CONCRETE: every one of the three
+# envelopes is TWO NESTED TAGS, and in all three the OUTER tag is the
+# one this document allocates while the INNER tag -- the one that says
+# WHICH protocol, which is the whole point of section 1's
+# APK-is-a-ZIP argument -- must be obtained from IANA by the protocol
+# designer. Under MD-3's no-IANA-tags rule the in-band answer to "what
+# kind of file is this" is therefore unavailable AT ANY PRICE, while
+# under DEC-002 option 2 it costs one email (section 2.1).
+#
+# AND IN ALL THREE THE INDICATOR IS OUTSIDE THE PAYLOAD. In the Tag
+# Wrapped method the two tag heads ENCLOSE the data item; in the other
+# two the label is a SEPARATE DATA ITEM in front of it. Either way it is
+# outside anything a signature over the content could cover, which is
+# why `canonical-encoding` condition (4) is not discharged. Each entry
+# carries that as `relation_to_signature`.
+#
+# `constrained_by` IS USED HERE. 103 of the 195 requirements are cited
+# by a named field; the 92 that are not are accounted for in
+# `requirements_not_cited_by_a_field` by CLASS with counts, because
+# listing 92 ids individually would be noise -- the classes are what a
+# reader needs and pass 3 can recompute both.
+#
+# Quoted sentences are RFC 9277's own words. Anything marked OURS is
+# this library's reading, not the document's.
+#
+# Source: RFC 9277, cached source sha256
+#   bd637eafad9ef940c8f5d029076f70c58af7bde6beb38efee5ba7af3690289f7
+# =====================================================================
+record: rfc-9277
+reviewed_by: ""
+
+# ---------------------------------------------------------------------
+# The shape all three envelopes share. Recorded once so each entry need
+# not repeat it.
+# ---------------------------------------------------------------------
+shared_shape:
+  name: 'two-nested-tags'
+  locator: "§2 (and §2.1 for the inner tag)"
+  encoding: 'CBOR, as a prefix of a stored file'
+  quote: 'Both use CBOR tags in a way that results in a deterministic first 8 to 12 bytes.'
+  determinism_is_not_delivered: >-
+    OURS, and it refutes the quote above. The claim holds only under PREFERRED
+    SERIALIZATION and nothing in RFC 9277 requires anything -- the document has
+    ZERO BCP 14 keywords. schema/prefix-spellings.derived.txt enumerates all 30
+    well-formed definite-length spellings of the 12-byte label: 1 is 12 bytes
+    long, 5 match the 8-byte fingerprint §2.3.1 states, and 20 put a zero byte
+    inside the first eight, defeating §2.1's own C-string advice. 30 is a floor,
+    because RFC 8949 §3.2.3 also admits an indefinite-length byte string for the
+    3-byte content.
+  fields:
+    - name: 'outer tag'
+      type: 'CBOR tag head, major type 6'
+      required: true
+      note: 'allocated BY THIS DOCUMENT in two of the three cases (55800, 55801) and by RFC 8949 §3.4.6 in the third (55799). It says only "CBOR", or "the file contains CBOR Sequences", or "the file starts with a CBOR-Labeled Non-CBOR Data label" -- never which protocol'
+      constrained_by: ['rfc-9277#R-0048', 'rfc-9277#R-0065', 'rfc-9277#R-0185']
+    - name: 'inner tag'
+      type: 'CBOR tag head, major type 6, value in 0x01000000..0xFFFFFFFF'
+      required: true
+      note: 'THE ONE THAT MATTERS, and the one that costs. "In both enveloping methods, CBOR Protocol designers need to obtain a CBOR tag for each kind of object that they might store in files." PER KIND OF OBJECT, not per protocol'
+      constrained_by: ['rfc-9277#R-0033', 'rfc-9277#R-0035', 'rfc-9277#R-0038', 'rfc-9277#R-0039', 'rfc-9277#R-0049', 'rfc-9277#R-0066', 'rfc-9277#R-0067']
+    - name: 'tag content'
+      type: 'the payload item, or the constant byte string 0x42_4f_52'
+      required: true
+      constrained_by: ['rfc-9277#R-0050', 'rfc-9277#R-0068', 'rfc-9277#R-0184']
+
+messages:
+
+  # ------------------------------------------------- envelope 1 of 3
+  - name: 'cbor-tag-wrapped-envelope'
+    locator: "§2.2"
+    encoding: 'CBOR; the whole file is ONE CBOR data item'
+    applicability_quote: 'The CBOR Tag Wrapped method is appropriate for use with CBOR Protocols that encode a single CBOR data item.'
+    fields:
+      - name: 'outer tag head'
+        type: 'tag 55799'
+        value: 'd9 d9f7'
+        width_bytes: 3
+        required: true
+        note: 'NOT DEFINED BY THIS DOCUMENT. "The outer tag is a self-described CBOR tag, 55799, as described in Section 3.4.6 of [STD94]." The in-library IANA row for 55799 reads reference "RFC 8949" (records/iso/iana-cbor-tags/distilled/tables.yaml, checked at this pass). rfc-8949''s design notes already book the §3.4.6 loss under option 5, so this costs option 5 nothing NEW'
+        constrained_by: ['rfc-9277#R-0048']
+      - name: 'inner tag head'
+        type: 'the protocol-specific tag, 4-byte argument'
+        value: 'da nnnnnnnn   # nnnnnnnn = the 4-byte tag number, big-endian'
+        width_bytes: 5
+        required: true
+        note: 'the FCFS allocation. §2.1 pins the VALUE into 0x01000000..0xFFFFFFFF, which makes `da` the shortest head and does not forbid `db`'
+        constrained_by: ['rfc-9277#R-0049', 'rfc-9277#R-0039']
+      - name: 'payload'
+        type: 'the single CBOR data item'
+        required: true
+        note: 'OURS: and Appendix B''s "Exceptionally" rule changes its shape when the inner tag is a content-format tag -- the bare item, or the sequence''s items wrapped in a CBOR array, and ONLY for identity content-coding. See schema/content-format-tag.derived.yaml'
+        constrained_by: ['rfc-9277#R-0050', 'rfc-9277#R-0159', 'rfc-9277#R-0160', 'rfc-9277#R-0162']
+    layout: >-
+      d9 d9f7 | da <4-byte tag> | <the data item>. The fingerprint is the first
+      8 bytes and the payload begins at offset 8. §2.2.1, worked with TN(112):
+      "the unique fingerprint for application/" / "senml+cbor is composed of the
+      8 bytes d9d9f7da63740171 hex, after which the unadorned CBOR data (81...
+      for the SenML data) is appended." Recomputed at this pass: the example's
+      first 8 bytes ARE d9d9f7da63740171.
+    fingerprint_bytes: 8
+    total_overhead_bytes: 8
+    relation_to_signature: >-
+      OURS. The two tag heads ENCLOSE the payload, so a signature over the
+      payload does not cover them and a signature over the whole item would have
+      to be outside the envelope again. Either way the type indicator is
+      unauthenticated. §3 states the adjacent problem and draws no conclusion.
+    strippable: true
+    strippability_quote: 'Applications that need to send the stored CBOR data item across a constrained network may wish to remove the two tags if the type is understood from the protocol context, e.g., from a CoAP Content-'
+    strippability_note: 'the quote is HALF A SENTENCE: "Content-Format" is severed at source lines 257/258 and the halves are rfc-9277#R-0052 and rfc-9277#R-0053. Removal "requires knowledge of the two tags involved" (rfc-9277#R-0129), unlike the label, which a parser returns as a unit'
+    constrained_by_count: 7
+
+  # ------------------------------------------------- envelope 2 of 3
+  - name: 'labeled-cbor-sequence-label'
+    locator: "§2.3"
+    encoding: 'CBOR; a SEPARATE data item prepended to an RFC 8742 CBOR Sequence'
+    applicability_quote: 'The Labeled CBOR Sequence method is appropriate for use with CBOR Sequences as described in [RFC8742].'
+    fields:
+      - name: 'outer tag head'
+        type: 'tag 55800'
+        value: 'd9 d9f8'
+        width_bytes: 3
+        required: true
+        note: 'allocated by §4.1. Semantics, verbatim from the registry: "indicates that the file contains CBOR Sequences" -- so it says the ENCODING FRAMING and not the protocol, which is exactly §1''s APK-is-a-ZIP complaint one level up'
+        constrained_by: ['rfc-9277#R-0065', 'rfc-9277#R-0069', 'rfc-9277#R-0094', 'rfc-9277#R-0105']
+      - name: 'inner tag head'
+        type: 'the protocol-specific tag, 4-byte argument'
+        value: 'da nnnnnnnn   # nnnnnnnn = the 4-byte tag number, big-endian'
+        width_bytes: 5
+        required: true
+        constrained_by: ['rfc-9277#R-0066', 'rfc-9277#R-0067', 'rfc-9277#R-0071']
+      - name: 'byte-string head'
+        type: 'CBOR major type 2, length 3'
+        value: '43'
+        width_bytes: 1
+        required: true
+        note: 'OURS: this byte is ASCII "C", which is why the four bytes 43 42 4f 52 read as "CBOR". The document states the four bytes and not that the first of them is a length head'
+        constrained_by: ['rfc-9277#R-0068', 'rfc-9277#R-0072', 'rfc-9277#R-0073']
+      - name: 'constant content'
+        type: "3-byte byte string 0x42_4f_52, 'BOR'"
+        value: '42 4f 52'
+        width_bytes: 3
+        required: true
+        note: 'exists ONLY so the inner tag has something to tag: "This value is also included simply because the inner nested tag needs to tag something." FOUR OF THE TWELVE LABEL BYTES ARE STRUCTURAL FILLER'
+        constrained_by: ['rfc-9277#R-0068', 'rfc-9277#R-0077']
+    layout: >-
+      d9 d9f8 | da <4-byte tag> | 43 | 42 4f 52, then the protocol's own data
+      items follow as the next elements of the CBOR Sequence. "The total length
+      of the label is 12 bytes." (rfc-9277#R-0064) Recomputed at this pass: 3+5+1+3 = 12, and that
+      holds for exactly one of the 30 well-formed spellings.
+    fingerprint_bytes: 8
+    total_overhead_bytes: 12
+    the_mnemonic_is_not_the_fingerprint: >-
+      OURS. The ASCII "CBOR" sits at offsets 8-11, PAST the 8-byte fingerprint
+      §2.3.1 identifies ("composed of the 8 bytes d9d9f8da63740212 hex").
+      So the advertised human-readable benefit -- "Should this file be reviewed
+      by a human (directly in an editor or in a hexdump display), it will include
+      the ASCII characters "CBOR" prominently." -- is real and is NOT the
+      identifying part. Verified by construction at this pass.
+    relation_to_signature: >-
+      OURS, and this is the condition-(4) finding. The label is a SEPARATE DATA
+      ITEM in front of the payload, so it is outside every signature over the
+      payload by construction -- there is no nesting in which it could be
+      covered. Swapping the inner tag relabels the artifact, breaks no
+      signature, and can route the same bytes to a different parser. §3: "This
+      is an instance of a check versus use issue."
+    strippable: true
+    strippability_quote: 'The use of a CBOR Sequence allows the application to trivially remove the first item with the two tags.'
+    concatenation_hazard: >-
+      THE RECORD'S HEADLINE FINDING. RFC 8742 §2 blesses the operation --
+      "(Consequently, concatenating zero or more CBOR Sequences also results in a
+      CBOR Sequence.)" -- and Appendix A.2 then says: "If the
+      CBOR-Sequence-based protocol does not define the semantics for or at least
+      tolerate embedded labels, care must be taken when concatenating Labeled
+      CBOR Sequences to remove the label from all but the first part." Lower-case
+      "must", no default, rule delegated to each protocol. A MAGIC NUMBER
+      DESIGNED FOR AN APPENDABLE FORMAT IS UNSAFE UNDER APPEND. See
+      ../state-machine.yaml, where it is a transition into a state the document
+      declines to define, and ../examples/vectors.yaml rfc-9277#D-0005.
+    cost_on_every_reader: >-
+      Appendix A, and it is the ONE explicit warning in a document otherwise full
+      of permissions: "On the other hand, having the Labeled CBOR Sequence in the
+      file requires that all programs that expect to examine that file be able to
+      skip what appears to be a CBOR item with two tags nested around a 3-byte
+      byte string.  The 3-byte entry is not of the format the program would
+      normally have processed, so it may be a surprise."
+    constrained_by_count: 11
+
+  # ------------------------------------------------- envelope 3 of 3
+  - name: 'cbor-labeled-non-cbor-header'
+    locator: "Appendix D"
+    encoding: 'CBOR header prepended to data that is NOT CBOR'
+    applicability_quote: 'The CBOR-Labeled Non-CBOR data method is appropriate for adding a magic number to a Non-CBOR data format, particularly one that can be described by a Content-Format tag (Appendix B).'
+    fields:
+      - name: 'outer tag head'
+        type: 'tag 55801'
+        value: 'd9 d9f9'
+        width_bytes: 3
+        required: true
+        note: 'allocated by §4.2. Registry semantics, verbatim: "indicates that the file starts with a CBOR-Labeled Non-CBOR Data label."'
+        constrained_by: ['rfc-9277#R-0185', 'rfc-9277#R-0106', 'rfc-9277#R-0109', 'rfc-9277#R-0187']
+      - name: 'inner tag head'
+        type: 'the protocol-specific tag, 4-byte argument'
+        width_bytes: 5
+        required: true
+        note: 'identifies "which Non-CBOR Protocol is used" -- a term the document never defines'
+        constrained_by: ['rfc-9277#R-0186', 'rfc-9277#R-0188']
+      - name: 'byte-string head and constant content'
+        type: "0x43 then 0x42_4f_52"
+        width_bytes: 4
+        required: true
+        constrained_by: ['rfc-9277#R-0184']
+      - name: 'payload'
+        type: 'NOT CBOR -- arbitrary bytes, directly appended'
+        required: true
+        note: 'OURS: after byte 12 the file is not CBOR at all, so no CDDL rule can describe the file. Appendix D.1''s snippets describe the HEADER only, and that is forced rather than accidental'
+        constrained_by: ['rfc-9277#R-0189', 'rfc-9277#R-0183']
+    layout: 'd9 d9f9 | da <4-byte tag> | 43 | 42 4f 52, then the non-CBOR bytes directly appended. 12 bytes, same arithmetic as the §2.3 label.'
+    fingerprint_bytes: 8
+    total_overhead_bytes: 12
+    relation_to_signature: 'OURS: the same as the §2.3 label, and worse, because the payload is not CBOR and has no envelope of its own in which the indicator could be carried.'
+    strippable: true
+    strippability_quote: 'This allows the application to trivially remove the header item with the two nested tags and the byte string.'
+    defect: 'Appendix D carries an UNRESOLVED KRAMDOWN ANCHOR into the published RFC: "As with the Labeled CBOR Sequence {#sequences}, this choice of the tag content places the ASCII characters "CBOR" prominently into the header." Reported, not repaired; not checked against the errata.'
+    constrained_by_count: 9
+
+  # ---------------------------------------------- the derivable tag
+  - name: 'content-format-tag'
+    locator: "Appendix B, §4.3"
+    encoding: 'a CBOR tag whose number is a FUNCTION of a CoAP Content-Format number'
+    fields:
+      - name: 'tag number'
+        type: 'uint in 1668546817..1668612095'
+        required: true
+        note: 'TN(ct) = 0x63740101 + (ct / 255) * 256 + ct % 255. Verified at this pass: injective over ct < 65025, image exactly the 65,025 values 0x6374XXYY with XX and YY both non-zero, 254 allocated code points unreachable and all of them zero-low-byte. The high half-word 0x6374 is ASCII "ct"'
+        constrained_by: ['rfc-9277#R-0093', 'rfc-9277#R-0110', 'rfc-9277#R-0112', 'rfc-9277#R-0152', 'rfc-9277#R-0154', 'rfc-9277#R-0155', 'rfc-9277#R-0156']
+      - name: 'tag content'
+        type: 'byte string, OR the bare item, OR the sequence items in an array'
+        required: true
+        note: >-
+          NOT DETERMINED BY THE TAG NUMBER, which is why §4.3's registry Data
+          Item field is a disjunction: "byte string or any CBOR data item (see
+          Appendix B)". Appendix B adds an exception for the case where the tag
+          sits immediately inside 55799, 55800 or 55801, and both of its options
+          for 55799 are limited to IDENTITY content-coding. OURS: so TN(ct)
+          immediately inside 55799 for a non-identity coding has NO DEFINED
+          CONTENT, and Appendix B.1's own `senml-cbor = #6.1668546929(bstr)`
+          contradicts the exception for the document's own §2.2.1 example.
+        constrained_by: ['rfc-9277#R-0111', 'rfc-9277#R-0153', 'rfc-9277#R-0159', 'rfc-9277#R-0160', 'rfc-9277#R-0161', 'rfc-9277#R-0162', 'rfc-9277#R-0163', 'rfc-9277#R-0164', 'rfc-9277#R-0165', 'rfc-9277#R-0170']
+    layout: 'da <TN(ct) as 4 big-endian bytes> then the content. The four bytes never contain a zero.'
+    no_allocation_needed: >-
+      OURS, and it is the corollary that joins this record to rfc-8742.
+      application/cbor-seq already holds CoAP Content-Format 63 (RFC 8742 §6.2,
+      Table 1), so TN(63) = 1668546880 = 0x63740140 and a labelled
+      CBOR-sequence file needs NO NEW IANA ALLOCATION: label bytes
+      d9d9f8 da63740140 43 424f52, fingerprint d9d9f8da63740140. It costs
+      nothing and says only "a CBOR sequence follows". Saying "an m-of-n
+      statement log follows" is the part that needs the FCFS allocation.
+    worked_values: 'TN(112)=1668546929, TN(272)=1668547090, TN(432)=1668547250, TN(11050)=1668557910 -- all four printed by the document and all four recomputed at this pass'
+    constrained_by_count: 17
+
+  # ------------------------------------------- the registry records
+  - name: 'tag-registration-55800'
+    locator: "§4.1"
+    encoding: 'a row of the IANA "Concise Binary Object Representation (CBOR) Tags" registry'
+    verbatim: 'schema/registrations.txt region R01, source lines 412-443'
+    fields:
+      - name: 'Tag'
+        value: 55800
+        required: true
+        constrained_by: ['rfc-9277#R-0094']
+      - name: 'Data Item'
+        value: 'tagged byte string'
+        required: true
+        note: 'OURS: it describes the 12-byte LABEL, not the file. What 55800 tags is a tagged byte string; what it ANNOUNCES is a property of the file'
+        constrained_by: ['rfc-9277#R-0104']
+      - name: 'Semantics'
+        value: 'indicates that the file contains CBOR Sequences'
+        required: true
+        note: 'verified verbatim against records/iso/iana-cbor-tags/distilled/tables.yaml at this pass'
+        constrained_by: ['rfc-9277#R-0105']
+      - name: 'Area'
+        value: 'First Come First Served'
+        required: true
+        constrained_by: ['rfc-9277#R-0096']
+      - name: 'Reference'
+        value: 'RFC 9277 (updated to point here)'
+        required: true
+        note: 'the word "updated" implies the tag PRE-EXISTED this document: "IANA has updated this tag registration to point to this document." §4.2 says the same thing without the "has"'
+        constrained_by: ['rfc-9277#R-0095']
+      - name: 'encoded tag head'
+        value: '0xd9_d9_f8'
+        width_bytes: 3
+        required: true
+        note: >-
+          Not a registry field: §4.1 states it in prose, together with FIVE
+          sentences arguing that the prefix cannot be mistaken for text -- not
+          valid UTF-8, not valid UTF-16 in either endian order. The UTF-16
+          argument is incomplete on its own terms and the document says so: "On
+          a little-endian system, it would be necessary to examine the fourth
+          byte to determine if it is valid." It then defers the general claim to
+          RFC 8949 §3.4.6. §4.2 repeats all five sentences verbatim for 0xd9_d9_f9.
+        constrained_by: ['rfc-9277#R-0098', 'rfc-9277#R-0099', 'rfc-9277#R-0100', 'rfc-9277#R-0101', 'rfc-9277#R-0102', 'rfc-9277#R-0103']
+    layout: 'a registry row; the encoded head 0xd9_d9_f8 is what appears in a file'
+    constrained_by_count: 11
+
+  - name: 'tag-registration-55801'
+    locator: "§4.2"
+    encoding: 'a row of the IANA CBOR Tags registry'
+    verbatim: 'schema/registrations.txt region R02, source lines 445-477'
+    fields:
+      - name: 'Tag'
+        value: 55801
+        required: true
+        constrained_by: ['rfc-9277#R-0106']
+      - name: 'Data Item'
+        value: 'tagged byte string'
+        required: true
+        note: >-
+          The string is BYTE-IDENTICAL to §4.1's, so requirements.yaml gives it
+          ONE id rather than two and this field cites that one. Recorded here
+          because an id that resolves to the wrong section is a worse defect
+          than one that resolves to none.
+        constrained_by: ['rfc-9277#R-0104']
+      - name: 'Semantics'
+        value: 'indicates that the file starts with a CBOR-Labeled Non-CBOR Data label.'
+        required: true
+        note: 'verified verbatim against the in-library registry table at this pass. The RFC breaks this value across two lines (475-477) and the registry carries it as one string'
+        constrained_by: ['rfc-9277#R-0109']
+      - name: 'Reference'
+        value: 'RFC 9277 (updated to point here)'
+        required: true
+        note: '§4.2 reads "IANA updated this tag registration to point to this document." against §4.1''s "IANA has updated ...". Editorial, and recorded only because the two sections are otherwise word-for-word parallel'
+        constrained_by: ['rfc-9277#R-0107']
+      - name: 'encoded tag head'
+        value: '0xd9_d9_f9'
+        width_bytes: 3
+        required: true
+        constrained_by: ['rfc-9277#R-0108']
+    layout: 'a registry row; the encoded head 0xd9_d9_f9 is what appears in a file'
+    constrained_by_count: 5
+
+  - name: 'tag-block-registration'
+    locator: "§4.3"
+    encoding: 'a single row of the IANA CBOR Tags registry covering 65,279 code points'
+    verbatim: 'schema/registrations.txt region R03, source lines 479-496'
+    fields:
+      - name: 'Tag'
+        value: '1668546817-1668612095'
+        required: true
+        note: 'verified at this pass: 65,279 code points, and TN maps its domain exactly onto the block''s endpoints -- TN(0) = 1668546817 and TN(65024) = 1668612095'
+        constrained_by: ['rfc-9277#R-0110', 'rfc-9277#R-0152']
+      - name: 'Data Item'
+        value: 'byte string or any CBOR data item (see Appendix B)'
+        required: true
+        note: 'the in-library registry row reads "... (see Appendix B of RFC 9277)". IANA qualified the dangling cross-reference; the RFC did not'
+        constrained_by: ['rfc-9277#R-0111']
+      - name: 'Semantics'
+        value: 'the representation of content-format ct < 65025 is indicated by tag number TN(ct) = 0x63740101 + (ct / 255) * 256 + ct % 255'
+        required: true
+        note: >-
+          A C EXPRESSION AS A REGISTRY SEMANTICS FIELD, AND THE REGISTRY TEXT
+          DOES NOT DEFINE ITS ARITHMETIC. The operators are defined only in
+          Appendix B, "as in the programming language C [C]", and [C] is
+          ISO/IEC 9899:2018 -- a PAYWALLED normative reference of this document,
+          used nowhere outside an appendix. Reported, not repaired.
+        constrained_by: ['rfc-9277#R-0112', 'rfc-9277#R-0155']
+      - name: 'Reference'
+        value: 'RFC 9277'
+        required: true
+        constrained_by: ['rfc-9277#R-0110']
+      - name: 'governing registry'
+        value: 'the "CoAP Content-Formats" registry, RFC 7252 §12.3'
+        required: true
+        note: 'OURS: not a field of the CBOR Tags row, but the dependency the row encodes. [RFC7252] is an INFORMATIVE reference of this document, although 65,025 of these code points are a function of its registry'
+        constrained_by: ['rfc-9277#R-0113']
+    layout: 'a registry row. The tag heads that appear in a file are da 6374XXYY with XX and YY both non-zero.'
+    constrained_by_count: 6
+
+# ---------------------------------------------------------------------
+# What this document does NOT register, stated because the complement is
+# the finding. RFC 8742 registers a media type, a CoAP Content-Format
+# number and a structured syntax suffix, AND NO TAG. RFC 9277 registers
+# three tags and a 65,279-wide tag block, AND NOTHING ELSE. §4: "These
+# IANA considerations are entirely about CBOR tags".
+# ---------------------------------------------------------------------
+not_registered_here:
+  - 'any media type'
+  - 'any CoAP Content-Format number -- it CONSUMES that registry instead, through TN'
+  - 'any structured syntax suffix'
+  - 'any magic(5) pattern for file(1), although file(1) is named four times and the abstract makes it the reference consumer'
+
+# ---------------------------------------------------------------------
+# locator_join. Computed mechanically at pass 1 over the constrained_by
+# lists above. 103 of 195 requirements are cited by a named field. The
+# 92 that are not are accounted for BY CLASS with counts rather than
+# listed individually; pass 3 can recompute both from this file.
+# ---------------------------------------------------------------------
+# The split BY LOCATOR, computed mechanically at pass 1 over the
+# `constrained_by:` lists above. Prose mentions of an id elsewhere in this
+# file do NOT count as a cite. Pass 3 can recompute both columns.
+#
+# THE SPLIT IS LOPSIDED AND IT IS ITSELF THE FINDING: 56 of 195. That is
+# a much lower ratio than rfc-9741's 48 of 61, and for a reason worth
+# stating. The byte layouts are small -- three envelopes, 29 fields --
+# while MOST OF THIS DOCUMENT IS NOT ABOUT BYTES AT ALL. It is motivation
+# (section 1, 19 uncited), terminology (section 1.1, 6), advice the
+# document itself declares informative (Appendix A and its three
+# subsections, 36), a case study (Appendix C, 7), security considerations
+# that resolve nothing (section 3, 7) and worked arithmetic restated in
+# appendices. A field-centred artifact cannot hold any of that, and the
+# right homes are ../state-machine.yaml, ../examples/vectors.yaml and
+# ../design-notes.md. Named per locator below.
+requirements_not_cited_by_a_field:
+  - locator: "Abstract"
+    uncited: 1
+    carried_by: 'design-notes.md -- the deliverable, and the file(1) consumer the document never ships a rule for'
+  - locator: "§1"
+    uncited: 19
+    carried_by: 'design-notes.md. Motivation, the APK-is-a-ZIP argument, the PEM disarray, the definition of "CBOR Protocol" (rfc-9277#R-0009, which is the measurement behind protocol: not_applicable), the exclusion of COSE as infrastructure (rfc-9277#R-0015, which decides the MD-3 mapping), and the first of the four permissive statements about stripping (rfc-9277#R-0018)'
+  - locator: "§1.1"
+    uncited: 6
+    carried_by: 'nothing, by design: the six terminology entries GOVERN the widths and types above rather than being fields. rfc-9277#R-0026, the forward reference to TN, is carried by schema/content-format-tag.derived.yaml'
+  - locator: "§1.2"
+    uncited: 3
+    carried_by: 'design-notes.md. A section titled "Requirements for a Magic Number" with no requirements language; its four properties are checkable OF the three layouts above rather than being fields of them'
+  - locator: "§2"
+    uncited: 3
+    carried_by: 'shared_shape -> determinism_is_not_delivered and schema/prefix-spellings.derived.txt. rfc-9277#R-0031, the deterministic-prefix claim, is refuted there rather than attached to a field'
+  - locator: "§2.1"
+    uncited: 9
+    carried_by: 'design-notes.md. The registry price (rfc-9277#R-0035 IS cited, by shared_shape), the mnemonic suggestion, the Reference-field suggestion the document''s own deployment did not take, and the two halves of the severed CoAP registry sentence'
+  - locator: "§2.2"
+    uncited: 7
+    carried_by: 'cbor-tag-wrapped-envelope -> strippability_quote and relation_to_signature, as prose rather than as fields; design-notes.md for the storage-only posture'
+  - locator: "§2.2.1"
+    uncited: 5
+    carried_by: '../examples/vectors.yaml rfc-9277#V-0001 and schema/content-format-tag.derived.yaml -> worked_values. Including the unbalanced parenthesis in rfc-9277#R-0056 and the non-deterministic map-key order in rfc-9277#R-0058'
+  - locator: "§2.3"
+    uncited: 8
+    carried_by: 'labeled-cbor-sequence-label -> the_mnemonic_is_not_the_fingerprint and layout, as prose; ../examples/vectors.yaml for the bytes'
+  - locator: "§2.3.1"
+    uncited: 5
+    carried_by: '../examples/vectors.yaml rfc-9277#V-0002'
+  - locator: "§3"
+    uncited: 7
+    carried_by: 'relation_to_signature on all three envelopes, and design-notes.md condition (4). Check-versus-use is a property of a SYSTEM, not of a field'
+  - locator: "§4"
+    uncited: 3
+    carried_by: 'not_registered_here above, and design-notes.md. The three roadmap sentences plus rfc-9277#R-0090, "These IANA considerations are entirely about CBOR tags"'
+  - locator: "§4.1"
+    uncited: 1
+    carried_by: 'rfc-9277#R-0097, why 55800 was chosen -- a rationale referred wholly to RFC 8949 §3.4.6'
+  - locator: "§4.2"
+    uncited: 0
+    carried_by: 'all four cited'
+  - locator: "§4.3"
+    uncited: 0
+    carried_by: 'all four cited'
+  - locator: "Appendix A"
+    uncited: 20
+    carried_by: '../state-machine.yaml for the strip and retrofit transitions, and design-notes.md otherwise. Declared informative by §1, so none of it binds; the ONE explicit warning (rfc-9277#R-0118) IS cited, on cost_on_every_reader'
+  - locator: "Appendix A.1"
+    uncited: 3
+    carried_by: '../state-machine.yaml -- all three are conditional advice about which method to adopt'
+  - locator: "Appendix A.2"
+    uncited: 12
+    carried_by: '../state-machine.yaml, which holds the whole concatenation finding as a transition into a state the document declines to define. Six of the twelve ARE cited, on concatenation_hazard'
+  - locator: "Appendix A.3"
+    uncited: 1
+    carried_by: '../state-machine.yaml -- the third survey question, one sentence long'
+  - locator: "Appendix B"
+    uncited: 4
+    carried_by: 'schema/content-format-tag.derived.yaml and schema/tn-formula.txt. Twelve of the sixteen ARE cited'
+  - locator: "Appendix B.1"
+    uncited: 9
+    carried_by: 'schema/cddl-snippets.cddl and schema/content-format-tag.derived.yaml -> worked_values. The one that matters, rfc-9277#R-0170, IS cited: it is the sentence whose CDDL contradicts Appendix B'
+  - locator: "Appendix C"
+    uncited: 7
+    carried_by: '../examples/vectors.yaml rfc-9277#V-0003, which is the Openswan label as a fixture, and design-notes.md for the implementation evidence'
+  - locator: "Appendix D"
+    uncited: 2
+    carried_by: 'cbor-labeled-non-cbor-header -> defect, and design-notes.md. Seven of the nine ARE cited'
+  - locator: "Appendix D.1"
+    uncited: 4
+    carried_by: 'schema/content-format-tag.derived.yaml -> worked_values, which recomputes both'
+
+counts:
+  messages: 7
+  envelopes: 3
+  registry_records: 3
+  field_entries: 29          # plus 3 in shared_shape = 32
+  requirements_total: 195
+  requirements_cited_by_a_field: 56
+  requirements_not_cited: 139
+  nested_tags_per_envelope: 2
+  iana_allocations_requested: 4           # 55800, 55801, the 65279-wide block, and nothing else
+  non_tag_registrations_requested: 0
+  magic5_patterns_supplied: 0

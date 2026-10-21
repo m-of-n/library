@@ -1,0 +1,327 @@
+# =====================================================================
+# rfc-8742 test vectors.
+#
+# TWO CLASSES, AND THE FILENAME CANNOT CARRY THE DISTINCTION, SO EVERY
+# ENTRY CARRIES IT:
+#
+#   V-NNNN  the source's own examples, lifted from the cache by line
+#           range, by script, never retyped. FIVE of them, and that is
+#           every example RFC 8742 prints.
+#   D-NNNN  DERIVED -- OURS. Byte-level fixtures this extraction
+#           computed, because THE DOCUMENT PRINTS NOT ONE HEX OCTET.
+#           Every one was executed through a CBOR well-formedness
+#           checker written for this pass, and each carries the
+#           observed result, not a predicted one.
+#
+# THE FINDING. For a specification whose entire content is a claim about
+# byte concatenation, RFC 8742 contains NO BYTES. It prints three CDDL
+# fragments, two lines of diagnostic notation and one registry table.
+# So any conformance test for RFC 8742 is OURS and has to be marked so
+# -- which, under R-O-03's discipline (cited, not invented silently), is
+# what the D- prefix is for.
+#
+# Source: RFC 8742, cached source sha256
+#   4462966836b60f42ebae9b5f1d2a479c328e16f0380a3434311a083bccbce30e
+# =====================================================================
+record: rfc-8742
+reviewed_by: ""
+
+vectors:
+
+  # ------------------------------------------- the source's own, all five
+  - id: 'rfc-8742#V-0001'
+    origin: 'source'
+    locator: '§4.1'
+    source_lines: "195-197"
+    kind: 'cddl'
+    cddl: |
+      my-embedded-cbor-seq = bytes .cborseq my-array
+      my-array = [* my-element]
+      my-element = my-foo / my-bar
+    matches: 'a byte string whose content is a CBOR Sequence, each of whose elements matches my-element.'
+    expect: 'valid'
+    instance: null
+    notes: >-
+      Printed with no instance. This is the ONE case CDDL handles natively, and
+      note what it is: a sequence INSIDE a byte string, reached by the .cborseq
+      control operator with an ARRAY as the controller type (RFC 8610 §3.8.4).
+      my-foo and my-bar are never defined in this document, so the rule cannot be
+      instantiated as printed. It is carried as printed, unresolved.
+
+  - id: 'rfc-8742#V-0002'
+    origin: 'source'
+    locator: '§4.1'
+    source_lines: "206-209"
+    kind: 'cddl'
+    cddl: |
+      ; This defines an array, the elements of which are to be used
+      ; in a CBOR Sequence:
+      my-sequence = [* my-element]
+      my-element = my-foo / my-bar
+    matches: 'OURS: as CDDL, a CBOR ARRAY. As the document intends it, a CBOR Sequence. The two are different byte strings and no tool can tell which was meant.'
+    expect: 'valid'
+    instance: null
+    notes: >-
+      THE COMMENT IS PART OF THE FIXTURE, and it is the whole point: §4.1 says
+      "For now, the suggestion is to use an array for the top-level rule, as is
+      used for the ".cborseq" control operator, and add English text that
+      explains that the specification is really about a CBOR Sequence with the
+      elements of the array:" -- quoted in full rather than elided, because the
+      middle clause is what ties it to V-0001. So the two source comment lines ARE the
+      specification of the container, and they have no machine meaning. A
+      validator handed a real multi-element file and this rule rejects the file.
+      Compare rfc-8742#D-0002 against rfc-8742#D-0003: the rule as written
+      matches D-0003 and not D-0002, and the document means D-0002.
+
+  - id: 'rfc-8742#V-0003'
+    origin: 'source'
+    locator: '§4.3'
+    source_lines: "245-249"
+    kind: 'cddl'
+    cddl: |
+      ; This defines an array of CBOR byte strings, the elements of which
+      ; are to be used in a CBOR Sequence:
+      my-sequence = [* my-element]
+      my-element = bytes .cbor my-element-structure
+      my-element-structure = my-foo / my-bar
+    matches: 'each element is a byte string whose content is a well-formed encoded CBOR data item matching my-element-structure.'
+    expect: 'valid'
+    instance: null
+    notes: >-
+      Same top-level fiction as V-0002, with the skipping optimisation applied.
+      NOTE THE RULE-NAME COLLISION WITH V-0002: both define my-sequence, and
+      DIFFERENTLY. schema/cddl-fragments.cddl says not to concatenate the
+      regions for exactly this reason. Instantiated at rfc-8742#D-0008.
+
+  - id: 'rfc-8742#V-0004'
+    origin: 'source'
+    locator: '§4.2'
+    source_lines: "229-229"
+    kind: 'diagnostic-notation'
+    diagnostic: '[1, 2, 3]'
+    matches: 'OURS: a single CBOR data item, an array of three unsigned integers. 4 bytes; see rfc-8742#D-0003.'
+    expect: 'valid'
+    notes: >-
+      The source prints this as the FIRST of "these two examples" and calls it
+      the recommended form: "In a similar spirit to the recommendation for CDDL
+      above, this specification recommends enclosing the CBOR data items in an
+      array." It is diagnostic notation for one array, not for a sequence.
+
+  - id: 'rfc-8742#V-0005'
+    origin: 'source'
+    locator: '§4.2'
+    source_lines: "231-231"
+    kind: 'diagnostic-notation'
+    diagnostic: '1, 2, 3'
+    matches: 'OURS: a CBOR Sequence of three unsigned integers. 3 bytes; see rfc-8742#D-0002.'
+    expect: 'valid'
+    notes: >-
+      The bracket-free form, permitted only "In a more informal setting, where
+      the boundaries within which the notation is used are obvious". The
+      document then concedes the gap this leaves: "Note that it is somewhat
+      difficult to discuss zero-length CBOR Sequences in the latter form."
+      (rfc-8742#R-0036) -- the empty sequence has no notation in either form,
+      which is why rfc-8742#D-0001 exists and is ours. RFC 9277 §2.3.1 uses
+      exactly this bracket-free form for its own worked example, with a comment
+      line standing in for the brackets.
+
+  # ---------------------------------------------- DERIVED -- OURS, not the
+  # document's. Each `observed` line is what the checker actually returned.
+  - id: 'rfc-8742#D-0001'
+    origin: 'ours (DERIVED)'
+    derived: true
+    bears_on: ['rfc-8742#R-0009', 'rfc-8742#R-0018', 'rfc-8742#R-0036']
+    kind: 'bytes'
+    hex: ''
+    length_bytes: 0
+    expect: 'valid'
+    observed: 'decodes to 0 items'
+    notes: >-
+      THE EMPTY CBOR SEQUENCE. Case one of §2's definition, and it has no
+      diagnostic notation in either of §4.2's forms. It is indistinguishable
+      from a file never written, a file fully truncated and a file whose writer
+      crashed before the first flush. A valid empty log.
+
+  - id: 'rfc-8742#D-0002'
+    origin: 'ours (DERIVED)'
+    derived: true
+    bears_on: ['rfc-8742#R-0011', 'rfc-8742#R-0015']
+    kind: 'bytes'
+    hex: '010203'
+    length_bytes: 3
+    expect: 'valid'
+    observed: 'decodes to 3 items: [1, 2, 3]'
+    renders_vector: 'rfc-8742#V-0005'
+    notes: 'The byte-level reading of the source''s bracket-free example. Three one-byte elements, nothing between them, nothing around them.'
+
+  - id: 'rfc-8742#D-0003'
+    origin: 'ours (DERIVED)'
+    derived: true
+    bears_on: ['rfc-8742#R-0014']
+    kind: 'bytes'
+    hex: '83010203'
+    length_bytes: 4
+    expect: 'valid'
+    observed: 'decodes to 1 item: [[1, 2, 3]] -- one array of three'
+    renders_vector: 'rfc-8742#V-0004'
+    notes: >-
+      THE WHOLE COST OF §2's OWN ALTERNATIVE, IN ONE BYTE. 0x83 is a
+      definite-length array head stating n = 3. It is self-delimiting, it uses
+      NO TAG, and it is therefore exactly as admissible under a no-IANA-tags
+      rule as D-0002 is. Head width: 1 byte for n <= 23, 2 for n <= 255, 3 for
+      n <= 65535, 5 for n <= 2**32-1 (computed at this pass from RFC 8949 §3).
+      This vector and D-0002 are the DEC-002 container question reduced to four
+      bytes against three.
+
+  - id: 'rfc-8742#D-0004'
+    origin: 'ours (DERIVED)'
+    derived: true
+    bears_on: ['rfc-8742#R-0024', 'rfc-8742#R-0013']
+    kind: 'bytes'
+    hex: '0102'
+    length_bytes: 2
+    expect: 'valid'
+    observed: 'decodes to 2 items: [1, 2] -- NO ERROR'
+    notes: >-
+      THE CENTRAL NEGATIVE FIXTURE OF THIS RECORD. D-0002 with its last element
+      removed. It is a perfectly valid CBOR Sequence and no decoder can tell it
+      from a complete two-element log. "There is no end-of-sequence indicator."
+      (rfc-8742#R-0013); the format "cannot detect entirely missing CBOR data
+      items at the end" (rfc-8742#R-0024). TRUNCATING AN APPEND-ONLY LOG AT AN
+      ITEM BOUNDARY IS IN SPEC AND UNDETECTABLE.
+
+  - id: 'rfc-8742#D-0005'
+    origin: 'ours (DERIVED)'
+    derived: true
+    bears_on: ['rfc-8742#R-0009', 'rfc-8742#R-0024']
+    kind: 'bytes'
+    hex: ''
+    length_bytes: 0
+    expect: 'valid'
+    observed: 'decodes to 0 items -- byte-identical to D-0001'
+    notes: >-
+      D-0002 truncated to nothing. Deliberately a duplicate of D-0001's bytes,
+      because THAT IS THE FINDING: the empty log and the fully destroyed log are
+      the same artifact. A test suite should assert that they cannot be told
+      apart, not that they can.
+
+  - id: 'rfc-8742#D-0006'
+    origin: 'ours (DERIVED)'
+    derived: true
+    bears_on: ['rfc-8742#R-0014', 'rfc-8742#R-0024']
+    kind: 'bytes'
+    hex: '830102'
+    length_bytes: 3
+    expect: 'invalid'
+    observed: 'MALFORMED: input ends before the initial byte at offset 3'
+    notes: >-
+      THE CONTRAST THAT DECIDES THE CONTAINER QUESTION. D-0003 with its last
+      element removed. The array head promised three elements and two arrived,
+      so the truncation is DETECTED -- by exactly the mechanism §2 says a
+      sequence lacks. Put beside D-0004: the same deletion is silent in a
+      sequence and loud in an array, and the difference is one byte of head.
+      §2's own parenthetical already recommends the array
+      (rfc-8742#R-0014); this vector is what that recommendation buys.
+
+  - id: 'rfc-8742#D-0007'
+    origin: 'ours (DERIVED)'
+    derived: true
+    bears_on: ['rfc-8742#R-0021', 'rfc-8742#R-0015']
+    kind: 'bytes'
+    hex: '011f03'
+    length_bytes: 3
+    expect: 'invalid'
+    observed: 'MALFORMED: additional information 31 is not well formed for major type 0 (at offset 1)'
+    notes: >-
+      ONE CORRUPT ENTRY COSTS THE TAIL. The first element (1) decodes; the
+      second byte 0x1f is major type 0 with additional information 31, which is
+      not well formed; and the third element is then unreachable, because "if
+      any data item in the sequence is not well formed, it is not possible to
+      reliably decode the rest of the sequence." (rfc-8742#R-0021) There is no
+      marker to resynchronise on (rfc-8742#R-0015). A JSON Text Sequence
+      (RFC 7464), which does use a marker, loses one record here.
+
+  - id: 'rfc-8742#D-0008'
+    origin: 'ours (DERIVED)'
+    derived: true
+    bears_on: ['rfc-8742#R-0038']
+    kind: 'bytes'
+    hex: '410141024103'
+    length_bytes: 6
+    expect: 'valid'
+    observed: "decodes to 3 items: [b'\\x01', b'\\x02', b'\\x03']"
+    instantiates_vector: 'rfc-8742#V-0003'
+    notes: >-
+      §4.3's byte-string wrapper applied to D-0002. 0x41 is a byte-string head
+      of length 1. Each element is now skippable without decoding its content.
+      COST: 6 bytes against 3 -- but that 100% figure is an artefact of
+      one-byte elements. The head is 1 byte for a payload under 24 bytes, 2
+      under 256, 3 under 65536, 5 under 2**32, so for a 100-byte statement it is
+      2 bytes on 102, about 2%.
+
+  - id: 'rfc-8742#D-0009'
+    origin: 'ours (DERIVED)'
+    derived: true
+    bears_on: ['rfc-8742#R-0039']
+    kind: 'bytes'
+    hex: '4101411f4103'
+    length_bytes: 6
+    expect: 'valid as a sequence of byte strings; the middle element''s CONTENT is malformed'
+    observed: "decodes to 3 items: [b'\\x01', b'\\x1f', b'\\x03'] -- and the middle content 0x1f alone is MALFORMED"
+    notes: >-
+      THE MITIGATION, DEMONSTRATED. The same corruption as D-0007, inside §4.3's
+      wrapper. The sequence of byte strings is well formed, so all three
+      elements are recovered as byte strings and only the middle one fails
+      `bytes .cbor`. That is exactly the document's claim and exactly its limit:
+      "Within limits, this may also enable recovering from elements that
+      internally are not well formed; the limitation is that the sequence of
+      byte strings does need to be well formed as such." (rfc-8742#R-0039) The
+      document presents the wrapper as a PERFORMANCE optimisation for skipping
+      and fan-out; this vector is the DURABILITY argument it does not make.
+
+  - id: 'rfc-8742#D-0010'
+    origin: 'ours (DERIVED)'
+    derived: true
+    bears_on: ['rfc-8742#R-0039', 'rfc-8742#R-0021']
+    kind: 'bytes'
+    hex: '41015a'
+    length_bytes: 3
+    expect: 'invalid'
+    observed: 'MALFORMED: truncated argument: head wants 4 more bytes, 0 available'
+    notes: >-
+      THE LIMIT OF THE LIMIT. A corrupt or truncated byte-string HEAD still
+      strands the tail, because the length that makes skipping possible is
+      itself in the bytes being skipped. 0x5a is a byte-string head with a
+      4-byte length and the length is absent. So §4.3 moves the failure
+      boundary in one level and does not remove it.
+
+  - id: 'rfc-8742#D-0011'
+    origin: 'ours (DERIVED)'
+    derived: true
+    bears_on: ['rfc-8742#R-0012']
+    kind: 'bytes'
+    hex: '010203040506'
+    length_bytes: 6
+    expect: 'valid'
+    observed: 'decodes to 6 items: [1, 2, 3, 4, 5, 6]'
+    notes: >-
+      `cat a.seq b.seq > c.seq`, in bytes. "(Consequently, concatenating zero or
+      more CBOR Sequences also results in a CBOR Sequence.)" (rfc-8742#R-0012)
+      It is in spec and it is the whole reason to pick a sequence over an array.
+      CROSS-RECORD: RFC 9277 §2.3's Labeled CBOR Sequence puts a 12-byte label
+      at the front of a file, so this operation on two LABELLED files yields a
+      label in the middle -- which RFC 9277 Appendix A.2 says "care must be
+      taken" over and leaves to each protocol. Both documents are right: this
+      one is about well-formedness, that one about interpretation. The derived
+      fixture for that case is records/ietf/rfc-9277/distilled/examples/
+      vectors.yaml rfc-9277#D-0005.
+
+counts:
+  vectors_total: 16
+  from_the_source: 5
+  derived_ours: 11
+  cddl_fragments_in_the_source: 3
+  instances_in_the_source: 2
+  hex_octets_in_the_source: 0
+  derived_fixtures_executed: 11
+  derived_negatives: 4          # D-0006, D-0007, D-0010, and D-0005 as an identity
