@@ -38,8 +38,10 @@ and 9 now carry "(Deprecated by RFC 9338)" (§5.2).
 
 Its normative surface is two sentences: §4's "The narrowed deterministic
 encoding rules MUST be used to ensure that all implementations generate the
-same byte string for the 'to be signed' value", and §6's "To provide 128-bit
-security against collision attacks, the tag length MUST be at least 256 bits."
+same byte string for the "to be signed" value." — the inner quotation
+marks are the source's own and are kept rather than re-punctuated — and §6's
+"To provide 128-bit security against collision attacks, the tag length MUST
+be at least 256 bits."
 Everything about migrating off the broken mechanism is in **lowercase** prose.
 
 ## Applicability
@@ -95,7 +97,7 @@ Combined with §1's instruction that new implementations keep *verifying* label
 7, a verifier that accepts both accepts the same bytes under two names.
 
 **And `sign_protected` is ambiguous exactly where it matters.** §3.3 defines
-`body_protected` as "the serialized protected attributes from **the target
+`body_protected` as "The serialized protected attributes from **the target
 structure**" and `sign_protected` as those "from **the signer structure**",
 with the signing process taking "the countersignature target structure … [and]
 the signer information (COSE_Signature)" as separate inputs. When the target is
@@ -115,8 +117,10 @@ over Alice's `COSE_Signature` verifies unchanged as one over Bob's.**
 registry action and replaces the algorithm — and it is not a document-line
 supersession.** The facts: §1, the WG "decided to remove all of the
 countersignature text from [RFC9052], which obsoletes [RFC8152]"; §5.2, IANA
-"has modified the existing 'Description' field for 'counter signature' (7) and
-'CounterSignature0' (9) to include the words '(Deprecated by RFC 9338)'"; §1,
+"has modified the existing "Description" field for "counter signature" (7)
+and "CounterSignature0" (9) to include the words "(Deprecated by RFC 9338)"."
+(the inner quotation marks are the source's own, kept rather than
+re-punctuated); §1,
 migration 7 → 11 and 9 → 12 is "encouraged". But every migration obligation is
 **lowercase** in a document that invokes BCP 14 in §1.1: verification of
 `CounterSignature` "must be supported by new implementations", of
@@ -138,13 +142,16 @@ mechanism-level supersession is real and is recorded instead as
 decides mechanism-scoped supersession deserves its own relation; it currently
 has none.
 
-**Usable as a transparency or witness co-signature? For exactly three targets,
-and the live open question is one of the five it misses.**
+**Usable as a transparency or witness co-signature? `other_fields` reaches
+exactly three targets and binds a *signature* for exactly one, and the live
+open question is one of the five it misses.**
 `records/ietf/rfc-9052/distilled/design-notes.md` §6 already concludes that
 countersignatures are wrong for `Endorse` and right for "a witness or receipt
 over one exported statement … because `other_fields` binds the target's
-signature bytes". **That verdict holds — and only for `COSE_Sign1`, `COSE_Mac`
-and `COSE_Mac0`.** The same file's open question 7 asks whether the threshold
+signature bytes". **That verdict holds for `COSE_Sign1` and for nothing
+else**: `COSE_Mac` and `COSE_Mac0` also get `other_fields`, but what it carries
+for them is a **MAC tag**, not a signature — `distilled/design-notes.md`
+§3. The same file's open question 7 asks whether the threshold
 export extends the target from `COSE_Sign1` to `COSE_Sign`; the table above is
 the price. A countersignature over a `COSE_Sign` binds **no signature at
 all** — not one of the *n* `COSE_Signature` entries — so a witness receipt over

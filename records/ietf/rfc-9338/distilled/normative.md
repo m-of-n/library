@@ -856,7 +856,11 @@ countersignature algorithm.
 named external tool required to turn them into bytes, and an XPath promise for
 extracting them. No key material is printed anywhere in the document, so no
 signature in Appendix A can be *verified* from this document alone;
-`examples/README.md` records what was reproduced instead.
+`examples/README.md` records what was reproduced instead. The region below
+**also carries Appendix A's own terminology list** (lines 619-635, eight
+acronym expansions), which the per-example preambles in
+`requirements.yaml` R-0135-R-0140 use without expanding: added by the verify
+pass, which found it in no artifact.
 
 ```
    This appendix includes a set of examples that show the different
@@ -881,9 +885,27 @@ signature in Appendix A can be *verified* from this document alone;
    is using, it may be necessary to deal with &gt; as an entity.)
 
    //sourcecode[@type='cbor-diag']/text()
+
+   This appendix uses the following terms:
+
+   AES-GCM:  AES Galois/Counter Mode
+
+   CEK:  content-encryption key
+
+   ECDH:  Elliptic Curve Diffie-Hellman
+
+   ECDH-ES:  Elliptic Curve Diffie-Hellman Ephemeral Static
+
+   ECDSA:  Elliptic Curve Digital Signature Algorithm
+
+   EdDSA:  Edwards-curve Digital Signature Algorithm
+
+   HKDF:  HMAC-based Key Derivation Function
+
+   HMAC:  Hashed Message Authentication Code
 ```
 
-*Source `.cache/rfc-9338.txt` lines 596-617 · `sha256:c67b98dd18386fa6e42bc26610703e8228ac8757fe363d9257a8152cef8a83c8`*
+*Source `.cache/rfc-9338.txt` lines 596-635 · `sha256:62f5c452aa9d9a83ca7779eb455cb0291100c52d7a76a9034a4f1508c36c9b35`*
 
 
 **The six examples themselves are reproduced as fixtures, not quoted here** —
@@ -904,6 +926,12 @@ instead.
 
 Everything else in §1-§6 and Appendix A's lead-in that carries force,
 definition, structure, registry content or a stated measurement has an entry.
-The reverse direction — entries whose statement is *not* in this file — is
-empty by construction: every `text` in `requirements.yaml` is a span of a
-region reproduced above.
+
+**The reverse direction is NOT empty, and an earlier draft of this paragraph
+said it was.** It claimed every `text` in `requirements.yaml` is a span of a
+region reproduced above. Measured: **134 of 140 are; six are not.**
+`R-0135`-`R-0140` quote the six per-example preambles of Appendix A
+(lines 639-648, 685-693, 726-736, 784-792, 820-828, 866-874), which lie
+outside this file's declared scope of §1-§6 plus Appendix A's lead-in. They are
+carried verbatim in `requirements.yaml` with their line ranges, and their
+stated sizes are measured in `examples/vectors.yaml`.
