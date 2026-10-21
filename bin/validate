@@ -9,6 +9,7 @@ import pathlib, re, sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from _yaml import parse as miniyaml
+import _record_yaml
 import _bcp14
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -127,6 +128,39 @@ ID_DEF = re.compile(r'^\s*-?\s*id:\s*["\']?([a-z0-9][a-z0-9.\-]*)#((?:R|V|G|N)-[
 # draft-mcnally-deterministic-cbor's own paragraph warning about that very wrap.
 ID_REF = re.compile(r'(?<![\w.\-…])([a-z0-9][a-z0-9.\-]*?)#((?:R|V|G|N)-[0-9]+)\b')
 ID_FILES = {".yaml", ".md", ".txt", ".cddl", ".abnf", ".json"}
+
+
+def check_artifact_parses(recdir, where, warns):
+    """Warn where a distilled/ YAML artifact cannot be read by both readers.
+
+    bin/validate checked only that an artifact's PATH EXISTS, so rfc-8392
+    shipped a protocol model and a state machine that bin/_record_yaml.py —
+    the reader bin/ingest, bin/fetch-source, bin/_record_html and
+    bin/check-locators all import — could not parse at all, and nothing said
+    so (library#39). An artifact no reader can read is not an artifact.
+
+    A warning rather than an error: 19 of 308 artifacts in the library are in
+    this state already, several in records at profile: full, so erroring would
+    fail the build on history instead of on new drift. Library#20 tracks the
+    wider divergence between the two readers.
+    """
+    d = recdir / "distilled"
+    if not d.is_dir():
+        return
+    for f in sorted(x for x in d.rglob("*.yaml") if x.is_file()):
+        rel = f.relative_to(recdir)
+        try:
+            text = f.read_text(errors="ignore")
+        except OSError:
+            continue
+        for name, read in (("bin/_yaml.py", lambda: miniyaml(text)),
+                           ("bin/_record_yaml.py", lambda: _record_yaml.load_yaml(f))):
+            try:
+                read()
+            except Exception as e:                       # noqa: BLE001
+                warns.append(f"{where}: {rel} cannot be parsed by {name} "
+                             f"({type(e).__name__}) — an artifact no reader "
+                             f"can read is not an artifact")
 
 
 def check_id_collisions(recdir, rid, where, warns):
@@ -345,6 +379,7 @@ def main():
         # the moment a schema/ directory exists, not when the record finishes.
         check_derived_naming(rec.parent, where, errs, warns)
         check_id_collisions(rec.parent, rid, where, warns)
+        check_artifact_parses(rec.parent, where, warns)
         if (rec.parent / "distilled.md").exists():
             errs.append(f"{where}: distilled.md is superseded by distilled/ (schema v5)")
         # A summary must not declare the absence of a distilled/ the record

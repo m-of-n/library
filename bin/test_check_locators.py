@@ -52,6 +52,22 @@ Abstract
 3.  Security Considerations
 
    The repeated sentence appears here.
+
+Appendix A.  Examples
+
+   Front matter belonging to the appendix itself.
+
+A.1.  First Example
+
+   The first example paragraph says this.
+
+A.2.  Second Example
+
+   The second example paragraph says that.
+
+B.  Not an introduced appendix letter
+
+   This paragraph is not reachable as Appendix B.
 """
 
 RECORD = """schema: "library-record/v1"
@@ -152,6 +168,38 @@ CASES = [
         [("R-0001", "§1", "introduction says something unremarkable about the "
                           "format")],
         0, 0,
+    ),
+    # Sub-appendix headings. An RFC .txt spells out "Appendix A.  Examples"
+    # and then prints every sub-appendix BARE — "A.1.  First Example" — so
+    # matching only the spelled-out form left 83 locators in the library
+    # silently unchecked, found by rfc-8392's verify pass (library#39).
+    (
+        "a bare sub-appendix heading is a section",
+        [("R-0001", "Appendix A.1", "The first example paragraph says this")],
+        0, 0,
+    ),
+    (
+        "a text in the wrong sub-appendix is MISFILED",
+        [("R-0001", "Appendix A.1", "The second example paragraph says that")],
+        1, 0,
+    ),
+    (
+        "the spelled-out appendix contains its bare sub-appendices",
+        [("R-0001", "Appendix A", "The first example paragraph says this")],
+        0, 0,
+    ),
+    (
+        "appendix front matter is not inside its own sub-appendix",
+        [("R-0001", "Appendix A.1", "Front matter belonging to the appendix")],
+        1, 0,
+    ),
+    (
+        # The guard that stops an author line or a stray enumerated paragraph
+        # becoming a section: the letter must be one an "Appendix X." heading
+        # introduced, so "B.  Not an introduced appendix letter" is not one.
+        "a letter no Appendix heading introduced is not a section",
+        [("R-0001", "Appendix B", "This paragraph is not reachable")],
+        0, 1,
     ),
     (
         "several entries are counted independently",

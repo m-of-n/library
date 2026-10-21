@@ -41,6 +41,13 @@ CACHE = ROOT / ".cache"
 # one space is tolerated because some renderings use it.
 NUMBERED = re.compile(r"^(\d+(?:\.\d+)*)\.\s\s?(\S.*)$")
 APPENDIX = re.compile(r"^Appendix\s+([A-Z](?:\.\d+)*)\.\s\s?(\S.*)$")
+# An RFC .txt spells the first appendix heading out — "Appendix A.  Examples" —
+# and then prints every SUB-appendix bare: "A.2.1.  128-Bit Symmetric Key".
+# Matching only the spelled-out form left every sub-appendix locator in the
+# library unchecked, which the rfc-8392 verify pass caught (library#39). The
+# letter must be one an "Appendix X." heading already introduced, and at least
+# one ".<digit>" is required, so an author line like "A.  Author" cannot match.
+SUBAPPENDIX = re.compile(r"^([A-Z](?:\.\d+)+)\.\s\s?(\S.*)$")
 
 # A locator's leading section reference: §3, §3.1, Appendix B, Appendix B.2.
 LOC_SECTION = re.compile(r"^\s*(?:§\s*(\d+(?:\.\d+)*)|Appendix\s+([A-Z](?:\.\d+)*))")
@@ -70,6 +77,9 @@ def section_spans(src_lines):
     A section's body runs to the next heading that is not one of its
     descendants, so §2's span covers §2.1 while §2.1's stops at §2.2.
     """
+    letters = {m.group(1).split(".")[0]
+               for line in src_lines
+               for m in [APPENDIX.match(line)] if m}
     heads = []
     for i, line in enumerate(src_lines, 1):
         m = NUMBERED.match(line)
@@ -78,6 +88,10 @@ def section_spans(src_lines):
             continue
         m = APPENDIX.match(line)
         if m:
+            heads.append(("Appendix " + m.group(1), i))
+            continue
+        m = SUBAPPENDIX.match(line)
+        if m and m.group(1).split(".")[0] in letters:
             heads.append(("Appendix " + m.group(1), i))
     spans = {}
     for idx, (key, start) in enumerate(heads):
