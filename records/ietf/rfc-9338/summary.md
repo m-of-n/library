@@ -188,35 +188,50 @@ implementation: none in the document.*
 
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, and the `distillation` block |
 | `summary.md` | this document |
+| `distilled/` | the **FX-1 artifact set, pass 1 (extract) complete** — `distilled/README.md` indexes it |
 
-**No `distilled/` yet, and this one has the strongest claim on an extraction of
-the three in this lane.** This PR claims the **summary bar**: the record is
-`summarized`, declares no `distillation` block, and touches no `distilled/`, so
-FX-1 does not fire (`docs/extraction.md`). But the case for extracting it later
-is concrete rather than hypothetical, and naming it is the point of this
-paragraph. **What would trigger an extraction** is `rfc-9052`'s open question 7
-being answered "extend the target to `COSE_Sign`", or any transparency/receipt
-increment: `examples/` would hold all six Appendix A messages as fixtures
-(180, 275, 326, 136, 159 and 159 bytes, each convertible with `diag2cbor.rb`),
-`schema/` would hold the four CDDL fragments plus a `*.derived.cddl` with
-erratum 7338 applied, `messages.yaml` would carry the coverage table above as
-eight rows with their `other_fields` and `context` values, and
-`requirements.yaml` would have to record that only **two** BCP 14 statements
-exist and that the migration contract is lowercase. That is an issue worth
-filing against the receipt increment; none owns it today.
+**The extraction has happened.** `record.yaml` declares `standard: FX-1` and
+**no `profile`**: pass 1 (extract) is complete, every artifact in FX-1's set is
+present with **no `not_applicable` declaration**, and passes 2 (verify) and 3
+(cross-check) have not run. Read `distilled/README.md` first; the five results
+it leads with are the ones that change what this record says.
+
+**Three things the extraction changed about the paragraphs above**, recorded
+here so the summary does not read as the last word on them:
+
+1. **The `COSE_Signature` row is contested, not settled.** This summary asserts
+   that §1 and §3 "both cannot hold". The extraction found that
+   `Countersign_structure.payload` has **two available readings**, that the
+   document states neither, and that the better-supported one — three
+   independent supports, including RFC 8152 §4.5's own positional rule — puts
+   the countersigned signature value in that slot, which reconciles §1 with §3.
+   So the contradiction is an **under-specification**, and the
+   Alice/Bob-transferability claim above holds under one reading only. Both were
+   **built**: `distilled/examples/vectors.yaml` V-0013, V-0014 and `collisions`.
+   `distilled/design-notes.md` §3.4.
+2. **What survives unconditionally is the `COSE_Sign` row**, which is the one
+   that bears on `rfc-9052`'s open question 7: no reading of `payload` reaches
+   the `signatures` array, so a countersignature over a `COSE_Sign` binds no
+   signature at all. `distilled/design-notes.md` §9.
+3. **A state machine *is* owed, and is small.** This summary says none would be.
+   §3.3's finalization precondition is one guard, but §3.1's recursion is an
+   **unbounded self-loop with no termination rule**, label 11's one-or-more value
+   type is a second, and the label 7→11 migration is a lifecycle with **no
+   terminal state**. `distilled/state-machine.yaml` models exactly that and
+   gives the near-zero state-vocabulary counts beside it.
+
+**A fourth finding is new and not in the paragraphs above at all: Appendix
+A.6.1's stated size is wrong by 20 bytes** — *"The size of the binary file is
+159 bytes"* against an encoded 139 — and no erratum covers it.
+`distilled/examples/README.md`.
 
 **No verbatim normative text here.** Under FX-1 that belongs in
-`distilled/normative.md` with its locator; in a summary the rule is to cite the
-§ and let the reader open the source, so the fragments quoted above are short
-and locator-bearing by design.
-
-**No `state-machine` would be owed even then.** A countersignature has no
-lifecycle: §3.3's only ordering constraint is that "The target structure of the
-countersignature needs to have all of its cryptographic functions finalized
-before computing the signature", which is a precondition on one operation, not
-a state.
+`distilled/normative.md` with its locator, and now does: 38 regions, each an
+exact run of source lines with its own digest. In a summary the rule is to cite
+the § and let the reader open the source, so the fragments quoted above are
+short and locator-bearing by design.
 
 ## Limits
 

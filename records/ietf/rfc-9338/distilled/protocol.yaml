@@ -1,0 +1,341 @@
+record: rfc-9338
+reviewed_by: ""
+source_version: "RFC 9338 (December 2022), Standards Track, STD 96, Updates: 9052"
+source_digest: "3fd3a4b1cb4060070ffcf6104de0c12c6c5bed6cf2329d9019a16f7717365dde"
+source_lines_total: 921
+applicability: "APPLICABLE, as two local procedures and no exchange - and the boundary is measured"
+
+note: >-
+  WHY THIS FILE IS NOT A not_applicable DECLARATION. section 3.3 prints two
+  NUMBERED PROCEDURES - four steps to compute a countersignature, three to
+  verify one - each with named inputs, a named intermediate value
+  (ToBeSigned) and a stated precondition on the target. section 3.1 adds a
+  third operation, countersigning a countersignature, and section 3 adds a
+  fourth party-shaped fact: the countersigner "does not need to be related
+  to the producer of what is being countersigned". That is real procedural
+  content with distinguishable roles, and it is modelled below.
+
+  AND THERE IS NO EXCHANGE, WHICH MATTERS AS MUCH AS THE MODEL. Whole-word,
+  case-insensitive, over all 921 source lines: `verifier` 0, `sender`
+  0, `receiver` 0, `exchange` 0, `handshake` 0, `negotiate` 0, `negotiation`
+  0, `response` 0, `server` 0, `client` 0, `retrieve` 0, `intermediary`
+  0, `role` 0, `roles` 0, `flow` 0, `flows` 0, `error` 0, `reject`
+  0, `abort` 0, `failure` 0. `request` occurs ONCE, at line 6, in the RFC
+  masthead ("Request for Comments: 9338"). `fail` occurs ONCE, at line 269,
+  in "the converted structure will fail signature validation". `transport`
+  occurs ONCE, at line 173, about non-terminals "not emitted for
+  transport". `party` twice (line 209 "a second party", line 516 "Any party
+  that knows the message-authentication key") and `parties` twice, both in
+  section 6's shared-key paragraph. `protocol` occurs 5 times and NOT ONCE
+  about this document's own protocol: lines 181-183 define CoAP, line 187
+  says "protocol interactions", line 191 "a protocol-specific identifier",
+  line 565 is the RFC 7252 reference title; `protocols` once, line 308,
+  "protocols such as long- term archiving services".
+
+  SO THE ROLES BELOW ARE POSITIONS IN A COMPUTATION, NOT ENDPOINTS. Three of
+  the four are named by the document; the fourth, the verifier, is NOT - the
+  document says "Call the signature verification algorithm" and then hands
+  the identity and authorisation checks to "the application". That gap is
+  the finding of the error-path section below: there is no failure action
+  anywhere in this document.
+
+  NO TRANSPORT, NO CARRIAGE RULE FOR THE STANDALONE FORM. section 3.1
+  permits a tagged COSE_Countersignature and section 5.1 registers CBOR tag
+  19 with the Semantics "COSE standalone V2 countersignature", and NOTHING
+  says how a standalone countersignature names what it countersigns, how it
+  is fetched, or what a recipient does with one. That is flow 4 below and it
+  is empty by measurement, not by omission in this file.
+
+roles:
+  - name: 'primary producer'
+    named_in_source: true
+    description: >-
+      Whoever built the target structure - signer, MAC-er or encrypter. The
+      document calls it "the producer of what is being countersigned" (section
+      3.1) and "the initial operation" (section 3).
+    constrained_by:
+      - 'rfc-9338#R-0063'
+      - 'rfc-9338#R-0044'
+  - name: 'countersigner'
+    named_in_source: true
+    description: >-
+      Holds K and alg for the countersignature. Section 3.1 states it need not
+      be related to the primary producer, and that key and algorithm
+      identification can travel in the countersignature's own attributes - which
+      is what makes this the nearest COSE primitive to a third-party witness.
+      For the abbreviated form (label 12) there are no such attributes, so the
+      role collapses into the primary producer's context.
+    constrained_by:
+      - 'rfc-9338#R-0063'
+      - 'rfc-9338#R-0078'
+      - 'rfc-9338#R-0076'
+  - name: 'verifier'
+    named_in_source: false
+    description: >-
+      NOT NAMED IN THE DOCUMENT - `verifier` occurs zero times. Section 3.3's
+      three verification steps have no actor; the sentence that follows them
+      hands the identity and authorisation checks to "the application".
+    constrained_by:
+      - 'rfc-9338#R-0109'
+      - 'rfc-9338#R-0110'
+  - name: 'the application'
+    named_in_source: true
+    description: >-
+      Supplies external_aad (section 3.3), supplies the context for an
+      abbreviated countersignature (section 3.2, section 1.3), and performs the
+      key-to-identity pairing and authorisation checks after verification
+      (section 3.3). No failure action is specified for any of them.
+    constrained_by:
+      - 'rfc-9338#R-0095'
+      - 'rfc-9338#R-0110'
+      - 'rfc-9338#R-0025'
+  - name: 'IANA'
+    named_in_source: true
+    description: >-
+      Registers CBOR tag 19 and header parameter labels 11 and 12, and modifies
+      the Description of the existing labels 7 and 9 to add "(Deprecated by RFC
+      9338)". The deprecation of the version 1 mechanism happens here and
+      nowhere else.
+    constrained_by:
+      - 'rfc-9338#R-0117'
+      - 'rfc-9338#R-0120'
+      - 'rfc-9338#R-0123'
+
+flows:
+  - id: 'F-1'
+    name: 'Compute a countersignature'
+    locator: '§3.3'
+    actor: 'countersigner'
+    precondition: >-
+      The target structure of the countersignature needs to have all of its
+      cryptographic functions finalized before computing the signature (section
+      3.3, lowercase). This is the only ordering constraint in the document.
+    steps:
+      - n: 1
+        action: >-
+          Create a Countersign_structure and populate it with the appropriate
+          fields.
+        constrained_by: ['rfc-9338#R-0101']
+      - n: 2
+        action: >-
+          Create the value ToBeSigned by encoding the Countersign_structure to a
+          byte string, using the encoding described in Section 4.
+        constrained_by: ['rfc-9338#R-0102']
+      - n: 3
+        action: >-
+          Call the signature creation algorithm passing in K, alg and ToBeSigned.
+        constrained_by: ['rfc-9338#R-0103']
+      - n: 4
+        action: >-
+          Place the resulting signature value in the correct location:
+          the `signature` field of the COSE_Countersignature for the full form, or
+          the value of the Countersignature0 attribute for the abbreviated form.
+        constrained_by: ['rfc-9338#R-0104']
+    inputs:
+      - 'the countersignature target structure (one of the seven §3.3 names)'
+      - 'the signer information (COSE_Signature) - i.e. the countersigner'
+      - 'the application data (external source) -> external_aad'
+      - 'K and alg for the countersignature'
+    outputs:
+      - 'a COSE_Countersignature placed at label 11, or a bstr placed at label 12, in the TARGET structure\'s unprotected header map'
+    note: >-
+      THE ENCODING STEP CARRIES ONE OF THE DOCUMENT'S TWO MUSTs: step 2's "the
+      encoding described in Section 4" is RFC 8949 section 4.2 as narrowed by
+      RFC 9052 section 9, and it is scoped to the ToBeSigned value only - not to
+      the message that carries the result.
+
+      STEP 1 IS WHERE THE WHOLE AMBIGUITY LIVES. "populate it with the
+      appropriate fields" is all the procedure says; which bytes go in `payload`
+      when the target has no payload field is settled nowhere. See messages.yaml
+      target_coverage and design-notes.md section 3.
+  - id: 'F-2'
+    name: 'Verify a countersignature'
+    locator: '§3.3'
+    actor: 'verifier (unnamed in the source) and the application'
+    steps:
+      - n: 1
+        action: >-
+          Create a Countersign_structure and populate it with the appropriate
+          fields.
+        constrained_by: ['rfc-9338#R-0107']
+      - n: 2
+        action: >-
+          Create the value ToBeSigned by encoding the Countersign_structure to a
+          byte string, using the encoding described in Section 4.
+        constrained_by: ['rfc-9338#R-0108']
+      - n: 3
+        action: >-
+          Call the signature verification algorithm passing in K, alg, ToBeSigned
+          and sig.
+        constrained_by: ['rfc-9338#R-0109']
+      - n: 4
+        action: >-
+          The application performs the appropriate checks to ensure that the key is
+          correctly paired with the signing identity and that the signing identity
+          is authorized before performing actions.
+        constrained_by: ['rfc-9338#R-0110']
+    note: >-
+      STEP 4 IS THE ONLY PLACE THE DOCUMENT LOOKS BEYOND THE MATHEMATICS, and it
+      is lowercase, has no stated failure action, and names no mechanism for
+      binding a key to an identity. For the full form the countersigner's `kid`
+      sits in its UNPROTECTED bucket in all six Appendix A examples, so the
+      identity hint a verifier would start from is itself unauthenticated.
+
+      THE VERIFIER MUST RECONSTRUCT THE TARGET'S bstr-SLOT COUNT TO BUILD STEP
+      1, and the document never tells it to. If the target arrived with a
+      detached payload the count by wire item differs from the count by type
+      slot, and the two give different ToBeSigned values - one with other_fields
+      and one without.
+  - id: 'F-3'
+    name: 'Countersign a countersignature (chaining)'
+    locator: '§3.1'
+    actor: 'a second countersigner'
+    description: >-
+      Section 3.1: a full countersignature has the same structure as a
+      COSE_Signature, so "the countersignature can itself be countersigned", and
+      section 3 adds that full countersignatures "can have protected and
+      unprotected attributes, including chained countersignatures". The chain is
+      F-1 applied with a COSE_Countersignature as the target.
+    constrained_by:
+      - 'rfc-9338#R-0064'
+      - 'rfc-9338#R-0047'
+      - 'rfc-9338#R-0065'
+      - 'rfc-9338#R-0066'
+    note: >-
+      NO DEPTH LIMIT, NO PROCESSING ORDER, NO TERMINATION RULE. And the inner
+      target is a COSE_Signature-shaped structure, so by the derived coverage
+      table the chained countersignature falls in the contested row:
+      other_fields is omitted and the context string is RFC 8152's. A chain of
+      countersignatures is therefore a chain of the WEAKEST case in the
+      document.
+
+      [RFC4998] Evidence Record Syntax is cited as the use case. It is
+      informative.
+  - id: 'F-4'
+    name: 'Carry a standalone (detached) countersignature'
+    locator: '§3.1, §5.1'
+    actor: 'undefined'
+    description: >-
+      Section 3.1 permits the full countersignature structure to be encoded
+      tagged, section 5.1 registers CBOR tag 19 for it, and the registered
+      Semantics are "COSE standalone V2 countersignature". section 1.2's `start`
+      rule makes the tagged form the only top-level transmitted item the
+      document's grammar admits.
+    constrained_by:
+      - 'rfc-9338#R-0067'
+      - 'rfc-9338#R-0068'
+      - 'rfc-9338#R-0118'
+      - 'rfc-9338#R-0019'
+    note: >-
+      THIS FLOW IS EMPTY AND THE EMPTINESS IS MEASURED. Nothing in the document
+      says how a standalone countersignature identifies the structure it
+      countersigns, how the two are associated, who fetches which, or what a
+      recipient does with a tag-19 item it cannot match to a target. A verifier
+      needs body_protected, external_aad, payload and other_fields from the
+      target to rebuild ToBeSigned, and a detached countersignature carries none
+      of them and no pointer to them. design-notes.md section 7 names the cost
+      against DEC-002 option 5: a receipt either lives inside the message it
+      witnesses, or it is an invention.
+  - id: 'F-5'
+    name: 'Migrate from the version 1 countersignature (labels 7, 9)'
+    locator: '§1, §5.2'
+    actor: 'an implementer, an implementation'
+    steps:
+      - n: 1
+        action: >-
+          Emit label 11 in place of label 7, and label 12 in place of label 9 ("will
+          migrate").
+        constrained_by: ['rfc-9338#R-0012']
+      - n: 2
+        action: >-
+          Continue to VERIFY label 7 ("must be supported by new implementations").
+        constrained_by: ['rfc-9338#R-0013']
+      - n: 3
+        action: >-
+          Optionally continue to verify label 9 ("may be supported").
+        constrained_by: ['rfc-9338#R-0014']
+      - n: 4
+        action: >-
+          IANA adds "(Deprecated by RFC 9338)" to the Description of labels 7 and 9.
+        constrained_by: ['rfc-9338#R-0123']
+    note: >-
+      EVERY STEP OF THE ONLY FLOW THAT CHANGES DEPLOYED BEHAVIOUR IS LOWERCASE.
+      "encouraged", "will migrate", "must be supported", "may be supported" -
+      not one is a BCP 14 keyword in a document whose section 1.1 recites them.
+      And there is no step 5: nothing ever stops verifying label 7, so the
+      dual-accept window has no end. state-machine.yaml M-2 models exactly that.
+
+      THE DUAL-ACCEPT WINDOW IS WHERE THE CONTEXT-STRING FINDING BITES. For five
+      of the eight target structures the version 2 algorithm produces the SAME
+      signed bytes as version 1, under the SAME context string
+      "CounterSignature". So an implementation that verifies both labels, as
+      step 2 requires, accepts one byte string under two names and cannot tell
+      which version produced it.
+
+error_paths:
+  - name: 'form conversion'
+    locator: '§3'
+    description: >-
+      Converting between COSE_Countersignature and COSE_Countersignature0 makes
+      the converted structure "fail signature validation", because the `context`
+      text string inside the signed bytes differs. This is the ONLY occurrence
+      of `fail` in the document.
+    constrained_by:
+      - 'rfc-9338#R-0050'
+  - name: 'identity and authorisation checks'
+    locator: '§3.3'
+    description: >-
+      The application performs them after signature verification. No failure
+      action, no error code and no mechanism are specified.
+    constrained_by:
+      - 'rfc-9338#R-0110'
+  - name: 'short authentication tag'
+    locator: '§6'
+    description: >-
+      A countersignature over a COSE_Mac with AES-MAC gives at most 64 bits of
+      integrity protection and over a COSE_Encrypt with AES-CCM-16-64-128 at
+      most 32, against a MUST of at least 256 bits for 128-bit collision
+      security. The ceiling is set by the target and no countersignature
+      algorithm lifts it, so these are configurations in which the MUST cannot
+      be met at all.
+    constrained_by:
+      - 'rfc-9338#R-0128'
+      - 'rfc-9338#R-0129'
+      - 'rfc-9338#R-0130'
+      - 'rfc-9338#R-0127'
+  - name: 'shared MAC or encryption key'
+    locator: '§6'
+    description: >-
+      With more than two parties sharing the key, data origin authentication is
+      not provided at all: any holder can compute a valid tag.
+    constrained_by:
+      - 'rfc-9338#R-0125'
+      - 'rfc-9338#R-0126'
+  - name: 'AEAD key-commitment ambiguity'
+    locator: '§3'
+    description: >-
+      Two different keys can both decrypt successfully with a passing tag check
+      and yield completely different plaintexts, and a countersignature on the
+      encrypted data cannot detect it. An undetectable failure, stated as such.
+    constrained_by:
+      - 'rfc-9338#R-0060'
+      - 'rfc-9338#R-0061'
+  - name: 'unparseable CDDL'
+    locator: '§3.3'
+    description: >-
+      Not a protocol error path but the document's own tooling path: the
+      Countersign_structure fragment does not parse (erratum 7338), in a
+      document whose section 1.2 advertises XPath extraction and says it used
+      "automated validation tools".
+    constrained_by:
+      - 'rfc-9338#R-0100'
+      - 'rfc-9338#R-0021'
+
+not_modelled: >-
+  NO TIMESTAMP FLOW. Section 3 offers the notary analogy and withdraws its
+  essential element: "such a timestamp has not yet been defined for COSE".
+  So there is no flow in which a countersignature establishes WHEN, which is
+  most of what a witness is wanted for.
+
+  NO REVOCATION, NO KEY ROLLOVER, NO REGISTRATION. The vocabulary is absent
+  from the source; see state-machine.yaml for the counts.

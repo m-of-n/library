@@ -1,0 +1,357 @@
+record: rfc-9338
+reviewed_by: ""
+source_version: "RFC 9338 (December 2022), Standards Track, STD 96, Updates: 9052"
+source_digest: "3fd3a4b1cb4060070ffcf6104de0c12c6c5bed6cf2329d9019a16f7717365dde"
+source_lines_total: 921
+
+note: >-
+  FOURTEEN VECTORS: the six messages Appendix A prints, and eight derived
+  to-be-signed structures built from them.
+
+  THE SIX PRINTED MESSAGES ARE CBOR DIAGNOSTIC NOTATION, NOT BYTES. RFC 9338
+  prints no octets for any whole message; Appendix A says the examples are
+  "presented using the extended CBOR diagnostic notation (defined
+  in [RFC8610]) rather than as a binary dump" and points at the external
+  tool diag2cbor.rb. Each fixture under fixtures/ is therefore an EXACT RUN
+  OF SOURCE LINES with its line range and its own sha256, and the hex beside
+  it is DERIVED - produced by encoding that diagnostic notation under RFC
+  8949 shortest-form heads, preserving the written map key order.
+
+  FIVE OF THE SIX STATED SIZES REPRODUCE EXACTLY: 180, 275, 326, 136, 159.
+  THE SIXTH DOES NOT. Appendix A.6.1 states "The size of the binary file is
+  159 bytes" and the message it prints encodes to 139 BYTES. A.6.1 is a
+  COSE_Mac0 and A.5.1 a COSE_Mac with the same protected bucket, the same
+  countersignature, the same payload and a tag of the same width; the whole
+  difference between them is the tag head (two octets for 97, one for 17)
+  plus A.5.1's 19-octet recipients array, which is exactly 20. The two
+  preambles are BYTE-IDENTICAL runs of source text, so the 159 was carried
+  over from A.5.1. No erratum covers it: errata searched 2026-10-20 and EID
+  7338 on section 3.3 is the only one on RFC 9338. Recorded, not repaired.
+
+  THAT FIVE-OF-SIX AGREEMENT IS ALSO THE ENCODER'S VALIDATION.
+  Independently, every `<< { ... } >>` embedded map encodes to exactly the
+  hex the document's own diagnostic comment claims for it - h'a10126',
+  h'A201260300', h'A1013823', h'a10101', h'a1013823', h'a1013818',
+  h'A10101', h'A10127', h'A10105', and the five repeats. THIRTEEN COMMENTS,
+  THIRTEEN MATCHES.
+
+  NO SIGNATURE IN APPENDIX A CAN BE VERIFIED FROM THIS DOCUMENT. RFC 9338
+  prints no key material anywhere - no COSE_Key, no x/y/d, no public key for
+  any of the five `kid` values ('11', 'bilbo.baggins@hobbiton.example',
+  'our-secret', 'meriadoc.brandybuck@buckland.example'). The three ECDSA
+  examples are randomised and so could not be reproduced even with keys; the
+  three EdDSA ones are deterministic and would be reproducible WITH the
+  keys. What is reproduced here is the encoding, the sizes and the
+  to-be-signed structures.
+
+  THE EIGHT DERIVED ToBeSigned VECTORS ARE THE POINT OF THIS DIRECTORY. They
+  are what an implementer actually has to get right and what the document
+  never prints. V-0007 to V-0010 are the four whose target has a `payload`
+  field and so have a unique answer. V-0011 and V-0012 are the two whose
+  target has NO payload field, built under the positional reading only,
+  BECAUSE THE DOCUMENT DOES NOT SAY. V-0013 and V-0014 are the
+  COSE_Signature case built BOTH ways, which is the measurement behind
+  design-notes.md section 3.
+
+  ONE OBSERVATION ABOUT DETERMINISTIC ENCODING. section 4's MUST binds the
+  to-be-signed value, not the message. It is just as well: A.3.1's recipient
+  unprotected map is written {-1: {...}, 4: '...'}, and under RFC 8949
+  section 4.2.1 bytewise key ordering the encoded keys are 0x20 and 0x04, so
+  DETERMINISTIC ORDER WOULD PUT 4 FIRST. The document's own example is not
+  in deterministic key order. Every other map in the six examples is. So
+  these fixtures are countersignature vectors, not deterministic-encoding
+  vectors.
+
+vectors:
+  - id: 'rfc-9338#V-0001'
+    kind: 'printed example (diagnostic notation), encoded by this library'
+    locator: 'Appendix A (§A.1.1)'
+    fixture: 'fixtures/V-0001-sign-countersign-on-body.diag'
+    source_lines: '650-681'
+    source_region_sha256: 'ca24a2f02a10951b4704bcead393b101e6fa4107eac02a09a478da14b55fedbe'
+    target_structure: 'COSE_Sign'
+    cbor_tag: 98
+    algorithms: 'ECDSA with SHA-256, Curve P-256 for both the signature and the countersignature'
+    stated_size_bytes: 180
+    encoded_size_bytes: 180
+    reproduces_stated_size: true
+    encoded_sha256: '7925a9f68566a4b932d09843eca706978ea0bba7a08b14cb4d5b0da75cf148e0'
+    encoded_hex: 'd8628440a10b8343a10126a10442313158405ac05e289d5d0e1b0a7f048a5d2b643813ded50bc9e49220f4f7278f85f19d4a77d655c9d3b51e805a74b099e1e085aacd97fc29d72f887e8802bb6650cceb2c54546869732069732074686520636f6e74656e742e818343a10126a1044231315840e2aeafd40d69d19dfe6e52077c5d7ff4e408282cbefb5d06cbf414af2e19d982ac45ac98b8544c908b4507de1e90b717c3d34816fe926a2b98f53afd2fa0f30a'
+    derived_fields:
+      note: 'the hex and both digests of the ENCODING are derived; the fixture is verbatim'
+    note: >-
+      THE DOCUMENT'S ONLY SIGNED-MESSAGE EXAMPLE, AND IT COUNTERSIGNS A
+      COSE_Sign. Label 11 sits at index 1 of the 98(...) array - the BODY's
+      unprotected map - not inside the COSE_Signature at index 3. section 2's
+      permitted-target list does not include COSE_Sign; section 3.3's does;
+      section 3 assigns COSE_Sign no countersignature semantics at all. And
+      section 3.1 calls this example "a countersignature on a signature", which
+      it is not.
+
+      IT ALSO CANNOT DISAMBIGUATE sign_protected, because the document says "The
+      same header parameters are used for both the signature and the
+      countersignature": the COSE_Signature's protected bucket and the
+      countersigner's are both h'a10126', so the two candidate readings give
+      identical bytes. See V-0013 and V-0014.
+  - id: 'rfc-9338#V-0002'
+    kind: 'printed example (diagnostic notation), encoded by this library'
+    locator: 'Appendix A (§A.2.1)'
+    fixture: 'fixtures/V-0002-sign1-countersign.diag'
+    source_lines: '695-722'
+    source_region_sha256: 'a20647612177fecdbfa1f6c4e19bbeea4775fcf6c5757aa7d24983461bce93dc'
+    target_structure: 'COSE_Sign1'
+    cbor_tag: 18
+    algorithms: 'ECDSA with SHA-256 P-256 signature; ECDSA with SHA-512 P-521 countersignature'
+    stated_size_bytes: 275
+    encoded_size_bytes: 275
+    reproduces_stated_size: true
+    encoded_sha256: '390ecaf8324187b3ad451c140ed202b3bec4b83aa9e7f3ee9a36b427cb9164b6'
+    encoded_hex: 'd28445a201260300a2044231310b8344a1013823a104581e62696c626f2e62616767696e7340686f626269746f6e2e6578616d706c65588401b1291b0e60a79c459a4a9184a0d393e034b34af069a1cca34f5a913affff698002295fa9f8fcbfb6fdff59132fc0c406e98754a98f1fbfe81c03095f481856bc470170227206fa5bee3c0431c56a66824e7aaf692985952e31271434b2ba2e47a335c658b5e995aeb5d63cf2d0ced367d3e4cc8fffd53b70d115baa9e86961fbd1a5cf54546869732069732074686520636f6e74656e742e5840bb587d6b15f47bfd54d2cbfcecef75451e92b08a514bd439fa3aa65c6ac92df0d7328c4a47529b32add3dd1b4e940071c021e9a8f2641f1d8e3b053ddd65ae52'
+    derived_fields:
+      note: 'the hex and both digests of the ENCODING are derived; the fixture is verbatim'
+  - id: 'rfc-9338#V-0003'
+    kind: 'printed example (diagnostic notation), encoded by this library'
+    locator: 'Appendix A (§A.3.1)'
+    fixture: 'fixtures/V-0003-encrypt-countersign.diag'
+    source_lines: '738-780'
+    source_region_sha256: '12d010d98e82b8a8898b350d9491996523ff673b5401806000df306b531c1cec'
+    target_structure: 'COSE_Encrypt'
+    cbor_tag: 96
+    algorithms: 'AES-GCM 128 CEK, ECDH-ES P-256 recipient; ECDSA with SHA-512 P-521 countersignature'
+    stated_size_bytes: 326
+    encoded_size_bytes: 326
+    reproduces_stated_size: true
+    encoded_sha256: '031c77f4df232ff1e11b6e7554aa75cbc90e2d2a319db53b43cf5c941085e0c3'
+    encoded_hex: 'd8608443a10101a2054cc9cf4df2fe6c632bf78864130b8344a1013823a104581e62696c626f2e62616767696e7340686f626269746f6e2e6578616d706c65588400929663c8789bb28177ae28467e66377da12302d7f9594d2999afa5dfa531294f8896f2b6cdf1740014f4c7f1a358e3a6cf57f4ed6fb02fcf8f7aa989f5dfd07f0700a3a7d8f3c604ba70fa9411bd10c2591b483e1d2c31de003183e434d8fba18f17a4c7e3dfa003ac1cf3d30d44d2533c4989d3ac38c38b71481cc3430c9d65e7ddff58247adbe2709ca818fb415f1e5df66f4e1a51053ba6d65a1a0c52a357da7a644b8070a151b0818344a1013818a220a40102200121582098f50a4ff6c05861c8860d13a638ea56c3f5ad7590bbfbf054e1c7b4d91d628022f50458246d65726961646f632e6272616e64796275636b406275636b6c616e642e6578616d706c6540'
+    derived_fields:
+      note: 'the hex and both digests of the ENCODING are derived; the fixture is verbatim'
+    note: >-
+      THE ONE MAP IN APPENDIX A THAT IS NOT IN DETERMINISTIC KEY ORDER: the
+      recipient's unprotected map is written {-1: {ephemeral}, 4: kid}, and RFC
+      8949 section 4.2.1 bytewise ordering on the encoded keys (0x20, 0x04)
+      would put 4 first. Harmless - section 4's MUST binds the to-be-signed
+      value, not the message - and worth knowing before anyone reuses these as
+      encoding vectors.
+  - id: 'rfc-9338#V-0004'
+    kind: 'printed example (diagnostic notation), encoded by this library'
+    locator: 'Appendix A (§A.4.1)'
+    fixture: 'fixtures/V-0004-encrypt0-countersign.diag'
+    source_lines: '794-816'
+    source_region_sha256: '2c6751dd990a8d0d521aa5c2c49aa669cd524bbbda530d5d3d83e1abbe9c1d8a'
+    target_structure: 'COSE_Encrypt0'
+    cbor_tag: 16
+    algorithms: 'AES-GCM 128 CEK; EdDSA Ed25519 countersignature'
+    stated_size_bytes: 136
+    encoded_size_bytes: 136
+    reproduces_stated_size: true
+    encoded_sha256: '8f523312de2651a4ee151ea048355d6ddbddb3bda332273f4b494f4993393eeb'
+    encoded_hex: 'd08343a10101a2054c02d1f7e6f26c43d4868d87ce0b8343a10127a1044231315840e10439154cc75c7a3a5391491f88651e0292fd0fe0e02cf740547eaf6677b4a4040b8eca16db592881262f77b14c1a086c02268b17171ca16be4b8595f8c0a08582460973a94bb2898009ee52ecfd9ab1dd25867374b162e2c03568b41f57c3cc16f9166250a'
+    derived_fields:
+      note: 'the hex and both digests of the ENCODING are derived; the fixture is verbatim'
+  - id: 'rfc-9338#V-0005'
+    kind: 'printed example (diagnostic notation), encoded by this library'
+    locator: 'Appendix A (§A.5.1)'
+    fixture: 'fixtures/V-0005-mac-countersign.diag'
+    source_lines: '830-862'
+    source_region_sha256: '6917337265efda6b4d06528e5ca8542568288c80d5cb2d9db640a40b049288a6'
+    target_structure: 'COSE_Mac'
+    cbor_tag: 97
+    algorithms: 'HMAC/SHA-256 256-bit key; EdDSA Ed25519 countersignature'
+    stated_size_bytes: 159
+    encoded_size_bytes: 159
+    reproduces_stated_size: true
+    encoded_sha256: 'ba09d7e2b7d1825a8732c004a5f60fab72b544814e16f99bb4b5db825823608e'
+    encoded_hex: 'd8618543a10105a10b8343a10127a1044231315840602566f4a311dc860740d2df54d4864555e85bc036ea5a6cf7905b96e499c5f66b01c4997f6a20c37c37543adea1d705347d38a5b13594b29583dd741f45510154546869732069732074686520636f6e74656e742e58202bdcc89f058216b8a208ddc6d8b54aa91f48bd63484986565105c9ad5a6682f6818340a20125044a6f75722d73656372657440'
+    derived_fields:
+      note: 'the hex and both digests of the ENCODING are derived; the fixture is verbatim'
+  - id: 'rfc-9338#V-0006'
+    kind: 'printed example (diagnostic notation), encoded by this library'
+    locator: 'Appendix A (§A.6.1)'
+    fixture: 'fixtures/V-0006-mac0-countersign.diag'
+    source_lines: '876-898'
+    source_region_sha256: '5f95a5459056a24b1e4c0b7079b5c70dbc483459d192e2fb69e33366a043e75a'
+    target_structure: 'COSE_Mac0'
+    cbor_tag: 17
+    algorithms: 'HMAC/SHA-256 256-bit key; EdDSA Ed25519 countersignature'
+    stated_size_bytes: 159
+    encoded_size_bytes: 139
+    reproduces_stated_size: false
+    encoded_sha256: 'f77d073a291812c67387880b8cdd4ce954f0ec16a63cf7a8f5c004e638bf678c'
+    encoded_hex: 'd18443a10105a10b8343a10127a1044231315840968a315df6b4f26362e11f4cfd2f2f4e76232f39657bf1598837ff9332cddd7581e248116549451f81ef823da5974f885b681d3d6e38fc4142d8f8e9e7dc8f0d54546869732069732074686520636f6e74656e742e5820a1a848d3471f9d61ee49018d244c824772f223ad4f935293f1789fc3a08d8c58'
+    derived_fields:
+      note: 'the hex and both digests of the ENCODING are derived; the fixture is verbatim'
+    defect: >-
+      SOURCE DEFECT, NEW. The stated size is 159 bytes and the printed message
+      encodes to 139. The 20-byte difference is exactly the tag head (d861 for
+      97 versus d1 for 17, one octet) plus A.5.1's 19-octet recipients array
+      (818340a20125044a6f75722d73656372657440), which a COSE_Mac0 does not have.
+      A.5.1's and A.6.1's preambles are byte-identical runs of source text, so
+      the number was carried over. Not covered by erratum 7338, the only erratum
+      on this RFC. RECORDED, NOT REPAIRED.
+  - id: 'rfc-9338#V-0007'
+    kind: 'DERIVED Countersign_structure (to-be-signed); not printed in RFC 9338'
+    locator: '§3.3 + Appendix A (§A.1.1)'
+    target_structure: 'COSE_Sign'
+    bstr_type_slots_in_target: 2
+    other_fields: 'OMITTED'
+    context: 'CounterSignature'
+    size_bytes: 45
+    sha256: '51230d47e1b2f52e7388e987a5ed50ec6388575d98352b6966248617d38a0063'
+    hex: '8570436f756e7465725369676e61747572654043a101264054546869732069732074686520636f6e74656e742e'
+    note: >-
+      UNIQUE. COSE_Sign has a payload field, so the two readings of
+      Countersign_structure.payload agree. AND NO SIGNATURE VALUE IS IN IT:
+      COSE_Sign's bstr slots are protected and payload, and `signatures : [+
+      COSE_Signature]` is an array, so it is neither the second bstr slot nor a
+      member of "all bstr fields after the second". This 45-byte array is
+      everything a countersignature over a COSE_Sign attests, and it says
+      nothing about who signed. design-notes.md section 9.
+  - id: 'rfc-9338#V-0008'
+    kind: 'DERIVED Countersign_structure (to-be-signed); not printed in RFC 9338'
+    locator: '§3.3 + Appendix A (§A.2.1)'
+    target_structure: 'COSE_Sign1'
+    bstr_type_slots_in_target: 3
+    other_fields: '[signature]'
+    context: 'CounterSignatureV2'
+    size_bytes: 120
+    sha256: '15b27ddcb8ca5ec8284f7974168285acbb1a96988c68668bea14749d0ddac038'
+    hex: '8672436f756e7465725369676e6174757265563245a20126030044a10138234054546869732069732074686520636f6e74656e742e815840bb587d6b15f47bfd54d2cbfcecef75451e92b08a514bd439fa3aa65c6ac92df0d7328c4a47529b32add3dd1b4e940071c021e9a8f2641f1d8e3b053ddd65ae52'
+    note: >-
+      UNIQUE, AND THE ONLY ONE OF THE EIGHT THAT BINDS A SIGNATURE. The repair
+      working, in 120 bytes: other_fields = [the COSE_Sign1's signature] and the
+      context string is the V2 one. This is the vector a conformance test should
+      start from.
+  - id: 'rfc-9338#V-0009'
+    kind: 'DERIVED Countersign_structure (to-be-signed); not printed in RFC 9338'
+    locator: '§3.3 + Appendix A (§A.5.1)'
+    target_structure: 'COSE_Mac'
+    bstr_type_slots_in_target: 3
+    other_fields: '[tag]'
+    context: 'CounterSignatureV2'
+    size_bytes: 85
+    sha256: '5bf8fb03b3f8b21dde3c73d318c05b5c23304498c5f532645c9b87de6f55c297'
+    hex: '8672436f756e7465725369676e6174757265563243a1010543a101274054546869732069732074686520636f6e74656e742e8158202bdcc89f058216b8a208ddc6d8b54aa91f48bd63484986565105c9ad5a6682f6'
+    note: >-
+      UNIQUE. other_fields carries a MAC TAG, not a signature - section 3's "the
+      payload is included as well as the MAC value". And section 6 caps what it
+      is worth: with AES-MAC at most 64 bits, against a MUST of at least 256.
+  - id: 'rfc-9338#V-0010'
+    kind: 'DERIVED Countersign_structure (to-be-signed); not printed in RFC 9338'
+    locator: '§3.3 + Appendix A (§A.6.1)'
+    target_structure: 'COSE_Mac0'
+    bstr_type_slots_in_target: 3
+    other_fields: '[tag]'
+    context: 'CounterSignatureV2'
+    size_bytes: 85
+    sha256: '8d567a279c8ffc47022351879301a18d2f9f7a84f7e6e2211492a63daed11c6b'
+    hex: '8672436f756e7465725369676e6174757265563243a1010543a101274054546869732069732074686520636f6e74656e742e815820a1a848d3471f9d61ee49018d244c824772f223ad4f935293f1789fc3a08d8c58'
+    note: >-
+      UNIQUE. Identical in shape to V-0009 and 85 bytes like it; only the
+      protected bucket and the tag value differ. Note that the MESSAGE size the
+      document states for A.6.1 is wrong while the to-be-signed structure is
+      perfectly well defined.
+  - id: 'rfc-9338#V-0011'
+    kind: 'DERIVED Countersign_structure (to-be-signed); not printed in RFC 9338'
+    locator: '§3.3 + Appendix A (§A.3.1)'
+    target_structure: 'COSE_Encrypt'
+    bstr_type_slots_in_target: 2
+    other_fields: 'OMITTED'
+    context: 'CounterSignature'
+    size_bytes: 66
+    sha256: 'e74846a48660b3dc8f72a07b2f04945bcbbb9857c2742ca98db783b27f2a92ab'
+    hex: '8570436f756e7465725369676e617475726543a1010144a10138234058247adbe2709ca818fb415f1e5df66f4e1a51053ba6d65a1a0c52a357da7a644b8070a151b0'
+    note: >-
+      NOT UNIQUE - BUILT UNDER THE POSITIONAL READING ONLY. COSE_Encrypt has
+      no `payload` field, and section 3.3 does not say what fills
+      Countersign_structure.payload. This vector puts the CIPHERTEXT there,
+      which is the positional reading and is what section 3's "the existence of
+      the encrypted data is attested to" implies. Under the semantic reading the
+      slot is undefined and the document's own example cannot be reduced to a
+      to-be-signed value at all.
+  - id: 'rfc-9338#V-0012'
+    kind: 'DERIVED Countersign_structure (to-be-signed); not printed in RFC 9338'
+    locator: '§3.3 + Appendix A (§A.4.1)'
+    target_structure: 'COSE_Encrypt0'
+    bstr_type_slots_in_target: 2
+    other_fields: 'OMITTED'
+    context: 'CounterSignature'
+    size_bytes: 65
+    sha256: '5df5fa41fc90a13fe1b0f99ce5565fbe8cb30d5004996afb0c013d137f709b68'
+    hex: '8570436f756e7465725369676e617475726543a1010143a1012740582460973a94bb2898009ee52ecfd9ab1dd25867374b162e2c03568b41f57c3cc16f9166250a'
+    note: >-
+      NOT UNIQUE - same under-specification as V-0011, for COSE_Encrypt0.
+  - id: 'rfc-9338#V-0013'
+    kind: 'DERIVED Countersign_structure (to-be-signed); not printed in RFC 9338'
+    locator: '§3.3 (constructed from Appendix A §A.1.1 components)'
+    target_structure: 'COSE_Signature'
+    bstr_type_slots_in_target: 2
+    other_fields: 'OMITTED'
+    context: 'CounterSignature'
+    size_bytes: 93
+    sha256: 'ab7efd6462c31f975184885130b58a9eaca4459ae1f7e252b08db2ea070103bf'
+    hex: '8570436f756e7465725369676e617475726543a1012643a10126405840e2aeafd40d69d19dfe6e52077c5d7ff4e408282cbefb5d06cbf414af2e19d982ac45ac98b8544c908b4507de1e90b717c3d34816fe926a2b98f53afd2fa0f30a'
+    note: >-
+      THE POSITIONAL READING OF THE CONTESTED CASE, built from A.1.1's own
+      COSE_Signature as if it, rather than the body, were the target. `payload`
+      = the target's second bstr slot = THE SIGNATURE VALUE, so the signature IS
+      covered and section 3's "the normal countersignature semantics are
+      preserved" holds. Note what is still not covered under this reading: the
+      enclosing COSE_Sign's protected bucket (h'' here) and its payload.
+  - id: 'rfc-9338#V-0014'
+    kind: 'DERIVED Countersign_structure (to-be-signed); not printed in RFC 9338'
+    locator: '§3.3 (constructed from Appendix A §A.1.1 components)'
+    target_structure: 'COSE_Signature'
+    bstr_type_slots_in_target: 2
+    other_fields: 'OMITTED'
+    context: 'CounterSignature'
+    size_bytes: 48
+    sha256: '88b49d7260ca695ceab460c7f3464cc5e2de77ee488a72332d022811272fab3c'
+    hex: '8570436f756e7465725369676e617475726543a1012643a101264054546869732069732074686520636f6e74656e742e'
+    note: >-
+      THE SEMANTIC READING OF THE SAME CASE: `payload` = the content. 48 bytes,
+      and THE SIGNATURE VALUE APPEARS NOWHERE - which is what section 1's "there
+      is no cryptographically computed value" says and what section 3 denies.
+      UNDER THIS READING ONLY, TWO SIGNERS COLLIDE: this byte string depends on
+      the COSE_Signature's PROTECTED bucket and not on its unprotected one,
+      and `kid` is unprotected in all six of the document's examples, so two
+      signers over one payload with identical protected buckets produce this
+      same array and a countersignature over one verifies unchanged as a
+      countersignature over the other. Under the positional reading (V-0013)
+      they do not collide. Verified by construction, not asserted: see
+      README.md.
+
+collisions:
+  - name: 'two signers, one payload, identical protected buckets'
+    locator: '§3.3 + Appendix A'
+    result: >-
+      CONSTRUCTED, NOT ASSERTED. Two COSE_Signature entries in one COSE_Sign
+      with the same protected bucket (h'a10126', as A.1.1 uses) differing only
+      in the unprotected `kid`, countersigned by the same countersigner. Under
+      the SEMANTIC reading both Countersign_structures are the byte string of
+      V-0014 and are IDENTICAL, so a countersignature over one verifies
+      unchanged as one over the other. Under the POSITIONAL reading they differ,
+      because each signer's own signature value lands in the `payload` slot.
+      Measured both ways; the document chooses neither reading.
+    identical_under_semantic_reading: true
+    identical_under_positional_reading: false
+    structure_sha256_semantic: '88b49d7260ca695ceab460c7f3464cc5e2de77ee488a72332d022811272fab3c'
+
+not_reproducible: >-
+  NO SIGNATURE VERIFICATION. RFC 9338 prints no key material of any kind, so
+  none of the six examples can be verified from this document. The three
+  ECDSA examples (A.1.1, A.2.1, A.3.1) are randomised and could not be
+  REPRODUCED even with the keys; the three EdDSA ones (A.4.1, A.5.1, A.6.1)
+  are deterministic and would be. A later pass that wants signature
+  verification needs the key set, which lives in RFC 8152's and RFC 9052's
+  appendices and is not this record's to copy.
+
+  NO TAG-19 EXAMPLE. The document registers CBOR tag 19 for a standalone
+  countersignature and prints no example of one, and protocol.yaml flow F-4
+  is empty for the same reason: there is no specified way to associate a
+  standalone countersignature with its target.
+
+  NO ABBREVIATED (LABEL 12) EXAMPLE. All six examples use label 11.
+
+  NO DETACHED-PAYLOAD EXAMPLE, which is the one that would have forced the
+  document to say whether its bstr count is by type slot or by wire
+  item. `detach` and `nil` occur ZERO times in the source.

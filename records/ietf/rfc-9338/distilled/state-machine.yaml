@@ -1,0 +1,266 @@
+record: rfc-9338
+reviewed_by: ""
+source_version: "RFC 9338 (December 2022), Standards Track, STD 96, Updates: 9052"
+source_digest: "3fd3a4b1cb4060070ffcf6104de0c12c6c5bed6cf2329d9019a16f7717365dde"
+source_lines_total: 921
+applicability: "APPLICABLE, and deliberately SMALL - two machines, three states each"
+
+note: >-
+  THE STATE VOCABULARY IS ESSENTIALLY ABSENT AND THE VERDICT IS STILL
+  APPLICABLE. Measured whole-word and case-insensitively over all 921 source
+  lines: `state` 0, `lifecycle` 0, `transition` 0, `transitions` 0, `revoke`
+  0, `revocation` 0, `rotate` 0, `rotation` 0, `expire` 0, `expiry`
+  0, `expiration` 0, `issuance` 0, `enroll` 0, `step` 0, `phase`
+  0, `pending` 0, `ordering` 0. `states` occurs ONCE, at line 921, in
+  "United States of America". `issue` occurs once, at line 118, in "this was
+  not deemed to be an issue". `steps` occurs once, at line 435, in "The
+  steps for verifying a countersignature". `order` twice, at lines 356 and
+  365, in "In order to create a signature" and "The fields of the
+  Countersign_structure, in order, are". `finalized` ONCE, at line 364.
+
+  SO WHY NOT not_applicable? Because that single occurrence of `finalized`
+  is a REAL GUARD on a real transition, and section 3.1's recursion is a
+  REAL SELF-LOOP WITH NO TERMINATION RULE - the same reason rfc-8392's state
+  machine is applicable-and-small rather than absent. An implementer needs
+  the guard, the self-loop and the absence of a bound written down. And
+  there is a second machine the document does not call one: the MIGRATION
+  from labels 7/9 to 11/12, which has an initial state, a dual-accept state,
+  a transition, and NO TERMINAL STATE, because nothing in the document ever
+  stops accepting label 7.
+
+  WHAT IS NOT HERE, MEASURED. No key
+  lifecycle: `rotate`, `rotation`, `revoke`, `revocation`, `expire` are all
+  0 and no key is ever named as an object with a life. No token or
+  credential lifecycle: this document defines no token. No registration
+  lifecycle: section 5's IANA actions are one-time. No validity
+  window: `timestamp` occurs 4 times and all four say there ISN'T one -
+  "such a timestamp has not yet been defined for COSE".
+
+  ONE STATE THIS DOCUMENT CANNOT REACH. A countersignature never becomes
+  INVALID through anything the document models: there is no expiry, no
+  revocation and no time, so once verified a countersignature is verified
+  forever against a key whose status this document cannot speak about.
+
+machines:
+  - id: 'M-1'
+    name: 'Countersignature over one target structure'
+    locator: '§3, §3.1, §3.3'
+    scope: 'one target structure and the countersignatures placed on it'
+    states:
+      - id: 'S-1'
+        name: 'target-unfinalized'
+        description: >-
+          The target structure exists but not all of its cryptographic functions are
+          finalized. Countersigning from here is forbidden by the only ordering
+          constraint in the document.
+        constrained_by:
+          - 'rfc-9338#R-0086'
+      - id: 'S-2'
+        name: 'target-finalized'
+        description: >-
+          Every cryptographic function of the target is finalized. The entry state
+          for F-1. Also the state a target is in when it is transmitted with no
+          countersignature at all - both header parameters are optional in every
+          map.
+        constrained_by:
+          - 'rfc-9338#R-0086'
+          - 'rfc-9338#R-0035'
+      - id: 'S-3'
+        name: 'countersigned'
+        description: >-
+          A COSE_Countersignature sits at label 11, or a bstr at label 12, in the
+          target's UNPROTECTED header map. The target's own signature or tag is
+          unchanged, because the countersignature went into a bucket it does not
+          cover.
+        constrained_by:
+          - 'rfc-9338#R-0033'
+          - 'rfc-9338#R-0081'
+    transitions:
+      - id: 'T-1'
+        from: 'S-1'
+        to: 'S-2'
+        trigger: >-
+          the primary producer finalizes the target's cryptographic functions
+        guard: >-
+          none stated
+        constrained_by:
+          - 'rfc-9338#R-0044'
+        note: >-
+          The document gives this transition no procedure of its own; it belongs to
+          RFC 9052. What RFC 9338 adds is that the countersignature "needs to be
+          treated as a separate operation from the initial operation even if it is
+          applied by the same user".
+      - id: 'T-2'
+        from: 'S-2'
+        to: 'S-3'
+        trigger: >-
+          flow F-1, compute a countersignature (section 3.3, four steps)
+        guard: >-
+          THE DOCUMENT'S ONLY GUARD, and it is lowercase: the target "needs to have
+          all of its cryptographic functions finalized before computing the
+          signature". No failure action is stated for computing one anyway.
+        constrained_by:
+          - 'rfc-9338#R-0086'
+          - 'rfc-9338#R-0101'
+          - 'rfc-9338#R-0104'
+        note: >-
+          The transition's effect on the signed bytes depends on the TARGET, not on
+          this transition: other_fields and the context string are fixed by the
+          target's bstr-slot count. messages.yaml target_coverage.
+      - id: 'T-3'
+        from: 'S-3'
+        to: 'S-3'
+        trigger: >-
+          flow F-3, countersign the countersignature (section 3.1)
+        guard: >-
+          none. NO DEPTH LIMIT, NO PROCESSING ORDER, NO TERMINATION RULE.
+        constrained_by:
+          - 'rfc-9338#R-0064'
+          - 'rfc-9338#R-0047'
+        note: >-
+          A SELF-LOOP WITH NO BOUND, and this is why M-1 is a machine rather than a
+          checklist. The full form only: COSE_Countersignature0 is a bare bstr with
+          no header map to put a label 11 in, so the abbreviated form cannot be
+          chained.
+      - id: 'T-4'
+        from: 'S-3'
+        to: 'S-3'
+        trigger: >-
+          a second independent countersigner adds another label 11 value
+        guard: >-
+          none. The value type is 'COSE_Countersignature / [+
+          COSE_Countersignature]', so one map entry can hold an array of them - but
+          nothing says how a second countersigner converts the single form into the
+          array form, or whether a verifier must accept both.
+        constrained_by:
+          - 'rfc-9338#R-0031'
+          - 'rfc-9338#R-0036'
+        note: >-
+          A SECOND SELF-LOOP, orthogonal to T-3: breadth rather than depth. All six
+          Appendix A examples use the single, non-array form.
+    verification_states:
+      - id: 'V-A'
+        name: 'countersignature-verified'
+        description: >-
+          Signature verification succeeded over the reconstructed ToBeSigned.
+          Reached by flow F-2 steps 1 to 3. What it means depends entirely on the
+          target: for COSE_Sign1 the target's signature value was inside the signed
+          bytes; for COSE_Sign nothing cryptographic was; for COSE_Signature it
+          depends on an unstated reading of `payload`.
+        constrained_by:
+          - 'rfc-9338#R-0109'
+          - 'rfc-9338#R-0054'
+          - 'rfc-9338#R-0097'
+      - id: 'V-B'
+        name: 'application-accepted'
+        description: >-
+          The application has additionally checked that the key is correctly paired
+          with the signing identity and that the signing identity is authorized.
+          There is NO corresponding rejected state in the document: no failure
+          action, no error value and no mechanism are specified,
+          and `reject`, `abort`, `error` and `failure` each occur zero times in the
+          source.
+        constrained_by:
+          - 'rfc-9338#R-0110'
+      - id: 'V-X'
+        name: 'validation-failed (the one named failure)'
+        description: >-
+          The only failure the document names: a countersignature converted between
+          the full and abbreviated forms "will fail signature validation", because
+          the `context` text string inside the signed bytes differs. `fail` occurs
+          exactly once in the source, here.
+        constrained_by:
+          - 'rfc-9338#R-0050'
+  - id: 'M-2'
+    name: 'Migration of an implementation off the version 1 countersignature'
+    locator: '§1, §5.2'
+    scope: 'a deployed implementation, not a message'
+    note: >-
+      THE DOCUMENT DOES NOT CALL THIS A STATE MACHINE AND IT IS ONE. It has an
+      initial state, a transition, a dual-accept state and no terminal state,
+      and EVERY TRANSITION LABEL IN IT IS LOWERCASE in a document that recites
+      BCP 14 in section 1.1. It is modelled here because it is the only thing in
+      RFC 9338 that changes deployed behaviour, and because the missing terminal
+      state is the finding.
+    states:
+      - id: 'M-1a'
+        name: 'v1-only'
+        description: >-
+          Emits and verifies header parameter label 7 (counter signature) and label
+          9 (CounterSignature0), per RFC 8152 section 4.5. Conformant to RFC 8152,
+          which RFC 9338 does not obsolete.
+        constrained_by:
+          - 'rfc-9338#R-0012'
+          - 'rfc-9338#R-0123'
+      - id: 'M-1b'
+        name: 'dual-accept'
+        description: >-
+          Emits labels 11 and 12; still VERIFIES label 7, and may still verify label
+          9. This is where section 1 puts every new implementation.
+        constrained_by:
+          - 'rfc-9338#R-0013'
+          - 'rfc-9338#R-0014'
+      - id: 'M-1c'
+        name: 'v2-only (NOT REACHABLE FROM THIS DOCUMENT)'
+        description: >-
+          Emits and verifies only labels 11 and 12. NO TRANSITION INTO THIS STATE IS
+          DEFINED. Nothing in RFC 9338 ever stops requiring label 7 verification,
+          sets a date, names a condition or deprecates the behaviour - the only
+          deprecation is a Description-field edit on the IANA rows, which changes
+          nothing on the wire.
+        constrained_by:
+          - 'rfc-9338#R-0013'
+          - 'rfc-9338#R-0123'
+    transitions:
+      - id: 'MT-1'
+        from: 'M-1a'
+        to: 'M-1b'
+        trigger: >-
+          publication of RFC 9338: implementers "are encouraged to migrate"; uses of
+          "CounterSignature" "will migrate" to "CounterSignatureV2".
+        guard: >-
+          none. Not a BCP 14 keyword in sight.
+        constrained_by:
+          - 'rfc-9338#R-0011'
+          - 'rfc-9338#R-0012'
+        note: >-
+          For the five target structures whose other_fields is omitted, section 1
+          says the migration is only "to change the value of the header parameter" -
+          the signed bytes are identical, including the context string. So for most
+          targets this transition changes one integer and nothing else.
+      - id: 'MT-2'
+        from: 'M-1b'
+        to: 'M-1c'
+        trigger: >-
+          NONE DEFINED
+        guard: >-
+          NONE DEFINED - this is the finding. There is no condition, date,
+          negotiation or registry action that ever lets an implementation stop
+          verifying label 7.
+        constrained_by:
+          - 'rfc-9338#R-0013'
+        note: >-
+          THE DUAL-ACCEPT WINDOW HAS NO END, and it is where the context-string
+          collision bites: for five of the eight target structures version 1 and
+          version 2 produce the SAME signed bytes under the SAME context string
+          "CounterSignature", so an implementation in M-1b accepts one byte string
+          under two header labels and cannot tell which version produced it.
+
+not_modelled: >-
+  KEY LIFECYCLE: `rotate`,
+  `rotation`, `revoke`, `revocation`, `expire`, `expiry` all 0 occurrences.
+  section 6 says only that implementations need to protect private key
+  material, by reference to RFC 9052.
+
+  TIME: `timestamp` occurs 4 times and every one says there is not one -
+  "such a timestamp has not yet been defined for COSE", "A timestamp, once
+  defined in a future document". So a countersignature has no validity
+  window and no point of existence, which is most of what a witness is
+  wanted for.
+
+  REGISTRY LIFECYCLE: section 5's actions are one-time assignments and one
+  Description edit. Nothing provides for revising them.
+
+  THE STANDALONE (TAG 19) FORM has no lifecycle here because it has no
+  procedure at all - see protocol.yaml flow F-4, which is empty by
+  measurement.
