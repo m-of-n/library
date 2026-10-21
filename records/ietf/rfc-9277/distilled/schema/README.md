@@ -14,8 +14,18 @@ four carry an outer tag at all. So the verbatim captures here are the document's
 snippets, its three registry entries and the TN formula; everything that
 describes an **envelope** is derived and carries `.derived.` in its name.
 
-**Four verbatim files, three derived.** `docs/extraction.md`, *Derived vs
+**Three verbatim files, four derived.** `docs/extraction.md`, *Derived vs
 verbatim*: an unmarked filename asserts the source's own bytes.
+*(`[correction]` 2026-10-21, pass 3: this read "**Four** verbatim files, three
+derived", against its own table below, which marks three and four. Counted from
+the directory: `cddl-snippets.cddl`, `registrations.txt` and `tn-formula.txt`
+carry no infix and a `verbatim` header; `cddl-snippets-dedented.derived.cddl`,
+`envelopes.derived.cddl`, `content-format-tag.derived.yaml` and
+`prefix-spellings.derived.txt` carry `.derived.` and a `derived` header —
+`bin/validate` checks name against header and passes all seven. The same
+reversed figure stood in `../README.md` and `record.yaml`; the likely origin is
+counting the four CDDL **snippets** rather than the files, and `record.yaml`'s
+list of derived files omits the dedented one.)*
 
 | file | claim | what it is |
 |---|---|---|

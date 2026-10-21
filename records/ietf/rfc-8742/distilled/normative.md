@@ -91,7 +91,7 @@ here.**
 - (§1) "CBOR Sequences can be consumed (and produced) incrementally without requiring a streaming CBOR parser that is able to deliver substructures of a data item incrementally (or a streaming encoder able to encode from substructures incrementally)."  *(`rfc-8742#R-0003`)*
 - (§1) "This document defines and registers the "application/cbor-seq" media type in the "Media Types" registry along with a Constrained Application Protocol (CoAP) Content-Format identifier."  *(`rfc-8742#R-0004`)*
 - (§1) "CBOR [RFC7049] defines the "+cbor" structured syntax suffix."  *(`rfc-8742#R-0005`)*
-- (§1) "Media type structured syntax suffixes [RFC6838] were introduced as a way for a media type to signal that it is based on another media type as its foundation."  *(**no id.** `[correction]` 2026-10-20, pass 2: dropped at pass 1, source lines 96–98. It is the sentence that states **what a structured syntax suffix is for**, which is the premise of §3's whole `SHOULD` test and of §6.3's registration, and it is the document's only characterisation of RFC 6838's mechanism — a reference this record classifies as informative-but-used-normatively in §7 defect 5. See `requirements.yaml` `verify_pass`)*
+- (§1) "Media type structured syntax suffixes [RFC6838] were introduced as a way for a media type to signal that it is based on another media type as its foundation."  *(**no id.** `[correction]` 2026-10-20, pass 2: dropped at pass 1, source lines 96–99. It is the sentence that states **what a structured syntax suffix is for**, which is the premise of §3's whole `SHOULD` test and of §6.3's registration, and it is the document's only characterisation of RFC 6838's mechanism — a reference this record classifies as informative-but-used-normatively in §7 defect 5. See `requirements.yaml` `verify_pass`)*
 - (§1) "This document defines and registers the "+cbor-seq" structured syntax suffix in the "Structured Syntax Suffix Registry"."  *(`rfc-8742#R-0006`)*
 
 ### §1.1. Conventions Used in This Document
@@ -116,7 +116,7 @@ cannot report its own completeness (`rfc-8742#R-0009`, `rfc-8742#R-0013`,
 - (§2) "(If one is desired, CBOR encoding an array of the CBOR data model values being encoded, employing either a definite or an indefinite length encoding, as a single CBOR data item may actually be the more appropriate representation.)"  *(`rfc-8742#R-0014`)*
 - (§2) "CBOR Sequences, unlike JSON Text Sequences [RFC7464], do not use a marker between items."  *(`rfc-8742#R-0015`)*
 - (§2) "This is possible because CBOR-encoded data items are self delimiting and the end can always be calculated."  *(`rfc-8742#R-0016`)*
-- (§2) "(Note that, while the early object/array-only form of JSON was self delimiting as well, this stopped being the case when simple values such as single numbers were made valid JSON documents.)"  *(**no id.** `[correction]` 2026-10-20, pass 2: dropped at pass 1, source lines 136–138, and it is the **only sentence in §2 that pass 1 did not extract** — §2 otherwise runs `rfc-8742#R-0008` to `#R-0025` with nothing skipped. It matters beyond completeness: it is the only statement **in either lane record** about the JSON side's self-delimitation, and `design-notes.md` §8 refutes the summary's "a JSON text sequence … has a grammar for the whole file" precisely on the ground that nothing in this library speaks to the JSON side. This sentence does — and it cuts the other way, saying JSON *lost* self-delimitation. It does not rescue the refuted claim, since self-delimitation of items is not a whole-file grammar, but it is the evidence the refutation should have weighed and did not. See `requirements.yaml` `verify_pass`)*
+- (§2) "(Note that, while the early object/array-only form of JSON was self delimiting as well, this stopped being the case when simple values such as single numbers were made valid JSON documents.)"  *(**no id.** `[correction]` 2026-10-20, pass 2: dropped at pass 1, source lines 137–139, and it is the **only sentence in §2 that pass 1 did not extract** — §2 otherwise runs `rfc-8742#R-0008` to `#R-0025` with nothing skipped. It matters beyond completeness: it is the only statement **in either lane record** about the JSON side's self-delimitation, and `design-notes.md` §8 refutes the summary's "a JSON text sequence … has a grammar for the whole file" precisely on the ground that nothing in this library speaks to the JSON side. This sentence does — and it cuts the other way, saying JSON *lost* self-delimitation. It does not rescue the refuted claim, since self-delimitation of items is not a whole-file grammar, but it is the evidence the refutation should have weighed and did not. See `requirements.yaml` `verify_pass`)*
 - (§2) "Decoding a CBOR Sequence works as follows:"  *(`rfc-8742#R-0017`)*
 - (§2) "If the CBOR Sequence is an empty sequence of bytes, the result is an empty sequence of CBOR data model values."  *(`rfc-8742#R-0018`)*
 - (§2) "Otherwise, one must decode a single CBOR data item from the bytes of the CBOR Sequence and insert the resulting CBOR data model value at the start of the result of repeating this decoding process recursively with the remaining bytes."  *(`rfc-8742#R-0019` — LOWER-CASE `must`: the one sentence that states how to decode the format carries no BCP 14 force)*
@@ -352,9 +352,18 @@ The §6.3 structured syntax suffix registration template, verbatim and complete 
   `[RFC8610]` are informative**, although §6.3 registers "in accordance with
   [RFC6838]", §6.2 assigns from a range `[RFC8126]` names, and §4.1 and §4.3
   depend on RFC 8610's control operators.
-- **§1's motivation paragraph** about concatenating serializations is carried as
-  `rfc-8742#R-0002` and `rfc-8742#R-0003` where it makes a claim, and dropped
-  where it is narrative.
+- **§1's motivation paragraph** about concatenating serializations is source
+  **79–85** and is carried by **`rfc-8742#R-0001` alone** where it makes a
+  claim, and dropped where it is narrative — the dropped half being source
+  **81–85**, *"When serializing a sequence of such values, it is sometimes
+  convenient to have a format where these sequences can simply be concatenated
+  … or to encode a sequence of values that might grow at the end by just
+  appending further CBOR data items."*, **the document's only statement of
+  appendability.**
+  *[correction 2026-10-21, pass 3 — cross-check] This named `rfc-8742#R-0002`
+  and `rfc-8742#R-0003`. Those are §1's **second** paragraph (source 87–92);
+  the motivation paragraph is 79–85 and R-0001 is its only carrier. Both cited
+  ids were real and neither dangled, so nothing in `bin/` could see it.*
 - **No test vector is quoted here, because the document prints none.** It prints
   three CDDL fragments, two diagnostic-notation lines and one table, and **not
   one hex octet.** See `examples/README.md`.
@@ -369,15 +378,64 @@ run of 70 characters or more — found **two statements that are neither narrati
 nor accounted for**, and both are now bullets above marked **no id**: §1's "Media
 type structured syntax suffixes [RFC6838] were introduced as a way for a media
 type to signal that it is based on another media type as its foundation."
-(source 96–98) and **§2's** "(Note that, while the early object/array-only form
-of JSON was self delimiting as well, …)" (source 136–138). The second is the only
+(source 96–99) and **§2's** "(Note that, while the early object/array-only form
+of JSON was self delimiting as well, …)" (source 137–139). The second is the only
 sentence of §2 the extraction missed, and it is the only statement in this lane
-about the JSON side's self-delimitation. Everything else the sweep surfaced is
+about the JSON side's self-delimitation. Most of what the sweep surfaced is
 declared: §1.1's BCP 14 boilerplate (deliberately unquoted, see the header), the
 CDDL fragments and registration templates held by line range in `schema/`, Table
 1, the references and the author's address. No id was minted: ids are
 append-only and `requirements.yaml` asserts source order with no gaps.
 `requirements.yaml` `verify_pass` holds the list.
+
+### `[correction]` 2026-10-21, pass 3 — cross-check
+
+The paragraph above ended *"Everything else the sweep surfaced is declared"*,
+and **three sentences are not** — each in no requirement, no bullet of this
+file, and no `schema/` region (checked against their declared ranges R01
+278–317, T01 326–332, R02 341–377), so each occurs **zero** times anywhere in
+the record:
+
+1. **source 81–85** — the second half of §1's motivation paragraph, quoted in
+   the bullet above. **It is the document's only statement of the append use
+   case**, which is the reason this record bears on an append-only log at all.
+2. **source 274–275** — *"Media types are registered in the "Media Types"
+   registry [IANA-MEDIA-TYPES]."*
+3. **source 336–338** — *"Structured Syntax Suffixes are registered within the
+   "Structured Syntax Suffix Registry" maintained at
+   [IANA-STRUCTURED-SYNTAX-SUFFIX]."*
+
+Two line ranges in pass 2's own list were also off by one: §1's suffix sentence
+runs **96–99** (it closes with "foundation." on 99, declared 96/98) and §2's
+JSON parenthesis runs **137–139** (declared 136/138). Both corrected here and
+in `requirements.yaml` `verify_pass`.
+
+Still no id minted, for the same append-only reason — but the blanket
+"everything else is declared" is withdrawn, because that is the sentence that
+stops a reader looking. (1) in particular is a decision for the record's owner
+rather than a pass-3 fix.
+
+### `[cross-check]` 2026-10-21 — the count, and two line ranges
+
+**This file now holds 65 spans, not 63**, and that is the arithmetic of the
+paragraph above: pass 1's 63 plus the two `no id` bullets pass 2 added. Measured
+at pass 3 by parsing every bullet of the form `- (§X) "…"`: **65** bullets over
+**12** locator labels (the 11 sections plus `Abstract`), **61** of them carrying
+a primary `R-` id — each of the 61 labelled exactly once, in strictly ascending
+order — and the other 4 being the Abstract fragment, §1.1's boilerplate and the
+two `no id` bullets. All 65 re-verified as contiguous spans of the raw
+whitespace-normalised source **and** as starting and ending inside their own
+locator's section, 0 failures. `record.yaml` and `README.md` both still said 63
+and are corrected.
+
+**Both pass-2 line ranges were off by one and are corrected above and in the
+paragraph above.** §1's sentence opens at the end of source line 96 and closes
+with "foundation." on line **99** (pass 2 wrote 96–98); §2's parenthesis runs
+**137–139** (pass 2 wrote 136–138). Measured from `.cache/rfc-8742.txt` with
+`split` on newlines and 1-based numbering, where line 1 is the UTF-8 BOM alone.
+Every other line range in this record — the 6 schema regions, the 5 source
+vectors, the 3 word breaks — re-measured clean, so these two were the pass-2
+additions rather than a numbering convention.
 
 **One difference from the sibling, recorded because it is a lane inconsistency
 rather than a defect in either record.** This record extracts **no** Abstract

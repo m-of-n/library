@@ -60,8 +60,13 @@ that could only come from an extraction.
 available at any price? No. And the reason is narrower and sharper than "option
 5 forbids the only way to say this file is CBOR".**
 
-**Both methods are two nested tags, and the outer one is not the one that
-matters.** §2.2: "The outer tag is a self-described CBOR tag, 55799, as described
+**All three methods are two nested tags, and the outer one is not the one that
+matters.** *(`[correction]` 2026-10-21, pass 3: this heading read "**Both
+methods**" — the exact wording §9 below **refutes** as a `summary.md` claim,
+while its own next three sentences quote all three. Pass 1 generalised the claim
+to three in `README.md`, `messages.yaml`, `schema/README.md`,
+`envelopes.derived.cddl` and §5.1's table of this file, refuted "both" in §9, and
+left "both" in the heading of §1.)* §2.2: "The outer tag is a self-described CBOR tag, 55799, as described
 in Section 3.4.6 of [STD94]." §2.3: "The outer tag is the self-described CBOR
 Sequence tag, 55800." Appendix D: "The outer tag is the CBOR-Labeled Non-CBOR
 Data tag, 55801." The outer tag says only *CBOR*, or — in the registry's own
@@ -454,8 +459,12 @@ Nine. All reported, none repaired.
    above, and reached the same finding — then sharpened it: the inconsistency is
    also internal to B.1's own two bullets.** B.1's *second* bullet qualifies its
    identical `#6.TN(ct)(bstr)` shape — "The following CDDL snippet can be used to
-   identify application/" / "missing-blocks+cbor-seq representations **as
-   embedded in a CBOR byte string**:" — while the *first*, senml bullet carries
+   identify application/" / "missing-blocks+cbor-seq representations as
+   embedded in a CBOR byte string:" — the qualifier is the clause *as embedded
+   in a CBOR byte string*, emphasis ours and now outside the quotation marks
+   (`[correction]` 2026-10-21, pass 3: the `**` markers were inside the quoted
+   span, so the span as written was not the source's bytes) — while the
+   *first*, senml bullet carries
    **no such qualification** and gives the same shape for a case the
    "Exceptionally" rule has removed the bstr form from. So B.1 states the general
    rule in the bullet that says it is about embedding, and misstates it in the
@@ -529,8 +538,11 @@ section for the keywords to have been omitted from. Every all-capitals keyword
 form occurs **zero** times.
 
 What the document uses instead: `may` **24** times, `should` 5 plus one
-sentence-initial `Should`, `must` **twice**, `required` twice, `optional` twice,
-and `encouraged` / `suggested` / `needs to` throughout. **Both lower-case
+sentence-initial `Should`, `must` **twice**, `required` twice, `optional`
+**zero times in any case** (`[correction]` 2026-10-21, pass 3: this read
+"`optional` twice"; pass 2 recounted it to zero in `requirements.yaml` and
+`../README.md` and left it wrong here and in `normative.md` and `record.yaml`),
+and `encouraged` (3) / `suggested` (2) / `needs to` (5) throughout. **Both lower-case
 `must`s matter**: one is boilerplate licence text and the other is Appendix A.2's
 "care must be taken when concatenating Labeled CBOR Sequences to remove the label
 from all but the first part" — the record's headline finding, carrying no force.
@@ -636,6 +648,12 @@ every claim below was re-derived from `.cache/rfc-9277.txt` at this pass.
   it as a method. It matters for us in one specific way: §5.1's table needs the
   third row, because a non-CBOR artifact of ours — a PDF, a key file — would be
   labelled by that method and not by the other two.
+  **`summary.md` was corrected at pass 3** (2026-10-21) and now reads "Three
+  enveloping methods"; this bullet records what it said. Pass 3 also found the
+  same wording still in §1's own heading of *this* file, in `record.yaml`'s
+  `usefulness.reason`, and as "under both methods" in `examples/README.md` and
+  `examples/vectors.yaml` — so the refutation had been written down in §9 and
+  propagated to none of the five places that stated the claim.
 - **`[correction]` The summary says the document "classes COSE itself as
   "infrastructure" rather than a protocol needing a magic number" and treats that
   as a remark about implementations.** It is confirmed as a quotation and
@@ -774,12 +792,23 @@ machine's subject is *one stored representation over its life*, acted on by
 different parties at different times — authored, labelled, stored, stripped for
 the wire, stored again, concatenated with another. `records/ietf/rfc-8949`,
 `rfc-9804`, `rfc-8610`, `rfc-9741` and `rfc-9682` all declare state-machine
-not-applicable, and **every one of them gives the same reason: their only
-stateful process is parsing** ("the one stateful process is the decode of a
-single data item, which has no persistent states, triggers or guards" —
-`rfc-8949`). Storing and stripping a file is not parsing it. The distinction is
-principled, so the artifact stands, and `state-machine.yaml`'s header now says
-so instead of resting on the count of five.
+not-applicable, **all five for the same class of document but on three
+different grounds — only `rfc-9804` names parsing.** `rfc-8949` names the
+decode of a single data item ("The one stateful process is the decode of a
+single data item, which has no persistent states, triggers or guards."),
+`rfc-8610` and `rfc-9741` that matching is a *predicate* over a specification
+and an instance rather than a lifecycle, and `rfc-9682` a transition period in
+the installed-tool population. Storing and stripping a file is not parsing it,
+which answers `rfc-8949` and `rfc-9804`; against `rfc-8610` and `rfc-9741` the
+artifact stands on its **subject** — one stored representation over its life —
+rather than on parsing. `state-machine.yaml`'s header says so.
+
+*[correction 2026-10-21, pass 3 — cross-check] This read "every one of them
+gives the same reason: their only stateful process is parsing", which is false
+of four of the five, and the keep decision was argued against that reading. It
+also quoted `rfc-8949` with a lowered capital and no final stop; the lower-case
+variant resolves nowhere in `rfc-8949`, only against this lane's own copies of
+the miscopy.*
 
 **The 56/195 join ratio: UPHELD, and the attack's premise was wrong by a factor
 of three.** Citing `state-machine.yaml` the way a field cites would move 19 ids,
@@ -803,7 +832,7 @@ the defect without quoting its evidence.
 **The 30-spelling enumeration: numbers CONFIRMED, one figure CORRECTED, and the
 floor turned into a theorem.** 3 × 2 × 5 = 30 re-derived from RFC 8949 §3
 without reading the table; 1 at 12 bytes and 5 matching the fingerprint both
-reproduce; the zero-byte figure is **25**, not the 20 that five files of this
+reproduce; the zero-byte figure is **25**, not the 20 that six files of this
 record stated. And the indefinite-length family is **not finite** — §3.2.3's
 "zero or more" chunks admit empty chunks without bound — so 30 cannot be raised
 to a total, which is a stronger result than "30 is a floor".
@@ -842,20 +871,34 @@ whether the library's own copies agree with each other, and the result is mixed:
 - **Option 2 and option 4 are consistent.** "CBOR + CDDL as canonical; COSE for
   signed form" appears identically in eight records (two of them truncating it
   at the semicolon without marking the truncation), and "Dual canonical (CBOR
-  and JSON) with a documented bijection" identically in four.
-- **The option-5 / MD-3 gloss has diverged, and two records quote the divergent
-  reading.** This lane writes "reduced CBOR, no IANA tags, COSE export only",
-  which is what `docs/extraction.md` §"The artifact set" writes — the only
-  in-repository statement of it. Five other records write **"CBOR data model**,
-  no IANA tags, COSE export only", two of them *inside quotation marks*
-  (`records/ietf/rfc-9679`, `records/ietf/draft-ietf-cbor-cde`), and two more
-  write "COSE **as** export only" (`records/ietf/rfc-9053`,
-  `records/community/draft-mcnally-deterministic-cbor`). *A reduced CBOR profile*
-  and *the CBOR data model* are not the same claim: the first restricts what may
-  be encoded, the second does not. **Reported, not repaired** — those records are
-  at `profile: full` and are not this lane's to edit. This lane agrees with
-  `docs/extraction.md`; the clause ", YAML as the human form" that this lane adds
-  is not in `docs/extraction.md` and is a gloss rather than a quotation, which is
-  why it is unquoted here.
+  and JSON) with a documented bijection" identically in three.
+  *[correction 2026-10-21, pass 3 — cross-check] The option-4 count read "four";
+  under the same "other records" convention the option-2 clause uses it is
+  **three**, the omitted record being `rfc-8610`. Option 2's eight reproduces.*
+- **The option-5 / MD-3 gloss has diverged, and THIS LANE CARRIES THE DIVERGENT
+  READING.** `docs/extraction.md` — the only in-repository statement of it —
+  writes "reduced CBOR, no IANA tags, COSE **as** export only". This lane writes
+  "COSE export only", **without the "as"**, in both of its records and in both
+  of their summaries, where it sits inside quotation marks attributed to MD-3.
+  Measured across the library with emphasis stripped: **16 records (and
+  `docs/extraction.md`) carry an "as" form; 21 carry a no-"as" form**, so both
+  readings are widespread and this lane is on the side the one checkable
+  in-repository statement does not support. Six other records write
+  **"CBOR data model**, no IANA tags, COSE export only", one of them *inside
+  quotation marks* (`records/ietf/rfc-9679`). *A reduced CBOR profile* and *the
+  CBOR data model* are not the same claim: the first restricts what may be
+  encoded, the second does not. **Reported, not repaired** in those records —
+  they are at `profile: full` and are not this lane's to edit. The clause
+  ", YAML as the human form" that this lane adds is not in `docs/extraction.md`
+  and is a gloss rather than a quotation, which is why it is unquoted here.
+
+  *[correction 2026-10-21, pass 3 — cross-check] This bullet said the lane's
+  wording "is what `docs/extraction.md` writes" and then "This lane agrees with
+  `docs/extraction.md`". **Both are false: the lane omits the "as" that source
+  carries.** Three counts were also wrong — "Five other records" (six);
+  `draft-ietf-cbor-cde` named as quoting the no-"as" form, when it carries the
+  **with**-"as" form and belongs in the other clause; and "two more write COSE
+  as export only" where sixteen do. The sibling `rfc-8742` carried the same
+  cluster, which is the copied-error signature hazards.md describes.*
 - The full four-option list appears **only** in this lane's two records, so there
   is no second copy in the library to cross-check it against. Marked, not fixed.

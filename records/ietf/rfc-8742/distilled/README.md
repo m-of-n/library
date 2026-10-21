@@ -11,15 +11,45 @@ reviewed_by: ""
 FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what it
 does not.
 
-**State: passes 1 and 2 of 3 (extract, verify). `distillation.standard: FX-1`
-and NO `profile`.** An unfinished extraction has no profile — pass 3
-(cross-check) has not run, and **no `reviewed_by` is signed** on any artifact.
-These files are readable and citable; they are not buildable-on.
+**State: all three machine passes have run (extract, verify, cross-check).
+`distillation.standard: FX-1` and NO `profile`.** Two deliberate omissions, both
+the lane's to close rather than pass 3's: `record.yaml` `distillation.passes`
+still records **two** entries, because the cross-check pass was scoped not to
+write its own, and no `profile` is declared. **No `reviewed_by` is signed** on
+any artifact either, so these files are readable and citable but not
+buildable-on. Read the 2-entry `passes` list against this paragraph, not
+instead of it.
+
+Pass 3 (2026-10-21, cross-check) closed the four closures and found **twenty**
+defects and stale claims, every one in this record's own prose and every one marked
+`[cross-check]` where it stands. The three that change what a reader should
+believe: the **overturned vacuity claim survived in six places** pass 2 did not
+reach (`record.yaml`, three `requirements.yaml` `field`s, two `messages.yaml`
+notes); `summary.md` **still said this record had no `distilled/` and no
+`distillation` block**; and two schema files cited **`V-0004`/`V-0005` for the
+two byte strings**, which are `D-0003`/`D-0002` — bare ids in a namespace
+`bin/check-id-joins` does not scan. Measured at pass 3: 6 of 6 schema regions
+byte-identical and digest-verified under the stated convention and under none of
+the alternatives; 61 of 61 requirement texts and 65 of 65 `normative.md` spans
+contiguous in the raw whitespace-normalised source *and* inside their attributed
+locator; `bin/bcp14-count` 4, extracted 4, all four in the four `stated` entries
+and no fifth smuggled into any `text`; 7 of 7 state-machine triggers named
+events with a source quote and a resolving id; 11 of 11 derived fixtures
+reproduced by an independent decoder.
 
 Pass 2 (2026-10-20, adversarial, did not extract) re-derived every count and
-re-ran the id-join audit: **243 citations, zero wrong ids** — this record has no
+re-ran the id-join audit: **zero wrong ids** — this record has no
 two requirements with the same text, so there is nowhere for a wrong id to hide,
-which is exactly the structural property its sibling lacks. It made **five**
+which is exactly the structural property its sibling lacks. *(`[cross-check]`
+2026-10-21, pass 3: pass 2 put the denominator at **243 citations**, and that
+number is reachable by no counting rule pass 3 could construct.
+`bin/check-id-joins --resolve` reported **344 citations, 0 dangling** on the
+record as pass 3 received it — 260 distinct `(file, id)` pairs, and 555 once the
+bare and `D-` spellings the tool does not scan are included, still 0 dangling.
+It reads **352** now, because pass 3's own `[cross-check]` notes cite ids as
+well; the figure is stated with its measurement point so a later pass can tell a
+fossil from a lie. "Zero wrong" stands for everything the tool scans.)* It
+made **five**
 corrections, each marked `[correction]` where it stands:
 `messages.yaml`'s header comment said 44/17 against its own 31/30; a
 re-quotation in `design-notes.md` had a capital the source does not have; the
@@ -32,9 +62,23 @@ marked `no id`. `requirements.yaml` `verify_pass` is the index.
 Source: RFC 8742, *Concise Binary Object Representation (CBOR) Sequences*,
 Standards Track, February 2020. sha256
 `4462966836b60f42ebae9b5f1d2a479c328e16f0380a3434311a083bccbce30e`, 462 lines,
-18421 bytes. **No form feeds, no page footers, no trailing whitespace on any
-line, no asides** — so no transformation of any kind was applied to any quoted
-span, and `requirements.yaml` says so rather than leaving it to be assumed.
+18421 bytes (line 1 is a UTF-8 BOM alone, part of the hashed bytes and part of
+no span). **No form feeds, no page footers, no trailing whitespace on any
+line, no asides** — so there is no page decoration to remove, and every one of
+the 61 requirement texts and 65 `normative.md` spans resolves against the
+**raw** whitespace-normalised source with no transformation at all.
+
+*(`[cross-check]` 2026-10-21, pass 3: that claim used to run "so no
+transformation of any kind was applied to **any quoted span**", which is a
+blanket and `hazards.md` says to state the rule actually kept. Two places in the
+record do transform, both declared where they stand and neither a quotation of
+the source: `schema/cddl-fragments-dedented.derived.cddl` removes the RFC's
+three-space margin — `.derived.`, and the removal round-trips, re-checked at
+pass 3 — and `messages.yaml`'s `structured-syntax-suffix-registration` `Contact`
+**value** states the joined form `IESG-designated`, marked OURS, where source
+lines 373/374 break at the hyphen. `schema/registrations.txt` carries that break
+unhealed and `normative.md` quotes the region verbatim. The rule kept is: **no
+span presented as the source's words is healed, dedented or elided silently.**)*
 
 ## The answer this record was extracted for
 
@@ -100,8 +144,8 @@ precedents are `rfc-8610` (2 keywords in 125 KB, 137 of 139 inferred),
 
 | kind | file | coverage |
 |---|---|---|
-| normative | `normative.md` | 63 verbatim spans across 11 locators (§1, §1.1, §2, §3, §4.1–§4.3, §5, §6.1–§6.3) plus the Abstract's first half, with all 3 CDDL fragments, both §4.2 instances, Table 1 and both IANA registration templates reproduced in fenced blocks with their source line ranges. All 63 confirmed contiguous substrings of the whitespace-normalised source **and** confirmed to start and end inside their locator's section, 0 failures. **No transformation applied**: no form feeds, no page footers, no asides, no dedent, no healed hyphenation. Three hyphenation breaks exist in the source and **none** falls inside a quoted span — all re-verified at pass 2, where all 61 requirement texts resolve against the **raw** source with no transformation of any kind, and the word-break census reproduces at 3 (2 in the body, 1 in the references, none in a span). **Two statements pass 1 dropped are now bullets here marked `no id`** — §1's definition of what a structured syntax suffix is for, and §2's parenthesis about JSON's self-delimitation, which is the only sentence of §2 the extraction missed |
-| requirements | `requirements.yaml` | 61 entries `R-0001`–`R-0061` in source order, no gaps: **4 stated, 57 inferred**. `source_keyword_count` and `extracted_keyword_count` both **4**, agreeing, with a 3.5 KB `reconciliation` written anyway because 4 is misleading in two directions — *where* the four are (none constrains the format; one is deferred, and only one of the four has an applicable effect at publication — `[correction]` 2026-10-20, pass 2, which read "two are vacuous") and *what the document says in lower case instead* (the only statement of how to decode it). §1.1's BCP 14 boilerplate is deliberately never quoted: `bin/validate` counts texts with stripping off, so quoting it would add 11 phantom keywords and make the extraction read 15 against a source of 4 |
+| normative | `normative.md` | **65** verbatim spans across 12 locator labels — the 11 sections (§1, §1.1, §2, §3, §4.1–§4.3, §5, §6.1–§6.3) plus the Abstract's first half — with all 3 CDDL fragments, both §4.2 instances, Table 1 and both IANA registration templates reproduced in fenced blocks with their source line ranges. All 65 confirmed contiguous substrings of the whitespace-normalised source **and** confirmed to start and end inside their locator's section, 0 failures; 61 carry a primary `R-` id, strictly ascending and each labelled exactly once, and the other 4 are the Abstract fragment, §1.1's boilerplate and the two `no id` bullets. *(`[cross-check]` 2026-10-21, pass 3: this row said **63**, twice. 63 was pass 1's true count; pass 2 added the two `no id` bullets the same row goes on to advertise and never carried the arithmetic — the fossil class `hazards.md` §6 names, created by a correct earlier pass.)* **No transformation applied**: no form feeds, no page footers, no asides, no dedent, no healed hyphenation. Three hyphenation breaks exist in the source and **none** falls inside a quoted span — all re-verified at pass 2, where all 61 requirement texts resolve against the **raw** source with no transformation of any kind, and the word-break census reproduces at 3 (2 in the body, 1 in the references, none in a span). **Two statements pass 1 dropped are now bullets here marked `no id`** — §1's definition of what a structured syntax suffix is for, and §2's parenthesis about JSON's self-delimitation, which is the only sentence of §2 the extraction missed |
+| requirements | `requirements.yaml` | 61 entries `R-0001`–`R-0061` in source order, no gaps: **4 stated, 57 inferred**. `source_keyword_count` and `extracted_keyword_count` both **4**, agreeing, with a **4462-character** `reconciliation` written anyway *(`[cross-check]` 2026-10-21, pass 3: this said "3.5 KB", which was its length before pass 2 appended the overturned-vacuity correction to it; measured from the parsed scalar)* because 4 is misleading in two directions — *where* the four are (none constrains the format; one is deferred, and only one of the four has an applicable effect at publication — `[correction]` 2026-10-20, pass 2, which read "two are vacuous") and *what the document says in lower case instead* (the only statement of how to decode it). §1.1's BCP 14 boilerplate is deliberately never quoted: `bin/validate` counts texts with stripping off, so quoting it would add 11 phantom keywords and make the extraction read 15 against a source of 4 |
 | schema | `schema/` | **3 verbatim, 3 derived.** Verbatim: all 3 CDDL fragments, and the three registrations complete (§6.1 template, Table 1, §6.3 template) — 6 regions, each with its source line range and its own sha256, all byte-identical and all digests verifying under the stated convention and **under none of the alternatives**. Derived: the format as a grammar (`cbor-seq.derived.abnf` — **two productions, one a placeholder**, and the one-line first production is everything a grammar can say about this format), a dedented CDDL companion that round-trips, and **the container rule §4.1 says cannot be written, written four ways with the byte cost of each**. No `*.schema.json`, and `schema/README.md` says why |
 | messages | `messages.yaml` | 6 structures, 37 field entries: the sequence, its element, §4.3's wrapped element, and the three IANA registration records. **`framing_bytes_contributed_by_this_document: 0`** — the `framing` pseudo-field enumerates the absence field by field. `constrained_by` is used: **31** of the 61 requirements are cited by a named field and the **30** that are not are listed with a reason each, the split being lopsided *because half of §2 is a decoding procedure rather than a set of fields* |
 | state-machine | `state-machine.yaml` | **DERIVED. The N/A verdict was weighed and rejected at pass 1; pass 2 kept the artifact and withdrew the reason** — see *Not applicable* below, and read it before citing this file, because **five sibling CBOR records declare this artifact N/A for the same class of document.** 5 states, 7 transitions, 1 absorbing error state, every state anchored to a quoted sentence of §2, and **0 occurrences of the word "state" in the source**. Its payload is **not** `indistinguishable_pairs` — two of those three pairs are pairs of *artifacts*, not of states, and `messages.yaml` `completeness` already holds them. What has no other home is `guards_the_source_does_not_supply`: no element-size bound, no count bound, and **no timeout on a paused decoder**, which is only stateable if the pause is modelled |
@@ -114,8 +158,16 @@ precedents are `rfc-8610` (2 keywords in 125 KB, 137 of 139 inferred),
   Measured over the whole source at this pass: `role` 0 occurrences, `party` 0,
   `client` 0, `sender` 0, `receiver` 0, `recipient` 0, `peer` 0, `endpoint` 0,
   `handshake` 0, `exchange` 0, `message` 0, `negotiat*` 0, `session` 0,
-  `connection` 0; `request` occurs once and `protocol` once, both inside
-  "Constrained Application Protocol (CoAP)" in §1. The only actors the document
+  `connection` 0 — all re-derived whole-word and case-insensitive at pass 3, and
+  all still 0 as substrings too. `protocol` occurs once, inside "Constrained
+  Application Protocol (CoAP)" in §1, and `request` occurs once, at **source
+  line 6** — "Request for Comments: 8742", the RFC's own masthead. *(`[cross-check]`
+  2026-10-21, pass 3: this bullet said `request` and `protocol` occurred once
+  each "**both** inside "Constrained Application Protocol (CoAP)" in §1". The
+  count was right for both and the attribution wrong for `request`: it is not in
+  §1 at all. `record.yaml`'s `not_applicable` reason carried the same sentence
+  and is corrected there too. The N/A verdict is unaffected and in fact
+  strengthened — the document's one `request` is bibliographic.)* The only actors the document
   names are a **decoder**, a **producer**, an **application** and a
   **specification author**, and §3's one sentence about an application —
   "Applications encountering a "+cbor-seq" media type can then either simply use
@@ -159,10 +211,19 @@ precedents are `rfc-8610` (2 keywords in 125 KB, 137 of 139 inferred),
   executably as `D-0001`, `D-0004` and `D-0005`, with `D-0001` and `D-0005`
   deliberately the same bytes. *Third*, the precedent is against the artifact:
   **five sibling CBOR records are at `profile: full` with state-machine
-  declared N/A, and every one gives the same reason — their only stateful
-  process is parsing** (`rfc-8949`: "the one stateful process is the decode of a
-  single data item, which has no persistent states, triggers or guards";
-  `rfc-9804`, `rfc-8610`, `rfc-9741`, `rfc-9682` likewise). §2 of RFC 8742 is a
+  declared N/A, all five for the same class of document but on three different
+  grounds** — `rfc-9804` names parsing, `rfc-8949` "The one stateful process is
+  the decode of a single data item, which has no persistent states, triggers or
+  guards.", `rfc-8610` and `rfc-9741` that matching is a *predicate* over a
+  specification and an instance rather than a lifecycle, and `rfc-9682` a
+  deployment transition in the installed-tool population.
+  *[correction 2026-10-21, pass 3 — cross-check] This read "every one gives the
+  same reason — their only stateful process is parsing". Only one of the five
+  does. It also quoted `rfc-8949`'s sentence with a lowered capital and no
+  final stop; that record writes "**The** one stateful process … guards**.**"
+  The lower-case variant resolves nowhere in `rfc-8949` — it resolves only
+  against this lane's own copies of the miscopy, which is why a per-record
+  audit reported success.* §2 of RFC 8742 is a
   **loop over** the decode `rfc-8949`'s record calls stateless, and
   `rfc-8742#R-0025` is a lower-case `may` in a parenthetical whose content is an
   implementation technique — which is the `rfc-9741` pattern of holding an

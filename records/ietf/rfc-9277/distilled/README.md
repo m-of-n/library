@@ -20,12 +20,26 @@ Pass 2 (2026-10-20, adversarial, did not extract) re-derived every count,
 re-ran the id-join audit across the whole lane, and corrected **fourteen** things
 in this record's own text — six wrong requirement ids, a cluster of five wrong id
 *ranges* in one schema header, one truncated requirement `text`, two rows that
-claimed a cite their own counts contradicted, three bad self-counts, one word
+claimed a cite their own counts contradicted, two bad self-counts, one word
 whose occurrence count was zero rather than two, and the 30-spelling zero-byte
 figure, which stood at 20 in **six** files when it is 25. It also found **nine
 statements with no requirement entry**. Every correction is marked
 `[correction]` with its date where it stands; `requirements.yaml` `verify_pass`
 is the index.
+*(`[correction]` 2026-10-21, pass 3: this enumeration read "three bad
+self-counts" and summed to fifteen against its stated fourteen. It is two —
+"Each of the nine" against "EIGHT entries", and the word-break census. And
+`record.yaml`'s pass-2 note says **eleven** corrections for the same work,
+listing the six ids and five others and omitting the range cluster and the two
+contradicted rows; `requirements.yaml` `own_text_corrected` says fourteen and
+enumerates fourteen, which is the figure that reconciles.)*
+
+**Pass 3 (2026-10-21, cross-check) corrected more of the same shape** — claims
+one pass had fixed in one artifact and left standing in the others — plus **six
+wrong requirement ids in `schema/`**, the files pass 2's id-join audit reached
+only through one header. Every pass-3 correction is marked `[correction]`
+2026-10-21 where it stands. No `passes` entry is recorded for it here: pass 3
+does not sign its own work, and `distillation.profile` is still unset.
 
 Source: RFC 9277, *On Stable Storage for Items in Concise Binary Object
 Representation (CBOR)*, Standards Track, August 2022. sha256
@@ -33,14 +47,21 @@ Representation (CBOR)*, Standards Track, August 2022. sha256
 41659 bytes. No form feeds, no page footers; **two RFC v3 asides** (source lines
 715–727 and 765–777), **four lines with trailing whitespace** (724, 767, 770,
 772 — all blank aside lines), **two U+2264** characters on line 771, and
-**fourteen line-end word breaks** in the body, every one left unhealed.
+**fifteen line-end word breaks**, every one left unhealed — **thirteen in the
+body and two inside asides**.
 *(`[correction]` 2026-10-20, pass 2: this read "twelve hyphenation breaks".
 `requirements.yaml`'s own list named thirteen, the census is fourteen — the
 fourteenth is at source lines 897/898 in Appendix D, and `requirements.yaml`
-described that very break in the sentence after the list it omitted it from. Only
-eight of the fourteen break a hyphenated token; the other six break after a
-slash, in `application/`. Two of the fourteen have a half with no partner: see
-`verify_pass`.)*
+described that very break in the sentence after the list it omitted it from.)*
+*(`[correction]` 2026-10-21, pass 3: the census is **fifteen**, not fourteen.
+Pass 2's list omits **628/629**, where line 628 ends `a public key/` and line 629
+begins `certificate in C509` — a slash break in Appendix A that the census's own
+stated rule catches. No requirement and no normative span quotes that sentence,
+so nothing was healed; the count was wrong, not the data. Pass 2's split of
+"eight hyphenated, six slash" was also wrong — over its own fourteen it is **ten
+and four**, and over the correct fifteen **ten and five**. And "in the body" was
+wrong of both figures: two of the fifteen are inside asides. Two of the fifteen
+have a half with no partner: see `verify_pass`.)*
 
 ## Read this first: the document has no normative statements
 
@@ -100,9 +121,9 @@ here.** `design-notes.md` §3.1, `state-machine.yaml`, fixtures `D-0004` and
 
 | kind | file | coverage |
 |---|---|---|
-| normative | `normative.md` | 195 verbatim spans across **24 locators** (Abstract, §1, §1.1, §1.2, §2, §2.1–§2.3.1, §3, §4–§4.3, Appendices A, A.1–A.3, B, B.1, C, D, D.1), plus both hex examples, the Openswan hex, all four CDDL snippets, the three registry entries and the TN formula with its aside reproduced in fenced blocks with their source line ranges. All 195 confirmed contiguous substrings of the whitespace-normalised source **and** confirmed to start and end inside their locator's section, 0 failures — re-verified at pass 2, where **188** resolve against the raw source and **7** only against the bar-stripped source, exactly the seven declared, and **0** resolve only after a word break is healed. **Two declared classes of exception, neither healed:** the two aside bars (stripped on 715–727 and 765–777 and nowhere else), and **fourteen line-end word breaks**, each sentence quoted as two halves cut where the source cuts it — *except two, where the second half was never extracted at all, and one more in Appendix D whose halves are reachable only through §2.3's ids* (`[correction]` 2026-10-20, pass 2: this cell said "twelve" and "each sentence quoted as two halves"; both were wrong). **Six statements pass 1 dropped are now bullets here marked `no id`**, and three more are listed under *What is NOT in this file* |
-| requirements | `requirements.yaml` | 195 entries `R-0001`–`R-0195` in source order, no gaps, **all `inferred`**. `source_keyword_count` and `extracted_keyword_count` both **0**, with a 3367-character `reconciliation` — required by `bin/validate` at zero — stating that the baseline is *there is none*, what the document uses instead (`may` 24, `should` 6, `must` **2**, both lower case — all three recounted and agreeing at pass 2, where `optional` turned out to occur **zero** times rather than the twice `reconciliation` claimed), and what was counted in its place: every structural rule of the three methods, every allocation and registry field value, the **four** permissive statements about stripping and the **one** warning running the other way, every disclaimer of normativity, and the four worked `TN` values. **Pass 2 added a `verify_pass` block**: the lane-wide id-join audit, the nine statements with no entry, and the eleven corrections to this record's own text |
-| schema | `schema/` | **4 verbatim, 3 derived.** Verbatim: all four CDDL snippets, the three registry entries complete, and the TN formula with its aside — 8 regions, each byte-identical to its declared range with its own sha256 verifying under the stated convention and **under none of the alternatives**. Derived: `content-format-tag.derived.yaml`, the TN function as checkable data; `prefix-spellings.derived.txt`, the enumeration that refutes §2's determinism claim; and `envelopes.derived.cddl`, the three envelopes as CDDL — whose value is the **four things CDDL cannot say** about them. 15 mechanical checks, all passing |
+| normative | `normative.md` | **201** quoted spans — the 195 carrying an id, across **24 locators**, plus the six marked `no id` (`[correction]` 2026-10-21, pass 3: this cell and `record.yaml` both said "195 verbatim spans" after pass 2 added the six bullets; counted at pass 3, the file has 201 bullets, 195 with an id and 6 without) (Abstract, §1, §1.1, §1.2, §2, §2.1–§2.3.1, §3, §4–§4.3, Appendices A, A.1–A.3, B, B.1, C, D, D.1), plus both hex examples, the Openswan hex, all four CDDL snippets, the three registry entries and the TN formula with its aside reproduced in fenced blocks with their source line ranges. All 195 confirmed contiguous substrings of the whitespace-normalised source **and** confirmed to start and end inside their locator's section, 0 failures — re-verified at pass 2, where **188** resolve against the raw source and **7** only against the bar-stripped source, exactly the seven declared, and **0** resolve only after a word break is healed. **Two declared classes of exception, neither healed:** the two aside bars (stripped on 715–727 and 765–777 and nowhere else), and **fifteen line-end word breaks**, each sentence quoted as two halves cut where the source cuts it — *except two, where the second half was never extracted at all, one in Appendix D whose halves are reachable only through §2.3's ids, and one (628/629) that no entry quotes at all* (`[correction]` 2026-10-20, pass 2: this cell said "twelve" and "each sentence quoted as two halves"; both were wrong. `[correction]` 2026-10-21, pass 3: and "fourteen" was wrong too — see the census above). **Six statements pass 1 dropped are now bullets here marked `no id`**, and three more are listed under *What is NOT in this file* |
+| requirements | `requirements.yaml` | 195 entries `R-0001`–`R-0195` in source order, no gaps, **all `inferred`**. `source_keyword_count` and `extracted_keyword_count` both **0**, with a **3858**-character `reconciliation` — required by `bin/validate` at zero — (`[correction]` 2026-10-21, pass 3: **3367** here and in `record.yaml`. That was true when pass 1 measured it; pass 2 then appended its two `[correction]` clauses to the field — 491 characters — and carried neither number back. Measured at pass 3 under **both** readers, which agree: 3858) stating that the baseline is *there is none*, what the document uses instead (`may` 24, `should` 6, `must` **2**, both lower case — all three recounted and agreeing at pass 2, where `optional` turned out to occur **zero** times rather than the twice `reconciliation` claimed), and what was counted in its place: every structural rule of the three methods, every allocation and registry field value, the **four** permissive statements about stripping and the **one** warning running the other way, every disclaimer of normativity, and the four worked `TN` values. **Pass 2 added a `verify_pass` block**: the lane-wide id-join audit, the nine statements with no entry, and the fourteen corrections to this record's own text |
+| schema | `schema/` | **3 verbatim files, 4 derived** (`[correction]` 2026-10-21, pass 3: this read "4 verbatim, 3 derived", as did `schema/README.md`'s own summary line and `record.yaml`; the directory holds three unmarked files and four carrying `.derived.`, and `bin/validate` passes all seven on name-against-header). Verbatim: all four CDDL snippets, the three registry entries complete, and the TN formula with its aside — 8 regions, each byte-identical to its declared range with its own sha256 verifying under the stated convention and **under none of the alternatives**. Derived: `content-format-tag.derived.yaml`, the TN function as checkable data; `prefix-spellings.derived.txt`, the enumeration that refutes §2's determinism claim; and `envelopes.derived.cddl`, the three envelopes as CDDL — whose value is the **four things CDDL cannot say** about them. 15 mechanical checks, all passing |
 | messages | `messages.yaml` | 7 structures and 29 field entries plus a 3-field `shared_shape`: the three envelopes, the derivable content-format tag, and the three registry records. Each envelope carries `relation_to_signature` — the condition-(4) finding, per method. `constrained_by` is used: **56** of the 195 requirements are cited by a named field and the **139** that are not are accounted for **by locator with counts**, every row recomputed mechanically. The ratio is low on purpose and the file says why: most of this document is motivation, terminology, informative advice and a case study, none of which a field-centred artifact can hold |
 | state-machine | `state-machine.yaml` | **DERIVED; the N/A verdict was weighed and rejected at pass 1 and the rejection was UPHELD at pass 2, on a different argument** — see *Not applicable*. 5 states, 8 transitions, **1 self-loop** (relabelling, which no integrity check sees), 1 error state, and **0** occurrences of the word "state" in the source. Its payload is `the_asymmetry` — four permissive statements about removing the envelope, **zero** about adding one, one warning about its presence — and **6 `undefined_transitions`**, including the mid-file label the document creates and declines to define |
 | examples | `examples/` | **14 vectors.** `V-0001`–`V-0007` are the source's own: **three complete annotated hex examples** and four CDDL snippets. Every hex string was rebuilt from its annotated source lines and found identical, executed through a CBOR decoder, and both stated fingerprints confirmed; all four `TN` values recomputed and agreeing. `D-0001`–`D-0007` are **derived, ours**: non-preferred spellings, relabelling, concatenation with and without the second label, `TN(63)`, and an unregistered inner tag. **Two derived fixtures deliberately have no expected result, because the document defines none** |
@@ -115,7 +136,18 @@ here.** `design-notes.md` §3.1, `state-machine.yaml`, fixtures `D-0004` and
   like a counter-example and is not. **"protocol" occurs 42 times** and every
   substantive one is the term §1 defines in a parenthesis: **"(A CBOR Protocol is
   a specification that uses CBOR as its encoding.)"** — a *specification*, not a
-  party. The breakdown, counted at this pass: `CBOR Protocol` 13, `Protocol` standalone 13 (one of them "the Protocol"), `CBOR Protocols` 3, `Protocols` 1, `Non-CBOR Protocol` 2, lower-case `protocol`/`protocols` 10 — 42 in all. Meanwhile `role` 0 occurrences, `party`
+  party. The breakdown, re-measured at pass 3 over the **whitespace-normalised**
+  source: `CBOR Protocol` **14**, `Protocol` standalone **12** (one of them "the
+  Protocol"), `CBOR Protocols` **4**, `Protocols` standalone **0**,
+  `Non-CBOR Protocol` 2, lower-case `protocol`/`protocols` 10 — 42 in all.
+  *(`[correction]` 2026-10-21, pass 3: this read 13 / 13 / 3 / 1 / 2 / 10, which
+  also sums to 42. The **total is right in both** and three of the six cells are
+  wrong, because the earlier breakdown was counted on the **raw** text: `CBOR`
+  ends a line and `Protocol`/`Protocols` begins the next at source lines 242/243
+  and 258/259, so two occurrences of the §1 term were filed as the bare word.
+  The verdict is unaffected — the document says "CBOR Protocol" in both places —
+  and the N/A measurement is **stronger** with them counted correctly, not
+  weaker.)* Meanwhile `role` 0 occurrences, `party`
   0, `client` 0, `sender` 0, `receiver` 0, `recipient` 0, `peer` 0, `endpoint`
   0, `handshake` 0, `negotiat*` 0, `session` 0, `connection` 0; **`message`
   occurs once** and refers to *other* protocols' messages ("but not within

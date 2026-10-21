@@ -25,10 +25,16 @@ lines of diagnostic notation and one registry table, and not one hex octet.**
 
 That is worth stating precisely, because it is unusual in this lane: `rfc-9277`
 prints complete annotated hex for both of its envelopes, and `rfc-8949` prints
-test vectors by the page. Here there is nothing to make a fixture from. So **any
-conformance test for RFC 8742 is ours**, and under `R-O-03` — an algorithm
-"SHALL be cited, not invented silently" — ours has to be marked as ours. The
-`D-` prefix is that marking.
+test vectors by the page. **There is nothing *of the document's* to make a
+fixture from — and eleven fixtures were still derivable, which is this
+directory.** So **any conformance test for RFC 8742 is ours**, and under
+`R-O-03` — an algorithm "SHALL be cited, not invented silently" — ours has to be
+marked as ours. The `D-` prefix is that marking.
+
+*(`[cross-check]` 2026-10-21, pass 3: that sentence read "Here there is nothing
+to make a fixture from", which is `summary.md`'s wording and is the claim
+`../design-notes.md` §8 **refutes** — it was still standing, unqualified, in the
+directory the refutation produced. The scoped version is above.)*
 
 And it is worse than "no vectors", because the document also records that the
 *notation* cannot write the thing: §4.2, diagnostic notation "also does not

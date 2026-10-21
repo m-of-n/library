@@ -21,7 +21,13 @@ zero times.
 
 What the document uses instead, counted at this pass: `may` **24** times,
 `should` **5** plus one sentence-initial `Should`, `must` **twice**, `required`
-twice, `optional` twice, and `encouraged` / `suggested` / `needs to` throughout.
+twice, `optional` **zero times in any case**, and `encouraged` (3) /
+`suggested` (2) / `needs to` (5) throughout.
+*(`[correction]` 2026-10-21, pass 3: this read "`optional` twice". Pass 2
+recounted the word as **zero** and wrote the correction into
+`requirements.yaml`'s `reconciliation` and into `../README.md`, and left it
+wrong here and in `design-notes.md` §8 and `record.yaml`. All three recounted at
+pass 3 and all three agree at zero.)*
 **Both lower-case `must`s matter:** one is boilerplate licence text, and the
 other is **Appendix A.2's** "care must be taken when concatenating Labeled CBOR
 Sequences to remove the label from all but the first part" — this record's
@@ -48,14 +54,32 @@ Track RFC.
      formula) — and every line in them begins `      |  `. **Eight** spans are drawn from those ranges and **seven of the eight are contiguous only after that leading `|` bar is removed, and after nothing else**; the eighth (`rfc-9277#R-0146`) begins at the start of its line and so is contiguous either way. Both cases are marked individually below — the distinction was computed, not assumed — the same removal is declared in `requirements.yaml`, and it is confined to those two ranges. **Four lines of the source carry trailing whitespace
      (724, 767, 770, 772) and all four are blank aside lines**; the fenced
      blocks preserve them.
-  2. **Twelve hyphenation breaks, every one left broken.** A sentence severed by
-     a line break inside a hyphenated token is **not** a contiguous span of the
-     document, so each is quoted as **two** bullets, cut where the source cuts
-     it, and the second begins mid-token. The breaks are at source lines
-     233/234, 257/258, 293/294, 329/330, 373/374, 657/658, **722/723 and
-     726/727 (both inside an aside)**, 784/785, 795/796, 807/808, 816/817 and
-     821/822. Two of them are the **same sentence appearing twice** in the
-     document — §2.3 and Appendix D — broken at the same token both times.
+  2. **Fifteen line-end word breaks, every one left broken.** A sentence severed
+     by a line break inside a token is **not** a contiguous span of the
+     document, so it is quoted as **two** bullets, cut where the source cuts it,
+     and the second begins mid-token — **except three: two whose second half was
+     never extracted at all (`rfc-9277#R-0147`'s and `rfc-9277#R-0169`'s, both
+     now bullets here marked `no id`), and one at 628/629 which no entry
+     quotes.** The census, measured at pass 3 by the rule
+     `requirements.yaml` states — every line ending in `-` or `/` whose word
+     continues on the next line, bars stripped first, references and author
+     addresses excluded: source lines 233/234, 257/258, 293/294, 329/330,
+     373/374, **628/629**, 657/658, **722/723 and 726/727 (both inside an
+     aside)**, 784/785, 795/796, 807/808, 816/817, 821/822 and 897/898.
+     **Ten break a hyphenated token and five break after a slash.** Two of them
+     are the **same sentence appearing twice** in the document — §2.3 and
+     Appendix D — broken at the same token both times.
+     *(`[correction]` 2026-10-21, pass 3: this read "**Twelve** hyphenation
+     breaks" and listed thirteen pairs. Pass 2 recounted the census as
+     **fourteen** and wrote that into `requirements.yaml` and `../README.md`
+     without touching this paragraph. Pass 3 re-measured it from the source and
+     the census is **fifteen**: pass 2's list omits **628/629**, where line 628
+     ends `a public key/` and line 629 begins `certificate in C509` — a slash
+     break in Appendix A that its own stated rule catches. No requirement or
+     normative span quotes that sentence, so nothing was healed by the omission;
+     it is a count that was wrong, not a quotation. Pass 2's hyphen/slash split
+     of "eight hyphenated, six slash" is also wrong: over its own fourteen it is
+     ten and four, and over the correct fifteen it is **ten and five**.)*
 - The source carries **no form feeds and no page footers** (RFC 9277 is an
   unpaginated v3 text rendering), so there is no page-frame decoration to
   remove. The cached rendering begins with a **UTF-8 BOM** (U+FEFF) alone on
@@ -323,7 +347,7 @@ The §4.1 registry entry for tag 55800, verbatim and complete (source lines 412�
 - (§4.2) "IANA has allocated tag 55801 for the CBOR-Labeled Non-CBOR Data Enveloping Method (Appendix D) from the "CBOR Tags" registry."  *(`rfc-9277#R-0106`)*
 - (§4.2) "IANA updated this tag registration to point to this document."  *(`rfc-9277#R-0107`)*
 - (§4.2) "The hexadecimal representation of the encoded tag head is 0xd9_d9_f9."  *(`rfc-9277#R-0108`)*
-- (§4.2) "indicates that the file starts with a CBOR-Labeled Non-CBOR Data"  *(`rfc-9277#R-0109`)*
+- (§4.2) "indicates that the file starts with a CBOR-Labeled Non-CBOR Data label."  *(`rfc-9277#R-0109` — `[correction]` 2026-10-21, pass 3: this bullet quoted only the first of the value's two source lines, ending at "Data". Pass 2 found that truncation, restored `label.` in `requirements.yaml` and in `messages.yaml`'s `Semantics` value, and left this bullet short — so the file that exists to carry the normative text verbatim was the one still carrying it truncated. Source lines 476/477 break at a **space**, not a hyphen, so the full value is one contiguous span)*
 
 The §4.2 registry entry for tag 55801, verbatim and complete (source lines 445–477):
 
@@ -638,8 +662,11 @@ without breaking that claim. `requirements.yaml` `verify_pass` holds the full li
   §4.1 carries twelve entries (`rfc-9277#R-0094`–`R-0105`); §4.2 carries four
   (`R-0106`–`R-0109`). The eight that are not re-extracted are byte-identical to
   §4.1's — except **one**, which is not: "However, the following 16-bit
-  big-endian value **0xf9_xx** is not a valid second sequence according to
-  [RFC2781]." against `rfc-9277#R-0101`'s **0xf8_xx**. That is a materially
+  big-endian value 0xf9_xx is not a valid second sequence according to
+  [RFC2781]." — note the `f9` — against `rfc-9277#R-0101`'s `0xf8_xx`.
+  *(`[correction]` 2026-10-21, pass 3: the `**` emphasis markers were inside the
+  quoted span, so the span as written was not the source's bytes; the emphasis
+  is now outside it.)* That is a materially
   different statement about a different tag and it has no entry. It is in this
   file, inside the complete §4.2 registry block above, and in
   `schema/registrations.txt` region R02 — so it is held, not lost, and only the
@@ -653,7 +680,13 @@ without breaking that claim. `requirements.yaml` `verify_pass` holds the full li
   the source's line-end break — "…their PEM-encoded private key and their PEM-"
   — and the remainder, "encoded certificate in the same file.", was never
   extracted. With `rfc-9277#R-0169`'s missing half (above) these are the only
-  two of the thirteen in-body word breaks whose halves do not pair.
+  two of the **fifteen** line-end word breaks whose halves do not pair — and
+  `rfc-9277#R-0147`'s break is **inside an aside**, not in the body.
+  *(`[correction]` 2026-10-21, pass 3: this read "the thirteen in-body word
+  breaks". Neither figure described the census: thirteen of the fifteen are in
+  the body and two are inside asides, and one of the two unpaired halves is one
+  of those two aside breaks, so "in-body" was wrong of this very sentence. See
+  the census above.)*
 
 **Not counted above, recorded so the shape is visible.** The document re-states
 whole paragraphs verbatim in two places, and in each case only the first

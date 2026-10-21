@@ -71,7 +71,7 @@ rest of the sequence."
 **§4.3 is the mitigation, and it is already in our vocabulary.** Wrap each
 element in a byte string — `my-element = bytes .cbor my-element-structure` — and
 the sequence becomes skippable without decoding, fannable out to parallel
-decoders, and partially recoverable: "within limits, this may also enable
+decoders, and partially recoverable: "Within limits, this may also enable
 recovering from elements that internally are not well formed; the limitation is
 that the sequence of byte strings does need to be well formed as such." That is
 tag 24's pattern with the tag removed, which is the move `rfc-8949`'s design
@@ -100,7 +100,13 @@ outside the RFC process.
 ## Where it cuts against MD-3
 
 MD-3 (2026-09-28) narrowed DEC-002 to option 5 — "reduced CBOR, no IANA tags,
-COSE export only" — and a narrowing is not an acceptance; no DEC-002 ADR exists.
+COSE as export only" — and a narrowing is not an acceptance; no DEC-002 ADR exists.
+<!-- [correction 2026-10-21, pass 3 - cross-check] This dropped "as" inside a
+     quotation attributed to MD-3. docs/extraction.md:124, the only
+     in-repository statement of the gloss, writes "COSE as export only". The
+     lane's design-notes asserted that the no-"as" form MATCHED that source;
+     it does not, and that correction is recorded there. -->
+
 Three cuts, each naming an option.
 
 **Cut 1 — option 5 inherits this container by inertia, and option 3 recovers
@@ -133,6 +139,16 @@ container is the weakest citation available, and there is nothing here for a
 lint rule to target. **This cost is shared by option 2 and option 5 and paid by
 neither option 1 nor option 3:** a canonical S-expression file and a JSON text
 sequence each have a grammar for the whole file.
+
+*(`[cross-check]` 2026-10-21, pass 3: the **option-1 half** of that last
+sentence is now checkable in-library and checked — `rfc-9804`'s verbatim
+`canonical.abnf`, start symbol `c-sexp`. The **option-3 half is refuted**:
+RFC 7464 is not a record in this library and no grammar of it is held, so "a
+JSON text sequence … has a grammar for the whole file" is an assertion about an
+unread document. `distilled/design-notes.md` §8 carries the refutation and
+§Cut 2 the narrowed claim; §Cut 4 is where the JSON-side evidence actually
+lands. The extraction also found **five** cuts against MD-3 where this summary
+names three.)*
 
 **Cut 3 — and running the other way, §2 names the fix, and the fix is tag-free.**
 "(If one is desired, CBOR encoding an array of the CBOR data model values being
@@ -170,25 +186,36 @@ deployment.
 
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata — `bears_on: DEC-002`, five typed `see_also` edges, each commented |
+| `record.yaml` | metadata — `bears_on: DEC-002` and `R-M-12`, five typed `see_also` edges, each commented; `distillation.standard: FX-1` |
 | `summary.md` | this document |
+| `distilled/` | the FX-1 artifact set — `normative.md`, `requirements.yaml`, `schema/` (3 verbatim, 3 derived), `messages.yaml`, `state-machine.yaml`, `examples/`, `design-notes.md`, and a `README.md` index. `protocol` is declared `not_applicable` with a measurement |
 | `summary.html` | GENERATED and untracked — `bin/render-html` builds it beside the source (`docs/generated-views.md`) |
 
-The absences, and what would trigger each:
+*(`[cross-check]` 2026-10-21, pass 3: this section used to say **"No
+`distilled/`, and no `distillation` block"** and **"No test vectors"**, and
+listed only three files. Both statements were true when the summary was written
+and were falsified by the extraction itself; neither pass 1 nor pass 2 carried
+the change back here, which is the propagation failure `hazards.md` warns about
+by name — "work outward from the corrected claim to every artifact that states
+it, **including `summary.md`**". Two numeric estimates in the old text are also
+refuted and are recorded as refutations in `distilled/design-notes.md` §8: the
+extraction is a **61-row** `requirements.yaml`, not four, and **eleven** fixtures
+were derivable where the summary concluded there was nothing to build.)*
 
-- **No `distilled/`, and no `distillation` block.** This record was summarised,
-  not extracted: FX-1 fires on what a record says it was measured against, and
-  this one claims no standard. The extraction would be cheap — four BCP 14
-  keywords makes `requirements.yaml` a four-row file — but cheapness is not the
-  reason to spend it. The reason would be Cut 2: the artifact worth having is a
-  `schema/*.derived.cddl` top-level sequence rule that §4.1 says CDDL cannot
-  write, and that file is derived by construction. **Trigger: a DEC-002 ADR that
-  names a container.**
-- **No test vectors, and that is the document's gap rather than ours.** It
-  prints `[1, 2, 3]` and `1, 2, 3` in diagnostic notation (§4.2) and three CDDL
-  fragments (§4.1, §4.3), and **not one hex octet**. For a specification whose
-  whole content is a byte-layout claim there is nothing here to make a fixture
-  from, so any conformance test for RFC 8742 is ours and has to be marked so.
+What is still absent, and why:
+
+- **No `distillation.profile`.** An unfinished extraction declares none
+  (`docs/extraction.md`). Passes 1–3 have run and no `reviewed_by` is signed, so
+  these artifacts are readable and citable but not buildable-on.
+- **No `protocol.yaml` / `protocol.md`.** Declared `not_applicable` with its own
+  measurement: this document defines no exchange, no role and no message.
+- **No `*.schema.json`.** Nothing here is JSON Schema shaped;
+  `distilled/schema/README.md` says why.
+- **No test vector of the document's own, and that is the document's gap rather
+  than ours.** It prints `[1, 2, 3]` and `1, 2, 3` in diagnostic notation (§4.2)
+  and three CDDL fragments (§4.1, §4.3), and **not one hex octet**. So every
+  conformance test for RFC 8742 in `distilled/examples/` is ours and is marked
+  `D-` for it.
 - **No `contradicts` edge.** The tension with `rfc-9277` over concatenation is
   real and is stated on that record; it is a well-formedness-versus-interpretation
   difference rather than a disagreement, so asserting `contradicts` would

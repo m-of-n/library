@@ -24,13 +24,22 @@ RFC 9277 gives stored CBOR a magic number, so that `file(1)` can tell one CBOR
 artifact from another. Its argument is that identifying a file as "CBOR" is no
 more use than identifying an APK as a ZIP (§1), so the first bytes must name the
 **CBOR Protocol** — "a specification that uses CBOR as its encoding" — rather
-than the encoding. Two enveloping methods, each built from **two nested tags**:
-*CBOR Tag Wrapped* (§2.2), tag 55799 around a protocol-specific tag around a
-single data item, giving an 8-byte fingerprint; and *Labeled CBOR Sequence*
+than the encoding. **Three** enveloping methods, each built from **two nested
+tags**: *CBOR Tag Wrapped* (§2.2), tag 55799 around a protocol-specific tag
+around a single data item, giving an 8-byte fingerprint; *Labeled CBOR Sequence*
 (§2.3), a separate 12-byte data item prepended to an RFC 8742 sequence, tag
-**55800** around a protocol-specific tag around the 3-byte string `'BOR'`. §4
+**55800** around a protocol-specific tag around the 3-byte string `'BOR'`; and
+*CBOR-Labeled Non-CBOR Data* (Appendix D), the same 12-byte shape under tag
+**55801**, prepended to data that is not CBOR at all. §4
 allocates 55800, 55801, and 65,279 tag numbers — one for every actual or
 potential CoAP Content-Format.
+*(`[correction]` 2026-10-21, pass 3: this read "Two enveloping methods". §1
+introduces the third outright — "A third method is also proposed by which a CBOR
+format tag is prepended to identify non-CBOR files." — and §2's own "This
+section presents two enveloping methods." scopes its count to §2.
+`design-notes.md` §9 recorded this refutation on 2026-10-20 and did not carry it
+back here; it matters because a non-CBOR artifact of ours would be labelled by
+the third method and not by either of the other two.)*
 
 **It does not define tag 55799.** RFC 8949 §3.4.6 does; RFC 9277 cites it as
 STD 94 and builds on it. And the document carries **zero** BCP 14 keywords
@@ -42,7 +51,7 @@ STD 94 and builds on it. And the document carries **zero** BCP 14 keywords
 |---|---|---|
 | Encoding | **core** | MD-3's option 5 excludes IANA tags. This is the IETF's answer to "what identifies a stored CBOR artifact", and the answer is two tags. It is the sharpest available measure of what that exclusion costs. |
 | Naming | **core** | `ARCH-0002` P1 makes identity key-relative. This makes *artifact-type* identity registry-relative, in band, at byte 0. Two answers to two different questions, and only one of them is ours. |
-| Security | supporting | §3 raises the check-versus-use problem by name and resolves nothing; under both methods the label sits outside every signature. |
+| Security | supporting | §3 raises the check-versus-use problem by name and resolves nothing; under all three methods the label sits outside every signature. |
 
 **The finding to act on: concatenating two labelled files is the operation
 RFC 8742 blesses and this document says needs care, and neither says who
@@ -72,7 +81,13 @@ the document is explicit that its advice "is informative" (§1).
 ## Where it cuts against MD-3
 
 MD-3 (2026-09-28) narrowed DEC-002 to option 5 — "reduced CBOR, no IANA tags,
-COSE export only" — and a narrowing is not an acceptance; no DEC-002 ADR exists.
+COSE as export only" — and a narrowing is not an acceptance; no DEC-002 ADR exists.
+<!-- [correction 2026-10-21, pass 3 - cross-check] This dropped "as" inside a
+     quotation attributed to MD-3. docs/extraction.md:124, the only
+     in-repository statement of the gloss, writes "COSE as export only". The
+     lane's design-notes asserted that the no-"as" form MATCHED that source;
+     it does not, and that correction is recorded there. -->
+
 **Verdict: tag 55799 is a genuine cut against the no-tags half, and it is
 narrower and sharper than "option 5 forbids the only way to say this file is
 CBOR".** Four parts.
@@ -139,9 +154,9 @@ an unlabelled one are both conformant, and the two are not interoperable.
 does.** The `canonical-encoding` topic's condition (4) is that "the encoding
 profile is named by an authenticated type indicator carried inside the signed
 bytes", which `R-O-05` delivers. RFC 9277's indicator is outside every signature
-under both methods: in Tag Wrapped the two tag heads enclose the COSE message,
-and in Labeled CBOR Sequence the 12-byte label is a *separate data item* in
-front of it. §3 says the adjacent thing without drawing the conclusion:
+under all three methods: in Tag Wrapped the two tag heads enclose the COSE
+message, and in Labeled CBOR Sequence and CBOR-Labeled Non-CBOR Data the
+12-byte label is a *separate data item* in front of it. §3 says the adjacent thing without drawing the conclusion:
 "Protective applications (that check data) cannot rely on the applications they
 try to protect (that use the data) to make exactly the same decisions in
 recognizing file formats. (This is an instance of a check versus use issue.)" So
@@ -212,8 +227,14 @@ and its registered tag is the evidence.*
 |---|---|---|---|
 | Openswan (`pluto`, `addconn`, `whack`) | IPsec daemon + IPC, tag 1330664270 | not stated in the source | not given in the source |
 
-The license and URL are left unstated deliberately: Appendix C names "the
+The license and URL are left unstated deliberately: Appendix C names "The
 Openswan IPsec project" and nothing else, and neither was checked here.
+<!-- [correction 2026-10-21, pass 3 - cross-check] The quotation opened with a
+     lower-case "the"; source line 829 reads "The Openswan IPsec project". It
+     was the ONLY delimited case-fold left in the lane, and it falsified the
+     "ZERO resolve only case-insensitively" claim stated elsewhere in this
+     record. -->
+
 
 **And the consumer the whole document is written for is not shipped.** `file(1)`
 appears four times (abstract, §1 twice, §1.2) and the abstract's claim is to
@@ -227,33 +248,44 @@ an allocation, not an identification.
 
 ## Artifacts in this record
 
+*(`[correction]` 2026-10-21, pass 3 of the extraction: this section used to list
+three files and then three absences — "**No `distilled/`, and no `distillation`
+block**", "**No test vectors held here**" and "**No `distilled/schema/`**". All
+three were true when the summary was written and all three were false by the end
+of the same day: the record carries `distillation.standard: FX-1` with seven
+artifacts, fourteen vectors and a seven-file schema directory. Pass 1 built
+them, pass 2 audited them, and neither came back here. The reasoning that
+survives is kept below.)*
+
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata — `bears_on: DEC-002`, four typed `see_also` edges, each commented |
+| `record.yaml` | metadata — `bears_on: DEC-002` and `R-M-12`, four typed `see_also` edges, each commented, and the `distillation` block |
 | `summary.md` | this document |
 | `summary.html` | GENERATED and untracked — `bin/render-html` builds it beside the source (`docs/generated-views.md`) |
+| `distilled/normative.md` | every normative span, verbatim, with its locator |
+| `distilled/requirements.yaml` | 195 entries, **all `kind: inferred`**, both keyword counts **0** |
+| `distilled/schema/` | 3 verbatim files and 4 derived — the four CDDL snippets, the three registry entries, the TN formula, and ours: the TN function as data, the 30 label spellings, the three envelopes as CDDL |
+| `distilled/messages.yaml` | 7 structures, 29 fields; 56 of the 195 requirements cited by a named field |
+| `distilled/state-machine.yaml` | DERIVED — 5 states, 8 transitions, 1 self-loop, 6 undefined transitions |
+| `distilled/examples/` | 14 vectors: 7 the source's own, 7 ours |
+| `distilled/design-notes.md` | MD-3 clause by clause, six cuts against it, 9 source defects |
 
-The absences, and what would trigger each:
+What the extraction changed about the forecast above, and what it did not:
 
-- **No `distilled/`, and no `distillation` block.** This is the clearest case in
-  the lane for the summary bar being the right one. With zero BCP 14 keywords,
-  `requirements.yaml` would be an empty list with `source_keyword_count: 0`, and
-  under `docs/requirements.md` §1's four-part test **nothing in RFC 9277
-  qualifies as a requirement at all**. Recording that *before* anyone budgets
-  the extraction is worth more than the extraction. What a full pass would add is
-  `messages.yaml` — the two envelopes are byte layouts and §4.3 is a formula with
-  a table — and `examples/`. **Trigger: a DEC-002 ADR that decides to carry or to
-  refuse a magic number.**
-- **No test vectors held here, although unusually for this lane the source has
-  usable ones.** §2.2.1 and §2.3.1 print complete annotated hex and Appendix C
-  prints the Openswan label; §2.2.1's `d9d9f7da63740171…` and §2.3.1's
-  `d9d9f8da63740212…` both reproduce from the TN formula. They are not fixtures
-  until somebody writes expected results, and that is extraction work.
-- **No `distilled/schema/`.** Appendices B.1 and D.1 give four one-line CDDL
-  snippets (`senml-cbor = #6.1668546929(bstr)` and three like it) and every one
-  is a tag assertion — the mechanism option 5 excludes. A derived CDDL for the
-  two envelopes would be `*.derived.*` by construction and would document a
-  mechanism we may not use.
+- **The "nothing qualifies as a requirement" judgement stands, and the
+  extraction measured it rather than assuming it.** `bin/bcp14-count` returns 0
+  and all 195 entries are `kind: inferred`; under `docs/requirements.md` §1's
+  four-part test nothing here qualifies. `status` therefore stays `summarized`
+  and `tags` stay `evidence`, not `normative`.
+- **The source's test vectors did become fixtures.** §2.2.1, §2.3.1 and
+  Appendix C are `V-0001`–`V-0003`, every hex string rebuilt from its annotated
+  source lines and executed; seven more are ours, and two of those deliberately
+  have no expected result because the document defines none.
+- **There is a `distilled/schema/`, and the forecast's reason for not having one
+  is now a finding in it.** Every one of the four snippets is a tag assertion —
+  the mechanism option 5 excludes — and none of them is an envelope, so the
+  envelope CDDL is `envelopes.derived.cddl` and its value is the four things
+  CDDL cannot say about these layouts.
 - **No `contradicts` edge**, for the reason given in the finding above: the
   concatenation tension is well-formedness versus interpretation, not
   disagreement.

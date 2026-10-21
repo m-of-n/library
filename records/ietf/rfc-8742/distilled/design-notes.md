@@ -476,9 +476,19 @@ Six. All reported, none repaired.
    collapse onto one determinate case is not vacuous; it is a rule with one
    branch. Taking the two `SHOULD`s separately, from §6.3's own text:
 
-   - **`rfc-8742#R-0055` is deferred.** Its referent is declared absent *"at the
-     time of publication of this document"* — a temporal qualifier, which is a
-     deferral marker and not an admission of emptiness. The rule binds
+   - **`rfc-8742#R-0055` is deferred.** Its referent is declared absent at the
+     time of publication of this document — §6.3's parenthesis opens
+     *"(At the time of publication of this document, …"* — a temporal
+     qualifier, which is a
+     deferral marker and not an admission of emptiness. *(`[cross-check]`
+     2026-10-21, pass 3: this sentence re-quoted the phrase with a **lower-case
+     `at`** where source line 351 has `At` — written without double quotes here,
+     as pass 2 did for its own case defect, so that the lane's case-sensitivity
+     audit stays clean. It is the same defect class pass 2 found once as `At least
+     sometimes` and declared **"the ONLY hit across 1628 quoted runs"** — the
+     blanket claim was false, and in the opposite direction. The phrase is now
+     unquoted where it is paraphrased and quoted from the capital where it is
+     quoted.)* The rule binds
      conditionally: if and when a fragment-identification syntax is registered
      for `application/cbor-seq`, `+cbor-seq` inherits it, and a future registrant
      of `xxx/yyy+cbor-seq` is bound by that. It is unsatisfiable *today* and
@@ -624,7 +634,14 @@ every claim below was re-derived from `.cache/rfc-8742.txt` at this pass.
   are length-prefixed by construction. Both halves come from grammars this
   library already holds verbatim and neither was in the summary.
 - `state-machine.yaml`, which the summary did not anticipate: the completeness
-  hole stated as an **indistinguishability between two states**.
+  hole stated as an **indistinguishability between two files** — and the file's
+  payload is in fact `guards_the_source_does_not_supply`, in particular the
+  absent timeout on a suspended decoder. *(`[cross-check]` 2026-10-21, pass 3:
+  this bullet read "an **indistinguishability between two states**". Pass 2
+  withdrew that wording in five places — `state-machine.yaml`'s header, its
+  `indistinguishable_pairs` banner, `messages.yaml`'s `completeness`,
+  `README.md` and §1 above — and missed this one, which is the last site in the
+  record that still said "states".)*
 
 ---
 
@@ -672,12 +689,25 @@ locator's section** (0 failures); 6 of 6 schema regions byte-identical to their
 declared line ranges with all 6 declared digests verifying and **none** matching
 the with-trailing-newline variant; 3 of 3 dedent round-trips; 5 of 5 source
 vectors exact dedented slices; 11 of 11 derived fixtures executed; 112 quoted
-spans across the YAML artifacts checked verbatim, **which caught one elided
-quote in `examples/vectors.yaml` and two inexact ones in `messages.yaml`, all
-three corrected in place**; 0 form feeds, 0 page footers, 0 lines with trailing
+spans across the YAML artifacts and 142 across the markdown artifacts checked
+verbatim, **which caught four elisions and two inexact quotes in this
+extraction's own prose, every one corrected in place** — an elided §4.1 quote in
+`examples/vectors.yaml`, an elided §3 quote in `README.md`, two elided quotes
+and one inexact quote in `messages.yaml`, and one elided §4.2 quote in
+`requirements.yaml`; 0 form feeds, 0 page footers, 0 lines with trailing
 whitespace, 0 asides, 0 healed hyphenations; and the join in `messages.yaml`
 recomputed as 31 cited / 30 uncited after a first draft that counted prose
 mentions as cites and was wrong by 12.
+
+*(`[cross-check]` 2026-10-21, pass 3: this paragraph said "112 quoted spans
+across the YAML artifacts ... which caught one elided quote in
+`examples/vectors.yaml` and two inexact ones in `messages.yaml`, all three
+corrected in place" — **three** where `record.yaml`'s own pass-1 note records
+**six**, and omitting the markdown half of the census entirely. The tally above
+is `record.yaml`'s. Note also that neither the 112 nor the 142 states its
+method, so neither is reproducible: pass 3's own whole-span census of the same
+files counts 744 quote marks in the YAML artifacts and 653 in the markdown
+ones, which is a different measurement of a different thing.)*
 
 **Verified present and quoted in-library:**
 `records/iso/iana-cbor-tags/distilled/tables.yaml` (tag 63, and tags
@@ -689,13 +719,31 @@ notes' §3.4.6 row; `records/ietf/rfc-9804/distilled/schema/canonical.abnf` and
 
 **Not held in this library, so every claim about them is `[unverified]` here:**
 `ARCH-0001`, `ARCH-0002`, `ADR-0001`, `MD-3`, `PLAN-0001`, `DECISIONS-0001`, all
-`R-M-*` / `R-O-*` / `R-I-*` texts, **RFC 7049**, **RFC 7464**, **RFC 8091**,
-**RFC 6838**, **RFC 8126** and **RFC 7252**. Of these, RFC 7464's marker and
+`R-M-*` / `R-O-*` / `R-I-*` texts, **RFC 7464**, **RFC 8091**,
+**RFC 6838**, **RFC 8126** and **RFC 7252** — for each of these
+`records/ietf/<id>` does not exist, checked by inventory at pass 3. Of these,
+RFC 7464's marker and
 RFC 7252 §12.3's experimental range are the two that a later pass could usefully
 close by ingesting them.
 
-**No `reviewed_by` is signed, and no `profile` is declared.** Passes 1 and 2 of 3
-have run; cross-check has not.
+**Held but not readable from here: RFC 7049.** *(`[cross-check]` 2026-10-21,
+pass 3: the list above used to include **RFC 7049**, and that was wrong —
+`records/ietf/rfc-7049/record.yaml` exists, with `content.sha256`
+`2b65264a9606b2182f536bffad10f12176837747e23a12f89e795d886d6ac33b` and a written
+`summary.md`.)* What is true, and is what the `[unverified]` marks actually rest
+on, is narrower: that record is at `status: fetched` with **no `distillation`
+block and no `distilled/`**, and `.cache/rfc-7049.txt` is absent, so no sentence
+of RFC 7049 is quotable from this repository even though the record is held. The
+normative-anchor finding does not depend on reading it: it rests on §2 and §5 of
+RFC 8742 naming `[RFC7049]`, and on `rfc-8949 supersedes rfc-7049`, both of
+which are in-library.
+
+**No `reviewed_by` is signed, and no `profile` is declared.** *(`[cross-check]`
+2026-10-21, pass 3: this read "Passes 1 and 2 of 3 have run; cross-check has
+not." All three machine passes have now run — §11 and §12 record passes 2 and 3
+— and `record.yaml` `distillation.passes` still lists **two** entries because
+pass 3 was scoped not to write its own. The profile and the `passes` entry are
+the lane's to add; `distilled/README.md` states both omissions.)*
 
 ---
 
@@ -767,19 +815,162 @@ agree, and they do not everywhere:
 - **Options 2 and 4 are consistent** across the library — "CBOR + CDDL as
   canonical; COSE for signed form" identically in eight records (two truncating
   it at the semicolon without marking the truncation) and "Dual canonical (CBOR
-  and JSON) with a documented bijection" identically in four, including
+  and JSON) with a documented bijection" identically in three, including
   `rfc-9679` and `rfc-9964`, which is where this lane's option-4 wording came
   from. So Cut 4 does not inherit a paraphrase.
-- **The option-5 / MD-3 gloss has diverged, and two records quote the divergent
-  reading.** This lane writes "reduced CBOR, no IANA tags, COSE export only",
-  which matches `docs/extraction.md` — the only in-repository statement of it.
-  Five other records write "**CBOR data model**, no IANA tags, COSE export only",
-  two of them *inside quotation marks* (`records/ietf/rfc-9679`,
-  `records/ietf/draft-ietf-cbor-cde`), and two more write "COSE **as** export
-  only". *A reduced CBOR profile* and *the CBOR data model* are not the same
-  claim. **Reported, not repaired** — those records are at `profile: full`.
-  So the chain is sound where this lane's cuts rest on it (options 1–4), and the
+  *[correction 2026-10-21, pass 3 — cross-check] The option-4 count read "four".
+  Measured under the same "other records" convention the option-2 clause above
+  uses, it is **three**; the record omitted from the list was `rfc-8610`. The
+  option-2 count of eight and the "two truncating it" both reproduce exactly.*
+- **The option-5 / MD-3 gloss has diverged, and THIS LANE CARRIES THE DIVERGENT
+  READING.** `docs/extraction.md` — the only in-repository statement of it —
+  writes "reduced CBOR, no IANA tags, COSE **as** export only". This lane writes
+  "COSE export only", **without the "as"**, in both of its records and in both
+  of their summaries, where it sits inside quotation marks attributed to MD-3.
+  Measured across the library with emphasis stripped: **16 records (and
+  `docs/extraction.md`) carry an "as" form; 21 carry a no-"as" form**, so both
+  readings are widespread and this lane is on the side that the one checkable
+  in-repository statement does not support. Six other records write
+  "**CBOR data model**, no IANA tags, COSE export only", one of them *inside
+  quotation marks* (`records/ietf/rfc-9679`). *A reduced CBOR profile* and *the
+  CBOR data model* are not the same claim. **Reported, not repaired** in those
+  records — they are at `profile: full`.
+
+  *[correction 2026-10-21, pass 3 — cross-check] This bullet previously said
+  the lane's wording "matches `docs/extraction.md`", and closed by saying "the
   one place it is not sound is the option-5 gloss, where this lane happens to
-  agree with the only in-repo source.
+  agree with the only in-repo source." **Both were false, and the second was
+  exactly inverted** — the lane disagrees with that source. It also said "Five
+  other records" (six) and named `draft-ietf-cbor-cde` as quoting the
+  no-"as" form (it carries the **with**-"as" form, so it belongs in the other
+  clause), and "two more write COSE as export only" where sixteen do. A
+  sentence of the form "the one place it is not sound is X, where we happen to
+  be fine" is the shape hazards.md now warns about: it stops the reader
+  checking the one thing it names.*
 - The full four-option list appears **only** in this lane's two records, so there
   is no second copy to cross-check. Marked, not fixed.
+
+---
+
+## 12. Pass 3 (cross-check), 2026-10-21 — the four closures, and twenty defects
+
+The closures `docs/extraction.md` defines, with the numbers measured rather than
+asserted. Nothing in this section changes a conclusion about RFC 8742; **every
+defect it found was in this record's own prose**, which is the fourth lane in a
+row for which that is true.
+
+**(a) Every field a requirement names exists in `messages.yaml` or `schema/`:
+8 of 8, 0 missing.** Eight requirement texts have the registration-template
+shape *Label: value* (`R-0046`–`R-0051`, `R-0055`, `R-0061`); every label is a
+field `name` in `messages.yaml` **and** appears in `schema/registrations.txt`.
+`messages.yaml` holds 6 structures and 37 field entries; 33 of the 37 field
+names occur verbatim in the source and the 4 that do not (`framing`, `head`,
+`byte-string head`, `embedded item`) are each marked OURS where they stand.
+25 of the 27 string field *values* are verbatim inside their declared region;
+the 2 that are not are the §6.3 fragment-identifier summary and the `Contact`
+value, both declared. The one source label with no field entry is §6.1's
+*Additional information*, which is a grouping header with no value — its four
+sub-bullets are all present.
+
+**(b) Every message in a protocol flow is defined in `messages.yaml`: vacuous,
+and the N/A verdict was RE-DERIVED rather than taken on trust.** Whole-word,
+case-insensitive, over all 462 lines: `role` 0, `party` 0, `client` 0,
+`server` 0, `sender` 0, `receiver` 0, `recipient` 0, `peer` 0, `endpoint` 0,
+`handshake` 0, `exchange` 0, `message` 0, `session` 0, `connection` 0,
+`negotiat*` 0 — all 0 as substrings too. `protocol` occurs **once**, in
+"Constrained Application Protocol (CoAP)" at line 96. `request` occurs
+**once**, at **line 6**, "Request for Comments: 8742" — the RFC's own masthead,
+not §1, which is the one thing the N/A reason got wrong and is corrected there.
+**Verdict confirmed and strengthened.**
+
+**(c) Every state-machine trigger is a defined message or a named event: 7 of
+7.** None is a message name, correctly — there are no messages. Each of the 7
+carries a named event, a source `quote` and a resolving `requirement` id; all
+`from`/`to` names are among the 5 declared states; `error_states` is a subset of
+them; and all **12** `quote` values are contiguous verbatim spans **inside the
+machine's declared locator §2**, not merely somewhere in the file.
+
+**(d) Every example validates against `schema/`: 16 of 16.** `V-0001`–`V-0003`
+validated against the **verbatim** CDDL (`schema/cddl-fragments.cddl`, regions
+F01–F03) and its dedented companion; `V-0004`/`V-0005` against §4.2's own two
+display lines. All five are exact dedented slices of their declared line ranges.
+`D-0001`–`D-0011` were decoded with a **CBOR well-formedness checker written
+for this pass**, sharing no code with pass 1's: every length matched its
+`length_bytes`, every valid/invalid verdict matched its `expect`, and the
+offsets in `D-0006` (3), `D-0007` (1) and `D-0010` (head wants 4, 0 available)
+reproduced independently. Against the **derived ABNF**
+(`cbor-seq.derived.abnf`, `cbor-sequence = *encoded-cbor-data-item`) the 8
+valid fixtures are accepted and the 3 malformed ones rejected, which is the
+grammar's whole discriminating power — it cannot tell `D-0004` (truncated
+sequence) from a complete one, and that is consequence (2) in that file.
+
+**Also re-measured, all reproducing:** `bin/bcp14-count` 4 (MUST 1, SHOULD 3) at
+source lines 172, 267, 350, 356, with the 11 §1.1 boilerplate occurrences making
+the raw total 15; `extracted_keyword_count` 4, carried by exactly the four
+`stated` entries and no fifth smuggled into any `text`; 61 of 61 requirement
+texts and 65 of 65 `normative.md` spans contiguous in the **raw**
+whitespace-normalised source and inside their attributed locator; 6 of 6 schema
+regions byte-identical to their declared ranges with all 6 digests verifying
+under `sha256` of the lines joined by newline with no trailing newline **and
+under none of the alternatives**; 3 of 3 dedent round-trips; `messages.yaml`'s
+37/31/30 join set-equal to the computed set; all four YAML artifacts and
+`record.yaml` read identically by both `bin/_yaml.py` and
+`bin/_record_yaml.py` at every leaf path, modulo scalar typing.
+
+**The quote audit, re-run over WHOLE SPANS longest-first and over the two blind
+spots.** Resolved against the section each span is attributed to. Final state:
+**0 relaxations** in the markdown and schema files, **0** in the parsed YAML
+values, **0** in `record.yaml`, **0** in the apostrophe and curly-quote
+spellings, and **0** undelimited verbatim runs of our prose. Getting there cost
+three fixes, because a fragment audit had reported clean twice: an **altered
+capital** in §7 defect 1 above, another in `summary.md` §4.3, and a third in
+`state-machine.yaml`'s quotation of `rfc-8949`'s N/A reason — so pass 2's
+*"the **only** hit across 1628 quoted runs"* was a blanket claim and false.
+
+**The twenty defects, by class.** The ten classes carry 1 + 1 + 1 + 4 + 1 + 4
++ 2 + 2 + 1 + 3 = **20** defects between them; where a class says *n* sites, a
+single defect was restated at *n* places and all *n* are fixed.
+
+1. **Propagation, 6 sites.** The overturned vacuity claim survived in
+   `record.yaml`'s requirements coverage, three `requirements.yaml` `field`
+   values (`R-0048`, `R-0055`, `R-0057`) and two `messages.yaml` notes. Pass 2
+   fixed four sites and named them; these six state the same claim.
+2. **Propagation, 1 site.** The withdrawn *indistinguishability between two
+   **states*** survived in §8 above.
+3. **Propagation into `summary.md`.** It still said the record had **no
+   `distilled/` and no `distillation` block** and **no test vectors**.
+4. **Fossil counts, 4.** `normative.md`'s spans (63 → **65**, created by pass 2's
+   own two additions); the `reconciliation`'s length (3536 / "3.5 KB" → **4462**,
+   created by pass 2 appending to it); pass 2's **243** citations (measured
+   **344**, 0 dangling, by no reachable rule 243);
+   `state-machine.yaml`'s `sentences_the_states_are_anchored_to` (8 → **9**).
+5. **Wrong-but-real ids, 2 sites.** `schema/cbor-seq.derived.abnf` and
+   `schema/cbor-seq-container.derived.cddl` cited `V-0004`/`V-0005` for the two
+   **byte strings**, which are `D-0003`/`D-0002` — and the pairing was inverted
+   as well. Invisible to `bin/check-id-joins`: the ids were **bare**, which its
+   regex skips by design, and `D-` is outside its namespaces.
+6. **Quotation defects, 4.** Three altered capitals (above) and one **dropped
+   terminal colon** in `schema/cbor-seq-container.derived.cddl`'s §4.1
+   quotation, where `design-notes.md` §3.1 quotes the same sentence with it.
+7. **Line ranges, 2.** Both of pass 2's "statements with no entry" were off by
+   one: §1's sentence is **96–99** (not 96–98) and §2's parenthesis **137–139**
+   (not 136–138).
+8. **A fossil reader claim and a dangling pointer, 2.** `messages.yaml`'s
+   *NOTE ON FORM* asserted in the present tense that `bin/_yaml.py` mis-parses
+   an inline flow map; commit `9322447` fixed that, and both readers now return
+   the map. Separately, its pointer to a flow-sequence report "in
+   `../design-notes.md`" resolved to nothing.
+9. **An inventory claim.** RFC 7049 was listed as *not held in this library*;
+   the record exists. The narrower true claim is in §10 above.
+10. **An understated tally, a blanket claim and a refuted wording left
+    standing, 3**, all narrowed in place: §10's three-defect count against
+    `record.yaml`'s six; `README.md`'s "no transformation of any kind was
+    applied to any quoted span"; and `examples/README.md` still asserting "there
+    is nothing to make a fixture from", which §8 above refutes, in the very
+    directory holding the eleven fixtures that refute it.
+
+**What pass 3 did NOT change.** No requirement was added, removed or
+re-worded; no locator moved; no digest, line range or fixture changed; the
+`protocol` N/A verdict and the state-machine KEEP verdict both stand on
+re-derived measurements; `distillation.profile` is still undeclared and
+`distillation.passes` still lists two entries, both of which belong to the lane.

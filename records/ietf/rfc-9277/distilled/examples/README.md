@@ -96,8 +96,12 @@ had drifted.)*
 
 **`D-0003` is the condition-(4) fixture.** Swapping the inner tag makes the file
 claim to be an Openswan configuration. It is well formed, it breaks no signature
-over the payload, and nothing in RFC 9277 detects it, because under both methods
-the indicator sits outside everything a signature over the content could cover.
+over the payload, and nothing in RFC 9277 detects it, because under **all three**
+methods the indicator sits outside everything a signature over the content could
+cover. *(`[correction]` 2026-10-21, pass 3: "both methods" here and in
+`vectors.yaml` `D-0003`, against "all three methods" in `../README.md`,
+`../design-notes.md` §1.1 and `../messages.yaml`. The fixture itself exercises
+the §2.3 method; the claim is about all three.)*
 §3 names the class — "(This is an instance of a check versus use issue.)" — and
 states no rule.
 
