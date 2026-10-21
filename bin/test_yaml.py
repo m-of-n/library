@@ -87,9 +87,34 @@ CASES = [
      {"f": [{"text": "one two three.", "kind": "stated"}]}),
     ("a single-quoted value wraps too",
      "k: 'one two\n   three.'\nb: 1\n", {"k": "one two three.", "b": "1"}),
-    ("an escaped quote does not terminate the scalar early",
+    # Double-quoted escapes. This case used to expect the backslashes back,
+    # which pinned the bug rather than the behaviour: the scalar must not
+    # terminate early AND the escape must resolve, as bin/_record_yaml.py has
+    # always resolved it. 435 values across 46 records read differently under
+    # the two readers because this one resolved nothing, 72 of them verbatim
+    # requirement texts (library#39, the sixth defect in this family).
+    ("an escaped quote does not terminate the scalar early, and resolves",
      'k: "she said \\"hi\\" twice"\nb: 1\n',
-     {"k": 'she said \\"hi\\" twice', "b": "1"}),
+     {"k": 'she said "hi" twice', "b": "1"}),
+    # The ordering bug, which is why this is one left-to-right pass and not a
+    # chain of str.replace(): a doubled backslash followed by `n` is an escaped
+    # backslash and then the letter `n`, NOT a newline. Chained replaces
+    # rescanned their own output and produced a real newline here.
+    ("a doubled backslash before n stays a backslash and an n",
+     'k: "joined by \\\\n, no trailing newline"\n',
+     {"k": "joined by \\n, no trailing newline"}),
+    ("a doubled backslash before t stays a backslash and a t",
+     "k: \"the char '\\\\t' (tab)\"\n", {"k": "the char '\\t' (tab)"}),
+    ("a lone escaped newline and tab do resolve",
+     'k: "one\\ntwo\\tthree"\n', {"k": "one\ntwo\tthree"}),
+    # Escapes NOT in the table are left exactly as written, because the records
+    # that use them are about escape notation itself: the CBOR/EDN test vectors
+    # carry brace-form literals (107 sites) and rfc-9804 prose names hex
+    # escapes as notation. Resolving these would rewrite the subject matter.
+    ("a brace-form EDN literal is left alone",
+     'k: "D\\u{6f}mino"\n', {"k": "D\\u{6f}mino"}),
+    ("a hex escape is left alone",
+     'k: "\\xFE is the same octet"\n', {"k": "\\xFE is the same octet"}),
     ("a doubled single quote does not terminate the scalar early",
      "k: 'it''s fine'\nb: 1\n", {"k": "it's fine", "b": "1"}),
     # A DOCUMENTED LIMITATION, pinned so it is a decision and not a surprise.

@@ -116,11 +116,47 @@ def _flow_map(v):
     return out
 
 
+# Escapes resolved inside a double-quoted scalar, and why the list stops where
+# it does. A quote and a backslash are unambiguous: a double-quoted scalar
+# cannot carry either one bare, so each can only be an escape. The `n` and `t`
+# forms are resolved because bin/_record_yaml.py already resolved them and the
+# library's records were authored against that.
+#
+# Everything else is left EXACTLY as written, deliberately. The test vectors
+# carry EDN literals in the brace form that YAML does not define (107 sites in
+# the CBOR lane), and rfc-9804 prose names hex escapes as notation. There the
+# escape text IS the subject matter, so resolving it would rewrite the records
+# that discuss escaping. See .claude/skills/extract/hazards.md #3.
+#
+# ONE PASS, LEFT TO RIGHT. Sequential str.replace() cannot do this: it rescans
+# text it has already produced, so a doubled backslash followed by `n` came out
+# as a backslash and a real NEWLINE instead of a backslash and an `n`. That was
+# the sixth reader disagreement found in this family (library#39).
+_DQ_ESCAPES = {'"': '"', chr(92): chr(92), "n": "\n", "t": "\t"}
+
+
+def _unescape_dq(body):
+    """Resolve the double-quoted escapes in `_DQ_ESCAPES`, in a single pass."""
+    if chr(92) not in body:
+        return body
+    out = []
+    i = 0
+    while i < len(body):
+        c = body[i]
+        if c == chr(92) and i + 1 < len(body) and body[i + 1] in _DQ_ESCAPES:
+            out.append(_DQ_ESCAPES[body[i + 1]])
+            i += 2
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
 def _scalar(v):
     v = _strip_comment(v.strip()).strip()
     if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
         # single-quoted YAML escapes a quote by doubling it: 'it''s' -> it's
-        return v[1:-1].replace("''", "'") if v[0] == "'" else v[1:-1]
+        return v[1:-1].replace("''", "'") if v[0] == "'" else _unescape_dq(v[1:-1])
     if v == "[]":
         return []
     if v == "{}":

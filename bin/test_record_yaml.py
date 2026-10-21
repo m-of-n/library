@@ -56,6 +56,25 @@ CASES = [
     ("a plain value that merely starts with > is not a block scalar",
      "gaps:\n  - note: >text\n",
      {"gaps": [{"note": ">text"}]}),
+    # Double-quoted escapes resolved in ONE left-to-right pass. This reader
+    # used four chained str.replace() calls, which rescanned their own output:
+    # a doubled backslash followed by `n` is an escaped backslash and then the
+    # letter `n`, but the chain turned it into a backslash and a real NEWLINE,
+    # corrupting verbatim requirement texts that quote an escape as itself.
+    ("a doubled backslash before n stays a backslash and an n",
+     'k: "joined by \\\\n, no trailing newline"\n',
+     {"k": "joined by \\n, no trailing newline"}),
+    ("a doubled backslash before t stays a backslash and a t",
+     "k: \"the char '\\\\t' (tab)\"\n", {"k": "the char '\\t' (tab)"}),
+    ("a lone escaped newline and tab still resolve",
+     'k: "one\\ntwo\\tthree"\n', {"k": "one\ntwo\tthree"}),
+    # Escapes outside the table are left exactly as written, because the
+    # records using them are about escape notation itself: the CBOR/EDN test
+    # vectors carry brace-form literals and rfc-9804 prose names hex escapes.
+    ("a brace-form EDN literal is left alone",
+     'k: "D\\u{6f}mino"\n', {"k": "D\\u{6f}mino"}),
+    ("a hex escape is left alone",
+     'k: "\\xFE is the same octet"\n', {"k": "\\xFE is the same octet"}),
 ]
 
 fail = 0
@@ -79,6 +98,14 @@ AGREE = [
     # Both readers must also agree about where a block scalar may start.
     "gaps:\n  - note: >\n      one two\n",
     "items:\n  - name: a\n    note: >\n      x y\n",
+    # And about double-quoted escapes. _yaml resolved NONE of them while this
+    # reader resolved four, so 435 values across 46 records read differently
+    # under the two — 72 of them verbatim requirement texts (library#39).
+    'k: "she said \\"hi\\" twice"\n',
+    'k: "joined by \\\\n, no trailing newline"\n',
+    "k: \"the char '\\\\t' (tab)\"\n",
+    'k: "D\\u{6f}mino"\n',
+    'k: "\\xFE is the same octet"\n',
 ]
 def _norm(v):
     """Compare structure and text, not chomping or scalar typing.

@@ -43,17 +43,41 @@ def _strip_comment(s: str) -> str:
     return "".join(out).rstrip()
 
 
+# Kept byte-identical in meaning to bin/_yaml.py's `_DQ_ESCAPES`. The two
+# readers are deliberately independent parsers, so the table is duplicated
+# rather than imported; bin/test_record_yaml.py and bin/test_yaml.py pin both.
+_DQ_ESCAPES = {'"': '"', chr(92): chr(92), "n": "\n", "t": "\t"}
+
+
+def _unescape_dq(body: str) -> str:
+    """Resolve the double-quoted escapes in `_DQ_ESCAPES`, in a single pass.
+
+    This replaced four chained str.replace() calls, which rescanned text they
+    had already produced: a doubled backslash followed by `n` resolved to a
+    backslash and a real NEWLINE instead of a backslash and an `n`, corrupting
+    verbatim requirement texts that quote an escape sequence as itself.
+    """
+    if chr(92) not in body:
+        return body
+    out = []
+    i = 0
+    while i < len(body):
+        c = body[i]
+        if c == chr(92) and i + 1 < len(body) and body[i + 1] in _DQ_ESCAPES:
+            out.append(_DQ_ESCAPES[body[i + 1]])
+            i += 2
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
 def _unquote(s: str):
     if len(s) >= 2 and s[0] == s[-1] and s[0] in "\"'":
         body = s[1:-1]
         if s[0] == "'":
             return body.replace("''", "'")
-        return (
-            body.replace("\\n", "\n")
-            .replace("\\t", "\t")
-            .replace('\\"', '"')
-            .replace("\\\\", "\\")
-        )
+        return _unescape_dq(body)
     return s
 
 
