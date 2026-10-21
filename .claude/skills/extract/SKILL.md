@@ -93,3 +93,40 @@ buildable-on.
 - **Never paraphrase normative text.** Verbatim or nothing.
 - **Never edit generated artifacts** (`bin/derive` output); fix the source artifact and regenerate.
 - **Never commit the source document.** Digest and URL only.
+
+## Hazards — read `hazards.md` before pass 1
+
+`hazards.md` beside this file is the list of defects that **actually happen**,
+every one found in this library's own artifacts and most of them more than
+once. It is not optional reading: the later passes of library#39 found more
+than the earlier ones precisely because this list grew. It also carries the
+measured **batching calibration** and what a verify pass should really attack.
+
+The one-line versions, in the order they cost you most:
+
+- **Digests and dates come from `record.yaml`, verified three ways.** Two were
+  fabricated into summary tables. `bin/validate` checks the Digest row because
+  of it. `maturity` is read off the front page — an RFC being an RFC does not
+  make it Standards Track.
+- **Never splice, never heal, and characterise breaks correctly.** Build a
+  quote audit with a *named relaxation channel* so the defect class is
+  reported rather than masked, plus a longest-prefix test for the splice
+  signature. Four lanes each found 4–5 defects in their own prose this way.
+- **Escapes resolve through editing paths.** Assemble any `\u{…}` in a script
+  and grep for the resolved character afterwards. One record carried this
+  seven times, always inside a sentence about the hazard.
+- **Emit every cited id from the id table by script, then read the resolved
+  pairs.** Two lanes shipped 41 ids that resolved to a real but *different*
+  statement — not dangling, so nothing caught them.
+  `bin/check-id-joins --surface` gives the attack surface.
+- **Prefer block sequences and maps over flow**, keep each `text:` on one line
+  or in a block scalar, and parse every artifact with **both** readers
+  comparing values rather than counts. Five data-loss defects in `_yaml.py`
+  came from this, one losing a whole `requirements.yaml` list.
+- **`split("\n")`, not `splitlines()`** (form feeds), and `python3 -I` with
+  `bin/` on the path explicitly (the shared scratch has a stale `__pycache__`).
+- **The first version of any new check over-reports.** Measure it across the
+  library and scope it narrowly before trusting it. Three for three.
+
+Tools that already exist, so no pass rebuilds them: `bin/bcp14-count`,
+`bin/check-locators`, `bin/check-id-joins`, `bin/fetch-source`, `bin/validate`.

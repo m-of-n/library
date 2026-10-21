@@ -1,0 +1,222 @@
+# FX-1 hazards — the defects that actually happen
+
+Every item here was found in this library's own artifacts, most of them more
+than once. None is hypothetical. They are ordered by how expensive they are to
+miss, not by how interesting they are.
+
+The pattern across all of them: **the defect is in OUR wording, not the
+source's**, and `bin/validate` reported nothing. A source defect is usually
+visible on a careful first read. What survives pass 1 is the extraction's own
+confident prose, and that is what a later engineer builds on without
+re-checking.
+
+Measured during library#39 Tier 2: **every one of five independent cross-check
+passes found at least one claim that pass 2 had corrected in one artifact and
+failed to propagate to the others stating the same claim.** Five for five. That
+is the specific thing an artifact-wide third pass buys.
+
+---
+
+## 1. Fabricated digests and dates
+
+Two digests were written into summary tables from invention rather than read.
+Both were caught by a later pass; `bin/validate` now checks the
+`| **Digest** |` row because of it.
+
+**Rule.** Copy the digest from `content.sha256` in the record's own
+`record.yaml`, then verify it three ways: against `record.yaml`, against a
+fresh `shasum -a 256` of the cached source, and against the `retrieved` date.
+Every bibliographic cell — authors, date, maturity, identifiers — comes from
+`record.yaml` or the source's own front page. `maturity` especially: an RFC
+being an RFC does not make it Standards Track. Two maturity values were wrong
+in briefs this effort (`rfc-9054` is Informational; `rfc-9338` is STD 96).
+
+## 2. Spliced and healed quotations
+
+The two recurring verbatim defects:
+
+- **Splice** — two non-adjacent quotes welded into one, inside a paragraph
+  asserting "verified verbatim". Found in vCon (2026-09) and again in
+  `rfc-9679`.
+- **Heal** — a line-break hyphenation silently joined, so the quoted token
+  does not occur in the source at all.
+
+**Rule.** Build a quote audit over every file the pass writes, with a **named
+relaxation channel**: retry each non-resolving fragment under
+terminal-punctuation swap, hyphenation heal, line-break heal and case fold, so
+the defect class is *reported* rather than masked. Then, for anything still
+unresolved, take the longest matching prefix and test whether the remainder
+matches **elsewhere in the source** — that is the splice signature.
+
+Zero relaxations needed is the result you want. Four separate lanes each found
+4–5 defects in their own prose this way, including an inserted `only`, an
+ellipsis splice, a terminal colon turned into a full stop, and five nested
+quotation marks silently re-punctuated.
+
+**Characterise breaks correctly, too.** One record claimed a break cut "hyphen
+and all" when it cut at a space with the hyphen intact — wrong in eight places
+while the data was right everywhere. Joining at a space is ordinary
+normalisation, not a heal.
+
+## 3. Escapes resolve through editing paths
+
+Writing a literal escape sequence (`\u{6f}`, `\n`) through an ordinary edit can
+silently resolve it to the character it denotes. The sentence quoting "the
+escape" then becomes false, because the *character* and the *escape* are
+exactly what the claim distinguishes.
+
+`rfc-9682` carried this **seven times across six artifacts**, every one inside a
+sentence *about* the hazard, and the correction hit the same trap three more
+times. The Edit tool itself has refused such a change, reporting that it "also
+tried swapping \uXXXX escapes and their characters".
+
+**Rule.** Assemble any string containing an escape sequence in a script
+(`chr(92)`), write the file from there, and afterwards grep the record for the
+resolved characters expecting **zero** hits outside a verbatim capture. Treat
+disagreement between two artifacts about the same quoted token as evidence of
+this, not as a judgement call.
+
+## 4. Ids that resolve to the wrong statement
+
+The worst class, because nothing catches it. A `constrained_by` or `Derived
+from` citation that resolves to a **real requirement which is not the one
+meant**: it does not dangle, so no closure check sees it; the text is verbatim,
+so no verbatim check sees it; the locator is right, so `bin/check-locators`
+passes it.
+
+Two lanes shipped **41 of these** between them — 30 in one record's
+`messages.yaml`, then 11 more in the files that pass never audited
+(`normative.md`, `requirements.yaml`'s own header fields, `schema/`). Two cited
+ids whose text was **byte-identical** to the intended one. One cluster of five
+ranges off by fifteen.
+
+Cause, and it is specific to batched lanes: one record's id layout is in
+working memory and the other's is not, so the second record's ids get written
+against the first record's shape.
+
+**Rule.** Emit every cited id **from the id table by script**, never typed or
+pattern-matched, with a selector that raises on zero or multiple matches rather
+than guessing. Then run a **join audit**: resolve each id to its own
+requirement's text, print the pairs, and read them. Only reading the resolved
+sentence catches this.
+
+`bin/check-id-joins --surface` gives you the attack surface: requirements
+sharing **identical text** are the only place a wrong id can still match the
+quoted words. `rfc-9277` has exactly two such groups and both were mis-joined;
+its sibling has zero, which is structurally why that record was clean at 0 of
+243 citations.
+
+## 5. Locators nobody checked
+
+A text can be perfectly verbatim and filed under the wrong section. Until
+`bin/check-locators` existed, three separate passes had named this gap and none
+had closed it; `rfc-9165` had a ten-production range off by five sections and
+`rfc-9682` a locator naming one line of a three-line rule, both caught by eye.
+
+**Rule.** Run `bin/check-locators` as you go, not once at the end. It also
+resolves bare sub-appendix headings (`A.2.1.  …`), which an RFC prints without
+the literal `Appendix` prefix — a gap that left 83 locators unchecked
+library-wide.
+
+## 6. The library's two YAML readers disagree
+
+`bin/_yaml.py` (used by `bin/validate`) and `bin/_record_yaml.py` (used by
+`bin/ingest`, `bin/fetch-source`, `bin/_record_html`, `bin/check-locators`,
+`bin/check-id-joins`) are independent subset parsers. Which one a tool uses
+changes what the record says.
+
+Five data-loss defects were fixed in `_yaml.py` during library#39, all the same
+shape — validate saw wrong data and reported nothing:
+
+1. A **wrapped quoted scalar** truncated, keeping its opening quote **and
+   minting a new map key from the remainder** (71 sites).
+2. A **wrapped flow sequence** truncated at its first line.
+3. An **inline flow map** stored as a single string key (4331 lines).
+4. A **flow sequence** returning bracket text where the other reader returns a
+   list (14,069 sites).
+5. A **block sequence at the same indent as its key** lost **entirely** by both
+   readers — three `requirements.yaml` files whose whole list was invisible to
+   every tool in `bin/`.
+
+`rfc-8392` also shipped a protocol model and a state machine that
+`_record_yaml.py` could not parse **at all**, while `bin/validate` was silent
+because it only checked that the path exists.
+
+**Rule.** Prefer **block** sequences and maps over flow for anything a record
+writes. Keep each `text:` on one line or in a block scalar. Avoid unescaped
+inner quotes. Then parse every artifact with **both** readers, flatten to leaf
+paths, and compare **values, not counts** — one lane found 358 keys present
+under one reader and absent under the other, and the key counts matched, which
+is what hid it. `bin/validate` now warns when an artifact cannot be read by
+both. Roughly 580 of 750 record YAML files still differ; see the open task.
+
+## 7. Small traps that cost real time
+
+- **`splitlines()` splits on form feeds.** Use `split("\n")`. On a paginated
+  RFC it shifts every line number by up to the number of page breaks.
+- **The shared scratch directory has a poisoned `__pycache__`.** One agent got
+  a wrong reader-diff result from a stale `.pyc`. Run everything with
+  `python3 -I` and insert `bin/` on the path explicitly.
+- **A digest check alone passes a retyped block.** Verify the printed region
+  byte-for-byte against its declared line range as well as checking its sha256.
+- **Region digests** are `sha256` of the region's lines joined by `\n`, with
+  **no trailing newline** — proven to be the only convention that fits.
+- **The first version of any new check over-reports.** Three for three: the
+  digest check first flagged 16 records, mostly IANA summaries quoting
+  superseded digests in prose on purpose; the id-collision check flagged a
+  record's own paragraph *about* wrapped ids; the locator check reported 44
+  misfilings that were all `str.find` returning the earliest of several
+  occurrences. **Measure across the library before trusting a check, and scope
+  it narrowly.**
+
+---
+
+## Batching, calibrated
+
+Measured on real lanes. Batching three records cost **539k tokens against
+~280k for a single-record pass** — about a 36% saving, not the 67% a naive
+count suggests.
+
+**Batch only a genuine dependency chain**, where the cross-record evidence is
+the main product and is otherwise unobtainable. Writing a CBOR/ECDSA/HMAC/CCM
+stack once for `rfc-8392` upgraded a central claim in *both* sibling records
+from "RFC 9052 §4.4 says so" to "here is a signature that verifies without it";
+three separate agents would each have had to redo it or cite a sibling's
+unverified pass-1 output, which FX-1 forbids. Likewise, `rfc-9360` cites
+`rfc-9054` twice as a draft while `rfc-9054` cites `rfc-9360` zero times in 614
+lines — **the finding is the asymmetry**, and it is invisible from either side.
+
+**Do not batch unrelated records.** There is no shared product, so you pay the
+propagation risk and a thinner per-record budget for nothing but attention
+divided by three.
+
+The sign of the trade-off **flips by pass**, which is the non-obvious result:
+
+| pass | batching helps | batching hurts |
+|---|---|---|
+| **extract** | the analysis — holding several sources at once is where cross-record findings come from | the **bookkeeping** — a shared wrong quotation propagates lane-wide, and id layouts get crossed |
+| **verify** | the **bookkeeping** — verification *is* comparison and comparison needs a corpus; one record's clean invariants become tests against the other | barely touches the analysis — each check anchors to one source, and the analytical findings come from *leaving* the lane |
+
+Two consequences to apply either way:
+
+- **Run the quote audit lane-wide, never per record.** A per-record audit
+  resolves a shared wrong quotation against the sibling's copy of it and
+  reports success. One inserted word reached all three design notes *and* all
+  three summaries; a per-record audit would have fixed one of three and never
+  suspected a pattern.
+- **A batched verifier should also check the records against *each other*** for
+  conventions that should match and do not. That is how a wrong cross-record
+  locator appearing in two records was recognised as a copied error rather than
+  a typo, and how the `option 5` gloss was found to have split into two
+  incompatible wordings across the library.
+
+## What a verify pass should actually attack
+
+Pass 1's self-nominated priorities were almost all clean. **Every serious
+defect a verify pass found was in something pass 1 did not nominate** — two
+unparseable artifacts, a false "both readers parse every file" claim, a
+line-break characterisation wrong in eight places, a cross-record locator wrong
+in two records, an ambiguous MUST absent from the defect list.
+
+Pass 1's attention map is accurate about its own uncertainty and silent about
+its blind spots. Work the predecessor's list **and** choose your own targets.
