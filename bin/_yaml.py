@@ -49,6 +49,73 @@ def _strip_comment(v):
     return v
 
 
+def _split_flow(inner):
+    """Split a flow collection's body on top-level commas."""
+    out, buf, depth, q = [], [], 0, None
+    i = 0
+    while i < len(inner):
+        c = inner[i]
+        if q:
+            buf.append(c)
+            if q == '"' and c == "\\":
+                if i + 1 < len(inner):
+                    buf.append(inner[i + 1])
+                    i += 2
+                    continue
+            elif c == q:
+                if q == "'" and inner[i + 1:i + 2] == "'":
+                    buf.append(inner[i + 1])
+                    i += 2
+                    continue
+                q = None
+        elif c in "\"'":
+            q = c
+            buf.append(c)
+        elif c in "[{":
+            depth += 1
+            buf.append(c)
+        elif c in "]}":
+            depth -= 1
+            buf.append(c)
+        elif c == "," and depth == 0:
+            out.append("".join(buf))
+            buf = []
+        else:
+            buf.append(c)
+        i += 1
+    if "".join(buf).strip():
+        out.append("".join(buf))
+    return out
+
+
+def _flow_map(v):
+    """Parse `{a: 1, b: "x, y"}` into a dict, or return None if it is not one.
+
+    bin/_record_yaml.py has always done this; this parser did not, so an
+    inline flow map became a single STRING KEY holding the whole brace
+    expression. 4331 lines in the library are written that way, including two
+    records at profile: full, so the two readers disagreed on all of them —
+    one lane measured 358 keys present under one reader and absent under the
+    other in a single file, and the key COUNTS matched, which is what hid it
+    (library#39).
+    """
+    if not (v.startswith("{") and v.endswith("}")):
+        return None
+    inner = v[1:-1].strip()
+    if not inner:
+        return {}
+    out = {}
+    for part in _split_flow(inner):
+        part = part.strip()
+        if not part:
+            continue
+        k, sep, val = part.partition(":")
+        if not sep:
+            return None        # not a map after all; leave it as text
+        out[_scalar(k.strip())] = _scalar(val.strip())
+    return out
+
+
 def _scalar(v):
     v = _strip_comment(v.strip()).strip()
     if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
@@ -58,6 +125,16 @@ def _scalar(v):
         return []
     if v == "{}":
         return {}
+    if v[:1] == "{" and v[-1:] == "}":
+        m = _flow_map(v)
+        if m is not None:
+            return m
+    # A flow sequence. bin/_record_yaml.py has always returned a list here and
+    # this parser returned the bracket text, so the library's two readers
+    # disagreed on 14,069 sites. Making them agree is the point: several
+    # extraction passes had to hand-work around the difference.
+    if v[:1] == "[" and v[-1:] == "]":
+        return [_scalar(p.strip()) for p in _split_flow(v[1:-1].strip())]
     return v
 
 
@@ -233,7 +310,14 @@ def parse(text):
             item = line[2:].strip()
             if not isinstance(cur, list):
                 continue
-            if re.match(r"^[^\s\"'][^:]*:(\s|$)", item) and not item.startswith(("http:", "https:")):
+            # A flow collection first: `- {id: 1, why: x}` otherwise matches
+            # the map-key pattern below on `{id:` and becomes a dict with the
+            # brace expression as its key. 4331 lines in the library are
+            # written this way (library#39).
+            if item[:1] in "[{":
+                item, i = _flow_continuation(lines, i, item)
+                cur.append(_scalar(item))
+            elif re.match(r"^[^\s\"'][^:]*:(\s|$)", item) and not item.startswith(("http:", "https:")):
                 k, _, v = item.partition(":")
                 d = {}
                 cur.append(d)
