@@ -512,7 +512,7 @@ two narrowed, one corrected.**
 
 ## 11. Source defects and ambiguities — reported, never repaired
 
-**D-1 · A.2.2's key disagrees with its own diagonal rendering, twice, and the
+**D-1 · A.2.2's key disagrees with its own diagnostic rendering, twice, and the
 two errata contradict each other.** Figure 6's hex decodes to
 `{-1: k, 1: 4, 2: h'Symmetric256', 3: 10}`; Figure 7 prints `kid` at label
 **4** and `alg` as **4 / HMAC 256/64 /**. Erratum **7982** says the label should

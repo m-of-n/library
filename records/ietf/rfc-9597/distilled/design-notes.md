@@ -357,6 +357,32 @@ put `iss` in has none, so "export in COSE because it interoperates" is not yet
 true of *this* header. Recorded as a cost with a shelf life: it expires the day
 a library ships label 15.
 
+**[pass 2, 2026-10-20 — RE-DATED, NOT RE-ASSERTED.]** This is the one argument
+in the record that rests on a search rather than on a document, so pass 2
+treats it as evidence with a timestamp rather than as a finding to confirm.
+**Pass 2 did not repeat the search**, and deliberately: a second unreproducible
+search on the same day adds a date and no information, and would make a
+one-source claim look corroborated. So the claim stands on **pass 1's
+2026-10-20 search alone**, by one agent, and nothing here raises its
+confidence.
+
+What that means for anyone reading this cut:
+
+- Treat the sentence as *"as of 2026-10-20, one search found no library
+  implementing the published RFC"* — not as *"no implementation exists."*
+- It is the **only** cut in this file that a reader cannot check against a
+  cached source in this repository. Every other cut here is checkable against
+  `.cache/rfc-9597.txt` or another record's artifacts, and pass 2 did check
+  those.
+- **What would refresh it**, in order of strength: a `python-cwt` release note
+  that drops `draft-ietf-cose-cwt-claims-in-headers-06` for RFC 9597; an entry
+  in a COSE interop matrix; a second independent library. Any one of those
+  retires the cut.
+- **It expires on its own**, unlike every other cut in this file, so a profile
+  must not be built on it. Weight it accordingly in the `DEC-002` ADR: it is
+  the weakest evidence in this record and it is the only piece with an expiry
+  date.
+
 ---
 
 ## 8. DEC-005 — the weakest `bears_on`, and the honest statement of it
@@ -457,6 +483,40 @@ quotation.
 §1: Other methods for determining the intended interpretation MAY also be used. Any method at all,
 with no requirement that it be in band, authenticated, or even stated. The
 `RECOMMENDED` in the preceding sentence is therefore not a floor.
+
+**D-6 · The placement `MUST` is ambiguous, and the whole placement model turns
+on which reading is taken. [found 2026-10-20, pass 2 — verify; not in pass 1's
+defect list]** §2, source lines 154–155:
+
+> The header parameter MUST only occur once in either the protected or unprotected header of a COSE structure.
+
+The English admits three readings and the document disambiguates none of them:
+
+1. **Once across both buckets** — so label 15 may be in the protected bucket or
+   in the unprotected one, but never in both. This is the reading
+   `schema/cwt-claims-header.derived.cddl` takes, and it is the reading that
+   makes that file's enumeration of **exactly three** conformant shapes
+   complete.
+2. **At most once per bucket** — so a fourth shape exists, label 15 in both
+   buckets with one occurrence each, and the derived CDDL is then *incomplete*
+   rather than wrong. Under this reading §2's duplication `MUST` (payload
+   against header) acquires a sibling problem it never addresses: which of two
+   headers wins.
+3. **Exactly once, i.e. required** — reading `MUST only occur once` as
+   asserting the occurrence. This one is defeated from inside §2, whose last
+   paragraph says the parameter *"MAY be used in any COSE object using header
+   parameters"*, and by the absence of any sentence requiring label 15
+   anywhere in the document.
+
+**Reading 1 is the right one and this record keeps it** — reading 3 is excluded
+by §2 itself, and reading 2 would leave the document's one cardinality rule
+saying nothing about the case it most obviously exists to prevent. But it is a
+reading, not a statement, and a profile that enforces "not in both" is
+enforcing our interpretation of an ambiguous `MUST`. **No erratum covers it
+(checked 2026-10-20).** It belongs with D-1: this document's two hard rules are
+its duplication `MUST` and its placement `MUST`, and **both of them turn on a
+word the document leaves undefined** — *"identical"* in the first and *"either
+… or"* in the second.
 
 ---
 

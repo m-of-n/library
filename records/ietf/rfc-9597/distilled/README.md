@@ -11,11 +11,13 @@ reviewed_by: ""
 FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what it
 does not.
 
-**State: pass 1 of 3 complete. NO `profile` IS CLAIMED.** Extract ran
+**State: passes 1 and 2 of 3 complete. NO `profile` IS CLAIMED.** Extract ran
 2026-10-20 at effort max, reading only `.cache/rfc-9597.txt` — never
-`summary.md` and never another record's artifacts. **Pass 2 (verify) and pass 3
-(cross-check) have not run**, and every `reviewed_by` here is empty: under
-`docs/extraction.md` an unfinished extraction has no profile at all.
+`summary.md` and never another record's artifacts. **Verify ran 2026-10-20 at
+effort max**, by an independent agent that did not extract, over all three
+records of the lane at once. **Pass 3 (cross-check) has not run**, and every
+`reviewed_by` here is empty: under `docs/extraction.md` an unfinished extraction
+has no profile at all.
 
 RFC 9597 is the **middle** record of library#39 Tier 2's CWT envelope lane
 (`rfc-8392` → `rfc-9597` → `rfc-9596`) and the smallest of the three: 265
@@ -109,3 +111,113 @@ identifies it, and two are our own `[...]`-labelled notes set as blockquotes.
 5. **The §7.6 implementation cut**, which is the one argument here that rests on
    a search rather than on the source. It has a shelf life and should be
    re-dated, not re-asserted.
+
+---
+
+## What pass 2 did, and what it found (2026-10-20, independent, effort max)
+
+**1. The 28 texts and their locators.** All 28 texts re-derived as contiguous
+verbatim spans. All 28 locators checked under a **stricter** rule than
+`bin/check-locators` applies — the tool permits a text that really lives in a
+subsection to be filed under its parent, so pass 2 computed the **innermost**
+containing section and compared. **0 misfiled, 0 imprecise, 0 unresolvable.**
+That is the result that mattered most here, because §1 spans 44 lines of four
+unlike paragraphs. Two terminator suspects, both legitimate: `R-0015` is a whole
+Table 1 row ending at its closing rule and `R-0018` is a complete CDDL
+production.
+
+**2. §1 is normative — confirmed exactly, with the section map computed rather
+than read.** §1 spans lines 69–112, §1.1 spans 113–120, §2 spans 121–160. The
+eight keywords sit at **L102 `MAY`, L105 `RECOMMENDED`, L107 `MAY`, L108
+`MUST NOT`** (four in §1) and **L148 `MUST`, L152 `RECOMMENDED`, L154 `MUST`,
+L157 `MAY`** (four in §2). §3, §4 and §5 have **none**. So half the document's
+BCP 14 force — **including its only `MUST NOT`** — is in the introduction.
+Recount: 8 = 8.
+
+**3. The derived CDDL.** `nonclaims-label = label .ne 15` was checked against
+**RFC 8610 §3.8 and §3.8.6 directly**, not against the file. §3.8's syntax is
+*"target .control-operator controller"*, satisfied with `15` as a controller
+"containing just that single value"; §3.8.6 states *".ne and .eq are defined for
+both numeric values and values of other types"* and that *"All other cases are
+not equal"*, so a `tstr` target **satisfies** `.ne 15` rather than erroring, and
+the production admits every text label and every integer but 15 — the intent.
+**The construct is correct.** One locator corrected: `label = int / tstr` was
+cited as RFC 9052 **§1.4**; it is **§1.5**. `rfc-9596` carried the same error,
+which is the signature of one wrong cross-record locator copied across a lane.
+
+**4. The three N/A sweeps are confirmed, and pass 1's work was more thorough
+than this README summarised.** It had already swept `party`, `producer`,
+`consumer`, `step`, `transport`, `handshake` and `negotiate`, and had already
+recorded `application`/`applications` at 9 occurrences — pass 2 re-counted
+exactly 9. **The §4 lifecycle hunt found what pass 1 already recorded and
+nothing more**: paragraph 4's tentative-then-confirmed decision is two states of
+a decision with neither named and no failure action, and `state-machine.yaml`
+says so. §4's other three paragraphs name `the application` and `Implementers`
+as responsible parties but never as counterparties, so the right form of the
+verdict is **no two roles that address each other**, which still holds.
+
+**5. §7.6 was re-dated, not re-asserted.** Pass 2 **deliberately did not repeat
+the search**: a second unreproducible search on the same day adds a date and no
+information and would make a one-source claim look corroborated. The cut now
+states its own shelf life, names what would retire it, and is marked as the only
+claim in the record that cannot be checked against a cached source.
+
+**One defect added that pass 1 did not list — D-6.** §2's placement `MUST`
+(*"MUST only occur once in either the protected or unprotected header"*) is
+**ambiguous across three readings**, and the derived CDDL's enumeration of
+exactly three conformant shapes is complete only under the first. Reading 1 is
+right and the record keeps it, but it is a reading, not a statement — so this
+document's **two** hard rules both turn on a word it leaves undefined:
+*"identical"* in the duplication `MUST` and *"either … or"* in the placement
+one.
+
+**All 16 `normative.md` regions and both schema regions re-verified** — digest
+**and** printed block byte-identical to the cache. **Body source-line coverage
+computed**: the only uncovered lines are the six section headings, so no
+statement is dropped.
+
+**This record's headline is now demonstrated rather than cited.** Pass 2's own
+independent A.3 verification succeeds on the four-field `Sig_structure` and
+**fails** when the unprotected map is folded in as a fifth field, so the
+unprotected bucket is provably not a signature input and a conformant producer's
+unsigned `iss` is a real exposure.
+
+### Pass 2's own lane-wide audits
+
+Run over the lane, not per record, because a per-record audit fixes one of
+three and never suspects a pattern — which is exactly how pass 1's inserted
+`only` reached all three design notes and all three summaries.
+
+**Quote audit: 291 delimited quotations across all 48 files of the lane; 289
+resolve whole as contiguous substrings; 2 unresolved and both are our own
+`[...]`-labelled notes set as blockquotes, not quotations. Zero splices.** The
+discriminator pass 2 added is a **named-relaxation channel**: any fragment that
+did not resolve whole was retried under four named relaxations — terminal
+punctuation swapped, a hyphenation break healed, a line break healed into one
+token, case folded — so the defect class would be *reported* rather than
+masked. **Zero fragments needed any relaxation.** That is the positive result:
+none of the four transcription-defect classes this lane's audits were built to
+catch survives anywhere in it. Pass 1's `only` correction was verified as
+correctly applied in all six places, and pass 2 traced the word's provenance —
+it is `rfc-9053`'s design notes restating the point **in their own lowercase
+voice**, where `only` is legitimate, so nothing in `rfc-9053` is defective
+either and the attribution was the only error.
+
+**Id join audit: every id emitted from the three requirements tables by script,
+then 456 references resolved and printed beside their requirement's own text
+for reading. 0 dangling, and 0 resolving to the wrong statement.** The sibling
+lane's 30 wrong-but-resolvable ids came from one record's layout being in
+working memory and another's not, so pass 2 also flagged every **bare**
+reference whose number exists in a sibling record — 70 of them — and checked
+each in context. All 70 are inside their own record's files, where the bare form
+correctly means the owning record.
+
+**YAML reader audit: all 17 YAML artifacts in the lane parsed with both
+`bin/_record_yaml.py` and `bin/_yaml.py`, flattened to leaf paths, and compared
+value by value — 2918 leaf paths, 0 key-set mismatches.** The detector was
+proved non-blind on synthetic positive controls first, because a clean result
+from an untested detector is worthless. **No inline flow map exists anywhere in
+the lane** and **no wrapped flow collection remains**: all 27 flow collections
+are empty `[]` and close on their own line. The 178 remaining value differences
+are all `int`/`bool` versus `str` typing — a difference between the two readers,
+not a mangling of our data.

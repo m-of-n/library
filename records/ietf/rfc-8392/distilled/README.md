@@ -11,14 +11,15 @@ reviewed_by: ""
 FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what it
 does not.
 
-**State: pass 1 of 3 complete. NO `profile` IS CLAIMED.** Extract ran
+**State: passes 1 and 2 of 3 complete. NO `profile` IS CLAIMED.** Extract ran
 2026-10-20 at effort max, one agent for the whole artifact set, reading only
 `.cache/rfc-8392.txt` — never `summary.md` and never another record's
-artifacts. **Pass 2 (verify) and pass 3 (cross-check) have not run**, and every
-`reviewed_by` in this directory is empty, deliberately: under
-`docs/extraction.md` an unfinished extraction has no profile at all, and that is
-the state of this record. The artifacts are readable and citable; they are not
-buildable-on.
+artifacts. **Verify ran 2026-10-20 at effort max**, by an independent agent that
+did not extract, over all three records of the lane at once. **Pass 3
+(cross-check) has not run**, and every `reviewed_by` in this directory is empty,
+deliberately: under `docs/extraction.md` an unfinished extraction has no profile
+at all, and that is the state of this record. The artifacts are readable and
+citable; they are not buildable-on.
 
 RFC 8392 is the base document of library#39 Tier 2's CWT envelope lane
 (`rfc-8392` → `rfc-9597` → `rfc-9596`), and much the largest: 25 pages, seven
@@ -159,3 +160,135 @@ identifies it, and two are our own `[...]`-labelled notes set as blockquotes.
 5. **The claim-key cost table**, recomputed from RFC 8949 §3 rather than from
    `schema/claim-key-policy.derived.yaml`. One cell of its predecessor was
    already wrong.
+
+---
+
+## What pass 2 did, and what it found (2026-10-20, independent, effort max)
+
+Pass 2 answered all five, in order.
+
+**1. The 110 texts, re-derived.** All 110 are contiguous verbatim spans of the
+whitespace-normalised source — re-derived, not inherited. A tightened
+terminator check over all 110 found **no fourth over-run**. Three suspects
+remain and all three are legitimate: `R-0022` is the one deliberate
+mid-sentence start and is declared in its own `note`; `R-0101` and `R-0105` are
+complete IANA registry templates that end at their last field
+(*"Provisional registration? No"*, *"Point of Contact: …"*), confirmed against
+§9.2.1 and §9.4.1.
+
+**2. Every locator — and under a stricter rule than the tool applies.**
+`bin/check-locators` permits a text that really lives in §3.1.4 to be filed
+under §3. Pass 2 computed the **innermost** containing section for every entry
+and compared: **0 misfiled, 0 imprecise, 0 unresolvable.** The two
+*unresolvable* rows `bin/check-locators` reports for `Appendix A.1` and
+`Appendix A.2` are a **gap in the tool, not a defect in this record**: an RFC
+`.txt` rendering prints sub-appendix headings bare (`A.2.1.  128-Bit Symmetric
+Key`), and the tool's `APPENDIX` pattern requires the literal `Appendix`
+prefix, so every locator naming a sub-appendix goes unchecked library-wide.
+Pass 2's own scan resolves all 41 of this document's headings and finds both
+locators correct.
+
+**3. `Sig_structure` and `MAC_structure` — re-derived from `rfc-9052`, not from
+here.** Both were rebuilt from `records/ietf/rfc-9052/distilled/schema/cose.cddl`
+(§4.4 and §6.3) and its `normative.md`, and `Enc_structure` from §5.3. They
+agree with what this record used. **The structures are now printed beside every
+outcome**, and **eleven negative controls were added** — a `"Signature"`
+context for `"Signature1"`, a wrongly included `sign_protected` field,
+`external_aad` and `payload` transposed, the unprotected map folded in as a
+fifth field, the payload signed bare, and the analogous wrong
+`MAC_structure`s and `Enc_structure` AADs. **All eleven correctly fail.** So
+the A.3 result is not a false positive, and the unprotected bucket is
+**provably** not a signature input — which is the mechanical proof of
+`rfc-9597`'s headline, obtained here rather than asserted there.
+
+**4. AES-CCM, re-derived from RFC 9053 §4.2 rather than from the name.** §4.2's
+own prose fixes L and Table 6 fixes the rest: **L = 16 bits (2 octets), M = 64
+bits (8-octet tag), 13-byte nonce, 128-bit key.** Confirmed. Pass 2 also added
+an external **CCM** known-answer test pass 1 did not report using — RFC 3610
+packet vector #1 — because FIPS 197 C.1 gates the block cipher but says nothing
+about the mode.
+
+**5. The claim-key cost table, recomputed by encoding.** Ten of eleven cells
+confirmed; **one corrected.** The Expert Review text row read *"1 + length
+thereafter"* with no bound, but an RFC 8949 text head is 1 octet only to length
+23, so a 24-character key costs **26** octets, not 25. The 5× headline, the
+35-vs-7 arithmetic and the absence of any Private Use range for text keys all
+survive. That row has now been wrong twice in two successive passes.
+
+**The five-CWT result is independently reproduced.** A second crypto stack
+sharing no code with pass 1's — SHA-256, HMAC, AES-128 with the S-box derived
+from its GF(2⁸) definition rather than tabulated, CCM, P-256, ECDSA and a CBOR
+codec, all from scratch — reproduces every one. 23 primitive gates pass first
+(FIPS 180-4 B.1, RFC 4231 TC1/TC2, FIPS 197 C.1 and A.1, RFC 3610 vector #1,
+RFC 8949 Appendix A, and two independent scalar-multiplication routines
+required to agree). 52 CWT checks run and 50 pass; the two failures are pass 2's
+own assertions written from **Figure 7's diagnostic notation**, and they
+re-confirm defect **D-1** from the hex side — Figure 6's bytes put `kid` at
+label 2 and `alg` at 10, exactly as `design-notes.md` says.
+
+**The A.2.2 refutation is confirmed.** Both MAC tags reproduce from Figure 6's
+own 32 octets of `k`, and pass 2 added the control that makes it sharp: the same
+tags do **not** reproduce from A.2.1's 128-bit key, so `k` is load-bearing and
+the metadata is not.
+
+**All 37 `normative.md` regions and all 9 schema regions re-verified** — digest
+**and** printed block byte-identical to the cache, which a digest check alone
+would not catch. **Body source-line coverage was computed**: the only uncovered
+lines in §1–§9 are the section headings themselves, so no statement is dropped.
+
+**Two defects pass 2 found that pass 1 did not look for.**
+
+1. **Two of this record's eight artifacts did not parse.**
+   `bin/_record_yaml.py` rejected `protocol.yaml` and `state-machine.yaml`
+   outright, so the reader `bin/check-locators` imports could not read the
+   protocol model or the state machine at all — while `bin/validate` reported
+   nothing, because it checks only that an artifact's **path exists**. The cause
+   was eight wrapped double-quoted sequence items and three unescaped inner
+   quotes, including four inside the very `absent:` list that sits one file away
+   from this directory's own warning about the hazard. All fixed; all 17 YAML
+   artifacts in the lane now parse with **both** readers, and 2918 leaf paths
+   were compared value by value with **0 key-set mismatches**.
+2. **A double-escaped apostrophe.** `requirements.yaml` R-0022's note read
+   `ENTRY''''''S`, which a single-quoted YAML scalar decodes to `ENTRY'''S`. A
+   sweep of the whole class across all 17 artifacts found it as the **only**
+   instance.
+
+### Pass 2's own lane-wide audits
+
+Run over the lane, not per record, because a per-record audit fixes one of
+three and never suspects a pattern — which is exactly how pass 1's inserted
+`only` reached all three design notes and all three summaries.
+
+**Quote audit: 291 delimited quotations across all 48 files of the lane; 289
+resolve whole as contiguous substrings; 2 unresolved and both are our own
+`[...]`-labelled notes set as blockquotes, not quotations. Zero splices.** The
+discriminator pass 2 added is a **named-relaxation channel**: any fragment that
+did not resolve whole was retried under four named relaxations — terminal
+punctuation swapped, a hyphenation break healed, a line break healed into one
+token, case folded — so the defect class would be *reported* rather than
+masked. **Zero fragments needed any relaxation.** That is the positive result:
+none of the four transcription-defect classes this lane's audits were built to
+catch survives anywhere in it. Pass 1's `only` correction was verified as
+correctly applied in all six places, and pass 2 traced the word's provenance —
+it is `rfc-9053`'s design notes restating the point **in their own lowercase
+voice**, where `only` is legitimate, so nothing in `rfc-9053` is defective
+either and the attribution was the only error.
+
+**Id join audit: every id emitted from the three requirements tables by script,
+then 456 references resolved and printed beside their requirement's own text
+for reading. 0 dangling, and 0 resolving to the wrong statement.** The sibling
+lane's 30 wrong-but-resolvable ids came from one record's layout being in
+working memory and another's not, so pass 2 also flagged every **bare**
+reference whose number exists in a sibling record — 70 of them — and checked
+each in context. All 70 are inside their own record's files, where the bare form
+correctly means the owning record.
+
+**YAML reader audit: all 17 YAML artifacts in the lane parsed with both
+`bin/_record_yaml.py` and `bin/_yaml.py`, flattened to leaf paths, and compared
+value by value — 2918 leaf paths, 0 key-set mismatches.** The detector was
+proved non-blind on synthetic positive controls first, because a clean result
+from an untested detector is worthless. **No inline flow map exists anywhere in
+the lane** and **no wrapped flow collection remains**: all 27 flow collections
+are empty `[]` and close on their own line. The 178 remaining value differences
+are all `int`/`bool` versus `str` typing — a difference between the two readers,
+not a mangling of our data.

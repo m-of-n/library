@@ -458,13 +458,28 @@ registering a single value**, so the first `typ` value anyone writes down is
 unexampled.
 
 **D-5 · The value space is stated twice, in two sections, and the registry name
-is severed by the line wrap in both.** §1 (lines 83–87) and §2 (114–119) each
-state it, and the plain-text wrap cuts *"CoAP Content-Formats"* in two at
-86/87 and again at 116/117, hyphen and all. **Not healed anywhere in this
-directory**: `schema/source-renderings.txt` carries the byte-exact lines and
-`requirements.yaml` R-0004 and R-0010 carry the flowed span with the hyphen
-visible. Recorded because two silently healed line breaks are among the five
-transcription defects this lane's own quote audit found in its own prose.
+is severed by the line wrap in both — but only one of the two is a hyphenation
+break.** §1 (lines 83–87) and §2 (114–119) each state it. The §1 wrap cuts
+*"CoAP Content-Formats"* at **85/86, at the space**: line 85 ends `the "CoAP`
+and line 86 begins `Content-Formats"`, hyphen intact. The §2 wrap cuts it at
+**116/117, at the hyphen**: line 116 ends `the "CoAP Content-` and line 117
+begins `Formats"`. **Neither is healed anywhere in this directory**:
+`schema/source-renderings.txt` carries the byte-exact lines, `requirements.yaml`
+R-0010 carries the hyphenated span with the hyphen visible, and R-0004 carries
+the 85/86 span as the source prints it across the space. Recorded because two
+silently healed line breaks are among the five transcription defects this lane's
+own quote audit found in its own prose.
+
+**[correction 2026-10-20, pass 2 — verify]** This defect note claimed the wrap
+cuts the name *"in two at 86/87 and again at 116/117, hyphen and all"* — one
+sentence with two errors about the first break: it is at **85/86**, not 86/87,
+and it falls at a **space**, so it is not a hyphenation break and joining it
+with one space is ordinary normalisation rather than a heal. The claim was
+repeated verbatim in eight places across six files of this record, which is why
+pass 2 corrected all of them rather than this one. Re-derived by reading
+`.cache/rfc-9596.txt` line by line. The second break was correctly described,
+and every byte-exact region in this record reproduces from the cache, so the
+record's **data** was never wrong — only its account of the breaks.
 
 **D-6 · The security case is a forward reference to a document the reader may
 not have.** §3's whole substance is that the case *"is equivalent to"* RFC 8725

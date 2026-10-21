@@ -23,11 +23,22 @@ two prose sentences**, and everything derived here is the library's own.
 
 ## The line breaks are preserved, not healed
 
-The plain-text wrap cuts the registry name **"CoAP Content-Formats"** in two
-at lines 86/87 and again at 116/117, hyphen and all. The verbatim regions carry
-those breaks **exactly as printed**, and `requirements.yaml` R-0004 and R-0010
-carry the flowed span — so the hyphen appears as `CoAP Content- Formats` after
-whitespace normalisation rather than being silently repaired.
+The plain-text wrap cuts the registry name **"CoAP Content-Formats"** in two at
+lines **85/86** and again at **116/117**, and **only the second cuts at the
+hyphen.** Line 85 ends `the "CoAP` and line 86 begins `Content-Formats"`, so
+that break falls at the space; line 116 ends `the "CoAP Content-` and line 117
+begins `Formats"`, so that one is a true hyphenation break. The verbatim regions
+carry both breaks **exactly as printed**, and `requirements.yaml` R-0010 carries
+the hyphenated span — so the hyphen appears as `CoAP Content- Formats` after
+whitespace normalisation rather than being silently repaired. R-0004 spans the
+85/86 break and reads `CoAP Content-Formats`, which is what the source prints
+across that space.
+
+**[correction 2026-10-20, pass 2 — verify]** This section said the breaks fall
+*"at lines 86/87 and again at 116/117, hyphen and all"*. The first break is at
+85/86, not 86/87, and it is **not** a hyphenation break — so "hyphen and all"
+was true of one break, not two. The byte-exact regions below were and are
+correct; only this description was wrong.
 
 **That is deliberate and it is declared in three places.** Two silently healed
 line breaks are among the five transcription defects this lane's own quote audit
