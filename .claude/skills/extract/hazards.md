@@ -10,10 +10,18 @@ visible on a careful first read. What survives pass 1 is the extraction's own
 confident prose, and that is what a later engineer builds on without
 re-checking.
 
-Measured during library#39 Tier 2: **every one of five independent cross-check
+Measured during library#39 Tier 2: **every one of six independent cross-check
 passes found at least one claim that pass 2 had corrected in one artifact and
-failed to propagate to the others stating the same claim.** Five for five. That
+failed to propagate to the others stating the same claim.** Six for six. That
 is the specific thing an artifact-wide third pass buys.
+
+The sixth is the sharpest: pass 2 of `rfc-9596` verified an octet count by
+encoding, propagated it to **five** sites, and left it wrong in `messages.yaml`
+— **the one artifact the measurement describes.** In the same lane, `rfc-8392`'s
+claim-key bound had reached 3 of 6 sites, and `rfc-9597`'s placement ambiguity
+was recorded in exactly the three files that do **not** state the placement
+rule, while the four asserting it as settled said nothing. Work outward from the
+corrected claim to every artifact that states it, including `summary.md`.
 
 ---
 
@@ -52,6 +60,51 @@ Zero relaxations needed is the result you want. Four separate lanes each found
 4–5 defects in their own prose this way, including an inserted `only`, an
 ellipsis splice, a terminal colon turned into a full stop, and five nested
 quotation marks silently re-punctuated.
+
+### Grade WHOLE SPANS, longest first — a fragment audit reports a false clean
+
+The CWT envelope lane's passes 1 and 2 each ran the audit above and each
+reported **zero** quotation defects. Pass 3 re-ran it over **whole quotation
+spans** instead of fragments and found **three** relaxations in the same files.
+
+The reason is specific and it will happen again. `rfc-9596` quotes §2 and
+spells a registry name `CoAP Content-Formats`. §2 breaks that name across lines
+**at the hyphen**, so §2 reads `Content- Formats` — but the unhyphenated
+spelling **is** a genuine contiguous substring of the same document, at §1's
+break, which cuts at a **space**. A per-fragment audit resolves the healed token
+against §1 and reports success. Only the whole §2 sentence, tested as one span,
+exposes the weld. Splices hide the same way: each half resolves *somewhere*.
+
+That record had declared three times that it heals no break, and its README
+concluded *"no artifact healed anything."* It was healed in two artifacts.
+
+**Rule.** Take every span between two quote marks as a candidate, **longest
+first**, so a sentence containing nested quotes is tested whole rather than as
+pieces. Resolve each against the source the span is *attributed to* — a
+quotation marked §2 must resolve inside §2, not merely somewhere in the file.
+
+### Two blind spots that are invisible by construction
+
+- **Undelimited quotations.** Every audit extracts *delimited* quotations, so a
+  verbatim span pasted into our own prose **with its quote marks lost** cannot
+  be found by one. `rfc-9596` carried a span of its §1.1 BCP 14 recital that
+  way, with a full stop added and a sentence fragment left behind it, through
+  two passes. Sweep for our prose that *reads* like the source: long
+  undelimited runs that resolve verbatim are the signature.
+- **Whole-scalar quotations in YAML.** A scalar whose *entire value* is a
+  quotation has no quote marks left after unescaping, so the delimited-span pass
+  cannot see it. That is where `guard:` and `action:` values live, and it is
+  where a paraphrase presented as a quotation was found (`"for creating the
+  object"`, which occurs **zero** times in RFC 8392 — each of §7.1 step 4's
+  three bullets names its own structure). Run a **separate whole-scalar pass**.
+
+### Distrust every blanket claim
+
+*"Never elided"*, *"nothing healed"*, *"zero relaxations needed"*, *"0 resolving
+to the wrong statement"* — all four were asserted in this lane and all four were
+false. A blanket claim is worse than the narrower truth, because it stops the
+next reader checking. State the rule you actually keep: *an elision is visible
+as `...` and the full sentence is carried verbatim in `requirements.yaml`.*
 
 **Characterise breaks correctly, too.** One record claimed a break cut "hyphen
 and all" when it cut at a space with the hyphen intact — wrong in eight places
@@ -138,6 +191,20 @@ shape — validate saw wrong data and reported nothing:
    readers — three `requirements.yaml` files whose whole list was invisible to
    every tool in `bin/`.
 
+6. **Double-quoted escape sequences**, in **both** readers and in opposite
+   directions. `_yaml.py` processed none of them, so an escaped quote kept its
+   backslash; `_record_yaml.py` resolved four with **chained `str.replace()`**,
+   which rescans text it has already produced, so an escaped backslash followed
+   by `n` came out as a backslash and a real **newline**. 435 values in 65 files
+   across 46 records read differently under the two, **72 of them verbatim
+   `text:` fields**. Fixed 2026-10-21 with one left-to-right pass in each
+   reader, resolving a deliberately short table: a quote and a backslash
+   (unambiguous — a double-quoted scalar cannot carry either bare) plus `n` and
+   `t`. **Everything else is left exactly as written**, because the records that
+   use the other forms are *about* escape notation: 107 sites carry EDN literals
+   in the brace form YAML does not define, and `rfc-9804` prose names hex
+   escapes. Resolving those would rewrite the records discussing escaping.
+
 `rfc-8392` also shipped a protocol model and a state machine that
 `_record_yaml.py` could not parse **at all**, while `bin/validate` was silent
 because it only checked that the path exists.
@@ -149,6 +216,32 @@ paths, and compare **values, not counts** — one lane found 358 keys present
 under one reader and absent under the other, and the key counts matched, which
 is what hid it. `bin/validate` now warns when an artifact cannot be read by
 both. Roughly 580 of 750 record YAML files still differ; see the open task.
+
+### And fixing a reader FALSIFIES the counts measured with it
+
+The consequence nobody anticipated, and the reason this section is not just
+about data loss. `rfc-8392`'s `record.yaml` claimed **24** requirement ids wired
+into its protocol model and **15** into its state machine. The artifacts hold
+**38** and **19**.
+
+Neither number was invented. Running the **pass-1-era `bin/_yaml.py`** (the blob
+at `d85093d`) over the **pass-1 artifacts** returns exactly 24 and 15, because
+that version truncated those files' wrapped flow sequences. Pass 2 fixed the
+reader *and* the artifacts, and never carried the numbers back.
+
+So they were **true measurements through a broken instrument**, and repairing
+the instrument made them false retroactively. Nothing reports this:
+`bin/validate` checks that an artifact exists and parses, never that a coverage
+sentence still describes it. It is the one defect class in this document that a
+*correct* earlier pass can create.
+
+**Rule.** Treat any count measured before the `_yaml.py` fixes of library#39
+(`9511f10` for wrapped scalars, `725439a` for double-quoted escapes) as
+unverified until recomputed. The check is cheap and worth running library-wide:
+recount cited ids per artifact by script and compare against the coverage prose.
+When you fix a parser, **grep the records for every number that parser
+produced** before closing the pass. And prefer to state a count *with the method
+that produced it*, so a later pass can tell a fossil from a lie.
 
 ## 7. Small traps that cost real time
 

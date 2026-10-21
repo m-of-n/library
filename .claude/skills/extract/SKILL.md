@@ -112,6 +112,16 @@ The one-line versions, in the order they cost you most:
   quote audit with a *named relaxation channel* so the defect class is
   reported rather than masked, plus a longest-prefix test for the splice
   signature. Four lanes each found 4–5 defects in their own prose this way.
+- **Grade WHOLE SPANS, longest first, or the audit reports a false clean.** Two
+  passes found zero defects by checking fragments; a healed token resolved
+  against a *different* part of the same source. Resolve each span against the
+  section it is attributed to, add a separate whole-scalar pass for YAML, and
+  remember that an undelimited quotation is invisible to any audit. Distrust
+  every blanket claim — "nothing healed", "zero relaxations" were both false.
+- **Fixing a reader falsifies the counts measured with it.** Two coverage counts
+  were true measurements through a parser bug, and repairing the parser made
+  them false with nothing to report it. When you fix a reader, grep the records
+  for every number it produced.
 - **Escapes resolve through editing paths.** Assemble any `\u{…}` in a script
   and grep for the resolved character afterwards. One record carried this
   seven times, always inside a sentence about the hazard.
