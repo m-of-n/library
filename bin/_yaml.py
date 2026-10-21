@@ -61,6 +61,86 @@ def _scalar(v):
     return v
 
 
+# A line that reads as the next map key or sequence item rather than as the
+# continuation of a wrapped scalar. Used only to bound that continuation.
+_NEXT_ENTRY = re.compile(r"^(?:-\s|-$|[A-Za-z_][\w.-]*:(?:\s|$))")
+
+
+def _quote_closed(v):
+    """Is the quoted scalar `v` terminated on its own line?"""
+    q = v[0]
+    j = 1
+    while j < len(v):
+        if q == '"' and v[j] == "\\":
+            j += 2
+            continue
+        if v[j] == q:
+            # In single-quoted YAML '' is an escaped quote, not a terminator.
+            if q == "'" and v[j + 1:j + 2] == "'":
+                j += 2
+                continue
+            return True
+        j += 1
+    return False
+
+
+def _quoted_continuation(lines, i, v):
+    """Join a quoted scalar that wraps across lines. Returns (text, next_i).
+
+    YAML folds a wrapped flow scalar onto one line with a single space. This
+    parser used to keep only the first line AND its opening quote, so
+    `text: "Threat modeling is a security focused design activity` became a
+    value beginning with a stray quote and ending mid-sentence. 71 lines in
+    the library wrap this way, most of them `text:` fields in
+    requirements.yaml — the one field FX-1's verbatim checks exist to read
+    (library#39).
+    """
+    if v[:1] not in "\"'" or _quote_closed(v):
+        return v, i
+    while i < len(lines):
+        nxt = lines[i].strip()
+        # Stop at anything that reads as the next entry rather than as more of
+        # this sentence. Records in this library contain genuinely unterminated
+        # quoted scalars — draft-ietf-cbor-edn-literals' requirements.yaml line
+        # 152 ends `''...#R-0066''` with no closing quote — and without this
+        # guard the scalar swallows the `verb:` line after it. bin/_record_yaml
+        # is lenient the same way, by ending such a scalar at its line break.
+        if _NEXT_ENTRY.match(nxt):
+            break
+        i += 1
+        v += " " + nxt
+        if _quote_closed(v):
+            break
+    return v, i
+
+
+def _flow_continuation(lines, i, v):
+    """Join a flow collection that wraps across lines. Returns (text, next_i).
+
+    This parser deliberately does NOT parse flow collections: `["a", "b"]`
+    comes back as its own text, and 14,000-odd call sites in the library rely
+    on that. What it must not do is return a TRUNCATED prefix. Before this,
+    a `constrained_by` list wrapped over two lines silently lost every id
+    after the first line — three of them in rfc-8392's protocol.yaml and
+    state-machine.yaml (library#39). Nothing warned: the value simply ended
+    mid-list, and the continuation line was then read as garbage at an
+    unexpected indent.
+
+    Bracket counting ignores quoting, so a flow collection holding a string
+    with an unbalanced bracket in it still wraps wrongly. That is a smaller
+    wrong than losing data, and the honest fix is a real YAML parser.
+    """
+    if v[:1] not in "[{":
+        return v, i
+    depth = (v.count("[") - v.count("]")) + (v.count("{") - v.count("}"))
+    while depth > 0 and i < len(lines):
+        nxt = lines[i].strip()
+        i += 1
+        v += " " + nxt
+        depth += (nxt.count("[") - nxt.count("]")) + (nxt.count("{") - nxt.count("}"))
+    return v, i
+
+
 def _block(lines, i, parent_indent, style, chomp):
     """Read a block scalar starting at lines[i]. Returns (value, next_index)."""
     body, j = [], i
@@ -142,6 +222,8 @@ def parse(text):
                 style, chomp = m.group(1), (m.group(2) or m.group(4))
                 d[k], i = _block(lines, i, key_indent, style, chomp)
             elif v and not _strip_comment(v).strip() == "":
+                v, i = _quoted_continuation(lines, i, v)
+                v, i = _flow_continuation(lines, i, v)
                 d[k] = _scalar(v)
             else:
                 d[k] = {}
@@ -166,6 +248,12 @@ def parse(text):
                     val, i = _block(lines, i, indent, m.group(1), m.group(2) or m.group(4))
                     cur.append(val)
                 else:
+                    # A bare sequence item wraps the same way a key's value
+                    # does, and used to truncate the same way — this branch is
+                    # how `error_paths: [- "None. §7.1 ...` lost its second
+                    # line in rfc-8392's protocol.yaml.
+                    item, i = _quoted_continuation(lines, i, item)
+                    item, i = _flow_continuation(lines, i, item)
                     cur.append(_scalar(item))
         elif ":" in line:
             k, _, v = line.partition(":")
