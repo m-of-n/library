@@ -261,10 +261,52 @@ the three scoping traps are worth inheriting:
   `rfc-9580`'s "413 of 421 wired, 8 not wired with a reason" likewise cites all
   421, since the 8 are named where they are excused.
 
-So the fossil class is, so far, **confined to the two counts in `rfc-8392`**
-that `9511f10` falsified. The check is still worth re-running after any future
-parser fix — but resolve ids from the parsed structure under the key the prose
-names, never with a file-wide regex.
+**[corrected hours later, 2026-10-21]** That measurement concluded *"the fossil
+class is confined to the two counts in `rfc-8392`."* **It is not**, and the
+sentence was over-narrow in a way worth dissecting: it was true only of the
+pattern the script matched — *requirement ids cited per artifact* — and was
+written as though it were true of counts in general. The next record
+cross-checked, `rfc-8742`, carried **four** fossils, none of which that script
+could see: normative spans claimed 63 where 65 bullets exist, a reconciliation
+claiming 3536 characters where it holds 4462, "243 citations" where the tool
+resolves 354, and an anchored-sentence count of 8 where 9 is measured.
+
+**And the cause is broader than a parser fix.** Two of those four were created
+by **pass 2 itself**: it added two bullets to `normative.md` without updating
+the sentence that counts them, and appended its own correction to the
+`reconciliation` field without updating the character count of that field. No
+reader bug was involved. **Any pass that edits an artifact falsifies every
+count of that artifact it does not also update** — which makes this a general
+obligation of editing, not a one-off consequence of `9511f10`.
+
+**The same two shapes then recurred in the sibling record**, `rfc-9277`, which
+carried eight more: a `reconciliation` claiming 3367 characters where it holds
+3858 (pass 2 appended 491 characters of correction and carried neither number
+back — *the identical defect, in the identical field, in both records of one
+lane*), "195 verbatim spans" where pass 2's own six added bullets make 201,
+"4 verbatim and 3 derived" schema files where it is 3 and 4, a word-break
+census of 14 where 15 exist, a sub-breakdown counted on the raw text when the
+claim was about the normalised text, and a `bin/check-locators` figure that
+moved when `cff7503` taught the tool sub-appendix resolution **during this very
+lane**.
+
+Two generalisations worth carrying, then:
+
+- **Appending a correction to a field invalidates any count of that field.**
+  It happened twice, in the same field name, in two records, by the same pass.
+  If you append, recount — and prefer to state the count *outside* the text it
+  measures, or not at all.
+- **A count can be falsified by a tool improvement, not just a tool bug.**
+  Giving `check-locators` sub-appendix resolution was a strict improvement and
+  it still broke a recorded figure. Any number produced by a `bin/` tool is
+  only true of that tool's behaviour on that day.
+
+So the rule is wider than the subsection title: **recount everything the prose
+asserts about an artifact you touched, not just ids, and not just after a
+parser fix.** Spans, bullets, characters, citations, distinct-sentence counts
+and byte lengths are all fossils waiting to happen, and a count stated in a
+*different* file from the artifact it describes is the likeliest to be missed.
+Scope each recount to the key the prose names, as above.
 
 ## 7. Small traps that cost real time
 
