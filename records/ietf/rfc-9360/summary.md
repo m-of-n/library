@@ -155,25 +155,57 @@ year, carries six.
 
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on` (widened to seven ids by the extraction) |
 | `summary.md` | this document |
+| `summary.html` | GENERATED and untracked — `bin/render-html`, see `docs/generated-views.md` |
+| `distilled/` | **the FX-1 artifact set — all eight artifacts, pass 1 of 3 complete** |
 
-**No `distilled/`, and the judgement is deliberate rather than economical.**
-This PR claims the **summary bar**: the record is `summarized`, declares no
-`distillation` block, and touches no `distilled/`, so FX-1 does not fire
-(`docs/extraction.md`). The reason is that this document is on the path we are
-arguing *against* — `record.yaml` has carried `usefulness.verdict: marginal`
-since 2026-09-22 on exactly that ground — and an FX-1 set would be 14
-requirements, two CDDL rules and zero test vectors. **What would trigger an
-extraction** is a decision to accept certificates for interoperability, which
-is a `DEC-003` call: `requirements.yaml` would then have to carry the four
-restatements of "the end-entity certificate MUST be integrity protected" as
-separate testable entries with their differing conditions, `schema/` would hold
-both CDDL rules plus a `*.derived.cddl` profile naming which `hashAlg` values
-we permit, and `examples/` would have to be written from scratch because the
-source supplies none. No issue owns that today.
+**The extraction has landed, and `distilled/README.md` is its index.** Added
+2026-10-20 by library#39 Tier 2: `normative.md` (29 verbatim regions with
+per-region digests, including **all nine paragraphs of §5 as nine separate
+regions** so their order is on the record), `requirements.yaml` (129 entries,
+counts reconciling 14 = 14 by keyword as well as in total), `schema/` (2
+verbatim + 4 derived, including the header grammar the document does not ship
+and a per-value `hashAlg` policy), `messages.yaml` (6 structures, 19 fields, 74
+requirement ids wired), `protocol.yaml` + `protocol.md` (**applicable** — three
+flows with Mermaid diagrams, including the intermediary rewrite the document
+admits itself), `state-machine.yaml` (**applicable** — two small machines, with
+what was measured separated from what was modelled), `examples/` (8 vectors,
+**every one computed**) and `design-notes.md`. `distillation.standard: FX-1` is
+declared and **no `profile`** is: passes 2 and 3 have not run and no
+`reviewed_by` is signed, so the artifacts are readable and citable but not
+buildable-on.
 
-**No verbatim normative text here.** Under FX-1 that belongs in
+**[correction] The extraction refuted one claim in this summary**, and the
+refutation makes the finding sharper. The sentence *"the identity-misbinding
+attack §5's own next paragraph describes"*, below and in `record.yaml`'s
+`contradicts` comment, **is wrong about the ordering**: §5 has nine paragraphs,
+the `x5t` security claim is the **ninth and last** with nothing after it, and
+the misbinding attack is the **third**, forty-one lines earlier. The paragraph
+immediately *before* the claim is §5's eighth, and it says that protecting
+`x5bag`, `x5chain` **and `x5t`** by placing them in the protected bucket *"can
+help mitigate some risks of a misbehaving CA"* — an adjacent, direct
+contradiction and a better citation than the one this summary gives. The
+conflict stands; the citation should change. `distilled/design-notes.md` §2.1
+has it, and the wording is left here rather than edited away so the correction
+is visible.
+
+**The other two results to take from the extraction.** A filtering `x5t` and a
+binding `x5t` with the same algorithm are **the same 25 octets** — an identity
+between byte strings rather than an inference about implementations, because
+`COSE_CertHash` has exactly two fields and `Filter Only` is a registry column
+(`distilled/examples/vectors.yaml` V-0004). And V-0006 encodes §2's own
+recommended configuration before and after an intermediary rewrite: **the
+protected bucket's bytes are identical**, so the digest comparison is the whole
+binding.
+
+The `*.derived.cddl` profile this summary said would have to be written is now
+in `distilled/schema/`, and the document's own two CDDL rules were checked
+mechanically against RFC 8610's grammar: both parse as printed and as *type*
+rules, and the `2*` that forbids the one-element array is a deliberate choice
+rather than a grammatical necessity.
+
+**No verbatim normative text in this file.** Under FX-1 that belongs in
 `distilled/normative.md` with its locator; in a summary the rule is to cite the
 § and let the reader open the source, so the fragments quoted above are short
 and locator-bearing by design.

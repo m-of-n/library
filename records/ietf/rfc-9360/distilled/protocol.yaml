@@ -1,0 +1,408 @@
+record: rfc-9360
+reviewed_by: ""
+source_version: "RFC 9360 (February 2023)"
+source_digest: "3dbe546adf08e309b429c8e71b2ee8384292fb8767338d3eb17d1c4e5adefc23"
+source_lines_total: 614
+applicability: "APPLICABLE"
+note: >-
+  RFC 9360 IS APPLICABLE FOR PROTOCOL, AND THE VERDICT WAS MEASURED RATHER
+  THAN ASSUMED. It defines no message exchange of its own - it is a
+  carriage specification - but it names FOUR PARTIES with distinct duties,
+  specifies a RETRIEVAL over HTTP or CoAP with a transport-security
+  SHOULD, admits an ACTIVE INTERMEDIARY into the model, and imposes an
+  ORDERING CONSTRAINT on two independent checks. Those are the elements a
+  protocol model is for, and omitting them would have hidden the
+  document's only two normative statements about behaviour over time.
+
+  WORD COUNTS OVER ALL 614 LINES, as whole words, case-insensitively, with
+  the lines where they occur. `sender` 13 (322, 327, 330, 332, 335, 336,
+  339, 340, 346, 348, 352, 353, 358 - ALL in section 3's static-static
+  ECDH material); `recipient` 4 (285, 286, 319, 327); "relying party" 3
+  (116, 118, 184); `party` 6 (116, 118, 148, 150, 184, 186);
+  `intermediary` 2 (161, 196); `server` 2 (271, 272); `client` 1 (443);
+  `retrieve` 2 (275, 451); `GET` 1 (275); `protocol` 4 (275, 477, 579, 600
+  - of which 579 and 600 are reference titles); `request` 2 (6 is the
+  masthead, 275 is the GET).
+
+  AND WHAT IS NOT THERE: `verifier` 0 and `verify` 0, in a document whose
+  whole subject is what a verifier may conclude. `handshake` 0,
+  `negotiate` 0, `negotiation` 0, `response` 0, `receiver` 0. The document
+  has no word for the verifying side; it says "the party evaluating the
+  signature" (line 148) and "the relying party" (lines 116, 118, 184).
+  There is also NO NUMBERED PROCEDURE: `steps` occurs 0 times and `step`
+  once, at line 134, in "when the validation succeeds in a single step".
+
+  SO THE FLOWS BELOW ARE THE DOCUMENT'S OBLIGATIONS ARRANGED IN THE ORDER
+  IT IMPOSES, not a sequence it prints. Every step carries its locator and
+  its requirement ids, and the `absent` list at the end records what no
+  diagram can show.
+
+roles:
+  - name: 'provisioned party (often a constrained device)'
+    duty: >-
+      Holds a certificate, or just a thumbprint, and provides it to the
+      relying party alongside a signature or encrypted message. section 2
+      is explicit that it is "not necessarily expected that constrained
+      devices themselves will evaluate and process X.509 certificates".
+      The document gives it no name of its own.
+    locator: '§2, source lines 113-123'
+  - name: 'relying party / party evaluating the signature'
+    duty: >-
+      Does everything. Validates the certificate under RFC 5280 section 6
+      or another trust structure, builds the path, checks revocation,
+      checks the key against the algorithm, and validates the signature.
+      The document uses two phrases for it and never the word `verifier`.
+    locator: '§2, source lines 116-137, 148-152, 184-187'
+  - name: 'intermediary'
+    duty: >-
+      AN ACTIVE PARTY THE MODEL ADMITS. section 2 says twice that sending
+      a certificate parameter in the unprotected bucket "allows an
+      intermediary to remove or add certificates". It is given no other
+      duty and no constraint, and it is the reason the protected `x5t` is
+      load-bearing.
+    locator: '§2, source lines 160-161, 195-196'
+  - name: 'certificate server (x5u target)'
+    duty: >-
+      Serves one of four media types at a URI. section 2 requires TLS,
+      DTLS or OSCORE for an HTTP or CoAP GET and makes trusting a
+      non-chaining retrieved certificate conditional on "integrity
+      protection and server authentication" plus the server being
+      "configured as trusted to provide new trust anchors".
+    locator: '§2, source lines 244-277'
+  - name: 'CA'
+    duty: >-
+      Appears only in section 5, and only as a risk: whether it required
+      proof of possession decides whether the integrity obligation
+      applies, and a misbehaving one is what the protected bucket
+      mitigates. It performs no step in any flow here.
+    locator: '§2, source lines 461-469, 497-500'
+  - name: 'out-of-band confirmation / firmware upgrade'
+    duty: >-
+      Not a party, but the only mechanism the document names for changing
+      the trust-anchor set. Named so that the state machine's one
+      permitted anchor transition has a trigger.
+    locator: '§2, source lines 155-157, 190-192, 445-446'
+
+flows:
+  - id: F-1
+    name: 'Relying-party validation of a certificate-bearing COSE object'
+    locator: '§2 (lines 104-137, 154-167, 189-202, 229-236), §5 (lines 448-485)'
+    summary: >-
+      THE DOCUMENT'S CENTRAL FLOW, and it is one-sided: everything happens
+      at the relying party. The ORDER of steps 3 and 4 is the only
+      ordering RFC 9360 constrains, and it constrains it as a JOIN rather
+      than a sequence - section 5 argues both orders and refuses to
+      choose.
+    steps:
+      - step: 1
+        actor: 'provisioned party'
+        action: >-
+          Emit a COSE_Sign1, COSE_Signature or COSE_recipient carrying one
+          or more of x5bag (32), x5chain (33), x5t (34), x5u (35). The
+          parameters identify the certificate for validating the
+          signature, or the recipient's certificate.
+        locator: '§2 lines 279-286'
+        constrained_by:
+          - 'rfc-9360#R-0062'
+          - 'rfc-9360#R-0063'
+          - 'rfc-9360#R-0005'
+      - step: 2
+        actor: 'provisioned party'
+        action: >-
+          GUARD, and it is the obligation the whole document restates four
+          times: the end-entity certificate must be integrity protected by
+          COSE. Three non-mandatory mechanisms are offered - parameter in
+          the protected header, parameter unprotected plus x5t protected,
+          or the certificate in external_aad - and section 5 adds a
+          conditional fourth form. NO MECHANISM IS MANDATED and the
+          property is about the whole object, so no single-header check
+          can decide it.
+        locator: '§2 lines 163, 198, 229, 261; §5 lines 461-464'
+        constrained_by:
+          - 'rfc-9360#R-0022'
+          - 'rfc-9360#R-0044'
+          - 'rfc-9360#R-0117'
+      - step: 3
+        actor: 'relying party'
+        action: >-
+          Treat every certificate in the message as UNTRUSTED INPUT. A
+          self-signed certificate in the parameter must not update the
+          trust-anchor set without out-of-band confirmation.
+        locator: '§2 lines 154-157, 189-192'
+        constrained_by:
+          - 'rfc-9360#R-0018'
+          - 'rfc-9360#R-0030'
+      - step: 4
+        actor: 'relying party'
+        action: >-
+          Build the certification path. For x5bag the set is unordered,
+          possibly duplicated, possibly extraneous and possibly
+          incomplete; for x5chain a candidate path is proposed but path
+          building is still required.
+        locator: '§2 lines 147-152, 182-187'
+        constrained_by:
+          - 'rfc-9360#R-0016'
+          - 'rfc-9360#R-0029'
+      - step: 5
+        actor: 'relying party'
+        action: >-
+          Validate the certificate: PKIX under RFC 5280, which includes
+          matching against the trust anchors configured for the
+          application, or a different trust structure such as a trusted
+          certificate distributor for self-signed certificates. Revocation
+          has to be handled by somebody and the document does not say who.
+        locator: '§2 lines 127-134; §5 lines 491-495'
+        constrained_by:
+          - 'rfc-9360#R-0008'
+          - 'rfc-9360#R-0009'
+          - 'rfc-9360#R-0010'
+          - 'rfc-9360#R-0011'
+          - 'rfc-9360#R-0007'
+          - 'rfc-9360#R-0126'
+          - 'rfc-9360#R-0127'
+      - step: 6
+        actor: 'relying party'
+        action: >-
+          Check the key against the algorithm to be used, plus any
+          algorithm-specific checks - points on curves, RSA key sizes
+          within an acceptable range. Unvalidated keys can cause loss of
+          security or excessive resource consumption.
+        locator: '§5 lines 479-485'
+        constrained_by:
+          - 'rfc-9360#R-0122'
+          - 'rfc-9360#R-0123'
+          - 'rfc-9360#R-0124'
+      - step: 7
+        actor: 'relying party'
+        action: >-
+          Validate the signature. RFC 9360 defines nothing here; the
+          procedure is RFC 9052 section 4's.
+        locator: '§2 lines 281-283'
+        constrained_by: []    # RFC 9052's, not this document's
+      - step: 8
+        actor: 'relying party'
+        action: >-
+          JOIN. Both the signature validation and the certificate
+          validation must complete successfully before acting on any
+          requests. Which is done first is a stated trade-off the document
+          leaves open: validating certificates first costs network access,
+          power and bandwidth, and validating them after the signature can
+          build an oracle out of the observable network access.
+        locator: '§5 lines 448-459'
+        constrained_by:
+          - 'rfc-9360#R-0116'
+          - 'rfc-9360#R-0114'
+          - 'rfc-9360#R-0115'
+      - step: 9
+        actor: 'relying party'
+        action: >-
+          TERMINAL FAILURE. If the application cannot establish trust in
+          the certificate, the public key contained in the certificate
+          cannot be used for cryptographic operations. THIS SENTENCE IS
+          LOWER CASE and is the document's strongest prohibition.
+        locator: '§2 lines 134-137'
+        constrained_by:
+          - 'rfc-9360#R-0012'
+
+  - id: F-2
+    name: 'Certificate retrieval through x5u'
+    locator: '§2 lines 244-277; §5 lines 487-489'
+    summary: >-
+      THE ONE FLOW WITH A NETWORK MESSAGE IN IT, and the only place RFC
+      9360 names a transport. It is also where the document contradicts
+      itself about whether the URI needs protection.
+    steps:
+      - step: 1
+        actor: 'relying party'
+        action: >-
+          Read the URI from x5u (35) or x5u-sender (-28): a CBOR text
+          string.
+        locator: '§2 lines 244-245'
+        constrained_by:
+          - 'rfc-9360#R-0050'
+      - step: 2
+        actor: 'relying party -> certificate server'
+        action: >-
+          GET the resource. If an HTTP or CoAP GET is used, TLS, DTLS or
+          OSCORE SHOULD be used - the document's only SHOULD, and its only
+          mandated transport protection.
+        locator: '§2 lines 274-277'
+        constrained_by:
+          - 'rfc-9360#R-0061'
+      - step: 3
+        actor: 'certificate server -> relying party'
+        action: >-
+          Return one of exactly four media types: application/pkix-cert,
+          application/pkcs7-mime with smime-type="certs-only",
+          application/cose-x509, or application/cose-x509 with
+          usage=chain. For the cose-x509 types the body is a CBOR sequence
+          of single-entry COSE_X509 structures.
+        locator: '§2 lines 246-259'
+        constrained_by:
+          - 'rfc-9360#R-0050'
+      - step: 4
+        actor: 'relying party'
+        action: >-
+          GUARD, and it is a MUST NOT: if the retrieved certificate does
+          not chain to an existing trust anchor it must not be trusted,
+          unless the URI provides integrity protection AND server
+          authentication AND the server is configured as trusted to
+          provide new trust anchors, or an out-of-band confirmation is
+          received.
+        locator: '§2 lines 269-274'
+        constrained_by:
+          - 'rfc-9360#R-0060'
+      - step: 5
+        actor: 'relying party'
+        action: >-
+          Apply RFC 3986's security considerations, specifically those in
+          its section 7.1.
+        locator: '§5 lines 487-489'
+        constrained_by:
+          - 'rfc-9360#R-0125'
+      - step: 6
+        actor: 'relying party'
+        action: >-
+          Then re-enter F-1 at step 3: the retrieved certificate is
+          untrusted input like any other.
+        locator: '§2 lines 154-157, 189-192'
+        constrained_by:
+          - 'rfc-9360#R-0030'
+    open_question: >-
+      THE INTERNAL TENSION, recorded here because it is a protocol
+      property. section 2 lines 264-267 say "As the end-entity certificate
+      is integrity protected by COSE, the URI does not need to provide any
+      protection" (rfc-9360#R-0059), and lines 269-274 then make trusting
+      a non-chaining retrieved certificate conditional on the URI
+      providing "integrity protection and server authentication"
+      (rfc-9360#R-0060). Both are about the same GET. They are
+      reconcilable only by reading the first as being about the end-entity
+      certificate and the second as being about trust anchors, which the
+      text does not say.
+
+  - id: F-3
+    name: 'Intermediary rewriting of the unprotected bucket'
+    locator: '§2 lines 160-161, 195-196; §5 lines 497-505'
+    summary: >-
+      THE ADVERSARIAL FLOW THE DOCUMENT ITSELF ADMITS, and the reason this
+      record exists. It is two steps long and it is stated twice in
+      section 2.
+    steps:
+      - step: 1
+        actor: 'provisioned party'
+        action: >-
+          Send x5bag or x5chain in the UNPROTECTED header bucket -
+          permitted because the contents are untrusted input anyway -
+          together with x5t in the PROTECTED bucket. This is section 2's
+          own worked suggestion for satisfying the integrity obligation.
+        locator: '§2 lines 157-167, 192-202'
+        constrained_by:
+          - 'rfc-9360#R-0021'
+          - 'rfc-9360#R-0033'
+          - 'rfc-9360#R-0022'
+      - step: 2
+        actor: 'intermediary'
+        action: >-
+          Remove or add certificates. section 2 states the capability
+          flatly, twice, with no constraint on who may do it or when.
+        locator: '§2 lines 160-161, 195-196'
+        constrained_by:
+          - 'rfc-9360#R-0021'
+          - 'rfc-9360#R-0033'
+      - step: 3
+        actor: 'relying party'
+        action: >-
+          Re-derive the end-entity certificate's identity from the
+          PROTECTED x5t alone. Here the certificate is NOT already present
+          on the system, so section 5's last paragraph does not describe
+          this case - and section 5's eighth paragraph, immediately before
+          it, says protecting x5t's integrity is what mitigates a
+          misbehaving CA.
+        locator: '§5 lines 497-505'
+        constrained_by:
+          - 'rfc-9360#R-0118'
+
+error_paths:
+  - name: 'trust cannot be established'
+    condition: >-
+      The application cannot establish trust in the certificate.
+    action: >-
+      The public key contained in the certificate cannot be used for
+      cryptographic operations. TERMINAL. The sentence is lower case.
+    locator: '§2 lines 134-137'
+    constrained_by:
+      - 'rfc-9360#R-0012'
+  - name: 'self-signed certificate offered as an anchor'
+    condition: >-
+      A self-signed certificate is present in x5bag or x5chain, or a new
+      self-signed certificate appears on the client.
+    action: >-
+      The trust-anchor set must not be updated without out-of-band
+      confirmation; section 5 adds that such an appearance "cannot be a
+      trigger to modify the set of trust anchors".
+    locator: '§2 lines 155-157, 190-192; §5 lines 442-445'
+    constrained_by:
+      - 'rfc-9360#R-0018'
+      - 'rfc-9360#R-0030'
+  - name: 'retrieved certificate does not chain'
+    condition: >-
+      An x5u retrieval returns a certificate that does not chain to an
+      existing trust anchor.
+    action: >-
+      MUST NOT be trusted unless the three-part condition or an
+      out-of-band confirmation holds.
+    locator: '§2 lines 269-274'
+    constrained_by:
+      - 'rfc-9360#R-0060'
+  - name: 'either validation fails'
+    condition: >-
+      Signature validation or certificate validation does not complete
+      successfully.
+    action: >-
+      Do not act on any requests. The document specifies NO REPORTING, no
+      error code and no message back to the sender.
+    locator: '§5 lines 456-459'
+    constrained_by:
+      - 'rfc-9360#R-0116'
+  - name: 'key is unfit for the algorithm'
+    condition: >-
+      The key in the certificate fails the algorithm check.
+    action: >-
+      Not stated. section 5 says only that using unvalidated keys "can
+      lead to either loss of security or excessive consumption of
+      resources". There is no specified failure action.
+    locator: '§5 lines 479-485'
+    constrained_by:
+      - 'rfc-9360#R-0122'
+      - 'rfc-9360#R-0124'
+
+absent:
+  - 'No word for the verifying side: `verifier` and `verify` occur ZERO times in 614 lines.'
+  - 'No numbered procedure: `steps` ZERO, `step` once (line 134, "in a single step").'
+  - 'No negotiation, no versioning and no way to advertise which hash algorithms an endpoint accepts - while section 2 makes SHA-256 mandatory to support and permits any other.'
+  - 'No error reporting of any kind: no code, no message, no obligation to tell the sender anything.'
+  - 'No revocation mechanism. `revocation` occurs 4 times and names no protocol; section 2 says only that "there still needs to be an entity that is responsible".'
+  - 'No statement of who handles revocation, and no party in the roles list owns it.'
+  - 'No ordering between certificate validation and signature validation - section 5 argues both and requires only that both complete.'
+  - 'No encoding for external_aad, although putting the end-entity certificate there is offered four times as a way to satisfy the integrity obligation.'
+  - 'No identity protection: section 5 says COSE does not provide it and the only remedy offered is to send COSE inside another protocol.'
+
+identity_exposure:
+  note: >-
+    Recorded as a protocol property rather than buried in the security
+    notes, because it survives every choice of parameter. End-entity
+    certificates contain identities a passive on-path attacker can use to
+    identify and track the subject (rfc-9360#R-0119), and `x5t` and `x5u`
+    "are just alternative permanent identifiers" usable for the same
+    tracking (rfc-9360#R-0120). The only remedy offered is to send COSE
+    inside another security protocol providing confidentiality
+    (rfc-9360#R-0121). So all four parameters are linkable identifiers,
+    and the hash is not an exception.
+
+coverage: >-
+  Three flows, nine plus six plus three steps, five error paths, six
+  roles. 35 of ../requirements.yaml's 129 requirement ids are wired.
+  Every `actor` is a role defined above, and every structure a step
+  names is defined in ../messages.yaml. The flows are the document's
+  obligations arranged in the order it imposes; RFC 9360 prints no
+  sequence and no procedure of its own.

@@ -1,0 +1,152 @@
+# =====================================================================
+# x5t-hashalg-policy.derived.yaml
+#
+# DERIVED -- NOT verbatim. Every `verdict` and every `why` below is this
+# library's. The `value`, `name`, `bits` and `recommended` columns are
+# rfc-9054's Tables 1-3, cited per row; the `cbor` column is computed
+# from RFC 8949 §3 by this pass.
+#
+# WHY IT EXISTS. RFC 9360's `x5t` is `[hashAlg, hashValue]` where
+# hashAlg is "an integer or a string containing the hash algorithm
+# identifier corresponding to the Value column ... of the algorithm
+# registered in the "COSE Algorithms" registry" (rfc-9360#R-0041).
+# THAT EXCLUDES NOTHING. The document's only algorithm constraint is a
+# floor on SUPPORT - applications "MUST support the hash algorithm
+# 'SHA-256' but can use other hash algorithms" (rfc-9360#R-0047) - so every
+# value below is permitted on the wire by RFC 9360, including the two
+# the registry marks Filter Only.
+#
+# AND THE PURPOSE IS NOT ON THE WIRE. COSE_CertHash has exactly two
+# fields. "Filter Only" is a REGISTRY COLUMN (rfc-9054#R-0087). A
+# verifier handed [-14, h'...'] cannot tell whether the sender was
+# filtering or binding; ../examples/vectors.yaml demonstrates that the
+# two uses are byte-identical.
+#
+# THE CONFLICT THIS TABLE RESOLVES FOR US. RFC 9360 §2 says x5t "does
+# not provide any trust" (rfc-9360#R-0043) and then says it provides
+# "integrity protection of the end-entity certificate" (rfc-9360#R-0046);
+# §5's last paragraph says its algorithm's security "does not affect
+# the security of the system" (rfc-9360#R-0129). The verdicts below assume
+# the second of the three, because that is the configuration §2
+# recommends.
+# =====================================================================
+record: rfc-9360
+kind: schema-policy
+reviewed_by: ""
+derived: true
+registry: "COSE Algorithms (https://www.iana.org/assignments/cose/)"
+registry_values_from: rfc-9054
+position_modelled: "x5t / x5t-sender carrying the integrity binding for an end-entity certificate"
+rule: >-
+  Where an x5t or x5t-sender value is the integrity binding for a
+  certificate the relying party does not already hold, hashAlg is
+  restricted to values whose Recommended column is "Yes", and the
+  binding lives in the PROTECTED bucket. Where an x5t value is used only
+  to filter a set of certificates the relying party already holds, and
+  the surviving candidates are each tested against the signature,
+  rfc-9054 §2's filtering argument applies and Filter Only values are
+  admissible - but nothing on the wire distinguishes the two cases, so
+  this profile does not rely on the distinction.
+algorithms:
+  - value: -14
+    name: SHA-1
+    digest_bits: 160
+    recommended: 'Filter Only'            # rfc-9054's Recommended column
+    cbor_head: '2d'            # 1 octet(s), RFC 8949 §3, computed by this pass
+    cose_capabilities: '[]'      # rfc-9054 §3.1-§3.3, all eight
+    permitted_by_rfc_9360: true  # RFC 9360 excludes no registry value
+    verdict: REFUSE
+    registry_row: 'rfc-9054#R-0054'
+    why: >-
+      Broken: a full collision exists (rfc-9054 §3.1 cites Stevens et al.
+      2017). Registered Filter Only, which rfc-9054 §4.1 defines as not
+      for purposes that require collision resistance.
+  - value: -15
+    name: SHA-256/64
+    digest_bits: 64
+    recommended: 'Filter Only'            # rfc-9054's Recommended column
+    cbor_head: '2e'            # 1 octet(s), RFC 8949 §3, computed by this pass
+    cose_capabilities: '[]'      # rfc-9054 §3.1-§3.3, all eight
+    permitted_by_rfc_9360: true  # RFC 9360 excludes no registry value
+    verdict: REFUSE
+    registry_row: 'rfc-9054#R-0067'
+    why: >-
+      64 bits, so a birthday collision is ~2^32 work. Registered Filter
+      Only. rfc-9054 §3.2 justifies it BY CITING THIS DOCUMENT'S DRAFT and
+      by the argument that a false positive is caught by testing the
+      public key - which the protected-x5t configuration does not do for
+      the certificate's identity. It is also the one value in the registry
+      with no test vector and no statement of which 64 bits.
+  - value: -16
+    name: SHA-256
+    digest_bits: 256
+    recommended: 'Yes'            # rfc-9054's Recommended column
+    cbor_head: '2f'            # 1 octet(s), RFC 8949 §3, computed by this pass
+    cose_capabilities: '[]'      # rfc-9054 §3.1-§3.3, all eight
+    permitted_by_rfc_9360: true  # RFC 9360 excludes no registry value
+    verdict: PERMIT
+    registry_row: 'rfc-9054#R-0068'
+    why: >-
+      The only mandatory-to-support value, and the citation R-O-03 needs.
+  - value: -17
+    name: SHA-512/256
+    digest_bits: 256
+    recommended: 'Yes'            # rfc-9054's Recommended column
+    cbor_head: '30'            # 1 octet(s), RFC 8949 §3, computed by this pass
+    cose_capabilities: '[]'      # rfc-9054 §3.1-§3.3, all eight
+    permitted_by_rfc_9360: true  # RFC 9360 excludes no registry value
+    verdict: PERMIT
+    why: >-
+      A different construction from a truncated SHA-512, per rfc-9054
+      §3.2's note.
+  - value: -18
+    name: SHAKE128
+    digest_bits: 256
+    recommended: 'Yes'            # rfc-9054's Recommended column
+    cbor_head: '31'            # 1 octet(s), RFC 8949 §3, computed by this pass
+    cose_capabilities: '[]'      # rfc-9054 §3.1-§3.3, all eight
+    permitted_by_rfc_9360: true  # RFC 9360 excludes no registry value
+    verdict: PERMIT
+    why: >-
+      Fixed 256-bit output.
+  - value: -43
+    name: SHA-384
+    digest_bits: 384
+    recommended: 'Yes'            # rfc-9054's Recommended column
+    cbor_head: '382a'            # 2 octet(s), RFC 8949 §3, computed by this pass
+    cose_capabilities: '[]'      # rfc-9054 §3.1-§3.3, all eight
+    permitted_by_rfc_9360: true  # RFC 9360 excludes no registry value
+    verdict: PERMIT
+  - value: -44
+    name: SHA-512
+    digest_bits: 512
+    recommended: 'Yes'            # rfc-9054's Recommended column
+    cbor_head: '382b'            # 2 octet(s), RFC 8949 §3, computed by this pass
+    cose_capabilities: '[]'      # rfc-9054 §3.1-§3.3, all eight
+    permitted_by_rfc_9360: true  # RFC 9360 excludes no registry value
+    verdict: PERMIT
+  - value: -45
+    name: SHAKE256
+    digest_bits: 512
+    recommended: 'Yes'            # rfc-9054's Recommended column
+    cbor_head: '382c'            # 2 octet(s), RFC 8949 §3, computed by this pass
+    cose_capabilities: '[]'      # rfc-9054 §3.1-§3.3, all eight
+    permitted_by_rfc_9360: true  # RFC 9360 excludes no registry value
+    verdict: PERMIT
+    why: >-
+      Fixed 512-bit output.
+
+coverage: >-
+  Eight rows: every value rfc-9054 registers in the COSE Algorithms
+  registry, which is the registry RFC 9360 §2 names. THE TABLE IS NOT
+  CLOSED, and that is the point - the registry is open, RFC 9360
+  excludes nothing, and a value registered tomorrow is admissible in
+  x5t by RFC 9360's own text with no action by anybody. A string
+  identifier is also admissible ("an integer or a string"), and no
+  string identifier exists in the registry today.
+not_carried: >-
+  The non-hash algorithms in the same registry (signature, MAC, AEAD,
+  key-derivation and key-wrap identifiers, rfc-9053's 43 code points).
+  A conforming RFC 9360 implementation would have to reject them in
+  hashAlg, and RFC 9360 gives no rule that does; the Value column it
+  cites is the whole registry's, not a hash subset's.

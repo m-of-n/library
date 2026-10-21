@@ -1,0 +1,219 @@
+record: rfc-9360
+reviewed_by: ""
+source_version: "RFC 9360 (February 2023)"
+source_digest: "3dbe546adf08e309b429c8e71b2ee8384292fb8767338d3eb17d1c4e5adefc23"
+source_lines_total: 614
+applicability: "APPLICABLE - two small machines, and the modelling is OURS"
+note: >-
+  WHAT IS MEASURED AND WHAT IS MODELLED, SEPARATED UP FRONT.
+
+  MEASURED: RFC 9360 contains NO STATE VOCABULARY AT ALL. Over all 614
+  lines, as whole words, case-insensitively: `state` 0, `states` 0,
+  `lifecycle` 0, `transition` 0, `revoke` 0, `rotate` 0, `rotation` 0,
+  `expire` 0, `expiry` 0, `expiration` 0, `issuance` 0, `enroll` 0.
+  `revocation` occurs 4 times (106, 125, 451, 518) and names no mechanism;
+  `enrollment` twice (84, 106) and names somebody else's protocols;
+  `issue`/`issuing` once each (462, 465) and both are about what an
+  attacker tricks a CA into doing. There is no numbered procedure: `steps`
+  0, `step` once at line 134 ("in a single step").
+
+  SO WHY NOT not_applicable. Because the document states, normatively, two
+  things that are propositions about a system CHANGING over time, and
+  dropping them would lose both: (1) the trust-anchor set may be updated
+  only by out-of-band confirmation or a firmware upgrade, and a
+  self-signed certificate appearing CANNOT be the trigger - two MUST NOTs
+  plus a lower-case restatement in section 5; and (2) acting on a request
+  requires that TWO independent validations have both completed
+  successfully, with the order left open - a JOIN, which is the one
+  genuinely stateful thing in the document.
+
+  Those are two machines, both tiny, and every state name below is THIS
+  EXTRACTION'S. The document names no state. Each transition carries its
+  locator and its requirement ids so the modelling can be checked against
+  the text, and the `absent` list records what cannot be modelled because
+  it is not there.
+
+machines:
+  - id: M-1
+    name: 'End-entity certificate: from untrusted input to usable key'
+    locator: '§2 lines 127-137, 154-157, 189-192; §5 lines 448-485'
+    modelled_by: 'this extraction; RFC 9360 names no state'
+    states:
+      - name: received
+        meaning: >-
+          The certificate has arrived in x5bag, x5chain or via x5u, or is
+          identified by x5t. ENTRY STATE. section 2: it is untrusted
+          input.
+      - name: path-built
+        meaning: >-
+          A candidate certification path exists. For x5chain one is
+          proposed; for x5bag the relying party built it.
+      - name: path-validated
+        meaning: >-
+          Validation succeeded under RFC 5280 section 6 or another trust
+          structure, including matching against the configured trust
+          anchors.
+      - name: key-checked
+        meaning: >-
+          The key has been checked against the algorithm to be used and
+          any algorithm-specific checks have been made.
+      - name: signature-validated
+        meaning: >-
+          RFC 9052's signature validation succeeded. INDEPENDENT of the
+          three states above - section 5 is explicit that the order is
+          open.
+      - name: usable
+        meaning: >-
+          TERMINAL ACCEPT. Both validations have completed successfully,
+          so the relying party may act on the request.
+      - name: unusable
+        meaning: >-
+          TERMINAL REJECT. Trust could not be established, so the public
+          key cannot be used for cryptographic operations. The document
+          specifies no reporting and no retry.
+    transitions:
+      - from: 'received'
+        to: 'path-built'
+        trigger: 'the relying party builds or accepts a path'
+        guard: >-
+          the certificates are processed AS UNTRUSTED INPUT, and no
+          self-signed certificate among them updates the anchor set
+        locator: '§2 lines 147-157, 182-192'
+        constrained_by:
+          - 'rfc-9360#R-0018'
+          - 'rfc-9360#R-0030'
+      - from: 'path-built'
+        to: 'path-validated'
+        trigger: 'RFC 5280 §6 path validation, or another trust structure'
+        guard: >-
+          the path matches a configured trust anchor
+        locator: '§2 lines 127-134'
+        constrained_by:
+          - 'rfc-9360#R-0008'
+          - 'rfc-9360#R-0009'
+          - 'rfc-9360#R-0010'
+      - from: 'path-validated'
+        to: 'key-checked'
+        trigger: 'the algorithm-appropriateness check'
+        guard: >-
+          points on curves, RSA sizes within an acceptable range, and any
+          other algorithm-specific check
+        locator: '§5 lines 479-485'
+        constrained_by:
+          - 'rfc-9360#R-0122'
+      - from: 'received'
+        to: 'signature-validated'
+        trigger: 'RFC 9052 signature validation'
+        guard: >-
+          NONE STATED. This transition may be taken before OR after the
+          three above; section 5 argues both orders and picks neither.
+        locator: '§5 lines 448-456'
+        constrained_by:
+          - 'rfc-9360#R-0114'
+          - 'rfc-9360#R-0115'
+      - from: 'key-checked + signature-validated'
+        to: 'usable'
+        trigger: 'the JOIN: both validations have completed successfully'
+        guard: >-
+          BOTH, and this is the document's only stateful MUST
+        locator: '§5 lines 456-459'
+        constrained_by:
+          - 'rfc-9360#R-0116'
+      - from: 'received | path-built | path-validated'
+        to: 'unusable'
+        trigger: 'any validation fails, or trust cannot be established'
+        guard: >-
+          none
+        locator: '§2 lines 134-137; §5 lines 456-459'
+        constrained_by:
+          - 'rfc-9360#R-0012'
+          - 'rfc-9360#R-0116'
+      - from: 'received'
+        to: 'unusable'
+        trigger: 'the certificate was retrieved through x5u and does not chain to an existing trust anchor'
+        guard: >-
+          unless the URI provides integrity protection AND server
+          authentication AND the server is configured as trusted to
+          provide new trust anchors, or an out-of-band confirmation is
+          received
+        locator: '§2 lines 269-274'
+        constrained_by:
+          - 'rfc-9360#R-0060'
+    finding: >-
+      THE FINDING THIS MACHINE EXISTS TO MAKE LEGIBLE. There are TWO
+      independent paths into `usable` and the document refuses to order
+      them, so a conforming implementation may validate the signature
+      first - building the oracle section 5 itself describes - or validate
+      the certificate first, paying the network cost section 5 itself
+      describes. The only thing RFC 9360 fixes is the join. An implementer
+      reading only section 2 would never know the choice existed; it is in
+      section 5, in prose, between two paragraphs about something else.
+
+  - id: M-2
+    name: 'The trust-anchor set'
+    locator: '§2 lines 155-157, 190-192; §5 lines 440-446'
+    modelled_by: 'this extraction; RFC 9360 names no state'
+    note: >-
+      TWO STATES AND ONE FORBIDDEN TRANSITION. It is worth writing out
+      precisely because the forbidden transition is the only thing in RFC
+      9360 stated THREE TIMES - twice as a MUST NOT (once per
+      certificate-carrying parameter) and once in lower case in section 5
+      - and because the permitted transition's only named mechanism is a
+      firmware upgrade, i.e. not a protocol at all.
+    states:
+      - name: 'anchor-set(T)'
+        meaning: >-
+          The set of trust anchors configured for the application, at some
+          time T. section 2: PKIX validation matches against it.
+      - name: 'anchor-set(T')'
+        meaning: >-
+          A changed set. Reachable ONLY by the transition below.
+    transitions:
+      - from: 'anchor-set(T)'
+        to: 'anchor-set(T'')'
+        trigger: 'out-of-band confirmation, or a new firmware upgrade'
+        guard: >-
+          The only two mechanisms the document names. section 5: "One
+          common way for a new trust anchor to be added to (or removed
+          from) a device is by doing a new firmware upgrade." Neither is
+          specified here, and neither is a message.
+        locator: '§2 lines 155-157, 190-192; §5 lines 445-446'
+        constrained_by:
+          - 'rfc-9360#R-0019'
+          - 'rfc-9360#R-0031'
+          - 'rfc-9360#R-0113'
+    forbidden_transitions:
+      - from: 'anchor-set(T)'
+        to: 'anchor-set(T'')'
+        trigger: 'a self-signed certificate appears in x5bag or x5chain, or a new self-signed certificate appears on the client'
+        why: >-
+          MUST NOT, twice in section 2, plus a lower-case restatement in
+          section 5: "A new self-signed certificate appearing on the
+          client cannot be a trigger to modify the set of trust anchors,
+          because a well-defined trust-establishment process is required."
+          Note that the section 5 restatement of a MUST NOT is lower case,
+          so of the three statements of the same rule, one binds nobody.
+        locator: '§2 lines 155-157, 190-192; §5 lines 442-445'
+        constrained_by:
+          - 'rfc-9360#R-0019'
+          - 'rfc-9360#R-0031'
+          - 'rfc-9360#R-0112'
+
+absent:
+  - 'No state vocabulary at all: `state`, `states`, `lifecycle` and `transition` each occur ZERO times in 614 lines.'
+  - 'No revocation state and no revocation mechanism. `revocation` occurs 4 times and section 2 says only that "there still needs to be an entity that is responsible" - naming no entity.'
+  - 'No expiry, no validity window, no clock. `expire`, `expiry` and `expiration` each ZERO occurrences, in a document entirely about X.509 certificates.'
+  - 'No key rollover and no re-enrollment: `rotate`, `rotation` and `issuance` each ZERO.'
+  - 'No caching state for an x5u retrieval - no freshness rule, no revalidation, nothing about re-fetching.'
+  - 'No state for the thumbprint-only device section 2 contemplates: it holds an x5t and no certificate, and the document says nothing about how it ever acquires one.'
+  - 'No failure state for the key-against-algorithm check: section 5 names the consequences and no action.'
+  - 'No ordering between M-1''s two independent validation paths; the document argues both and fixes only the join.'
+
+coverage: >-
+  Two machines, nine states, nine transitions (eight permitted, one
+  forbidden), and an eight-item absent list. 15 of
+  ../requirements.yaml's 129 requirement ids are wired. EVERY STATE NAME
+  IS THIS EXTRACTION'S: the document names none, and the `note` at the
+  top separates what was measured from what was modelled so a reviewer
+  can disagree with the modelling without disagreeing with the
+  measurement.

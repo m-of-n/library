@@ -1,0 +1,106 @@
+======================================================================
+cddl-parse.derived.txt
+
+DERIVED -- NOT verbatim. This is the OUTPUT of a check this pass ran,
+not anything RFC 9360 says. Do not cite it as the standard's text.
+
+WHAT WAS RUN. A recursive-descent parser for RFC 8610 Appendix B's
+grammar, transcribed production for production from
+records/ietf/rfc-8610/distilled/schema/cddl-dedented.derived.abnf (this
+library's mechanical dedent of RFC 8610 Figure 13; the verbatim bytes
+are in cddl.abnf beside it). No production was added, removed or
+widened. PEG semantics - ordered choice with backtracking - over
+ABNF's unordered alternation, following the grammar's own "preempted by
+above" comment on `grpent`. A parse counts as successful only if it
+consumes the WHOLE input.
+
+The parser is also used on rfc-9054's §2.1 fragments, where it produces
+this lane's sharpest schema finding; see
+records/ietf/rfc-9054/distilled/schema/cddl-parse.derived.txt.
+
+TWO LIMITATIONS OF THE REPORT, stated so it is not over-read:
+  1. The parser is a RECOGNISER. It decides syntax, not CDDL's type
+     system; RFC 8610's grammar accepts strings the type system
+     rejects, and this library's own grammar-gaps.derived.txt
+     enumerates 44 such side conditions (G-01 to G-44).
+  2. Its "undefined name" list over-reports, because a bareword member
+     key is first tried as a `type1` and the reference is logged before
+     the parse backtracks. In RFC 9360's two rules `certs`, `hashAlg`
+     and `hashValue` are member keys, NOT undefined types.
+======================================================================
+
+RFC 9360 §2 lines 311-312, AS PRINTED (indented)
+  whole-input parse: YES (consumed 102 of 102 chars)
+  rule kinds: [('type-rule', 'COSE_X509'), ('type-rule', 'COSE_CertHash')]
+  expected True -> MATCH
+
+the same two rules with the left margin removed
+  whole-input parse: YES (consumed 96 of 96 chars)
+  rule kinds: [('type-rule', 'COSE_X509'), ('type-rule', 'COSE_CertHash')]
+  expected True -> MATCH
+
+COSE_X509 alone
+  whole-input parse: YES (consumed 37 of 37 chars)
+  rule kinds: [('type-rule', 'COSE_X509')]
+  expected True -> MATCH
+
+COSE_CertHash alone
+  whole-input parse: YES (consumed 59 of 59 chars)
+  rule kinds: [('type-rule', 'COSE_CertHash')]
+  expected True -> MATCH
+
+the one-element form the 2* forbids, as CDDL
+  whole-input parse: YES (consumed 29 of 29 chars)
+  rule kinds: [('type-rule', 'X')]
+  expected True -> MATCH
+
+x5-headers.derived.cddl (this directory's derived profile)
+  whole-input parse: YES (consumed 5243 of 5243 chars)
+  rule kinds: [('type-rule', 'COSE_X509'), ('type-rule', 'COSE_CertHash'), ('group-rule', 'x5-header-entries'), ('group-rule', 'x5-sender-header-entries'), ('type-rule', 'x5-signature-header'), ('type-rule', 'x5-recipient-header'), ('type-rule', 'label'), ('type-rule', 'cose-x509-sequence-element'), ('type-rule', 'mofn-CertHash'), ('type-rule', 'mofn-hash-alg'), ('type-rule', 'mofn-x5-protected'), ('type-rule', 'mofn-x5-unprotected')]
+  expected True -> MATCH
+
+NEGATIVE CONTROL: unbalanced bracket
+  whole-input parse: NO  (consumed 0 of 10 chars)
+  rule kinds: none
+  expected False -> MATCH
+
+NEGATIVE CONTROL: no assignment
+  whole-input parse: NO  (consumed 0 of 6 chars)
+  rule kinds: none
+  expected False -> MATCH
+
+======================================================================
+WHAT THE RESULT MEANS FOR THIS RECORD
+
+1. BOTH OF RFC 9360'S RULES PARSE AS PRINTED, with the source's
+   three-column indent intact. CDDL whitespace is free-form
+   (`S = *WS`, `WS = SP / NL`), unlike ABNF's continuation rule, so no
+   dedented companion file is needed here - which is why this directory
+   has no `*-dedented.derived.cddl` and rfc-8610's does.
+
+2. BOTH PARSE AS **TYPE** RULES, not group rules. That matters because
+   RFC 8610 §2.2.4 says "there is no way to use a group as a root -- it
+   must be a type" (quoted in rfc-8610's grammar-gaps.derived.txt,
+   G-04). RFC 9360's two rules are usable as roots; rfc-9054's
+   COSE_Hash_V is not, and that is the difference between the two
+   documents' CDDL.
+
+3. THE `2*` IS A CHOICE, NOT A NECESSITY. `X = bstr / [ 1*certs: bstr ]`
+   parses too, so RFC 9360 could have admitted the one-element array
+   and deliberately did not: one certificate has exactly one encoding.
+   That is an ambiguity removed by construction rather than by a
+   canonicalization rule, and it is the one thing in this document
+   `canonical-encoding` condition (1) can point at approvingly. The
+   price is that every decoder must accept two shapes for one field.
+
+4. WHAT THE GRAMMAR CANNOT SAY, and therefore what no CDDL check of an
+   RFC 9360 message can cover: that the `bstr` holds DER (the content
+   is ASN.1, so even `.cbor` would not help); that label 34 carries a
+   COSE_CertHash (the labels are in a prose table); that -27/-28/-29
+   mean anything only under five named algorithms; that the end-entity
+   certificate is integrity protected, which is a property of the whole
+   COSE object; and which hashAlg values are fit for the position.
+   Four of those five are in x5-headers.derived.cddl as comments and in
+   ../messages.yaml as conditions. The fifth is in
+   x5t-hashalg-policy.derived.yaml.
+======================================================================

@@ -133,30 +133,69 @@ RFC 9053.
 
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on` (widened to six ids by the extraction) |
 | `summary.md` | this document |
+| `summary.html` | GENERATED and untracked — `bin/render-html`, see `docs/generated-views.md` |
+| `distilled/` | **the FX-1 artifact set — six artifacts, two measured `not_applicable`, pass 1 of 3 complete** |
 
-**No `distilled/`, and none is owed yet.** This PR claims the **summary bar**:
-the record is `summarized`, declares no `distillation` block, and touches no
-`distilled/`, so FX-1 does not fire (`docs/extraction.md`). The judgement is
-proportionate rather than economical — the whole normative content is eight
-registry rows, two SHOULD-strength sentences and one registry-column
-definition, and the two CDDL fragments are non-normative examples, one of which
-does not parse. **What would trigger an extraction** is a decision to make
-either §2.1 structure the basis of our own digest carrier; `requirements.yaml`
-would then have to reconcile two BCP 14 statements, and `schema/` would have to
-carry a `*.derived.cddl` repair of `COSE_Hash_V` with erratum 7335 applied —
-work that only makes sense once `R-M-07`'s carrier is being designed. No issue
-owns that today.
+**The extraction has landed, and `distilled/README.md` is its index.** Added
+2026-10-20 by library#39 Tier 2: `normative.md` (25 verbatim regions with
+per-region digests), `requirements.yaml` (96 entries, counts reconciling
+2 = 2 — the smallest BCP 14 budget any record in this library has reconciled),
+`schema/` (2 verbatim + 4 derived, including the repaired `COSE_Hash_V` with
+the map wrapper the document never supplies), `messages.yaml` (4 structures,
+16 fields, 28 requirement ids wired), `examples/` (8 vectors, 1 printed and 7
+ours) and `design-notes.md`. `protocol` and `state-machine` are **not
+applicable**, each with its word counts recorded in `record.yaml` under
+`distillation.not_applicable` — `state` occurs zero times and **both
+occurrences of `states` are "United States"**. `distillation.standard: FX-1` is
+declared and **no `profile`** is: passes 2 and 3 have not run and no
+`reviewed_by` is signed.
 
-**No verbatim normative text here.** Under FX-1 that belongs in
+**[correction] The extraction refuted one claim in this summary.** The sentence
+below that `COSE_Hash_V` *"does not parse"* is **wrong, and the real defect is
+worse.** A parser for RFC 8610 Appendix B's grammar, written for that pass and
+gated first on RFC 8610's own prelude, finds that the fragment **does** parse —
+`#` is CDDL's tag operator, so the grammar sees **24 group entries where four
+were written**, with 15 undefined names harvested from the comment words, and a
+tool rejects the file at **name resolution** rather than at syntax. Erratum 7335
+is real and its status, type, reporter and date were verified; the summary's
+*conclusion* (unusable as printed) stands and its *mechanism* does not. **And
+the defect no erratum covers is the second one**, which this summary already
+gestures at and the extraction confirmed mechanically: even repaired,
+`COSE_Hash_V` is a parenthesised **group** rather than a type, so RFC 8610
+§2.2.4 forbids it as a root. `distilled/schema/cddl-parse.derived.txt` has the
+measurement; the wording is left here rather than edited away.
+
+**[correction] And the "it does not cut against MD-3" verdict below is
+withdrawn.** The extraction names **four cuts and one convergence**
+(`distilled/design-notes.md` §7). The underlying claim this summary makes — that
+the costly dependency is the *absent structure* rather than a tag — is Cut 1 and
+is confirmed; the claim that there is therefore no cut is not.
+
+**Two more results to take from the extraction.** `COSE_Hash_Find` and
+`rfc-9360`'s `COSE_CertHash` encode **identically for all eight algorithms**
+(`distilled/examples/vectors.yaml` V-0006) — the same two-field shape arrived at
+twice by the same author in two documents, with neither citing the other's
+structure. And §4.1's own size rationale is **backwards for five of the eight
+allocations**: −14 to −18 each cost one CBOR octet, and SHA-1 at −14 sits in the
+shortest class available while §4.1 says a *"longer algorithm identifier is
+appropriate"* for it. No erratum covers that.
+
+**No verbatim normative text in this file.** Under FX-1 that belongs in
 `distilled/normative.md` with its locator; in a summary the rule is to cite the
 § and let the reader open the source, so the fragments quoted above are short
 and locator-bearing by design.
 
-**No examples or test vectors, in the record or in the source.** The RFC prints
-not one digest value and not one encoded identifier, so there is nothing to
-hold as a fixture. Any vector we want is ours to compute.
+**No test vectors in the source, and now eight in the record.** The RFC prints
+not one digest value and not one encoded identifier — for any of the eight
+algorithms it registers, including the one it defines itself — so every vector
+in `distilled/examples/` is computed, over one fixed input declared in the file.
+The three worth naming: both readings of SHA-256/64, which **differ** and which
+the document admits equally; SHA-512/256 against a truncated SHA-512, which
+**differ completely** although Table 2's own Description column says otherwise;
+and §2.1's length rule executed, exhibiting the **zero-work collision** it
+prevents.
 
 ## Limits
 

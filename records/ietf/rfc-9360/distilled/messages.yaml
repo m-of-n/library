@@ -1,0 +1,561 @@
+record: rfc-9360
+reviewed_by: ""
+source_version: "RFC 9360 (February 2023)"
+source_digest: "3dbe546adf08e309b429c8e71b2ee8384292fb8767338d3eb17d1c4e5adefc23"
+source_lines_total: 614
+
+# Every structure, header parameter and media-type payload RFC 9360 defines,
+# constrains or registers, with the actual code points and octet-level
+# layouts. Section numbers are RFC 9360's unless another document is named.
+#
+# ---------------------------------------------------------------------------
+# PROVENANCE OF EVERY BYTE LAYOUT
+# ---------------------------------------------------------------------------
+# RFC 9360 PRINTS NOT ONE BYTE. `Figure`, `Appendix`, `vector` and "test
+# vector" occur ZERO times in its 614 lines; the six occurrences of `example`
+# are all prose. So no layout below is read off a printed example - every one
+# was ENCODED FOR THIS PASS from RFC 8949 §3 with a CBOR encoder written here,
+# no CBOR, COSE or X.509 library involved, and every octet count was
+# re-derived by the generator at write time. Each such value is labelled
+# `computed: true`. ../examples/vectors.yaml carries them as fixtures with the
+# same provenance.
+#
+# ---------------------------------------------------------------------------
+# `constrained_by` IS WIRED FROM THE ID TABLE, NOT BY HAND
+# ---------------------------------------------------------------------------
+# Every id below was selected out of ../requirements.yaml by a predicate on
+# that entry's own `locator`, `object` and `field`, by script, and the
+# selection REFUSES to resolve if it is not unique. The guardrail is not
+# hypothetical: a batched lane in this same effort wrote 30 ids by
+# pattern-match against the wrong record's layout, and they resolved to
+# plausible-but-different statements, which no checker here catches. A join
+# audit printing every id beside the text it resolves to was read before this
+# file was accepted.
+#
+# `constrained_by: []` IS A FINDING. Every empty list below belongs to
+# RFC 9052: RFC 9360 defines no COSE structure, no bucket and no algorithm. It
+# adds entries to maps somebody else owns.
+#
+# ---------------------------------------------------------------------------
+# WHAT THIS DOCUMENT DOES NOT DEFINE, STATED UP FRONT
+# ---------------------------------------------------------------------------
+# NO CBOR TAG. `tag`, `tags` and `tagged` occur ZERO times. Its eight IANA
+# allocations are four header labels, three algorithm-scoped header labels and
+# one media type.
+#
+# NO COSE STRUCTURE. COSE_Sign1, COSE_Signature, COSE_recipient and the
+# protected/unprotected buckets are RFC 9052's. §2 names exactly two locations
+# for these parameters and COSE_Encrypt, COSE_Mac and COSE_Mac0 are not among
+# them.
+#
+# NO KEY IDENTIFIER. `kid` occurs ZERO times. This document adds four ways to
+# identify a key and relates none of them to COSE's own label 4.
+#
+# NO ALGORITHM, AND NO ALGORITHM RESTRICTION. It names one algorithm, SHA-256,
+# as a floor on support, and restricts `hashAlg` to no subset of the COSE
+# Algorithms registry. The eight values that registry holds for hashing are
+# rfc-9054's; see ../schema/x5t-hashalg-policy.derived.yaml.
+#
+# NO CANONICAL FORM AT THE CBOR LAYER, AND ONE AT THE LAYER BELOW.
+# `canonical`, `canonicalization` and `deterministic` occur ZERO times - but
+# every `bstr` here holds DER, which IS a canonical encoding with its own
+# rules. That is the DEC-002 finding and it is a property of the payload, not
+# of the CBOR.
+
+messages:
+
+  # =========================================================================
+  - name: COSE_X509
+    locator: "§2 (CDDL, source line 311), Table 1, §4.1"
+    encoding: "CBOR byte string, or CBOR array of byte strings"
+    summary: >-
+      THE TYPE BOTH CERTIFICATE-CARRYING PARAMETERS USE. Verbatim from
+      source line 311: `COSE_X509 = bstr / [ 2*certs: bstr ]`. Two shapes
+      for one field, chosen so that one certificate has exactly one
+      encoding: the `2*` makes the one-element array INVALID. That is an
+      ambiguity removed by construction rather than by a canonicalization
+      rule, and it is the one thing in this document `canonical-encoding`
+      condition (1) can point at approvingly. The price is that every
+      decoder must accept two shapes.
+
+      `certs` is a bareword MEMBER KEY, not a type name - RFC 8610's
+      `memberkey = bareword S ":"`. In an array context RFC 8610 Appendix
+      C notes a member key is only usable for arrays, which is what this
+      is; the name is documentation.
+    layout: >-
+      COMPUTED FOR THIS PASS, not printed anywhere in RFC 9360. One
+      certificate (here a 3-octet placeholder, since the document supplies
+      no certificate): `43300100` - major type 2, length 3. Two
+      certificates: `824330010043300101` - major type 4 length 2, then two
+      byte strings. The one-element array `8143300100` and the empty array
+      `80` are both INVALID against the `2*`.
+    computed: true
+    fields:
+      - name: 'bstr (single-certificate form)'
+        type: "bstr"
+        required: false
+        encoding: "major type 2; the bytes are ASN.1 DER"
+        locator: "§2, source lines 311 and 314"
+        constrained_by:
+          - 'rfc-9360#R-0069'
+          - 'rfc-9360#R-0071'
+          - 'rfc-9360#R-0025'
+          - 'rfc-9360#R-0037'
+        note: >-
+          THE DEC-002 CUT, IN ONE FIELD. Source line 314: "The contents of
+          "bstr" are the bytes of a DER-encoded certificate." A
+          reduced-CBOR profile reduces the CBOR; it does not reach inside
+          a byte string. Carrying this field buys ASN.1 DER - a second
+          encoding, a second parser, a second canonical form and a second
+          trust system - and none of that is excluded by "no IANA tags".
+          CDDL cannot constrain it either: `.cbor` would be wrong, because
+          the content is not CBOR.
+      - name: 'array (multi-certificate form)'
+        type: "[ 2*certs: bstr ]"
+        required: false
+        encoding: "major type 4, two or more elements, each major type 2"
+        locator: "§2, source line 311"
+        constrained_by:
+          - 'rfc-9360#R-0069'
+          - 'rfc-9360#R-0026'
+          - 'rfc-9360#R-0038'
+          - 'rfc-9360#R-0014'
+          - 'rfc-9360#R-0015'
+        note: >-
+          MINIMUM TWO, AND NO MAXIMUM. Nothing bounds the length, and for
+          `x5bag` §2 adds that the array may hold duplicates and
+          certificates "completely extraneous to the message" while
+          possibly still not holding "the full set of certificates needed
+          to build any particular chain". A constrained relying party
+          cannot bound the cost of a conforming message.
+
+  # =========================================================================
+  - name: COSE_CertHash
+    locator: "§2 (CDDL, source line 312), Table 1, Table 2"
+    encoding: "CBOR array of exactly two elements"
+    summary: >-
+      EXACTLY TWO FIELDS, AND THAT IS THE FINDING. Verbatim from source
+      line 312: `COSE_CertHash = [ hashAlg: (int / tstr), hashValue: bstr
+      ]`. There is no third field, so there is nowhere to carry what the
+      digest is FOR. rfc-9054 registers SHA-1 (-14) and SHA-256/64 (-15)
+      with `Recommended: Filter Only`, which rfc-9054 §4.1 defines as "not
+      to be used for purposes that require collision resistance" - but
+      Filter Only is a REGISTRY COLUMN, not a wire field. A verifier
+      handed `[-14, h'...']` cannot tell whether the sender was filtering
+      or binding; ../examples/vectors.yaml shows the two uses are
+      byte-identical.
+
+      Field for field this is rfc-9054 §2.1's `COSE_Hash_Find`, down to
+      the member key names. Neither document cites the other's structure.
+    layout: >-
+      COMPUTED. `[-16, h'<32 zero octets>']` encodes as
+      `822f5820000000...` - 36 octets: `82` (array of 2), `2f` (-16, one
+      octet), `5820` (byte string of 32), then the digest. Inside a
+      protected header map as label 34 it costs 39. Every algorithm's cost
+      is tabulated in ../examples/vectors.yaml.
+    computed: true
+    fields:
+      - name: hashAlg
+        index: 0
+        type: "int / tstr"
+        required: true
+        encoding: "major type 0 or 1 for the integer form, major type 3 for the string form"
+        locator: "§2, source lines 216-221"
+        constrained_by:
+          - 'rfc-9360#R-0070'
+          - 'rfc-9360#R-0041'
+          - 'rfc-9360#R-0047'
+          - 'rfc-9360#R-0048'
+        note: >-
+          THE REGISTRY JOIN, AND IT CITES NO DOCUMENT. §2 says the value
+          corresponds to "the Value column (integer or text string) of the
+          algorithm registered in the "COSE Algorithms" registry" and
+          gives the IANA URL. rfc-9054, which populates that registry with
+          all eight hash identifiers, is cited ZERO times in RFC 9360 -
+          `9054` does not occur in the source. The restriction on the
+          value is NONE; the only algorithm statement in the document is a
+          floor on SUPPORT.
+
+          THE STRING FORM IS UNREACHABLE TODAY. "an integer or a string"
+          admits a text identifier, and the COSE Algorithms registry holds
+          no text identifier for any hash algorithm, so the `tstr` branch
+          is dead on arrival and stays in the grammar.
+      - name: hashValue
+        index: 1
+        type: "bstr"
+        required: true
+        encoding: "major type 2; length is the digest length of hashAlg and is NOT stated anywhere"
+        locator: "§2, source lines 221-223"
+        constrained_by:
+          - 'rfc-9360#R-0070'
+          - 'rfc-9360#R-0042'
+        note: >-
+          THE WRONG ANSWER TO DEC-003, AND IT IS EXPLICIT. The digest is
+          "computed over the DER-encoded certificate" - the whole
+          certificate, not the key. DEC-003's mandatory clause is that
+          canonical KEY bytes are specified before hashing, so an `x5t`
+          value is not a KeyId and must not be used as one. rfc-9679 §5.4
+          draws the same distinction from the other side, preferring a
+          SubjectPublicKeyInfo digest to a digest of a complete
+          certificate value.
+
+          NO LENGTH RULE. Nothing says the length must match the digest
+          length of hashAlg, so `[-16, h'00']` is a conforming
+          COSE_CertHash. The source wraps `DER-encoded` across lines
+          222-223 and ../requirements.yaml carries the break rather than
+          healing it.
+
+  # =========================================================================
+  - name: x5-header-parameters
+    locator: "§2 (definitions and Table 1), §4.1"
+    encoding: "entries in a COSE protected or unprotected header map (RFC 9052)"
+    summary: >-
+      THE FOUR GENERAL PARAMETERS. RFC 9360 defines no header map; it adds
+      four labels to maps RFC 9052 owns, and the labels live in a prose
+      table while the types live in prose.
+      ../schema/x5-headers.derived.cddl is this library's grammar for
+      them, because the document ships none.
+
+      EVERY ONE OF THE FOUR LABELS COSTS TWO OCTETS in CBOR
+      (0x1820-0x1823), computed for this pass - 32 to 35 are above the 23
+      that fits in an initial byte.
+    layout: >-
+      COMPUTED: label 32 -> `1820`, 33 -> `1821`, 34 -> `1822`, 35 ->
+      `1823`. Each two octets, major type 0 with a one-octet argument.
+    computed: true
+    fields:
+      - name: x5bag
+        label: 32
+        type: "COSE_X509"
+        required: false
+        encoding: "0x1820 => COSE_X509"
+        locator: "§2, Table 1, §4.1"
+        registry: "COSE Header Parameters"
+        value_registry_field: empty    # §4.1, for all four items
+        constrained_by:
+          - 'rfc-9360#R-0064'
+          - 'rfc-9360#R-0013'
+          - 'rfc-9360#R-0022'
+          - 'rfc-9360#R-0020'
+          - 'rfc-9360#R-0021'
+          - 'rfc-9360#R-0018'
+          - 'rfc-9360#R-0019'
+          - 'rfc-9360#R-0024'
+          - 'rfc-9360#R-0025'
+          - 'rfc-9360#R-0026'
+          - 'rfc-9360#R-0016'
+          - 'rfc-9360#R-0017'
+          - 'rfc-9360#R-0014'
+          - 'rfc-9360#R-0015'
+          - 'rfc-9360#R-0023'
+          - 'rfc-9360#R-0081'
+          - 'rfc-9360#R-0082'
+      - name: x5chain
+        label: 33
+        type: "COSE_X509"
+        required: false
+        encoding: "0x1821 => COSE_X509"
+        locator: "§2, Table 1, §4.1"
+        registry: "COSE Header Parameters"
+        value_registry_field: empty    # §4.1, for all four items
+        constrained_by:
+          - 'rfc-9360#R-0065'
+          - 'rfc-9360#R-0027'
+          - 'rfc-9360#R-0034'
+          - 'rfc-9360#R-0032'
+          - 'rfc-9360#R-0033'
+          - 'rfc-9360#R-0030'
+          - 'rfc-9360#R-0031'
+          - 'rfc-9360#R-0036'
+          - 'rfc-9360#R-0037'
+          - 'rfc-9360#R-0038'
+          - 'rfc-9360#R-0028'
+          - 'rfc-9360#R-0029'
+          - 'rfc-9360#R-0035'
+          - 'rfc-9360#R-0081'
+          - 'rfc-9360#R-0082'
+      - name: x5t
+        label: 34
+        type: "COSE_CertHash"
+        required: false
+        encoding: "0x1822 => COSE_CertHash"
+        locator: "§2, Table 1, §4.1"
+        registry: "COSE Header Parameters"
+        value_registry_field: empty    # §4.1, for all four items
+        constrained_by:
+          - 'rfc-9360#R-0066'
+          - 'rfc-9360#R-0039'
+          - 'rfc-9360#R-0044'
+          - 'rfc-9360#R-0043'
+          - 'rfc-9360#R-0040'
+          - 'rfc-9360#R-0041'
+          - 'rfc-9360#R-0042'
+          - 'rfc-9360#R-0046'
+          - 'rfc-9360#R-0047'
+          - 'rfc-9360#R-0045'
+          - 'rfc-9360#R-0081'
+          - 'rfc-9360#R-0082'
+        constrained_by_cross_record:
+          # Spelled in full, and selected from rfc-9054's own id table:
+          # rfc-9360 defines its own R-0068 and R-0087 too.
+          - 'rfc-9054#R-0087'   # the Filter Only definition this field cannot carry
+          - 'rfc-9054#R-0068'   # SHA-256 = -16, the floor's registry row
+      - name: x5u
+        label: 35
+        type: "uri"
+        required: false
+        encoding: "0x1823 => uri"
+        locator: "§2, Table 1, §4.1"
+        registry: "COSE Header Parameters"
+        value_registry_field: empty    # §4.1, for all four items
+        constrained_by:
+          - 'rfc-9360#R-0067'
+          - 'rfc-9360#R-0049'
+          - 'rfc-9360#R-0057'
+          - 'rfc-9360#R-0050'
+          - 'rfc-9360#R-0055'
+          - 'rfc-9360#R-0056'
+          - 'rfc-9360#R-0060'
+          - 'rfc-9360#R-0061'
+          - 'rfc-9360#R-0059'
+          - 'rfc-9360#R-0058'
+          - 'rfc-9360#R-0081'
+          - 'rfc-9360#R-0082'
+
+  # =========================================================================
+  - name: x5-sender-header-parameters
+    locator: "§3 (definitions and Table 2), §4.2"
+    encoding: "entries in a COSE_recipient header map, VALID ONLY under five algorithms"
+    summary: >-
+      THREE PARAMETERS, NOT FOUR, AND THEY ARE SCOPED BY ALGORITHM. §3
+      defines `x5chain-sender`, `x5t-sender` and `x5u-sender` entirely by
+      reference to their §2 siblings, and declines a sender-side bag
+      because "the same attribute would be used for both the sender and
+      recipient certificates".
+
+      THE SCOPING IS THE R-M-12 DATUM. §4.2 registers these in the **COSE
+      Header ALGORITHM Parameters** registry, not the general one, so
+      -27/-28/-29 mean these things ONLY under ECDH-SS+HKDF-256,
+      ECDH-SS+HKDF-512, ECDH-SS+A128KW, ECDH-SS+A192KW and ECDH-SS+A256KW.
+      The same integers are free elsewhere. That is IANA's own answer to
+      label scoping - the *(algorithm, label)* pair - and the nearest
+      ratified relative of R-M-12's *(key, local label)*. CDDL cannot
+      express it; ../schema/x5-headers.derived.cddl carries it as a
+      comment, which is itself the finding.
+    layout: >-
+      COMPUTED: -27 -> `381a`, -28 -> `381b`, -29 -> `381c`. Two octets
+      each, major type 1 with a one-octet argument.
+    computed: true
+    valid_only_under_algorithms:
+      - 'ECDH-SS+HKDF-256'   # Table 2; the algorithm identifiers themselves are rfc-9053's
+      - 'ECDH-SS+HKDF-512'   # Table 2; the algorithm identifiers themselves are rfc-9053's
+      - 'ECDH-SS+A128KW'   # Table 2; the algorithm identifiers themselves are rfc-9053's
+      - 'ECDH-SS+A192KW'   # Table 2; the algorithm identifiers themselves are rfc-9053's
+      - 'ECDH-SS+A256KW'   # Table 2; the algorithm identifiers themselves are rfc-9053's
+    fields:
+      - name: x5t-sender
+        label: -27
+        type: "COSE_CertHash"
+        required: false
+        encoding: "0x381a => COSE_CertHash"
+        locator: "§3, Table 2, §4.2"
+        registry: "COSE Header Algorithm Parameters"
+        constrained_by:
+          - 'rfc-9360#R-0078'
+          - 'rfc-9360#R-0076'
+          - 'rfc-9360#R-0072'
+          - 'rfc-9360#R-0073'
+          - 'rfc-9360#R-0084'
+      - name: x5u-sender
+        label: -28
+        type: "uri"
+        required: false
+        encoding: "0x381b => uri"
+        locator: "§3, Table 2, §4.2"
+        registry: "COSE Header Algorithm Parameters"
+        constrained_by:
+          - 'rfc-9360#R-0079'
+          - 'rfc-9360#R-0077'
+          - 'rfc-9360#R-0072'
+          - 'rfc-9360#R-0073'
+          - 'rfc-9360#R-0084'
+      - name: x5chain-sender
+        label: -29
+        type: "COSE_X509"
+        required: false
+        encoding: "0x381c => COSE_X509"
+        locator: "§3, Table 2, §4.2"
+        registry: "COSE Header Algorithm Parameters"
+        constrained_by:
+          - 'rfc-9360#R-0080'
+          - 'rfc-9360#R-0075'
+          - 'rfc-9360#R-0072'
+          - 'rfc-9360#R-0073'
+          - 'rfc-9360#R-0084'
+    absent:
+      - 'There is no x5bag-sender: rfc-9360#R-0074'
+
+  # =========================================================================
+  - name: application/cose-x509
+    locator: "§2 (lines 256-259), §4.3"
+    encoding: "a CBOR SEQUENCE (RFC 8742) of single-entry COSE_X509 structures"
+    summary: >-
+      A THIRD WIRE FRAMING FOR THE SAME INFORMATION, and the construct it
+      names is rfc-8742's. §4.3: "the data is a CBOR sequence of
+      single-entry COSE_X509 structures (encoding "bstr")". So the same
+      list of certificates has three encodings in this one document: a
+      bare `bstr` (one certificate), a `[ 2*certs: bstr ]` array (two or
+      more), and a concatenation of `bstr`s with no enclosing item (this
+      media type). RFC 8742 defines CBOR sequences and registers
+      `application/cbor-seq`, and RFC 9360 cites it ZERO times - `8742`
+      does not occur in the source.
+
+      CDDL CANNOT DESCRIBE IT. CDDL describes single data items, so no
+      rule in this document covers the media type's content;
+      ../schema/x5-headers.derived.cddl can only give the shape of one
+      element.
+    layout: >-
+      COMPUTED. Two certificates as this media type: `4330010043300101`, 8
+      octets, two concatenated byte strings and no array head. The same
+      two as an `x5chain` array: `824330010043300101`, 9 octets. For ONE
+      certificate the two framings COINCIDE exactly - `43300100` is both a
+      valid COSE_X509 and a valid one-item CBOR sequence - so a decoder
+      cannot tell which framing it was handed without being told. Decoding
+      the two-certificate sequence as a single CBOR item fails with
+      trailing bytes.
+    computed: true
+    fields:
+      - name: 'sequence element'
+        type: "bstr"
+        required: false
+        encoding: "major type 2, repeated with no enclosing data item"
+        locator: "§2 lines 256-258, §4.3 lines 384-385"
+        constrained_by:
+          - 'rfc-9360#R-0055'
+          - 'rfc-9360#R-0086'
+          - 'rfc-9360#R-0071'
+      - name: 'usage parameter'
+        type: "media type parameter, optional"
+        required: false
+        encoding: 'absent, or the literal "chain"'
+        locator: "§4.3"
+        constrained_by:
+          - 'rfc-9360#R-0087'
+          - 'rfc-9360#R-0056'
+          - 'rfc-9360#R-0093'
+          - 'rfc-9360#R-0094'
+        note: >-
+          EXACTLY TWO STATES AND NO DEFAULT BEYOND SILENCE. Absent means
+          "no further information about the intended meaning of the
+          order"; "chain" means the sequence is a certificate chain. So an
+          unparameterised `application/cose-x509` is an ORDER-UNDEFINED
+          list - the media-type equivalent of `x5bag` - and the parameter
+          is the only thing distinguishing it from the equivalent of
+          `x5chain`.
+    registration_notes:
+      note: >-
+        NO MAGIC NUMBER AND NO FILE EXTENSION (rfc-9360#R-0102,
+        rfc-9360#R-0103), so a file of this type is not self-identifying:
+        it is a run of CBOR byte strings carrying DER, and nothing in the
+        bytes says so. Encoding considerations are "binary"
+        (rfc-9360#R-0095) and fragment identifiers are N/A
+        (rfc-9360#R-0100).
+
+  # =========================================================================
+  - name: carrying-locations
+    locator: "§2, source lines 279-286"
+    encoding: "RFC 9052 structures; named here, never redefined"
+    summary: >-
+      TWO LOCATIONS AND NO MORE. In COSE_Signature and COSE_Sign1 the
+      parameters "identify the certificate to be used for validating the
+      signature"; in COSE_recipient they "identify the certificate for the
+      recipient of the message". COSE_Encrypt, COSE_Mac and COSE_Mac0 are
+      named NOWHERE in the document, so whether these parameters may
+      appear in them is undefined - the IANA registry does not carry a
+      location column either.
+    fields:
+      - name: 'COSE_Signature / COSE_Sign1 header'
+        type: "RFC 9052 structure"
+        required: false
+        encoding: "RFC 9052 §4; not defined here"
+        locator: "§2, source lines 281-283"
+        constrained_by:
+          - 'rfc-9360#R-0062'
+      - name: 'COSE_recipient header'
+        type: "RFC 9052 structure"
+        required: false
+        encoding: "RFC 9052 §5; not defined here"
+        locator: "§2, source lines 285-286"
+        constrained_by:
+          - 'rfc-9360#R-0063'
+      - name: 'protected header bucket'
+        type: "RFC 9052 bstr-wrapped map"
+        required: false
+        encoding: "RFC 9052; not defined here"
+        locator: "§2, §5"
+        constrained_by: []    # RFC 9052's, not this document's
+        note: >-
+          WHERE THE WHOLE ARGUMENT SITS. §2 permits every one of the four
+          parameters in either bucket, and §2's own recommended integrity
+          configuration is `x5chain` unprotected plus `x5t` protected.
+          §5's eighth paragraph says protecting `x5bag`, `x5chain` and
+          `x5t` by placing them in the protected bucket "can help mitigate
+          some risks of a misbehaving CA"; §5's ninth and last paragraph
+          says the security of `x5t`'s algorithm "does not affect the
+          security of the system". See ../design-notes.md §10.
+      - name: 'unprotected header bucket'
+        type: "RFC 9052 map"
+        required: false
+        encoding: "RFC 9052; not defined here"
+        locator: "§2"
+        constrained_by:
+          - 'rfc-9360#R-0021'
+          - 'rfc-9360#R-0033'
+      - name: 'external_aad'
+        type: "RFC 9052 input to Sig_structure / Enc_structure"
+        required: false
+        encoding: "RFC 9052 §4.4; not defined here"
+        locator: "§2 (three times), §5"
+        constrained_by: []    # RFC 9052's, not this document's
+        note: >-
+          NAMED FOUR TIMES AS AN INTEGRITY MECHANISM AND NEVER SPECIFIED.
+          "including the end-entity certificate in the external_aad" is
+          offered as one of the ways to satisfy the integrity obligation,
+          for all four parameters. RFC 9360 says nothing about how the
+          certificate is encoded into external_aad, so two implementations
+          that both do this do not interoperate. This is the integrity
+          mechanism a schema can least check.
+      - name: 'kid (RFC 9052 label 4)'
+        type: "ABSENT"
+        required: false
+        encoding: "n/a"
+        locator: "nowhere"
+        constrained_by: []
+        note: >-
+          `kid` OCCURS ZERO TIMES IN 614 LINES. Measured. RFC 9360 adds
+          four ways to identify a key and relates none of them to COSE's
+          own key identifier, so a conforming COSE_Sign1 may carry
+          `x5chain` and no `kid`, and R-O-01 - every signed object SHALL
+          have an issuer key that can be specified as KeyId - is
+          unsatisfiable FROM THE MESSAGE without a rule we write. See
+          ../design-notes.md §3.
+
+coverage: >-
+  Six structures and 19 fields, which is every structure, header
+  parameter, media-type payload and carrying location RFC 9360 names,
+  plus three fields that are ABSENT and are listed because their absence
+  is the finding (`kid`, `external_aad`'s encoding, and the missing
+  `x5bag-sender`). 74 of ../requirements.yaml's 129 requirement ids are
+  wired here. The ones that are not are §4.3's media-type template
+  fields, §5's security paragraphs and §1's motivation - they constrain
+  no byte - and the shape of that list is the point: RFC 9360 is a
+  614-line document in which fewer than a third of the statements touch
+  the wire, because most of it is about what a relying party may
+  conclude from bytes somebody else defined.
+absent_by_measurement:
+  - 'kid: ZERO occurrences in 614 lines, so no parameter here is related to RFC 9052 label 4.'
+  - 'CBOR tags: `tag`, `tags` and `tagged` ZERO occurrences. Eight IANA allocations, none of them a tag.'
+  - 'Canonical form at the CBOR layer: `canonical`, `canonicalization` and `deterministic` ZERO occurrences - while every bstr holds DER, which is one.'
+  - 'Test vectors: `Figure`, `Appendix` and `vector` ZERO occurrences. Every byte in this file was computed for this pass.'
+  - 'A length rule on hashValue: none. `[-16, h\'00\']` is a conforming COSE_CertHash.'
+  - 'A location column: the IANA registries carry none, and §2 names only COSE_Signature, COSE_Sign1 and COSE_recipient.'
