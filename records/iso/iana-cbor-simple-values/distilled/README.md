@@ -3,7 +3,7 @@ schema: "library-doc/v1"
 id: iana-cbor-simple-values-distilled-index
 record: iana-cbor-simple-values
 type: index
-updated: "2026-10-16"
+updated: "2026-10-21"
 ---
 
 # Distilled artifacts — IANA CBOR Simple Values registry
@@ -52,10 +52,39 @@ are wrong with that and neither is ours to fix:
 - **`58-255 Unassigned` overlaps the two rows that follow it.** IANA's usual
   rendering splits an unassigned range around a new assignment; here the split
   left a range that still swallows the assigned value 59 and the `60-255`
-  tail. The row that was presumably meant is `58`.
+  tail.
 
 Both are recorded verbatim in `tables.yaml`, which is why the artifact is
 worth having: a hand-written restatement would have quietly tidied them away.
+
+**And a third, milder one.** The registration-procedures table covers `0-19`
+and `32-255`, so **values 20–31 sit in no procedure range** — the already
+allocated block, 20–23 assigned and 24–31 Reserved. Nothing unallocated rests
+on it, so no assignment claim is affected; it does mean the page states no
+procedure by which 24–31 could ever be un-Reserved.
+
+### The three are machine-readable now, and one reconstruction replaces another
+
+[cross-check pass, 2026-10-21] The defects above were stated here in prose
+from the first pass and **not** in `tables.yaml`, so a tool reading the table
+had no way to learn of them. They are now `source_defects` in `tables.yaml` as
+D-1 (the gap), D-2 (the overlap) and D-3 (the procedure-range omission), with
+their evidence.
+
+This section previously added, of the overlapping row, *"The row that was
+presumably meant is `58`."* That is withdrawn, because it explains D-2 while
+leaving D-1 unexplained: a bare `58` still covers none of 32–57. The
+reconstruction now recorded in `tables.yaml` is that a pre-existing
+`32-255 Unassigned` row needed splitting when 59 was registered on 2025-12-16,
+and the lower bound of its first part was written `58` instead of `32` —
+**one wrong bound, which produces D-1 and D-2 together.** Both readings are
+ours, marked `[analysis]`, and neither is stated by the page.
+
+**The sibling registry passes the same test.** Coverage was computed over the
+parsed rows of both snapshots in this lane: `iana-cbor-tags` has **no gap and
+no overlap across all 358 of its rows**, including the ranges it expresses as
+ranges. So this is a defect of this page, not a convention of IANA's CBOR
+registries or an artefact of how we parse them.
 
 ## This is a point-in-time snapshot of a LIVE registry
 
