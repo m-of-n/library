@@ -70,6 +70,20 @@ most to say about: both value spaces are global IANA registries.
 
 *Source `.cache/rfc-9596.txt` lines 81-87 · `sha256:01057add0ff3aa713e273c89f2ca055a522b4eabf34a08ec1e427d5dcb43a81c`*
 
+**And it is stated a third time, in the abstract, which this file deliberately
+does not cover.** Lines 16-22 carry *"The syntax of the COSE type header
+parameter value is the same as the existing COSE content type header
+parameter."* — the first 110 characters of `requirements.yaml` R-0004's text
+occur at **line 20** as well as at line 83, and line 20 is the first of the
+three occurrences of the word `syntax` that `schema/README.md` counts. Every
+region in this file lies between lines 69 and 164: an RFC abstract is not
+normative text, so it is excluded on purpose, but the exclusion is now stated
+rather than implied. **[added 2026-10-21, pass 3 — cross-check]** — the pass
+that found `record.yaml` and `README.md` both describing these regions as
+covering *the whole document except the references, the acknowledgements and
+the authors' addresses*, which left the front matter, lines 1-65, unaccounted
+for.
+
 ### The term "COSE object"
 ```
    The term "COSE object" is used as defined in [RFC9052].  An example

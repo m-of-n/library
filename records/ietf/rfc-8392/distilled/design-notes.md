@@ -269,7 +269,7 @@ price is in `schema/claim-key-policy.derived.yaml`:**
 | text string, length 1 | Standards Action | 2 octets |
 | integer −65536…−257, 256…65535; tstr length 2 | Specification Required | 3 octets |
 | integer > 65535 | Expert Review | 5 octets to 2³²−1, **9** beyond |
-| text string longer than 2 | Expert Review | 4 octets at length 3, `1 + n` after |
+| text string longer than 2 | Expert Review | 4 octets at length 3; `1 + n` **only to n = 23**, then **`2 + n`** to n = 255 |
 | **integer < −65536** | **Private Use** | **5 octets** to −2³², 9 beyond |
 
 Computed by this extraction from RFC 8949 §3 head encodings, not quoted.
@@ -280,6 +280,18 @@ policy-free range costs five times the cheapest**, and seven claims of our own
 in Private Use pay 35 octets of keys against 7 for the registered set. There is
 also **no Private Use range for text keys at all**, so "pick a URI-ish label and
 avoid the registry" is not available either.
+
+**[correction 2026-10-21, pass 3 — cross-check]** The Expert Review text-string
+cell above read *"4 octets at length 3, `1 + n` after"*. The `1 + n` was
+unbounded and wrong past length 23: an RFC 8949 §3 text head is 1 octet only to
+length 23, so a 24-character key costs **26** octets and not 25. Pass 2 made
+exactly this correction in `schema/claim-key-policy.derived.yaml` and recorded
+it in `README.md`, but did not propagate it to this table, to `summary.md` or to
+`messages.yaml`'s claim-key `encoding` — all three stated the unbounded form
+until this pass. Re-derived here by encoding lengths 0–26, 255 and 256 with an
+independent RFC 8949 §3 encoder gated on Appendix A: length 23 → 24 octets,
+length 24 → 26, length 255 → 257. Nothing else in the table moves, and the 5×
+headline and the 35-vs-7 arithmetic are unaffected.
 
 And the failure is silent. §3's ignore-the-unknown rule means two issuers who
 both reach for −65537 do not collide loudly; the verifier drops what it does not

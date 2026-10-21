@@ -37,11 +37,17 @@ quotation of another record's `design-notes.md` or `summary.md` is quoted from
 its **rendered** text: markdown emphasis (`*`, `**`) and code markers
 (backticks) are dropped, because they are formatting rather than words.
 Quotations of the **source** are not normalised beyond whitespace, are cut from
-`.cache/` by line range by script, and are **never elided** — where a sentence
-spans a line break the break is declared and the obligation-bearing half is
-quoted. This pass's own quote audit found four defects in its own prose under
-those rules, and each is recorded in place where it occurred rather than edited
-away.
+`.cache/` by line range by script, and where one **is** elided the elision is
+visible as `...` and the full sentence is carried verbatim in
+`requirements.yaml`; where a sentence spans a line break the break is declared
+and the obligation-bearing half is quoted. This pass's own quote audit found
+four defects in its own prose under those rules, and each is recorded in place
+where it occurred rather than edited away.
+
+*[correction 2026-10-21, pass 3 — cross-check] This said source quotations are
+**never elided**. Two in this directory are — see the correction at D-4 — so
+the rule is now stated as what it actually is. A blanket "never" is worse than
+the narrower truth, because it stops a reader checking.*
 
 **Decision status.** DEC-002 in `ARCH-0001` §7 lists **four** options; "option
 5" exists only as *proposed* text in `ARCH-0001-PROPOSAL-v0.2.0` §3.3, which is
@@ -390,14 +396,20 @@ What that means for anyone reading this cut:
 This record is filed `bears_on: [DEC-005]` and the document names **no
 algorithm, no key type and no hash anywhere.** Its only genuine `DEC-005`
 connection is §1's observation that an issuer value in the header is readable
-before decryption and the issuer value is used for key discovery. — a precondition for
-selecting a key, and therefore an algorithm, rather than a selection rule.
+before decryption and that *"the issuer value is used for key discovery"* (§1,
+source lines 79–80) — a precondition for selecting a key, and therefore an
+algorithm, rather than a selection rule. *[correction 2026-10-21, pass 3 —
+cross-check] The quotation marks around that clause were missing, which left a
+verbatim fragment of §1 reading as our own words and an orphaned full stop
+before the dash. `summary.md` carries the same clause marked, so the two now
+agree.*
 
 The stronger edges are to `R-M-12` (§4) and to `DEC-003`/`R-O-01` (where `iss`
-lands and whether it is signed). **[analysis] Whoever owns `DEC-005` should
-decide whether to add `R-M-12` or to drop `DEC-005`**; this pass widened
-`bears_on` rather than leaving the mismatch silent, and the evidence for each
-addition is annotated in `record.yaml`.
+lands and whether it is signed). **[analysis] `R-M-12` is now carried, so the
+remaining question for whoever owns `DEC-005` is whether to drop it**; this
+pass widened `bears_on` to six ids rather than leaving the mismatch silent, and
+the evidence for each addition is annotated in `record.yaml`. `summary.md`
+carries the same statement.
 
 ---
 
@@ -476,17 +488,44 @@ completed"* — an **ellipsis splice**, which is the first of the five
 transcription defect classes this lane's audit was built to catch and which it
 duly caught here. The elided span is *"made based on previously unverified
 information"*, the clause that names **what** the decision rested on and so the
-most load-bearing part of the sentence. Nothing in this directory now elides a
-quotation.
+most load-bearing part of the sentence.
+
+**[correction 2026-10-21, pass 3 — cross-check]** That paragraph ended
+*"Nothing in this directory now elides a quotation."* **Withdrawn** — it was
+false when written and the lane-wide audit found two surviving elisions in this
+very directory: `protocol.yaml`'s quotation of §1's `MUST NOT`, which elides
+*"in the CWT Claims header parameter"* after *"use the information"*, and
+`requirements.yaml`'s *"These include encrypted COSE structures ... and/or those
+featuring a detached signature"*, which elides *", which may or may not be an
+encrypted CWT,"*. Pass 3 also found and removed a third, the `*"either … or"*`
+construction recorded at D-6 below.
+
+What is actually true is narrower, and is the convention this directory keeps:
+**an elision is always visible as `...` and the full sentence is carried
+verbatim in `requirements.yaml`** — R-0002 holds the `encrypted COSE structures`
+sentence whole, and R-0014 the `MUST NOT`. The blanket claim is the defect, not
+the practice. The same unqualified sentence appears in `rfc-8392`'s and
+`rfc-9596`'s design notes, where four declared bullet abbreviations apiece make
+it false in the same way.
 
 **D-5 · The interpretation chain bottoms out in an unconstrained permission.**
-§1: Other methods for determining the intended interpretation MAY also be used. Any method at all,
-with no requirement that it be in band, authenticated, or even stated. The
-`RECOMMENDED` in the preceding sentence is therefore not a floor.
+§1 (source lines 106–107):
+
+> Other methods for determining the intended interpretation MAY also be used.
+
+Any method at all, with no requirement that it be in band, authenticated, or
+even stated. The `RECOMMENDED` in the preceding sentence is therefore not a
+floor. *[correction 2026-10-21, pass 3 — cross-check] That sentence was printed
+as unmarked prose, so a verbatim `MAY` of the source was indistinguishable from
+this file's own voice. It is `R-0013`, and it is now a blockquote like every
+other source quotation here.*
 
 **D-6 · The placement `MUST` is ambiguous, and the whole placement model turns
 on which reading is taken. [found 2026-10-20, pass 2 — verify; not in pass 1's
-defect list]** §2, source lines 154–155:
+defect list]** §2, source lines 153–155 — the sentence's first word, *The*, is
+the last word of line 153, so `normative.md` captures the whole placement
+paragraph as lines 152–155; this note read *154–155* until pass 3 recomputed
+the span:
 
 > The header parameter MUST only occur once in either the protected or unprotected header of a COSE structure.
 
@@ -514,9 +553,18 @@ saying nothing about the case it most obviously exists to prevent. But it is a
 reading, not a statement, and a profile that enforces "not in both" is
 enforcing our interpretation of an ambiguous `MUST`. **No erratum covers it
 (checked 2026-10-20).** It belongs with D-1: this document's two hard rules are
-its duplication `MUST` and its placement `MUST`, and **both of them turn on a
-word the document leaves undefined** — *"identical"* in the first and *"either
-… or"* in the second.
+its duplication `MUST` and its placement `MUST`, and **both of them turn on
+wording the document leaves undefined** — *"identical"* in the first, and in
+the second the scope of the either/or: whether *"MUST only occur once in either
+the protected or unprotected header of a COSE structure"* counts occurrences
+across the two buckets together or within each one.
+
+*[corrected 2026-10-21, pass 3 — cross-check] This sentence named the second
+one as `*"either … or"*`, an **elided quotation**, in the same section as D-4's
+own correction note, which states that "Nothing in this directory now elides a
+quotation." The construction is now named without quotation marks and the rule
+is quoted whole. The same elision stood in `README.md` and had been copied into
+`summary.md`; both are corrected.*
 
 ---
 

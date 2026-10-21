@@ -148,9 +148,14 @@ paragraph would add 11 phantom keywords against a source count of 8.
 
 ### The CDDL, and the source's own declaration that it is non-normative
 
-**The document says this itself**, which is why `schema/` carries the fragment
-as verbatim and marks it `non_normative: true` rather than treating it as a
-constraint.
+**The document says this itself**, which is why `schema/source-renderings.txt`
+captures the declaration and the fragment as **one** verbatim region rather
+than treating the fragment as a constraint, and why every mention of it in
+`schema/cwt-claims-header.derived.cddl` is marked `NON-NORMATIVE in the
+source`. *[correction 2026-10-21, pass 3 — cross-check] This sentence claimed
+`schema/` marks the fragment `non_normative: true`. No file in `schema/`
+contains that key, or the string `non_normative` at all; the marking is prose
+and a shared region, which is what it now says.*
 ```
    The following is a non-normative description for the value type of
    the CWT claim header parameter using CDDL [RFC8610].

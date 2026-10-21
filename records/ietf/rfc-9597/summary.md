@@ -56,6 +56,12 @@ required — and §2's one hard placement rule is weaker than it first reads:
 *"The header parameter MUST only occur once in either the protected or
 unprotected header of a COSE structure."* That bars label 15 appearing in
 **both** buckets; it expressly permits it appearing in the unprotected one.
+**That is a reading, not a statement** — the extraction's `D-6`
+(`distilled/design-notes.md` §11) records that the sentence admits three
+readings, because nothing in it fixes whether "once" is counted across the two
+buckets together or within each, and the document disambiguates none. So a
+profile enforcing "not in both" is enforcing our interpretation of an ambiguous
+`MUST`.
 
 RFC 9052 §4.4's `Sig_structure` is
 `[context, body_protected, external_aad, payload]`. The unprotected header is
@@ -143,9 +149,14 @@ before decryption and *"is used for key discovery"* — a precondition for
 selecting a key, and therefore an algorithm, rather than a selection rule.
 
 The stronger edges are to `R-M-12` (above) and to `DEC-003`/`R-O-01` (where
-`iss` lands and whether it is signed). `bears_on` is left as recorded rather
-than quietly widened; this paragraph is the flag, and whoever owns `DEC-005`
-should decide whether to add `R-M-12` or to drop `DEC-005`.
+`iss` lands and whether it is signed). The extraction **widened `bears_on` to
+six ids** rather than leaving the mismatch silent, annotating the evidence for
+each in `record.yaml`, and `DEC-005` is kept as the weakest of the six; whoever
+owns `DEC-005` should decide whether to drop it now that `R-M-12` is carried.
+*[corrected 2026-10-21, pass 3 — cross-check: this paragraph said `bears_on`
+was "left as recorded rather than quietly widened", which contradicted
+`record.yaml`, `distilled/design-notes.md` §8 and this file's own Artifacts
+table three sections below.]*
 
 ## Where it cuts against MD-3 — DEC-002 option 5
 
@@ -206,6 +217,13 @@ prints it. For a parameter whose whole value is interoperability, that matters:
 **we would be an early implementer, not a late one.** The RFC itself names no
 implementation and has no implementation-status section.
 
+*This whole section is **unverifiable from this repository**: it is one agent's
+search of 2026-10-20, and `python-cwt`, SCRAPI and `rfc-9942` §4.4 have no
+cached source here (SCRAPI's record is a stub, and `rfc-9942` holds no `.cache/`
+rendering). Only `rfc-9943` §6 is checkable, against that record's own
+artifacts. `distilled/design-notes.md` §7.6 states the shelf life and what
+would retire the claim. Labelled 2026-10-21 by pass 3.*
+
 ## Artifacts in this record
 
 | File | What it is |
@@ -221,8 +239,12 @@ per-region digests), `requirements.yaml` (**28 entries, counts reconciling
 8 = 8**), `schema/` (1 verbatim + 2 derived), `messages.yaml` (3 structures,
 `constrained_by` wired — and **all eight wired ids are §2's**, because §2 is
 the only section that says anything about bytes) and `design-notes.md`.
-`distillation.standard: FX-1` is declared and **no `profile`** is: passes 2 and
-3 have not run and no `reviewed_by` is signed.
+`distillation.standard: FX-1` is declared and **no `profile`** is: pass 2
+(verify) ran 2026-10-20 — `distilled/README.md` records what it found — human
+review has not run and no `reviewed_by` is signed. *[corrected 2026-10-21,
+pass 3 — cross-check: this read "passes 2 and 3 have not run", which
+`record.yaml`'s recorded verify pass and `distilled/README.md` had both
+contradicted since 2026-10-20.]*
 
 **`protocol`, `state-machine` and `examples` are `not_applicable`, each with
 the measurement written out** rather than asserted — the word sweeps are in

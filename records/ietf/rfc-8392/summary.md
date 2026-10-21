@@ -52,6 +52,17 @@ offered by COSE."*
 | Naming | **core** | `ARCH-0002 P1` wants `(key, local label)`; the CWT claim space is one flat global registry plus an unscoped Private Use range. Direct `R-M-12` conflict. |
 | Encoding | supporting | Two tag prohibitions that help option 5 (§5, §2) and one tag definition that does not (§6). |
 
+**Quotations of `mofn` documents below cannot be verified from this
+repository.** Every quotation of `ARCH-0001`, `ARCH-0002`, `ADR-0001`, a `DEC-*`
+or an `R-O-*` / `R-M-*` rule is reproduced from the extracting agent's context;
+treat each as a citation to re-check against `mofn` before relying on it.
+`distilled/design-notes.md` sets out this convention, which `rfc-9741`'s
+cross-check pass established, and this summary now follows it (marker added
+2026-10-21, pass 3). What **is** checkable in this worktree, and was checked:
+`docs/extraction.md`'s statement of MD-3, `topics/canonical-encoding.yaml`'s
+conditions, and the `rfc-9052` / `rfc-9053` / `rfc-9679` records — so the MD-3
+gloss quoted further down is not covered by this marker.
+
 ### The finding to act on: a thumbprint cannot be an `iss`
 
 `ARCH-0001` §6 carries "COSE_Sign1 + CWT" as an interchange row and asks that
@@ -145,8 +156,15 @@ floating-point `exp`/`nbf`/`iat`, and A.7 prints `1443944944.5` as a float64
 ## Where it cuts against MD-3 — DEC-002 option 5
 
 `MD-3` (2026-09-28) narrowed `DEC-002` to option 5 — "reduced CBOR, no IANA
-tags, COSE export only" — and is a **narrowing, not an acceptance**; no
-`DEC-002` ADR exists. This document cuts both ways, and the cut against is the
+tags, COSE as export only" — and is a **narrowing, not an acceptance**; no
+`DEC-002` ADR exists.
+<!-- [correction 2026-10-21, pass 3 - cross-check] This dropped "as" from the
+     gloss, inside quotation marks attributed to MD-3. docs/extraction.md:124
+     and this record's own design-notes (twice) have "COSE as export only".
+     The lane-wide audit found both wordings in circulation library-wide and
+     this was the lane's one live instance; it is the checkable form, because
+     docs/extraction.md is in this repository and MD-3 itself is not. -->
+ This document cuts both ways, and the cut against is the
 more interesting half.
 
 **For option 5, and from 2018.** §5 is a tag prohibition in the same spirit:
@@ -204,9 +222,14 @@ price it:
 | < −65536 | **Private Use** | **5 bytes** |
 
 Computed here from RFC 8949 §3.1 head encodings, not quoted.
-**[narrowed 2026-10-20 by the FX-1 extraction, pass 1.]** The Expert Review row
+**[narrowed 2026-10-20 by the FX-1 extraction, pass 1; the text-string bound
+corrected 2026-10-21, pass 3.]** The Expert Review row
 flattens two different costs: an integer above 65535 is **5** octets and a
-three-character text key is **4** (`1 + n` thereafter). The Expert Review and
+three-character text key is **4** — `1 + n` **only to n = 23**, then **`2 + n`**,
+so a 24-character key costs **26** octets and not 25. (This sentence read
+*"`1 + n` thereafter"*, unbounded, until pass 3: pass 2 had corrected the same
+cell in `distilled/schema/claim-key-policy.derived.yaml` and not propagated it
+here.) The Expert Review and
 Private Use integer rows also become **9** octets beyond ±2³². And there is
 **no Private Use range for text keys at all**, so "pick a URI-ish label and
 avoid the registry" is not an option either. The 5× headline and the 35-vs-7

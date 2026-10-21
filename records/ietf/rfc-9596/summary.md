@@ -230,13 +230,21 @@ three stated requirements, one `messages.yaml` entry, one IANA registration
 table, no CDDL, no examples and not one byte of hex, no state machine and no
 protocol"* — all of that is confirmed, with **three** `not_applicable`
 declarations rather than four, because `schema/` earns its place: the verbatim
-capture of Table 1 and the four prose sentences that fix the value space and the
-placement is worth having, and the derived CDDL's value is the list of **three
-things it cannot express** — equality, consistency with content type, and any
-check at all.
+capture of Table 1 and the four prose **passages** that fix the value space, the
+placement and the scope limit is worth having, and the derived CDDL's value is
+the list of **three things it cannot express** — equality, consistency with
+content type, and any check at all. (Those four passages carry **seven**
+sentences; this sentence called them "four prose sentences" until 2026-10-21.)
 
-`distillation.standard: FX-1` is declared and **no `profile`** is: passes 2 and
-3 have not run and no `reviewed_by` is signed.
+`distillation.standard: FX-1` is declared and **no `profile`** is:
+`record.yaml`'s `distillation.passes` records every pass that has run, and no
+`reviewed_by` is signed.
+
+**[corrected 2026-10-21 by the FX-1 extraction, pass 3 — cross-check]** This
+sentence read *"passes 2 and 3 have not run"*. Pass 2 (verify) ran 2026-10-20
+and is recorded in `record.yaml`; `distilled/README.md` had been updated to say
+so and this sentence had not. The same stale claim was sitting in
+`record.yaml`'s own `distillation` comment.
 
 **One claim below is scoped rather than refuted by the source**, and the
 scoping is recorded in place:
@@ -272,7 +280,9 @@ That is a `cites` gap and an ingest candidate, not a defect in this record.
 - **The enforcement side is entirely non-normative and the library layer is
   told to ignore the parameter.** Both of §3's reject rules are lowercase
   (quoted above), §2 says COSE implementations ignore `typ`, and the body of the
-  document contains **no capitalised MUST, SHOULD or RECOMMENDED at all**. The
+  document contains **no capitalised MUST, SHOULD, SHALL or RECOMMENDED at
+  all** — `SHALL` was missing from this list until 2026-10-21 while the other
+  six statements of the same census carried it. The
   mechanism is a label with no check attached anywhere in the specification
   stack. For us that means `typ` is cheap to emit and the whole defence is in
   code we write, with no conformance target to test against.

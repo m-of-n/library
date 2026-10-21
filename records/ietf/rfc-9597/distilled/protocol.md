@@ -37,9 +37,13 @@ Four near-misses, none of them a role in a flow:
 > for these claims.
 
 **No failure action, no ordering, no error path, no counterparty.** It is one
-check, and it is carried in `requirements.yaml` (R-0020) and in `messages.yaml`
+check, and it is carried in `requirements.yaml` (R-0019) and in `messages.yaml`
 as a constraint on the payload claim — which is where a check belongs when
 there is no flow to put it in.
+
+*[correction 2026-10-21, pass 3 — cross-check] This read `R-0020` here and in
+`protocol.yaml`. R-0020 is §2's RECOMMENDED protected placement; the
+duplication `MUST` quoted above is `R-0019`.*
 
 **It is also a step that another document's procedure does not contain.**
 `rfc-8392` §7.2's seven validation steps say nothing about header claims, and

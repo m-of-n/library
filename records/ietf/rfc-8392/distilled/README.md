@@ -129,8 +129,12 @@ place with the falsified wording recorded:**
    part of the sentence. Now quoted whole.
 3. **A silently healed line break**, in `rfc-9596`'s `examples/README.md`:
    *"CoAP Content-Formats"* written as one token where the source breaks it
-   across lines 116/117. The one place in this lane that healed a break was in
-   the record that declares three times that it does not.
+   across lines 116/117. *[correction 2026-10-21, pass 3 — cross-check] This
+   read "The one place in this lane that healed a break was in the record that
+   declares three times that it does not." It was not the one place: pass 3's
+   whole-span audit found the same break healed twice more, both in `rfc-9596`
+   (`schema/typ-header.derived.cddl` and `record.yaml`). Three sites, all in
+   that record. The point survives, the count was wrong.*
 4. **A case change** in a quotation of our own `messages.yaml`.
 
 The nine residuals are each accounted for: three are the **superseded summary
@@ -172,9 +176,13 @@ whitespace-normalised source — re-derived, not inherited. A tightened
 terminator check over all 110 found **no fourth over-run**. Three suspects
 remain and all three are legitimate: `R-0022` is the one deliberate
 mid-sentence start and is declared in its own `note`; `R-0101` and `R-0105` are
-complete IANA registry templates that end at their last field
-(*"Provisional registration? No"*, *"Point of Contact: …"*), confirmed against
-§9.2.1 and §9.4.1.
+complete IANA registry templates that end at their last field — §9.2.1's is
+*"Provisional registration?  No"* and §9.4.1's is its `Point of Contact` field —
+confirmed against §9.2.1 and §9.4.1. **[corrected 2026-10-21, pass 3:** the
+second of that pair was printed here as *"Point of Contact: …"*, which put our
+own ellipsis inside quotation marks beside a genuinely verbatim neighbour.
+§9.4.1's field reads *"Point of Contact: Michael B.  Jones,
+mbj@microsoft.com"*.**]**
 
 **2. Every locator — and under a stricter rule than the tool applies.**
 `bin/check-locators` permits a text that really lives in §3.1.4 to be filed
@@ -266,7 +274,16 @@ discriminator pass 2 added is a **named-relaxation channel**: any fragment that
 did not resolve whole was retried under four named relaxations — terminal
 punctuation swapped, a hyphenation break healed, a line break healed into one
 token, case folded — so the defect class would be *reported* rather than
-masked. **Zero fragments needed any relaxation.** That is the positive result:
+masked. **Zero fragments needed any relaxation.**
+*[correction 2026-10-21, pass 3 — cross-check] **Withdrawn.** Re-run over whole
+quotation spans rather than fragments, across all 48 files of the lane at once,
+**three** fragments needed a named relaxation: two hyphenation heals in
+`rfc-9596` and a terminal-punctuation swap in `rfc-9597`, where a §1 quotation
+was cut at a comma and given a full stop. 310 of 313 spans resolved exactly and
+there were **0 splices**, so the discipline is sound — but "zero" was an
+artefact of auditing fragments, each of which resolved somewhere in the source.
+This record's own prose was clean of that class; its defects were elsewhere.*
+That is the positive result:
 none of the four transcription-defect classes this lane's audits were built to
 catch survives anywhere in it. Pass 1's `only` correction was verified as
 correctly applied in all six places, and pass 2 traced the word's provenance —
@@ -276,7 +293,19 @@ either and the attribution was the only error.
 
 **Id join audit: every id emitted from the three requirements tables by script,
 then 456 references resolved and printed beside their requirement's own text
-for reading. 0 dangling, and 0 resolving to the wrong statement.** The sibling
+for reading. 0 dangling, and 0 resolving to the wrong statement.**
+*[correction 2026-10-21, pass 3 — cross-check] Still true of every
+`record#R-NNNN` reference — pass 3 re-read all 67 citation sites in this record
+and all 268 citations support their citing sentence. **It was never a claim
+about the two reference forms `bin/check-id-joins` does not collect**, and pass
+3 found wrong ids in both: **four cross-vector `V-NNNN` references in this
+record's own `vectors.yaml`** (V-0002's `usable_for` naming V-0006/V-0007 for
+what are V-0007/V-0008; V-0003 twice, and the file header, naming V-0005/V-0008
+for the MACed pair that is V-0006/V-0009 — neither named vector is MACed at
+all), and three bare `R-NNNN` references in `rfc-9597`. Proved by decoding
+rather than by eye: V-0006 and V-0009 are the only two vectors carrying COSE
+tag 17, the only two whose protected bucket is `h'a10104'`, and the only two
+keyed on V-0003.* The sibling
 lane's 30 wrong-but-resolvable ids came from one record's layout being in
 working memory and another's not, so pass 2 also flagged every **bare**
 reference whose number exists in a sibling record — 70 of them — and checked

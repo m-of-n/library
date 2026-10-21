@@ -45,6 +45,17 @@ profile's job. The second and third are not expressible: one is a
 cross-structure equality predicate scoped to a classification `rfc-8392` §6
 declines to define, and the other is a constraint on *use* rather than on bytes.
 
+**Those three shapes are complete only under reading 1 of the placement
+`MUST`** — *at most once across the two buckets* — which is
+`../design-notes.md`'s `D-6`: the sentence admits three readings and the
+document disambiguates none. Under D-6's reading 2, *at most once per bucket*, a
+fourth shape is conformant (label 15 in both buckets, once each) and the
+enumeration is incomplete rather than wrong. The `.cddl` now states which
+reading it encodes, at the top of its placement block. *[added 2026-10-21,
+pass 3 — cross-check: pass 2 found D-6 and recorded it in three files, none of
+them in this directory, so the two files the ambiguity is actually about did not
+mention it.]*
+
 ## What the derived schemas deliberately do not constrain
 
 - **Which claims must be present.** RFC 9597 requires none. `rfc-9943` §6 is

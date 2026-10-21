@@ -44,11 +44,20 @@ quotation of another record's `design-notes.md` or `summary.md` is quoted from
 its **rendered** text: markdown emphasis (`*`, `**`) and code markers
 (backticks) are dropped, because they are formatting rather than words.
 Quotations of the **source** are not normalised beyond whitespace, are cut from
-`.cache/` by line range by script, and are **never elided** — where a sentence
-spans a line break the break is declared and the obligation-bearing half is
-quoted. This pass's own quote audit found four defects in its own prose under
-those rules, and each is recorded in place where it occurred rather than edited
-away.
+`.cache/` by line range by script, and where one **is** elided the elision is
+visible as `...` and the full sentence is carried verbatim in
+`requirements.yaml`; where a sentence spans a line break the break is declared
+and the obligation-bearing half is quoted. This pass's own quote audit found
+four defects in its own prose under those rules, and each is recorded in place
+where it occurred rather than edited away.
+
+*[correction 2026-10-21, pass 3 — cross-check] This said source quotations are
+**never elided**, and this file carries four declared abbreviations of parallel
+bullets, so the rule is now stated as what it actually is. The same pass also
+found this record had **healed** the 116/117 break in two artifacts after
+declaring three times that it heals none — see `README.md` and
+`schema/typ-header.derived.cddl`. A blanket claim is worse than the narrower
+truth, because it stops a reader checking.*
 
 **Decision status.** DEC-002 in `ARCH-0001` §7 lists **four** options; "option
 5" exists only as *proposed* text in `ARCH-0001-PROPOSAL-v0.2.0` §3.3, which is
@@ -133,9 +142,19 @@ And §3's two enforcement sentences are **lowercase**:
 
 > COSE applications employing explicit typing should reject COSE objects with a type header parameter value different than values that they expect in that application context. They should also reject COSE objects without a type header parameter when one is expected.
 
-Under §1.1's BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all capitals, as shown here.
-neither carries normative force. **A conformant implementation of RFC 9596
-performs no check whatsoever.**
+Under §1.1's *"when, and only when, they appear in all capitals, as shown
+here"*, neither carries normative force. **A conformant implementation of
+RFC 9596 performs no check whatsoever.**
+
+**[correction 2026-10-21, pass 3 — cross-check]** That sentence stood as
+*Under §1.1's BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in
+all capitals, as shown here.* followed by a lowercase *neither carries
+normative force.* — a verbatim span of §1.1 pasted into our own prose with its
+quotation delimiters lost and a full stop added, leaving a sentence fragment
+behind it. The span is genuinely verbatim, which is why nothing flagged it: the
+quote audits of passes 1 and 2 extract only **unambiguously delimited**
+quotations, and this one had no delimiters left to find. `summary.md` carried
+the same clause correctly delimited throughout.
 
 **[analysis] And the count makes it stronger than a reading of two sentences.**
 The document's body contains **three** capitalised BCP 14 keywords — `OPTIONAL`
@@ -317,7 +336,11 @@ type parameters"* clause, which the document does not constrain at all.
 **[analysis] Note where that sentence sits.** The value space is stated in **§1**
 as well as §2 (source lines 83–87), so a reader who skips the introduction as
 background misses half the document's statement of its own type space. That is
-the same shape as `rfc-9597`, where half the keywords are in §1.
+the same shape as `rfc-9597`, where half the keywords are in §1. **[pass 3]**
+And a third time outside the body: the abstract states it at lines 16–22, which
+is where the first of the document's three `syntax` occurrences sits (line 20).
+`normative.md` records that, and records that its regions begin at line 69 and
+therefore do not cover it.
 
 `topics/canonical-encoding.yaml`, which is in this repository, records that
 option 3 *"is registry-free by construction"* and that option 1 also wins that

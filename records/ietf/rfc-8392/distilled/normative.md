@@ -26,14 +26,35 @@ by `\n` with no trailing newline — the convention established by two earlier
 passes in this effort.
 
 **Page decoration is never inside a region.** The source is a paginated RFC
-with **25 form feeds** and 25 five-line page breaks (running footer, blank,
-running header, blank, blank), at lines 58-62, 114-118, 170-174, 226-230,
+with **25 form feeds**. Twenty-four of them sit inside a five-line page break
+(running footer, the form-feed line, running header, blank, blank), at lines
+58-62, 114-118, 170-174, 226-230,
 282-286, 338-342, 394-398, 450-454, 506-510, 562-566, 618-622, 674-678,
 730-734, 786-790, 842-846, 898-902, 954-958, 1010-1014, 1066-1070, 1122-1126,
-1178-1182, 1234-1238, 1290-1294, 1346-1350 and 1402-1404. Four sections of the
-document are therefore quoted as **two or three adjacent regions each**, with
-the break declared in place: §7.1, §7.2, §9.1.2 and §6. **Nothing is welded
-across the gap.** Note for any later pass: Python's `splitlines()` splits on
+1178-1182, 1234-1238, 1290-1294 and 1346-1350; the **twenty-fifth** is the
+document's last two lines, 1402-1403 — footer and form feed, with no running
+header after them because the document ends there.
+**[corrected 2026-10-21, pass 3:** this read *"25 form feeds and 25 five-line
+page breaks"* and listed the last range as 1402-**1404**. There is no line
+1404 — the cache is 1403 newline-delimited lines, and `split` on a newline
+returns a 1404th empty element after the final one. The 24 complete breaks were
+re-verified to have exactly the shape named above, and the 25th to be two
+lines.**]**
+
+**Five** headings below are quoted as **two or three adjacent regions each**,
+with the break declared in place: §6, §7.1, §7.2, §9.1.2 (twice) and
+§9.3/§9.3.1 — **six declared breaks**, at 394-398, 450-454, 506-510, 674-678,
+730-734 and 786-790. **[corrected 2026-10-21, pass 3:** this sentence said
+*"Four sections"* and named only §7.1, §7.2, §9.1.2 and §6, while this file's
+own body already declared the fifth at the §9.3/§9.3.1 heading. The seven other
+page breaks that fall between two consecutively quoted regions — 226-230,
+282-286, 338-342, 562-566, 618-622, 842-846 and 898-902 — separate distinct
+statements or sections rather than splitting one passage, so they need no
+in-place declaration.**]** **Nothing is welded
+across the gap**: re-verified in pass 3 that no region contains a form-feed
+line, a running footer or a running header, and that all 37 fenced blocks are
+byte-identical to their declared line ranges. Note for any later pass:
+Python's `splitlines()` splits on
 form feeds as well as newlines and would shift every line number here by up to
 25; this file was built with `split("\n")`.
 
