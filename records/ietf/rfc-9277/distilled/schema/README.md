@@ -107,13 +107,24 @@ Of the **30** definite-length spellings of the 12-byte label:
 
 - **1** is 12 bytes long;
 - **5** match the 8-byte fingerprint §2.3.1 states;
-- **20** put a **zero byte inside the first eight**, defeating §2.1's own advice
+- **25** put a **zero byte inside the first eight**, defeating §2.1's own advice
   to avoid values that "may confuse implementations that treat the magic number
-  as a C string."
+  as a C string." *(`[correction]` 2026-10-20, pass 2: this line read **20**.
+  `prefix-spellings.derived.txt` marked 25 rows in its own table and said 25 in
+  its own summary, so the drift was in the restatement, not the enumeration; the
+  same wrong figure stood in five other files of this record. Re-derived from
+  RFC 8949 §3 at pass 2: the 5 spellings with both tag heads at their shortest
+  have no zero byte in the first eight, and the other 25 do.)*
 
-And **30 is a floor, not a count**: RFC 8949 §3.2.3 also admits an
-indefinite-length byte string for the 3-byte content, which the enumeration
-excludes. §2.1 pins the tag **value** into `0x01000000..0xFFFFFFFF` and that is
+And **30 is a floor, not a count** — settled at pass 2 as a theorem rather than
+a hedge: RFC 8949 §3.2.3 defines an indefinite-length byte string as `0x5f`,
+then **"zero or more"** definite-length chunks, then `0xff`, so an empty chunk
+is admissible and may be repeated without bound. **The set of well-formed labels
+is therefore infinite**, and 30 is exact only for the definite-length family.
+The two finite restrictions worth knowing are 54 (non-empty chunks, preferred
+chunk heads) and 1110 (non-empty chunks, any chunk head spelling); see
+`prefix-spellings.derived.txt`. §2.1 pins the tag **value** into
+`0x01000000..0xFFFFFFFF` and that is
 exactly as far as it goes — it makes `da` the *shortest* head and does not
 forbid `db`, and it does not reach the outer tag at all, whose value is
 `55800 = 0xD9F8`.

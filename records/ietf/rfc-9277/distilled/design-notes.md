@@ -450,6 +450,17 @@ Nine. All reported, none repaired.
    "The CBOR data item within the representation (without byte-" / "string
    wrapping)." — makes §2.2.1's tag content an **array**. B.1 is introduced by a
    cross-reference *to* §2.2.1. Vectors `V-0001` and `V-0004`.
+   **Pass 2 re-derived this from Appendix B alone, without reading the account
+   above, and reached the same finding — then sharpened it: the inconsistency is
+   also internal to B.1's own two bullets.** B.1's *second* bullet qualifies its
+   identical `#6.TN(ct)(bstr)` shape — "The following CDDL snippet can be used to
+   identify application/" / "missing-blocks+cbor-seq representations **as
+   embedded in a CBOR byte string**:" — while the *first*, senml bullet carries
+   **no such qualification** and gives the same shape for a case the
+   "Exceptionally" rule has removed the bstr form from. So B.1 states the general
+   rule in the bullet that says it is about embedding, and misstates it in the
+   bullet that cross-references §2.2.1; and the appendix supplies **no CDDL at
+   all** for the exceptional case, which is the case its own §2.2.1 example is in.
 2. **The TN formula's arithmetic is defined only in an appendix, and only by
    reference to a paywalled standard.** Appendix B: "(where +, *, / and % stand
    for integer addition, multiplication, division, and remainder as in the
@@ -491,7 +502,11 @@ Nine. All reported, none repaired.
    registration to point to this document." for two otherwise word-for-word
    parallel entries. §4.3 writes the block's upper bound `0x6374ffff` where
    Appendix B writes `0x6374FFFF`. §2.3 writes the constant as `'BOR'` and
-   Appendix C writes the same three bytes as `h'424F52'`.
+   Appendix C writes the same three bytes as `h'424F52'`. **A fourth, added at
+   pass 2:** §2.3 and Appendix D's own penultimate paragraph write the constant
+   as `0x42_4f_52`, and Appendix D's numbered item 3 — three paragraphs earlier
+   in the same appendix — writes it as `0x42_4F_52`. The same appendix is
+   inconsistent with itself, which the `0x6374ffff` case is not.
 9. **Two structural slips.** §2.2.1's lead-in closes a parenthesis it never
    opens: "of the "CoAP Content-Formats" registry [IANA.CORE-PARAMETERS])."
    And Appendix C's "The above magic number is included in the file and on the
@@ -590,9 +605,21 @@ every claim below was re-derived from `.cache/rfc-9277.txt` at this pass.
   enumeration in `schema/prefix-spellings.derived.txt` covers the **outer** tag
   and the **byte-string head** as well: 3 × 2 × 5 = **30** definite-length
   spellings of the 12-byte label, of which 1 is 12 bytes, 5 match the stated
-  fingerprint, and **20 contain a zero byte inside the first eight** — which
-  defeats §2.1's C-string advice, a consequence the summary does not reach. And
-  **30 is a floor**, because an indefinite-length byte string is also admissible.
+  fingerprint, and **25 contain a zero byte inside the first eight** — which
+  defeats §2.1's C-string advice, a consequence the summary does not reach.
+  `[correction]` 2026-10-20, pass 2: this sentence read **20**, as did five other
+  files; `schema/prefix-spellings.derived.txt` had 25 in its own table and its
+  own summary throughout, so the arithmetic was never wrong, only its six
+  restatements. Re-derived from RFC 8949 §3 independently at pass 2: 25.
+  And **30 is a floor** — now settled as a theorem rather than left as a hedge.
+  RFC 8949 §3.2.3 admits an indefinite-length byte string as `0x5f`, **"zero or
+  more"** definite-length chunks, `0xff`, so an empty chunk is admissible and may
+  be repeated without bound: **the set of well-formed labels is infinite.** 30 is
+  exact for the definite-length family; the finite restrictions are 54 with
+  non-empty preferred chunks and 1110 with any chunk-head spelling. So the
+  determinism claim fails worse than *30 ways*, and the honest statement is that
+  the document's single deliverable is a byte prefix whose satisfying set is not
+  enumerable.
 - The summary says the Openswan tag "checks". **It does, and the registry row
   says something the summary does not:** its reference is "Michael Richardson;
   Samir Hussain", **not** RFC 9277, so the document's own worked deployment did
@@ -728,5 +755,107 @@ reported rather than touched.
 experimental-range inference and Appendix B's Content-Format definition both rest
 on it.
 
-**No `reviewed_by` is signed, and no `profile` is declared.** Passes 2 and 3 have
-not run.
+**No `reviewed_by` is signed, and no `profile` is declared.** Passes 1 and 2 of 3
+have run; cross-check has not.
+
+---
+
+## 12. Pass 2 (verify), 2026-10-20 — what was attacked, and what survived
+
+An adversarial pass that did not extract. Full mechanical results are in
+`requirements.yaml` `verify_pass`; this section records only what changed a
+conclusion.
+
+**The state-machine verdict: UPHELD, and on better grounds than pass 1 gave.**
+Pass 1 justified the artifact by counting five permissive statements about one
+operation. That is the weaker argument. The stronger one, and the one that
+distinguishes this record from its five siblings, is the **subject**: this
+machine's subject is *one stored representation over its life*, acted on by
+different parties at different times — authored, labelled, stored, stripped for
+the wire, stored again, concatenated with another. `records/ietf/rfc-8949`,
+`rfc-9804`, `rfc-8610`, `rfc-9741` and `rfc-9682` all declare state-machine
+not-applicable, and **every one of them gives the same reason: their only
+stateful process is parsing** ("the one stateful process is the decode of a
+single data item, which has no persistent states, triggers or guards" —
+`rfc-8949`). Storing and stripping a file is not parsing it. The distinction is
+principled, so the artifact stands, and `state-machine.yaml`'s header now says
+so instead of resting on the count of five.
+
+**The 56/195 join ratio: UPHELD, and the attack's premise was wrong by a factor
+of three.** Citing `state-machine.yaml` the way a field cites would move 19 ids,
+not "roughly 36 Appendix A entries" — and across Appendix A, A.1, A.2 and A.3
+together, which is exactly 36 entries, the machine touches eleven. Appendix A is
+a set of survey questions and a question is not a transition. Full arithmetic in
+`messages.yaml` `join_ratio_at_pass_2`.
+
+**The Appendix B "Exceptionally" analysis: both findings CONFIRMED by
+re-derivation from Appendix B alone**, and defect 1 above is now sharper for it
+— the inconsistency is internal to B.1's own two bullets, not only between B.1
+and §2.2.1. Defect 4's non-identity-coding gap re-derives exactly: the clause
+says the tag content **is** one of two things, both restricted to identity
+content-coding, and it *replaces* the general bstr form for that position, so a
+CBOR representation in a non-identity coding placed immediately inside 55799 has
+no defined content at all. The document supplies its own witness in Appendix
+D.1 — Content-Format 11050, `application/json` in deflate — and **the sentence
+that introduces it was one of the nine pass 1 dropped**, so the record argued
+the defect without quoting its evidence.
+
+**The 30-spelling enumeration: numbers CONFIRMED, one figure CORRECTED, and the
+floor turned into a theorem.** 3 × 2 × 5 = 30 re-derived from RFC 8949 §3
+without reading the table; 1 at 12 bytes and 5 matching the fingerprint both
+reproduce; the zero-byte figure is **25**, not the 20 that five files of this
+record stated. And the indefinite-length family is **not finite** — §3.2.3's
+"zero or more" chunks admit empty chunks without bound — so 30 cannot be raised
+to a total, which is a stronger result than "30 is a floor".
+
+**The three refutations pass 1 made: all three CONFIRMED.**
+
+1. **Three envelope methods, not two.** §1 says it outright — "A third method is
+   also proposed" (`rfc-9277#R-0012`) — and §4.2 allocates it tag 55801. The
+   sentence that *reconciles* §1's "two possible methods" with its own "third
+   method" is "Further information on this method appears in Appendix D because
+   it is not about identifying media types containing CBOR-encoded data items.",
+   and **that sentence was dropped at pass 1**. So the refutation was right and
+   was made without the one sentence that proves it. It is now in
+   `normative.md`, marked **no id**.
+2. **`R-O-03` does not reach a file header on its own terms.** The premise is
+   `[unverifiable-here]` — `ARCH-0001` is not in this library and `R-O-03`'s text
+   cannot be read from here — but the *replacement* reasoning is in the source
+   and checks: §1's file(1)-confusion argument, `rfc-9277#R-0004` and
+   `#R-0005`. **And its strongest form was also dropped at pass 1**: "Additionally,
+   both OpenOffice and MSOffice files are ZIP files of XML files; the
+   identification may stop at identifying them as ZIP files." is the
+   *generalisation* of the APK case — two more formats, a second mechanism — and
+   it is the sentence that makes the argument about a class rather than an
+   anecdote. Also now in `normative.md`.
+3. **The JSON-side whole-file-grammar claim is unsupported by anything this
+   library holds.** Confirmed by inventory: `records/ietf/rfc-7464` and
+   `records/ietf/rfc-8091` do not exist, while `records/ietf/rfc-9804` does. See
+   `records/ietf/rfc-8742/distilled/design-notes.md`, where the same refutation
+   is made and where pass 2 closed the option-1 half of it.
+
+**The DEC-002 / MD-3 provenance chain, checked as far as this repository allows.**
+`ARCH-0001` is not here, so the four option texts quoted in §0 cannot be checked
+against their source and stay `[unverifiable-here]`. What *can* be checked is
+whether the library's own copies agree with each other, and the result is mixed:
+
+- **Option 2 and option 4 are consistent.** "CBOR + CDDL as canonical; COSE for
+  signed form" appears identically in eight records (two of them truncating it
+  at the semicolon without marking the truncation), and "Dual canonical (CBOR
+  and JSON) with a documented bijection" identically in four.
+- **The option-5 / MD-3 gloss has diverged, and two records quote the divergent
+  reading.** This lane writes "reduced CBOR, no IANA tags, COSE export only",
+  which is what `docs/extraction.md` §"The artifact set" writes — the only
+  in-repository statement of it. Five other records write **"CBOR data model**,
+  no IANA tags, COSE export only", two of them *inside quotation marks*
+  (`records/ietf/rfc-9679`, `records/ietf/draft-ietf-cbor-cde`), and two more
+  write "COSE **as** export only" (`records/ietf/rfc-9053`,
+  `records/community/draft-mcnally-deterministic-cbor`). *A reduced CBOR profile*
+  and *the CBOR data model* are not the same claim: the first restricts what may
+  be encoded, the second does not. **Reported, not repaired** — those records are
+  at `profile: full` and are not this lane's to edit. This lane agrees with
+  `docs/extraction.md`; the clause ", YAML as the human form" that this lane adds
+  is not in `docs/extraction.md` and is a gloss rather than a quotation, which is
+  why it is unquoted here.
+- The full four-option list appears **only** in this lane's two records, so there
+  is no second copy in the library to cross-check it against. Marked, not fixed.

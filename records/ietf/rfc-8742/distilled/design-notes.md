@@ -45,9 +45,11 @@ decision.
 
 **What this document is, in one line.** The claim that a container is
 unnecessary: concatenate encoded CBOR data items and the bytes *are* the format.
-**Four BCP 14 keywords in 18 KB, none of them in §2**, and two of the four
-vacuous at publication by the document's own admission. It registers three
-things and **not one of them is a CBOR tag**.
+**Four BCP 14 keywords in 18 KB, none of them in §2**, and one of the four
+unsatisfiable at publication by the document's own admission — see §7 defect 1,
+rewritten at pass 2, where "two of the four, vacuous" is corrected to "one of
+the four, deferred". It registers three things and **not one of them is a CBOR
+tag**.
 
 **Why a 7-page format RFC reaches our design at all.** Because MD-3's option 5
 names no container, and this is the only ratified answer to *how two
@@ -79,8 +81,14 @@ append-only log at an item boundary is in spec and undetectable, and a log
 truncated to nothing is a valid empty log.** The three fixtures are
 `examples/vectors.yaml` `D-0004` (two items, no error), `D-0005` (zero bytes, no
 error) and `D-0001` (the empty sequence), and `D-0001` and `D-0005` are
-deliberately the **same bytes**. `state-machine.yaml` carries the same finding
-as an indistinguishability between two states that the source never names.
+deliberately the **same bytes**. `messages.yaml`'s `cbor-sequence.completeness`
+states the finding in prose, and `state-machine.yaml` restates it as an
+indistinguishability between two **files**. *(`[correction]` 2026-10-20, pass 2:
+this read "an indistinguishability between two **states** that the source never
+names". The two load-bearing pairs in `state-machine.yaml` are pairs of
+artifacts, not of states — the machine's own `how` field says both are
+`input-exhausted-at-boundary` — and the finding does not live only there. See
+§11.)*
 
 **And one corrupt entry costs the tail, not just the entry.** §2: "if any data
 item in the sequence is not well formed, it is not possible to reliably decode
@@ -225,8 +233,18 @@ offers no content to digest that is not an element.
 - **§3's `SHOULD` test for the suffix, as a rule we could apply.** "it SHOULD be
   used by a media type when the result of parsing the bytes of the media type
   object as a CBOR Sequence is meaningful and is at least sometimes not just a
-  single CBOR data item." (`rfc-8742#R-0026`) **"At least sometimes" is
-  unquantified**, and the document's own parenthesis explains that the
+  single CBOR data item." (`rfc-8742#R-0026`) **"at least sometimes" is
+  unquantified** *(`[correction]` 2026-10-20, pass 2: this re-quotation read
+  `At least sometimes` with a capital the source does not have — written without
+  double quotes here so that the lane's case-sensitivity audit stays clean. It
+  occurs
+  mid-sentence at source line 174, lower case, inside the very sentence quoted
+  two lines above. A quotation with a silently changed capital is the fifth
+  defect class pass 1 found in its own work and fixed in four places; this was
+  the one it missed. The whole-lane audit that found it tested every quotation
+  for a case-insensitive match that fails case-sensitively: across both records
+  and 1628 quoted runs, this was the **only** hit)*, and the document's own
+  parenthesis explains that the
   qualification exists only to stop the sentence being trivially true. It is the
   only conduct rule in the document aimed at a specification author and it has
   no decision procedure. If we ever register `application/mofn-statement-log+cbor-seq`
@@ -359,6 +377,36 @@ narrowing never considered.** `[analysis]` Both grounds come out of
    the *detection* half of condition (5) and not the *canonical order* half. This
    is the same trade as `D-0003` against `D-0002`, one layer down.
 
+   **`[correction]` 2026-10-20, pass 2 — attacked, and the trade SURVIVES on
+   stronger evidence, with one ground narrowed.** Pass 1's option-1 claim rested
+   on reading `canonical.abnf` whose own header says it is **"NOT
+   SELF-CONTAINED"** — `verbatim` is defined only in RFC 9804 §7.1 — so the
+   grammar pass 1 reasoned from was open. Pass 2 closed it by reading the §7.1
+   grammar this library also holds verbatim
+   (`records/ietf/rfc-9804/distilled/schema/advanced-transport.abnf`), and the
+   attack it was meant to settle — *does §7.1's advanced transport admit a
+   sequence of top-level `c-sexp`s, which would weaken "not appendable"?* — is
+   **answered no, decisively**: §7.1's start production is
+   `sexp = *whitespace value *whitespace`, **exactly one `value`**. So *both*
+   RFC 9804 transports have a one-item start symbol, and "not appendable" is a
+   property of the advanced form as well as the canonical one. Pass 1 asserted it
+   of the canonical form alone; it is true of both, and the trade is firmer than
+   stated, not weaker.
+
+   **The ground that must be narrowed is ground 1, not the trade.** "either way
+   the file fails the grammar" holds only when the top level is a **list**. A
+   canonical S-expression file whose top level is a bare `c-string` has no
+   closing parenthesis to lose, and `verbatim = decimal ":" *OCTET` is
+   **unbounded as ABNF** — `*OCTET` matches any number of octets, and the "exact
+   number of OCTETs indicated by the length" is stated in the rule's own inline
+   comment, which is prose. So truncation of a top-level atom is detected by the
+   **length-prefix semantics**, not by the grammar; and a concatenation of two
+   bare top-level atoms parses as one `verbatim` under pure ABNF while failing
+   under the semantics. Either way the file is not a valid single `c-sexp`, so
+   detection and non-appendability both hold — but the honest statement is
+   *"fails RFC 9804's definition of `verbatim`"* rather than *"fails the
+   grammar"*. Ground 2, the length prefix, is in the grammar and is unaffected.
+
 **Cut 4 — option 4's documented bijection does not extend to the container, and
 this document is the evidence. Favours nothing; narrows option 4.** Option 4 is
 "Dual canonical (CBOR and JSON) with a documented bijection"
@@ -408,17 +456,57 @@ silence.
 
 Six. All reported, none repaired.
 
-1. **Two of the four BCP 14 keywords are vacuous at publication, by the
-   document's own admission.** §6.3's two `SHOULD`s govern fragment identifiers
-   for `+cbor-seq` by deferring to the same syntax and semantics as "that
-   specified for "application/cbor-seq"" — which §6.1 registers as "Fragment
-   identifier considerations: N/A", and which §6.3 then confirms: "(At the time
-   of publication of this document, there is no fragment identification syntax
-   defined for "application/cbor-seq".)" `[analysis]` **Half the document's
-   normative content points at a referent the same document declares not to
-   exist**, and the three cases of the second `SHOULD` collapse to the third,
-   since with no `+cbor-seq` rules every case is one "not defined in
-   +cbor-seq". (`rfc-8742#R-0048`, `R-0055`–`R-0060`)
+1. **One of the four BCP 14 keywords is DEFERRED — not vacuous — and the other
+   §6.3 `SHOULD` is not even that.** §6.3's first `SHOULD` governs fragment
+   identifiers for `+cbor-seq` by deferring to the same syntax and semantics as
+   "that specified for "application/cbor-seq"" — which §6.1 registers as
+   "Fragment identifier considerations: N/A", and which §6.3 then confirms: "(At
+   the time of publication of this document, there is no fragment identification
+   syntax defined for "application/cbor-seq".)" (`rfc-8742#R-0048`,
+   `rfc-8742#R-0055`, `rfc-8742#R-0056`)
+
+   **`[correction]` 2026-10-20, pass 2 — THIS DEFECT IS OVERTURNED AS STATED AND
+   REPLACED BY A NARROWER ONE.** Pass 1 wrote: "Two of the four BCP 14 keywords
+   are vacuous at publication, by the document's own admission … **Half the
+   document's normative content points at a referent the same document declares
+   not to exist**", and then, in the same sentence, observed that "the three
+   cases of the second `SHOULD` collapse to the third, since with no `+cbor-seq`
+   rules every case is one 'not defined in +cbor-seq'". **That observation
+   defeats the conclusion it was attached to.** A rule all of whose cases
+   collapse onto one determinate case is not vacuous; it is a rule with one
+   branch. Taking the two `SHOULD`s separately, from §6.3's own text:
+
+   - **`rfc-8742#R-0055` is deferred.** Its referent is declared absent *"at the
+     time of publication of this document"* — a temporal qualifier, which is a
+     deferral marker and not an admission of emptiness. The rule binds
+     conditionally: if and when a fragment-identification syntax is registered
+     for `application/cbor-seq`, `+cbor-seq` inherits it, and a future registrant
+     of `xxx/yyy+cbor-seq` is bound by that. It is unsatisfiable *today* and
+     well-formed *as written*.
+   - **`rfc-8742#R-0057` is not vacuous at all.** Its three cases are "defined in
+     +cbor-seq and resolving" (`R-0058`), "defined in +cbor-seq and not
+     resolving" (`R-0059`), and "not defined in +cbor-seq" (`R-0060`). Since no
+     case is defined in `+cbor-seq`, the third is **universal at publication**:
+     every fragment identifier on an `xxx/yyy+cbor-seq` URI is processed as the
+     specific media type specifies. That is a determinate, applicable, testable
+     instruction on the day the RFC shipped, and the only one of the four
+     keywords that *is*.
+
+   So the headline must come down: **not** "half the document's normative content
+   points at a non-existent referent", but *one of four keywords is conditional
+   on a future registration, and its sibling resolves to its own third case.*
+   The replacement defect is thinner and still real: §6.1 and §6.3 register
+   **contradictory** fragment-identifier dispositions for the same format — "N/A"
+   against a `SHOULD` plus a three-case procedure — and §6.3 does not reconcile
+   them.
+
+   **Why pass 1's version needed a document this library does not hold.** To call
+   a deferral *vacuous* you must assert that an RFC 6838 structured-syntax-suffix
+   registration may not legitimately defer to a syntax that does not yet exist.
+   `records/ietf/rfc-6838` **does not exist in this library** and RFC 6838 is not
+   cached, so that premise is `[unverifiable-here]` — and it is exactly the
+   premise the overturned claim rested on. The narrower claim above needs only
+   §6.3's own words.
 2. **§6.3's second `SHOULD` is miscategorised.** "The syntax and semantics for
    fragment identifiers for a specific "xxx/yyy+cbor-seq" SHOULD be processed as
    follows:" — what gets *processed* is a fragment identifier, not its syntax
@@ -523,9 +611,11 @@ every claim below was re-derived from `.cache/rfc-8742.txt` at this pass.
 
 **Added at this pass, not in the summary:**
 
-- Defects 1, 2, 4 and 5 of §7 above — the **vacuity** of two of the four
-  keywords, the miscategorised `SHOULD`, the two registrations disagreeing, and
-  three informative references used normatively.
+- Defects 1, 2, 4 and 5 of §7 above — the **deferral** of one of the four
+  keywords and the contradictory fragment-identifier dispositions in §6.1 and
+  §6.3 (defect 1 as pass 2 rewrote it; pass 1 claimed the **vacuity** of two of
+  the four and that claim is overturned), the miscategorised `SHOULD`, the two
+  registrations disagreeing, and three informative references used normatively.
 - The **lower-case `must`** finding: the one sentence that states how to decode
   the format carries no BCP 14 force (`R-0019`), and neither does "decoders must
   operate on input that is assumed to be untrusted" (`R-0043`), which sits
@@ -604,5 +694,92 @@ notes' §3.4.6 row; `records/ietf/rfc-9804/distilled/schema/canonical.abnf` and
 RFC 7252 §12.3's experimental range are the two that a later pass could usefully
 close by ingesting them.
 
-**No `reviewed_by` is signed, and no `profile` is declared.** Passes 2 and 3 have
-not run.
+**No `reviewed_by` is signed, and no `profile` is declared.** Passes 1 and 2 of 3
+have run; cross-check has not.
+
+---
+
+## 11. Pass 2 (verify), 2026-10-20 — what was attacked, and what survived
+
+An adversarial pass that did not extract. Full mechanical results are in
+`requirements.yaml` `verify_pass`; this section records only what changed a
+conclusion. **Three attacks were put to this record and two of them landed.**
+
+**1. The state-machine verdict: the artifact KEPT, the justification WITHDRAWN.**
+See `README.md` *Not applicable* and `state-machine.yaml`'s header. The short
+version: pass 1 said the completeness finding's sharpest form *is* a state
+indistinguishability and that an N/A would have lost it. Both are false — two of
+the three `indistinguishable_pairs` are pairs of **artifacts**, not of states,
+and `messages.yaml` `completeness` plus `examples/vectors.yaml` `D-0001` /
+`D-0004` / `D-0005` already hold the finding. The attack's suggested precedent
+held: **`rfc-9741` treated its implementation note as an algorithm in all five
+places, and four more sibling CBOR records declare state-machine N/A on the
+ground that their only stateful process is parsing** — including `rfc-8949`, for
+the very decode §2 loops over. The file stays for exactly one thing with no other
+home: the **paused** state and the absent timeout on a suspended decoder, which
+is a denial of service the document's only `MUST` does not reach. This record is
+the lane's outlier and now says so.
+
+**2. Cut 3's option-1 claim: the attack FAILED, and the claim is now on better
+evidence.** The question was whether RFC 9804 §7.1's advanced transport admits a
+sequence of top-level `c-sexp`s, which would weaken "not appendable". It does
+not: §7.1's start production is `sexp = *whitespace value *whitespace`, **exactly
+one `value`** — so *both* RFC 9804 transports are one-item grammars and the trade
+is firmer than pass 1 stated. What *was* wrong is a detail of ground 1, now
+narrowed in place: `verbatim = decimal ":" *OCTET` is unbounded as ABNF, so
+truncation of a bare top-level atom is caught by the length-prefix **semantics**
+rather than by the grammar, and "fails the grammar" should read "fails RFC 9804's
+definition of `verbatim`". Pass 1 read `canonical.abnf` whose own header says it
+is **"NOT SELF-CONTAINED"**; pass 2 read §7.1 as well, so the claim is now
+`[verified]` in-library rather than resting on an open grammar.
+
+**3. The vacuity claim about §6.3's two `SHOULD`s: OVERTURNED.** §7 defect 1,
+rewritten. The attack's framing was right: *deferred* is the correct word for
+`rfc-8742#R-0055`, and `rfc-8742#R-0057` is not even deferred — it resolves to
+its own third case, universally, at publication. Pass 1 had the defeating premise
+in its own sentence. And RFC 6838's registration-template rules, which the attack
+proposed testing the claim against, **cannot be tested from this repository**:
+RFC 6838 is not a record here and is not cached, which is itself the reason the
+strong claim should not have been made.
+
+**The three refutations pass 1 made in §8: all three CONFIRMED.** Specifically:
+
+- **The JSON-side whole-file-grammar claim is unsupported by anything this
+  library holds.** Confirmed by inventory: `records/ietf/rfc-7464` and
+  `records/ietf/rfc-8091` do not exist; `records/ietf/rfc-9804` does.
+  **One qualification pass 2 adds:** §2 *does* contain a sentence about the JSON
+  side — "(Note that, while the early object/array-only form of JSON was self
+  delimiting as well, this stopped being the case when simple values such as
+  single numbers were made valid JSON documents.)" — and **pass 1 dropped it**
+  (it is now in `normative.md`, marked `no id`). It does not rescue the refuted
+  claim, since self-delimitation of *items* is not a grammar for the *whole
+  file*, and it cuts against RFC 7464's lineage rather than for it. But it is the
+  only in-library statement about the JSON side's self-delimitation and the
+  refutation should have weighed it.
+- **The 61-row estimate and the eleven derivable fixtures.** Both re-checked:
+  61 entries, 16 vectors, and the document prints zero hex octets.
+
+**The DEC-002 / MD-3 provenance chain, checked as far as this repository allows.**
+`ARCH-0001` is not here, so the four option texts in §0 stay
+`[unverifiable-here]`. What *can* be checked is whether the library's own copies
+agree, and they do not everywhere:
+
+- **Options 2 and 4 are consistent** across the library — "CBOR + CDDL as
+  canonical; COSE for signed form" identically in eight records (two truncating
+  it at the semicolon without marking the truncation) and "Dual canonical (CBOR
+  and JSON) with a documented bijection" identically in four, including
+  `rfc-9679` and `rfc-9964`, which is where this lane's option-4 wording came
+  from. So Cut 4 does not inherit a paraphrase.
+- **The option-5 / MD-3 gloss has diverged, and two records quote the divergent
+  reading.** This lane writes "reduced CBOR, no IANA tags, COSE export only",
+  which matches `docs/extraction.md` — the only in-repository statement of it.
+  Five other records write "**CBOR data model**, no IANA tags, COSE export only",
+  two of them *inside quotation marks* (`records/ietf/rfc-9679`,
+  `records/ietf/draft-ietf-cbor-cde`), and two more write "COSE **as** export
+  only". *A reduced CBOR profile* and *the CBOR data model* are not the same
+  claim. **Reported, not repaired** — those records are at `profile: full`.
+  So the chain is sound where this lane's cuts rest on it (options 1–4), and the
+  one place it is not sound is the option-5 gloss, where this lane happens to
+  agree with the only in-repo source.
+- The full four-option list appears **only** in this lane's two records, so there
+  is no second copy to cross-check. Marked, not fixed.

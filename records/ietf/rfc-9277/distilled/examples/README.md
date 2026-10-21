@@ -88,8 +88,11 @@ first 8 to 12 bytes." — that holds only under **preferred serialization**, and
 this document requires nothing at all: it has **zero** BCP 14 keywords.
 `schema/prefix-spellings.derived.txt` enumerates all **30** well-formed
 definite-length spellings of the 12-byte label; **1** is 12 bytes long, **5**
-match the stated fingerprint, and **20** put a zero byte inside the first eight —
+match the stated fingerprint, and **25** put a zero byte inside the first eight —
 defeating §2.1's own advice about C strings even when the registrant followed it.
+*(`[correction]` 2026-10-20, pass 2: **20** here, re-derived as 25. The
+enumeration itself was right; six prose restatements of it, including this one,
+had drifted.)*
 
 **`D-0003` is the condition-(4) fixture.** Swapping the inner tag makes the file
 claim to be an Openswan configuration. It is well formed, it breaks no signature

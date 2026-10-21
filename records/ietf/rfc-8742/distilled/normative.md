@@ -25,14 +25,22 @@ RFC 9741 (3 in 28 KB).
 **Two further facts about the keyword count, both load-bearing, both stated once
 here.**
 
-1. **Two of the four are vacuous at publication, by the document's own
-   admission.** §6.3's two `SHOULD`s govern fragment identifiers for
-   `+cbor-seq`, defined by reference to the syntax "specified for
-   "application/cbor-seq"" — which §6.1 registers as **"Fragment identifier
-   considerations: N/A"**, and which §6.3 then confirms in a parenthesis: "(At
-   the time of publication of this document, there is no fragment identification
-   syntax defined for "application/cbor-seq".)" So half the document's normative
-   content points at a referent the same document declares not to exist.
+1. **One of the four is unsatisfiable at publication, by the document's own
+   admission — and it is a deferral, not a void.** §6.3's **first** `SHOULD`
+   (`rfc-8742#R-0055`) governs fragment identifiers for `+cbor-seq` by reference
+   to the syntax "specified for "application/cbor-seq"" — which §6.1 registers as
+   **"Fragment identifier considerations: N/A"**, and which §6.3 then confirms in
+   a parenthesis: "(At the time of publication of this document, there is no
+   fragment identification syntax defined for "application/cbor-seq".)" Note the
+   temporal qualifier: the rule binds if and when such a syntax is registered.
+   §6.3's **second** `SHOULD` (`rfc-8742#R-0057`) is a different matter — its
+   three cases collapse onto the third, "For cases not defined in +cbor-seq,
+   process as specified in "xxx/yyy+cbor-seq"", which with no `+cbor-seq` rules
+   is **universal and determinate at publication**. *(`[correction]` 2026-10-20,
+   pass 2: this item read "Two of the four are vacuous at publication … So half
+   the document's normative content points at a referent the same document
+   declares not to exist." Overturned; `design-notes.md` §7 defect 1 carries the
+   argument and the replacement defect.)*
 2. **The document uses lower-case `must` where an uppercase keyword would be
    expected, and §1.1 binds keywords "when, and only when, they appear in all
    capitals".** The **one sentence that states how to decode the format** is
@@ -83,6 +91,7 @@ here.**
 - (§1) "CBOR Sequences can be consumed (and produced) incrementally without requiring a streaming CBOR parser that is able to deliver substructures of a data item incrementally (or a streaming encoder able to encode from substructures incrementally)."  *(`rfc-8742#R-0003`)*
 - (§1) "This document defines and registers the "application/cbor-seq" media type in the "Media Types" registry along with a Constrained Application Protocol (CoAP) Content-Format identifier."  *(`rfc-8742#R-0004`)*
 - (§1) "CBOR [RFC7049] defines the "+cbor" structured syntax suffix."  *(`rfc-8742#R-0005`)*
+- (§1) "Media type structured syntax suffixes [RFC6838] were introduced as a way for a media type to signal that it is based on another media type as its foundation."  *(**no id.** `[correction]` 2026-10-20, pass 2: dropped at pass 1, source lines 96–98. It is the sentence that states **what a structured syntax suffix is for**, which is the premise of §3's whole `SHOULD` test and of §6.3's registration, and it is the document's only characterisation of RFC 6838's mechanism — a reference this record classifies as informative-but-used-normatively in §7 defect 5. See `requirements.yaml` `verify_pass`)*
 - (§1) "This document defines and registers the "+cbor-seq" structured syntax suffix in the "Structured Syntax Suffix Registry"."  *(`rfc-8742#R-0006`)*
 
 ### §1.1. Conventions Used in This Document
@@ -107,6 +116,7 @@ cannot report its own completeness (`rfc-8742#R-0009`, `rfc-8742#R-0013`,
 - (§2) "(If one is desired, CBOR encoding an array of the CBOR data model values being encoded, employing either a definite or an indefinite length encoding, as a single CBOR data item may actually be the more appropriate representation.)"  *(`rfc-8742#R-0014`)*
 - (§2) "CBOR Sequences, unlike JSON Text Sequences [RFC7464], do not use a marker between items."  *(`rfc-8742#R-0015`)*
 - (§2) "This is possible because CBOR-encoded data items are self delimiting and the end can always be calculated."  *(`rfc-8742#R-0016`)*
+- (§2) "(Note that, while the early object/array-only form of JSON was self delimiting as well, this stopped being the case when simple values such as single numbers were made valid JSON documents.)"  *(**no id.** `[correction]` 2026-10-20, pass 2: dropped at pass 1, source lines 136–138, and it is the **only sentence in §2 that pass 1 did not extract** — §2 otherwise runs `rfc-8742#R-0008` to `#R-0025` with nothing skipped. It matters beyond completeness: it is the only statement **in either lane record** about the JSON side's self-delimitation, and `design-notes.md` §8 refutes the summary's "a JSON text sequence … has a grammar for the whole file" precisely on the ground that nothing in this library speaks to the JSON side. This sentence does — and it cuts the other way, saying JSON *lost* self-delimitation. It does not rescue the refuted claim, since self-delimitation of items is not a whole-file grammar, but it is the evidence the refutation should have weighed and did not. See `requirements.yaml` `verify_pass`)*
 - (§2) "Decoding a CBOR Sequence works as follows:"  *(`rfc-8742#R-0017`)*
 - (§2) "If the CBOR Sequence is an empty sequence of bytes, the result is an empty sequence of CBOR data model values."  *(`rfc-8742#R-0018`)*
 - (§2) "Otherwise, one must decode a single CBOR data item from the bytes of the CBOR Sequence and insert the resulting CBOR data model value at the start of the result of repeating this decoding process recursively with the remaining bytes."  *(`rfc-8742#R-0019` — LOWER-CASE `must`: the one sentence that states how to decode the format carries no BCP 14 force)*
@@ -278,9 +288,9 @@ Table 1, verbatim (source lines 326–332):
 ### §6.3. Structured Syntax Suffix
 
 - (§6.3) "IANA has registered the "+cbor-seq" structured syntax suffix in accordance with [RFC6838] as follows:"  *(`rfc-8742#R-0054`)*
-- (§6.3) "Fragment identifier considerations: The syntax and semantics of fragment identifiers specified for +cbor-seq SHOULD be the same as that specified for "application/cbor-seq"."  *(`rfc-8742#R-0055` — **BCP 14 SHOULD — 3 of 4, and vacuous: see `rfc-8742#R-0048` and `rfc-8742#R-0056`**)*
+- (§6.3) "Fragment identifier considerations: The syntax and semantics of fragment identifiers specified for +cbor-seq SHOULD be the same as that specified for "application/cbor-seq"."  *(`rfc-8742#R-0055` — **BCP 14 SHOULD — 3 of 4, and DEFERRED: unsatisfiable at publication, binding if and when a syntax is registered. See `rfc-8742#R-0048` and `rfc-8742#R-0056`.** `[correction]` 2026-10-20, pass 2: this annotation read "and vacuous")*
 - (§6.3) "(At the time of publication of this document, there is no fragment identification syntax defined for "application/cbor-seq".)"  *(`rfc-8742#R-0056`)*
-- (§6.3) "The syntax and semantics for fragment identifiers for a specific "xxx/yyy+cbor-seq" SHOULD be processed as follows:"  *(`rfc-8742#R-0057` — **BCP 14 SHOULD — 4 of 4, and vacuous for the same reason**)*
+- (§6.3) "The syntax and semantics for fragment identifiers for a specific "xxx/yyy+cbor-seq" SHOULD be processed as follows:"  *(`rfc-8742#R-0057` — **BCP 14 SHOULD — 4 of 4, and NOT vacuous: its three cases collapse onto `rfc-8742#R-0060`, which is universal and determinate at publication.** `[correction]` 2026-10-20, pass 2: this annotation read "and vacuous for the same reason"; see `design-notes.md` §7 defect 1)*
 - (§6.3) "For cases defined in +cbor-seq, if the fragment identifier resolves per the +cbor-seq rules, then process as specified in +cbor-seq."  *(`rfc-8742#R-0058`)*
 - (§6.3) "For cases defined in +cbor-seq, if the fragment identifier does not resolve per the +cbor-seq rules, then process as specified in "xxx/yyy+cbor-seq"."  *(`rfc-8742#R-0059`)*
 - (§6.3) "For cases not defined in +cbor-seq, process as specified in "xxx/yyy+cbor-seq"."  *(`rfc-8742#R-0060`)*
@@ -348,3 +358,33 @@ The §6.3 structured syntax suffix registration template, verbatim and complete 
 - **No test vector is quoted here, because the document prints none.** It prints
   three CDDL fragments, two diagnostic-notation lines and one table, and **not
   one hex octet.** See `examples/README.md`.
+
+### `[correction]` 2026-10-20 — two statements pass 1 dropped
+
+Pass 1 reported this file as 63 spans over 61 requirements with nothing dropped
+but the narrative, and the sentence above accounted for §1's motivation
+paragraph. A sentence-level coverage sweep of the whole source at pass 2 — mark
+every character covered by some requirement `text`, then read every uncovered
+run of 70 characters or more — found **two statements that are neither narrative
+nor accounted for**, and both are now bullets above marked **no id**: §1's "Media
+type structured syntax suffixes [RFC6838] were introduced as a way for a media
+type to signal that it is based on another media type as its foundation."
+(source 96–98) and **§2's** "(Note that, while the early object/array-only form
+of JSON was self delimiting as well, …)" (source 136–138). The second is the only
+sentence of §2 the extraction missed, and it is the only statement in this lane
+about the JSON side's self-delimitation. Everything else the sweep surfaced is
+declared: §1.1's BCP 14 boilerplate (deliberately unquoted, see the header), the
+CDDL fragments and registration templates held by line range in `schema/`, Table
+1, the references and the author's address. No id was minted: ids are
+append-only and `requirements.yaml` asserts source order with no gaps.
+`requirements.yaml` `verify_pass` holds the list.
+
+**One difference from the sibling, recorded because it is a lane inconsistency
+rather than a defect in either record.** This record extracts **no** Abstract
+statement — its 11 locators start at §1 — while `records/ietf/rfc-9277` gives its
+Abstract an entry of its own. Both choices are defensible for
+an abstract that restates the body; the two records in one lane making different
+ones is worth a reader knowing before comparing their counts. (That record's
+Abstract entry is its **first** requirement, at locator `Abstract`; its id is not
+spelled here because its bare form collides with this record's own first id and
+`bin/validate` warns on exactly that.)

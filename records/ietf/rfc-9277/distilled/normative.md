@@ -83,6 +83,7 @@ is every sentence that makes a claim, states a scope or defines a term.)*
 - (§1) "In the media type registration template [RFC6838], a magic number is asked for, if available, as is a file extension."  *(`rfc-9277#R-0003`)*
 - (§1) "A challenge for the file(1) command is often that it can be confused by recognizing the overall encoding but not the content being encoded."  *(`rfc-9277#R-0004`)*
 - (§1) "For instance, an Android Package Kit APK (as used to transfer and store an application) may be identified as a ZIP file."  *(`rfc-9277#R-0005`)*
+- (§1) "Additionally, both OpenOffice and MSOffice files are ZIP files of XML files; the identification may stop at identifying them as ZIP files."  *(**no id.** `[correction]` 2026-10-20, pass 2: dropped at pass 1, source line 118/119. It is not history and not narrative — it is the **generalisation** of the APK case, and so the strongest form of the §1 argument that `design-notes.md` §9 uses to replace the `R-O-03` framing. See `requirements.yaml` `verify_pass`)*
 - (§1) "As CBOR becomes a more and more common encoding for a wide variety of artifacts, identifying them as just "CBOR" is probably not sufficient."  *(`rfc-9277#R-0006`)*
 - (§1) "This document provides a way to encode a magic number into the beginning of a CBOR format file."  *(`rfc-9277#R-0007`)*
 - (§1) "As a CBOR format may use a single CBOR data item or a CBOR sequence of data items [RFC8742], two possible methods of enveloping data are presented; a CBOR Protocol designer will specify one."  *(`rfc-9277#R-0008`)*
@@ -90,6 +91,7 @@ is every sentence that makes a claim, states a scope or defines a term.)*
 - (§1) "This document also gives advice to designers of CBOR Protocols on choosing one of these mechanisms for identifying their contents."  *(`rfc-9277#R-0010`)*
 - (§1) "This advice is informative."  *(`rfc-9277#R-0011` — **the disclaimer that governs the only guidance on the one choice the document makes load-bearing**)*
 - (§1) "A third method is also proposed by which a CBOR format tag is prepended to identify non-CBOR files."  *(`rfc-9277#R-0012`)*
+- (§1) "Further information on this method appears in Appendix D because it is not about identifying media types containing CBOR-encoded data items."  *(**no id.** `[correction]` 2026-10-20, pass 2: dropped at pass 1, source line 136/137. This is the **one sentence in the document that reconciles `rfc-9277#R-0008`'s "two possible methods" with `rfc-9277#R-0012`'s "third method"** — it says why the third is appendicised and scopes the count of two to media types containing CBOR. It is therefore load-bearing for `design-notes.md` §9's refutation that there are three envelope methods and not two, and the record made that refutation without it. See `requirements.yaml` `verify_pass`)*
 - (§1) "This includes a simple way to derive a magic number for content-formats as defined in [RFC7252], even if the file is not in CBOR form."  *(`rfc-9277#R-0013`)*
 - (§1) "Examples of CBOR Protocols currently under development include Concise Software Identification Tags [CoSWID] and Entity Attestation Tokens [EAT]."  *(`rfc-9277#R-0014`)*
 - (§1) "CBOR Object Signing and Encryption (COSE) itself [RFC8152] is considered infrastructure."  *(`rfc-9277#R-0015` — **COSE is not a CBOR Protocol** — decisive for the MD-3 mapping)*
@@ -164,7 +166,7 @@ per kind of object, from IANA.**
 - (§2.2.1) "To construct an example without registering a new tag, we use the Content-Format ID assigned for application/senml+cbor (112) [RFC8428] of the "CoAP Content-Formats" registry [IANA.CORE-PARAMETERS])."  *(`rfc-9277#R-0056` — **an unbalanced parenthesis**, carried verbatim)*
 - (§2.2.1) "Using the technique described in Appendix B, this translates into the tag TN(112) = 1668546929."  *(`rfc-9277#R-0057`)*
 - (§2.2.1) "With this tag, the SenML-CBOR pack [{0: "current", 6: 3, 2: 1.5}] would be enveloped as follows (in diagnostic notation):"  *(`rfc-9277#R-0058` — and its map keys are **not** in RFC 8949 §4.2.1 order)*
-- (§2.2.1) "At the representation level, the unique fingerprint for application/"  *(`rfc-9277#R-0081`)*
+- (§2.2.1) "At the representation level, the unique fingerprint for application/"  *(`rfc-9277#R-0059` — `[correction]` 2026-10-20, pass 2: this bullet was labelled `rfc-9277#R-0081` at pass 1. R-0081 is the **§2.3.1** half of the same sentence, whose text is byte-identical, so no text check and no locator check could see it; only resolving the id back to its own entry does. The two duplicate-text groups in this record are the only places a wrong id can hide from a text comparison, and both were wrong — see `requirements.yaml` `verify_pass`)*
 - (§2.2.1) "senml+cbor is composed of the 8 bytes d9d9f7da63740171 hex, after which the unadorned CBOR data (81... for the SenML data) is appended."  *(`rfc-9277#R-0060`)*
 
 The §2.2.1 envelope in diagnostic notation and in hex, verbatim and complete (source lines 277–295):
@@ -521,7 +523,8 @@ The Appendix B allocation, the TN formula and its aside, verbatim **with the `|`
 - (Appendix B.1) "The "CoAP Content-Formats" registry [IANA.CORE-PARAMETERS] defines content formats that can be used as examples:"  *(`rfc-9277#R-0166`)*
 - (Appendix B.1) "As discussed in Section 2.2.1, Content-Format ID 112 represents the application/senml+cbor media type (no parameters)."  *(`rfc-9277#R-0167`)*
 - (Appendix B.1) "The corresponding tag number is TN(112) = 1668546929."  *(`rfc-9277#R-0168`)*
-- (Appendix B.1) "The following CDDL snippet can be used to identify application/"  *(`rfc-9277#R-0174`)*
+- (Appendix B.1) "The following CDDL snippet can be used to identify application/"  *(`rfc-9277#R-0169` — `[correction]` 2026-10-20, pass 2: this bullet was labelled `rfc-9277#R-0174` at pass 1, which is the **second** occurrence of the same sentence, eight bullets below. The text is byte-identical, so the mis-join was invisible to every check in `bin/`)*
+- (Appendix B.1) "senml+cbor representations:"  *(**no id.** `[correction]` 2026-10-20, pass 2: the second half of `rfc-9277#R-0169`'s sentence, cut at the source's own line-end break after "application/" at source line 807/808, was never extracted at pass 1 — the only unpaired break half in this record besides `rfc-9277#R-0147`'s. Recorded here rather than given an id, because ids are append-only and this record's `requirements.yaml` asserts source order with no gaps. See `requirements.yaml` `verify_pass`)*
 - (Appendix B.1) "Note that a byte string is used as the type of the tag content because a media type representation in general can be any byte string."  *(`rfc-9277#R-0170` — **contradicts Appendix B's "Exceptionally" rule for the document's own §2.2.1 example**)*
 - (Appendix B.1) "Content-Format ID 272 represents the application/missing-"  *(`rfc-9277#R-0171`)*
 - (Appendix B.1) "blocks+cbor-seq media type, which is a CBOR sequence [RFC9177]."  *(`rfc-9277#R-0172`)*
@@ -570,6 +573,7 @@ The Appendix C Openswan label in diagnostic notation and in hex, verbatim and co
 - (Appendix D) "This method prepends a CBOR data item to the Non-CBOR data; this data item is called the "header" and, similar to the Labeled CBOR-Sequence label, consists of two nested tags around a constant byte string for a total of 12 bytes."  *(`rfc-9277#R-0184`)*
 - (Appendix D) "The outer tag is the CBOR-Labeled Non-CBOR Data tag, 55801."  *(`rfc-9277#R-0185`)*
 - (Appendix D) "As with CBOR Tag Wrapped, the use of a 4-byte tag is encouraged that encodes without zero bytes."  *(`rfc-9277#R-0186`)*
+- (Appendix D) "The tag content is a 3-byte CBOR byte string containing 0x42_4F_52 ('BOR' in diagnostic notation)."  *(**no id.** `[correction]` 2026-10-20, pass 2: dropped at pass 1, source line 881/882. It is numbered item **3** of Appendix D's own three-item header structure, and items 1 and 2 are `rfc-9277#R-0185` and `rfc-9277#R-0186` — so the structure was extracted two-thirds complete, and `messages.yaml`'s `byte-string head and constant content` field had no statement of its own to cite. **It also carries a source defect of its own:** the constant is written `0x42_4F_52` here and `0x42_4f_52` in §2.3 and in Appendix D's own next-but-one paragraph — the same class as `0x6374ffff` against `0x6374FFFF` in `design-notes.md` §7 defect 8)*
 - (Appendix D) "The outer tag in the label identifies the file as being prefixed by a Non-CBOR data label and does so with all the desirable properties explained in Section 3.4.6 of [STD94]."  *(`rfc-9277#R-0187`)*
 - (Appendix D) "The inner tag in the label identifies which Non-CBOR Protocol is used."  *(`rfc-9277#R-0188`)*
 - (Appendix D) "The actual Non-CBOR Protocol data then follow directly appended to the CBOR representation of the header."  *(`rfc-9277#R-0189`)*
@@ -580,8 +584,10 @@ The Appendix C Openswan label in diagnostic notation and in hex, verbatim and co
 
 - (Appendix D.1) "Content-Format ID 432 represents the application/td+json media type (no parameters)."  *(`rfc-9277#R-0192`)*
 - (Appendix D.1) "The corresponding tag number is TN(432) = 1668547250."  *(`rfc-9277#R-0193`)*
+- (Appendix D.1) "The following CDDL snippet can be used to identify a CBOR-Labeled Non-CBOR data for application/td+json representations:"  *(**no id.** `[correction]` 2026-10-20, pass 2: dropped at pass 1, source lines 918–919. Note the wording: it is **not** Appendix B.1's "The following CDDL snippet can be used to identify application/…" but a distinct sentence naming the CBOR-Labeled Non-CBOR Data method, so it is not covered by `rfc-9277#R-0169` or `rfc-9277#R-0174`)*
 - (Appendix D.1) "Content-Format 11050 represents the application/json media type in deflate content-coding."  *(`rfc-9277#R-0194`)*
 - (Appendix D.1) "The corresponding tag number is TN(11050) = 1668557910."  *(`rfc-9277#R-0195`)*
+- (Appendix D.1) "The following CDDL snippet can be used to identify a CBOR-Labeled Non-CBOR data for application/json representations compressed in deflate content-coding:"  *(**no id.** `[correction]` 2026-10-20, pass 2: dropped at pass 1, source lines 928–930. It is the sentence that puts a **non-identity content-coding** inside the document's own worked examples, which is the witness for `design-notes.md` §7 defect 4 — so the record argued that defect without quoting its own evidence)*
 
 The `td-json-header` CDDL snippet, verbatim (source lines 923–923):
 
@@ -615,3 +621,51 @@ The `json-deflate-header` CDDL snippet, verbatim (source lines 934–934):
   (`rfc-9277#R-0017`), because it is the out-of-band substitute failing at
   exactly the job this document gives to in-band bytes.
 - **No BCP 14 boilerplate, because there is none.** See the header.
+
+### `[correction]` 2026-10-20 — what pass 2 found missing, and where it put it
+
+Pass 1 reported this file as 195 spans against 195 requirement entries, with no
+statement dropped. A sentence-level coverage sweep of the whole source at pass 2
+— mark every character covered by some requirement `text`, then read every
+uncovered run of 60 characters or more — found **nine statements with no entry of
+their own**. Six are now bullets above, marked **no id**; three are reachable
+only through a fenced block and are listed here. Nothing was renumbered: ids are
+stable forever, and this record's `requirements.yaml` asserts source order with
+no gaps, so a statement found at pass 2 cannot be given the next free number
+without breaking that claim. `requirements.yaml` `verify_pass` holds the full list.
+
+- **§4.2 repeats §4.1 almost word for word and was re-extracted only in part.**
+  §4.1 carries twelve entries (`rfc-9277#R-0094`–`R-0105`); §4.2 carries four
+  (`R-0106`–`R-0109`). The eight that are not re-extracted are byte-identical to
+  §4.1's — except **one**, which is not: "However, the following 16-bit
+  big-endian value **0xf9_xx** is not a valid second sequence according to
+  [RFC2781]." against `rfc-9277#R-0101`'s **0xf8_xx**. That is a materially
+  different statement about a different tag and it has no entry. It is in this
+  file, inside the complete §4.2 registry block above, and in
+  `schema/registrations.txt` region R02 — so it is held, not lost, and only the
+  requirement-level index is short.
+- **One sentence of the Appendix A.2 aside.** "The file would contain not just
+  the End-Entity (EE) certificate, but also any subordinate certification
+  authorities (CAs) needed to validate the EE." sits between
+  `rfc-9277#R-0143` and `rfc-9277#R-0144` and has no entry of its own. It is in
+  the aside block above.
+- **And one unpaired break half inside the aside.** `rfc-9277#R-0147` ends at
+  the source's line-end break — "…their PEM-encoded private key and their PEM-"
+  — and the remainder, "encoded certificate in the same file.", was never
+  extracted. With `rfc-9277#R-0169`'s missing half (above) these are the only
+  two of the thirteen in-body word breaks whose halves do not pair.
+
+**Not counted above, recorded so the shape is visible.** The document re-states
+whole paragraphs verbatim in two places, and in each case only the first
+occurrence has entries: seven of §4.2's eight repeated sentences are
+byte-identical to §4.1's, and **two of Appendix D's paragraphs are byte-identical
+to §2.3's** — "Specifically, it does not appear to conflict with any known file
+types, and it is not valid Unicode in any Unicode encoding."
+(`rfc-9277#R-0070`, locator §2.3) and the two halves of "The inner tag content is
+a constant byte string that is represented as 0x43_42_4f_52, …"
+(`rfc-9277#R-0072`/`R-0073`, locator §2.3). Those statements are held; it is the
+**locator** that is short, because an entry filed at §2.3 does not tell a reader
+that Appendix D asserts the same thing of a different tag. Sixteen requirement
+texts in this record occur twice in the source, and only two of the sixteen were
+given one id per occurrence — the two in `verify_pass`, which is why they were
+also the two the wrong ids hid in.
