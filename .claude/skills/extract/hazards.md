@@ -243,6 +243,29 @@ When you fix a parser, **grep the records for every number that parser
 produced** before closing the pass. And prefer to state a count *with the method
 that produced it*, so a later pass can tell a fossil from a lie.
 
+**Measured, 2026-10-21 — and it over-reported exactly as #7 says.** Run over
+every record declaring FX-1 artifacts, the check flagged **9** mismatches, then
+**5**, then **0** as it was scoped. All of them were the checker's fault, and
+the three scoping traps are worth inheriting:
+
+- **"7 of 21 requirements cited" states the CITED count as 7.** A pattern that
+  matches a bare number before `requirements` grabs the 21 as well. The idiom
+  also appears as `222 of the 251 requirement ids` and `74 of the 129` — note
+  the `the`, which defeats a naive `(?<!of )` guard.
+- **A count may be scoped to one section, not the file.** `rfc-9682` says "all
+  35 requirement ids *the reconciliation* cites"; the file as a whole cites 87.
+  Both are right.
+- **Count the key the claim names.** `rfc-9943` says "80 `constrained_by` links
+  to 54 requirement ids" and that is exact; a file-wide regex returns 55,
+  because one id also appears under a `requirements:` key and in prose.
+  `rfc-9580`'s "413 of 421 wired, 8 not wired with a reason" likewise cites all
+  421, since the 8 are named where they are excused.
+
+So the fossil class is, so far, **confined to the two counts in `rfc-8392`**
+that `9511f10` falsified. The check is still worth re-running after any future
+parser fix — but resolve ids from the parsed structure under the key the prose
+names, never with a file-wide regex.
+
 ## 7. Small traps that cost real time
 
 - **`splitlines()` splits on form feeds.** Use `split("\n")`. On a paginated
