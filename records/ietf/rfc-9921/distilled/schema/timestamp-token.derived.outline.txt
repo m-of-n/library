@@ -1,0 +1,83 @@
+rfc-9921 Appendix A -- the structure of the printed TimeStampToken
+=================================================================
+DERIVED -- not verbatim. RFC 9921 prints no ASN.1 module and its own value
+dumps are truncated with "[...]" (source lines 592 and 835). The outline below
+was produced BY DECODING the 5453 octets of Appendix A.1's hex with a DER
+parser written for this pass -- no ASN.1, CMS, X.509 or cryptography library
+was used -- and every offset and length is the decoder's output, not a reading
+of the prose. The filename carries `.derived.` as docs/extraction.md requires.
+
+The grammar these octets obey belongs to RFC 5652 (CMS, STD 70) and RFC 3161,
+NEITHER OF WHICH THIS LIBRARY HOLDS. So the names in the left column are this
+extraction's identification of the structures, checked against the OIDs the
+bytes carry, and not quotations of a specification we can cite from here.
+
+Appendix A.2's token has the same shape, the same certificate chain and the
+same lengths; it differs in TSTInfo.messageImprint, TSTInfo.serialNumber,
+TSTInfo.genTime, the signingTime attribute, the messageDigest attribute and
+the signature. Both are 5453 octets.
+
+WHAT 5453 OCTETS ARE MADE OF (A.1; A.2 is identical to the octet)
+----------------------------------------------------------------
+  ContentInfo                               5453   SEQUENCE, 4-octet header
+    contentType                                11   OID 1.2.840.113549.1.7.2
+                                                    (id-signedData)
+    content [0] SignedData                   5434
+      version                                   3   INTEGER 3
+      digestAlgorithms                         15   SET of 1: OID
+                                                    2.16.840.1.101.3.4.2.3
+                                                    (sha-512)
+      encapContentInfo                        391
+        eContentType                           13   OID 1.2.840.113549.1.9.16.1.4
+                                                    (id-ct-TSTInfo)
+        eContent [0] OCTET STRING             367   the TSTInfo DER
+      certificates [0]                       4108   TWO certificates:
+                                                      2053 octets (TSA signing)
+                                                      2051 octets (Root CA)
+      signerInfos                             910   SET of 1 SignerInfo
+        version                                 1   INTEGER 1
+        sid issuerAndSerialNumber             163
+        digestAlgorithm                        13   sha-512
+        signedAttrs [0]                       184   4 attributes (below)
+        signatureAlgorithm                     13   OID 1.2.840.113549.1.1.1
+                                                    (rsaEncryption)
+        signature                             512   4096-bit RSA
+
+  TSTInfo (367 octets, inside eContent)
+    version                                     1   INTEGER 1
+    policy                                      4   OID 1.2.3.4.1
+    messageImprint                             49
+      hashAlgorithm                            13   OID 2.16.840.1.101.3.4.2.1
+                                                    (sha-256)
+      hashedMessage                            32   the digest
+    serialNumber                                4   INTEGER 12096870
+    genTime                                    15   GeneralizedTime
+                                                    20250829074546Z
+    ordering                                    1   BOOLEAN TRUE
+    tsa [0]                                   273   GeneralName [4] directoryName,
+                                                    8 RDNs
+    (NO accuracy, NO nonce, NO extensions)
+
+  SignerInfo signedAttrs
+    contentType          OID 1.2.840.113549.1.9.3  -> id-ct-TSTInfo
+    signingTime          OID 1.2.840.113549.1.9.5  -> UTCTime 250829074546Z
+    signingCertificate   OID 1.2.840.113549.1.9.16.2.12 (id-aa-signingCertificate)
+                         ESSCertID certHash = SHA-1 of the signing certificate
+    messageDigest        OID 1.2.840.113549.1.9.4  -> SHA-512 of eContent
+
+  INTERNAL CONSISTENCY CHECKS RUN IN THIS PASS, both tokens:
+    messageDigest attribute == sha512(eContent)                       PASS
+    signingCertificate certHash == sha1(certificates[0])              PASS
+    outer SEQUENCE length + header == buffer length                   PASS
+    TSTInfo.messageImprint.hashedMessage == the printed OCTET STRING   PASS
+  WHAT WAS NOT CHECKED, and cannot be from this document: the RSA signature
+  over the signedAttrs, which needs the TSA public key -- it is in
+  certificates[0], but verifying the chain needs a trust anchor and RFC 5652's
+  rules, and neither is here.
+
+  FIELDS THE TWO FIGURES SHOW AND THE TOKEN DOES NOT HAVE: both figures draw a
+  `nonce` crossing from the signer to the TSA (source lines 186 and 213), and
+  NEITHER appendix TimeStampReq carries a nonce field, so neither TSTInfo can
+  echo one. Measured, not inferred: TimeStampReq is
+  SEQUENCE { INTEGER 1, MessageImprint, BOOLEAN TRUE } in both appendices --
+  version, messageImprint, certReq -- and TSTInfo has no nonce component.

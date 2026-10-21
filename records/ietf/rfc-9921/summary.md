@@ -112,18 +112,62 @@ Two notes stand in for the empty table:
 
 ## Artifacts in this record
 
+**FX-1 pass 1 (extract) landed 2026-10-20.** `record.yaml` declares
+`standard: FX-1` and **no `profile`**: the artifact set is complete, passes 2
+(verify) and 3 (cross-check) have not run, and no `reviewed_by` is signed.
+Per-artifact coverage lines are in `record.yaml`; `distilled/README.md` indexes
+them.
+
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata, and the locator-by-locator warrant for each `bears_on` id |
+| `record.yaml` | metadata, the locator-by-locator warrant for each `bears_on` id, and the `distillation` block |
 | `summary.md` | this document |
+| `distilled/normative.md` | 29 verbatim regions, each with its source line range and its own sha256. Measured coverage: 0 statement-bearing lines of §1–Appendix A.2 uncovered |
+| `distilled/requirements.yaml` | 109 entries, 11 stated and 98 inferred; `source_keyword_count` and `extracted_keyword_count` both **8** and agreeing; 109/109 texts verbatim with **0 relaxations** |
+| `distilled/schema/` | 1 verbatim capture of the document's twelve printed renderings, plus 4 derived files — RFC 9921 ships **no** CDDL, ABNF, ASN.1 or JSON Schema |
+| `distilled/messages.yaml` | 13 structures, 48 fields, every layout produced by **decoding** the appendix bytes |
+| `distilled/protocol.{yaml,md}` | **applicable**: 4 roles, 4 flows, 20 steps, a Mermaid diagram per flow |
+| `distilled/state-machine.yaml` | **applicable**: 5 machines, 28 states, 23 transitions, 10 error states |
+| `distilled/examples/` | 15 vectors and the two 5453-octet tokens as `.hex` fixtures |
+| `distilled/design-notes.md` | DEC-002 both ways, R-M-12 from the value side, R-O-05's adopt and hazard, the six `canonical-encoding` conditions, MD-3 mapped and then five cuts against it, 11 source defects, 7 open questions |
 
-**No `distilled/`, deliberately.** Settled 2026-10-20 (library#39 Tier 2): the
-record was unblocked from `bears_on: []` by reading the source, and the
-findings fit in `record.yaml`'s comment block. If FX-1 is ever owed here the
-work is larger than the document's 8 BCP 14 keywords suggest, because
-`normative.md` would have to decide how much of RFC 3161 and RFC 5652 counts as
-in-scope — and **neither is in this library**, which is the first thing the
-extraction would have to report.
+### What the extraction changed about this summary's own claims
+
+**Nothing above was falsified; two things were overtaken and three were
+sharpened.**
+
+- **Overtaken: "No `distilled/`, deliberately."** That paragraph stood here
+  until 2026-10-20 and is now wrong — the extraction ran. Its *warning* was
+  right about the reason, though: `normative.md` did have to decide how much of
+  RFC 3161 and RFC 5652 counts as in scope, and the answer is recorded as a
+  **boundary** in `protocol.yaml` and `state-machine.yaml` (every TSA-side step
+  and every CMS validation step is marked as crossing into a document this
+  library does not hold) rather than as content.
+- **Overtaken: Appendix A as a fixture.** This summary said the example token
+  was from a public demo TSA "and it expires". It **has expired**: the signing
+  certificate's `notAfter` is **2026-03-11 01:57:39Z**, one month after this
+  RFC published. `examples/README.md` says which tests the bytes are still good
+  for (parsing and digest agreement) and which they are not (path validation,
+  acceptance).
+- **Sharpened: the 5453 octets.** Re-measured from the bytes: **75.26 %** of
+  the token is a two-certificate X.509 chain and **6.73 %** is the timestamp
+  assertion; the token is **98.09 %** of the whole 5559-octet tagged
+  `COSE_Sign1`, a ratio of **272.65 : 1** against the payload.
+- **Sharpened: §3.1.1's imprint over the head bytes.** Now **proved**, not
+  read: `sha256(0x58 0x40 ‖ signature)` reproduces the printed MessageImprint
+  byte for byte. And §3.1.2 is worse than this summary said — the `COSE_Sign`
+  preimage is the whole `signatures` array, 77 octets for a 64-octet signature,
+  **5 of them the per-signature *unprotected* header map**.
+- **Sharpened: "each mode has its own separate verification algorithm."**
+  Confirmed verbatim, and **neither algorithm is written down anywhere in the
+  document**: §4 is one sentence covering both modes.
+
+**New, and not in this summary before:** **Appendix A.2's MessageImprint does
+not reproduce.** The document's rule, its own §3.1.1 worked example and A.2
+disagree three ways and the disagreement resolves against A.2 — 207 candidate
+preimages assembled from the document's printed bytes produce none of the
+printed value. RFC Errata **9177** (status *Reported*, filed 2026-09-13) says
+the same. See `distilled/design-notes.md` D-1 and `examples/` `V-0011`.
 
 ## Limits
 

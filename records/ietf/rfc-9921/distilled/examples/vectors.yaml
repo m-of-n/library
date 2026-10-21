@@ -1,0 +1,487 @@
+record: rfc-9921
+reviewed_by: ""
+vector_count: 15
+source_version: "RFC 9921 (February 2026), Standards Track"
+source_digest: "ba1c4dbb7b4ea83f517418a9b8963085c0a8b5e5bea0c992089d215579b78f39"
+
+# RFC 9921 PRINTS FOUR DIGESTS AND THREE OF THEM REPRODUCE.
+#
+# That is the headline of this file, and the fourth is the one in the mode the
+# document's own Security Considerations warn about. §3.1.1, §3.1.2 and
+# Appendix A.1 reproduce BYTE FOR BYTE from the document's own printed inputs.
+# APPENDIX A.2's DOES NOT, and 207 candidate preimages assembled from the
+# document's printed bytes were tried before saying so. See V-0011 and
+# ../design-notes.md D-1.
+#
+# WHAT WAS DONE, AND WITH WHAT. A CBOR encoder/decoder (RFC 8949 §3 and
+# §4.2.1) and a DER parser, both written for this pass over `hashlib` alone.
+# NO CBOR, COSE, ASN.1, CMS, X.509 OR CRYPTOGRAPHY LIBRARY WAS USED, so a
+# shared library bug cannot hide here. SHA-256 and SHA-512 are hashlib's.
+#
+# WHAT COULD NOT BE DONE, STATED PLAINLY. Neither COSE signature can be
+# verified and neither timestamp token's RSA signature can be verified from
+# this document:
+#   - the COSE signer's public key appears NOWHERE in RFC 9921. `kid` is the
+#     two ASCII octets '11' and no COSE_Key is printed. The two signature
+#     values (A.1's f5f0f279..., A.2's 8eb33e4c...) are not in the COSE
+#     example corpus this library holds either.
+#   - the TSA's public key IS in the token (certificates[0]), but verifying
+#     the chain needs a trust anchor and RFC 5652's rules, and RFC 5652 and
+#     RFC 3161 are NOT IN THIS LIBRARY.
+# What WAS verified cryptographically is everything that needs no key: four
+# message digests, two CMS messageDigest attributes, two ESSCertID cert
+# hashes, and every length and offset in both tokens.
+#
+# PROVENANCE CONVENTION, as rfc-9964's and rfc-8392's vectors use it:
+#   source: printed - every byte of every value in the vector appears in RFC
+#                     9921 itself. `reproduced` says what this pass recomputed
+#                     from those bytes and whether it matched.
+#   source: derived - every byte is printed by the source, but the ASSERTION
+#                     the vector makes is this extraction's.
+# NOTHING HERE IS COMPUTED AND PRESENTED AS PRINTED.
+#
+# `locator` gives the section AND the exact line range in .cache/rfc-9921.txt,
+# plus `region_sha256`, the sha256 of that run of lines joined by "\n" with no
+# trailing newline, so any value here can be re-cut from the source without
+# trusting this file. The RFC hard-wraps its hex for display and the only
+# transformation applied is joining those lines; nothing else is altered.
+#
+# THE TWO 5453-OCTET TOKENS ARE IN SEPARATE FILES so this YAML stays readable
+# and so a harness can use them directly:
+#   a1-ttc-timestamp-token.hex  sha256(file) = a512c078ccfb7a42bf101e9cec863bbd1a15a80ec4ff32635188ce1e0cd2f274
+#                               sha256(bytes) = 025648cf7ed706fcc312baba119d3394ace8f80eb7eaaf6f58e1cb29653fd555
+#   a2-ctt-timestamp-token.hex  sha256(file) = 3bac4bf824fb94cd037b76eb2957376026cd7c7d1d4ba2cf32c4228cd4874ae6
+#                               sha256(bytes) = 5e1e0ade11fb869f1e9358c7b5b972edf31e3a9741d769c0fbe99936485f92bd
+# Each file is one line of lower-case hex plus a newline: `xxd -r -p` gives
+# the DER.
+#
+# NOT A CONFORMANCE FIXTURE. Both tokens come from a public demonstration TSA
+# and the signing certificate expired on 2026-03-11. V-0015 measures it; the
+# README says what it means.
+
+vectors:
+
+  - id: V-0001
+    name: "§3.1.1 sample COSE_Sign1 - the CTT input object"
+    locator: "§3.1.1, source lines 283-298"
+    region_sha256: "ffb0fa72a45568e35cd53c9525494e46b1c8fa569da8efb0d7948714af8ef733"
+    source: printed
+    notation: "CBOR diagnostic notation (RFC 8949 Appendix G)"
+    fields:
+      protected: "h'a10126' = {1: -7}, alg ECDSA 256"
+      unprotected: "{4: '11'}, kid"
+      payload: "'This is the content.' - 20 octets"
+      signature: "h'8eb33e4c...45cacb36' - 64 octets"
+    reproduced:
+      signature_octets: 64
+      payload_octets: 20
+      note: >-
+        The same 64-octet signature value is printed three times in the
+        document - §3.1.1 (lines 294-296), A.2's starting object (778-780) and
+        A.2's final object (1009-1011) - AND THE THREE PRINTINGS WRAP AT
+        DIFFERENT COLUMNS. All three were cut and compared: identical.
+    constrained_by:
+      - rfc-9921#R-0047
+
+  - id: V-0002
+    name: "§3.1.1 CTT MessageImprint - REPRODUCED, head included"
+    locator: "§3.1.1, source lines 300-321"
+    region_sha256: "d42e7a585db207cf9a4bd0a44117ad7eeae19b3e11532d35857d4e57362667cf"
+    source: printed
+    preimage_hex: "58408eb33e4ca31d1c465ab05aac34cc6b23d58fef5c083106c4d25a91aef0b0117e2af9a291aa32e14ab834dc56ed2a223444547e01f11d3b0916e5a4c345cacb36"
+    preimage_octets: 66
+    expected_sha256: "44c2419d131d53d55584b5dd33b788c24e551c6d44b1afc8b2b85e6954763b4e"
+    printed_imprint: "44C2419D131D53D55584B5DD33B788C24E551C6D44B1AFC8B2B85E6954763B4E"
+    reproduced:
+      match: true
+      note: >-
+        sha256(0x58 0x40 || signature) EQUALS the printed MessageImprint byte
+        for byte. This is the document's own claim and it holds: the CBOR HEAD
+        IS IN THE PREIMAGE. For contrast, sha256 of the bare 64 octets is
+        14da253852f84a2baaca99e4e8975c0c9af2ab617c01a636efe8d056832337e7,
+        which appears nowhere in the document.
+    constrained_by:
+      - rfc-9921#R-0049
+
+  - id: V-0003
+    name: "§3.1.1 MessageImprint as printed ASN.1"
+    locator: "§3.1.1, source lines 311-321"
+    region_sha256: "df8fa1ab65608bde42f868e556bf874ffa1e3794af2f0ff2f664460e2a29be2b"
+    source: printed
+    structure: "SEQUENCE { SEQUENCE { OID sha-256 (2 16 840 1 101 3 4 2 1), NULL }, OCTET STRING (32) }"
+    expected:
+      hash_algorithm_oid: "2.16.840.1.101.3.4.2.1"
+      hashed_message: "44c2419d131d53d55584b5dd33b788c24e551c6d44b1afc8b2b85e6954763b4e"
+    reproduced:
+      note: >-
+        The structure is printed as a value dump, not as DER, so there are no
+        octets to re-encode. The same shape was then MEASURED in DER inside
+        both appendix tokens: SEQUENCE(49) over AlgorithmIdentifier(15) and
+        OCTET STRING(32).
+    constrained_by:
+      - rfc-9921#R-0065
+
+  - id: V-0004
+    name: "§3.1.2 sample COSE_Sign - the multi-signer CTT input"
+    locator: "§3.1.2, source lines 328-349"
+    region_sha256: "79d6e4ee5e115a9f2b7c73b79f80d2daa11e5d287ba18af896ffbfcb7d3748ae"
+    source: printed
+    notation: "CBOR diagnostic notation"
+    fields:
+      protected: "h'' - an EMPTY bstr at the body level"
+      unprotected: "{} - the empty map"
+      payload: "'This is the content.'"
+      signatures: "one COSE_Signature: protected h'a10126', unprotected {4: '11'}, signature 64 octets"
+    reproduced:
+      signature_octets: 64
+      note: "The COSE_Sign signature value (e2aeafd4...) is printed once and nowhere reused."
+    constrained_by:
+      - rfc-9921#R-0051
+
+  - id: V-0005
+    name: "§3.1.2 CTT MessageImprint over the signatures array - REPRODUCED"
+    locator: "§3.1.2, source lines 351-379"
+    region_sha256: "5fb3df27039fa8e0dcf724a877a3b070063127fd77b7cb624957da443fef8f68"
+    source: printed
+    preimage_hex: "818343a10126a1044231315840e2aeafd40d69d19dfe6e52077c5d7ff4e408282cbefb5d06cbf414af2e19d982ac45ac98b8544c908b4507de1e90b717c3d34816fe926a2b98f53afd2fa0f30a"
+    preimage_octets: 77
+    expected_sha256: "803fada2912d6b7a833a27bd961cc05bc1cc164759b1c56f7aa771e4e21526f7"
+    printed_imprint: "803FADA2912D6B7A833A27BD961CC05BC1CC164759B1C56F7AA771E4E21526F7"
+    reproduced:
+      match: true
+      framing_octets: 13
+      unprotected_octets_in_preimage: 5
+      note: >-
+        REPRODUCED EXACTLY, and the composition is the finding: 77 octets of
+        preimage for a 64-octet signature. 13 octets are not signature, and 5
+        of those 13 are the per-signature UNPROTECTED map carrying `kid`. The
+        COSE signature does not cover the per-signature unprotected bucket, so
+        the TSA's digest commits to bytes the COSE signature leaves free.
+    constrained_by:
+      - rfc-9921#R-0053
+      - rfc-9921#R-0043
+
+  - id: V-0006
+    name: "Appendix A.1 TTC MessageImprint over the payload - REPRODUCED"
+    locator: "Appendix A.1, source lines 538-556"
+    region_sha256: "f9457b29bc550fedad0b47b1b29fc4a24ea3eeaca95488d08b6ee653e823c425"
+    source: printed
+    preimage_hex: "546869732069732074686520636f6e74656e742e"
+    preimage_ascii: "This is the content."
+    preimage_octets: 20
+    expected_sha256: "09e638d4aa95fd7271866203595303bce232f462a94d38e393773cd3aae3f6b0"
+    printed_imprint: "09E638D4AA95FD7271866203595303BCE232F462A94D38E393773CD3AAE3F6B0"
+    reproduced:
+      match: true
+      also_matches_embedded_imprint: true
+      note: >-
+        sha256 of the 20 CONTENT octets - no 0x54 head - equals the printed
+        TimeStampReq imprint AND the imprint embedded in the TSTInfo of the
+        token A.1 prints. §3.2's "This does not include the bstr wrapping --
+        only the payload bytes" is confirmed twice over, from the request side
+        and from the token side.
+    constrained_by:
+      - rfc-9921#R-0058
+      - rfc-9921#R-0101
+
+  - id: V-0007
+    name: "Appendix A.1 TimeStampReq"
+    locator: "Appendix A.1, source lines 544-556"
+    region_sha256: "e464d6a83786af98028e6b700a3ef23828de0678da8cf558642349782a72a9a2"
+    source: printed
+    structure: "SEQUENCE { INTEGER 1, MessageImprint, BOOLEAN TRUE }"
+    expected:
+      version: 1
+      imprint_algorithm: "sha-256"
+      imprint: "09e638d4aa95fd7271866203595303bce232f462a94d38e393773cd3aae3f6b0"
+      certReq: true
+      nonce: null
+    reproduced:
+      note: >-
+        certReq TRUE is why each token carries 4104 octets of certificates. The
+        nonce field is ABSENT although both figures draw a nonce crossing to
+        the TSA.
+    constrained_by:
+      - rfc-9921#R-0057
+
+  - id: V-0008
+    name: "Appendix A.1 TimeStampToken - 5453 octets, decoded and internally verified"
+    locator: "Appendix A.1, source lines 599-757 (hex inside the protected header)"
+    region_sha256: "0bd5ce91773442dfff6a4a325e3c9f579c3562dbf5a3a73946b62a60c92c2424"
+    source: printed
+    fixture_file: "a1-ttc-timestamp-token.hex"
+    octets: 5453
+    sha256: "025648cf7ed706fcc312baba119d3394ace8f80eb7eaaf6f58e1cb29653fd555"
+    expected:
+      contentType: "1.2.840.113549.1.7.2 (id-signedData)"
+      signedData_version: 3
+      digestAlgorithms: ["2.16.840.1.101.3.4.2.3 (sha-512)"]
+      eContentType: "1.2.840.113549.1.9.16.1.4 (id-ct-TSTInfo)"
+      eContent_octets: 367
+      certificates: [2053, 2051]
+      signerInfo_signature_octets: 512
+      tstinfo:
+        version: 1
+        policy: "1.2.3.4.1"
+        imprint_algorithm: "2.16.840.1.101.3.4.2.1 (sha-256)"
+        imprint: "09e638d4aa95fd7271866203595303bce232f462a94d38e393773cd3aae3f6b0"
+        serialNumber: 12096870
+        genTime: "20250829074546Z"
+        ordering: true
+        accuracy: null
+        nonce: null
+    reproduced:
+      outer_length_consistent: true
+      messageDigest_attribute_equals_sha512_of_eContent: true
+      sha512_of_eContent: "8831bbe259ac6314847a26804e155a6d04c485b43aa55d2dd4c6dd7f5943b5bd5a3dd24f05a17a2658ef65759ce4e0001f2b8ff99e38718044ab3784b3f174b6"
+      signingCertificate_certHash_equals_sha1_of_cert0: true
+      sha1_of_cert0: "916da3d860ecca82e34bc59d1793e7e968875f14"
+      embedded_imprint_equals_sha256_of_payload: true
+      note: >-
+        FOUR INTERNAL CHECKS, ALL PASS: the outer SEQUENCE length plus its
+        4-octet header equals the buffer exactly (5449 + 4 = 5453); the CMS
+        messageDigest signed attribute equals sha512 of the eContent; the
+        id-aa-signingCertificate ESSCertID certHash equals sha1 of
+        certificates[0]; and TSTInfo.messageImprint.hashedMessage equals
+        sha256('This is the content.'). THE RSA SIGNATURE WAS NOT CHECKED - see
+        the header of this file.
+    constrained_by:
+      - rfc-9921#R-0103
+      - rfc-9921#R-0064
+
+  - id: V-0009
+    name: "Appendix A.1 COSE_Sign1 - the TTC object, measured"
+    locator: "Appendix A.1, source lines 598-763"
+    region_sha256: "cefb431486d381714b531ff03ef035a973dbcbbcc87b422b685adc4f80d144a8"
+    source: derived
+    assertion: "the octet budget of a COSE object carrying one RFC 9921 header parameter"
+    measured:
+      tst_octets: 5453
+      tst_bstr_head: "59154d"
+      protected_map_octets: 5462
+      protected_field_octets: 5465
+      unprotected_field_octets: 5
+      payload_field_octets: 21
+      signature_field_octets: 66
+      whole_tagged_object_octets: 5559
+      token_share_percent: 98.09
+      token_to_payload_ratio: 272.65
+      protected_map_in_rfc8949_4_2_1_order: true
+    note: >-
+      THE MEASUREMENT THE RECORD EXISTS FOR. 5453 octets of ASN.1 DER against a
+      20-octet payload: 272.65 to 1, and 98.09 per cent of the whole object.
+      The protected map {1: -7, 269: h'...'} IS in RFC 8949 §4.2.1
+      deterministic order (01 before 19010d); the document neither requires
+      that nor remarks on it.
+    constrained_by:
+      - rfc-9921#R-0104
+
+  - id: V-0010
+    name: "Appendix A.2 starting COSE_Sign1 - before the timestamp"
+    locator: "Appendix A.2, source lines 769-782"
+    region_sha256: "443e7d2b74ff9f08c043cb6c5cb61a27ec38c2eb4faef9413064d8eccdbf5ee8"
+    source: printed
+    measured:
+      whole_tagged_object_octets: 98
+      protected_field_octets: 4
+      unprotected_field_octets: 5
+    reproduced:
+      identical_to_section_3_1_1_object: true
+      note: >-
+        Byte for byte the same object as V-0001, printed again with a different
+        hex wrap. So §3.1.1's worked example and Appendix A.2 operate on THE
+        SAME 64-octet signature - which is what makes V-0011's mismatch a
+        defect rather than two different inputs.
+    constrained_by:
+      - rfc-9921#R-0105
+
+  - id: V-0011
+    name: "Appendix A.2 TimeStampReq - NOT REPRODUCIBLE. The defect."
+    locator: "Appendix A.2, source lines 784-799"
+    region_sha256: "d753f79acecb58379a98f6f546277765a29ffa26a8e2c7bee8ebbce4cf0a0660"
+    source: printed
+    structure: "SEQUENCE { INTEGER 1, MessageImprint, BOOLEAN TRUE }"
+    printed_imprint: "DD9471EFE743C4051335DF8F6D2882F3BADC387700F7ED3F7091672A3EEAF7C8"
+    expected_under_the_document_own_rule: "44c2419d131d53d55584b5dd33b788c24e551c6d44b1afc8b2b85e6954763b4e"
+    reproduced:
+      match: false
+      candidate_preimages_tried: 207
+      candidates_matching: 0
+      note: >-
+        THE APPENDIX A.2 FIXTURE IS NOT REPRODUCIBLE AND THE §3.1.1 WORKED
+        EXAMPLE ON THE SAME SIGNATURE IS. A.2 says "the CBOR-encoded signature
+        field is hashed using SHA-256 to create the following TimeStampReq
+        object"; §3.1.1 settles what that means ("including the heading bytes
+        0x5840") and its own printed imprint reproduces exactly. For A.2's
+        signature - verified identical to §3.1.1's - the rule gives
+        44C2419D..., and the document prints DD9471EF... 207 candidate
+        preimages assembled from the document's own printed bytes were tried:
+        the bare signature, the head-prefixed signature, both other printed
+        signatures, the payload with and without its head, the protected
+        bucket, the unprotected map in both key orders, the whole object tagged
+        and untagged, a Sig_structure in three context strings, every pairwise
+        concatenation of the small values, and the head written
+        non-canonically as 59 0040, 5a 00000040, 5b and indefinite-length.
+        NONE produces DD9471EF.... The imprint is also what the TSTInfo inside
+        A.2's own token commits to (V-0012), so the token was obtained for an
+        input this document does not print.
+      errata: >-
+        RFC Errata ID 9177, status REPORTED (not verified), type Technical,
+        section A.2, reported by Florent Morselli on 2026-09-13, says the same
+        thing and proposes 44 C2 41 9D ... as the correct value; the errata
+        notes attribute the printed value to a generator script hashing an
+        error message after a folded line truncated the signature. FETCHED
+        2026-10-20 from errata.rfc-editor.org/rfc9921. POSITIVE CONTROL for
+        that lookup: the same endpoint returns 5 errata for RFC 3161 (1879,
+        2931, 2932 Verified; 844 Held for Document Update; 4042 Rejected), so
+        an empty result would have been a result and not a silent failure. The
+        erratum's CAUSE is reported, not verified here; what this pass verifies
+        independently is only that the printed imprint does not match and that
+        44C2419D... does.
+    constrained_by:
+      - rfc-9921#R-0106
+      - rfc-9921#R-0042
+
+  - id: V-0012
+    name: "Appendix A.2 TimeStampToken - 5453 octets, decoded and internally verified"
+    locator: "Appendix A.2, source lines 847-1005 (hex inside the unprotected header)"
+    region_sha256: "fe2f02cfc8cc459e18979d97afe6715a811f1763055d9a945c93b4e3e2fe5570"
+    source: printed
+    fixture_file: "a2-ctt-timestamp-token.hex"
+    octets: 5453
+    sha256: "5e1e0ade11fb869f1e9358c7b5b972edf31e3a9741d769c0fbe99936485f92bd"
+    expected:
+      eContent_octets: 367
+      tstinfo:
+        version: 1
+        policy: "1.2.3.4.1"
+        imprint_algorithm: "2.16.840.1.101.3.4.2.1 (sha-256)"
+        imprint: "dd9471efe743c4051335df8f6d2882f3badc387700f7ed3f7091672a3eeaf7c8"
+        serialNumber: 12100074
+        genTime: "20250829075300Z"
+        ordering: true
+        accuracy: null
+        nonce: null
+    reproduced:
+      outer_length_consistent: true
+      messageDigest_attribute_equals_sha512_of_eContent: true
+      sha512_of_eContent: "1d3b1f355cc995b2c7a38dfee19a0815ae93a9078cea6db540501eedf305e9f9f41349096a089bf5358380d6ed01eb508cbb551d120e9aca924429148ef1a229"
+      signingCertificate_certHash_equals_sha1_of_cert0: true
+      embedded_imprint_equals_printed_imprint: true
+      embedded_imprint_reproducible_from_the_document: false
+      same_length_as_a1_token: true
+      same_certificate_chain_as_a1_token: true
+      note: >-
+        THE TOKEN IS INTERNALLY CONSISTENT AND COMMITS TO THE WRONG DIGEST.
+        Every CMS check that passes for A.1 passes here too, and the TSA
+        genuinely signed this TSTInfo - 7 minutes and 14 seconds after A.1's,
+        with serial 12100074 against 12096870. So the defect is not a
+        transcription error in the printed hex: the request that produced this
+        token carried DD9471EF..., which is why Errata 9177 asks for a NEW
+        token rather than an edit.
+    constrained_by:
+      - rfc-9921#R-0108
+
+  - id: V-0013
+    name: "Appendix A.2 final COSE_Sign1 - and the document's only non-deterministic map"
+    locator: "Appendix A.2, source lines 841-1014"
+    region_sha256: "344994626eab08ed5a6beed69ad9474a17ec2ef1a430e4995a3804bc92b38b6d"
+    source: derived
+    assertion: "the octet budget and the map order of the CTT object"
+    measured:
+      tst_octets: 5453
+      unprotected_map_octets: 5464
+      whole_tagged_object_octets: 5557
+      protected_field_octets: 4
+      payload_field_octets: 21
+      signature_field_octets: 66
+      printed_key_order: [270, 4]
+      rfc8949_4_2_1_key_order: [4, 270]
+      unprotected_map_in_rfc8949_4_2_1_order: false
+      growth_over_the_starting_object: 5459
+    note: >-
+      THE DOCUMENT PRINTS TWO MAPS WITH MORE THAN ONE KEY AND ONLY ONE IS IN
+      §4.2.1 ORDER. A.1's protected map is (01, 19010d) - sorted. A.2's
+      unprotected map is printed 270 then 4, and §4.2.1 sorts on the encoded
+      key bytes, where 04 precedes 19010e. Nothing in RFC 9921 requires either
+      order; `canonical` and `deterministic` occur zero times. The CTT object
+      also grows by 5459 octets over the object it starts from, all of it in a
+      bucket nothing signs.
+    constrained_by:
+      - rfc-9921#R-0109
+
+  - id: V-0014
+    name: "Derived census: where a CBOR head sits inside a third party's digest"
+    locator: "§3.1.1, §3.1.2, §3.2 (compared)"
+    source: derived
+    assertion: "which octets each of the three MessageImprint preimages commits to"
+    measured:
+      ctt_cose_sign1:
+        preimage_octets: 66
+        cbor_head_octets: 2
+        head_in_preimage: true
+        covered_by_the_cose_signature: false
+      ctt_cose_sign:
+        preimage_octets: 77
+        cbor_head_octets: 7
+        unprotected_header_octets: 5
+        head_in_preimage: true
+        covered_by_the_cose_signature: false
+      ttc:
+        preimage_octets: 20
+        cbor_head_octets: 0
+        head_in_preimage: false
+        covered_by_the_cose_signature: true
+    note: >-
+      THREE PREIMAGES, THREE DIFFERENT ANSWERS TO "DOES THE WRAPPER COUNT". In
+      the two CTT cases a CBOR head is inside a digest that a third party
+      signs, and in neither case does the COSE signature cover that head: a
+      COSE signature is computed over a Sig_structure built from the protected
+      bucket, external_aad and the payload (RFC 9052 §4.4), so the encoding of
+      the `signature` field itself and of the per-signature unprotected bucket
+      are outside it. CONSEQUENCE, derived: re-encode the object with a legal
+      but non-smallest head - 59 0040 instead of 58 40 - and the COSE signature
+      still verifies while the CTT timestamp no longer matches. The TTC
+      preimage has no such exposure: payload content octets do not move when
+      the envelope is re-encoded.
+    constrained_by:
+      - rfc-9921#R-0049
+      - rfc-9921#R-0058
+
+  - id: V-0015
+    name: "Derived census: what the fixture's TSA actually is, and when it expired"
+    locator: "Appendix A.1 and A.2 tokens (decoded)"
+    source: derived
+    assertion: "the provenance and shelf life of the only test vectors the document ships"
+    measured:
+      tsa_strings: ["Free TSA", "TSA", "www.freetsa.org", "Wuerzburg", "Bayern", "DE", "busilezas@gmail.com"]
+      tsa_policy_oid: "1.2.3.4.1"
+      certificates: 2
+      cert0_octets: 2053
+      cert0_serial: "0xc1e986160da8e982"
+      cert0_notBefore: "160313015739Z"
+      cert0_notAfter: "260311015739Z"
+      cert0_sha256: "4694be23c3a53004444b1705bfe5a7f50a6d2a1638194f23c0f389b68bd78a75"
+      cert1_octets: 2051
+      cert1_notBefore: "160313015213Z"
+      cert1_notAfter: "410307015213Z"
+      cert1_sha256: "a6379e7cecc05faa3cbf076013d745e327bbbaa38c0b9af22469d4701d18aabc"
+      certificate_share_of_token_percent: 75.26
+      tstinfo_share_of_token_percent: 6.73
+      crl_distribution_point: "http://www.freetsa.org/crl/root_ca.crl"
+      cps_urls: ["http://www.freetsa.org/freetsa_cps.html", "http://www.freetsa.org/freetsa_cps.pdf"]
+      signature_algorithm_in_signerInfo: "1.2.840.113549.1.1.1 (rsaEncryption)"
+      signerInfo_digest_algorithm: "2.16.840.1.101.3.4.2.3 (sha-512)"
+      rsa_modulus_bits: 4096
+    note: >-
+      THESE ARE NOT CONFORMANCE VECTORS. The tokens come from freetsa.org, a
+      public demonstration TSA; the TSAPolicyId is 1.2.3.4.1, a placeholder
+      arc; and THE SIGNING CERTIFICATE EXPIRED ON 2026-03-11 01:57:39Z - one
+      month after this RFC published in February 2026, and seven months before
+      this extraction. 75.26 per cent of each token is that certificate chain
+      and 6.73 per cent is the timestamp assertion. A harness may use these
+      bytes to test PARSING and DIGEST AGREEMENT, which is what V-0002,
+      V-0005, V-0006, V-0008 and V-0012 do, and must not use them to test
+      path validation or acceptance, which would now fail for a reason that has
+      nothing to do with RFC 9921.
+    constrained_by: []

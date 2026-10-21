@@ -1,0 +1,424 @@
+record: rfc-9921
+reviewed_by: ""
+source_version: "RFC 9921 (February 2026), Standards Track"
+source_digest: "ba1c4dbb7b4ea83f517418a9b8963085c0a8b5e5bea0c992089d215579b78f39"
+source_lines_total: 1056
+applicability: "APPLICABLE, and the lifecycle is the one the document never names"
+
+note: >-
+  THE LIFECYCLE VOCABULARY IS ABSENT AND THE LIFECYCLE IS THE WHOLE POINT.
+  Measured whole-word and case-insensitive over all 1056 lines: `state` 0,
+  `states` 0, `lifecycle` 0, `revoke` 0, `revoked` 0, `expire` 0, `expiry` 0,
+  `expiration` 0, `rotate` 0, `step` 0, `steps` 0, `error` 0, `reject` 0,
+  `accept` 0. What there IS: `expired` 2, `revocation` 2, `verification` 3,
+  `validation` 3, and the document's stated purpose - "long-term signatures,
+  i.e., signatures that can still be verified even after the signing
+  certificate has expired". A signature whose trust state CHANGES WHEN A
+  CERTIFICATE EXPIRES is a lifecycle, and M5 below is it.
+
+  WHAT IS MODELLED, AND WHY EACH MACHINE IS NOT A not_applicable DECLARATION.
+  M1 and M2 are the two ASSEMBLY ORDERS, and the order is the document's entire
+  subject matter: §2 opens "There are two different modes of composing COSE
+  protection and timestamping", and the difference between the modes is nothing
+  but which of {signature, token} exists first. A reader who gets the order
+  wrong produces an object that verifies and proves the wrong thing, which is
+  exactly §5.1's vulnerability. M3 and M4 are the two verification algorithms
+  §5.1 asserts exist; THE DOCUMENT WRITES NEITHER DOWN, so every state and
+  guard in them is marked `reconstructed` and the reconstruction is this
+  extraction's. M5 is the long-term-validity lifecycle from §1.1 and §5.1.
+
+  THE FINDING THIS FILE EXISTS TO MAKE LEGIBLE: in M3 the transition that
+  CHOOSES THE MACHINE is guarded on an unauthenticated byte. The CTT
+  discriminator is the presence of label 270 in the unprotected bucket, and §5
+  concedes that "an attacker could manipulate the unprotected header by
+  removing or replacing the timestamp". So an attacker can delete the edge from
+  `token-located` to `ctt-imprint-checked` and leave a well-formed object that
+  verifies as an untimestamped one - and nothing in either machine detects the
+  deletion, because no state records that a timestamp was expected.
+
+  AND EVERY FAILING GUARD LEADS NOWHERE. `reject`, `invalid`, `discard` and
+  `abort` each occur zero times, so the `error_states` below are named by this
+  extraction and the document supplies NO action for any of them. §4's MUST is
+  the only machine-facing obligation in the document and it has no else-branch.
+
+machines:
+  - name: ctt-assembly-order
+    locator: "§2.1, §3.1, Appendix A.2"
+    kind: stated
+    initial: payload-held
+    states:
+      - name: payload-held
+        description: "the datum to be signed is in hand; no signature, no token"
+      - name: signed
+        description: >-
+          the COSE_Sign1 or COSE_Sign exists and is signed. THE ORDER
+          CONSTRAINT: the CTT imprint is over the signature field, so this
+          state must be reached before a token can be requested
+      - name: imprint-computed
+        description: "the hash of the CBOR-encoded signature field (0x5840 included) or of the signatures array"
+      - name: token-held
+        description: "a TimeStampToken has come back from the TSA"
+      - name: ctt-complete
+        description: >-
+          the token is bstr-wrapped in the UNPROTECTED bucket of the object
+          that was signed in state `signed`. The object is NOT re-signed, so
+          the signature value is unchanged from `signed`
+    transitions:
+      - from: payload-held
+        to: signed
+        trigger: "COSE_Sign1 (CTT instantiation)"
+        guard: "none stated"
+        constrained_by:
+          - rfc-9921#R-0026
+      - from: signed
+        to: imprint-computed
+        trigger: "CTT MessageImprint preimage (COSE_Sign1)"
+        guard: "a signature field exists; the preimage INCLUDES its CBOR head"
+        constrained_by:
+          - rfc-9921#R-0041
+          - rfc-9921#R-0049
+      - from: imprint-computed
+        to: token-held
+        trigger: TimeStampReq
+        guard: "the TSA is reachable and trusted (§5 assumes both)"
+        external_dependency: "RFC 3161 - not held by this library"
+        constrained_by: []
+      - from: token-held
+        to: ctt-complete
+        trigger: "3161-ctt"
+        guard: "the parameter goes in the unprotected bucket - MUST, §3.1"
+        constrained_by:
+          - rfc-9921#R-0039
+          - rfc-9921#R-0109
+    error_states:
+      - name: "(none defined)"
+        description: >-
+          NAMED BY THIS EXTRACTION, NOT BY THE DOCUMENT. No transition has a
+          failure branch: a TSA that refuses, times out or returns a non-granted
+          PKIStatus leaves the signer in `imprint-computed` with nothing said.
+
+  - name: ttc-assembly-order
+    locator: "§2.2, §3.2, Appendix A.1"
+    kind: stated
+    initial: datum-held
+    states:
+      - name: datum-held
+        description: "the datum exists; nothing is signed and no token exists"
+      - name: imprint-computed
+        description: "the hash of the datum - the payload bytes ONLY, not the bstr wrapping"
+      - name: token-held
+        description: "a TimeStampToken has come back from the TSA"
+      - name: token-in-protected
+        description: "the token is bstr-wrapped into the protected header bucket, which is not yet signed"
+      - name: ttc-complete
+        description: >-
+          the object is signed, so the signature covers the token. THE ORDER
+          CONSTRAINT IS THE EXACT INVERSE OF M1: here the token must exist
+          before the signature, there the signature before the token
+      - name: registered
+        description: >-
+          OPTIONAL AND UNSPECIFIED (§1.1): the signed parts have been registered
+          with a transparency service, "rendering it a transparent statement".
+          No message, no endpoint and no cited specification, so this state has
+          no observable entry condition
+    transitions:
+      - from: datum-held
+        to: imprint-computed
+        trigger: "TTC MessageImprint preimage"
+        guard: "the preimage EXCLUDES the bstr wrapping"
+        constrained_by:
+          - rfc-9921#R-0057
+          - rfc-9921#R-0058
+      - from: imprint-computed
+        to: token-held
+        trigger: TimeStampReq
+        guard: "the TSA is reachable and trusted"
+        external_dependency: "RFC 3161 - not held"
+        constrained_by: []
+      - from: token-held
+        to: token-in-protected
+        trigger: "3161-ttc"
+        guard: "the parameter goes in the protected bucket - MUST, §3.2"
+        constrained_by:
+          - rfc-9921#R-0055
+          - rfc-9921#R-0034
+      - from: token-in-protected
+        to: ttc-complete
+        trigger: "COSE_Sign1 (TTC instantiation)"
+        guard: "the datum becomes the payload"
+        constrained_by:
+          - rfc-9921#R-0035
+          - rfc-9921#R-0104
+      - from: ttc-complete
+        to: registered
+        trigger: "(none defined)"
+        guard: "the TST is inside the signed statement, so registration cannot lose it"
+        constrained_by:
+          - rfc-9921#R-0017
+    error_states:
+      - name: "(none defined)"
+        description: "as M1. No failure branch anywhere."
+
+  - name: ctt-verification
+    locator: "§4, §5.1"
+    kind: reconstructed
+    initial: received
+    states:
+      - name: received
+        description: "candidate bytes in hand; nothing checked"
+      - name: token-located
+        description: >-
+          reconstructed: label 270 found in the UNPROTECTED bucket, which
+          selects this machine over `ttc-verification`. THE GUARD ON THIS EDGE
+          IS AN UNAUTHENTICATED BYTE
+      - name: cms-validated
+        description: "stated (§4): the TST validates as CMS per RFC 5652, with RFC 3161's token rules"
+      - name: imprint-matched
+        description: >-
+          stated (§4): the embedded MessageImprint equals a hash of the
+          signature field AS RECEIVED, 0x5840 included, under the algorithm
+          named inside the imprint
+      - name: cose-verified
+        description: "reconstructed: the COSE signature itself verifies, per RFC 9052"
+      - name: signature-timed
+        description: >-
+          stated (§5.1): the terminal accepting state. The signature existed at
+          the TSA's genTime, and this is the ONLY mode that may be used for
+          signature validity timing
+    transitions:
+      - from: received
+        to: token-located
+        trigger: "3161-ctt"
+        guard: "label 270 present in the unprotected bucket - unauthenticated"
+        constrained_by:
+          - rfc-9921#R-0085
+          - rfc-9921#R-0084
+      - from: token-located
+        to: cms-validated
+        trigger: TimeStampToken
+        guard: "RFC 5652 signature verification and RFC 3161 token validation succeed"
+        external_dependency: "RFC 5652 (STD 70) and RFC 3161 - NEITHER held by this library"
+        constrained_by:
+          - rfc-9921#R-0063
+          - rfc-9921#R-0062
+      - from: cms-validated
+        to: imprint-matched
+        trigger: "CTT MessageImprint preimage (COSE_Sign1)"
+        guard: "MUST (§4): the imprint matches a hash of the signature field"
+        constrained_by:
+          - rfc-9921#R-0066
+          - rfc-9921#R-0065
+      - from: imprint-matched
+        to: cose-verified
+        trigger: "COSE_Sign1 (CTT instantiation)"
+        guard: "reconstructed: RFC 9052 signature verification succeeds"
+        external_dependency: "RFC 9052 - records/ietf/rfc-9052"
+        constrained_by: []
+      - from: cose-verified
+        to: signature-timed
+        trigger: "(decision)"
+        guard: "the mode is CTT, so the evidence is about the signature"
+        constrained_by:
+          - rfc-9921#R-0086
+          - rfc-9921#R-0089
+    error_states:
+      - name: timestamp-stripped
+        description: >-
+          STATED AS AN ATTACK (§5) AND NOT AS A STATE: "an attacker could
+          manipulate the unprotected header by removing or replacing the
+          timestamp". The machine never enters `token-located`, the object
+          verifies as an untimestamped COSE_Sign1, and NO STATE ANYWHERE
+          RECORDS THAT A TIMESTAMP WAS EXPECTED. The document's answer is the
+          lower-case "the COSE Signed Message should be integrity protected
+          during transit and at rest", which is a requirement on a layer it
+          does not define.
+        constrained_by:
+          - rfc-9921#R-0077
+          - rfc-9921#R-0078
+      - name: cms-validation-failed
+        description: >-
+          stated (§5) as a denial of service when the relying party's clock has
+          been moved: "a denial of service can occur if the attacker can adjust
+          the relying party's clock so that the CMS validation fails". No action
+          specified.
+        constrained_by:
+          - rfc-9921#R-0075
+      - name: imprint-mismatch
+        description: >-
+          UNDEFINED BY THE SOURCE. §4 requires the match and says nothing about
+          the failure. `reject`, `invalid`, `discard` and `abort` occur zero
+          times in the document.
+        constrained_by: []
+
+  - name: ttc-verification
+    locator: "§4, §5.1"
+    kind: reconstructed
+    initial: received
+    states:
+      - name: received
+        description: "candidate bytes in hand"
+      - name: token-located
+        description: "reconstructed: label 269 found in the PROTECTED bucket, selecting this machine"
+      - name: cms-validated
+        description: "stated (§4): as in M3, and with the same two external dependencies"
+      - name: imprint-matched
+        description: "stated (§4, §3.2): the imprint equals a hash of the payload bytes as received, wrapper excluded"
+      - name: cose-verified
+        description: "reconstructed: the COSE signature verifies, and because the token is protected the signature covers it"
+      - name: payload-timed
+        description: >-
+          stated (§5.1): the terminal accepting state, and a NARROWER one than
+          M3's. The payload existed at genTime. Nothing about the signature,
+          and reading it otherwise is the vulnerability §5.1 names
+    transitions:
+      - from: received
+        to: token-located
+        trigger: "3161-ttc"
+        guard: "label 269 present in the protected bucket; authenticated once the signature verifies"
+        constrained_by:
+          - rfc-9921#R-0056
+      - from: token-located
+        to: cms-validated
+        trigger: TimeStampToken
+        guard: "RFC 5652 and RFC 3161 validation succeed"
+        external_dependency: "RFC 5652 and RFC 3161 - neither held"
+        constrained_by: []
+      - from: cms-validated
+        to: imprint-matched
+        trigger: "TTC MessageImprint preimage"
+        guard: "MUST (§4): the imprint matches a hash of the payload"
+        constrained_by:
+          - rfc-9921#R-0057
+      - from: imprint-matched
+        to: cose-verified
+        trigger: "COSE_Sign1 (TTC instantiation)"
+        guard: "reconstructed: RFC 9052 signature verification succeeds"
+        constrained_by: []
+      - from: cose-verified
+        to: payload-timed
+        trigger: "(decision)"
+        guard: "the mode is TTC, so the evidence is about the payload only"
+        constrained_by:
+          - rfc-9921#R-0088
+    error_states:
+      - name: semantic-confusion
+        description: >-
+          THE DOCUMENT'S OWN NAMED VULNERABILITY, and it is a transition into
+          M3's accepting state from M4's: reading `payload-timed` as
+          `signature-timed`. §5.1: "incorrectly accepting signatures created
+          after key revocation based on older payload-only timestamps." Note
+          that this is a defect of INTERPRETATION with no byte-level signature:
+          both objects are well-formed and both verify.
+        constrained_by:
+          - rfc-9921#R-0087
+      - name: imprint-mismatch
+        description: "undefined by the source, as in M3"
+        constrained_by: []
+      - name: privacy-loss
+        description: >-
+          stated (§5) and not a failure of verification: the TSA holds an
+          "opaque identifier (a cryptographic hash value) for the payload" and
+          can compare it against known payloads. The armoring that would answer
+          it is "out of scope for this document".
+        constrained_by:
+          - rfc-9921#R-0079
+          - rfc-9921#R-0081
+
+  - name: signature-trust-over-time
+    locator: "§1.1, §5.1"
+    kind: inferred
+    initial: within-certificate-validity
+    note: >-
+      THE LIFECYCLE THE DOCUMENT EXISTS FOR AND NEVER NAMES. Every state below
+      is inferred from §1.1's "long-term signatures" paragraph and §5.1's
+      revocation sentence; the document has no `state`, `lifecycle`, `expire`
+      or `revoke` vocabulary at all. The transitions are driven by the passage
+      of TIME and by third-party events, not by messages, which is why they
+      belong here rather than in protocol.yaml.
+    states:
+      - name: within-certificate-validity
+        description: "the signing certificate has not expired; a plain COSE signature suffices"
+      - name: certificate-expired
+        description: >-
+          inferred from §1.1: "signatures that can still be verified even after
+          the signing certificate has expired". A verifier can no longer
+          conclude the signature was made while the certificate was valid
+      - name: attributable-via-ctt
+        description: >-
+          inferred from §1.1 + §5.1: a CTT token covering the signature places
+          the signing event inside the certificate's validity window, so the
+          signature remains attributable. §1.1: the relying party "can be
+          certain that the document was signed at least at the time specified
+          by the TSA and that the signing certificate was valid at the time the
+          signature was made"
+      - name: attributable-via-ttc-plus-revocation-evidence
+        description: >-
+          inferred from §1.1: with only a TTC token, attribution needs a second
+          input - "the authenticity of the statement can be ascertained by
+          ensuring that no revocation information was made public before the
+          time asserted by the issuer and registered at the transparency
+          service". SO THE TTC PATH REQUIRES EVIDENCE THIS DOCUMENT DOES NOT
+          CARRY: revocation status as of a past instant
+      - name: not-attributable
+        description: >-
+          inferred: certificate expired or key compromised, no CTT token, and no
+          revocation evidence for the asserted time. The document does not name
+          this state; it is what is left when the other two are unreachable
+    transitions:
+      - from: within-certificate-validity
+        to: certificate-expired
+        trigger: "(the passage of time)"
+        guard: "notAfter < now"
+        constrained_by:
+          - rfc-9921#R-0008
+      - from: certificate-expired
+        to: attributable-via-ctt
+        trigger: "3161-ctt"
+        guard: "a CTT token over the signature field, genTime within the certificate's validity window"
+        constrained_by:
+          - rfc-9921#R-0011
+          - rfc-9921#R-0010
+      - from: certificate-expired
+        to: attributable-via-ttc-plus-revocation-evidence
+        trigger: "3161-ttc"
+        guard: >-
+          a TTC token over the payload AND evidence that no revocation
+          information was published before the asserted time. The second
+          conjunct is not carried by any structure in this document
+        constrained_by:
+          - rfc-9921#R-0020
+          - rfc-9921#R-0019
+      - from: certificate-expired
+        to: not-attributable
+        trigger: "(absence of evidence)"
+        guard: "inferred: neither of the above holds"
+        constrained_by: []
+    error_states:
+      - name: revocation-bypass
+        description: >-
+          §5.1's vulnerability expressed as a state: a verifier in
+          `certificate-expired` that treats a TTC token as a CTT one reaches
+          `attributable-via-ctt` WITHOUT the evidence that state requires, and
+          accepts "signatures created after key revocation based on older
+          payload-only timestamps".
+        constrained_by:
+          - rfc-9921#R-0087
+          - rfc-9921#R-0088
+      - name: tsa-certificate-expired
+          # not a source state: a measured property of the document's own fixture
+        description: >-
+          NOT IN THE DOCUMENT, measured from its own example. The Appendix A
+          token's TSA signing certificate has notAfter 2026-03-11 01:57:39Z, so
+          for every object built from that fixture this machine's third-party
+          anchor has itself expired - one month after this RFC published. §5
+          says nothing about a TSA certificate's own lifetime, and for
+          "long-term signatures" that is the same problem one level up.
+        constrained_by: []
+
+absent:
+  - "No state vocabulary of any kind: `state`, `states` and `lifecycle` occur zero times."
+  - "No failure action for any guard. `reject`, `invalid`, `discard`, `abort` and `accept` occur zero times."
+  - "No transition for an object carrying BOTH labels, or either label in the wrong bucket."
+  - "No re-timestamping, renewal or archival-timestamp state, although §1.1's long-term use case is exactly where RFC 3161 deployments need one."
+  - "No state in which a verifier knows a timestamp was EXPECTED, which is what makes the §5 stripping attack undetectable."
+  - "No TSA key rollover, no TSA certificate lifetime, and no path from a TSA compromise to the objects it timestamped."
