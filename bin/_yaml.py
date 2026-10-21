@@ -277,11 +277,26 @@ def parse(text):
         indent = len(raw_e) - len(raw_e.lstrip())
         line = raw.strip()
 
-        while len(stack) > 1 and indent < stack[-1][0]:
+        is_item = line.startswith("- ") or line == "-"
+        # A block sequence may sit at the SAME indent as its key — `rows:` then
+        # `- a` at column zero is valid YAML — so such a list is pushed at its
+        # key's indent and has to be popped by the next line that is not one of
+        # its items. Without the second clause, `a:` / `- 1` / `b: 2` would
+        # append `b` to a's list.
+        while len(stack) > 1 and (
+                indent < stack[-1][0]
+                or (indent == stack[-1][0] and isinstance(stack[-1][1], list)
+                    and not is_item)):
             stack.pop()
         cur = stack[-1][1]
 
-        if pending_key and indent > pending_key[0]:
+        # `indent == pending_key[0]` only for a sequence: a MAP at the key's own
+        # indent is the next sibling key, not the key's value. 13 files in the
+        # library write a column-zero sequence this way and BOTH readers lost
+        # every one of them entirely — including three requirements.yaml whose
+        # whole list was invisible to every tool in bin/ (library#39).
+        if pending_key and (indent > pending_key[0]
+                            or (indent == pending_key[0] and is_item)):
             d, k = pending_key[1], pending_key[2]
             cur = [] if line.startswith("- ") or line == "-" else {}
             d[k] = cur

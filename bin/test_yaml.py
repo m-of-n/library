@@ -107,6 +107,25 @@ CASES = [
     ("a continuation line that is plainly prose is still folded in",
      'k: "one two\n   three and four"\nb: 1\n',
      {"k": "one two three and four", "b": "1"}),
+    # A block sequence at the SAME indent as its key is valid YAML, and BOTH
+    # of the library's readers used to lose it entirely — `requirements:` came
+    # back as an empty dict. 13 files are written that way, three of them
+    # requirements.yaml whose whole list was invisible to every tool in bin/,
+    # which is why 16 citations looked dangling that were not (library#39).
+    ("a column-zero sequence belongs to its key",
+     "a:\n- 1\n- 2\nb: 3\n", {"a": ["1", "2"], "b": "3"}),
+    ("a column-zero sequence of maps, then a sibling key",
+     "r:\n- id: x\n  k: 1\n- id: y\n  k: 2\nz: 9\n",
+     {"r": [{"id": "x", "k": "1"}, {"id": "y", "k": "2"}], "z": "9"}),
+    ("a nested sequence at its own key's indent",
+     "a:\n- id: x\n  sub:\n  - 1\n  - 2\nb: 3\n",
+     {"a": [{"id": "x", "sub": ["1", "2"]}], "b": "3"}),
+    ("an indented sequence still works",
+     "a:\n  - 1\n  - 2\nb: 3\n", {"a": ["1", "2"], "b": "3"}),
+    # The guard: a MAP at the key's own indent is the next sibling key, not the
+    # key's value, so an empty key must stay empty rather than swallowing it.
+    ("a key with no value does not swallow its sibling",
+     "a:\nb: 3\n", {"a": {}, "b": "3"}),
 ]
 
 fail = 0
