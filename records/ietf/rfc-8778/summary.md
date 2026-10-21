@@ -117,15 +117,35 @@ against.
 
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata, and the locator-by-locator warrant for each `bears_on` id |
+| `record.yaml` | metadata, the locator-by-locator warrant for each `bears_on` id, and the `distillation` block |
 | `summary.md` | this document |
+| `distilled/README.md` | the artifact index, the one result, the verification, and what pass 2 should attack |
+| `distilled/normative.md` | every normative sentence with its locator, plus 25 byte-exact fenced runs of source lines and nine source observations |
+| `distilled/requirements.yaml` | 135 entries, all 9 BCP 14 keywords, counts reconciled exactly; 135/135 locators resolve inside their section |
+| `distilled/schema/` | 1 verbatim renderings file + 6 derived (3 CDDL, 1 ABNF, 1 JSON Schema, 1 parameter-set table), with the full 56-octet width derivation |
+| `distilled/messages.yaml` | 11 structures, 35 fields, with offsets and encoded sizes; `constrained_by` wired on 30 of them |
+| `distilled/state-machine.yaml` | **applicable** — two machines, 2 error states with no way out, 2 forbidden transitions, 5 unspecified behaviours |
+| `distilled/protocol.{yaml,md}` | **not applicable**, with the word counts written out; `protocol.md` carries a state diagram as a reading aid |
+| `distilled/examples/` | 11 vectors, 4 byte fixtures, both stated sizes reproduced to the octet |
+| `distilled/design-notes.md` | the `rfc-9964` result, six `MD-3` cuts naming their `DEC-002` option, the conditions (0) and (1)–(6), seven open questions |
 
-**No `distilled/`, deliberately.** Settled 2026-10-20 (library#39 Tier 2): the
-record was unblocked from `bears_on: []` by reading the source. FX-1 here would
-be unusually dependent on a second document — the record is a 9-keyword binding
-whose substance is RFC 8554's, and [`rfc-8554`] is a stub. Extracting this one
-first would produce a requirements file that mostly points elsewhere, which is
-the argument for extracting RFC 8554 first if the suite is ever admitted.
+**FX-1 pass 1 of 3, and no `profile` is claimed.** `distillation.standard:
+FX-1`, `pass: extract` on 2026-10-20 at effort `max`; **verify and cross-check
+have not run** and every `reviewed_by` is empty, so the artifacts are readable
+and citable but not buildable-on. `status` stays `summarized` for that reason.
+
+**This replaces a settled decision, and the reason it was overturned is worth
+recording.** On 2026-10-20 this record was to carry **no distilled artifacts at
+all**: FX-1 here looked "unusually dependent on a second document — the record is a
+9-keyword binding whose substance is RFC 8554's, and [`rfc-8554`] is a stub."
+The extraction found that **wrong in the one direction that mattered**. Three of
+the deferrals to `[HASHSIG]` turned out to be closable from RFC 8778 alone, by
+measurement against its own Appendix A: the `u32str` width, the parameter set of
+the printed signatures (`h = 10`, `p = 67`), and the length of an LM-OTS
+signature. The dependency that *does* remain is narrower than it looked —
+**the parameter-set code points**, which RFC 8778 names nine of and numbers none
+of, so the document cannot resolve its own examples. Extracting RFC 8554 is still
+the highest-value follow-on; it was not a precondition.
 
 ## Limits
 
@@ -134,9 +154,22 @@ the argument for extracting RFC 8554 first if the suite is ever admitted.
   checklist) and no COSE_Key or `pub` value appears anywhere; Appendix A gives
   signatures only. So the thumbprint RFC 9679 §4.5 defines for this key type
   **cannot be computed from any document this library holds**, and §2.1/§2.2's
-  public-key layout is prose rather than bytes. The u32str type-code convention
-  is at least confirmed in the printed signatures, whose octets 8..11 are
-  `00000003` — LMOTS_SHA256_N32_W8 — in both examples.
+  public-key layout is prose rather than bytes.
+
+  **[correction] 2026-10-20, FX-1 pass 1.** This bullet used to end: "The u32str
+  type-code convention is at least confirmed in the printed signatures, whose
+  octets 8..11 are `00000003` — LMOTS_SHA256_N32_W8 — in both examples." The
+  octets are right and **the name is wrong**, and the reason it is wrong is the
+  sharper finding. `00000003` is at octets 8–11 of both signatures, as stated.
+  But the structural arithmetic fixes `p = 67` for those signatures
+  (`distilled/examples/vectors.yaml` `V-0003`), and 67 is the `w = 4` parameter
+  count; `w = 8` has `p = 34` and would make the signature `1136 + 32h` octets,
+  never 2512. So `00000003` cannot be the W8 code point. **And RFC 8778 supports
+  neither reading: it names nine parameter sets and prints no code point for any
+  of them**, so the document cannot resolve its own examples at all. What the
+  printed signatures *do* pin, and nothing else in this library does, is the
+  **width** — `u32str` is 4 octets, uniquely, because `2512 − 4u − 32` is
+  divisible by 32 for no other `u`.
 - **Its own examples ignore its own suggestion.** §3 says a `kid` MAY be the
   16-byte `I`; both Appendix A examples use `kid: 'ItsBig'`, six ASCII octets.
   The suggestion has no worked instance here, so anyone adopting it is the

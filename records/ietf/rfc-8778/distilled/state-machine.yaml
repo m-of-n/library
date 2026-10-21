@@ -1,0 +1,337 @@
+record: rfc-8778
+reviewed_by: ""
+source_version: "RFC 8778"
+source_digest: "2d43646b974c76b9e13565af9b96432ac2b7ba39b66a61820d97f94f3cf1c398"
+source_lines_total: 772
+applicability: "APPLICABLE"
+note: >-
+  RFC 8778 SPECIFIES A LIFECYCLE, AND IT IS THE REASON THIS RECORD IS USEFUL.
+  This artifact is NOT declared not_applicable, and the measurement that would
+  have supported declaring it is worth stating because it is misleading:
+  `lifecycle` occurs 0 times in the source, `revoke` 0, `rotate` 0, `expire` 0
+  and `exhaust` 0. The word count says no lifecycle. THE SENTENCES SAY
+  OTHERWISE. `state` occurs four times as a word plus `statefulness` once, all
+  inside §4 and §5, and six requirements between them define a complete
+  state model with a terminal condition and an error condition:
+
+  rfc-8778#R-0101, §4: "An implementation MUST ensure that an LM-OTS private key
+  is used to generate a signature only one time and ensure that it cannot be
+  used for any other purpose." One MUST, two obligations, and the first of them
+  is a state transition that cannot be repeated.
+
+  rfc-8778#R-0097, §4: "Along with the private key, the implementation MUST keep
+  track of which leaf nodes in the tree have been used." The state that must
+  exist.
+
+  rfc-8778#R-0098, §4: "Loss of integrity of this tracking data can cause a
+  one-time key to be used more than once." The error transition, and the only
+  path the document names by which the one-time property is violated.
+
+  rfc-8778#R-0111, §5: "To ensure that none of the tree nodes are used to
+  generate more than one signature, the signer maintains state across different
+  invocations of the signing algorithm." State across invocations, in terms.
+
+  rfc-8778#R-0109 and rfc-8778#R-0110, §5: "this public key is a trust anchor,
+  and the number of signatures that can be generated is bounded by the size of
+  the overall HSS set of trees. When all of the LM-OTS signatures have been used
+  to produce a signature, then the establishment of a new trust anchor is
+  required." A counted lifetime with a terminal condition.
+
+  rfc-8778#R-0115 and rfc-8778#R-0116, §5: "A COSE Key Type Parameter for
+  encoding the HSS/LMS private key and the state about which tree nodes have been
+  used is deliberately not defined. It was not defined to avoid creating the
+  ability to save the private key and state, generate one or more signatures, and
+  then restore the private key and state." A transition the document removes the
+  CAPABILITY for rather than prohibiting - see `forbidden_transitions`.
+
+  TWO MACHINES, because the document describes two things with different
+  lifetimes: a single LM-OTS leaf, which is consumed once and never returns, and
+  the HSS key that is the trust anchor, which is spent down leaf by leaf and then
+  retired. Every state, trigger and guard below carries the R-id that states it;
+  anything with no R-id is marked `derived` and is this extraction's inference.
+
+  WHAT THE DOCUMENT DOES NOT SPECIFY, AND IT IS THE GAP THAT MATTERS MOST: the
+  ORDERING between emitting a signature and committing the state change.
+  rfc-8778#R-0112 points at "Section 9.2 of [HASHSIG]" for "practical
+  implementation approaches around this statefulness" and says nothing more. So
+  the crash window is unspecified by this document - see `unspecified`.
+
+machines:
+
+  # =====================================================================
+  - name: lm_ots_leaf
+    locator: "§4 and §5"
+    description: >-
+      One leaf of one LMS tree - equivalently, one LM-OTS private key, one value
+      of q in the signature layout (messages.yaml S-0004). There are 2^h of them
+      per tree (rfc-8778#R-0037).
+    initial: unused
+    states: [unused, consumed, sacrificed, reused]
+    state_meanings:
+      unused: >-
+        The leaf has never produced a signature and the tracking data says so.
+        rfc-8778#R-0097.
+      consumed: >-
+        The leaf has produced exactly one signature. TERMINAL AND IRREVERSIBLE:
+        rfc-8778#R-0101 forbids a second use and forbids any other use.
+      sacrificed: >-
+        The leaf was given up without signing anything, to make the tracking
+        cheap or crash-safe. rfc-8778#R-0113: "In some of these approaches, nodes
+        are sacrificed to ensure that none are used more than once." TERMINAL.
+      reused: >-
+        ERROR STATE. The leaf has produced more than one signature.
+        rfc-8778#R-0098 names the only cause: "Loss of integrity of this tracking
+        data can cause a one-time key to be used more than once." The
+        consequence is not stated in §4 beyond rfc-8778#R-0096's "the ability to
+        forge signatures"; [HASHSIG] is where the cryptographic consequence
+        lives.
+    transitions:
+      - from: unused
+        to: consumed
+        trigger: "sign - the signing algorithm selects leaf q"
+        guard: "the tracking data records this leaf as unused"
+        action: "record the leaf as used"
+        constrained_by: [rfc-8778#R-0101, rfc-8778#R-0097, rfc-8778#R-0111]
+        locator: "§4, §5"
+      - from: unused
+        to: sacrificed
+        trigger: "state_management_approach_sacrifices_the_node"
+        guard: "the implementation uses an approach that sacrifices nodes"
+        constrained_by: [rfc-8778#R-0113, rfc-8778#R-0112]
+        locator: "§5"
+        note: >-
+          The document names the behaviour and neither requires nor forbids it;
+          rfc-8778#R-0112 defers the choice of approach to [HASHSIG] §9.2.
+      - from: consumed
+        to: reused
+        trigger: "sign - the signing algorithm selects leaf q a second time"
+        guard: "the tracking data no longer records this leaf as used"
+        constrained_by: [rfc-8778#R-0098, rfc-8778#R-0099, rfc-8778#R-0101]
+        locator: "§4"
+        note: >-
+          THE ERROR TRANSITION. rfc-8778#R-0099 names how the guard comes to be
+          satisfied: "when a private key and the tracking data are stored on
+          nonvolatile media or in a virtual machine environment, failed writes,
+          virtual machine snapshotting or cloning, and other operational concerns
+          must be considered to ensure confidentiality and integrity." Note that
+          this sentence uses LOWERCASE `must` - the only named route into the
+          error state carries no BCP 14 keyword.
+      - from: sacrificed
+        to: reused
+        trigger: "sign - the signing algorithm selects a sacrificed node"
+        guard: "the tracking data no longer records this node as sacrificed"
+        constrained_by: [rfc-8778#R-0113, rfc-8778#R-0098]
+        locator: "§4, §5"
+        kind: derived
+        note: >-
+          DERIVED, this extraction's inference and not the document's claim.
+          rfc-8778#R-0113 says sacrificed nodes exist "to ensure that none are
+          used more than once", so losing the record of a sacrifice has the same
+          consequence as losing the record of a use. The document does not say
+          so.
+    error_states: [reused]
+    terminal_states: [consumed, sacrificed, reused]
+    no_transition_out_of:
+      consumed: >-
+        There is no path back to `unused`. rfc-8778#R-0101 is unconditional and
+        §5 withholds the serialisation that would make a rollback expressible
+        (rfc-8778#R-0115, rfc-8778#R-0116).
+      reused: >-
+        The document specifies no detection, no recovery and no remediation for
+        a reused leaf. Nothing in RFC 8778 tells a verifier that reuse has
+        happened or a signer that it has occurred.
+
+  # =====================================================================
+  - name: hss_key_trust_anchor
+    locator: "§4 and §5"
+    description: >-
+      The HSS key whose public half is the trust anchor. rfc-8778#R-0108 and
+      rfc-8778#R-0109 place it: "The public key for the hash-based signature is
+      the key at the root of Hierarchical Signature System (HSS)" and "In the
+      absence of a public key infrastructure [RFC5280], this public key is a
+      trust anchor".
+    initial: generated
+    states: [generated, in_use, exhausted, replaced, state_lost]
+    state_meanings:
+      generated: >-
+        The key pairs exist and the public key has not yet been published as a
+        trust anchor. rfc-8778#R-0100 constrains how they were made: "an
+        implementation MUST generate each key pair independently of all other key
+        pairs in the HSS tree."
+      in_use: >-
+        The public key is a trust anchor (rfc-8778#R-0109) and at least one
+        LM-OTS leaf is `unused`. The remaining budget is NOT exactly knowable:
+        rfc-8778#R-0114, "the total number of signatures that can be generated
+        might be less than the overall HSS set of trees."
+      exhausted: >-
+        Every LM-OTS leaf is `consumed` or `sacrificed`. rfc-8778#R-0110: "When
+        all of the LM-OTS signatures have been used to produce a signature, then
+        the establishment of a new trust anchor is required." Note the LOWERCASE
+        `required`: the document's only terminal lifecycle condition carries no
+        BCP 14 keyword.
+      replaced: >-
+        A new trust anchor has been established. HOW IS NOT SPECIFIED - see
+        `unspecified`. TERMINAL for this key.
+      state_lost: >-
+        ERROR STATE. The leaf-usage tracking data has lost integrity
+        (rfc-8778#R-0098). Every subsequent signature risks the `reused`
+        transition of the machine above. The document specifies no recovery.
+    transitions:
+      - from: generated
+        to: in_use
+        trigger: "publish_as_trust_anchor"
+        guard: "each LMS key pair in the tree was generated independently of all others"
+        constrained_by: [rfc-8778#R-0109, rfc-8778#R-0100, rfc-8778#R-0108]
+        locator: "§4, §5"
+      - from: in_use
+        to: in_use
+        trigger: "sign"
+        guard: "at least one LM-OTS leaf is unused"
+        action: "consume one leaf; commit the tracking data"
+        constrained_by: [rfc-8778#R-0109, rfc-8778#R-0097, rfc-8778#R-0111, rfc-8778#R-0101]
+        locator: "§4, §5"
+        note: >-
+          EVERY SIGNATURE IS A STATE MUTATION. That is the whole operational cost
+          of this algorithm and it has no analogue in any stateless signature
+          scheme: the action is not idempotent and cannot be retried.
+      - from: in_use
+        to: exhausted
+        trigger: "sign - consuming the last unused leaf"
+        guard: "all of the LM-OTS signatures have been used to produce a signature"
+        constrained_by: [rfc-8778#R-0110, rfc-8778#R-0109, rfc-8778#R-0114]
+        locator: "§5"
+      - from: exhausted
+        to: replaced
+        trigger: "establish_new_trust_anchor"
+        guard: "none stated"
+        constrained_by: [rfc-8778#R-0110]
+        locator: "§5"
+        note: >-
+          rfc-8778#R-0110 requires this and specifies nothing about it. No rekey
+          procedure, no cross-signature from the old root to the new, no way for
+          a verifier to learn that a principal was replaced. See `unspecified`.
+      - from: in_use
+        to: state_lost
+        trigger: "tracking_data_integrity_loss - a failed write, a virtual machine snapshot, a virtual machine clone"
+        guard: "none; the triggers are operational events outside the algorithm"
+        constrained_by: [rfc-8778#R-0098, rfc-8778#R-0099]
+        locator: "§4"
+      - from: generated
+        to: state_lost
+        trigger: "tracking_data_integrity_loss"
+        guard: "none"
+        constrained_by: [rfc-8778#R-0098, rfc-8778#R-0099]
+        locator: "§4"
+        kind: derived
+        note: >-
+          DERIVED. rfc-8778#R-0099's hazards do not depend on the key having been
+          published, so a snapshot taken before publication carries the same
+          risk. The document does not distinguish the two cases.
+    error_states: [state_lost]
+    terminal_states: [replaced, state_lost]
+    no_transition_out_of:
+      state_lost: >-
+        RFC 8778 supplies no recovery. It cannot: restoring a known-good state
+        IS the save-and-restore operation §5 withholds the format for
+        (rfc-8778#R-0116), and rfc-8778#R-0117 calls such a restoration
+        "disastrous opportunities for tree node reuse". The only sound response
+        the document leaves available is the `exhausted` to `replaced` path -
+        retire the key - and it does not say so.
+      replaced: >-
+        A replaced key never returns to use. rfc-8778#R-0110 does not say what
+        happens to signatures the retired key already produced.
+
+forbidden_transitions:
+  - name: save_and_restore
+    from: "any state"
+    to: "an earlier state of the same key"
+    locator: "§5"
+    constrained_by: [rfc-8778#R-0115, rfc-8778#R-0116, rfc-8778#R-0117]
+    mechanism: "the capability is withheld, not the act prohibited"
+    note: >-
+      READ THIS PRECISELY, BECAUSE IT IS STRONGER THAN A PROHIBITION AND WEAKER
+      IN A DIFFERENT WAY. §5 does NOT forbid storing the private key in software
+      and states no MUST NOT at all. It withholds the FORMAT: "A COSE Key Type
+      Parameter for encoding the HSS/LMS private key and the state about which
+      tree nodes have been used is deliberately not defined. It was not defined
+      to avoid creating the ability to save the private key and state, generate
+      one or more signatures, and then restore the private key and state. Such a
+      restoration operation provides disastrous opportunities for tree node
+      reuse." So there is NO STANDARD PRIVATE-KEY FORMAT FOR HSS-LMS AT ALL, on
+      purpose, and §6.3 registers exactly one key type parameter for kty 5 - the
+      public key. STRONGER than a prohibition because a MUST NOT can be
+      disobeyed interoperably and a missing format cannot: no two
+      implementations can agree on how to move this key. WEAKER because nothing
+      stops a single implementation defining its own private format and doing
+      exactly what §5 is trying to prevent - the document removes the
+      interoperable route and nothing else.
+
+  - name: replicate_or_migrate
+    from: "in_use on one holder"
+    to: "in_use on a second holder"
+    locator: "§4 and §5"
+    constrained_by: [rfc-8778#R-0099, rfc-8778#R-0115, rfc-8778#R-0116]
+    kind: derived
+    note: >-
+      DERIVED - THIS EXTRACTION'S INFERENCE, NOT THE DOCUMENT'S CLAIM, AND NO
+      R-id IS ASSERTED FOR IT. rfc-8778#R-0099 names "virtual machine
+      snapshotting or cloning" as a way the tracking data loses integrity, and
+      rfc-8778#R-0115/#R-0116 withhold the serialisation precisely to prevent
+      save-and-restore. Taken together, an HSS-LMS signing key held in more than
+      one place at one time is the reuse attack, and the document supplies no
+      format with which to move it from one place to another even sequentially.
+      RFC 8778 says nothing whatever about threshold signing, multi-party
+      signing or replication, and this entry must not be read as if it did.
+      design-notes.md carries the consequence for an m-of-n project.
+
+unspecified:
+  - name: "ordering between emitting a signature and committing the state change"
+    locator: "§5"
+    constrained_by: [rfc-8778#R-0112, rfc-8778#R-0111]
+    note: >-
+      THE GAP THAT MATTERS MOST, and the document is explicit about deferring it:
+      rfc-8778#R-0112 says only that "Section 9.2 of [HASHSIG] offers some
+      practical implementation approaches around this statefulness." Neither
+      order is specified here, and the two fail differently - commit first and a
+      crash wastes a leaf; emit first and a crash can let the leaf be reused.
+      rfc-8778#R-0113's sacrificed nodes are one answer to this and the document
+      does not say which problem they solve. A protocol model would have to
+      choose; this record does not, because the source does not.
+  - name: "how a new trust anchor is established, and how a verifier learns of it"
+    locator: "§5"
+    constrained_by: [rfc-8778#R-0110]
+    note: >-
+      rfc-8778#R-0110 requires the establishment of a new trust anchor on
+      exhaustion and stops. No procedure, no cross-signature from the old root
+      to the new, no notification, and nothing about the status of signatures the
+      retired key already produced.
+  - name: "detection of a reused leaf"
+    locator: "§4"
+    constrained_by: [rfc-8778#R-0098]
+    note: >-
+      The error state is named and nothing detects it. A verifier holding two
+      signatures from the same q has no instruction in RFC 8778.
+  - name: "what happens when any of §3's five checks fails"
+    locator: "§3"
+    constrained_by: [rfc-8778#R-0085, rfc-8778#R-0086, rfc-8778#R-0087, rfc-8778#R-0088, rfc-8778#R-0089, rfc-8778#R-0090]
+    note: >-
+      rfc-8778#R-0085 says "the following checks are made" - passive, no actor,
+      no failure action. The five checks are preconditions with no specified
+      consequence, which is why they are NOT modelled as states here: nothing in
+      the document can be in a state of having failed one.
+  - name: "the remaining signature budget of a key in use"
+    locator: "§5"
+    constrained_by: [rfc-8778#R-0114, rfc-8778#R-0037, rfc-8778#R-0036]
+    note: >-
+      §2.2 gives 2^h leaves per tree for h in {5, 10, 15, 20, 25}, and
+      rfc-8778#R-0114 then says "the total number of signatures that can be
+      generated might be less than the overall HSS set of trees." So the
+      `in_use` to `exhausted` transition fires at a time no verifier and
+      possibly no signer can predict from the parameter set alone.
+
+absent:
+  - "No revocation: `revoke` and `revocation` as a state concept occur 0 times (the one `revocation` is in the RFC 5280 reference title)."
+  - "No expiry: `expire` occurs 0 times. The key retires by EXHAUSTION, not by time or policy."
+  - "No rotation: `rotate` occurs 0 times. rfc-8778#R-0110's trust-anchor replacement is the nearest thing and specifies no procedure."
+  - "No suspension, no re-enabling, no recovery from any error state."
+  - "No states for a COSE_Key or a signature object: those are data, and §3's five checks are preconditions with no specified failure action."
