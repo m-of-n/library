@@ -65,7 +65,9 @@ and §2.1's injectivity rule testable rather than described.
 **It registers the identifiers and refuses the carrier, so `R-O-03` can be
 half-satisfied by citation and no more.** §1:> It also does not define a structure syntax that is used to encode a digested object structure along the lines of the DigestedData ASN.1 structure in [CMS]. This omission was intentional, as a structure consisting of just a digest identifier, the content, and a digest value does not, by itself, provide any strong security service.
 Citing `-16` for SHA-256 discharges the **algorithm** half of
-*"the canonicalization algorithm SHALL be cited, not invented silently"*. The
+*"Canonicalization algorithm for each concrete encoding SHALL be cited, not
+invented silently"* (`R-O-03`, `ARCH-0001` §5.3, as five other records in this
+library quote it — **[unverifiable from this repository]**). The
 four-field structure around it — algorithm, value, pointer to what was hashed,
 additional data (§2.1) — **is ours to invent, with no COSE citation
 available**, and the document says that is deliberate. That is the decision a
@@ -201,8 +203,8 @@ takes the §2 wording as the definition will not see the conflict at all.
 A registry column is not a wire field. `COSE_Hash_Find` and `rfc-9360`'s
 `COSE_CertHash` both have **exactly two fields**, so a verifier handed
 `[-14, h'…']` cannot tell whether the sender was filtering or binding —
-`records/ietf/rfc-9360/distilled/examples/vectors.yaml` V-0004 shows the two
-uses are the same 25 octets. The fitness judgement lives in a registry a
+`rfc-9360#V-0004` shows the two uses are the same bytes (23 octets with SHA-1,
+and the identity holds for every value of `hashAlg`). The fitness judgement lives in a registry a
 verifier is not required to consult, in a document with no `MUST`.
 
 ### 4.1 The cross-record result: §3.2 registers a 64-bit truncation **because of** `rfc-9360`, and `rfc-9360` makes it a binding
@@ -583,10 +585,13 @@ lines.
 **E-3. §4.1's size rationale is backwards for five of eight allocations**
 (Cut 4), and exactly backwards for the one algorithm it names. No erratum.
 
-**E-4. Table 2's Description for `-17` reads "SHA-2 512-bit Hash truncated to
-256-bits"**, which is precisely what §3.2's NOTE says it is not — the NOTE
-calls it *"a modified variant of SHA-512 truncated to 256 bits, as defined in
-[FIPS-180-4]"*, i.e. a different initial value rather than a post-hoc
+**E-4. Table 2's Description cell for `-17`, read down the column, says "SHA-2
+512-bit Hash truncated to 256-bits"** — a cell, not a contiguous span: the row
+as printed is carried verbatim in `requirements.yaml` R-0071, pipes and all.
+It is precisely what §3.2's NOTE says it is not — the NOTE calls it *"a
+modified variant of SHA-512 truncated to 256 bits, as defined in
+[FIPS-180-4]"* (quoted across the NOTE's own `|` box margin, which the
+normalised source carries), i.e. a different initial value rather than a post-hoc
 truncation. The row and the NOTE are 30 lines apart, and **the row is what gets
 copied into a lookup table.** `examples/vectors.yaml` V-0004 computes both and
 they differ completely. No erratum.

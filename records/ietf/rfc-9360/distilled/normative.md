@@ -17,7 +17,7 @@ statement sits and what it is.
 
 | | |
 |---|---|
-| **Source** | `.cache/rfc-9360.txt`, 615 newline-delimited lines |
+| **Source** | `.cache/rfc-9360.txt`, **614 lines** (`wc -l`; 615 elements under `split("\n")`, which is the convention this directory's line counts use) |
 | **Digest** | `3dbe546adf08e309b429c8e71b2ee8384292fb8767338d3eb17d1c4e5adefc23` |
 | **BCP 14 keywords** | **14** — 10 MUST, 3 MUST NOT, 1 SHOULD; `bin/bcp14-count`, boilerplate excluded |
 | **Examples in the source** | **none** — `Figure`, `Appendix` and `vector` occur zero times |
@@ -27,9 +27,10 @@ by `\n` with no trailing newline — the convention established by earlier passe
 in this effort.
 
 **There is no page decoration in this source and no region is split.** This
-rendering has **0 form feeds** and no running headers or footers in its 615
+rendering has **0 form feeds** and no running headers or footers in its 614
 lines, checked with the same footer and header patterns that match 25 page
-breaks in RFC 8392. So every section below is one contiguous region and
+breaks in RFC 8392 (verified by pass 2: 25 form feeds and 25 `[Page N]`
+markers there, 0 of each here). So every section below is one contiguous region and
 **nothing is welded across a gap**, because there are no gaps. Note for any
 later pass: this file was built with `split("\n")`, never `splitlines()`.
 

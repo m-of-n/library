@@ -191,7 +191,8 @@ has it, and the wording is left here rather than edited away so the correction
 is visible.
 
 **The other two results to take from the extraction.** A filtering `x5t` and a
-binding `x5t` with the same algorithm are **the same 25 octets** — an identity
+binding `x5t` with the same algorithm are **the same bytes** (23 octets with
+SHA-1; the identity holds for every `hashAlg`) — an identity
 between byte strings rather than an inference about implementations, because
 `COSE_CertHash` has exactly two fields and `Filter Only` is a registry column
 (`distilled/examples/vectors.yaml` V-0004). And V-0006 encodes §2's own

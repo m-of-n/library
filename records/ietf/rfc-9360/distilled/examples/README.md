@@ -14,7 +14,9 @@ times in its 614 lines; there is no hex, no base64 and no diagnostic notation
 anywhere. For a document whose entire content is wire format — four header
 labels, two lines of CDDL, one media type — there is not one COSE object, not
 one certificate and not one `x5t` value to take. `rfc-9338`, by the same author
-in the same year, carries six figures.
+in the same year, carries **six worked examples** — Appendix A.1 to A.6, with
+CBOR diagnostic notation and `h'…'` literals. (It contains the word `Figure`
+zero times too; the contrast is in the examples, not in the figure labels.)
 
 So **every vector here is this extraction's computation**, marked
 `source: computed` or `source: derived`, with its `computed_fields` named and
@@ -25,10 +27,10 @@ its purpose stated. Nothing is presented as printed.
 | V-0001 | all seven allocated labels, as CBOR | **all seven cost 2 octets**; 8 IANA allocations, 0 tags |
 | V-0002 | `COSE_X509` shape conformance, 7 cases | the one-element array and the empty array are **invalid** |
 | V-0003 | three framings of one certificate list | for **one** certificate the array and sequence framings are the **same bytes** |
-| V-0004 | **filtering vs binding `x5t`** | **byte-identical, 25 octets** |
+| V-0004 | **filtering vs binding `x5t`** | **byte-identical** (23 octets with SHA-1) |
 | V-0005 | `COSE_CertHash` with all eight registered hashes | 11 to 69 octets; the two cheapest are the two `Filter Only` ones |
 | V-0006 | **F-3 executed**: the intermediary rewrite | the protected bucket's bytes are **unchanged** |
-| V-0007 | census: what the source prints | 13 of 15 terms at **zero** |
+| V-0007 | census: what the source prints | 14 of 15 terms at **zero** |
 | V-0008 | the `hashValue` length non-rule | `[-16, h'']` is **conforming** |
 
 ## The two results that are identities, not observations
@@ -39,7 +41,8 @@ its purpose stated. Nothing is presented as printed.
 `Recommended` is a **registry column**, not a wire field. RFC 9360 restricts
 `hashAlg` to no subset of the registry. So a sender filtering among
 certificates the relying party already holds and a sender integrity-binding an
-`x5chain` that arrived in a rewritable bucket emit **the same 25 octets**.
+`x5chain` that arrived in a rewritable bucket emit **the same bytes** — 23
+octets with SHA-1, and the identity holds for every value of `hashAlg`.
 There is no third field in which the purpose could have travelled. That is not
 an inference about implementations; it is an equality between two byte strings,
 and it is why `../schema/x5t-hashalg-policy.derived.yaml` has to exist.

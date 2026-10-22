@@ -360,9 +360,26 @@ the main product and is otherwise unobtainable. Writing a CBOR/ECDSA/HMAC/CCM
 stack once for `rfc-8392` upgraded a central claim in *both* sibling records
 from "RFC 9052 §4.4 says so" to "here is a signature that verifies without it";
 three separate agents would each have had to redo it or cite a sibling's
-unverified pass-1 output, which FX-1 forbids. Likewise, `rfc-9360` cites
-`rfc-9054` twice as a draft while `rfc-9054` cites `rfc-9360` zero times in 614
-lines — **the finding is the asymmetry**, and it is invisible from either side.
+unverified pass-1 output, which FX-1 forbids. Likewise, **`rfc-9054` (498
+lines) cites `rfc-9360` twice as a draft** — `[COSE-x509]` =
+`draft-ietf-cose-x509-08`, at lines 111 and 286, with the reference entry at
+463 — **while `rfc-9360` (614 lines) cites `rfc-9054` zero times**, naming its
+registry once as "COSE Algorithms" with a bare IANA URL. **The finding is the
+asymmetry**, and it is invisible from either side.
+
+> **[correction 2026-10-21]** This sentence had the two records **transposed**,
+> and attached 614 lines to the 498-line one. Measured: `9360` occurs **0**
+> times in RFC 9054's source and `9054` occurs **0** times in RFC 9360's, so
+> the direction above is the only one the bytes support — RFC 9054 is the
+> earlier document, published while RFC 9360 was still six months from an RFC
+> number, which is *why* it can only cite it as a draft.
+>
+> Worth keeping as a hazard in its own right: **this file carried an unverified
+> claim, and it propagated.** The transposed version was copied verbatim out of
+> here into a pass-2 brief, where it would have become the lane's own finding
+> had the pass not re-derived it from the source instead of confirming it. A
+> hazard list is prose like any other, and "work the predecessor's list **and**
+> choose your own targets" applies to this file too.
 
 **Do not batch unrelated records.** There is no shared product, so you pay the
 propagation risk and a thinner per-record budget for nothing but attention

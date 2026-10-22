@@ -16,7 +16,7 @@ by script.
 
 | | |
 |---|---|
-| **Source** | `.cache/rfc-9054.txt`, 499 newline-delimited lines |
+| **Source** | `.cache/rfc-9054.txt`, **498 lines** (`wc -l`; 499 elements under `split("\n")`, which is the convention this directory's line counts use) |
 | **Digest** | `75a6bf62b4226baa1e14ccdcc4c603b8a039084ad79677db029e0bbec4525e6f` |
 | **Category** | **Informational** — "This document is not an Internet Standards Track specification" (line 25) |
 | **BCP 14 keywords** | **2** — 1 SHOULD NOT, 1 SHOULD, both in §2 and both about collision attacks |
@@ -26,8 +26,10 @@ by script.
 by `\n` with no trailing newline.
 
 **There is no page decoration in this source and no region is split.** This
-rendering has **0 form feeds** and no running headers or footers in its 499
-lines, checked with the same patterns that match 25 page breaks in RFC 8392.
+rendering has **0 form feeds** and no running headers or footers in its 498
+lines, checked with the same patterns that match 25 page breaks in RFC 8392
+(verified by pass 2: 25 form feeds and 25 `[Page N]` markers there, 0 of each
+here).
 Built with `split("\n")`, never `splitlines()`.
 
 **What the shape of this document is.** Two BCP 14 keywords, eight registry

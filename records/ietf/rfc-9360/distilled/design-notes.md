@@ -194,8 +194,9 @@ one. The shape: §6.
 ---
 ## 5. `R-O-03` — what can be cited from here, and what cannot
 
-`R-O-03`: *"canonicalization algorithm SHALL be cited, not invented
-silently."* **[Unverifiable from this repository — `mofn` rule.]**
+`R-O-03`: *"Canonicalization algorithm for each concrete encoding SHALL be
+cited, not invented silently."* (`ARCH-0001` §5.3, as five other records in
+this library quote it.) **[Unverifiable from this repository — `mofn` rule.]**
 
 **RFC 9360 cites no canonicalization and defines none.** Measured: `canonical`,
 `canonicalization` and `deterministic` each occur **zero** times. What it does
@@ -386,7 +387,8 @@ This is §2's contradiction expressed as a `DEC-002` cost. `COSE_CertHash` has
 require collision resistance"*; and `Recommended` is a **registry column, not a
 wire field**. `examples/vectors.yaml` V-0004 is the result as an identity rather
 than an inference: **a filtering `x5t` and a binding `x5t` with the same
-algorithm are the same 25 octets.**
+algorithm are the same bytes** — 23 octets with SHA-1, and the identity holds
+for every value of `hashAlg`.
 
 Option 5 says "COSE as export only", so we export into a format whose own
 grammar permits a value our profile must reject and whose wire form cannot
@@ -582,7 +584,7 @@ four are confirmed, three are scoped.
 3. **"`COSE_CertHash` excludes no registry value, and Filter Only is a registry
    column, not a wire field, so a verifier handed `[-14, h'…']` cannot tell
    whether the sender was filtering or binding."** **CONFIRMED and executed**
-   (V-0004): byte-identical, 25 octets, and the structure has exactly two
+   (V-0004): byte-identical — 23 octets with SHA-1 — and the structure has exactly two
    fields so there is nowhere a purpose could have gone. What it costs us is in
    Cut 4: the restriction has to live in our profile because the format cannot
    express it.
