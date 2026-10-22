@@ -130,6 +130,14 @@ The one-line versions, in the order they cost you most:
 - **Check the arithmetic, not just the words.** A record claimed a width was
   "the only" one its byte count admitted; the congruence admits every eighth
   value. Enumerate the solution set before writing "only" or "uniquely".
+- **A schema that parses is not a schema that binds.** A derived CDDL parsed
+  perfectly for two passes and constrained nothing, because a `* label => any`
+  wildcard in the same map satisfied every item its rule rejected. Write down
+  the instance the schema must REJECT, and check that it does.
+- **A new check can under-report to ZERO, silently.** One collected no pairs at
+  all on the lane it existed for, and printed that as a clean result. Make every
+  check report how many candidates it EXAMINED beside what it found — an absence
+  of findings must be distinguishable from an absence of looking.
 - **Escapes resolve through editing paths.** Assemble any `\u{…}` in a script
   and grep for the resolved character afterwards. One record carried this
   seven times, always inside a sentence about the hazard.

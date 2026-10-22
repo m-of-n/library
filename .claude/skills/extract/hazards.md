@@ -328,7 +328,48 @@ and byte lengths are all fossils waiting to happen, and a count stated in a
 *different* file from the artifact it describes is the likeliest to be missed.
 Scope each recount to the key the prose names, as above.
 
-## 7. Small traps that cost real time
+## 7. A schema that parses is not a schema that binds
+
+`rfc-9360`'s derived CDDL existed, by its own header, because nothing in the
+source says *in a grammar* that label 34 carries a `COSE_CertHash`. It did not
+say so either, and it parsed perfectly for two passes.
+
+Its x5 entries are optional map entries inside a map that also carries
+`* label => any`. RFC 8610 §3.5.4 gives this exact shape as its own worked
+example and states that an item with a wrongly typed value **"does match this
+specification: while the first entry of the group does not match, the second
+one (the wildcard) does."** So `{ 34: "nonsense" }` matched the rule the file
+exists to state. The fix is CDDL's cut, `^ =>`, on every such entry.
+
+**Rule.** A parse check answers *is this grammar well formed*, never *does it
+bind what I meant*. For every derived schema, write down the instance it is
+supposed to REJECT and check that it does. Where a wildcard or an optional
+entry is in scope, assume it swallows your constraint until you have shown
+otherwise. And note where the error propagates: two prose artifacts here had
+written the vacuity down as a property of the SOURCE — "the labels are in a
+prose table" — when it was a property of our own grammar.
+
+## 8. A new check can under-report to ZERO, silently
+
+The inverse of #9's over-reporting rule, and worse. `bin/check-id-joins
+--quote-join` collected **0 pairs** on `rfc-9054`/`rfc-9360` — the lane with 11
+duplicate-text groups over 23 requirements, i.e. the lane the check exists for
+— because its `QUOTE` pattern cannot span a quotation containing a nested
+mark, which is exactly how a registry name is quoted inside a sentence. The
+summary then printed only mismatches, so "0 pairs, 0 to read" meant the same
+thing whether it had examined nothing or examined twenty and found them sound.
+
+Over-reporting is loud: you see the noise and scope it. Under-reporting reads
+as success, and an earlier pass had already paid for the ambiguity by verifying
+by hand that its own `0` meant "22 quotations all carried" rather than "nothing
+found".
+
+**Rule.** Every check reports its own COVERAGE beside its findings — how many
+candidates it examined, not just how many failed. Then test it on a case it
+should catch and confirm the count moves. A check that cannot say what it
+looked at cannot be trusted when it says nothing is wrong.
+
+## 9. Small traps that cost real time
 
 - **`splitlines()` splits on form feeds.** Use `split("\n")`. On a paginated
   RFC it shifts every line number by up to the number of page breaks.
