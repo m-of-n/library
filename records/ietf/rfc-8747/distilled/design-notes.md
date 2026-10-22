@@ -481,9 +481,15 @@ did **not** nominate. So work this list **and** choose your own targets.
    `D-0001` rests on them. Re-derive it independently rather than confirming
    it; the CBOR arithmetic, the 48 = 40 + 8 and the determinism of each entry
    order are checkable without any cipher at all.
-6. **`bin/check-id-joins --quote-join` examines 22 pairs where this record
-   carries 35.** A zero finding there is not coverage — see `README.md`, known
-   gap 1. Pass 2 should not read its clean result as a clean record.
+6. **`bin/check-id-joins --quote-join` examined fewer pairs than this record
+   carries, and this entry was itself two figures out of step with
+   `README.md`.** It said 22 of 35 where `README.md` said 25 of 38 — one
+   record, one check, two denominators and two numerators, which is
+   `hazards.md` §6 inside a single pass. The check has since been fixed and
+   both files re-measured from it: **31 examined, 31 carried, 0 to read**, with
+   the seven remaining exclusions named in `README.md`, known gap 1. The
+   warning that stood here still stands in general — a zero finding is not
+   coverage unless the examined count says what was looked at.
 7. **Counts stated in a file other than the one they describe.** `README.md`
    and `record.yaml` both count these artifacts. Every figure in them was read
    off the files at write time, but that is exactly the fossil class

@@ -57,7 +57,7 @@ table's figures are read **off the files on disk** when this index is built.
 | fenced regions byte- **and** digest-exact against their declared line range | **33 of 33** |
 | both YAML readers agree on every artifact | **0** real value divergences; the only differences are `int` vs `str` on bare numbers |
 | `bin/check-id-joins --surface` | **1** duplicate-text group, `R-0038`/`R-0052` — both `example-intro` sentences, byte-identical |
-| `bin/check-id-joins --quote-join` | **25** pairs examined, 24 carried, 0 to read |
+| `bin/check-id-joins --quote-join` | **31** pairs examined, **31** carried, 0 to read — re-measured after the check was fixed (below) |
 | this pass's own exhaustive join audit | **38** pairs examined, **38** carried by their cited id |
 | citation closure over `distilled/` | **118** distinct ids cited, **0** dangling |
 | `bin/validate` | **0 errors**, nothing flagged on this record |
@@ -69,15 +69,36 @@ that resolves to a real but different statement (`hazards.md` §4).
 
 ## Known gaps, named rather than left for pass 2 to find
 
-1. **`--quote-join` could not see 13 of the pairs this record carries.** It
-   examines 25 where this pass's own audit finds 38. Its window is
-   `text[pos-1400:pos]` and `QUOTE` pairs quote marks left to right from
-   wherever that cut falls, so when the cut lands inside a quotation the
-   pairing is offset by one and the span beside the citation is not recognised.
-   Coverage therefore depends on byte position, not on whether the evidence is
-   present. Reported rather than worked around: `bin/` is not this pass's to
-   change. The 38 are correct **by construction** — each quotation is the cited
-   requirement's own `text`, emitted from the id table.
+1. **`--quote-join`'s coverage was this pass's finding, and it has since been
+   fixed.** This pass reported that the check examined **25** pairs where its
+   own audit finds 38, and diagnosed the window: `text[pos-1400:pos]` paired
+   quote marks left to right from wherever the cut fell, so a cut landing
+   inside a quotation offset the pairing and the span beside the citation went
+   unrecognised. Reported rather than worked around, because `bin/` was not
+   this pass's to change.
+
+   The fix found that the window was real but **not** the binding constraint
+   here. Two further causes dominated, and both were invisible until the
+   rejections were tallied rather than reasoned about:
+
+   - `_OPENS` did not list `'` as an opener-shaped predecessor, so **this
+     record's commonest attributed shape was unreadable** — a `quoted_evidence`
+     entry is a YAML single-quoted scalar opening on the quotation itself,
+     `- '"…" (rfc-8747#R-0047)'`, where the `"` is preceded by `'` and nothing
+     else;
+   - a quotation carrying **more than one** interior mark pair was rejected,
+     which §7.1's sentence does twice in one breath.
+
+   Now **31 examined, 31 carried, 0 to read**. The remaining seven of this
+   pass's 38 are excluded by design rather than by accident, and each class can
+   be named: a `- id: 'rfc-8747#R-0017'` line **defines** an entry and does not
+   cite one (the nearby mark is the previous entry's `text:`); `` `Specification
+   Required` `` is a backticked code span, not a quotation; and §7.2.2's IANA
+   registration block is a template of `* Change Controller:` lines, which is
+   structure rather than prose. The 38 remain correct **by construction** —
+   each quotation is the cited requirement's own `text`, emitted from the id
+   table — but 31 is now a coverage figure determined by evidence, and the
+   difference is accounted for instead of unexplained.
 2. **The cut operator is inert on Confirmation Keys 1 and 2.** `schema/README.md`
    says so in its own words: RFC 8747 defines no `COSE_Key` or `COSE_Encrypt0`
    grammar, so those rules are sockets typed `any` and the whole constraint on

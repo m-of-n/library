@@ -369,6 +369,47 @@ candidates it examined, not just how many failed. Then test it on a case it
 should catch and confirm the count moves. A check that cannot say what it
 looked at cannot be trusted when it says nothing is wrong.
 
+### 8.1 A coverage number can be wrong without being zero
+
+Reporting coverage is necessary and not sufficient. Once `--quote-join` printed
+its examined count, `rfc-8747`'s pass read **25** where its own exhaustive
+audit carried 38, and `rfc-9338`'s read **22** where the record carries 35. A
+plausible non-zero number is harder to distrust than a zero, and the two
+records disagreed with themselves about it: `rfc-8747` recorded 25 of 38 in
+`README.md` and 22 of 35 in `design-notes.md` — one record, one check, two
+numerators and two denominators, #6 inside a single pass.
+
+**The diagnosis you reason out from the code is not usually the binding one.**
+The window was blamed, plausibly and in writing: pairing began at an arbitrary
+byte offset, so a cut landing mid-quotation shifted every pair after it. That
+was real — fixing it took the library-wide examined count from 307 to 400 — and
+it moved `rfc-8747` **not at all**. The causes that mattered there were found
+only by tallying the rejections by reason instead of reading the regexes:
+
+- the opener set omitted `'`, so the library's **commonest** attributed shape
+  was unreadable — a `quoted_evidence` entry is a YAML single-quoted scalar
+  opening on the quotation itself, `- '"…" (rec#R-0047)'`, where the `"` is
+  preceded by `'` and nothing else. It cannot be an apostrophe there: an
+  apostrophe sits between word characters, where no quotation starts;
+- exactly one interior mark pair was admitted, one short of a sentence quoting
+  two registry names in one breath.
+
+**Rule.** When a check's coverage looks short, instrument it: for every
+candidate it skipped, record WHICH test rejected it, and read the tally before
+touching the code. Then classify the remainder by hand and name each excluded
+class in the record — `rfc-8747` now states 31 examined and accounts for the
+other seven as id-definition lines, backticked code spans and an IANA
+registration template. A gap you can name is scoping; a gap you cannot is a
+blind spot wearing a number.
+
+**And fixing a check falsifies every count measured with it** (#6, which
+applies to tools and not only to readers). Grep the library for the figure, not
+just the record in front of you: this fix falsified counts in four files across
+three records, in two of which the stale number sat in a `record.yaml` note
+belonging to a different pass. Annotate those in place with the new figure and
+the reason rather than silently rewriting them — the verdict usually survives;
+only the number has moved.
+
 ## 9. Small traps that cost real time
 
 - **`splitlines()` splits on form feeds.** Use `split("\n")`. On a paginated

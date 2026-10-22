@@ -116,6 +116,50 @@ check("two adjacent quotations are not welded into one",
       cij._adjacent_quote(WELD, WELD.index("(rfc-9054") + 1,
                           WELD.index("(rfc-9054") + 16), None)
 
-total = 19
+# --- the single quote is an OPENER ------------------------------------------
+# The library's commonest attributed shape is a YAML single-quoted scalar that
+# opens on the quotation itself, so the `"` is preceded by `'` and nothing
+# else. Omitting `'` from _OPENS is why the check saw 25 of rfc-8747's 38
+# pairs and printed 25 as its coverage.
+SQ = ("""        quoted_evidence:\n          - '"The COSE_Key representation """
+      """is used as the plaintext when encrypting the key." """
+      """(rfc-8747#R-0047)'""")
+check("a quotation opening inside a single-quoted scalar is found",
+      cij._adjacent_quote(SQ, SQ.index("(rfc-8747") + 1,
+                          SQ.index("(rfc-8747") + 16),
+      "The COSE_Key representation is used as the plaintext when "
+      "encrypting the key.")
+check("an apostrophe between word characters still opens nothing",
+      cij._OPENS.search("don"), None)
+
+# --- more than one interior pair -------------------------------------------
+# Admitting exactly one pair was one short of what the library writes: a
+# sentence quoting two registry names in one breath. The ORIENTATION test, not
+# the count, is what excludes welding, so the rule generalises without
+# weakening — WELD above still returns None.
+TWO = ('"This specification establishes the IANA "CWT Confirmation Methods" '
+       'registry for CWT "cnf" member values." (rfc-8747#R-0107)')
+check("a quotation containing two nested pairs is found",
+      cij._adjacent_quote(TWO, TWO.index("(rfc-8747") + 1,
+                          TWO.index("(rfc-8747") + 16),
+      'This specification establishes the IANA "CWT Confirmation Methods" '
+      'registry for CWT "cnf" member values.')
+
+# --- JSON structure is structure, whatever its separators look like ---------
+# Generalising the pair count exposed this: `":"` separators between spaces are
+# both opener- and closer-shaped, so rfc-9679's derived JSON welded into four
+# "quotations". _is_prose is the test in a position to say so, and it required
+# a word character immediately before the colon, which JSON never has.
+check("a json object span is not a quotation",
+      cij._is_prose('"layout": "<prefix> ":" <hash algorithm identifier>", '
+                    '"separator": ":", "requirements": ['), False)
+
+# --- `(rec#R-0134)'s section` attributes a SECTION, not a sentence ----------
+check("the possessive-section idiom is an attribution to a section",
+      bool(cij._OF_SECTION.match("`'s section) says byte strings are")), True)
+check("a bare citation is not the possessive idiom",
+      bool(cij._OF_SECTION.match(") and Appendix D: the prelude")), False)
+
+total = 25
 print(f"test_check_id_joins: {total - fail}/{total} passed")
 sys.exit(1 if fail else 0)

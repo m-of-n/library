@@ -145,6 +145,9 @@ def citations(recdir):
 #      only one. Reported separately as `partial`, never as a mismatch
 #   5. an explicit disclaimer ("R-0017's neighbour"), i.e. prose that says the
 #      id is NOT the span's own
+#   6. `(rec#R-0134)'s section`, which attributes the quotation to the SECTION
+#      the id lives in rather than to the id's own sentence. The library writes
+#      it 23 times, and it is #5's shape said positively
 #
 # Anything still flagged is a pair a human must read. Keep it that way.
 
@@ -182,7 +185,15 @@ def _is_prose(s):
     # sentence. _YAMLISH only sees structure that spans a newline, and
     # slsa-1-2's vectors supplied `", schema: ..., expected: invalid, result:"`
     # on a single line.
-    return len(re.findall(r"[A-Za-z_][\w.-]*:\s", s)) < 2
+    #
+    # The closing quote before the colon is OPTIONAL because JSON puts one
+    # there. Requiring a word character immediately before the colon let
+    # rfc-9679's derived JSON through as four "quotations" — spans of
+    # `"layout": "…", "separator": ":", "requirements": [` welded together by
+    # the `":"` separators, which read as nested quotations because a colon
+    # between two spaces is both opener- and closer-shaped. The span is
+    # structure either way; only this test was in a position to say so.
+    return len(re.findall(r"""[A-Za-z_][\w.-]*["']?:\s""", s)) < 2
 
 
 # An elision is a legitimate quotation shape in this library, declared and
@@ -217,7 +228,21 @@ _JOIN = re.compile(r"^[\s—–()\[\]{}*`,;:.\-]{0,14}$")
 _MARK = re.compile(r"[\"“”]")
 # A real opening delimiter follows a line start, whitespace or an opener —
 # never a word character, which is how `don"t`-shaped noise is excluded.
-_OPENS = re.compile(r"(?:^|[\s(\[{*`—–>|-])$")
+# The SINGLE QUOTE belongs in that set, and leaving it out was the whole reason
+# this check saw 25 of rfc-8747's 38 pairs. The library's commonest attributed
+# shape is a YAML single-quoted scalar opening on the quotation itself —
+#     quoted_evidence:
+#       - '"The COSE_Key representation is used as the plaintext …" (rec#R-0047)'
+# — so the quotation's `"` is preceded by `'` and nothing else. It cannot be an
+# apostrophe in that position: an apostrophe sits between two word characters,
+# where no quotation starts.
+_OPENS = re.compile(r"(?:^|[\s(\[{*`—–>|'’-])$")
+# `(rec#R-0134)'s section` attributes the SECTION the id lives in, not the id's
+# own sentence, and the library says so 23 times. It is `_DISCLAIM`'s shape —
+# prose stating the id is not the span's — but it is matched immediately after
+# the citation rather than anywhere in a 400-character context, because at that
+# width it would also silence the real mis-joins sitting beside it.
+_OF_SECTION = re.compile(r"^[`'\"”]?['’]s\s+(?:section|clause|appendix)\b", re.I)
 
 
 def _nested_quote(window):
@@ -241,9 +266,17 @@ def _nested_quote(window):
         welded   "…review" `party` at line 403, inside "is i"
                           ^closer                      ^opener
 
-    So exactly one interior pair is admitted, its first mark must look like an
-    OPENER (preceded by space or a bracket) and its second like a CLOSER
-    (followed by space or punctuation), and the inner quotation must be short.
+    So the interior marks must PAIR UP: an even count, every first mark of a
+    pair looking like an OPENER (preceded by space or a bracket) and every
+    second like a CLOSER (followed by space or punctuation), and every inner
+    quotation short. A single pair was admitted at first, which is one short of
+    what the library writes — §7.1's sentence quotes two registry names in one
+    breath, `… the IANA "CWT Confirmation Methods" registry for CWT "cnf"
+    member values.` — and the rule generalises without weakening, because what
+    excludes welding is the ORIENTATION test, not the count: in `"A" prose "B"`
+    the first interior mark is preceded by `A`, so it is a closer, and no
+    pairing of it is admitted however many marks follow.
+
     Bounded by the caller's window and by the same prose and structure tests
     the strict path uses.
     """
@@ -256,15 +289,47 @@ def _nested_quote(window):
         if not (40 <= len(body) <= 400):
             continue
         marks = [m.start() for m in _MARK.finditer(body)]
-        if len(marks) != 2:
+        if not marks or len(marks) % 2:
             continue
-        a, b = marks
-        if not (a == 0 or body[a - 1] in " ([{—–-"):
-            continue                                  # first is not an opener
-        if not (b == len(body) - 1 or body[b + 1] in " ,.;:)]}—–"):
-            continue                                  # second is not a closer
-        if b - a > 80 or "\n" in body[a:b]:
-            continue                                  # inner span too long
+        ok = True
+        for a, b in zip(marks[::2], marks[1::2]):
+            if not (a == 0 or body[a - 1] in " ([{—–-"):
+                ok = False                            # first is not an opener
+            elif not (b == len(body) - 1 or body[b + 1] in " ,.;:)]}—–"):
+                ok = False                            # second is not a closer
+            elif b - a > 80 or "\n" in body[a:b]:
+                ok = False                            # inner span too long
+            if not ok:
+                break
+        if not ok:
+            continue
+        if _YAMLISH.search(body) or not _is_prose(body):
+            continue
+        return body
+    return None
+
+
+def _plain_quote(window):
+    """The span closing at the end of `window` with NO interior marks.
+
+    Anchored on the closing delimiter and scanning back for its partner, which
+    is what makes the result independent of where the caller's window starts.
+    The version this replaced iterated QUOTE over the window instead, so
+    pairing began at an arbitrary byte offset: if the cut landed mid-quotation
+    every subsequent pair shifted by one and whichever quotation happened to
+    fall on the wrong side was never examined at all. On rfc-8747 that reported
+    25 pairs where an exhaustive join finds 38 — an undercount determined by
+    POSITION rather than by evidence, in the very number the summary prints as
+    coverage.
+    """
+    if not window or not _MARK.match(window[-1]):
+        return None
+    for i in [m.start() for m in _MARK.finditer(window[:-1])][::-1]:
+        if not _OPENS.search(window[:i] or "\n"):
+            continue
+        body = window[i + 1:-1]
+        if not (40 <= len(body) <= 1200) or _MARK.search(body):
+            continue
         if _YAMLISH.search(body) or not _is_prose(body):
             continue
         return body
@@ -279,18 +344,22 @@ def _adjacent_quote(text, pos, end):
       `(rec#R-0001): "…"`  the citation introduces the quotation
     Either way only whitespace, a bracket, a dash or light punctuation may
     stand between. Anything else is proximity, not attribution.
+
+    Both backward paths are anchored on a closing delimiter adjacent to the
+    citation — never on the window edge — so what gets examined depends on the
+    text, not on the arithmetic of the window.
     """
     window = text[max(0, pos - 1400):pos]
-    for m in reversed(list(QUOTE.finditer(window))):
-        if _JOIN.match(window[m.end():]) and not _YAMLISH.search(m.group(1)):
-            return m.group(1)
-    # Strict pairing found nothing: retry allowing nested marks, anchored on a
-    # closing delimiter that is itself adjacent to the citation.
     for cut in range(len(window), max(0, len(window) - 15), -1):
-        if _JOIN.match(window[cut:]):
-            nested = _nested_quote(window[:cut])
-            if nested:
-                return nested
+        if not _JOIN.match(window[cut:]):
+            continue
+        head = window[:cut]
+        plain = _plain_quote(head)             # the common shape
+        if plain:
+            return plain
+        nested = _nested_quote(head)           # one balanced interior pair
+        if nested:
+            return nested
     ahead = text[end:end + 1400]
     m = QUOTE.search(ahead)
     if m and _JOIN.match(ahead[:m.start()]) and not _YAMLISH.search(m.group(1)):
@@ -326,6 +395,8 @@ def quote_joins(recdir, known):
             who, bare = m.group(1), m.group(2)
             if bare[0] in "GN" or bare not in known.get(who, {}):
                 continue
+            if _OF_SECTION.match(text[m.end():m.end() + 24]):
+                continue                      # shape 6: attribution to a section
             quote = _adjacent_quote(text, m.start(), m.end())
             if not quote or not _is_prose(quote):
                 continue
