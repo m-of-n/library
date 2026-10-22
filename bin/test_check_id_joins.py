@@ -93,6 +93,29 @@ check("a yamlish span is never a quotation",
       cij._adjacent_quote('"- name: protected\n  index: 0\n  type: bstr\n'
                           '  required: true" (rfc-9052#R-0006)', 60, 75), None)
 
-total = 17
+# --- nested quote marks: the silent under-report ---------------------------
+# QUOTE's character class excludes `"`, so a quotation CONTAINING a nested mark
+# matched nothing and the check collected ZERO pairs on the lane it exists for
+# — 11 duplicate-text groups over 23 requirements — while reporting clean.
+NEST = ('hashAlg is "an integer or a string containing the hash algorithm '
+        'identifier of the algorithm registered in the "COSE Algorithms" '
+        'registry" (rfc-9360#R-0041).')
+check("a quotation containing a nested pair is found",
+      cij._adjacent_quote(NEST, NEST.index("(rfc-9360") + 1,
+                          NEST.index("(rfc-9360") + 16),
+      'an integer or a string containing the hash algorithm identifier of the '
+      'algorithm registered in the "COSE Algorithms" registry')
+
+# ...but the fallback must not WELD two adjacent quotations with prose between
+# them. Both shapes have two interior marks; they differ in whether the first
+# is an opener or a closer. Longest-first plus an even count alone took the
+# library-wide count from 4 to 101.
+WELD = ('"a review by the maintainers of the protocol" and `party` appears at '
+        'line 403, inside "is in" (rfc-9054#R-0025).')
+check("two adjacent quotations are not welded into one",
+      cij._adjacent_quote(WELD, WELD.index("(rfc-9054") + 1,
+                          WELD.index("(rfc-9054") + 16), None)
+
+total = 19
 print(f"test_check_id_joins: {total - fail}/{total} passed")
 sys.exit(1 if fail else 0)

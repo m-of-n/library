@@ -40,6 +40,17 @@ Exit 1 if any citation dangles, else 0. A duplicate-text group is not a defect
 and does not affect the exit status — it is a place to look. A --quote-join
 mismatch is a finding to READ, not an error, for the same reason, and it is
 scoped deliberately narrowly; see `_adjacent_quote`.
+
+--quote-join REPORTS ITS OWN COVERAGE, and that is not cosmetic. The first
+version printed only mismatches, so "0 pairs, 0 to read" meant the same thing
+whether it had examined nothing or examined twenty and found them all sound.
+It then collected ZERO on rfc-9054/rfc-9360 — the lane with 11 duplicate-text
+groups over 23 requirements, i.e. the one this check exists for — because
+`QUOTE` cannot span a quotation containing a nested mark, and the clean report
+read as coverage. Over-reporting is loud and gets scoped; under-reporting to
+zero is silent. The summary now always says how many pairs were EXAMINED
+beside how many need reading, so an absence of findings can be told apart from
+an absence of looking.
 """
 import argparse
 import collections
@@ -203,6 +214,63 @@ def _carries(quote, target):
 _JOIN = re.compile(r"^[\s—–()\[\]{}*`,;:.\-]{0,14}$")
 
 
+_MARK = re.compile(r"[\"“”]")
+# A real opening delimiter follows a line start, whitespace or an opener —
+# never a word character, which is how `don"t`-shaped noise is excluded.
+_OPENS = re.compile(r"(?:^|[\s(\[{*`—–>|-])$")
+
+
+def _nested_quote(window):
+    """The OUTERMOST quoted span closing at the end of `window`, if any.
+
+    Why this exists, and it is the whole of hazard "a new check can under-report
+    to zero": QUOTE's character class excludes `"`, so a quotation CONTAINING a
+    nested quote mark — `"restricted to values whose "COSE Algorithms" column
+    is Yes"` — matches nothing at all. On the rfc-9054/rfc-9360 lane, which has
+    11 duplicate-text groups over 23 requirements and is therefore the lane most
+    exposed to a wrong-but-resolving id, the check collected ZERO pairs and
+    reported them as a clean result. Over-reporting is loud; this was silent.
+
+    An even count of interior marks is NOT enough, and the first version of
+    this failed exactly there: `"A" prose "B"` also has two, so longest-first
+    welded two adjacent quotations together with the prose between them and the
+    library-wide count went from 4 to 101. The two cases separate structurally:
+
+        nested   "restricted … "COSE Algorithms" … is Yes"
+                                ^opener        ^closer
+        welded   "…review" `party` at line 403, inside "is i"
+                          ^closer                      ^opener
+
+    So exactly one interior pair is admitted, its first mark must look like an
+    OPENER (preceded by space or a bracket) and its second like a CLOSER
+    (followed by space or punctuation), and the inner quotation must be short.
+    Bounded by the caller's window and by the same prose and structure tests
+    the strict path uses.
+    """
+    if not window or not _MARK.match(window[-1]):
+        return None
+    for i in [m.start() for m in _MARK.finditer(window[:-1])]:   # longest first
+        if not _OPENS.search(window[:i] or "\n"):
+            continue
+        body = window[i + 1:-1]
+        if not (40 <= len(body) <= 400):
+            continue
+        marks = [m.start() for m in _MARK.finditer(body)]
+        if len(marks) != 2:
+            continue
+        a, b = marks
+        if not (a == 0 or body[a - 1] in " ([{—–-"):
+            continue                                  # first is not an opener
+        if not (b == len(body) - 1 or body[b + 1] in " ,.;:)]}—–"):
+            continue                                  # second is not a closer
+        if b - a > 80 or "\n" in body[a:b]:
+            continue                                  # inner span too long
+        if _YAMLISH.search(body) or not _is_prose(body):
+            continue
+        return body
+    return None
+
+
 def _adjacent_quote(text, pos, end):
     """The quoted span this citation ATTRIBUTES, if any.
 
@@ -216,6 +284,13 @@ def _adjacent_quote(text, pos, end):
     for m in reversed(list(QUOTE.finditer(window))):
         if _JOIN.match(window[m.end():]) and not _YAMLISH.search(m.group(1)):
             return m.group(1)
+    # Strict pairing found nothing: retry allowing nested marks, anchored on a
+    # closing delimiter that is itself adjacent to the citation.
+    for cut in range(len(window), max(0, len(window) - 15), -1):
+        if _JOIN.match(window[cut:]):
+            nested = _nested_quote(window[:cut])
+            if nested:
+                return nested
     ahead = text[end:end + 1400]
     m = QUOTE.search(ahead)
     if m and _JOIN.match(ahead[:m.start()]) and not _YAMLISH.search(m.group(1)):
@@ -277,6 +352,13 @@ def quote_joins(recdir, known):
             if (who, bare) not in ids:
                 ids.append((who, bare))
             if any(_carries(q, _norm(known[w][b][1])) for w, b in ids):
+                # Recorded, not discarded. A pair that RESOLVES is the evidence
+                # that the check looked at anything at all, and conflating it
+                # with "found nothing" is how this tool reported a clean result
+                # on the one lane it covered least — see the summary line.
+                out.append((f.relative_to(recdir),
+                            text.count("\n", 0, pos) + 1,
+                            ["%s#%s" % (w, b) for w, b in ids], q, "ok"))
                 continue
             seen.add(key)
             # shape 4: under-citation — the span runs into the next id
@@ -323,7 +405,7 @@ def main():
              if d.is_dir()}
 
     tot_groups = tot_cites = tot_dangling = 0
-    tot_pairs = tot_mismatch = tot_partial = 0
+    tot_pairs = tot_mismatch = tot_partial = tot_ok = 0
     for recdir in dirs:
         rid = recdir.name
         where = recdir.relative_to(ROOT) if recdir.is_relative_to(ROOT) else recdir
@@ -352,6 +434,9 @@ def main():
             pairs = quote_joins(recdir, known)
             tot_pairs += len(pairs)
             for rel, ln, cids, quote, verdict in pairs:
+                if verdict == "ok":
+                    tot_ok += 1
+                    continue
                 if verdict == "partial":
                     tot_partial += 1
                     continue
@@ -367,7 +452,8 @@ def main():
           + (f", {tot_groups} duplicate-text group(s)" if a.surface else "")
           + (f", {tot_cites} citation(s), {tot_dangling} dangling"
              if a.resolve else "")
-          + (f", {tot_pairs} quotation/citation pair(s), {tot_mismatch} to read"
+          + (f", {tot_pairs} quotation/citation pair(s) examined"
+             f" ({tot_ok} carried by their cited id), {tot_mismatch} to read"
              + (f", {tot_partial} spanning the next id too" if tot_partial
                 else "")
              if a.quote_join else ""))
