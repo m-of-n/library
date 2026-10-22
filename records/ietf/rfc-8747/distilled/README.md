@@ -1,115 +1,99 @@
 ---
-schema: "library-doc/v1"
-id: rfc-8747-distilled-index
 record: rfc-8747
-type: index
-updated: "2026-10-21"
+kind: index
+title: "rfc-8747 — distilled artifacts"
+extracted: "2026-10-21"
+reviewed_by: ""
 ---
 
-# Distilled artifacts — RFC 8747 (Proof-of-Possession Key Semantics for CWTs)
+# Distilled artifacts
 
-**FX-1 pass 1 (extract) only.** `distillation.passes` in `record.yaml` is the
-only authority for which passes have run — this file deliberately does not
-restate a pass count, because such a restatement goes stale the moment the next
-pass lands and nothing reports it. It was found stale in four files at once in
-`rfc-9338`, four in `rfc-8778` and one in `rfc-9921`, each time inside a file
-that recorded the pass it denied.
+FX-1 (`docs/extraction.md`). One line per artifact: what it covers, and what it
+does not.
 
-No `profile` is declared: an unfinished extraction has neither `full` nor
-`partial`. `reviewed_by` is empty on every artifact — that is pass 4, human
-review. Artifacts may be read; nothing may be built on them yet
-(`docs/requirements.md`).
+**Pass 1 (extract) only.** Passes 2 and 3 have not run, so
+`distillation.profile` is deliberately **unset** and every `reviewed_by` is
+empty. Read every count below as pass 1's measurement, with the method stated.
 
-## The source
+| kind | file | coverage |
+|---|---|---|
+| normative | `normative.md` | **28** byte-exact fenced regions covering **389** of the source's 683 lines, in document order, §1-§7.2.2 plus the masthead and Abstract; includes Table 1 and all four IANA blocks. Front matter, ToC, both reference lists, Acknowledgements and Authors' Addresses dropped and stated as dropped |
+| requirements | `requirements.yaml` | **118** entries `R-0001`-`R-0118`, source order, no gaps: 111 `stated`, 7 `inferred`; 35 `testable: yes`, 12 `partial`, 71 `no`. Keyword counts **8 = 8**, bijection by source line |
+| schema | `schema/` | **1** verbatim and **3** derived. The source ships **no** grammar, so every formal artifact is ours; the CDDL is shown to **bind**, 10 of 10 instances |
+| messages | `messages.yaml` | **5** structures, **22** fields, **38** of the 118 requirements wired, every `constrained_by` non-empty except five RFC 8392 claims that carry an `unwired_reason` |
+| protocol | `protocol.yaml`, `protocol.md` | **3** roles, **6** steps, **0** error paths. One step partly specified; five unspecified, two by explicit refusal. Mermaid diagram with every arrow dashed |
+| state-machine | `state-machine.yaml` | **not applicable**, written out: thirteen lifecycle words at zero over 683 lines, four near misses each checked, and a ground none of the five sibling N/A records shares |
+| examples | `examples/` | **6** vectors over the source's 4 printed examples and 1 printed scalar; 5 byte-exact fences. The one cryptographic computation **reproduces** |
+| design-notes | `design-notes.md` | all four `bears_on` identifiers, the `MD-3` structure mapping and export mapping, **6** named cuts against `MD-3` each naming the `DEC-002` option it affects, plus a convergence note; the six canonical-encoding conditions as a measured negative; **6** source defects; **13** open questions; and a pass-2/3 attention map |
+
+## What this extraction measured rather than asserted
+
+Every number here was re-derived at write time by the generator that wrote the
+file, and asserted against the printed value, so a stale count cannot survive
+in the artifact that states it. Counts stated in a *different* file from the
+artifact they describe are the likeliest fossils (`hazards.md` §6), so this
+table's figures are read **off the files on disk** when this index is built.
 
 | | |
 |---|---|
-| Lines | **683** newline-delimited, **0** form feeds — so no page decoration and no running header to exclude |
-| Digest | `9b695379f119f9675828d054f1b0e76014c06c9a59dccef8bb417e0420272dda`, matching `content.sha256` and a fresh `shasum -a 256` of the cache |
-| Standing | `Category: Standards Track`, read off the front page, matching `maturity: standard` |
-| BCP 14 keywords | **8** — 4 MUST, 2 MAY, 1 SHOULD, 1 MUST NOT |
+| source | `.cache/rfc-8747.txt`, **683** newline-delimited lines, **0 form feeds** |
+| digest | `9b695379f119f9675828d054f1b0e76014c06c9a59dccef8bb417e0420272dda` — matches `content.sha256` |
+| maturity | **Standards Track**, quoted from source line 7 in `normative.md`, not inferred |
+| BCP 14 keywords | **8**: 4 MUST, 2 MAY, 1 SHOULD, 1 MUST NOT — `bin/bcp14-count --by-keyword` |
+| where they are | L172, L180 (§3.1); L227, L228, L231, L235 (§3.2); L357, L391 (§4). **None** in §1, §2, §3, §3.3, §3.4, §3.5, §5, §6, §7 |
+| non-uppercase force words in the body | **25** on 25 lines — `may` 9, `should` 7, `must` 4, `required` 2, `Required` 1, `recommended` 1, `optional` 1 |
+| line-end hyphens | **8**, three of them inside quoted requirement texts. **None healed** |
+| §3.3 ciphertext | **authenticates** and reproduces all 48 octets — from entry order `3, 1, -1`, not from the printed `1, 3, -1` |
+| §3.2 public key | **on P-256** |
+| `cnf` sizes | **77** octets (`COSE_Key`), **73** (`Encrypted_COSE_Key`, untagged), **19** (`kid`) |
+| tag cost | **1 octet** — 71 untagged against 72 tagged |
 
-## The artifacts
+## Mechanical results, with the method
 
-| file | what it is | coverage |
-|---|---|---|
-| `normative.md` | every normative statement verbatim with its locator, plus Table 1 and the §7 registration templates | regions carry a line range and a digest |
-| `requirements.yaml` | **118** entries, `R-0001`–`R-0118`, source order, no gaps | 8 = 8 keywords reconciled; all 118 texts verified contiguous |
-| `schema/` | 1 verbatim rendering + 3 derived | `cnf-claim.derived.cddl`, `.schema.json`, `confirmation-methods.derived.yaml`, `source-renderings.txt` |
-| `messages.yaml` | 4 structures, 8 field entries | 17 distinct ids wired; the 101 not wired are enumerated **by locator** |
-| `protocol.yaml` + `protocol.md` | **3 roles, 0 flows, 2 declared absences** | produced, not N/A — see below |
-| `state-machine.yaml` | `not_applicable`, with the sweep behind it | 13 lifecycle words at zero, 4 near misses each checked |
-| `examples/` | the §3.2/§3.3/§3.4 CWT Claims Sets as fixtures | CBOR diagnostic notation; the document prints no hex |
-| `design-notes.md` | the finding, MD-3 header by header, and where it cuts | 3 adopt, 2 adapt, 2 reject, 3 cuts + 1 convergence |
+| check | result |
+|---|---|
+| requirement texts contiguous in the whitespace-normalised source | **118 of 118**, zero relaxations |
+| `bin/check-locators` | **118 of 118** contained, 0 misfiled, 0 unresolvable |
+| fenced regions byte- **and** digest-exact against their declared line range | **33 of 33** |
+| both YAML readers agree on every artifact | **0** real value divergences; the only differences are `int` vs `str` on bare numbers |
+| `bin/check-id-joins --surface` | **1** duplicate-text group, `R-0038`/`R-0052` — both `example-intro` sentences, byte-identical |
+| `bin/check-id-joins --quote-join` | **25** pairs examined, 24 carried, 0 to read |
+| this pass's own exhaustive join audit | **38** pairs examined, **38** carried by their cited id |
+| citation closure over `distilled/` | **118** distinct ids cited, **0** dangling |
+| `bin/validate` | **0 errors**, nothing flagged on this record |
 
-## Why `protocol` is produced and `state-machine` is not
+**Every cited id was emitted from the id table by a selector that raises on
+zero or multiple matches.** None was typed or pattern-matched, which is the
+only defence against the one defect class nothing automated catches — an id
+that resolves to a real but different statement (`hazards.md` §4).
 
-These two verdicts go opposite ways in the same record, and both are measured.
+## Known gaps, named rather than left for pass 2 to find
 
-**Protocol: produced.** This is the only record in library#39's CBOR/COSE set
-whose source names parties and still has no flow. Measured whole-word,
-case-insensitively, over all 683 lines: `presenter` **18**, `recipient`
-**14**, `issuer` **8**, `party` **8**, `parties` **7** — three roles with
-distinct obligations. What it lacks is the exchange, and that absence is the
-document's own: §3.5 is titled *"Specifics Intentionally Not Specified"* and
-withholds both the nonce and the signed nonce. Recording three roles and two
-declared absences says more than an N/A verdict would, because the gap is the
-finding — an application adopting `cnf` supplies the entire proof mechanism
-itself.
-
-**State machine: not applicable.** Thirteen lifecycle words occur **zero**
-times; the four near misses are an issuer-side uniqueness constraint, the IANA
-registry procedure, two uses of "in order to", and §3.5's refusal to specify
-freshness. Five sibling CBOR/COSE records at `profile: full` declare this
-artifact N/A on three different grounds; **this record's ground is a fourth** —
-it has a lifecycle-shaped subject, a key bound to a token and held by parties
-over time, and the document declines to give it states. Kept distinct rather
-than folded in, because a reader looking for prior art on key rotation will
-come here and should find the absence rather than an oversight.
-
-## What the record is for
-
-Almost nothing is adopted from it. Its value is a **definition by contrast**,
-and it is in §3.4:
-
-> Note that the value of a Key ID for a specific key is not necessarily the
-> same for different parties.
-
-A `kid` is a *(party, local label)* pair resolved by table lookup.
-`ARCH-0002 P1` makes an extension point a *(defining key, local label)* pair
-resolved by derivation. Same shape, different first element — and that
-difference is the whole of P1. Set out in `design-notes.md` §5, with the other
-three limbs of what a Key ID is **not**: not derived, not unique, and with the
-collision foreseen in the text and nothing mandated against it.
-
-## Two defects found in this pass's own prose
-
-Recorded rather than quietly fixed, because the point of writing them down is
-that the next pass knows which classes actually fire here.
-
-1. **A healed hyphenation break.** `design-notes.md` §2 first quoted §3.1's
-   MUST as *"a single proof-of-possession key"*. Source lines 180–181 break it
-   **at the hyphen**, so the normalised source reads `proof-of- possession` and
-   the quoted token would have occurred nowhere in RFC 8747. Corrected and
-   declared in place. It is the only hyphenation break among the document's
-   eight keyword-bearing sentences.
-2. **A verbatim sentence unmarked in a whole-scalar value.** `messages.yaml`'s
-   `cnf` `purpose:` field carried *"Some of them use proof-of-possession keys,
-   while others do not."* with no quotation marks — invisible to a delimited
-   quote audit, which is the blind spot `hazards.md` §2 names. Now marked.
-
-And one count this pass got wrong about itself: `messages.yaml`'s `coverage`
-first said 21 ids and 11 fields where the parsed file has **17** and **8**.
-Corrected. Any pass that edits an artifact falsifies every count of it that it
-does not also update.
-
-## What passes 2 and 3 should attack
-
-`design-notes.md` §10 carries the list. In short: the unusually high
-**111 `stated` / 7 `inferred`** split, since *contiguous* and *literally stated*
-are different claims; **R-0038 and R-0052, which each occur twice in the
-source** — a duplicate-text group, the one place a wrong id still matches the
-quoted words, and neither cited from any artifact yet; **R-0040**, which begins
-with a conjunction after a mid-sentence split off R-0039; this pass's own
-recounted numbers; and the inference behind producing `protocol` rather than
-declaring it N/A.
+1. **`--quote-join` could not see 13 of the pairs this record carries.** It
+   examines 25 where this pass's own audit finds 38. Its window is
+   `text[pos-1400:pos]` and `QUOTE` pairs quote marks left to right from
+   wherever that cut falls, so when the cut lands inside a quotation the
+   pairing is offset by one and the span beside the citation is not recognised.
+   Coverage therefore depends on byte position, not on whether the evidence is
+   present. Reported rather than worked around: `bin/` is not this pass's to
+   change. The 38 are correct **by construction** — each quotation is the cited
+   requirement's own `text`, emitted from the id table.
+2. **The cut operator is inert on Confirmation Keys 1 and 2.** `schema/README.md`
+   says so in its own words: RFC 8747 defines no `COSE_Key` or `COSE_Encrypt0`
+   grammar, so those rules are sockets typed `any` and the whole constraint on
+   those two labels is carried by `other-label`'s exclusion. The cut does real
+   work on Confirmation Key 3 alone.
+3. **`summary.md` heals a hyphen.** It quotes rfc-8747#R-0028 as
+   `proof-of-possession` where the source breaks `proof-of-` / `possession`
+   across lines 180-181. All seven `bears_on` quotations in `record.yaml`
+   resolve **exact**; this one resolves only under a source-side hyphen heal.
+   Not edited by this pass — see `design-notes.md` §7.
+4. **`record.yaml`'s `bears_on` elides a qualifier.** Its §6 quotation runs
+   `… within the lifetime of the CWTs... Failure to do so …`, eliding `, unless
+   intentionally desired.` The ellipsis is visible, so the elision is declared
+   rather than hidden — but what it removes is the clause that makes §6 a
+   *qualified* uniqueness rule, and `design-notes.md` §4.2 treats that clause as
+   a finding in its own right. rfc-8747#R-0091 carries
+   the full sentence verbatim.
+5. **Nothing here has been read by a human.** Every `reviewed_by` is empty and
+   `profile` is unset.

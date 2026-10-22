@@ -1,214 +1,391 @@
-schema: "library-messages/v1"
 record: rfc-8747
-source_version: "RFC 8747 (March 2020), Category: Standards Track"
-source_digest: "9b695379f119f9675828d054f1b0e76014c06c9a59dccef8bb417e0420272dda"
 reviewed_by: ""
+# Every structure RFC 8747 defines, constrains or exhibits, with the actual
+# code points and octet-level layouts. Section numbers are RFC 8747's unless
+# another document is named.
+#
+# ------------------------------------------------------------------------
+# PROVENANCE OF EVERY OCTET COUNT BELOW
+# ------------------------------------------------------------------------
+# Encoded and decoded with a CBOR codec written for this pass from RFC 8949
+# section 3, and with AES-128 and CCM written from FIPS 197 and the CCM
+# construction, both gated on a published vector before use. NO cbor, cose or
+# cryptography library was used. Every count was re-derived by the generator
+# at write time and asserted against the value printed here, so a stale
+# number cannot survive. See examples/vectors.yaml for the fixtures.
+#
+# ------------------------------------------------------------------------
+# WHAT THIS DOCUMENT DOES NOT DEFINE, STATED UP FRONT
+# ------------------------------------------------------------------------
+# NO COSE STRUCTURE. RFC 8747 names COSE_Key, COSE_Encrypt and COSE_Encrypt0
+# and defines none of them; section 3.2 and section 3.3 cite [RFC8152] for all
+# three. They appear below as SOCKETS, with their fields labelled as RFC
+# 8152's and present here only because section 3.2, section 3.3 and section
+# 3.4 instantiate them in examples.
+#
+# NO ALGORITHM. The only algorithm identifiers in the document (5, 10, and
+# curve 1) are inside the examples. No sentence of the document names one, and
+# AES-CCM-16-64-128 below is read off the section 3.3 protected header rather
+# than from prose.
+#
+# NO CANONICAL FORM. The words canonical and deterministic occur ZERO times.
+# MEASURED CONSEQUENCE, from decoding the examples: all five printed maps ARE
+# in RFC 8949 section 4.2.1 deterministic order, and the COSE_Key actually
+# ENCRYPTED in section 3.3 is NOT - its entries run 3, 1, -1. See
+# examples/vectors.yaml source_defects rfc-8747#D-0001.
+#
+# NO KEY RESOLUTION. section 3.4 assumes the recipient can obtain a key from a
+# Key ID and specifies no mechanism; section 6 says what the issuer must
+# arrange out of band.
 
-# WHAT THIS DOCUMENT DEFINES, AND WHAT IT ONLY NAMES. RFC 8747 defines exactly
-# one claim - `cnf`, CWT claim key 8 - and three confirmation methods inside
-# it. Everything else here (COSE_Key, COSE_Encrypt, COSE_Encrypt0, the CWT
-# itself) belongs to RFC 8152/9052 or RFC 8392 and is NAMED, never redefined.
-# Those entries carry an empty `constrained_by` for that reason, and the
-# reason is stated per field rather than left to be inferred.
+messages:
 
-coverage: >-
-  4 structures and 8 field entries, counted from the parsed file rather than
-  from the prose. The `cnf` claim and its three confirmation methods are this
-  document's own; `CWT_Claims_Set` is RFC 8392's and appears because `cnf` is a
-  member of it.
-
-  constrained_by cites 17 distinct requirement ids out of 118. The 101 not
-  cited here are, by locator: §1's paradigm and party-identification prose
-  (R-0001..R-0019), §2's terminology (none wired), §3.4's and §6's Key ID
-  ANALYSIS (R-0050..R-0060, R-0086..R-0096 - the record's central finding,
-  which is about what a `kid` IS rather than about a wire field, and which
-  design-notes.md carries), §3.5's intentionally-unspecified nonce
-  (R-0061..R-0067), §4's and §5's considerations, and §7's registry
-  procedure. None of them constrains a field of a structure defined here.
-  Measured by locator, not estimated.
-
-structures:
-
-  - name: cnf
-    kind: claim
-    defined_by: this document
-    locator: "§3.1, §7.1.1"
-    encoding: CBOR
+  # =====================================================================
+  - name: cnf_claim
+    locator: 'section 3 (definition), section 3.1 (rules and Table 1), section 7.1.1 (registration)'
+    encoding: 'CBOR map, carried as claim key 8 of a CWT Claims Set'
     claim_key: 8
-    value_type: map
-    jwt_equivalent: "cnf (RFC 7800)"
-    cbor_tag: none
-    purpose: >-
-      Carries confirmation methods — §3.1: "Some of them use proof-of-possession
-      keys, while others do not." [The quoted sentence is the source's; the
-      lead-in is ours. It is marked because an unmarked verbatim span inside a
-      whole-scalar value is invisible to a delimited quote audit, which is the
-      blind spot hazards.md §2 names.]
-    constrained_by:
-      - rfc-8747#R-0020
-      - rfc-8747#R-0025
-      - rfc-8747#R-0028
-      - rfc-8747#R-0029
+    claim_value_type: 'map'
+    summary: >-
+      THE ONLY STRUCTURE THIS DOCUMENT DEFINES. section 3: "The value of the "cnf" claim is a CBOR map (which is defined in Section 2.1 of [RFC7049])" and
+      "the members of that map identify the proof-of-possession key." Claim key 8 and value type map are
+      stated ONLY in section 7.1.1's registration, not in the prose.
+    cardinality_rule: >-
+      section 3.1 states two rules one sentence apart and in different registers.
+      The first is BCP 14: "The "cnf" claim value MUST represent only a single proof-of- possession key." The second is not:
+      "At most one of the "COSE_Key" and "Encrypted_COSE_Key" confirmation values defined in Table 1 may be present." - lowercase
+      may. The exclusion an implementer most needs is the one with no keyword
+      behind it.
+    layout: >-
+      from the document's own examples, measured: the cnf VALUE is 77
+      octets with a COSE_Key, 73 with an untagged Encrypted_COSE_Key, and
+      19 with a kid - a ratio of 4.05 between the first and the last.
     fields:
-      - name: COSE_Key
-        index: 1
-        type: COSE_Key
-        required: false
-        note: >-
-          Confirmation key 1. The value type is RFC 8152's COSE_Key structure,
-          which this document does not define.
+      - name: '1'
+        label: 1
+        member: 'COSE_Key'
+        type: 'COSE_Key structure (RFC 8152)'
+        required: 'false'
+        encoding: '0x01 => a CBOR map'
+        locator: 'section 3.1 Table 1, section 3.2, section 7.2.2'
+        note: 'Table 1 row 1 gives the value type as COSE_Key; section 7.2.2''s registration gives it as COSE_Key structure. The two do not use the same words.'
         constrained_by:
-          - rfc-8747#R-0033
-          - rfc-8747#R-0039
-          - rfc-8747#R-0040
-          - rfc-8747#R-0041
-          - rfc-8747#R-0043
-      - name: Encrypted_COSE_Key
-        index: 2
-        type: "COSE_Encrypt or COSE_Encrypt0"
-        required: false
-        note: >-
-          Confirmation key 2. THE TAG IS OPTIONAL, and that is a finding
-          rather than a detail: §7.2.2 registers the value type as "COSE_Encrypt
-          or COSE_Encrypt0 structure (with an optional corresponding
-          COSE_Encrypt or COSE_Encrypt0 tag)", while §3.3's worked example
-          prints the COSE_Encrypt0 UNTAGGED. So one `cnf` value has two
-          conforming encodings and the registry entry does not choose between
-          them. See design-notes.md, the DEC-002 cut.
+          - 'rfc-8747#R-0033'
+          - 'rfc-8747#R-0037'
+          - 'rfc-8747#R-0039'
+          - 'rfc-8747#R-0040'
+          - 'rfc-8747#R-0041'
+          - 'rfc-8747#R-0116'
+          - 'rfc-8747#R-0029'
+          - 'rfc-8747#R-0028'
+      - name: '2'
+        label: 2
+        member: 'Encrypted_COSE_Key'
+        type: 'COSE_Encrypt or COSE_Encrypt0 structure, tag optional'
+        required: 'false'
+        encoding: '0x02 => a CBOR array, tagged or untagged'
+        locator: 'section 3.1 Table 1, section 3.3, section 7.2.2'
+        note: 'THE DEC-002 SITE. section 7.2.2 registers the value type as "* Confirmation Value Type(s): COSE_Encrypt or COSE_Encrypt0 structure (with an optional corresponding COSE_Encrypt or COSE_Encrypt0 tag)" - and the word optional there is LOWERCASE. Table 1 omits the tag clause entirely. section 3.3''s worked example carries the COSE_Encrypt0 UNTAGGED, as a bare three-element array.'
         constrained_by:
-          - rfc-8747#R-0034
-      - name: kid
-        index: 3
-        type: "binary string"
-        required: false
-        note: >-
-          Confirmation key 3. The field this record is held for. Its CONTENT is
-          application specific (R-0053) and the document specifies no key
-          encoding, no parameter subset and no digest algorithm, while naming a
-          hash of the public key as one thing an application MAY do (R-0054).
-          What a `kid` is NOT - derived, unique, or the same for both parties -
-          is the subject of design-notes.md.
+          - 'rfc-8747#R-0034'
+          - 'rfc-8747#R-0045'
+          - 'rfc-8747#R-0043'
+          - 'rfc-8747#R-0047'
+          - 'rfc-8747#R-0117'
+          - 'rfc-8747#R-0029'
+          - 'rfc-8747#R-0028'
+      - name: '3'
+        label: 3
+        member: 'kid'
+        type: 'binary string (CBOR byte string)'
+        required: 'false'
+        encoding: '0x03 => a byte string'
+        locator: 'section 3.1 Table 1, section 3.4, section 7.2.2'
+        note: 'the document never says bstr or byte string; Table 1 and the registration both say binary string. On content it says only "The content of the "kid" value is application specific."'
         constrained_by:
-          - rfc-8747#R-0035
-          - rfc-8747#R-0050
-          - rfc-8747#R-0053
-      - name: "(unrecognised members)"
-        index: null
-        type: any
-        required: false
-        note: >-
-          Not a field the document names, but a field RULE it states: in the
-          absence of application requirements, all confirmation members that
-          are not understood MUST be ignored. The only MUST in §3.1 that binds
-          a RECIPIENT rather than a producer.
+          - 'rfc-8747#R-0035'
+          - 'rfc-8747#R-0050'
+          - 'rfc-8747#R-0053'
+          - 'rfc-8747#R-0054'
+          - 'rfc-8747#R-0059'
+          - 'rfc-8747#R-0060'
+          - 'rfc-8747#R-0056'
+          - 'rfc-8747#R-0058'
+          - 'rfc-8747#R-0118'
+          - 'rfc-8747#R-0091'
+      - name: 'other'
+        label: 'any other CBOR map key'
+        member: 'unregistered or future member'
+        type: 'any'
+        required: 'false'
+        encoding: 'any label => any value'
+        locator: 'section 3.1'
+        note: 'the extension socket, and it is wide open: "However, in the absence of such requirements, all confirmation members that are not understood by implementations MUST be ignored." So a collision between two unrelated registrations is invisible at the receiver. RFC 9679 later takes Confirmation Key 5 here, for ckt.'
         constrained_by:
-          - rfc-8747#R-0025
+          - 'rfc-8747#R-0025'
+          - 'rfc-8747#R-0027'
+          - 'rfc-8747#R-0023'
+          - 'rfc-8747#R-0107'
+        quoted_evidence:
+          - '"However, in the absence of such requirements, all confirmation members that are not understood by implementations MUST be ignored." (rfc-8747#R-0025)'
 
-  - name: COSE_Key
-    kind: structure
-    defined_by: "RFC 8152 (now RFC 9052)"
-    locator: "§3.2"
-    encoding: CBOR
-    cbor_tag: none
-    purpose: >-
-      Carries an asymmetric proof-of-possession key, or a symmetric one when
-      the CWT itself is encrypted.
-    constrained_by: []
-    constrained_by_why: >-
-      Defined by RFC 8152, not here. This document constrains its USE - which
-      members it must carry and when a symmetric key may travel in it - and
-      those constraints are wired to the `COSE_Key` field above rather than
-      duplicated on the structure.
+  # =====================================================================
+  - name: COSE_Key_confirmation
+    locator: 'section 3.2'
+    encoding: 'CBOR map - a COSE_Key as defined by RFC 8152, not by this document'
+    summary: >-
+      A SOCKET, NOT A DEFINITION. section 3.2: "When the key held by the presenter is an asymmetric private key, the "COSE_Key" member is a COSE_Key [RFC8152] representing the corresponding asymmetric public key."
+      The two obligations on it are both delegations: "The COSE_Key MUST contain the required key members for a COSE_Key of that key type"
+      and "and MAY contain other COSE_Key members, including the "kid" (Key ID) member."
+    layout: >-
+      section 3.2's example COSE_Key, measured: 75 octets, entries 1, -1, -2,
+      -3 (kty, crv, x, y), which IS RFC 8949 section 4.2.1 deterministic order
+      since the encoded keys 01, 20, 21, 22 sort that way. The point is on
+      P-256 - checked. Full encoding in examples/vectors.yaml V-0001.
     fields:
-      - name: "(required members for the key type)"
-        index: null
-        type: "per key type"
-        required: true
-        note: >-
-          The document states the obligation and delegates the content: the
-          COSE_Key MUST contain the required key members for a COSE_Key of that
-          key type. Which members those are is RFC 8152's.
+      - name: 'required key members'
+        type: 'per key type, per RFC 8152'
+        required: 'true'
+        encoding: 'unspecified here'
+        locator: 'section 3.2'
+        note: 'this document names no key type and no required member for any of them, so the obligation is testable only against RFC 8152. Note the LOWERCASE required in the same sentence as the MUST - not a BCP 14 keyword, and bin/bcp14-count correctly does not count it.'
         constrained_by:
-          - rfc-8747#R-0039
-      - name: kid
-        index: 2
-        type: bstr
-        required: false
-        note: >-
-          RFC 8152's `kid` label INSIDE the COSE_Key, distinct from the `kid`
-          confirmation method at `cnf` key 3. The document says the COSE_Key MAY
-          contain it. Two different `kid`s one nesting level apart is a real
-          ambiguity for a reader and is named here deliberately.
+          - 'rfc-8747#R-0039'
+        quoted_evidence:
+          - '"The COSE_Key MUST contain the required key members for a COSE_Key of that key type" (rfc-8747#R-0039)'
+      - name: 'kid'
+        type: 'per RFC 8152'
+        required: 'false'
+        encoding: 'a COSE_Key member, NOT cnf member 3'
+        locator: 'section 3.2'
+        note: 'the document permits a Key ID INSIDE the COSE_Key as well as beside it as cnf member 3, and says nothing about whether the two must agree when both are present. Two places for one identifier, no stated precedence.'
         constrained_by:
-          - rfc-8747#R-0040
+          - 'rfc-8747#R-0040'
+      - name: 'symmetric key material'
+        type: 'per RFC 8152'
+        required: 'false'
+        encoding: 'a COSE_Key of a symmetric key type'
+        locator: 'section 3.2, section 3.3'
+        note: 'admitted only under a condition, and the failure of that condition carries the document''s one conditional MUST: "If the CWT is not encrypted, the symmetric key MUST be encrypted as described in Section 3.3."'
+        constrained_by:
+          - 'rfc-8747#R-0041'
+          - 'rfc-8747#R-0043'
+          - 'rfc-8747#R-0042'
+        quoted_evidence:
+          - '"If the CWT is not encrypted, the symmetric key MUST be encrypted as described in Section 3.3." (rfc-8747#R-0043)'
 
-  - name: Encrypted_COSE_Key
-    kind: structure
-    defined_by: "RFC 8152 (now RFC 9052)"
-    locator: "§3.3, §7.2.2"
-    encoding: CBOR
-    cbor_tag: "optional - 96 (COSE_Encrypt) or 16 (COSE_Encrypt0), per §7.2.2"
-    purpose: >-
-      Carries a symmetric proof-of-possession key encrypted to the recipient,
-      for use when the CWT itself is not encrypted.
-    constrained_by: []
-    constrained_by_why: >-
-      Defined by RFC 8152. This document's own constraint on it - that an
-      unencrypted CWT's symmetric key MUST be encrypted as described in §3.3 -
-      is wired to the `COSE_Key` field, which is where the obligation arises.
+  # =====================================================================
+  - name: Encrypted_COSE_Key_confirmation
+    locator: 'section 3.3, section 7.2.2'
+    encoding: 'CBOR array - a COSE_Encrypt or COSE_Encrypt0 as defined by RFC 8152; the corresponding tag is optional'
+    summary: >-
+      section 3.3: "When the key held by the presenter is a symmetric key, the "Encrypted_COSE_Key" member is an encrypted COSE_Key [RFC8152] representing the symmetric key encrypted to a key known to the recipient using COSE_Encrypt or COSE_Encrypt0."
+      The plaintext rule is one sentence: "The COSE_Key representation is used as the plaintext when encrypting the key."
+    two_encodings_of_one_cnf: >-
+      section 7.2.2 makes the tag optional and section 3.3's example omits it,
+      so one cnf has two wire forms. Measured from the document's own example:
+      71 octets untagged against 72 tagged, a difference of exactly
+      1 octet. Nothing in the document chooses between them, and the word
+      tag occurs exactly ONCE in the whole source - at line 544, in that
+      registration. A deterministic profile has to choose; this registry entry
+      does not choose for it.
+    layout: >-
+      section 3.3's example, decoded: a bare three-element array [protected,
+      unprotected, ciphertext] = 71 octets. protected = a1010a, a one-entry
+      map 1 => 10. unprotected = a one-entry map 5 => a 13-octet IV.
+      ciphertext = 48 octets = 40 plaintext + 8 CCM tag. VERIFIED: the
+      ciphertext authenticates under the key printed at line 279 with AAD
+      8368456e63727970743043a1010a40, and re-encrypting the recovered plaintext
+      reproduces all 48 octets.
     fields:
-      - name: "(COSE_Encrypt / COSE_Encrypt0 contents)"
-        index: null
-        type: "per RFC 8152"
-        required: true
-        note: >-
-          Not restated here. §3.3's example is captured in examples/ and the
-          encryption procedure is RFC 8152's.
+      - name: 'protected'
+        type: 'bstr wrapping a CBOR map'
+        required: 'true'
+        encoding: 'h''a1010a'' in section 3.3''s example, decoding to 1 => 10'
+        locator: 'section 3.3 (example only)'
+        note: 'RFC 8152''s field, not this document''s. The algorithm identifier 10 is the ONLY place AES-CCM-16-64-128 is named anywhere in RFC 8747, and it is named in hex inside an example.'
         constrained_by:
-          - rfc-8747#R-0043
+          - 'rfc-8747#R-0045'
+      - name: 'unprotected'
+        type: 'CBOR map'
+        required: 'true'
+        encoding: '5 => a 13-octet byte string in section 3.3''s example'
+        locator: 'section 3.3 (example only)'
+        note: 'RFC 8152''s field. Label 5 is the IV.'
+        constrained_by:
+          - 'rfc-8747#R-0045'
+      - name: 'ciphertext'
+        type: 'bstr'
+        required: 'true'
+        encoding: '48 octets in section 3.3''s example: 40 plaintext plus an 8-octet tag'
+        locator: 'section 3.3'
+        note: 'THE DEFECT SITE. The plaintext is supposed to be the printed COSE_Key - "The COSE_Key representation is used as the plaintext when encrypting the key." - and measured, it is not: the recovered plaintext carries the same three pairs in entry order 3, 1, -1 where the document prints 1, 3, -1. Recorded, not repaired: examples/vectors.yaml rfc-8747#D-0001.'
+        constrained_by:
+          - 'rfc-8747#R-0047'
+          - 'rfc-8747#R-0049'
+        quoted_evidence:
+          - '"The COSE_Key representation is used as the plaintext when encrypting the key." (rfc-8747#R-0047)'
+          - '"The example above was generated with the key: h''6162630405060708090a0b0c0d0e0f10''" (rfc-8747#R-0049)'
+      - name: 'tag'
+        type: 'CBOR tag, value not stated by this document'
+        required: 'false'
+        encoding: 'absent in section 3.3''s example'
+        locator: 'section 7.2.2'
+        note: 'registered as optional and printed absent. The registration says the value type is a COSE_Encrypt or COSE_Encrypt0 structure with an optional corresponding tag; RFC 8747 never states the tag''s numeric value, which is RFC 8152''s.'
+        constrained_by:
+          - 'rfc-8747#R-0117'
+          - 'rfc-8747#R-0034'
+        quoted_evidence:
+          - '"| Encrypted_COSE_Key | 2 | COSE_Encrypt or COSE_Encrypt0 |" (rfc-8747#R-0034)'
 
-  - name: CWT_Claims_Set
-    kind: structure
-    defined_by: "RFC 8392"
-    locator: "§3.1, §3.4"
-    encoding: CBOR
-    cbor_tag: none
-    purpose: >-
-      The map `cnf` is a member of. Present because every example in this
-      document is a CWT Claims Set carrying `cnf` beside `iss`, `aud` and `exp`.
-    constrained_by: []
-    constrained_by_why: >-
-      Defined by RFC 8392. This document adds one member to it and constrains
-      nothing else about it.
+  # =====================================================================
+  - name: kid_confirmation
+    locator: 'section 3.4, section 6, section 7.2.2'
+    encoding: 'CBOR byte string under cnf member 3'
+    summary: >-
+      WHAT THIS RECORD IS HELD FOR. section 3.4: "The proof-of-possession key can also be identified using a Key ID instead of communicating the actual key, provided the recipient is able to obtain the identified key using the Key ID."
+      The precondition in that sentence - that the recipient can obtain the key
+      - is assumed and never specified.
+    what_a_kid_is_not: >-
+      NOT DERIVED: "The content of the "kid" value is application specific." with a hash of the
+      public key offered as one thing an application may do and no key
+      encoding, parameter subset or digest algorithm stated. NOT UNIQUE:
+      "In cases where the Key ID is not a cryptographic value derived from the key or where not all of the parties involved are validating the cryptographic derivation, implementers should expect collisions where different keys are assigned the same Key ID." NOT THE SAME FOR
+      EVERY PARTY: "Note that the value of a Key ID for a specific key is not necessarily the same for different parties."
+    party_relative: >-
+      the sharpest sentence in the document, verified at source: "When sending a COSE encrypted message with a shared key, the Key ID may be different on both sides of the conversation, with the appropriate one being included in the message based on the recipient of the message."
+      A kid is therefore a (party, local label) pair resolved by table lookup.
+      See design-notes.md on ARCH-0002 P1.
+    layout: >-
+      section 3.4's example: a 16-octet byte string; the cnf value is 19
+      octets against 77 for the COSE_Key form. No length is stated anywhere;
+      section 3.4 says only that size is often restricted in constrained
+      devices.
     fields:
-      - name: cnf
-        index: 8
-        type: map
-        required: false
-        note: >-
-          The claim registered by §7.1.1. Claim key 8, value type map, change
-          controller IESG.
+      - name: 'kid value'
+        type: 'binary string'
+        required: 'true'
+        encoding: 'a CBOR byte string; no length constraint stated'
+        locator: 'section 3.4, section 3.1 Table 1'
+        note: 'content is application specific and the document states no derivation, so the value is unfalsifiable from the token alone. Section 3.4 offers one construction: "For instance, some applications may choose to use a cryptographic hash of the public key value as the "kid" value."'
         constrained_by:
-          - rfc-8747#R-0020
+          - 'rfc-8747#R-0053'
+          - 'rfc-8747#R-0054'
+          - 'rfc-8747#R-0035'
+        quoted_evidence:
+          - '"The proof-of-possession key can also be identified using a Key ID instead of communicating the actual key, provided the recipient is able to obtain the identified key using the Key ID." (rfc-8747#R-0050)'
+          - '"In cases where the Key ID is not a cryptographic value derived from the key or where not all of the parties involved are validating the cryptographic derivation, implementers should expect collisions where different keys are assigned the same Key ID." (rfc-8747#R-0056)'
+      - name: 'uniqueness'
+        type: 'operational property, not a field'
+        required: 'false'
+        encoding: 'not encoded'
+        locator: 'section 6'
+        note: 'R-O-01''s price. Uniqueness is the issuer''s discipline: "When an issuer creates a CWT containing a Key ID claim, it needs to make sure that it does not issue another CWT with different claims containing the same Key ID within the lifetime of the CWTs, unless intentionally desired." and the failure is impersonation.'
+        constrained_by:
+          - 'rfc-8747#R-0091'
+          - 'rfc-8747#R-0092'
+          - 'rfc-8747#R-0093'
+          - 'rfc-8747#R-0094'
+          - 'rfc-8747#R-0095'
+        quoted_evidence:
+          - '"When an issuer creates a CWT containing a Key ID claim, it needs to make sure that it does not issue another CWT with different claims containing the same Key ID within the lifetime of the CWTs, unless intentionally desired." (rfc-8747#R-0091)'
+          - '"Failure to do so may allow one party to impersonate another party, with the potential to gain additional privileges." (rfc-8747#R-0092)'
+      - name: 'size'
+        type: 'operational property, not a field'
+        required: 'false'
+        encoding: 'not encoded'
+        locator: 'section 3.4'
+        note: 'no minimum, no maximum, no stated encoding. "In the world of constrained Internet of Things (IoT) devices, there is frequently a restriction on the size of Key IDs, either because of table constraints or a desire to keep message sizes small."'
+        constrained_by:
+          - 'rfc-8747#R-0058'
+        quoted_evidence:
+          - '"In the world of constrained Internet of Things (IoT) devices, there is frequently a restriction on the size of Key IDs, either because of table constraints or a desire to keep message sizes small." (rfc-8747#R-0058)'
+          - '"Note that the value of a Key ID for a specific key is not necessarily the same for different parties." (rfc-8747#R-0059)'
+          - '"When sending a COSE encrypted message with a shared key, the Key ID may be different on both sides of the conversation, with the appropriate one being included in the message based on the recipient of the message." (rfc-8747#R-0060)'
 
-# Fields a requirement names and this file does NOT define, with why - the
-# closure (a) direction a cross-check pass will test.
-named_but_not_defined_here:
-  - name: nonce
-    named_by: [rfc-8747#R-0062, rfc-8747#R-0064]
-    why: >-
-      §3.5 names it and then declines to specify it: "The means of
-      communicating the nonce and the nature of its contents are intentionally
-      not described in this specification". There is no field to define, and
-      inventing one would breach FX-1. Recorded in protocol.yaml as a declared
-      absence rather than modelled.
-  - name: "signed nonce"
-    named_by: [rfc-8747#R-0065]
-    why: >-
-      Same declared absence: "the means of communicating the signed nonce is
-      also not specified, as this is also protocol specific."
-  - name: "audience restriction"
-    named_by: [rfc-8747#R-0072]
-    why: >-
-      §4's SHOULD points at RFC 8392's `aud` claim, which this document does not
-      define or constrain.
+  # =====================================================================
+  - name: CWT_Claims_Set_fragment
+    locator: 'section 3, section 3.2, section 3.3, section 3.4 (examples)'
+    encoding: 'CBOR map - RFC 8392''s structure, not this document''s'
+    summary: >-
+      Present only because this document registers claim key 8 into it and
+      instantiates it three times. Every other claim below appears in an
+      example and nowhere in a sentence.
+    layout: >-
+      the three printed Claims Sets, measured: 143 octets (section 3.2),
+      138 (section 3.3) and 82 (section 3.4). ALL THREE are in RFC 8949
+      section 4.2.1 deterministic map order - claim keys ascending - which the
+      document neither requires nor mentions.
+    fields:
+      - name: '8'
+        label: 8
+        member: 'cnf'
+        type: 'map'
+        required: 'false'
+        encoding: '0x08 => a CBOR map'
+        locator: 'section 7.1.1'
+        note: 'the claim this document registers. "This specification registers the "cnf" claim in the IANA "CBOR Web Token (CWT) Claims" registry [IANA.CWT.Claims], established by [RFC8392]."'
+        constrained_by:
+          - 'rfc-8747#R-0105'
+          - 'rfc-8747#R-0106'
+          - 'rfc-8747#R-0012'
+      - name: '1'
+        label: 1
+        member: 'iss'
+        type: 'per RFC 8392'
+        required: 'false'
+        encoding: 'appears in this document''s examples only'
+        locator: 'section 3.2, section 3.3, section 3.4 (examples)'
+        note: 'RFC 8392''s claim. RFC 8747 mentions sub and iss in section 3 as ways an application may identify the presenter, and prints exp and iat in examples without discussing them.'
+        constrained_by:
+          - 'rfc-8747#R-0016'
+      - name: '2'
+        label: 2
+        member: 'sub'
+        type: 'per RFC 8392'
+        required: 'false'
+        encoding: 'appears in this document''s examples only'
+        locator: 'section 3.2, section 3.3, section 3.4 (examples)'
+        note: 'RFC 8392''s claim. RFC 8747 mentions sub and iss in section 3 as ways an application may identify the presenter, and prints exp and iat in examples without discussing them.'
+        constrained_by:
+          - 'rfc-8747#R-0015'
+      - name: '3'
+        label: 3
+        member: 'aud'
+        type: 'per RFC 8392'
+        required: 'false'
+        encoding: 'appears in this document''s examples only'
+        locator: 'section 3.2, section 3.3, section 3.4 (examples)'
+        note: 'RFC 8392''s claim. RFC 8747 mentions sub and iss in section 3 as ways an application may identify the presenter, and prints exp and iat in examples without discussing them.'
+        constrained_by: []
+        unwired_reason: 'no sentence of RFC 8747 constrains this claim; it appears only inside printed examples. RFC 8392 is where it is defined.'
+      - name: '4'
+        label: 4
+        member: 'exp'
+        type: 'per RFC 8392'
+        required: 'false'
+        encoding: 'appears in this document''s examples only'
+        locator: 'section 3.2, section 3.3, section 3.4 (examples)'
+        note: 'RFC 8392''s claim. RFC 8747 mentions sub and iss in section 3 as ways an application may identify the presenter, and prints exp and iat in examples without discussing them.'
+        constrained_by: []
+        unwired_reason: 'no sentence of RFC 8747 constrains this claim; it appears only inside printed examples. RFC 8392 is where it is defined.'
+      - name: '5'
+        label: 5
+        member: 'iat'
+        type: 'per RFC 8392'
+        required: 'false'
+        encoding: 'appears in this document''s examples only'
+        locator: 'section 3.2, section 3.3, section 3.4 (examples)'
+        note: 'RFC 8392''s claim. RFC 8747 mentions sub and iss in section 3 as ways an application may identify the presenter, and prints exp and iat in examples without discussing them.'
+        constrained_by: []
+        unwired_reason: 'no sentence of RFC 8747 constrains this claim; it appears only inside printed examples. RFC 8392 is where it is defined.'
+
+coverage:
+  structures: 5
+  fields: 22
+  requirements_wired: 38
+  quoted_evidence_pairs: 13
+  quoted_evidence_note: 'each is the cited requirement''s OWN text, emitted from the id table, with the id immediately after the closing quote so bin/check-id-joins --quote-join can examine the pair rather than reporting zero coverage.'
+  requirements_total: 118
+  wiring_rule: 'a requirement is wired to a field only where it constrains that field''s PRESENCE, VALUE, TYPE, LENGTH, ENCODING or CARDINALITY - never where it merely mentions it. Every id was emitted from requirements.yaml by a selector that raises on zero or multiple matches, so no citation here was typed.'
+  unwired_note: 'the requirements NOT wired here are the ones that constrain no structure: the role definitions, the two SAML analogies, section 3.5''s refusals, section 4''s security reasoning, section 5''s privacy advice, section 7''s registration procedure and section 7.2.1''s template fields. The template fields are wired in schema/confirmation-methods.derived.yaml instead, which is the artifact that models them.'

@@ -1,136 +1,173 @@
-schema: "library-protocol/v1"
 record: rfc-8747
-source_version: "RFC 8747 (March 2020), Category: Standards Track"
-source_digest: "9b695379f119f9675828d054f1b0e76014c06c9a59dccef8bb417e0420272dda"
 reviewed_by: ""
-
-# THIS ARTIFACT IS PRODUCED, NOT DECLARED not_applicable, AND THE REASON IS
-# THE POINT. Every other CBOR/COSE record in this lane that lacks a protocol
-# lacks one because the document has no word for any party. This one does:
-# measured whole-word and case-insensitively over all 683 lines,
-# `presenter` 18, `recipient` 14, `issuer` 8, `party` 8, `parties` 7. Three
-# roles, named and given distinct obligations.
+# ------------------------------------------------------------------------
+# WHY THIS FILE EXISTS AND WHAT IT IS NOT
+# ------------------------------------------------------------------------
+# RFC 8747 DEFINES THREE ROLES AND NOT ONE MESSAGE. section 2 defines Issuer,
+# Presenter and Recipient outright - they are not merely named - and section 3
+# states the relation between them in one sentence. Then section 3.5 refuses
+# TWICE to specify how anything is communicated, and section 4 puts the
+# surrounding architecture out of scope. So this file models the ROLE
+# TRIANGLE, with every leg marked for whether the document specifies it and
+# the refusal quoted in place. It is not a message flow, and no step below
+# should be read as one.
 #
-# What it does NOT have is a specified exchange - and that absence is the
-# document's own declaration rather than our inference. §3.5 is titled
-# "Specifics Intentionally Not Specified" and says of the nonce: "The means of
-# communicating the nonce and the nature of its contents are intentionally not
-# described in this specification, as different protocols will communicate
-# this information in different ways" (R-0064), and of the reply: "Likewise,
-# the means of communicating the signed nonce is also not specified, as this
-# is also protocol specific" (R-0065).
+# NOT DECLARED not_applicable, and the reason is the opposite of a shortcut:
+# rfc-9679's extraction declared ITS protocol not_applicable on the ground
+# that the flow belongs to RFC 8747. This is RFC 8747. The role model is the
+# thing that was pointed at, so it is extracted here rather than deferred
+# again - and the finding is that the arrows are missing from this end too.
 #
-# So: roles YES, flows NO BY CONSTRUCTION. Recording the roles and the declared
-# gap is more informative than an N/A verdict, because the gap is a finding -
-# an application that adopts `cnf` must supply the whole exchange itself, and
-# nothing in this document constrains how.
-#
-# The thin exchange vocabulary corroborates it: `protocol` 2 (lines 341, 614 -
-# one in §3.5's own disclaimer, one in a reference title), `exchange` 2 (333,
-# 335), `message` 4, `nonce` 3, `challenge` 1, `request` 4 (one at line 6, the
-# masthead), and `response`, `handshake`, `negotiate`, `sender`, `verifier`,
-# `round` all ZERO.
-
-coverage: >-
-  3 roles, 0 flows, 0 error paths, and 2 declared absences. No Mermaid diagram:
-  there is no sequence to draw, and drawing a plausible one would invent the
-  exchange §3.5 declines to specify.
+# THE WORD SWEEP BEHIND THAT JUDGEMENT, over all 683 source lines,
+# case-insensitive, whole words:
+#   error        0      step        0      response    0
+#   flow         0      handshake   0      negotiate   0
+#   sender       0      verifier    0      round-trip  0
+#   request      7      message     7      protocol    7
+#   exchange     2      nonce       4      challenge   1
+# Counts are OCCURRENCES, not lines - the two differ for 'message', which
+# appears 7 times on 6 lines because line 325 carries it twice.
+# ZERO errors, ZERO steps, ZERO responses. The 7 'request' hits are the
+# masthead 'Request for Comments' (L6), section 4's 'used by a presenter to
+# request these tokens' (L367), four in section 7's registration-request
+# procedure (L443, L444, L445, L449) and 'requested' in section 7.2.1's
+# template (L496). THREE of the four 'nonce' hits and the single 'challenge'
+# are inside section 3.5, the section titled Specifics Intentionally Not
+# Specified; the fourth is section 4's 'nonces and timestamps' at L371. Both
+# 'exchange' hits are in section 3.5. That is a role model with the arrows
+# deliberately left out, not a protocol.
 
 roles:
+  - name: 'Issuer'
+    locator: 'section 2'
+    definition: 'Party that creates the CWT and binds the claims about the subject to the proof-of-possession key.'
+    requirement: 'rfc-8747#R-0004'
+  - name: 'Presenter'
+    locator: 'section 2'
+    definition: 'Party that proves possession of a private key (for asymmetric key cryptography) or secret key (for symmetric key cryptography) to a recipient of a CWT.'
+    requirement: 'rfc-8747#R-0005'
+    oauth_alias: 'OAuth Client'
+    oauth_alias_requirement: 'rfc-8747#R-0006'
+  - name: 'Recipient'
+    locator: 'section 2'
+    definition: 'Party that receives the CWT containing the proof-of-possession key information from the presenter.'
+    requirement: 'rfc-8747#R-0007'
+    oauth_alias: 'OAuth Resource Server'
+    oauth_alias_requirement: 'rfc-8747#R-0008'
 
-  - name: issuer
-    occurrences: 8
-    locator: "§1, §3.4, §6"
-    does: >-
-      Creates the CWT and declares in it that the presenter possesses a
-      particular key, by including a `cnf` claim.
-    obligations:
-      - rfc-8747#R-0051
-      - rfc-8747#R-0091
-    note: >-
-      §6 places the one operational obligation in the document on this role,
-      and it is lower case: when an issuer creates a CWT containing a Key ID
-      claim, it "needs to make sure" it does not issue another CWT with
-      different claims carrying the same Key ID within the CWTs' lifetime.
-      Uniqueness is therefore the issuer's discipline, not a property of the
-      identifier - which is the whole of this record's bearing on R-O-01.
+flows:
+  - name: 'declare and confirm a proof-of-possession key'
+    locator: 'section 3, section 3.4, section 3.5, section 6'
+    specified_by_this_document: 'partly - the structure only. The CWT and its cnf claim are fully specified; every transmission and every check is not.'
+    steps:
+      - step: 1
+        from: 'Issuer'
+        to: 'Issuer'
+        message: 'none - an internal act'
+        what_happens: 'the issuer binds claims about the subject to a proof-of-possession key and chooses one of the three confirmation methods'
+        specified_here: 'YES for the structure, NO for the choice: nothing states when to prefer COSE_Key, Encrypted_COSE_Key or kid'
+        locator: 'section 2 (role), section 3, section 3.1, Table 1'
+        requirements:
+          - 'rfc-8747#R-0004'
+          - 'rfc-8747#R-0011'
+          - 'rfc-8747#R-0028'
+          - 'rfc-8747#R-0029'
+          - 'rfc-8747#R-0036'
+        note: 'the issuer must also satisfy section 6''s uniqueness discipline before issuing, which is a precondition on this step and not a message: "When an issuer creates a CWT containing a Key ID claim, it needs to make sure that it does not issue another CWT with different claims containing the same Key ID within the lifetime of the CWTs, unless intentionally desired." (rfc-8747#R-0091)'
+      - step: 2
+        from: 'Issuer'
+        to: 'Presenter'
+        message: 'CWT carrying a cnf claim'
+        what_happens: 'the CWT reaches the presenter'
+        specified_here: 'NO - the document never says how a CWT gets from issuer to presenter'
+        locator: 'section 4 (by reference to the ACE OAuth Framework, explicitly out of scope)'
+        requirements:
+          - 'rfc-8747#R-0075'
+          - 'rfc-8747#R-0077'
+        note: 'section 4 names an architecture in which this happens and then excludes it: "Note that a discussion of the architecture or specific protocols that CWTs with proof-of-possession keys are used with is beyond the scope of this specification." (rfc-8747#R-0077)'
+      - step: 3
+        from: 'Presenter'
+        to: 'Recipient'
+        message: 'CWT carrying a cnf claim'
+        what_happens: 'the presenter presents the CWT to a recipient'
+        specified_here: 'NO - no transport, no encoding beyond the CWT itself, no ordering'
+        locator: 'section 2 (roles), section 4'
+        requirements:
+          - 'rfc-8747#R-0005'
+          - 'rfc-8747#R-0007'
+          - 'rfc-8747#R-0075'
+      - step: 4
+        from: 'Recipient'
+        to: 'Presenter'
+        message: 'a nonce or challenge - NOT SPECIFIED'
+        what_happens: 'the recipient determines a value for the presenter to sign'
+        specified_here: 'NO, and the refusal is explicit'
+        locator: 'section 3.5'
+        requirements:
+          - 'rfc-8747#R-0061'
+          - 'rfc-8747#R-0062'
+          - 'rfc-8747#R-0064'
+        note: 'the shape is described - "Proof of possession is often demonstrated by having the presenter sign a value determined by the recipient using the key possessed by the presenter." (rfc-8747#R-0061) - and then withheld: "The means of communicating the nonce and the nature of its contents are intentionally not described in this specification, as different protocols will communicate this information in different ways." (rfc-8747#R-0064)'
+      - step: 5
+        from: 'Presenter'
+        to: 'Recipient'
+        message: 'the signed nonce - NOT SPECIFIED'
+        what_happens: 'the presenter proves possession of the confirmation key'
+        specified_here: 'NO, and the refusal is explicit'
+        locator: 'section 3.5'
+        requirements:
+          - 'rfc-8747#R-0065'
+          - 'rfc-8747#R-0066'
+          - 'rfc-8747#R-0063'
+        note: '"Likewise, the means of communicating the signed nonce is also not specified, as this is also protocol specific." (rfc-8747#R-0065)'
+      - step: 6
+        from: 'Recipient'
+        to: 'Recipient'
+        message: 'none - an internal act'
+        what_happens: 'the recipient resolves the confirmation key and checks the proof'
+        specified_here: 'NO. For COSE_Key the key is in the token; for Encrypted_COSE_Key the recipient must already hold the decryption key; for kid the resolution is ASSUMED to be possible and no mechanism is given'
+        locator: 'section 3.2, section 3.3, section 3.4, section 6'
+        requirements:
+          - 'rfc-8747#R-0050'
+          - 'rfc-8747#R-0087'
+          - 'rfc-8747#R-0088'
+          - 'rfc-8747#R-0089'
+          - 'rfc-8747#R-0086'
+          - 'rfc-8747#R-0090'
+        note: 'the key-resolution step is the hole in the middle of this document: "The proof-of-possession key can also be identified using a Key ID instead of communicating the actual key, provided the recipient is able to obtain the identified key using the Key ID." (rfc-8747#R-0050) - ''provided'' is the whole of it.'
 
-  - name: presenter
-    occurrences: 18
-    locator: "§1, §3.4, §3.5"
-    does: >-
-      Possesses the proof-of-possession key and demonstrates that possession
-      to the recipient.
-    obligations: []
-    obligations_why: >-
-      The document states NO obligation on the presenter. §3.5 describes how
-      possession is "often demonstrated" - signing a value determined by the
-      recipient - and then declines to specify it. The most-named party in the
-      document carries none of its eight BCP 14 keywords.
-    note: >-
-      §1 identifies the presenter in several ways depending on the application
-      (`sub`, `iss`, or a subject identifier relative to the issuer) and says
-      "The actual mechanism used is dependent upon the application."
+error_paths:
+  count: 0
+  statement: 'the word ''error'' occurs ZERO times in the 683-line source, and no sentence defines a failure response, a rejection message, a retry or a recovery. Three sentences come closest and none is an error path.'
+  nearest_candidates:
+    - requirement: 'rfc-8747#R-0025'
+      text: 'However, in the absence of such requirements, all confirmation members that are not understood by implementations MUST be ignored.'
+      why_not_an_error_path: 'a local accept-and-drop rule on a map member, with no peer, no message and no response. It is a decoding rule, captured in messages.yaml on the cnf extension socket.'
+    - requirement: 'rfc-8747#R-0083'
+      text: 'Proof-of-possession signatures made with keys not meeting the application''s trust criteria MUST NOT be relied upon.'
+      why_not_an_error_path: 'a prohibition on relying on a signature, not a response to send. The document never says what a recipient does instead.'
+    - requirement: 'rfc-8747#R-0057'
+      text: 'Recipients of a CWT with a PoP key linked through only a Key ID should be prepared to handle such situations.'
+      why_not_an_error_path: 'lowercase ''should be prepared to handle such situations'' - no behaviour is specified, so there is nothing to model and nothing to test.'
 
-  - name: recipient
-    occurrences: 14
-    locator: "§1, §3.1, §3.3, §3.4, §6"
-    does: >-
-      Receives the CWT, obtains or decrypts the proof-of-possession key, and
-      cryptographically confirms the presenter's possession of it.
-    obligations:
-      - rfc-8747#R-0025
-      - rfc-8747#R-0057
-      - rfc-8747#R-0087
-      - rfc-8747#R-0088
-      - rfc-8747#R-0089
-    note: >-
-      Carries the only MUST in the document that binds a consumer rather than
-      a producer - unrecognised confirmation members MUST be ignored - and the
-      lower-case advice that recipients of a CWT whose PoP key is linked only
-      through a Key ID "should be prepared to handle" collisions.
+scope_limits:
+  note: 'the three places RFC 8747 declines to specify something a protocol model would need. Quoted rather than summarised, because the refusals are the finding.'
+  refusals:
+    - requirement: 'rfc-8747#R-0064'
+      locator: '§3.5'
+      text: 'The means of communicating the nonce and the nature of its contents are intentionally not described in this specification, as different protocols will communicate this information in different ways.'
+    - requirement: 'rfc-8747#R-0065'
+      locator: '§3.5'
+      text: 'Likewise, the means of communicating the signed nonce is also not specified, as this is also protocol specific.'
+    - requirement: 'rfc-8747#R-0077'
+      locator: '§4'
+      text: 'Note that a discussion of the architecture or specific protocols that CWTs with proof-of-possession keys are used with is beyond the scope of this specification.'
 
-flows: []
-flows_why: >-
-  The document specifies no exchange. Not for want of a subject - it names
-  three roles and describes the proof-of-possession paradigm in §1 - but
-  because §3.5 withholds the two messages that would constitute the flow. See
-  `declared_absences` below. Writing a flow here would mean inventing the
-  nonce exchange, which R-0064 and R-0065 forbid by declaring it out of scope.
-
-error_paths: []
-error_paths_why: >-
-  No flow, so no error path. The nearest thing to a failure the document
-  describes is a Key ID collision (§3.4, §6), and its consequence is stated as
-  a risk - "may allow one party to impersonate another party" - with no
-  detection step, no actor obliged to act and no recovery.
-
-declared_absences:
-
-  - what: "the nonce, and the means of communicating it"
-    locator: "§3.5"
-    requirement: rfc-8747#R-0064
-    quote: >-
-      The means of communicating the nonce and the nature of its contents are
-      intentionally not described in this specification, as different protocols
-      will communicate this information in different ways.
-    consequence: >-
-      An application adopting `cnf` supplies the challenge mechanism itself,
-      and nothing here constrains its freshness, its encoding or its binding
-      to the key.
-
-  - what: "the signed nonce, and the means of communicating it"
-    locator: "§3.5"
-    requirement: rfc-8747#R-0065
-    quote: >-
-      Likewise, the means of communicating the signed nonce is also not
-      specified, as this is also protocol specific.
-    consequence: >-
-      The reply half is unspecified too, so the document defines a key
-      REPRESENTATION and leaves the proof itself entirely to the application.
-
-# Alternatives to signing a nonce are acknowledged and pushed to the registry:
-# R-0066 notes other means of proving possession exist and R-0067 encourages
-# registering them in the registry §7.2 establishes. So the extension point
-# for the missing half is a registry, which is itself the shape ARCH-0002 P1
-# rejects - see design-notes.md.
+coverage:
+  roles: 3
+  steps: 6
+  steps_the_document_specifies: 0
+  steps_partly_specified: 1
+  error_paths: 0
+  requirements_cited: 27
+  statement: 'of the six steps, exactly ONE is even partly specified by this document - step 1, and only as to the structure the issuer builds. Steps 2 to 6 are named by the role definitions and left unspecified, two of them by explicit refusal. That ratio is the model''s actual content.'

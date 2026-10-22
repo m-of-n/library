@@ -1,76 +1,111 @@
 ---
-schema: "library-doc/v1"
-id: rfc-8747-protocol
 record: rfc-8747
-type: protocol
-updated: "2026-10-21"
+kind: protocol
+title: "rfc-8747 — protocol model"
+extracted: "2026-10-21"
+reviewed_by: ""
 ---
 
-# RFC 8747 — protocol model
+# RFC 8747 — three roles, no messages
 
-**Three roles, no exchange, and the gap is the document's own.** This is the
-only record in library#39's CBOR/COSE set whose source names parties and still
-has no flow to model. Every other lane record without a protocol lacks one
-because the document has no word for any party; this one names three and then
-withholds the messages between them.
+**The model is the shape of what is missing.** RFC 8747 defines three roles
+outright in §2 — it does not merely name them — and states their relation in
+one sentence in §3. It then refuses **twice**, in §3.5, to specify how anything
+is communicated, and in §4 puts the surrounding architecture out of scope. So
+the diagram below is a role triangle with its arrows annotated by whether the
+document specifies them. Five of the six do not exist as specified messages.
 
-Measured whole-word and case-insensitively over all 683 lines: `presenter`
-**18**, `recipient` **14**, `issuer` **8**, `party` **8**, `parties` **7**.
-Against that: `response` **0**, `handshake` **0**, `negotiate` **0**, `sender`
-**0**, `verifier` **0**, `round` **0**; `protocol` **2** — one of them inside
-§3.5's own disclaimer — `exchange` **2**, `message` **4**, `nonce` **3**,
-`challenge` **1**.
+**Why this is modelled rather than declared not applicable.** `rfc-9679`'s
+extraction declared *its* protocol `not_applicable` on the ground that the flow
+belongs to RFC 8747. This is RFC 8747. The role model is the thing that was
+pointed at, so it is extracted here rather than deferred a second time — and
+the finding is that the arrows are missing from this end too.
 
-## The three roles
+## The word sweep behind that judgement
 
-| role | named | does | obligations |
-|---|---|---|---|
-| **issuer** | 8× | Creates the CWT and declares the presenter possesses a key, via `cnf` | 2, both lower case |
-| **presenter** | 18× | Possesses the key and demonstrates possession | **none** |
-| **recipient** | 14× | Obtains or decrypts the key and confirms possession | 5 |
+Over all 683 source lines, case-insensitive, whole words:
 
-**The most-named party carries none of the document's eight BCP 14 keywords.**
-§3.5 describes how possession is *"often demonstrated"* — the presenter signs a
-value determined by the recipient — and then declines to specify any of it.
+| word | hits | where |
+|---|---|---|
+| `error` | **0** | — |
+| `step` | **0** | — |
+| `response` | **0** | — |
+| `flow` | **0** | — |
+| `handshake` | **0** | — |
+| `negotiate` | **0** | — |
+| `sender` | **0** | — |
+| `verifier` | **0** | — |
+| `round-trip` | **0** | — |
+| `request` | 7 | the masthead `Request for Comments`, one in §4, four in §7's registration procedure, one in §7.2.1's template |
+| `message` | 7 on 6 lines | §3.4 (×4 — L319, L323, and L325 twice), §4 (×2, audience restriction), §4 (keyed message digest) |
+| `protocol` | 7 | §3.5 (×3, *protocol specific*), §4 (×3, out of scope), one reference title |
+| `exchange` | 2 | both in §3.5 |
+| `nonce` | 4 | three in §3.5; the fourth is §4's *nonces and timestamps* at L371 |
+| `challenge` | 1 | §3.5 |
 
-## Why there is no flow
+Counts are **occurrences, not lines** — the two differ only for `message`,
+which appears 7 times on 6 lines because line 325 carries it twice.
 
-§3.5 is titled *"Specifics Intentionally Not Specified"*, and it removes both
-halves of the exchange that would constitute one:
+Zero errors, zero steps, zero responses. Every occurrence of `challenge` and
+`exchange`, and three of the four of `nonce`, sit inside §3.5 — the section
+titled *Specifics Intentionally Not Specified*. The one `nonce` outside it is
+§4's *nonces and timestamps*, which is replay advice rather than a message.
+That is a role model with the arrows deliberately left out, not a protocol.
 
-> The means of communicating the nonce and the nature of its contents are
-> intentionally not described in this specification, as different protocols
-> will communicate this information in different ways.
+## The role triangle
 
-> Likewise, the means of communicating the signed nonce is also not specified,
-> as this is also protocol specific.
+```mermaid
+sequenceDiagram
+    autonumber
+    participant I as Issuer
+    participant P as Presenter
+    participant R as Recipient
+    Note over I: binds claims to a PoP key<br/>and picks one of COSE_Key,<br/>Encrypted_COSE_Key or kid<br/>(§3, §3.1 Table 1)
+    Note over I: precondition, §6: must not reuse a Key ID<br/>across CWTs with different claims
+    I -->> P: CWT carrying a cnf claim<br/>(transport NOT specified, §4)
+    P -->> R: the CWT is presented<br/>(transport NOT specified)
+    R -->> P: a nonce or a challenge<br/>(INTENTIONALLY not specified, §3.5)
+    P -->> R: the signed nonce<br/>(INTENTIONALLY not specified, §3.5)
+    Note over R: resolve the confirmation key,<br/>then check the proof<br/>(resolution ASSUMED possible, §3.4)
+```
 
-So the document defines a key **representation** and leaves the **proof**
-entirely to the application. `protocol.yaml` records both absences as
-`declared_absences` with their requirement ids rather than modelling a
-plausible sequence, because a plausible sequence would be ours.
+Every arrow is dashed deliberately: not one of the four is a message this
+document defines. The two solid facts in the diagram are both inside a role —
+the issuer's construction of the `cnf` claim, and the recipient's obligation to
+already know what it needs.
 
-**No Mermaid diagram, deliberately.** There is no sequence to draw. A diagram
-of challenge → signed-response would be this library's invention presented as
-the document's, which is the defect class `hazards.md` §2 exists for.
+## What each leg costs a reader
 
-## What the absence costs, and where it is followed up
+| leg | specified here? | what stands in its place |
+|---|---|---|
+| issuer builds the `cnf` | **structure yes, choice no** | Table 1 and §7.2.2 give the three forms; nothing says when to prefer one |
+| issuer → presenter | **no** | §4 names the ACE OAuth Framework and excludes it |
+| presenter → recipient | **no** | the role definitions in §2 and nothing else |
+| recipient → presenter (nonce) | **no, by explicit refusal** | rfc-8747#R-0064 |
+| presenter → recipient (signed nonce) | **no, by explicit refusal** | rfc-8747#R-0065 |
+| recipient resolves the key | **no** | §3.4's single word *provided*; §6's out-of-band agreement |
 
-An application adopting `cnf` supplies the whole challenge mechanism itself,
-and nothing here constrains its freshness, its encoding, or its binding to the
-key. The document acknowledges alternatives and pushes them to a registry:
-other means of proving possession exist (`rfc-8747#R-0066`) and applications
-using them are *encouraged to register* them in the registry §7.2 establishes
-(`rfc-8747#R-0067`).
+## The hole in the middle
 
-That is worth noticing rather than passing over: **the extension point for the
-missing half of this protocol is a registry** — which is the shape
-`ARCH-0002 P1` rejects. `design-notes.md` takes it from there.
+For a `COSE_Key` confirmation the key travels in the token, so step 6 is local.
+For an `Encrypted_COSE_Key` the recipient must already hold the decryption key.
+For a bare `kid` the resolution is **assumed to be possible and never
+specified** — rfc-8747#R-0050 carries the whole of it in one
+subordinate clause, *provided the recipient is able to obtain the identified key
+using the Key ID*. §6 then says what has to be arranged out of band for that
+clause to hold, and §3.4 says what goes wrong when it does not: collisions are
+foreseen (rfc-8747#R-0056) and the Key ID is not even
+the same on both sides of one conversation (rfc-8747#R-0060).
 
-## The nearest thing to an error path
+That is the whole reason this record is held. See `design-notes.md`.
 
-A Key ID collision (§3.4, §6). Its consequence is stated as a risk — *"may
-allow one party to impersonate another party, with the potential to gain
-additional privileges"* — with no detection step, no actor obliged to act and
-no recovery. `error_paths` is therefore empty, and `protocol.yaml` says why
-rather than leaving the reader to wonder whether the sweep missed something.
+## Error paths: zero
+
+The word `error` occurs **zero** times. The three nearest candidates and why
+none is an error path:
+
+| requirement | why not |
+|---|---|
+| rfc-8747#R-0025 | a local accept-and-drop rule on a map member — no peer, no message, no response |
+| rfc-8747#R-0083 | a prohibition on *relying* on a signature; the document never says what to do instead |
+| rfc-8747#R-0057 | lowercase *should be prepared to handle such situations* — no behaviour specified, nothing to test |
