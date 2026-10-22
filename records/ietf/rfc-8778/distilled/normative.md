@@ -81,6 +81,39 @@ document's own words, and `examples/vectors.yaml` measures both halves: a
 56-octet public key against 2512 octets of signature.
 
 
+## §1.1. Motivation (lines 96–123)
+
+**Added 2026-10-21, FX-1 pass 2, which found this section absent from this file
+with nothing saying so**, while `record.yaml` claimed every normative sentence
+of §1–§6. §1.1 is pure motivation — the post-quantum argument — and this file's
+own instruction at the top is to drop motivation; the section is here now so the
+judgement is visible rather than inferred from a gap. Four of its eight
+sentences are requirement entries, because they state what the document is
+*for*:
+
+- (§1.1) "Recent advances in cryptanalysis [BH2013] and progress in the development of quantum computers [NAS2019] pose a threat to widely deployed digital signature algorithms." — `R-0010`
+- (§1.1) "When it will be feasible to build such computers is open to conjecture; however, RSA [RFC8017], DSA [DSS], Elliptic Curve Digital Signature Algorithm (ECDSA) [DSS], and Edwards-curve Digital Signature Algorithm (EdDSA) [RFC8032] are all vulnerable if large-scale quantum computers come to pass." — `R-0011`
+- (§1.1) "Since the HSS/LMS signature algorithm does not depend on the difficulty of discrete logarithm or factoring, the HSS/LMS signature algorithm is considered to be post-quantum secure." — `R-0012`
+- (§1.1) "The use of HSS/ LMS hash-based signatures to protect software update distribution will allow the deployment of future software that implements new cryptosystems." — `R-0013`, **severance 117–118**
+
+**The other four sentences have no requirement entry**, like the Abstract and the
+§1.2 recital, and are carried here so nothing is dropped silently. None carries
+a BCP 14 keyword, none constrains an artifact, and none bears on a decision this
+record names:
+
+- (§1.1) "As a result, there is a need to prepare for a day that cryptosystems, such as RSA and DSA, that depend on discrete logarithm and factoring cannot be depended upon." — lines 100–102
+- (§1.1) "If large-scale quantum computers are ever built, these computers will have more than a trivial number of quantum bits (qubits), and they will be able to break many of the public-key cryptosystems currently in use." — lines 104–106
+- (§1.1) "A post-quantum cryptosystem [PQC] is a system that is secure against such large-scale quantum computers." — lines 107–108
+- (§1.1) "By deploying HSS/LMS today, authentication and integrity protection of the future software can be provided, even if advances break current digital-signature mechanisms." — lines 120–122
+
+A sentence-level sweep of the Abstract, §1–§6 and Appendix A against every
+artifact in this record resolved **137 of 143** units before this section was
+written and **141 of 143** with it. The two residuals are the Appendix A
+diagnostic-notation blocks, which this file carries in pieces — the frames in
+two fenced regions each, the signature bytes in `examples/vectors.yaml` — rather
+than as one span.
+
+
 ## §1.2. Terminology — the BCP 14 recital (lines 126–130)
 
 Carried here with **no requirement entry**, deliberately. It recites all eleven
@@ -744,7 +777,7 @@ typographic or editorial; the last three cost a reader something.
    `R-0083` ("The byte string is designed for easy parsing") and `R-0084` ("type
    codes that indirectly provide all of the information that is needed to parse
    the byte string") are correct about the format. But RFC 8778 **prints no code
-   point for any LMS or LM-OTS parameter set** — §2.2 and §2.3 give the ten
+   point for any LMS or LM-OTS parameter set** — §2.2 and §2.3 give the nine
    names and no numbers — and `R-0072` defers every value of `p` to [HASHSIG]
    Appendix B. So a parser built from RFC 8778 alone cannot resolve the
    `00000003` and `00000006` its own Appendix A prints to any parameter set. It

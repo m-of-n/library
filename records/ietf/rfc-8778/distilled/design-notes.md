@@ -83,10 +83,16 @@ document's own arithmetic against its own bytes. §2.1 `R-0027`, §2.2 `R-0062`
 and §2.3 `R-0079` make a stand-alone-tree signature `4u + n + n·p + m·h` octets
 with four `u32str` fields, and `R-0039` and `R-0066` fix `m = n = 32`. Both
 printed signatures measure **2512**, and `2512 − 4u − 32` is divisible by 32 for
-`u = 4` and for no other `u` in {1, 2, 8} — so `u = 4` uniquely, with `p + h = 77`
-falling out, and `h = 10`, `p = 67` following from where the type code lands
-(`examples/vectors.yaml` `V-0003`). **The one width neither RFC 8778 nor this
-library states is pinned by a non-normative appendix.**
+`u = 4` and for no other `u` in {1, 2, 8}. **[correction] 2026-10-21, FX-1
+pass 2.** This clause continued "so `u = 4` uniquely", which does not follow from
+a four-candidate table: the congruence reduces to `u ≡ 4 (mod 8)` and `u = 12`,
+`20`, `28` satisfy it. `u = 4` is pinned by a **second** leg the pass had
+measured and not used — octets 0–3 of both signatures are `00000000`, §2.1
+`R-0027`'s `u32str(0)`, and the two first differ at octet 7, the leaf number `q`.
+With that, `p + h = 77` falls out, and `h = 10`, `p = 67` follow from where the
+type code lands (`examples/vectors.yaml` `V-0003`, `schema/README.md`). **The one
+width neither RFC 8778 nor this library states is pinned by a non-normative
+appendix.**
 
 **§3's five key checks, as the whole of the conformance surface for a key.**
 `R-0086` is the only unconditional obligation about a key in the document and
@@ -517,7 +523,9 @@ the tag and import must strip it; under **option 2** ("CBOR + CDDL as canonical;
 COSE for signed form") the tagged bytes are native and there is nothing to strip.
 **Measured here for the first time on this path**: the tag costs 2 octets
 (`COSE_Sign`) or 1 (`COSE_Sign1`), and the whole envelope costs 48 or 40 octets
-around a 2512-octet signature — **1.6% of the object**. `rfc-9964` found the same
+around a 2512-octet signature — **1.9% of the 2560-octet `COSE_Sign` and 1.6%
+of the 2552-octet `COSE_Sign1`**. *(Corrected 2026-10-21: one figure, 1.6%, was
+given for both.)* `rfc-9964` found the same
 pattern for ML-DSA and `rfc-9679`'s Cut C was qualified by it. **Third instance,
 not a new finding, and the measurement is new: the conformance rule is the cost,
 not the bytes.**

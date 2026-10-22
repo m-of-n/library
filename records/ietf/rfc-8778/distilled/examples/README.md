@@ -182,7 +182,10 @@ times as much. Here the key is 56 octets — **24 more than its own thumbprint, 
 more as a minimal `COSE_Key`** — so carrying it is nearly free, and the whole
 expense has moved to the signature. `design-notes.md` under `R-M-02`.
 
-**A sibling lane's reading is refuted by `V-0003`.** It read octets 8–11 of both
+**This record's own earlier reading is refuted by `V-0003`.** *(Corrected
+2026-10-21, FX-1 pass 2: this said "a sibling lane's reading". No other record in
+the library ever carried the claim — it was this record's own `summary.md` bullet,
+and `record.yaml` still carried it until pass 2.)* It read octets 8–11 of both
 signatures — `00000003` — as `LMOTS_SHA256_N32_W8`. The structural arithmetic
 gives `p = 67`, which is the `w = 4` parameter count; `w = 8` has `p = 34` and
 would make the signature `1136 + 32h` octets, never 2512. So `00000003` cannot be

@@ -17,7 +17,7 @@ library's own.** Measured over its 772 lines: `ABNF` 0, `ASN.1` 0,
 `JSON Schema` 0, `CDDL` **1** — and that one occurrence is the title of the
 RFC 8610 entry in §7.2's *Informative* references. There is no `COSE_Key`
 anywhere (0 occurrences), `kty` occurs once and `pub` once as a word. What the
-document does supply is **six concatenation renderings** in `[HASHSIG]`'s `||`
+document does supply is **five concatenation renderings** in `[HASHSIG]`'s `||`
 notation, **two lists of parameter-set names with no code points**, **one
 checklist of five COSE-key conditions** and **three IANA registration
 templates**. `source-renderings.txt` collects all of that verbatim; everything
@@ -26,13 +26,13 @@ else carries `.derived.` in its filename, per `docs/extraction.md`,
 
 | file | kind | what it is |
 |---|---|---|
-| `source-renderings.txt` | **verbatim** | 20 byte-exact runs of source lines — the Abstract, the BCP 14 recital, all six concatenation renderings, both name lists, §3's five checks, §4's state paragraph, §5's whole lifecycle, and all three registration templates. Each block carries its line range and the sha256 of the region's lines joined by `\n`. |
+| `source-renderings.txt` | **verbatim** | 20 byte-exact runs of source lines — the Abstract, the BCP 14 recital, all five concatenation renderings, both name lists, §3's five checks, §4's state paragraph, §5's whole lifecycle, and all three registration templates. Each block carries its line range and the sha256 of the region's lines joined by `\n`. |
 | `hss-lms-public-key.derived.cddl` | derived | the 56-octet `pub`, with every one of the four widths cited to an `R-id` and the u32str width's **measurement** written out. 3 rules. |
 | `hss-lms-public-key.derived.schema.json` | derived | the same structure as a parsed object in hex, for a JSON test harness. `$id: urn:library:rfc-8778:hss-lms-public-key.derived`. |
 | `hss-lms-cose-key.derived.cddl` | derived | the `kty: 5` `COSE_Key` assembled from §3's five checks and §6.2/§6.3's registrations, **plus RFC 9679 §4.5's thumbprint input over it** (cross-record, marked as such). 5 rules. |
 | `hss-lms-cose-envelopes.derived.cddl` | derived | `COSE_Sign` (tag 98) and `COSE_Sign1` (tag 18) as Appendix A instantiates them. The document itself never says where the signature octets go. 6 rules. |
 | `hss-lms-octets.derived.abnf` | derived | the flat byte layouts — public key, LM-OTS signature, LMS signature, both HSS signature forms — as RFC 5234 ABNF, so the **lengths** are machine-checkable. 21 rules. |
-| `parameter-sets.derived.yaml` | derived | the ten parameter-set names, what RFC 8778 fixes about each (h, m, n, w, leaf count) and **what it does not**: no code point for any of the nine, and no value of `p` for three of the four LM-OTS variants. |
+| `parameter-sets.derived.yaml` | derived | the nine parameter-set names, what RFC 8778 fixes about each (h, m, n, w, leaf count) and **what it does not**: no code point for any of the nine, and no value of `p` for three of the four LM-OTS variants. |
 
 ## What the renderings do not give you
 
@@ -72,13 +72,33 @@ Both printed signatures measure **2512** octets. Then:
 |---|---|---|---|
 | 1 | 2476 | 77.375 | impossible |
 | 2 | 2472 | 77.25 | impossible |
-| **4** | **2464** | **77** | **the only integer** |
+| **4** | **2464** | **77** | **the only integer among these four** |
 | 8 | 2448 | 76.5 | impossible |
 
-So `u = 4` is pinned by the document's own arithmetic against its own bytes, and
-`p + h = 77` falls out of it. `h = 10` then follows because only `p = 67` puts a
-small integer (`00000006`) at the resulting type-code offset, 2188, with exactly
-10 trailing 32-octet path nodes as §2.2 `R-0060` requires.
+**[correction] 2026-10-21, FX-1 pass 2 — the divisibility test does not give
+uniqueness, and this file and five others said it did.** That last cell read
+"the only integer". It is the only integer *in this table*. The congruence
+`2512 − 4u − 32 ≡ 0 (mod 32)` reduces to `u ≡ 4 (mod 8)`, so **`u = 12`, `20`
+and `28` satisfy it too** (with `p + h = 76`, `75`, `74`). The arithmetic alone
+excludes 1, 2 and 8 and nothing wider.
+
+**What does pin `u = 4` is the second leg, and it is in the printed octets.**
+Octets 0–3 of **both** signatures are `00000000`, which is exactly §2.1
+`R-0027`'s `u32str(0)` for a stand-alone tree, and the two signatures first
+differ at octet **7** — the leaf number `q`, `00000001` in A.1 against
+`00000000` in A.2. Under `u = 12` the first field would run to octet 11 and the
+leaf number would begin at octet 12, where both signatures carry `91291de7…`;
+under `u = 4` every one of the four `u32str` fields holds a small integer
+(`0`, `1`/`0`, `3`, `6`) at the predicted offset. Taken together with the
+congruence, `u = 4` is the only width consistent with the printed bytes.
+
+Then `p + h = 77` falls out of it, and `h = 10` follows because only `p = 67`
+puts a small integer (`00000006`) at the resulting type-code offset, 2188, with
+exactly 10 trailing 32-octet path nodes as §2.2 `R-0060` requires — the other
+four admitted `h` values put `bb1d8cc8`, `b0e99b2b`, `366c8ffe` and `352e20e0`
+there. Independently: the two signatures share a **288-octet** common suffix,
+which is 9 × 32, exactly the `path[1..9]` that `R-0061` predicts two sibling
+leaves share.
 
 **56 octets holds for all 20 parameter-set combinations RFC 8778 admits** — all
 five tree sizes are `M32`, all four LM-OTS variants are `N32`, `I`'s width is
@@ -96,7 +116,9 @@ parameter sets, so a registered `m ≠ 32` changes `T[1]` and the total.
   `protected`, `unprotected`, `payload`, `signature`, `signatures`,
   `lms_algorithm_type`, `otstype`, `I` and `T1` as unresolved; they are CDDL
   **member keys** inside arrays and maps, not rule references.
-- **21 ABNF rules, closed**, with `%x00-FF` the only terminal.
+- **21 ABNF rules, closed.** Terminals: `%x00-FF` (the `OCTET` rule) and the
+  two fixed `Nspk` values, `%x00.00.00.00` and `%x00.00.00.01`. *(Corrected
+  2026-10-21: this said `%x00-FF` was the only terminal.)*
 - **`parameter-sets.derived.yaml` round-trips through both of the library's YAML
   readers** — `bin/_yaml.py` and `bin/_record_yaml.py` — and they agree on all
   eight top-level keys. The file was first written with flow maps spanning two

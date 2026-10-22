@@ -54,8 +54,10 @@ is the comment block above `bears_on` in `record.yaml`.
 
 - **DEC-002** — a second, independent instance of `rfc-9964`'s Cut B, by a
   different mechanism, and it **refutes that cut's escape clause.** rfc-9964
-  concluded that "a raw `pub` is `alg`-independent, so DEC-003 option 1 is
-  immune to this hazard". For HSS/LMS the raw `pub` is *not*
+  concluded that "An AKP `pub` is `alg`-independent" and therefore "for AKP keys
+  `DEC-003` option 1 is immune to this hazard" — a sentence its own correction
+  block records as having first read "A raw `pub` is `alg`-independent, so" with
+  no key type named. For HSS/LMS the raw `pub` is *not*
   parameter-independent: §2.2's public key begins with two u32 IANA code points,
   `lms_algorithm_type` and `otstype`. The allocation is in the key material,
   where no choice of digest input removes it — option 1 carries it, RFC 9679
@@ -168,8 +170,16 @@ the highest-value follow-on; it was not a precondition.
   neither reading: it names nine parameter sets and prints no code point for any
   of them**, so the document cannot resolve its own examples at all. What the
   printed signatures *do* pin, and nothing else in this library does, is the
-  **width** — `u32str` is 4 octets, uniquely, because `2512 − 4u − 32` is
-  divisible by 32 for no other `u`.
+  **width** — `u32str` is 4 octets. **[correction] 2026-10-21, FX-1 pass 2.**
+  This read "4 octets, uniquely, because `2512 − 4u − 32` is divisible by 32 for
+  no other `u`", and the divisibility test alone does **not** give uniqueness:
+  it holds for every `u ≡ 4 (mod 8)`, so `u = 12`, `20` and `28` pass it too.
+  What is true is that `u = 4` is the only candidate in {1, 2, 8}, and that the
+  printed octets pin it outright: octets 0–3 of both signatures are `00000000`,
+  which is §2.1's `u32str(0)` for a stand-alone tree, and the two differ first
+  at octet **7** — the leaf number `q`, `1` against `0`. A 12-octet field would
+  put `91291de7…` where a leaf number belongs. See
+  `distilled/schema/README.md`.
 - **Its own examples ignore its own suggestion.** §3 says a `kid` MAY be the
   16-byte `I`; both Appendix A examples use `kid: 'ItsBig'`, six ASCII octets.
   The suggestion has no worked instance here, so anyone adopting it is the
