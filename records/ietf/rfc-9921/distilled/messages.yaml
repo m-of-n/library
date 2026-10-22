@@ -87,8 +87,12 @@ messages:
       a2 0126 19010d 59154d <5453 octets> = 5462 octets; wrapped as the
       `protected` bstr field it is 5465 octets with head 59 1556. The payload
       field is 21 octets (54 + 20). So ONE HEADER PARAMETER IS 5456 OF THE
-      5559 OCTETS of the whole tagged COSE_Sign1 object - 98.09 per cent - and
-      the ratio of token to payload is 272.65 : 1.
+      5559 OCTETS of the whole tagged COSE_Sign1 object - 98.15 per cent as a
+      FIELD, and the 5453-octet token inside it is 98.09 per cent. PASS 3
+      SEPARATED THE TWO: this sentence previously put 98.09 beside 5456, and
+      98.09 is 5453/5559 while 5456/5559 is 98.15. Every other site in this
+      record states 98.09 against the TOKEN and is correct. The ratio of token
+      to payload is 272.65 : 1 (5453 / 20, exact).
     note: >-
       THE MAP IS IN RFC 8949 §4.2.1 DETERMINISTIC ORDER (01 before 19010d),
       which the document neither requires nor remarks on. Compare the CTT
@@ -163,7 +167,7 @@ messages:
         type: "header_map"
         required: true
         octets: 5
-        encoding: "a1 04 42 3131  -- {{4: '11'}}, RFC 9052's kid"
+        encoding: "a1 04 42 3131  -- {4: '11'}, RFC 9052's kid"
         constrained_by: []
       - name: payload
         type: "bstr"
@@ -203,7 +207,7 @@ messages:
         type: "bstr .cbor header_map"
         required: true
         octets: 4
-        encoding: "43 a10126  -- {{1: -7}}, alg = ECDSA 256"
+        encoding: "43 a10126  -- {1: -7}, alg = ECDSA 256"
         constrained_by: []
       - name: unprotected
         type: "header_map"
@@ -268,7 +272,7 @@ messages:
         type: "[+ COSE_Signature]"
         required: true
         octets: 77
-        encoding: "81 83 43a10126 a1044 23131 5840 <64>"
+        encoding: "81 83 43 a10126 a1 04 42 3131 58 40 <64>"
         constrained_by:
           - rfc-9921#R-0043
           - rfc-9921#R-0053
@@ -304,6 +308,8 @@ messages:
           in every one of the document's four printings
         constrained_by:
           - rfc-9921#R-0065
+          - rfc-9921#R-0044
+          - rfc-9921#R-0060
       - name: hashedMessage
         type: "OCTET STRING"
         required: true
@@ -443,11 +449,19 @@ messages:
         encoding: "one entry, 910 octets; signature 512 octets (RSA-4096)"
         constrained_by: []
     layout: >-
-      MEASURED, A.1 and A.2 identical to the octet: 5453 total = 4-octet
-      SEQUENCE header + 11 (contentType) + 5434 ([0] SignedData), of which
-      TSTInfo is 367, the certificate bag 4108 and the single SignerInfo 910.
-      SO 75.26 PER CENT OF THE TOKEN IS CERTIFICATES and 6.73 per cent is the
-      timestamp assertion itself.
+      MEASURED, A.1 and A.2 identical to the octet, and every figure here is an
+      ELEMENT total (tag + length + content) so the decomposition sums:
+      5453 = 4 (the outer SEQUENCE header) + 11 (contentType) + 5438 (the [0]
+      EXPLICIT element), and that [0] element is 4 + 5434 (the SignedData
+      SEQUENCE). Inside SignedData: 3 + 17 + 392 + 4108 + 910 = 5430 = its
+      content. Of those, the TSTInfo DER is 367 content octets inside a
+      392-octet encapContentInfo, the certificate bag is 4108 and the single
+      SignerInfo 910. PASS 3 CORRECTED THE SUM: it read
+      "4 + 11 + 5434", which is 5449, because it used the [0] CONTENT length
+      where the other two terms are element totals. SO 75.26 PER CENT OF THE
+      TOKEN IS CERTIFICATES (4104 content octets of 5453; the [0]-inclusive
+      reading, 4108, gives 75.33, and 75.26 is the one used throughout this
+      record) and 6.73 per cent is the timestamp assertion itself (367/5453).
     note: >-
       signatureAlgorithm in the SignerInfo is 1.2.840.113549.1.1.1
       (rsaEncryption) rather than a combined sha512WithRSA OID, with
@@ -507,7 +521,7 @@ messages:
       - name: tsa
         type: "[0] GeneralName"
         required: false
-        encoding: "[4] directoryName, 8 RDNs: Free TSA / TSA / www.freetsa.org / Wuerzburg / Bayern / DE"
+        encoding: "[4] directoryName, 8 RDNs, all 8: O=Free TSA / OU=TSA / description='This certificate digitally signs documents and time stamp requests made using the freetsa.org online services' / CN=www.freetsa.org / emailAddress=busilezas@gmail.com / L=Wuerzburg / C=DE / ST=Bayern"
         constrained_by: []
       - name: extensions
         type: "[1] Extensions"
@@ -527,13 +541,23 @@ messages:
 
   # =========================================================================
   - name: "CTT MessageImprint preimage (COSE_Sign1)"
-    locator: "§3.1.1, source lines 300-309"
+    locator: "§3.1.1, source lines 283-309"
     encoding: "a byte sequence, not a CBOR item: the `signature` field as encoded"
     summary: >-
-      "the bstr-wrapped signature ... (including the heading bytes 0x5840) is
-      used as input for computing the MessageImprint." THE DOCUMENT IS EXPLICIT
-      THAT THE HEAD IS IN THE PREIMAGE, and it is the only place any document
-      in this library puts a CBOR head inside a third party's digest.
+      "Given the COSE_Sign1 message ... the bstr-wrapped signature ...
+      (including the heading bytes 0x5840) is used as input for computing the
+      MessageImprint." THAT IS ONE SENTENCE IN THREE FRAGMENTS, interrupted
+      TWICE - by the CBOR diagnostic object at L285-298 and then by the byte
+      listing at L302-306 - so both elisions above are block boundaries and
+      nothing is welded: the three fragments are R-0110 (L283), R-0048 (L300)
+      and R-0049 (L308-309), each its own entry in requirements.yaml. THE
+      DOCUMENT IS EXPLICIT THAT THE HEAD IS IN THE PREIMAGE, and it is the only
+      place any document in this library puts a CBOR head inside a third
+      party's digest.
+    constrained_by:
+      - rfc-9921#R-0110
+      - rfc-9921#R-0048
+      - rfc-9921#R-0049
     fields:
       - name: head
         type: "2 octets"
@@ -545,7 +569,8 @@ messages:
         type: "64 octets"
         required: true
         encoding: "the ECDSA P-256 signature value"
-        constrained_by: []
+        constrained_by:
+          - rfc-9921#R-0048
     layout: >-
       66 octets: 58 40 || 8eb33e4c...45cacb36.
       VERIFIED IN THIS PASS: sha256 of those 66 octets is
@@ -561,32 +586,45 @@ messages:
 
   # =========================================================================
   - name: "CTT MessageImprint preimage (COSE_Sign)"
-    locator: "§3.1.2, source lines 351-367"
+    locator: "§3.1.2, source lines 328-367"
     encoding: "a byte sequence: the whole `signatures` array as encoded"
     summary: >-
       Same rule, wider preimage: the array, both per-signature buckets and all
-      the heads.
+      the heads. The sentence that says so has the SAME SHAPE as §3.1.1's -
+      "Given the COSE_Sign message ... the signatures array ... is used as
+      input for computing the MessageImprint" is ONE sentence in THREE
+      fragments, interrupted twice, by the CBOR diagnostic object at L330-349
+      and then by the byte listing at L353-365. The fragments are R-0111
+      (L328), R-0052 (L351) and R-0053 (L367).
+    constrained_by:
+      - rfc-9921#R-0111
+      - rfc-9921#R-0052
+      - rfc-9921#R-0053
     fields:
       - name: array heads
         type: "2 octets"
         required: true
         encoding: "81 83"
-        constrained_by: []
+        constrained_by:
+          - rfc-9921#R-0053
       - name: per-signature protected
         type: "4 octets"
         required: true
         encoding: "43 a10126"
-        constrained_by: []
+        constrained_by:
+          - rfc-9921#R-0053
       - name: per-signature unprotected
         type: "5 octets"
         required: true
         encoding: "a1 04 42 3131 -- kid, A HEADER NOTHING SIGNS"
-        constrained_by: []
+        constrained_by:
+          - rfc-9921#R-0053
       - name: signature field
         type: "66 octets"
         required: true
         encoding: "58 40 || 64 octets"
-        constrained_by: []
+        constrained_by:
+          - rfc-9921#R-0053
     layout: >-
       77 octets. VERIFIED: sha256 = 803fada2912d6b7a833a27bd961cc05bc1cc164759
       b1c56f7aa771e4e21526f7, the printed MessageImprint byte for byte.
@@ -622,7 +660,7 @@ messages:
       This preimage is encoding-stable: the payload's content octets do not
       change when the envelope is re-encoded. The CTT preimage is not. The two
       answers are both deliberate and the document never says which rule to
-      prefer, which is the R-O-05 citation in ../design-notes.md §6.
+      prefer, which is the R-O-05 citation in ../design-notes.md §5.1.
 
 coverage:
   wired: >-
@@ -630,13 +668,24 @@ coverage:
     requirement id, and every id was resolved by script from the requirement's
     own text rather than typed.
   empty_lists_are_findings: >-
-    29 `constrained_by: []` entries across 48 fields. Every one belongs to RFC 9052 (the COSE
-    array shapes, kid, alg, empty_or_serialized_map), RFC 5652 (SignedData,
-    SignerInfo, signedAttrs) or RFC 3161 (TimeStampReq.version, certReq,
-    TSTInfo.serialNumber, genTime, ordering, policy). RFC 9921 constrains
-    exactly four things about the wire: which bucket each label goes in, that
-    the value is a bstr holding a DER TST, what each mode hashes, and that the
-    receiver must check the imprint.
+    24 `constrained_by: []` entries across 48 fields, and the enumeration is
+    exhaustive rather than blanket: 7 belong to RFC 9052 (the COSE array shapes
+    - both bodies' `protected`, `unprotected`, `payload` slots where RFC 9921
+    says nothing, `kid`, `alg`, `empty_or_serialized_map`), 5 to RFC 5652
+    (SignedData.version, digestAlgorithms, eContent, certificates, signerInfos)
+    and 12 to RFC 3161 (TimeStampReq.version, certReq and nonce;
+    TimeStampResp.status, whose PKIStatusInfo this file identifies as RFC
+    3161's shape; TSTInfo.version, policy, serialNumber, genTime, ordering,
+    nonce, tsa and extensions). 7 + 5 + 12 = 24.
+    RFC 9921 constrains exactly four things about the wire:
+    which bucket each label goes in, that the value is a bstr holding a DER
+    TST, what each mode hashes, and that the receiver must check the imprint.
+    PASS 3 CORRECTED THE COUNT AND THE CLAIM. It read "29 ... every one belongs
+    to RFC 9052, RFC 5652 or RFC 3161", and 5 of the 29 did not: the four
+    components of the COSE_Sign CTT preimage and the `signature` component of
+    the COSE_Sign1 one are in a third party's digest BECAUSE OF RFC 9921
+    §3.1.1 and §3.1.2, which is this record's central finding and the one place
+    an empty list said the opposite. Those five now cite R-0048 and R-0053.
   not_wired_and_why:
     - "§1.1's two use cases and §5's threat model constrain no field; they are requirements on a deployment, not on bytes."
     - "§5.1's semantic-confusion statements constrain no field either: they bind an implementer's INTERPRETATION of a field whose syntax is unchanged, which is precisely why an unauthenticated label can select a verification algorithm."

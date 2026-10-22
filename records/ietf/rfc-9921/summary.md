@@ -112,13 +112,29 @@ Two notes stand in for the empty table:
 
 ## Artifacts in this record
 
-**FX-1 pass 1 (extract) landed 2026-10-20; pass 2 (verify) landed 2026-10-21.**
-`record.yaml` declares `standard: FX-1` and **no `profile`**: the artifact set
-is complete, pass 3 (cross-check) has not run, and no `reviewed_by` is signed.
+**FX-1 pass 1 (extract) landed 2026-10-20; passes 2 (verify) and 3
+(cross-check) landed 2026-10-21.** `record.yaml` declares `standard: FX-1`, the
+artifact set is complete, and no `reviewed_by` is signed — that is pass 4, a
+person, which `docs/extraction.md` lists separately from the profile.
 Pass 2 fixed nine defects — two dropped statements, four leaked generator
 templates, three relaxed quotations, a quotation attributed to the wrong
-section, a wrong line range and four stale or mis-split counts — and its
-measurements are in `record.yaml`'s `distillation.passes`.
+section, a wrong line range and four stale or mis-split counts.
+**Pass 3 closed the four cross-check closures** — every field a requirement
+names exists (68 requirements name a wire artefact, 0 undefined), every one of
+20 protocol steps and 23 state-machine triggers resolves, and every example
+validates against the production covering it. It also fixed defects in six
+classes, each listed with its file and line in `record.yaml`: a **leaked
+brace-escaped template** in `messages.yaml`'s two CBOR diagnostic renderings —
+the same class pass 2 found in `design-notes.md`, and again invisible to a
+quotation audit because the text inside it was right; **two octet
+decompositions that did not sum**, in `messages.yaml` and
+`timestamp-token.derived.outline.txt`; **`98.09 %` written against the wrong
+numerator** (it is 5453/5559, not the 5456-octet header field, which is
+98.15 %); **three cross-references pointing at the wrong section**, two of them
+transposed with each other; an **undelimited near-quotation of `CLAUDE.md`**
+that had swapped the referent of the sentence it leaned on; and **four stale
+counts**, including a citation total that was already stale in the commit that
+recorded it. All measurements are in `record.yaml`'s `distillation.passes`.
 Per-artifact coverage lines are in `record.yaml`; `distilled/README.md` indexes
 them.
 
@@ -129,11 +145,11 @@ them.
 | `distilled/normative.md` | 29 verbatim regions, each with its source line range and its own sha256; 27 carry a printed block and 2 are declared with a digest only (the two final Appendix A objects, 166 and 173 lines). Measured coverage: 0 statement-bearing lines of §1–Appendix A.2 uncovered |
 | `distilled/requirements.yaml` | **111** entries, 11 stated and 100 inferred (R-0110 and R-0111 added by pass 2 as dropped statements, placed in source order); `source_keyword_count` and `extracted_keyword_count` both **8** and agreeing; 111/111 texts verbatim with **0 relaxations**, and 111/111 `source_lines` re-measured exact |
 | `distilled/schema/` | 1 verbatim capture of the document's twelve printed renderings (1 IANA table, 6 ASN.1 value dumps, 3 CBOR diagnostic objects, 2 byte listings), plus 4 derived files — RFC 9921 ships **no** CDDL, ABNF, ASN.1 or JSON Schema |
-| `distilled/messages.yaml` | 13 structures, 48 fields, every layout produced by **decoding** the appendix bytes |
+| `distilled/messages.yaml` | 13 structures, 48 fields, every layout produced by **decoding** the appendix bytes and re-decoded by pass 3 with an independent parser; 24 fields carry an empty `constrained_by`, enumerated exhaustively as 7 RFC 9052, 5 RFC 5652 and 12 RFC 3161 |
 | `distilled/protocol.{yaml,md}` | **applicable**: 4 roles, 4 flows, 20 steps, a Mermaid diagram per flow |
 | `distilled/state-machine.yaml` | **applicable**: 5 machines, 28 states, 23 transitions, 10 `error_states` entries of which 8 are named error states and 2 are `(none defined)` markers |
 | `distilled/examples/` | 15 vectors and the two 5453-octet tokens as `.hex` fixtures |
-| `distilled/design-notes.md` | DEC-002 both ways, R-M-12 from the value side, R-O-05's adopt and hazard, the six `canonical-encoding` conditions, MD-3 mapped and then five cuts against it, 11 source defects, 7 open questions |
+| `distilled/design-notes.md` | DEC-002 both ways, R-M-12 from the value side, R-O-05's adopt and hazard, the six `canonical-encoding` conditions, MD-3 mapped and then five cuts against it, 11 source defects, 8 open questions |
 
 ### What the extraction changed about this summary's own claims
 

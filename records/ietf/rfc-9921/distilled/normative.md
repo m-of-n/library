@@ -365,9 +365,14 @@ printed MessageImprint **byte for byte**. So the CBOR *head* of the `signature`
 field is inside a third party's digest preimage, and the COSE signature does not
 cover its own head.
 
-The sentence *the bstr-wrapped signature … (including the heading bytes 0x5840) is
-used as input* is interrupted by the displayed block. The whole region is quoted
-here so the interruption is visible.
+The sentence is *Given the COSE_Sign1 message … the bstr-wrapped signature …
+(including the heading bytes 0x5840) is used as input for computing the
+MessageImprint.* — **one sentence in three fragments, interrupted twice**: by
+the CBOR diagnostic object at L285–298 and then by the byte listing at
+L302–306. The whole region is quoted here so both interruptions are visible.
+(Pass 3 corrected this paragraph, which described one interruption and began
+the sentence at its second fragment, against the file header above and against
+`requirements.yaml`'s R-0110/R-0048/R-0049.)
 
 **Source lines 278-321** · `sha256:d4e5d05babdd7f2cd3337e25bd5806e6dd02c20bd1433f2aaf521e9bf1f406af`
 
@@ -989,10 +994,17 @@ inside one of the regions above, except section headings and blank lines
 between regions. **Measured: 0 uncovered.** Two of the 29 regions are
 **declared with their digest rather than reproduced** (L598-763 and L841-1013,
 166 and 173 lines), so of the 29 regions **27 carry a printed block and all 29
-carry a verified digest**. The only statement-bearing lines of the document
-outside that span are source lines 25-77 — Status of This Memo, the Copyright
-Notice and the Table of Contents — and they are excluded deliberately, as
-recorded above.
+carry a verified digest**. **The non-blank lines of the document outside that
+span are exactly three runs, and all three are excluded deliberately:** source
+lines 1–15, the front-page header block (authors, RFC number, category, ISSN,
+date and title — read for `maturity` and the bibliographic cells, never quoted
+as a statement); source lines 25–77, Status of This Memo, the Copyright Notice
+and the Table of Contents; and source lines 1015–1056, Acknowledgments,
+Contributors and Authors' Addresses, which `requirements.yaml` excludes as
+attribution rather than obligation. 83 non-blank lines in all. Pass 3 replaced
+"the only statement-bearing lines outside that span are 25-77": two of the
+three runs were missing from the enumeration, and a blanket "the only" is the
+one shape this library has repeatedly had to retract.
 
 **Re-verified by pass 2 (2026-10-21), by script and against the cache:** 29
 region headers, 2 declared-only; the 27 printed blocks are byte-identical to

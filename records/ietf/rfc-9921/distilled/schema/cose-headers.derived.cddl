@@ -65,17 +65,61 @@ ctt-cose-sign1 = [
                                                   ; the imprint preimage
 ]
 
+; §3.1's MUST is not restricted to COSE_Sign1: the Abstract and §1 name
+; "COSE_Sign and COSE_Sign1", §3.1's second imprint alternative is over the
+; `signatures` field of a COSE_Sign (R-0043), and §3.1.2 prints a worked
+; example of exactly that. Added by pass 3 (cross-check): the two rules above
+; covered COSE_Sign1 in both modes and COSE_Sign in neither, so the document's
+; own §3.1.2 object (examples/ V-0004, 103 octets) validated against no
+; production in this file.
+;
+; WHAT THIS RULE DELIBERATELY DOES NOT DECIDE. A COSE_Sign has TWO unprotected
+; buckets - the body's and one per COSE_Signature - and RFC 9921 never says
+; which carries `3161-ctt`. §3.1 says only "The 3161-ctt COSE _unprotected_
+; header parameter MUST be used". So `header_map` is left open in both places
+; and neither placement is preferred here; see ../design-notes.md Q-8.
+ctt-cose-sign = [
+    protected   : empty_or_serialized_map,
+    unprotected : header_map,                     ; may carry
+                                                  ; rfc3161-ctt-label; §3.1
+                                                  ; does not say whether it
+                                                  ; must
+    payload     : bstr / nil,
+    signatures  : [+ COSE_Signature]              ; §3.1.2: the WHOLE array as
+                                                  ; encoded - heads, both
+                                                  ; per-signature buckets and
+                                                  ; all - is the imprint
+                                                  ; preimage
+]
+
+; There is no `ttc-cose-sign`: §3.2 defines the TTC imprint over "the payload
+; of the COSE Signed Message", which is a body field, so `ttc-protected-map`
+; above applies to a COSE_Sign body unchanged. Recorded so the absence reads as
+; a measurement rather than an omission.
+
 ; ------------------------------------------------------- the imprint preimages
 ; NOT CBOR TYPES -- byte sequences. Written as CDDL only to pin which octets
 ; are in each digest, because that is the one thing an implementer gets wrong.
 ;
+; Each of the two CTT rules below is stated by ONE SENTENCE IN THREE
+; FRAGMENTS, interrupted TWICE — first by a CBOR diagnostic object and then by
+; a byte listing — so the elisions marked `...` are block boundaries, not
+; omissions, and nothing is welded across them. The fragments are carried as
+; separate entries in ../requirements.yaml. (Noted by pass 3; these comments
+; had described the preimages without saying how the source states them.)
+;
 ; §3.1.1, COSE_Sign1 CTT:  the `signature` field INCLUDING its CBOR head.
+;   "Given the COSE_Sign1 message ... the bstr-wrapped signature ...
+;    (including the heading bytes 0x5840) is used as input for computing the
+;    MessageImprint."                         (R-0110 / R-0048 / R-0049)
 ;   preimage = 0x58 0x40 || signature          (66 octets for a 64-octet sig)
 ;   verified: sha256 = 44c2419d131d53d55584b5dd33b788c24e551c6d44b1afc8b2b85e
 ;             6954763b4e, the printed MessageImprint
 ;
 ; §3.1.2, COSE_Sign CTT:   the whole `signatures` ARRAY, heads and all,
 ;   including each COSE_Signature's protected bstr AND its UNPROTECTED map.
+;   "Given the COSE_Sign message ... the signatures array ... is used as input
+;    for computing the MessageImprint."       (R-0111 / R-0052 / R-0053)
 ;   preimage = 81 83 43 a10126 a1 04 42 3131 58 40 || signature   (77 octets)
 ;   verified: sha256 = 803fada2912d6b7a833a27bd961cc05bc1cc164759b1c56f7aa771
 ;             e4e21526f7, the printed MessageImprint

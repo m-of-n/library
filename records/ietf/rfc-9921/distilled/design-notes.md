@@ -20,12 +20,34 @@ by script**, located by anchor in the whitespace-normalised source and verified
 as a contiguous substring of it before this file was written. The audit retries
 any non-resolving fragment under terminal-punctuation swap, hyphenation heal,
 line-break heal and case fold, so that class of defect is reported rather than
-silently healed. **Result: 0 relaxations needed.**
+silently healed. **Result: 0 relaxations needed**, re-measured by pass 3 over
+whole spans longest-first across **all 18 text files of this record** —
+everything under `records/ietf/rfc-9921/` except the generated `summary.html`
+and the two `.hex` fixtures, `record.yaml` and `summary.md` included.
+
+**The quotation census, stated with the method that produced it**, because a
+count without one cannot be reproduced and pass 2's could not be. Taking every
+maximal, non-overlapping delimited span on a line — a `*"…"*` span counted
+**once**, not twice as both an italic and a quoted span — splitting on visible
+elisions and keeping parts of four words or more: **27 inline spans resolve
+verbatim in RFC 9921, 25 of them distinct**, of which 4 sit in §12's table
+where the span being tested is `summary.md`'s claim rather than a direct
+quotation. Plus **9 blockquotes: 8 exact whole, and 1 (§3) carrying a visible
+`…` elision whose halves are each verbatim** — that elision marks a displayed
+block the source interrupts the sentence with, not an omission. **36 quotation
+instances, 0 relaxations.** Pass 2 recorded 29 / 24 / 38 without recording its
+span rule and pass 3 could not reproduce that split under any rule it could
+construct, so the figure is restated with its method rather than carried
+forward.
 
 **[correction] The `mofn` documents this file reasons about are not in this
-repository.** This library is **standalone by design** — independently
-cloneable, forkable and citable by projects that are not `mofn` (`CLAUDE.md`).
-A `find` over the worktree returns none of `ARCH-0001`,
+repository.** `CLAUDE.md` says this library is *"Standalone by design:
+independently cloneable, forkable, and citable by projects that are not this
+one."* — *this one* being the library, so `mofn` is one consumer of it and not
+a part of it. (Pass 3 made this a delimited quotation: it stood as our own
+prose with a bare `(CLAUDE.md)` attribution, dropped a comma and replaced
+*this one* with `mofn`, which swaps the referent.) A `find` over the worktree
+returns none of `ARCH-0001`,
 `ARCH-0001-PROPOSAL-v0.2.0`, `ARCH-0002`, `ADR-0001`, `DECISIONS-0001`, `MD-3`,
 or the `DEC-00n` / `R-M-*` / `R-O-*` / `R-I-*` rules. **Every quotation of
 those documents below is reproduced from the extracting agent's context and
@@ -37,6 +59,25 @@ before relying on it, including the three identifiers `record.yaml` names in
 convention is `records/ietf/rfc-9741`'s, adopted 2026-10-20 and carried by
 `rfc-9964`.
 
+**And the convention has teeth: pass 3 declined to add `R-001`.** Issue
+library#39 cites *survey `R-001` §10* for timestamping being first-class for
+long-lived attestations, and this record is obviously about that. It is still
+not added to `bears_on`, for two reasons that are checkable from here rather
+than argued. First, `R-001` occurs **zero** times in `records/`, `topics/` and
+`docs/` outside the notes recording this decision. Second, its **shape** is not
+one this library uses: every rule id here is `R-<letter>-<digits>` —
+`R-M-12`, `R-O-05`, `R-I-01` — and `R-001` has no letter segment, so it is not
+an id of the family the three entries above belong to; it reads as a section of
+an `mofn` survey document. `schema/record.schema.yaml` says of `bears_on`: *Do
+not invent relevance.* **What the substance is, and where, so that a reader who
+holds `mofn` can wire it in one step:** §1.1 at source lines 98–100, *The
+primary use case is that of "long-term signatures", i.e., signatures that can
+still be verified even after the signing certificate has expired* (`R-0008`,
+with `R-0009`–`R-0011` carrying what a CTT timestamp then lets a relying party
+conclude); §8.5 below, where that capability and the `MD-3` mapping collide;
+and `state-machine.yaml`'s **M5 `signature-trust-over-time`**, the five-state
+lifecycle the question is actually about.
+
 **What IS checkable here, and was checked.** `topics/canonical-encoding.yaml`
 is in this worktree and is the source for the six conditions scored in §6 and
 for the identification of `DEC-002` options 1 and 3.
@@ -45,7 +86,7 @@ for the identification of `DEC-002` options 1 and 3.
 `records/ietf/rfc-9360` is here at `profile: full` and is where the first
 instance of this record's central cut was established (§2).
 `records/ietf/rfc-9943` is here and is what §1.1's second use case is written
-about without citing (§9). **`RFC 3161` and `RFC 5652` are NOT here**, and that
+about without citing (§10). **`RFC 3161` and `RFC 5652` are NOT here**, and that
 is the first thing this extraction has to report: they are two of the
 document's six normative references and they are where everything the
 timestamp token *means* is defined.
@@ -238,21 +279,28 @@ survives untouched — and the profile acquires an ASN.1 identifier tree.
 **[analysis] The point this record makes that no other record in this library
 makes as well: relabelling the parameter changes nothing, because the VALUE is
 registry-rooted end to end.** Measured from the Appendix A.1 token, which
-carries **25 distinct OIDs**:
+carries **25 distinct OIDs in its CMS wrapper and 2 more inside the TSTInfo
+the wrapper encapsulates — 27 in all.** The scope matters and pass 3 made it
+explicit: the eContent is an `OCTET STRING`, so a decoder that does not re-parse
+it sees 25, and the two the list below marks † are only reachable by decoding
+the TSTInfo. (Descend further, into the X.509 extension `extnValue` octet
+strings as well, and the figure is larger again; 27 is "the token's own
+identifiers, one level of encapsulation in".)
 
 - `1.2.840.113549.1.7.2` (`id-signedData`), `1.2.840.113549.1.9.16.1.4`
   (`id-ct-TSTInfo`) — RSA Laboratories' arc under ISO/ITU-T;
-- `2.16.840.1.101.3.4.2.1` and `…2.3` (SHA-256, SHA-512) — NIST's arc;
+- `2.16.840.1.101.3.4.2.3` (SHA-512) in the wrapper and
+  `2.16.840.1.101.3.4.2.1` † (SHA-256, the imprint's own) — NIST's arc;
 - `2.5.4.3`, `2.5.4.6`, `2.5.4.7`, `2.5.4.8`, `2.5.4.10`, `2.5.4.11`,
   `2.5.4.13` (X.520 attribute types), `2.5.29.14`/`15`/`19`/`31`/`32`/`35`/`37`
   (X.509 extensions) — ITU-T's;
 - `1.3.6.1.5.5.7.1.1` (`id-ad-ocsp`'s parent, authorityInfoAccess) — IANA's
   enterprise arc;
-- and `1.2.3.4.1`, the TSAPolicyId, **which is a placeholder in the ITU-T
+- and `1.2.3.4.1` †, the TSAPolicyId, **which is a placeholder in the ITU-T
   example arc** rather than a real policy.
 
 Rename the label to `(our key, "rfc3161-timestamp")` as `R-M-12` would have
-us do and **every one of those 25 identifiers is still allocated by someone
+us do and **every one of those 27 identifiers is still allocated by someone
 else**, inside a byte string our schema cannot see into. The label is the
 cheapest 3 octets in the structure; the governance is all in the other 5453.
 
@@ -445,7 +493,7 @@ But CTT is the unprotected mode, which §7's mapping rejects, and TTC proves
 only that the payload existed. **So the mapping above can carry exactly the
 half of RFC 9921 that does not answer the long-term-signature question §1.1
 opens with.** That is not an argument between `DEC-002` options — it is the
-document's own inversion (§10) reaching our design, and it means that if we
+document's own inversion (§9) reaching our design, and it means that if we
 ever need signature-time evidence we need a mechanism this document does not
 offer: a countersignature over the signature *inside* the signed bytes, which
 is `records/ietf/rfc-9338`'s territory and which §2.1 gestures at —
@@ -759,6 +807,25 @@ requirement on the *implementation*, not on the format.
 **Q-7. Does `R-M-12` need a value-closure clause (§4)?** This record is the
 evidence that a key-relative label can carry a registry-rooted value. Whether
 the rule should reach that far is not ours to decide here.
+
+**Q-8. In a `COSE_Sign`, WHICH unprotected bucket carries `3161-ctt`?** Added
+by pass 3 (cross-check), as a source ambiguity found by the schema↔examples
+closure rather than by reading. A `COSE_Sign` has two: the body's and one per
+`COSE_Signature` (RFC 9052 §4.1). §3.1 says only *The 3161-ctt COSE
+_unprotected_ header parameter MUST be used for the mode described in Section
+2.1*, and §3.1.2 — the document's only `COSE_Sign` worked example — prints an
+object with **no token in it at all**, because it shows the imprint *input*
+rather than the finished object. So the MUST that binds the bucket has two
+candidate buckets and the document never distinguishes them. **[analysis]** It
+matters: the
+body bucket is one map for all signers, while a per-signature bucket is
+per-signer, and §3.1.2's preimage is the **whole** `signatures` array — so a
+token placed in a per-signature unprotected map would be inside the very bytes
+its own imprint commits to, which is not satisfiable. That argues for the body
+bucket, but it is an inference and the document does not state it.
+`schema/cose-headers.derived.cddl`'s `ctt-cose-sign` leaves both open and
+points here rather than resolving it. For us the question is moot under §7's
+mapping, which rejects label 270 in any form.
 
 ---
 
