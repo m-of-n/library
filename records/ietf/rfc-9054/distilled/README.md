@@ -15,15 +15,16 @@ no `reviewed_by` is signed.
 | artifact | file | lines | coverage |
 |---|---|---:|---|
 <!-- `lines` is `len(text.split("\n"))`, i.e. one more than `wc -l`, measured
-     by pass 2 on 2026-10-21. The `examples/` row read 431 under pass 1 and
-     matched nothing measurable; it is now vectors.yaml under the same rule. -->
+     by pass 3 on 2026-10-21 over the artifacts as pass 3 leaves them. The
+     `examples/` row read 431 under pass 1 and matched nothing measurable; it
+     is now vectors.yaml under the same rule. -->
 | normative | `normative.md` | 654 | 25 verbatim regions, §1–§5 complete, each with its line range and sha256 |
 | requirements | `requirements.yaml` | 1216 | 96 entries, R-0001–R-0096; **2 stated**, 94 inferred; counts agree at 2 |
 | schema | `schema/` | — | 7 files: 2 verbatim, 4 derived (one of them the parse report), 1 README |
-| messages | `messages.yaml` | 453 | 4 structures, 16 fields, 28 requirement ids wired |
+| messages | `messages.yaml` | 460 | 4 structures, 16 fields, 28 requirement ids wired |
 | protocol | `protocol.yaml` + `protocol.md` | 93 + 88 | **NOT APPLICABLE**, measured — see below |
 | state machine | `state-machine.yaml` | 80 | **NOT APPLICABLE**, measured — see below |
-| examples | `examples/vectors.yaml` | 555 | 8 vectors: 1 printed, 6 computed, 1 census |
+| examples | `examples/vectors.yaml` | 573 | 8 vectors: 1 printed (V-0005), 6 computed, 1 derived census |
 | design notes | `design-notes.md` | 653 | 13 sections; MD-3 mapped with 4 cuts and 1 convergence; 9 source defects |
 
 ## The three results to read first
@@ -102,11 +103,14 @@ steps defined**, so a machine over it would be ours entirely.
 - **Cross-record ids are spelled in full and emitted from the id table**, with
   a uniqueness-enforcing selector and a join audit read before acceptance.
 
-## The nine expected `bin/validate` warnings
+## The fourteen expected `bin/validate` warnings
 
-`bin/validate` reports **nine warnings** across these two records and **no
-errors**. All nine are the same warning, and it is the one introduced for this
-effort:
+`bin/validate` reports **fourteen warnings** across these two records and **no
+errors** — nine at the end of pass 2 and five more added by pass 3, which gave
+`rfc-9360`'s `schema/x5t-hashalg-policy.derived.yaml` the five `registry_row`
+ids it was missing (`rfc-9054#R-0069`, `#R-0070`, `#R-0071`, `#R-0078`,
+`#R-0079`), each of which `rfc-9360` also defines. All fourteen are the same
+warning, and it is the one introduced for this effort:
 
 ```
 cites rfc-9054#R-0087 while defining its own R-0087 — a bare 'R-0087' in prose
@@ -134,15 +138,16 @@ a blanket. Otherwise the bare forms are in each record's own
 A lane-wide **join audit** resolved every record-qualified citation in both
 records to the requirement or vector it points at and printed the pairs for
 reading. The count depends entirely on its scope, so the method is stated:
-`bin/check-id-joins --resolve` resolves **587 citation occurrences** across
-the two records with **0 dangling** — 501 distinct file/id pairs — of which
-**19 occurrences at 18 distinct file/id sites are cross-record**. Measured on
-the state at the end of pass 2, including the citations pass 2's own notes
-added: the first number this paragraph carried (585) was already stale by the
-time the notes were written, which is the hazard in miniature. Pass 1's "271
-citations, 14 cross-record" is the same audit counted as distinct file/id pairs
-with `requirements.yaml` and these two `README.md`s excluded — 273 and 16 under
-that scoping now, and a different number under any other. Pass 2 then read
+`bin/check-id-joins --resolve` resolves **612 citation occurrences** across
+the two records with **0 dangling** — 513 distinct file/id pairs — of which
+**24 occurrences at 23 distinct file/id sites are cross-record**. Measured on
+the state at the **end of pass 3**, these notes included. The earlier figures
+are kept so the drift is visible: 585 (pass 2, before its own notes), 587
+(pass 2, after them), 612 (pass 3, which added eleven citations across the two
+records). Pass 1's "271 citations, 14 cross-record" is the same audit counted
+as distinct file/id pairs with `requirements.yaml` and the `README.md`s
+excluded — 273 and 16 at the end of pass 2, **284 and 21** at the end of pass 3,
+and a different number under any other scoping. Pass 2 then read
 every cross-record pair and every citation of an id in a duplicate-text group —
 the only places a wrong id still matches the quoted words — and **0 resolve to a
 statement other than the one meant**: in `rfc-9054` the per-algorithm citations

@@ -49,13 +49,12 @@ first on RFC 8610's own 40-rule prelude and on three deliberate negatives.
 
 ## What no schema here can check, and why that is the finding
 
-Five things, four of them carried as comments in
+Four things, three of them carried as comments in
 `x5-headers.derived.cddl` and as conditions in `../messages.yaml`:
 
 - **that the `bstr` holds DER.** The content is ASN.1, so even CDDL's `.cbor`
   control operator would be wrong. This is the `DEC-002` cut: a reduced-CBOR
   profile does not reach inside a byte string.
-- that label 34 carries a `COSE_CertHash` — the labels are in a prose table;
 - that −27/−28/−29 mean anything only under five named algorithms — IANA's
   *(algorithm, label)* scoping, which CDDL cannot express;
 - that the end-entity certificate is integrity protected, which is a property
@@ -63,3 +62,16 @@ Five things, four of them carried as comments in
 - which `hashAlg` values are fit for the position — that is
   `x5t-hashalg-policy.derived.yaml`, and it exists because the wire format
   cannot carry the distinction `rfc-9054`'s registry draws.
+
+**A fifth item was on this list until pass 3 and did not belong:** *that label
+34 carries a `COSE_CertHash`*. **RFC 9360** does not say it in a grammar — the
+labels are in a prose table — but **CDDL** can, and `x5-headers.derived.cddl`
+exists to say it. What the grammar needed was RFC 8610 §3.5.4's **cut**: an
+optional entry followed by a `* label => any` wildcard binds nothing, because
+the wildcard matches the member the optional entry rejected. §3.5.4's own
+worked example says of `{ "optional-key": "nonsense" }` that it *"does match
+this specification"*. `x5-headers.derived.cddl` carried that shape through
+passes 1 and 2, so `{ 34: "nonsense" }` matched `x5-signature-header`; pass 3
+added `^ =>` to each x5 entry, re-parsed the file (whole-input parse, same
+twelve rules, same kinds) and corrected this list and
+`cddl-parse.derived.txt`.

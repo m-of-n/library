@@ -37,11 +37,30 @@ COSE_CertHash = [ hashAlg: (int / tstr), hashValue: bstr ]  ; rfc-9360#R-0070
 
 ; --- the four general header parameters (Table 1).  OURS: the document
 ; --- gives the labels in a table and the types in prose.
+; ---
+;
+; EVERY ENTRY CARRIES CDDL'S CUT `^`, AND WITHOUT IT THIS RULE WOULD SAY
+; NOTHING.  These groups are used below inside maps that end in
+; `* label => any`, because a COSE header map may carry any other label.
+; RFC 8610 section 3.5.4 is explicit about what that costs.  Its own
+; worked example is a map of an optional key and a wildcard, and of the
+; item carrying a wrongly-typed value it says it
+;   "does match this specification: while the first entry of the group
+;   does not match, the second one (the wildcard) does."
+; With the cut inserted, section 3.5.4 says that
+;   "once the member key matches the name part of an entry that carries
+;   a cut, other potential matches for the key of the member that occur
+;   in later entries in the group of the map are no longer allowed"
+; so a label 34 carrying anything but a COSE_CertHash makes the whole map
+; fail.  Pass 3 added the cuts; before them `{ 34: "nonsense" }` matched
+; both header rules below, and the one thing this file exists to say was
+; unsaid.
+;
 x5-header-entries = (
-  ? 32 => COSE_X509          ; x5bag    rfc-9360#R-0064
-  ? 33 => COSE_X509          ; x5chain  rfc-9360#R-0065
-  ? 34 => COSE_CertHash      ; x5t      rfc-9360#R-0066
-  ? 35 => uri                ; x5u      rfc-9360#R-0067
+  ? 32 ^ => COSE_X509        ; x5bag    rfc-9360#R-0064
+  ? 33 ^ => COSE_X509        ; x5chain  rfc-9360#R-0065
+  ? 34 ^ => COSE_CertHash    ; x5t      rfc-9360#R-0066
+  ? 35 ^ => uri              ; x5u      rfc-9360#R-0067
 )
 
 ; --- the three algorithm-scoped parameters (Table 2).  THESE MEAN THESE
@@ -51,9 +70,9 @@ x5-header-entries = (
 ; --- condition in ../messages.yaml - which is itself the R-M-12
 ; --- finding.
 x5-sender-header-entries = (
-  ? -27 => COSE_CertHash     ; x5t-sender      rfc-9360#R-0078
-  ? -28 => uri               ; x5u-sender      rfc-9360#R-0079
-  ? -29 => COSE_X509         ; x5chain-sender  rfc-9360#R-0080
+  ? -27 ^ => COSE_CertHash   ; x5t-sender      rfc-9360#R-0078
+  ? -28 ^ => uri             ; x5u-sender      rfc-9360#R-0079
+  ? -29 ^ => COSE_X509       ; x5chain-sender  rfc-9360#R-0080
 )
 
 ; --- where RFC 9360 says these may appear.  Two locations and no more:
@@ -89,9 +108,9 @@ mofn-hash-alg = -16 / -17 / -18 / -43 / -44 / -45   ; NOT -14, NOT -15
 ; (b) x5t in the PROTECTED bucket whenever it carries the binding.
 ;     RFC 9360 permits either bucket (rfc-9360#R-0043) while also making
 ;     x5t the sanctioned integrity binding (rfc-9360#R-0046).
-mofn-x5-protected = { 34 => mofn-CertHash, * label => any }
-mofn-x5-unprotected = { ? 32 => COSE_X509, ? 33 => COSE_X509,
-                        ? 35 => uri, * label => any }
+mofn-x5-protected = { 34 ^ => mofn-CertHash, * label => any }
+mofn-x5-unprotected = { ? 32 ^ => COSE_X509, ? 33 ^ => COSE_X509,
+                        ? 35 ^ => uri, * label => any }
 
 ; (c) and the rule CDDL cannot carry, stated so it is not lost: the
 ;     digest in hashValue is over the whole DER certificate, which is

@@ -106,10 +106,31 @@ tags:
   - prior-art
 distillation:
   standard: "FX-1"
-  # NO `profile` IS DECLARED. Pass 1 (extract) is complete and the artifact set
-  # is complete; pass 2 (verify) and pass 3 (cross-check) have NOT run and no
-  # `reviewed_by` is signed. Under docs/extraction.md an unfinished extraction
-  # has no profile at all, and that is the state of this record.
+  # `profile: full` DECLARED on the cross-check pass's report, 2026-10-21.
+  # Every artifact in FX-1's set is present with NO `not_applicable`
+  # declaration at all.
+  #
+  # `distillation.passes` below is the ONLY authority for which passes have
+  # run. DO NOT RESTATE THE PASS COUNT here or in any artifact: a restatement
+  # goes stale the moment the next pass lands and nothing reports it. This
+  # comment was itself the proof, reading "pass 2 and pass 3 have NOT run"
+  # after both had.
+  #
+  # ONE THING A READER SHOULD KNOW BEFORE BUILDING ON distilled/schema/: pass 3
+  # found that `x5-headers.derived.cddl` PARSED PERFECTLY AND BOUND NOTHING.
+  # Its x5 entries sit inside a map that also carries `* label => any`, and
+  # RFC 8610 section 3.5.4 says of its own structurally identical example that
+  # an item with a wrongly typed value "does match this specification: while
+  # the first entry of the group does not match, the second one (the wildcard)
+  # does." So a map carrying a nonsense value under label 34 matched the rule
+  # for two passes. The cut operator is now applied to all seven x5 entries.
+  # A schema that parses is not a schema that binds, and no parse check can
+  # see the difference.
+  #
+  # What `full` does NOT mean: no `reviewed_by` is signed on any artifact, so
+  # pass 4 (human review) is outstanding and nothing may be BUILT on these yet
+  # (docs/requirements.md). They may be read.
+  profile: full
   artifacts:
     - kind: normative
       path: distilled/normative.md
@@ -185,26 +206,41 @@ distillation:
         negatives - which establishes that both rules parse AS PRINTED and as
         TYPE rules, and that the 2* forbidding the one-element array is a
         deliberate choice rather than a grammatical necessity. Header markers
-        and filenames agree on all six non-README files
-      reviewed_by: ""
+        and filenames agree on all six non-README files. PASS 3 RE-IMPLEMENTED
+        THE PARSER INDEPENDENTLY - a set-returning recogniser over the same
+        RFC 8610 Appendix B grammar, gated on 13 positives and negatives and on
+        RFC 8610's own 40-rule prelude - and reproduced every verdict in both
+        records' parse reports exactly, then found a defect in
+        x5-headers.derived.cddl that the parse report could not see: an
+        optional map entry followed by a `* label => any` wildcard matches a
+        WRONGLY-TYPED value, per RFC 8610 section 3.5.4, so `{ 34: "nonsense" }`
+        satisfied x5-signature-header and the one thing this file exists to
+        say was unsaid. CDDL's cut, `^ =>`, is the fix; the file re-parses
+        whole with the same twelve rules and the same kinds
     - kind: messages
       path: distilled/messages.yaml
       coverage: >-
-        6 structures and 19 fields with the actual code points and octet-level
+        7 structures and 21 fields with the actual code points and octet-level
         layouts: COSE_X509, COSE_CertHash, the four general header parameters,
         the three algorithm-scoped ones, the application/cose-x509 media-type
-        payload, and the carrying locations. EVERY LAYOUT WAS ENCODED FOR THIS
+        payload, the x5u retrieval exchange, and the carrying locations. EVERY
+        LAYOUT WAS ENCODED FOR THIS
         PASS from RFC 8949 section 3 with a CBOR encoder written here - no CBOR,
         COSE or X.509 library - because the source prints NOT ONE BYTE, and
         every octet count is re-derived at write time. constrained_by IS WIRED:
-        74 of the 129 requirement ids, 0 dangling, every one SELECTED FROM THE
+        78 of the 129 requirement ids, 0 dangling, every one SELECTED FROM THE
         ID TABLE BY SCRIPT with a predicate on the entry's own locator, object
         and field that refuses to resolve unless unique. Three fields are listed
         BECAUSE THEY ARE ABSENT and the absence is the finding: kid (zero
         occurrences in 614 lines), external_aad's encoding (offered four times
         as an integrity mechanism and never specified), and the missing
-        x5bag-sender. Two cross-record ids are cited, both spelled in full and
-        selected from rfc-9054's own id table
+        x5bag-sender - each named by a requirement and answered by an entry
+        that records WHAT IS MISSING AND THE MEASUREMENT BEHIND IT, which is
+        how an absent field is closed. Two cross-record ids are cited, both
+        spelled in full and selected from rfc-9054's own id table. Pass 3 added
+        the x5u-retrieval structure (F-2's GET and its response, neither
+        defined by RFC 9360) with the four permitted target media types
+        R-0051 to R-0054, which no artifact had wired
       reviewed_by: ""
     - kind: protocol
       path: distilled/protocol.yaml
@@ -213,7 +249,7 @@ distillation:
         flows: F-1, the relying party's nine-step validation with the section 5
         JOIN at its end; F-2, the six-step x5u retrieval with the document's
         only SHOULD; and F-3, the three-step INTERMEDIARY REWRITE the document
-        admits itself, twice. Five error paths, six roles, 35 requirement ids
+        admits itself, twice. Five error paths, six roles, 37 requirement ids
         wired, 0 dangling. protocol.md carries a Mermaid sequence diagram per
         flow. WHY APPLICABLE, counted over all 614 lines as whole words with a
         hyphen counting as a word boundary and an underscore not: sender 13
@@ -489,7 +525,12 @@ distillation:
         maturity: standard records. The 25-page-break control in RFC 8392 is
         real - 25 form feeds and 25 "[Page N]" markers there, 0 of each here.
         bin/validate: 0 errors and the 9 expected collision warnings.
-status: summarized
+    - pass: cross-check
+      by: "claude-opus-5 (pass 3 of 3, independent; did not extract and did not verify; cross-checked with rfc-9054 as one lane)"
+      effort: max
+      date: "2026-10-21"
+      note: 'ALL FOUR CLOSURES CLOSED, TWO OF THEM ONLY AFTER A FIX. (a) 16 distinct structure and field tokens from all 129 entries, and ONE REAL GAP: R-0051 to R-0054, the four permitted x5u target media types, were named by requirements and appeared in NO artifact outside requirements.yaml. Now carried by a new x5u-retrieval structure. (b) 3 flows, 18 steps, and TWO OF THEM WERE MESSAGES NOTHING DEFINED - F-2 step 2, the HTTP or CoAP GET, and step 3, the response and its media types. The same structure closes both; 18 of 18 now. Writing it surfaced a finding of its own, recorded rather than smoothed: R-0050 reads "The referenced resource CAN BE any of the following media types" - lower case, no keyword - so "exactly four" is the extraction reading of a PERMISSIVE sentence and a fifth type is prohibited by no text, while protocol.yaml calls the list closed. (c) 9 of 9 triggers resolve to a named event, including the out-of-band role protocol.yaml says in terms exists so that M-2 one permitted anchor transition has a trigger. (d) 38 checks 0 failures, every byte string re-encoded from scratch, including the 7 label encodings, V-0002 seven cases with all four declared INVALID failing for the stated reason, and the array-versus-sequence octet delta of exactly 1 in both the 2- and 3-certificate cases. THE SHARPEST FINDING: x5-headers.derived.cddl PARSED PERFECTLY AND BOUND NOTHING. Its x5 entries are optional map entries inside a map that also carries the wildcard, and RFC 8610 section 3.5.4 - lines 1307 to 1363 of the cached source - gives this EXACT shape as its worked example and states that an item with a wrongly typed value "does match this specification: while the first entry of the group does not match, the second one (the wildcard) does." So a map carrying nonsense under label 34 matched x5-signature-header through passes 1 and 2, while the file own header says it exists precisely because nothing in the document says in a grammar that label 34 carries a COSE_CertHash. The cut operator is now applied to all seven x5 entries and to both mofn rules; re-parsed, whole-input, same twelve rules, same kinds. THE SAME ERROR HAD PROPAGATED INTO TWO PROSE ARTIFACTS, both listing that binding among the things NO schema here can check and attributing it to the SOURCE rather than to our own grammar. A schema that parses is not a schema that binds, and no parse check can see the difference. The 8 PERMIT/REFUSE verdicts were re-derived from rfc-9054 registry rows read out of the cache directly: Recommended is Filter Only for -14 and -15 and Yes for the other six, so REFUSE/REFUSE/PERMIT times six follows exactly, and the digest-bit columns check against sections 3.2 and 3.3 prose. FIVE OF THE EIGHT ROWS CARRIED NO registry_row ID while the structurally identical table in rfc-9054 carries all eight, and two carried a verdict with NO why at all; both fixed, which is what takes bin/validate warnings from 9 to 14, every one a bare-id collision that was read and is correct. M-1 two independent paths are sound and both orders section 5 argues are representable, but the signature branch guard read NONE STATED where R-0122, a MUST, requires the key be checked against the algorithm BEFORE the key is used - and signature validation uses the key. Also fixed: a hyphenation heal in summary.md that falsifies pass 2 "0 heals" - source lines 471 to 472 break on-path AT THE HYPHEN, so the normalised source reads "passive on- path attacker" and the quoted token occurs nowhere in RFC 9360, surviving two passes because the quotation also carries an elision that defeated the elision test; three nested quote marks re-punctuated, where requirements.yaml, normative.md and design-notes.md all keep the source marks; two false vector counts; an F-1 summary naming the wrong two steps for the one ordering the document constrains; and an F-1 step citing 3 of the 5 positions its own locator names, the two missing ones being members of a DUPLICATE-TEXT GROUP, so the citation resolved to a byte-identical statement and nothing automated could have caught it. bin/validate 0 errors; 129 of 129 locators contained; 14 = 14 keywords by keyword; 29 + 4 regions byte-for-byte AND digest-exact; both readers agreeing on every leaf path; 612 citations 0 dangling and all 24 cross-record sites read, 0 resolving to a different statement.'
+status: distilled
 usefulness:
   verdict: marginal
   reason: "X.509 carriage is the identifier model m-of-n is arguing against, and DEC-003 must say why. Kept for three things it supplies: §5's identity-misbinding attack, which is the RFC's own argument for ARCH-0002 P1; §2's in-band protected `hashAlg`, which R-O-05 should copy; and the DEC-002 finding that option 5's exclusions stop at the CBOR layer while DER sits below it."

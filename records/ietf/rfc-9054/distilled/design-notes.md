@@ -414,9 +414,9 @@ comment markers), and anyone who reads §4.1's reasoning as a design principle
 will mis-size their own allocations. **As a `DEC-002` datum, it is a point for
 option 5**: "reduced CBOR" makes you count octets, and counting octets is what
 catches this. An option that does not price its encodings would have read §4.1
-and believed it. That is the smallest of the five cuts in this lane and it is
-the only one that runs in option 5's favour, which is worth saying for exactly
-that reason.
+and believed it. That is the smallest of **this record's four cuts** and the
+only one of the **nine in this lane** — four here, five in `rfc-9360` §7 — that
+runs in option 5's favour, which is worth saying for exactly that reason.
 
 ### 7.6 And the one place option 5 is simply right
 

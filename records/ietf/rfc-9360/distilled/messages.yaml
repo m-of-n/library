@@ -462,6 +462,88 @@ messages:
         (rfc-9360#R-0100).
 
   # =========================================================================
+  - name: x5u-retrieval
+    locator: "§2 lines 244-277; §5 lines 487-489"
+    encoding: "NOT DEFINED HERE - an HTTP or CoAP GET and its response"
+    summary: >-
+      THE ONE EXCHANGE IN THE DOCUMENT, AND RFC 9360 DEFINES NEITHER
+      MESSAGE. Added by pass 3, because ../protocol.yaml F-2 steps 2 and
+      3 are a request and a response and the cross-check rule is that
+      every message in a flow is defined here. What the document
+      actually supplies is a method name, a transport-security SHOULD
+      and a CLOSED LIST OF FOUR MEDIA TYPES for the response; the
+      request has no format, no headers and no parameters of its own,
+      and there is no error response of any kind - `verifier`, `verify`
+      and any error vocabulary occur ZERO times in 614 lines.
+
+      THE DOCUMENT'S ONLY SHOULD IS HERE, and bin/bcp14-count's 14
+      keywords break down as 10 MUST, 3 MUST NOT and exactly this one:
+      "If an HTTP or Constrained Application Protocol (CoAP) GET request
+      is used to retrieve a certificate, TLS [RFC8446], DTLS [RFC9147],
+      or Object Security for Constrained RESTful Environments (OSCORE)
+      [RFC8613] SHOULD be used." (rfc-9360#R-0061, source lines
+      274-277). It binds the TRANSPORT rather than either message, and
+      it is conditional on the method being used at all.
+
+      AND THE LIST OF FOUR IS NOT STATED AS CLOSED. R-0050 reads "The
+      referenced resource can be any of the following media types:" -
+      `can be`, lower case, with no keyword - so "exactly four" is this
+      extraction's reading of a permissive sentence, and a fifth media
+      type is not prohibited by any text. Recorded rather than smoothed
+      over, because ../protocol.yaml F-2 step 3 calls the list closed.
+    computed: false    # nothing is encoded here; neither message is CBOR
+    fields:
+      - name: 'the GET request'
+        type: "HTTP or CoAP GET"
+        required: false
+        encoding: "not defined by RFC 9360; the method is HTTP's or CoAP's"
+        locator: "§2 lines 274-277"
+        constrained_by:
+          - 'rfc-9360#R-0061'
+          - 'rfc-9360#R-0059'
+        note: >-
+          MEASURED: `GET` occurs ONCE in 614 lines, case-sensitively, at
+          line 275 (the lower-case "get" at line 451 is "get revocation
+          information", not the method); `request` twice, at line 6 (the
+          masthead) and line 275. The document names no other method,
+          no header, no status code and no retry rule. The URI's own
+          protection is where the document contradicts itself - see
+          ../protocol.yaml F-2's `open_question`, R-0059 against R-0060.
+      - name: 'the response body (the x5u target)'
+        type: "one of exactly four media types"
+        required: false
+        encoding: "whatever the named media type specifies; only the fourth is CBOR"
+        locator: "§2 lines 246-259"
+        media_types:
+          - 'application/pkix-cert'                                  # rfc-9360#R-0051
+          - 'application/pkcs7-mime with smime-type="certs-only"'    # rfc-9360#R-0052
+          - 'application/cose-x509'                                  # rfc-9360#R-0053
+          - 'application/cose-x509 with usage=chain'                 # rfc-9360#R-0054
+        constrained_by:
+          - 'rfc-9360#R-0050'
+          - 'rfc-9360#R-0051'
+          - 'rfc-9360#R-0052'
+          - 'rfc-9360#R-0053'
+          - 'rfc-9360#R-0054'
+          - 'rfc-9360#R-0055'
+          - 'rfc-9360#R-0056'
+          - 'rfc-9360#R-0060'
+        note: >-
+          FOUR NAMED TYPES AND NO NEGOTIATION. R-0050 introduces the
+          list and R-0051 to R-0054 are its four members, each a bare
+          line of the bullet list with its own reference. There is no
+          content negotiation, no Accept rule, and no statement of what
+          a relying party does with a type that is not on the list -
+          nor, as the summary above says, any text making the list
+          exhaustive. Only the last two are this document's own; their
+          payload is the `application/cose-x509` structure above, which
+          is a CBOR SEQUENCE and not a single data item. The first two
+          carry the source's own references, [RFC2585] and [RFC8551],
+          and are named, never defined. The guard on what may be TRUSTED
+          out of this response is R-0060, one of the document's three
+          MUST NOTs.
+
+  # =========================================================================
   - name: carrying-locations
     locator: "§2, source lines 279-286"
     encoding: "RFC 9052 structures; named here, never redefined"
@@ -541,17 +623,38 @@ messages:
           ../design-notes.md §3.
 
 coverage: >-
-  Six structures and 19 fields, which is every structure, header
-  parameter, media-type payload and carrying location RFC 9360 names,
-  plus three fields that are ABSENT and are listed because their absence
-  is the finding (`kid`, `external_aad`'s encoding, and the missing
-  `x5bag-sender`). 74 of ../requirements.yaml's 129 requirement ids are
-  wired here. The ones that are not are §4.3's media-type template
-  fields, §5's security paragraphs and §1's motivation - they constrain
-  no byte - and the shape of that list is the point: RFC 9360 is a
-  614-line document in which fewer than a third of the statements touch
-  the wire, because most of it is about what a relying party may
-  conclude from bytes somebody else defined.
+  Seven structures and 21 fields, which is every structure, header
+  parameter, media-type payload, retrieval message and carrying location
+  RFC 9360 names, plus three fields that are ABSENT and are listed
+  because their absence is the finding (`kid`, `external_aad`'s
+  encoding, and the missing `x5bag-sender`; the third is under
+  x5-sender-header-parameters' own `absent:` key rather than in
+  `fields`, because there is no field to describe).
+
+  HOW AN ABSENT FIELD IS CLOSED, since the cross-check rule is that
+  every field a requirement names exists here: each of the three is
+  carried as an entry whose `type` or `encoding` records what is
+  missing, with the measurement that establishes the absence (`kid` 0
+  occurrences in 614 lines; `external_aad` 4 occurrences, all offering
+  it as an integrity mechanism, 0 specifying an encoding; no
+  `x5bag-sender` label in Table 2, with §3's own stated reason as
+  rfc-9360#R-0074). An absence that no requirement names would be a
+  silent gap; each of these three is named by a requirement and
+  answered here.
+
+  78 of ../requirements.yaml's 129 requirement ids are wired here, and
+  the other 51 are, by locator: §1 2 (the motivation), §2 11 (R-0003 to
+  R-0012, the validation duties, which ../protocol.yaml F-1 carries, and
+  R-0068, the status of the source's own CDDL, which ../schema/ carries),
+  §4.1 1 and §4.2 1 (R-0083 and R-0085, the two identical "Reference
+  field" sentences), §4.3 16 (the media-type registration template) and
+  §5 20 (the security paragraphs, which ../protocol.yaml and
+  ../state-machine.yaml carry). Counted by locator for this pass,
+  because the earlier sentence here named three of those six groups and
+  omitted §2, §4.1 and §4.2. The shape of the list is the point: RFC 9360
+  is a 614-line document in which fewer than two thirds of the statements
+  touch the wire, because most of the rest is about what a relying party
+  may conclude from bytes somebody else defined.
 absent_by_measurement:
   - 'kid: ZERO occurrences in 614 lines, so no parameter here is related to RFC 9052 label 4.'
   - 'CBOR tags: `tag`, `tags` and `tagged` ZERO occurrences. Eight IANA allocations, none of them a tag.'

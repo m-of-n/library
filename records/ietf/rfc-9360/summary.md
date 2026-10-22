@@ -39,7 +39,7 @@ that is responsible for handling the possible certificate revocation" without
 saying which. The two CDDL rules are the whole wire format:
 `COSE_X509 = bstr / [ 2*certs: bstr ]` and
 `COSE_CertHash = [ hashAlg: (int / tstr), hashValue: bstr ]`, where
-"The contents of `bstr` are the bytes of a DER-encoded certificate."
+"The contents of "bstr" are the bytes of a DER-encoded certificate."
 
 ## Applicability
 
@@ -100,13 +100,13 @@ certificate values", so the library already holds the argument for not reusing
 `ARCH-0002 P1` is key-relative naming, accepted by `ADR-0001`. A certificate
 carries a CA-issued *global* name. This document never names the Subject field
 and never places it against the key; all it says is that "End-entity X.509
-certificates contain identities that a passive on-path attacker … can use to
+certificates contain identities that a passive on- path attacker … can use to
 identify and track the subject", and that `x5t` and `x5u` "are just
 alternative permanent identifiers" usable for the same tracking (§5). So the
 global name space arrives silently, as a property of the opaque `bstr`.
 **The sharpest form of the tension is §5's identity-misbinding paragraph**:
 "Without proof of possession, an attacker can trick the CA into issuing an
-identity-misbinding certificate with someone else's 'borrowed' public key but
+identity-misbinding certificate with someone else's "borrowed" public key but
 with a different subject." That attack exists only because the name and the key
 are separable. Under P1 the name *is* the key, so there is nothing to misbind —
 the RFC's own worst case is an argument for P1, and it is better evidence than
@@ -280,7 +280,7 @@ document would cost option 5 on option 5's own terms: eight IANA allocations
 completely untouched — and the profile acquires ASN.1.
 
 That is the mechanism. `COSE_X509` is `bstr`, and §2 states that "The contents
-of `bstr` are the bytes of a DER-encoded certificate." A reduced-CBOR profile
+of "bstr" are the bytes of a DER-encoded certificate." A reduced-CBOR profile
 reduces the CBOR; **it does not reach inside a byte string.** Carrying one
 certificate therefore buys a second encoding (DER), a second parser, a second
 *canonical form* — DER is itself a canonicalization, with its own rules and its

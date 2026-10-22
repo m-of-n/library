@@ -16,15 +16,16 @@ has no profile at all, and that is this record's state.
 | artifact | file | lines | coverage |
 |---|---|---:|---|
 <!-- `lines` is `len(text.split("\n"))`, i.e. one more than `wc -l`, measured
-     by pass 2 on 2026-10-21. The `examples/` row read 430 under pass 1 and
-     matched nothing measurable; it is now vectors.yaml under the same rule. -->
+     by pass 3 on 2026-10-21 over the artifacts as pass 3 leaves them. The
+     `examples/` row read 430 under pass 1 and matched nothing measurable; it
+     is now vectors.yaml under the same rule. -->
 | normative | `normative.md` | 812 | 29 verbatim regions, §1–§5 complete, each with its line range and sha256 |
 | requirements | `requirements.yaml` | 1600 | 129 entries, R-0001–R-0129; 14 stated, 115 inferred; counts agree at 14 |
 | schema | `schema/` | — | 1 verbatim CDDL file, 1 verbatim source-rendering file, 4 derived |
-| messages | `messages.yaml` | 562 | 6 structures, 19 fields, 74 requirement ids wired |
-| protocol | `protocol.yaml` + `protocol.md` | 415 + 139 | **APPLICABLE**: 3 flows, 18 steps, 5 error paths, 6 roles |
-| state machine | `state-machine.yaml` | 220 | **APPLICABLE**: 2 machines, 9 states, 9 transitions (1 forbidden) |
-| examples | `examples/vectors.yaml` | 542 | 8 vectors, **every one computed** — the source prints none |
+| messages | `messages.yaml` | 665 | 7 structures, 21 fields, 78 requirement ids wired |
+| protocol | `protocol.yaml` + `protocol.md` | 435 + 139 | **APPLICABLE**: 3 flows, 18 steps, 5 error paths, 6 roles |
+| state machine | `state-machine.yaml` | 232 | **APPLICABLE**: 2 machines, 9 states, 9 transitions (1 forbidden) |
+| examples | `examples/vectors.yaml` | 549 | 8 vectors: 7 computed, 1 derived census — the source prints none |
 | design notes | `design-notes.md` | 696 | 15 sections; MD-3 mapped header by header with 5 cuts; 9 source defects |
 
 ## The three results to read first
@@ -71,9 +72,17 @@ has no profile at all, and that is this record's state.
   patterns that match 25 page breaks in RFC 8392 — so no region is split and
   nothing is welded across a gap. Built with `split("\n")`, never
   `splitlines()`.
-- **Hyphenation is not healed.** The source wraps `DER-encoded` across lines
-  222–223; `requirements.yaml` R-0042 carries `DER- encoded certificate`
-  exactly as the normalised source does.
+- **Hyphenation is not healed — and pass 3 found the one place it had been.**
+  The source wraps `DER-encoded` across lines 222–223 and `on-path` across
+  471–472, both **at the hyphen**; `requirements.yaml` R-0042 carries
+  `DER- encoded certificate` and R-0119 carries `passive on- path attacker`,
+  exactly as the normalised source does. `summary.md` quoted R-0119's sentence
+  with the break healed to `on-path` through passes 1 and 2 — the quoted token
+  then occurs nowhere in RFC 9360 — and pass 3 restored it. The same pass
+  restored two further nested quote marks `summary.md` had re-punctuated:
+  §5's `"borrowed"` (written `'borrowed'`) and line 314's `"bstr"` (written
+  `` `bstr` ``, twice), both of which `requirements.yaml` R-0118 and R-0071
+  carry correctly.
 - **`.derived.` on everything we wrote.** `schema/README.md` lists which files
   are which.
 - **Cross-record ids are spelled in full and emitted from the id table.** Every
@@ -82,11 +91,11 @@ has no profile at all, and that is this record's state.
   refuses to resolve unless it is unique. A join audit resolving each cited id
   to its requirement's own text was read before these files were accepted.
 
-## The nine expected `bin/validate` warnings
+## The fourteen expected `bin/validate` warnings
 
-`bin/validate` reports **nine warnings** across these two records and **no
-errors**. All nine are the same warning, and it is the one introduced for this
-effort:
+`bin/validate` reports **fourteen warnings** across these two records and **no
+errors**. All fourteen are the same warning, and it is the one introduced for
+this effort:
 
 ```
 cites rfc-9054#R-0087 while defining its own R-0087 — a bare 'R-0087' in prose
@@ -114,15 +123,18 @@ a blanket. Otherwise the bare forms are in each record's own
 A lane-wide **join audit** resolved every record-qualified citation in both
 records to the requirement or vector it points at and printed the pairs for
 reading. The count depends entirely on its scope, so the method is stated:
-`bin/check-id-joins --resolve` resolves **587 citation occurrences** across
-the two records with **0 dangling** — 501 distinct file/id pairs — of which
-**19 occurrences at 18 distinct file/id sites are cross-record**. Measured on
-the state at the end of pass 2, including the citations pass 2's own notes
-added: the first number this paragraph carried (585) was already stale by the
-time the notes were written, which is the hazard in miniature. Pass 1's "271
-citations, 14 cross-record" is the same audit counted as distinct file/id pairs
-with `requirements.yaml` and these two `README.md`s excluded — 273 and 16 under
-that scoping now, and a different number under any other. Pass 2 then read
+`bin/check-id-joins --resolve` resolves **612 citation occurrences** across
+the two records with **0 dangling** — 513 distinct file/id pairs — of which
+**24 occurrences at 23 distinct file/id sites are cross-record**. Measured on
+the state at the **end of pass 3**, these notes included. Every earlier figure
+this paragraph carried is a fossil of its own moment and they are kept so the
+drift is visible: 585 (pass 2, before its own notes), 587 (pass 2, after
+them), 612 (pass 3, which added five `registry_row` ids to
+`schema/x5t-hashalg-policy.derived.yaml`, four media-type ids and two
+restatement ids). Pass 1's "271 citations, 14 cross-record" is the same audit
+counted as distinct file/id pairs with `requirements.yaml` and the `README.md`s
+excluded — 273 and 16 at the end of pass 2, **284 and 21** at the end of pass 3,
+and a different number under any other scoping. Pass 2 then read
 every cross-record pair and every citation of an id in a duplicate-text group —
 the only places a wrong id still matches the quoted words — and **0 resolve to a
 statement other than the one meant**: in `rfc-9054` the per-algorithm citations
