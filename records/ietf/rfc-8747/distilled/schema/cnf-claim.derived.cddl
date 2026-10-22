@@ -1,0 +1,79 @@
+; DERIVED - not verbatim. RFC 8747 ships no CDDL, no ABNF, no ASN.1 and no
+; JSON Schema; see source-renderings.txt for the measurement. This grammar is
+; this library's rendering of what section 3, section 3.1 (including Table 1),
+; section 3.2, section 3.3 and section 3.4 state in prose, written so that a
+; decoder can be tested against it.
+;
+; WHAT IT IS BUILT FROM, requirement by requirement:
+;   rfc-8747#R-0012  the cnf claim value is a CBOR map
+;   rfc-8747#R-0028   MUST represent only a single proof-of-possession key
+;   rfc-8747#R-0029   at most one of COSE_Key and Encrypted_COSE_Key may be present
+;   rfc-8747#R-0025   confirmation members that are not understood MUST be ignored
+;   rfc-8747#R-0033     Table 1 row 1: COSE_Key, key 1, value type COSE_Key
+;   rfc-8747#R-0034     Table 1 row 2: Encrypted_COSE_Key, key 2, COSE_Encrypt/Encrypt0
+;   rfc-8747#R-0035     Table 1 row 3: kid, key 3, binary string
+;
+; THE INSTANCE THIS GRAMMAR EXISTS TO REJECT, written down so a later pass can
+; falsify it cheaply (hazards.md s7 - a schema that parses is not a schema that
+; binds):
+;
+;     { 1: <COSE_Key>, 2: <COSE_Encrypt0> }
+;
+; A naive rendering misses it. If the extension socket demanded by rfc-8747#R-0025 is
+; written as `* label => any` in the SAME map as optional entries for 1 and 2,
+; then RFC 8610 s3.5.4 makes the wildcard satisfy every entry the named rules
+; reject, and the grammar constrains nothing - which is exactly how rfc-9360's
+; derived CDDL parsed for two passes and bound nothing. Two devices prevent it
+; here: the cut operator `^ =>` on every named entry, so a wrongly typed value
+; under a known label cannot fall through to the wildcard; and `other-label`,
+; which EXCLUDES 1, 2 and 3 by construction, so a second key representation
+; cannot be absorbed as an unknown member. Both are checked, not assumed - see
+; README.md for the accept/reject table.
+;
+; WHAT IT DELIBERATELY DOES NOT CONSTRAIN:
+;   - the empty map. Section 3.1 puts the set of members a CWT must contain
+;     out of scope ("is context dependent and is outside the scope of this
+;     specification"), so {} is not excluded by this document.
+;   - co-occurrence of kid with a key representation. Section 3.1 restricts
+;     COSE_Key against Encrypted_COSE_Key and says nothing about kid, and
+;     section 3.2 explicitly allows a kid INSIDE a COSE_Key. Forbidding
+;     { 1: ..., 3: ... } would be this library's rule, not the document's.
+;   - COSE_Key, COSE_Encrypt and COSE_Encrypt0 themselves. They are RFC 8152's
+;     and this document defines none of them; they are left as sockets.
+;   - whether a COSE_Encrypt0 carries its tag. Section 7.2.2 makes the tag
+;     optional and section 3.3's example omits it, so BOTH forms are admitted
+;     here and a deterministic profile has to choose. See design-notes.md.
+
+cnf-claim = cnf-with-cose-key
+          / cnf-with-encrypted-cose-key
+          / cnf-without-key-representation
+
+cnf-with-cose-key            = { 1 ^ => COSE_Key,            cnf-rest }
+cnf-with-encrypted-cose-key  = { 2 ^ => Encrypted_COSE_Key,  cnf-rest }
+cnf-without-key-representation = { cnf-rest }
+
+cnf-rest = (
+    ? 3 ^ => bstr,              ; Table 1 row 3: "binary string"
+    * other-label ^ => any,     ; the extension socket rfc-8747#R-0025 requires
+)
+
+; EXCLUDES 1, 2 and 3. This is what stops the socket swallowing a second key
+; representation. CDDL has no negation on literals, so the complement is
+; written out: 0, every negative integer, every unsigned integer from 4 up,
+; and every text key.
+other-label = 0
+            / nint
+            / (4 .. 18446744073709551615)
+            / tstr
+
+; Sockets. RFC 8747 defines none of these three - section 3.2 and section 3.3
+; name them and cite [RFC8152].
+COSE_Key           = any
+Encrypted_COSE_Key = COSE_Encrypt / COSE_Encrypt0
+COSE_Encrypt       = any
+COSE_Encrypt0      = any
+
+; The claim as it sits in a CWT Claims Set. Claim Key 8 and value type `map`
+; are stated only in section 7.1.1's registration.
+cwt-claims-set-fragment = { 8 ^ => cnf-claim, * other-claim-label ^ => any }
+other-claim-label = 0 / nint / (1 .. 7) / (9 .. 18446744073709551615) / tstr
