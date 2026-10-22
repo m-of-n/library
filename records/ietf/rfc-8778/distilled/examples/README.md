@@ -105,7 +105,11 @@ provenance class alongside `printed` and `derived`.
 
 **What would close it.** One `COSE_Key` for `kty: 5` from any source this
 library can hash. The obvious candidate is RFC 8554's own test vectors —
-`[HASHSIG]` Appendix F prints LMS public keys — and
+`[HASHSIG]` Appendix F prints LMS public keys, **a claim about a document this
+library does not hold and cannot check: `records/ietf/rfc-8554` is a stub whose
+`content.sha256` is empty, so `bin/fetch-source` would have no digest to verify
+fetched bytes against and its `content.url` points at the HTML page rather than
+the `.txt` FX-1 needs** — and
 `records/ietf/rfc-8554` is a **stub**. Extracting RFC 8554 would make every
 template in this file a vector, and would also supply the parameter-set code
 points RFC 8778 omits (see `../schema/parameter-sets.derived.yaml`). That is the
@@ -189,7 +193,18 @@ and `record.yaml` still carried it until pass 2.)* It read octets 8–11 of both
 signatures — `00000003` — as `LMOTS_SHA256_N32_W8`. The structural arithmetic
 gives `p = 67`, which is the `w = 4` parameter count; `w = 8` has `p = 34` and
 would make the signature `1136 + 32h` octets, never 2512. So `00000003` cannot be
-the W8 code point. What RFC 8778 itself supports is weaker and is the real
-finding: **the document prints no code point for any of its nine named parameter
-sets**, so neither `00000003` nor `00000006` is resolvable to a *name* from this
-document at all. The parameters are recoverable; the names are not.
+the W8 code point.
+
+**[flagged 2026-10-21, FX-1 pass 3] That last step rests on a document this
+library does not hold.** "67 is the `w = 4` count" and "`w = 8` has `p = 34`"
+are RFC 8554 Appendix B's table, and `records/ietf/rfc-8554` is a **stub with no
+`content.sha256` and no cached bytes**, so neither figure is checkable from this
+repository and `bin/fetch-source` cannot make it so — with an empty digest it
+has nothing to verify fetched bytes against, and the record's `content.url` is
+the HTML page rather than the `.txt` rendering FX-1 requires. The refutation has
+a floor that does not need it, and the floor is the real finding: **the document
+prints no code point for any of its nine named parameter sets**, so neither
+`00000003` nor `00000006` is resolvable to a *name* from this document at all —
+not to `W8`, and not to `W4` either. The parameters are recoverable; the names
+are not. What `p = 67` *is* measured here, from the printed bytes alone
+(`V-0003`): 67 thirty-two-octet `y` elements between `C` and the type code.

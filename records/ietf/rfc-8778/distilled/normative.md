@@ -113,6 +113,19 @@ diagnostic-notation blocks, which this file carries in pieces — the frames in
 two fenced regions each, the signature bytes in `examples/vectors.yaml` — rather
 than as one span.
 
+**[correction] 2026-10-21, FX-1 pass 3 — read those two figures as a direction,
+not a measurement.** A "unit" is whatever the sentence splitter admits, and the
+splitter decides the denominator: pass 3 re-ran the same regions with an
+explicit splitter (split on `.`/`:` followed by whitespace and a capital,
+discarding fragments under 25 characters) and got **125 units, 101 resolving** —
+most of its 24 residuals being section headings welded onto a first sentence by
+the split, not gaps in this record. Neither 143 nor 125 is wrong; both are
+properties of a splitter. **What does recompute, and is the claim worth
+keeping**: §1.1 has exactly **eight** sentences, and all eight are present
+verbatim in this file — checked by normalising lines 96–123 of
+`.cache/rfc-8778.txt` and substring-testing each sentence against this file.
+The two Appendix A residuals are real and are described above.
+
 
 ## §1.2. Terminology — the BCP 14 recital (lines 126–130)
 

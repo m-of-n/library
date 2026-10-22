@@ -29,14 +29,51 @@ on it; that includes the six identifiers `bears_on` names (`DEC-002`, `DEC-003`,
 reaches (`R-M-12`, `R-O-03`, `R-O-05`, `R-O-01`). `rfc-9741` adopted this
 convention on 2026-10-20 and `rfc-9964` followed it; this record follows both.
 
-What **is** checkable here, and was checked mechanically by this pass: every
-quotation of RFC 8778 (194 across this directory, 41 of them in this file,
-against `.cache/rfc-8778.txt`, digest `2d43646b974c…`); every quotation of
-RFC 9679 and RFC 9964, against their own cached sources and against those
-records' own design notes (25 across this directory); the `canonical-encoding` conditions (1)–(6), which are stated
-**in this repository** in `topics/canonical-encoding.yaml` and are therefore the
-one group of our own rules this record can cite rather than reconstruct; and the
-existence and state of every record named below.
+What **is** checkable here, and the method each check used — *(rewritten
+2026-10-21, FX-1 pass 3. This paragraph read "every quotation of RFC 8778 (194
+across this directory, 41 of them in this file) … (25 across this directory)".
+Pass 2 found the breakdown those figures belong to sums to 233 rather than its
+stated 225 and left them standing with the flaw declared. **No stated method
+reproduces 194, 41 or 25, and none can**: a delimited-span count over this
+directory is dominated by YAML scalar values that are not quotations at all — a
+`name:`, an `encoding:`, a `locator:` — so the denominator is an artifact of the
+extractor, not a property of the record. The figures are deleted rather than
+re-estimated, and what replaces them is three checks that recompute.)*
+
+1. **Every requirement text, against `.cache/rfc-8778.txt`, digest
+   `2d43646b974c…`.** Whitespace-normalise both sides, then substring-test and
+   count occurrences: **135 of 135 are contiguous spans of the normalised
+   source and each occurs in it exactly once**, so no entry's text can be
+   satisfied by a different sentence.
+2. **Every markdown blockquote in this directory, against the same source.**
+   Take each contiguous `>`-prefixed run as one span, strip the marker and any
+   trailing `— R-NNNN` attribution: **11 of 11 resolve verbatim.**
+3. **Every quotation attributed to another document, against that document
+   only, with this record's own files excluded from the corpus** — the rule
+   `.claude/skills/extract/hazards.md` records *because of this record*, whose
+   `summary.md` once resolved a wrong `rfc-9964` quotation against
+   `record.yaml`'s copy of the same wrong quotation. Corpora: the cached
+   sources, the quoted records' own files, `topics/canonical-encoding.yaml`,
+   `docs/extraction.md` and the extract skill. Every span resolves in the
+   document it names. **No total is recorded, deliberately**: this paragraph
+   quotes the quotations it counts, so any edit moves the figure — the same
+   reason `README.md` gives for not totalling the bare `R-`/`V-`/`S-`
+   references.
+
+**And inline markup inside a quotation is reproduced, never added** — the
+convention this pass settled, because the audit above turned on it. `MD-3`'s own
+emphasis is carried (`COSE_Sign1 and DSSE remain **export** envelopes`, and the
+bold on its no-registry clause), exactly as `rfc-9964` and
+`records/community/draft-mcnally-deterministic-cbor` carry it. Two spans here
+had markup this record added: `carried as **ordinary map entries**` in §8 and
+`` Envelope for `ArtifactStatement` `` in §7, both plain in every other copy in
+the library. Both are now plain. A reader cannot tell an added emphasis from the
+quoted document's own, which is why the rule has to be *reproduce or nothing*.
+
+Also checkable, and checked: the `canonical-encoding` conditions (1)–(6), which
+are stated **in this repository** in `topics/canonical-encoding.yaml` and are
+therefore the one group of our own rules this record can cite rather than
+reconstruct; and the existence and state of every record named below.
 
 **Nothing in this record's findings rests on an unverifiable quotation.** Every
 finding is measured against `.cache/rfc-8778.txt`; the `mofn` ids say which of
@@ -433,7 +470,7 @@ code.**
 
 ### 7. `DEC-005` — a stateful one-time-signature scheme is a **recommended** COSE algorithm
 
-`DEC-005` is "Envelope for `ArtifactStatement`. Options: DSSE (in-toto world),
+`DEC-005` is "Envelope for ArtifactStatement. Options: DSSE (in-toto world),
 COSE_Sign1 (SCITT world), both with a single unsigned payload schema." §6.1
 `R-0122` registers `alg` −46 with **"Recommended: Yes"**, and Appendix A
 exercises **both** COSE envelope shapes — `COSE_Sign` (tag 98) and `COSE_Sign1`
@@ -462,7 +499,7 @@ verification carries none of the cost.
 **`R-M-12` is unsatisfiable for this key type's parameter identification, and
 for a structural reason.** `R-M-12` requires an extension point to be a
 `(key, local label)` pair, and `MD-3`'s option-5 text has types and tags
-"identified key-relatively per R-M-12, carried as **ordinary map entries**".
+"identified key-relatively per R-M-12, carried as ordinary map entries".
 **[analysis] The two `u32str` code points in an HSS-LMS public key are not map
 entries and cannot be made into any.** They are octets 0–7 of a byte string that
 a Merkle root is computed over. `R-M-12`'s mechanism operates at the map layer;
@@ -655,11 +692,25 @@ Items this document cannot settle, with who must.
    is the only available shape and prices it at 2512 octets per member. *`DEC-005`
    and `R-M-06`'s owner.*
 
-7. **Who extracts RFC 8554?** It supplies the `u32str` convention this pass had
-   to measure, the parameter-set code points RFC 8778 omits, the values of `p`,
-   the §9.2 state-management approaches, and the test vectors that would turn
-   this record's two templates into fixtures. `records/ietf/rfc-8554` is a
-   **stub**, and it is the single highest-value follow-on this record identifies.
+7. **Who extracts RFC 8554?** RFC 8778 defers to it for the `u32str` convention
+   this pass had to measure, the parameter-set code points RFC 8778 omits, the
+   values of `p` and `ls`, the §9.2 state-management approaches, and the test
+   vectors that would turn this record's two templates into fixtures.
+   `records/ietf/rfc-8554` is a **stub**, and it is the single highest-value
+   follow-on this record identifies. **[flagged 2026-10-21, FX-1 pass 3] Three
+   claims this record makes *about* RFC 8554 are unverifiable from this
+   repository and are marked at every site where they are made: that its
+   Appendix B table gives `p = 67` for `w = 4` and `p = 34` for `w = 8`
+   (load-bearing for the W8 refutation in `summary.md`, `examples/README.md`,
+   `examples/vectors.yaml` and `schema/parameter-sets.derived.yaml`); that its
+   Appendix F prints LMS public keys (`examples/README.md`); and that it states
+   the `u32str` width. **`bin/fetch-source` cannot close any of them**: that
+   record's `content.sha256` is the empty string, so the tool would have no
+   digest to verify fetched bytes against and would write unverified bytes under
+   `--no-verify` or nothing at all — and its `content.url` is the HTML page, not
+   the `.txt` rendering FX-1 needs. Closing them is an **ingest** of RFC 8554
+   under this issue, not a fix a cross-check pass can make from inside this
+   record. Nothing this record *measures* depends on any of the three.
 
 ---
 

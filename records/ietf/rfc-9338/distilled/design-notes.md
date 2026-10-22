@@ -501,12 +501,16 @@ clean confirmation, which is `docs/extraction.md`'s point.
 Option 5 legislates the encoding and the export. A *receipt over* an export is
 neither: it is a second party's statement about our statement. `MD-3` has no
 clause for it, so the shape arrives by inertia from whatever COSE offers — and
-what COSE offers is §3's table, in which the receipt binds a signature for one
-target shape and nothing for the rest. **That is not an argument against option
-5. It is an argument that the `DEC-002` ADR owes a receipt clause whichever
-option wins**, and §9 below is the clause: *a receipt binds the signature value
-of an attached-payload `COSE_Sign1`, and no other target of this document gives
-a receipt anything cryptographic to bind.*
+what COSE offers is §3.3's table, in which the receipt binds a **signature** for
+exactly one target shape, a **MAC tag** for two more, and for the remaining five
+either nothing at all or something the document never fixes. **That is not an
+argument against option 5. It is an argument that the `DEC-002` ADR owes a
+receipt clause whichever option wins**, and §9 below is the clause: *a receipt
+binds the signature value of an attached-payload `COSE_Sign1`; `COSE_Mac` and
+`COSE_Mac0` give it a MAC tag instead; `COSE_Signature`, `COSE_Encrypt`,
+`COSE_Encrypt0` and `COSE_recipient` give it whatever the unstated reading of
+`payload` puts there (§3.4); and `COSE_Sign` gives it nothing cryptographic
+under any reading.*
 
 ---
 

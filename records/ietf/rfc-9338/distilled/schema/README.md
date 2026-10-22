@@ -76,6 +76,8 @@ classification of `protected`, which is read off that file's own
 asserted.
 
 The census prints **two** columns, `slot-bstr` and `wire-bstr`, and **they
-disagree for five of the eight structures**. §3.3's own COSE_Sign1 example
+disagree for seven of the eight structures** — every one except `COSE_Signature`,
+whose two `bstr` members are `protected` and `signature` and neither of which can
+be `nil`, so it alone reads 2 and 2. §3.3's own COSE_Sign1 example
 forces the `slot` reading; the `wire` column is printed because the gap between
 them *is* the detached-payload hazard.

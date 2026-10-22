@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-8778
 record: rfc-8778
 type: summary
-updated: "2026-10-20"
+updated: "2026-10-21"
 ---
 
 # Use of the HSS/LMS Hash-Based Signature Algorithm with CBOR Object Signing and Encryption (COSE)
@@ -121,7 +121,7 @@ against.
 |---|---|
 | `record.yaml` | metadata, the locator-by-locator warrant for each `bears_on` id, and the `distillation` block |
 | `summary.md` | this document |
-| `distilled/README.md` | the artifact index, the one result, the verification, and what pass 2 should attack |
+| `distilled/README.md` | the artifact index, the one result, the verification, and what each pass found |
 | `distilled/normative.md` | every normative sentence with its locator, plus 25 byte-exact fenced runs of source lines and nine source observations |
 | `distilled/requirements.yaml` | 135 entries, all 9 BCP 14 keywords, counts reconciled exactly; 135/135 locators resolve inside their section |
 | `distilled/schema/` | 1 verbatim renderings file + 6 derived (3 CDDL, 1 ABNF, 1 JSON Schema, 1 parameter-set table), with the full 56-octet width derivation |
@@ -131,10 +131,14 @@ against.
 | `distilled/examples/` | 11 vectors, 4 byte fixtures, both stated sizes reproduced to the octet |
 | `distilled/design-notes.md` | the `rfc-9964` result, six `MD-3` cuts naming their `DEC-002` option, the conditions (0) and (1)–(6), seven open questions |
 
-**FX-1 pass 1 of 3, and no `profile` is claimed.** `distillation.standard:
-FX-1`, `pass: extract` on 2026-10-20 at effort `max`; **verify and cross-check
-have not run** and every `reviewed_by` is empty, so the artifacts are readable
-and citable but not buildable-on. `status` stays `summarized` for that reason.
+**FX-1 passes 1–3 have run, and no `profile` is claimed yet.**
+`distillation.standard: FX-1`; `pass: extract` on 2026-10-20, `verify` and
+`cross-check` on 2026-10-21, each at effort `max`. Every `reviewed_by` is still
+empty — **pass 4 is human review and has not run** — so the artifacts are
+readable and citable but not buildable-on, and `status` stays `summarized` for
+that reason. *(Corrected 2026-10-21, FX-1 pass 3: this said "pass 1 of 3" and
+"verify and cross-check have not run". The identical stale sentence stood in
+`record.yaml`, `distilled/README.md` and `distilled/requirements.yaml`.)*
 
 **This replaces a settled decision, and the reason it was overturned is worth
 recording.** On 2026-10-20 this record was to carry **no distilled artifacts at
@@ -166,8 +170,15 @@ the highest-value follow-on; it was not a precondition.
   But the structural arithmetic fixes `p = 67` for those signatures
   (`distilled/examples/vectors.yaml` `V-0003`), and 67 is the `w = 4` parameter
   count; `w = 8` has `p = 34` and would make the signature `1136 + 32h` octets,
-  never 2512. So `00000003` cannot be the W8 code point. **And RFC 8778 supports
-  neither reading: it names nine parameter sets and prints no code point for any
+  never 2512. So `00000003` cannot be the W8 code point. *(Flagged 2026-10-21,
+  FX-1 pass 3: "67 is the `w = 4` count" and "`w = 8` has `p = 34`" are RFC 8554
+  Appendix B's figures, and `records/ietf/rfc-8554` is a **stub with no
+  `content.sha256` and no cached bytes**, so neither is checkable here;
+  `bin/fetch-source` cannot close it, having no digest to verify against. The
+  `p = 67` itself is measured from the printed bytes and does not depend on it.)*
+  **And RFC 8778 supports
+  neither reading — that part needs no second document: it names nine parameter
+  sets and prints no code point for any
   of them**, so the document cannot resolve its own examples at all. What the
   printed signatures *do* pin, and nothing else in this library does, is the
   **width** — `u32str` is 4 octets. **[correction] 2026-10-21, FX-1 pass 2.**

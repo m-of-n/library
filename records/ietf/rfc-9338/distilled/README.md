@@ -8,22 +8,23 @@ reviewed_by: ""
 
 # `distilled/` — RFC 9338, COSE countersignatures
 
-**FX-1 passes 1 (extract) and 2 (verify) only.** `standard: FX-1` is declared in
-`record.yaml` and **no `profile` is**: pass 3 (cross-check) has not run and no
-`reviewed_by` is signed. `docs/extraction.md`: an unfinished extraction has no
-profile at all. Pass 2's findings and numbers are in `record.yaml`
-`distillation.passes`; the six defects it fixed are marked below.
+**FX-1.** `standard: FX-1` is declared in `record.yaml` and **no `profile` is**,
+because no `reviewed_by` is signed — `docs/extraction.md`: an unfinished
+extraction has no profile at all. **`record.yaml`'s `distillation.passes` is the
+only authority for which passes have run and what each found**, and no artifact
+here restates the pass count, because a restatement goes stale the moment the
+next pass lands and nothing reports it.
 
 | artifact | file | lines | coverage |
 |---|---|---:|---|
 | normative | `normative.md` | 937 | **38 verbatim regions**, front page and §1–§6 complete plus Appendix A's lead-in **and its terminology list** (lines 619–635, added by pass 2, which found those eight acronym expansions in no artifact), each an exact run of source lines with its range and its own sha256. 419 distinct source lines, no line quoted twice. The only non-heading run of §1–§6 not reproduced is §1's opening IoT/CBOR paragraph (lines 90–101), which carries nothing normative |
-| requirements | `requirements.yaml` | 1981 | **140 entries**, R-0001–R-0140, source order, no gaps: **2 stated keywords**, 21 `kind: stated` verbatim fragments, 119 inferred. `source_keyword_count` and `extracted_keyword_count` both **2** and agreeing, with a reconciliation written anyway |
+| requirements | `requirements.yaml` | 1994 | **140 entries**, R-0001–R-0140, source order, no gaps: **2 stated keywords**, 21 `kind: stated` verbatim fragments, 119 inferred. `source_keyword_count` and `extracted_keyword_count` both **2** and agreeing, with a reconciliation written anyway |
 | schema | `schema/` | — | 2 verbatim files, 3 derived, including the `bstr`-slot census that the whole record turns on |
 | messages | `messages.yaml` | 601 | 6 structures, 6 `Countersign_structure` fields with byte-level layout, the **8-row derived target-coverage table**, 3 registry actions, 2 byte layouts; 49 requirement ids wired |
-| protocol | `protocol.yaml` + `protocol.md` | 344 + 191 | **APPLICABLE** with the boundary measured — 5 roles (4 named in the source), 5 flows, 6 error paths, 5 Mermaid diagrams |
+| protocol | `protocol.yaml` + `protocol.md` | 345 + 191 | **APPLICABLE** with the boundary measured — 5 roles (4 named in the source), 5 flows, 6 error paths, 5 Mermaid diagrams |
 | state machine | `state-machine.yaml` | 266 | **APPLICABLE and deliberately small** — 2 machines, 3 states each, 6 transitions, 2 unbounded self-loops and 1 unreachable state |
 | examples | `examples/` | 357 + 6 fixtures | **14 vectors**: the 6 printed messages encoded and size-checked, and 8 derived to-be-signed structures. **One stated size is wrong** |
-| design notes | `design-notes.md` | 721 | 12 sections; 3 adopt, 4 adapt, 5 reject; **MD-3 header by header with 5 named cuts**, each naming the `DEC-002` option it affects; all 6 `canonical-encoding` conditions; **7 source defects**; 6 open questions |
+| design notes | `design-notes.md` | 725 | 12 sections; 3 adopt, 4 adapt, 5 reject; **MD-3 header by header with 5 named cuts**, each naming the `DEC-002` option it affects; all 6 `canonical-encoding` conditions; **7 source defects**; 6 open questions |
 
 ## The five results to read first
 

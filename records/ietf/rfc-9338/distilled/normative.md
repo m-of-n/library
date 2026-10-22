@@ -120,7 +120,7 @@ also concedes that the MAC structures were known to be wrong and shipped.
 change.** *"the same countersignature value in those cases where the computed
 cryptographic value was already included"* is what makes the version-2
 algorithm a no-op for five of the eight target structures; §3.3's arithmetic
-is where that lands. See `design-notes.md` §2.
+is where that lands. See `design-notes.md` §3.
 
 ```
    The new algorithm defined in this document is designed to produce the

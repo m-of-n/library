@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-9338
 record: rfc-9338
 type: summary
-updated: "2026-10-20"
+updated: "2026-10-21"
 ---
 
 # CBOR Object Signing and Encryption (COSE): Countersignatures
@@ -146,7 +146,7 @@ has none.
 exactly three targets and binds a *signature* for exactly one, and the live
 open question is one of the five it misses.**
 `records/ietf/rfc-9052/distilled/design-notes.md` §6 already concludes that
-countersignatures are wrong for `Endorse` and right for "a witness or receipt
+countersignatures are wrong for `Endorse` and right for a "witness or receipt
 over one exported statement … because `other_fields` binds the target's
 signature bytes". **That verdict holds for `COSE_Sign1` and for nothing
 else**: `COSE_Mac` and `COSE_Mac0` also get `other_fields`, but what it carries
@@ -197,13 +197,14 @@ implementation: none in the document.*
 |---|---|
 | `record.yaml` | metadata, and the `distillation` block |
 | `summary.md` | this document |
-| `distilled/` | the **FX-1 artifact set, pass 1 (extract) complete** — `distilled/README.md` indexes it |
+| `distilled/` | the **FX-1 artifact set** — `distilled/README.md` indexes it |
 
 **The extraction has happened.** `record.yaml` declares `standard: FX-1` and
-**no `profile`**: pass 1 (extract) is complete, every artifact in FX-1's set is
-present with **no `not_applicable` declaration**, and passes 2 (verify) and 3
-(cross-check) have not run. Read `distilled/README.md` first; the five results
-it leads with are the ones that change what this record says.
+**no `profile`**: every artifact in FX-1's set is present with **no
+`not_applicable` declaration**, and `record.yaml`'s `distillation.passes` is
+the authority for which passes have run and what each found. Read
+`distilled/README.md` first; the five results it leads with are the ones that
+change what this record says.
 
 **Three things the extraction changed about the paragraphs above**, recorded
 here so the summary does not read as the last word on them:
@@ -256,9 +257,14 @@ short and locator-bearing by design.
    assigns a countersignature semantics to `COSE_Sign` at all (it covers
    Signature/Sign1, Mac/Mac0 and Encrypt/Encrypt0 and stops). Not in the
    errata.
-2. **§1 and §3 contradict each other on `COSE_Signature` coverage** (above),
-   and §3.3's arithmetic settles it against §3. This is the document's own
-   subject matter.
+2. **§1 and §3 appear to contradict each other on `COSE_Signature` coverage**
+   (above), and §3.3's arithmetic does **not** settle it: the arithmetic fixes
+   only whether `other_fields` is present, while the question is what fills
+   `Countersign_structure.payload` when the target has no `payload` field, which
+   §3.3 never says. Under the better-supported reading §1 and §3 are
+   reconcilable, so this is an **under-specification in the document's own
+   subject matter** rather than a contradiction.
+   `distilled/design-notes.md` §3.4.
 3. **Erratum 7338 (status *Reported*, checked 2026-10-20): §3.3's CDDL
    `context` choice ends `"CounterSignature0V2" /,` — a trailing `/` before the
    comma, so the fragment does not parse.** In a document that tells the reader
