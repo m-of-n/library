@@ -33,14 +33,18 @@ sections had to be quoted as adjacent regions. Line 1 carries a UTF-8 BOM.
 Built with `split("\n")`, for consistency with the rest of the library rather
 than from necessity.
 
-**Two sentences in this document are interrupted by a displayed byte block**
-(§3.1.1 and §3.1.2). They are quoted as whole regions here, so the interruption
-is visible; `requirements.yaml` carries each half as its own entry and **welds
-nothing**.
+**Two sentences in this document are each interrupted TWICE by a displayed
+block** (§3.1.1: the CBOR diagnostic object at L285-298 and the byte listing at
+L302-306; §3.1.2: L330-349 and L353-365). Each therefore has **three**
+fragments, not two — pass 2's correction. They are quoted as whole regions
+here, so both interruptions are visible; `requirements.yaml` carries each of
+the six fragments as its own entry (R-0110/R-0048/R-0049,
+R-0111/R-0052/R-0053) and **welds nothing**.
 
-**The Appendix A byte blocks are declared, not reproduced.** Each of the two
-appendix examples carries 5453 octets of DER as 159 lines of hex. Reproducing
-them here would make this file mostly hex; they are in
+**The two final Appendix A objects are declared, not reproduced.** Each carries
+5453 octets of DER as 159 lines of hex, inside 7 and 14 further lines of CBOR
+diagnostic notation; the declared regions are therefore 166 and 173 lines, not
+159. Reproducing them here would make this file mostly hex. The hex is in
 `examples/a1-ttc-timestamp-token.hex` and `examples/a2-ctt-timestamp-token.hex`
 with their digests, and every structural claim about them in `examples/` and
 `messages.yaml` was produced by decoding those bytes.
@@ -300,8 +304,8 @@ Figure 1.
 ## §3 — Timestamp Tokens per RFC 3161: COSE Header Parameters
 
 **The design choice this record turns on is in the second sentence.** Two parameters
-exist *to clearly separate their semantics*, so the mode discriminator **is the
-header label**. There is no type field inside either value, which means the
+exist, in the document's words, *To clearly separate their semantics*, so the mode
+discriminator **is the header label**. There is no type field inside either value, which means the
 discriminator inherits the protection of whichever bucket carries it — and one of
 the two buckets is unprotected.
 
@@ -962,15 +966,37 @@ The resulting COSE_Sign1 object.
   part of the security considerations* and that *Orie contributed an improved
   version of the diagrams* — so the two parts of the document this extraction
   finds sharpest are both attributed to contributors rather than to the authors.
-- **The two 159-line hex blocks**, declared above with their digests and
-  reproduced in `examples/`.
+- **The two final Appendix A objects**, source lines 598-763 (166 lines) and
+  841-1013 (173 lines), declared above with their digests instead of being
+  reproduced. **Pass 2 correction: these are not "the two 159-line hex
+  blocks".** Each hex run is 159 lines (599-757 and 847-1005), and the declared
+  regions are 7 and 14 lines larger, because each also carries the CBOR
+  diagnostic notation that frames the hex — `18([`, the `{4: '11'}` /
+  `/ kid / 4:'11'` unprotected bucket, `'This is the content.'`, the
+  `signature` field and the closing brackets. 15 of those 21 extra lines are
+  diagnostic notation rather than hex. The hex itself is in
+  `examples/a1-ttc-timestamp-token.hex` and
+  `examples/a2-ctt-timestamp-token.hex`; the framing is in
+  `schema/source-renderings.txt` for A.2's starting object and in
+  `messages.yaml` and `examples/vectors.yaml` V-0009/V-0013 as a decoded,
+  octet-by-octet layout.
 
 ## Coverage, stated as a measurement
 
 Every statement-bearing line of the Abstract (source lines 17-23) and of the
 body from source line 79 (§1) to source line 1014 (the end of Appendix A.2) is
-inside one of the regions above, except section headings, blank lines between
-regions, and the two declared hex blocks. **Measured: 0 uncovered.** The only
-statement-bearing lines of the document outside that span are source lines
-25-77 — Status of This Memo, the Copyright Notice and the Table of Contents —
-and they are excluded deliberately, as recorded above.
+inside one of the regions above, except section headings and blank lines
+between regions. **Measured: 0 uncovered.** Two of the 29 regions are
+**declared with their digest rather than reproduced** (L598-763 and L841-1013,
+166 and 173 lines), so of the 29 regions **27 carry a printed block and all 29
+carry a verified digest**. The only statement-bearing lines of the document
+outside that span are source lines 25-77 — Status of This Memo, the Copyright
+Notice and the Table of Contents — and they are excluded deliberately, as
+recorded above.
+
+**Re-verified by pass 2 (2026-10-21), by script and against the cache:** 29
+region headers, 2 declared-only; the 27 printed blocks are byte-identical to
+their declared line ranges AND digest-correct, 27 of 27; the 2 declared-only
+regions are digest-correct, 2 of 2; no region contains a form feed, a running
+header or a running footer. The 23 non-blank, non-heading source lines that
+fall outside a *printed* block are exactly the two declared regions' content.

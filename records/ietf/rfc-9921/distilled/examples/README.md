@@ -48,7 +48,14 @@ minutes 14 seconds after A.1's with the next-but-one serial number. **So the
 request that produced it carried the wrong imprint**, and no edit to the
 printed hex can fix the appendix.
 
-**Errata, stated as a result rather than an absence.**
+**Errata, stated as a result rather than an absence — and UNVERIFIABLE FROM
+THIS REPOSITORY.** Pass 2 (2026-10-21) flags everything in this paragraph as
+second-hand: the lookup was made from the network on 2026-10-20, no errata
+listing is cached beside the source, and a validation run cannot reach
+`errata.rfc-editor.org`. Treat the id, status, reporter, date, proposed value,
+cause and the RFC 3161 control counts as a citation to re-check, the way
+`design-notes.md` §0 treats quotations of `mofn` documents. The mismatch itself
+needs no network and is verified above. As recorded:
 `errata.rfc-editor.org/rfc9921` returns **one** erratum — **ID 9177, status
 REPORTED (not Verified), type Technical, section A.2**, filed 2026-09-13 by
 Florent Morselli — proposing `44 C2 41 9D …` and asking for a **newly issued**

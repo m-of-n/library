@@ -106,7 +106,7 @@ sequenceDiagram
    algorithms runs.
 2. **Steps 2 and 3 of F3 and F4 run an ASN.1/CMS/X.509 parser on
    unauthenticated bytes.** In F3 the token is unprotected; in F4 it is inside
-   the signed bytes but §4 puts the imprint check *"as part of the signature
+   the signed bytes but §4 puts the imprint check *"As part of the signature
    verification"*, so a receiver that follows the document parses 5453 octets
    of DER before it has a verification result.
 3. **The TSA exchange leaves this document entirely.** Both `T` lanes are RFC

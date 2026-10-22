@@ -112,9 +112,13 @@ Two notes stand in for the empty table:
 
 ## Artifacts in this record
 
-**FX-1 pass 1 (extract) landed 2026-10-20.** `record.yaml` declares
-`standard: FX-1` and **no `profile`**: the artifact set is complete, passes 2
-(verify) and 3 (cross-check) have not run, and no `reviewed_by` is signed.
+**FX-1 pass 1 (extract) landed 2026-10-20; pass 2 (verify) landed 2026-10-21.**
+`record.yaml` declares `standard: FX-1` and **no `profile`**: the artifact set
+is complete, pass 3 (cross-check) has not run, and no `reviewed_by` is signed.
+Pass 2 fixed nine defects — two dropped statements, four leaked generator
+templates, three relaxed quotations, a quotation attributed to the wrong
+section, a wrong line range and four stale or mis-split counts — and its
+measurements are in `record.yaml`'s `distillation.passes`.
 Per-artifact coverage lines are in `record.yaml`; `distilled/README.md` indexes
 them.
 
@@ -122,12 +126,12 @@ them.
 |---|---|
 | `record.yaml` | metadata, the locator-by-locator warrant for each `bears_on` id, and the `distillation` block |
 | `summary.md` | this document |
-| `distilled/normative.md` | 29 verbatim regions, each with its source line range and its own sha256. Measured coverage: 0 statement-bearing lines of §1–Appendix A.2 uncovered |
-| `distilled/requirements.yaml` | 109 entries, 11 stated and 98 inferred; `source_keyword_count` and `extracted_keyword_count` both **8** and agreeing; 109/109 texts verbatim with **0 relaxations** |
-| `distilled/schema/` | 1 verbatim capture of the document's twelve printed renderings, plus 4 derived files — RFC 9921 ships **no** CDDL, ABNF, ASN.1 or JSON Schema |
+| `distilled/normative.md` | 29 verbatim regions, each with its source line range and its own sha256; 27 carry a printed block and 2 are declared with a digest only (the two final Appendix A objects, 166 and 173 lines). Measured coverage: 0 statement-bearing lines of §1–Appendix A.2 uncovered |
+| `distilled/requirements.yaml` | **111** entries, 11 stated and 100 inferred (R-0110 and R-0111 added by pass 2 as dropped statements, placed in source order); `source_keyword_count` and `extracted_keyword_count` both **8** and agreeing; 111/111 texts verbatim with **0 relaxations**, and 111/111 `source_lines` re-measured exact |
+| `distilled/schema/` | 1 verbatim capture of the document's twelve printed renderings (1 IANA table, 6 ASN.1 value dumps, 3 CBOR diagnostic objects, 2 byte listings), plus 4 derived files — RFC 9921 ships **no** CDDL, ABNF, ASN.1 or JSON Schema |
 | `distilled/messages.yaml` | 13 structures, 48 fields, every layout produced by **decoding** the appendix bytes |
 | `distilled/protocol.{yaml,md}` | **applicable**: 4 roles, 4 flows, 20 steps, a Mermaid diagram per flow |
-| `distilled/state-machine.yaml` | **applicable**: 5 machines, 28 states, 23 transitions, 10 error states |
+| `distilled/state-machine.yaml` | **applicable**: 5 machines, 28 states, 23 transitions, 10 `error_states` entries of which 8 are named error states and 2 are `(none defined)` markers |
 | `distilled/examples/` | 15 vectors and the two 5453-octet tokens as `.hex` fixtures |
 | `distilled/design-notes.md` | DEC-002 both ways, R-M-12 from the value side, R-O-05's adopt and hazard, the six `canonical-encoding` conditions, MD-3 mapped and then five cuts against it, 11 source defects, 7 open questions |
 
@@ -167,18 +171,28 @@ not reproduce.** The document's rule, its own §3.1.1 worked example and A.2
 disagree three ways and the disagreement resolves against A.2 — 207 candidate
 preimages assembled from the document's printed bytes produce none of the
 printed value. RFC Errata **9177** (status *Reported*, filed 2026-09-13) says
-the same. See `distilled/design-notes.md` D-1 and `examples/` `V-0011`.
+the same — **that errata record is not verifiable from this repository** and is
+flagged as second-hand in `examples/vectors.yaml`; the mismatch itself needs no
+network. See `distilled/design-notes.md` D-1 and `examples/` `V-0011`.
 
 ## Limits
 
-- **Protection and evidence are inverted, and the document does not say so.**
-  The mode that proves something about the *signature* (`3161-ctt`, 270) lives
-  in the bucket nothing signs; the mode in the protected bucket (`3161-ttc`,
-  269) proves only that the payload existed. §5 concedes the first — "an
-  attacker could manipulate the unprotected header by removing or replacing the
-  timestamp" — and answers with "the COSE Signed Message should be integrity
-  protected during transit and at rest": lowercase, and at a layer this
-  document does not define. The stronger evidence is the more fragile carrier.
+- **Protection and evidence are inverted. The document requires the inversion
+  and never remarks on it.** The mode that proves something about the
+  *signature* (`3161-ctt`, 270) lives in the bucket nothing signs; the mode in
+  the protected bucket (`3161-ttc`, 269) proves only that the payload existed.
+  **Four MUSTs close the matrix**: §3.1 makes the signature-covering parameter
+  the *unprotected* one and binds its imprint to the `signature`/`signatures`
+  field, and §3.2 makes the *protected* parameter's imprint the payload hash —
+  so no RFC 9921 parameter can carry signature-time evidence inside the signed
+  bytes, and a second signature pass does not open one. §5 concedes the
+  consequence — "an attacker could manipulate the unprotected header by
+  removing or replacing the timestamp" — and answers with "the COSE Signed
+  Message should be integrity protected during transit and at rest": lowercase,
+  and at a layer this document does not define. The stronger evidence is the
+  more fragile carrier, and that is normative rather than accidental:
+  `distilled/design-notes.md` §9 separates the document's own normative leg
+  from this library's mechanical one.
 - **No value registry and no CDDL.** §6 gives both parameters Value Type `bstr`
   and Value Registry "-", and the document contains no CDDL at all. There is
   nothing a CBOR validator can check about those 5453 octets, by design.

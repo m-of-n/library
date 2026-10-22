@@ -122,6 +122,14 @@ The one-line versions, in the order they cost you most:
   were true measurements through a parser bug, and repairing the parser made
   them false with nothing to report it. When you fix a reader, grep the records
   for every number it produced.
+- **Resolve a foreign quotation against the foreign document only.** Never per
+  record *and* never including self: a sibling's copy of a shared wrong
+  quotation resolves it, and so does the record's own other file. One record's
+  `summary.md` was validated against its own `record.yaml`'s copy of the same
+  welded quotation, and the audit reported success.
+- **Check the arithmetic, not just the words.** A record claimed a width was
+  "the only" one its byte count admitted; the congruence admits every eighth
+  value. Enumerate the solution set before writing "only" or "uniquely".
 - **Escapes resolve through editing paths.** Assemble any `\u{…}` in a script
   and grep for the resolved character afterwards. One record carried this
   seven times, always inside a sentence about the hazard.

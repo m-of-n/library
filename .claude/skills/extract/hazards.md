@@ -98,6 +98,26 @@ quotation marked §2 must resolve inside §2, not merely somewhere in the file.
   object"`, which occurs **zero** times in RFC 8392 — each of §7.1 step 4's
   three bullets names its own structure). Run a **separate whole-scalar pass**.
 
+### Resolve a foreign quotation against the FOREIGN document only
+
+The lane-wide rule below has a within-record twin, and it is easier to miss. A
+quotation attributed to another document must be resolved against **that
+document**, with the quoting record's own files excluded from the corpus.
+
+`rfc-8778`'s pass 2 ran its audit over a corpus that included the record
+itself, and `summary.md`'s wrong quotation of `rfc-9964` **resolved against
+`record.yaml`'s copy of the same wrong quotation** — so the audit reported
+success. Both copies were wrong, and wrong in a way that mattered: they welded
+`rfc-9964`'s *retracted* opening to its *corrected* tail with a qualifier
+deleted, reinstating the over-general claim that record's correction exists to
+retract. Excluding SELF is what exposed it.
+
+So the corpus rule has two halves, for the same reason:
+
+- never per record, because a sibling's copy of a shared wrong quotation
+  resolves it (below);
+- never including self, because the record's *own other file* does the same.
+
 ### Distrust every blanket claim
 
 *"Never elided"*, *"nothing healed"*, *"zero relaxations needed"*, *"0 resolving

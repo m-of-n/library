@@ -157,8 +157,11 @@ obviously yes.
 
 **This is the leg that discriminates between options, and it is an argument
 for determinism on the EXPORT path.** §3.1.1 says what the CTT MessageImprint
-is computed over. The sentence is interrupted by a displayed byte block, so it
-is quoted here in its two halves, **adjacent in the source and not welded**:
+is computed over. The sentence is interrupted **twice** — by the CBOR
+diagnostic object and then by the byte listing — so it has three fragments, and
+the two that carry the rule are quoted here with the elision visible,
+**adjacent in the source and not welded** (its opening fragment, *Given the
+COSE_Sign1 message*, is `R-0110`):
 
 > the bstr-wrapped signature … (including the heading bytes 0x5840) is used as input for computing the MessageImprint.
 
@@ -361,10 +364,10 @@ decision.
 | "this statement was timestamped, and the timestamp covers the payload" | `3161-ttc`, protected | **269** | COSE Header Parameters | **export only** — option 5 forbids native COSE header parameters; nothing else in RFC 9921 can carry it |
 | "this statement was timestamped, and the timestamp covers the signature" | `3161-ctt`, unprotected | **270** | COSE Header Parameters | **reject** — the carrier is a bucket nothing signs, and the indicator selects a verification algorithm (§5) |
 | the timestamp value itself | `bstr` holding DER CMS | — | **none (`-`)** | **carry opaquely or not at all.** No reduced-CBOR rule reaches inside it; our CDDL cannot constrain it and `.cbor` cannot either |
-| the imprint hash algorithm | inside the TSA's `MessageImprint` | — | ITU-T/NIST OID arcs | **inherit** — §4: *{Q("The hash algorithm is contained in the MessageImprint structure, together with the hash itself.")}* It is **not** our `alg` and we do not choose it |
+| the imprint hash algorithm | inside the TSA's `MessageImprint` | — | ITU-T/NIST OID arcs | **inherit** — §4: *"The hash algorithm is contained in the MessageImprint structure, together with the hash itself."* It is **not** our `alg` and we do not choose it |
 | the time value | `TSTInfo.genTime`, `GeneralizedTime` | — | RFC 3161's | **inherit as text.** A `GeneralizedTime` string, not a CBOR integer or a tag-1 epoch value |
 | the TSA identity | `TSTInfo.tsa`, X.509 `DirectoryName` | — | X.520 attribute OIDs | **reject as a principal.** It is a directory name, not a key; our `KeyId` model cannot consume it |
-| accuracy / precision of the time | `TSTInfo.accuracy` | — | RFC 3161's | **absent in both of the document's own tokens**, while §5 says it *{Q("must be taken into account when implementing solutions based on the COSE header parameters defined in this document")}* |
+| accuracy / precision of the time | `TSTInfo.accuracy` | — | RFC 3161's | **absent in both of the document's own tokens**, while §5 says it *"must be taken into account when implementing solutions based on the COSE header parameters defined in this document"* |
 | replay protection for the request | `TimeStampReq.nonce` | — | RFC 3161's | **absent in both examples**, although both figures draw one |
 | "these bytes are a COSE_Sign1" | COSE tag 18 | — | CBOR Tags | **drop**, as elsewhere in this lane; the appendix objects carry it and nothing depends on it |
 
@@ -463,17 +466,49 @@ out, and one is sharper than stated.**
 | *"This does not include the bstr wrapping -- only the payload bytes"* | **CONFIRMED verbatim**, §3.2 |
 | §5 concedes the stripping attack | **CONFIRMED verbatim**, and the mitigation is lower case |
 | the integrity requirement is pushed to an undefined layer | **CONFIRMED.** *the COSE Signed Message should be integrity protected during transit and at rest* — no mechanism, no layer, no reference |
-| the stronger evidence is the more fragile carrier | **CONFIRMED, and it is structural rather than an oversight** |
+| the stronger evidence is the more fragile carrier | **CONFIRMED — but this leg is OUR characterisation, not a span of the source** (pass 2 marked it): the seven legs above each resolve to the document's own words, this one is the conclusion drawn from them. It is structural rather than an oversight, for the reasons in leg A below |
 
-**[analysis] Why it is structural.** The CTT imprint is over the signature, so
-the signature must exist before the token does; the token therefore cannot be
-inside the signed bytes without a second signature pass. **The inversion is
-forced by the dependency order, not chosen.** The document could have said so
-and does not — and the fix it does not mention is the one §2.1's own
-countersignature analogy points at: a countersignature structure that is
-itself signed. `records/ietf/rfc-9338` (COSE Countersignatures) is in this
-library and is **not cited by RFC 9921**; `9338` occurs zero times in the
-source.
+**Why it is forced, in two legs — and pass 2 found the first one, which is the
+document's own and not ours.**
+
+**Leg A — normative, and it is stated, as the conjunction of four MUSTs.** The
+matrix is closed by the document itself, in words, not by inference:
+
+| | protected bucket | unprotected bucket |
+|---|---|---|
+| imprint over the **signature** | **unreachable** | `3161-ctt`, §3.1 |
+| imprint over the **payload** | `3161-ttc`, §3.2 | — |
+
+- §3.1, source line 256: *The 3161-ctt COSE _unprotected_ header parameter MUST be used for the mode described in Section 2.1.* — the signature-covering mode's carrier is the **unprotected** parameter, by MUST.
+- §3.1, source lines 262-268: *The MessageImprint sent in the request to the TSA MUST be* the hash of the `signature` or `signatures` field — so `3161-ctt` is the signature-covering parameter, by MUST.
+- §3.2, source line 383: *The 3161-ttc COSE _protected_ header parameter MUST be used for the mode described in Section 2.2.*
+- §3.2, source lines 389-390: *The MessageImprint sent to the TSA (Section 2.4 of [RFC3161]) MUST be the hash of the payload of the COSE Signed Message.* — so the **protected** parameter may only ever carry a payload imprint, by MUST.
+
+**[analysis]** Read together, those four leave no RFC 9921 parameter that can
+carry a signature-covering imprint inside the protected bucket. **A second
+signature pass does not open one**, because the only protected carrier the
+document defines is bound by MUST to a payload hash. So the inversion is
+*normatively* forced, within this document's two parameters, and that part of
+the claim is the document's rather than this extraction's.
+
+**Leg B — mechanical, and this leg is OURS.** **[analysis]** The CTT imprint is
+over the signature, so the signature must exist before the token does; the
+token therefore cannot be inside the signed bytes without a second signature
+pass. **The inversion is forced by the dependency order as well as by the four
+MUSTs, not chosen.** Measured, so that the inference is checkable: nothing in
+the source states the dependency or the forcing in those terms and nothing
+permits the other order — `cannot` occurs twice (source lines 124 and 435) and
+neither occurrence is about placement; `re-sign`, `resign`, `second signature`
+and `already signed` occur **zero** times; the nearest the document comes is
+Appendix A.2's *The contents of the TST are bstr-wrapped and added to the
+unprotected headers bucket in the original COSE_Sign1 object*, where *in the
+original* carries the whole point without arguing it, and §5.1's *symmetric to
+the signature and assembly mechanics*. **The document never names the
+consequence, and the fix it does not mention** is the one §2.1's own
+countersignature analogy points at: a countersignature structure that is itself
+signed. `countersignature` occurs **once** in 1056 lines (source line 199).
+`records/ietf/rfc-9338` (COSE Countersignatures) is in this library and is
+**not cited by RFC 9921**; `9338` occurs zero times in the source.
 
 **One leg is sharper than the summary states.** For `COSE_Sign`, the CTT
 preimage includes the **per-signature unprotected bucket** (§3.1.2, 5 of 77
@@ -541,9 +576,9 @@ rendering for. There is no `KeyId`-shaped field anywhere in the mechanism.
 **`DEC-005`.** **Not claimed, and the reason is now measured rather than
 asserted.** RFC 9921 is COSE-only by construction: `COSE_Sign` and `COSE_Sign1`
 are named in the Abstract and in §1 and no other envelope appears; §3.1's two
-imprint alternatives are defined over *{Q("the CBOR-encoded signature field of the COSE_Sign1")}*
+imprint alternatives are defined over *"the CBOR-encoded signature field of the COSE_Sign1"*
 and the `signatures` field of `COSE_Sign`; §3.2's over
-*{Q("the payload of the COSE Signed Message")}*. So the mechanism is available
+*"the payload of the COSE Signed Message"*. So the mechanism is available
 to one `DEC-005` option and not the other — the same asymmetry
 `records/ietf/rfc-9964` records as its Cut D. **[analysis]** Settling it needs
 the DSSE record as well as this one, and this extraction does not settle it.
@@ -613,8 +648,14 @@ indefinite-length — and **none** produces `DD 94 71 EF …`. The token A.2 pri
 internally perfect, so this is not a transcription slip in the hex: the request
 that produced the token carried the wrong imprint. **Severity: the CTT
 appendix cannot be used as a fixture.** *Errata status, stated as a result
-rather than an absence:* `errata.rfc-editor.org/rfc9921` returns **one**
-erratum, **ID 9177, REPORTED (not Verified), Technical, §A.2**, filed
+rather than an absence, and **UNVERIFIABLE FROM THIS REPOSITORY** (pass 2):
+the lookup below was made from the network on 2026-10-20 and nothing in this
+worktree can re-check it — the id, status, reporter, date, proposed value,
+cause and the RFC 3161 control counts are all second-hand here, so treat them
+as a citation to re-check, exactly as §0 treats quotations of `mofn`
+documents. The mismatch itself needs no network and is verified in
+`examples/vectors.yaml`.* As recorded: `errata.rfc-editor.org/rfc9921` returns
+**one** erratum, **ID 9177, REPORTED (not Verified), Technical, §A.2**, filed
 2026-09-13 by Florent Morselli, proposing `44 C2 41 9D …` and asking for a
 newly issued token rather than an edit; its notes attribute the printed value
 to a generator script hashing an error message. **Positive control:** the same

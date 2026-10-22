@@ -18,7 +18,7 @@ in two English sentences and a six-column table.
 
 | file | kind | what it is |
 |---|---|---|
-| `source-renderings.txt` | **verbatim** | the twelve places the document renders a structure by printing it — §6's Table 1, four ASN.1 value dumps, three CBOR diagnostic objects and four byte listings — as exact runs of source lines, each with its line range and its own `sha256` |
+| `source-renderings.txt` | **verbatim** | the twelve places the document renders a structure by printing it — §6's Table 1, **six** ASN.1 value dumps, **three** CBOR diagnostic objects and **two** byte listings, counted by the file's own per-region captions and corrected by pass 2 from "four … and four" — as exact runs of source lines, each with its line range and its own `sha256` |
 | `cose-headers.derived.cddl` | derived | the two labels, the opaque value, the two bucket constraints, and the three imprint preimages written out octet by octet |
 | `header-parameters.derived.yaml` | derived | §6's two registrations as data, reassembled from the column-wrapped table |
 | `timestamp-token.derived.outline.txt` | derived | what the 5453 octets actually contain, produced by **decoding** Appendix A.1's hex with a DER parser written for this pass |
