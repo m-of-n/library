@@ -30,7 +30,12 @@ def _strip_comment(s: str) -> str:
         elif c in "\"'":
             q = c
             out.append(c)
-        elif c == "#":
+        elif c == "#" and (i == 0 or s[i - 1] in " \t"):
+            # YAML opens a comment at `#` only when it begins the scalar or
+            # follows whitespace. An inline `#` is part of the value: that is
+            # what a requirement or vector id looks like (`rfc-8949#V-0001`),
+            # and breaking there silently collapsed every id in an artifact to
+            # the bare record name. bin/_yaml.py already had this right.
             break
         else:
             out.append(c)
@@ -38,17 +43,41 @@ def _strip_comment(s: str) -> str:
     return "".join(out).rstrip()
 
 
+# Kept byte-identical in meaning to bin/_yaml.py's `_DQ_ESCAPES`. The two
+# readers are deliberately independent parsers, so the table is duplicated
+# rather than imported; bin/test_record_yaml.py and bin/test_yaml.py pin both.
+_DQ_ESCAPES = {'"': '"', chr(92): chr(92), "n": "\n", "t": "\t"}
+
+
+def _unescape_dq(body: str) -> str:
+    """Resolve the double-quoted escapes in `_DQ_ESCAPES`, in a single pass.
+
+    This replaced four chained str.replace() calls, which rescanned text they
+    had already produced: a doubled backslash followed by `n` resolved to a
+    backslash and a real NEWLINE instead of a backslash and an `n`, corrupting
+    verbatim requirement texts that quote an escape sequence as itself.
+    """
+    if chr(92) not in body:
+        return body
+    out = []
+    i = 0
+    while i < len(body):
+        c = body[i]
+        if c == chr(92) and i + 1 < len(body) and body[i + 1] in _DQ_ESCAPES:
+            out.append(_DQ_ESCAPES[body[i + 1]])
+            i += 2
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
 def _unquote(s: str):
     if len(s) >= 2 and s[0] == s[-1] and s[0] in "\"'":
         body = s[1:-1]
         if s[0] == "'":
             return body.replace("''", "'")
-        return (
-            body.replace("\\n", "\n")
-            .replace("\\t", "\t")
-            .replace('\\"', '"')
-            .replace("\\\\", "\\")
-        )
+        return _unescape_dq(body)
     return s
 
 
@@ -241,7 +270,16 @@ class YamlParser:
                 items.append(self._nested(ind))
             elif _is_map_item(rest):
                 key, _, val = rest.partition(":")
-                item = {key.strip(): _scalar(val.strip()) if val.strip() else self._nested(ind)}
+                val = val.strip()
+                if val in ("|", ">", "|-", ">-", "|+", ">+"):
+                    # A block scalar on the FIRST key of a sequence item.
+                    # _map_into already handled this for every later key, so
+                    # `- name: a` + `note: >` parsed while `- note: >` raised
+                    # "unexpected indent". bin/_yaml.py got it right; this
+                    # branch is the one that was missing.
+                    item = {key.strip(): self._block_scalar(ind, val)}
+                else:
+                    item = {key.strip(): _scalar(val) if val else self._nested(ind)}
                 self._map_into(item, ind + 1)
                 items.append(item)
             else:

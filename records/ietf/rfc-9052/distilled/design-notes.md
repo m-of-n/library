@@ -601,7 +601,88 @@ existence, not agreement, and a *k*-of-*n* multi-speaker statement is better
 served by `COSE_Sign`'s *n* `COSE_Signature` entries `[9052 §4.1]`; DEC-009 is
 open and this file does not answer it.
 
-**Recommendation:** countersignatures are out of the D5 export mapping. Revisit
+> **[correction] 2026-10-20, maintenance pass on this `profile: full` record
+> (library#39 Tier 2), answering open question 7.** The paragraph above is
+> right for the structure it was written about and **over-general as stated**.
+> It says `other_fields` binds the target's signature bytes without saying for
+> which targets, and `other_fields` is **not always there**. `[9338 §3.3]`
+> verbatim: "other_fields:  Omitted if there are only two bstr fields in the
+> target structure.  This field is an array of all bstr fields after the
+> second.  As an example, this would be an array of one element for the
+> COSE_Sign1 structure containing the signature value." The `"CounterSignature"`
+> and `"CounterSignature0"` context strings — the RFC 8152 ones `[9338 §1]` —
+> are used "when other_fields is absent", `"CounterSignatureV2"` and
+> `"CounterSignature0V2"` only "when other_fields is present" `[9338 §3.3]`.
+>
+> Counted against RFC 9052's own verbatim CDDL (`schema/cose.cddl`), expanding
+> `Headers` and `empty_or_serialized_map = bstr .cbor header_map / bstr .size
+> 0`, so `protected` is bstr field 1 in every structure:
+>
+> | target `[9338 §3.3]` | bstr fields, in order | `other_fields` | context |
+> |---|---|---|---|
+> | `COSE_Sign1` | protected, payload, signature | **[signature]** | V2 |
+> | `COSE_Mac` | protected, payload, tag | **[tag]** | V2 |
+> | `COSE_Mac0` | protected, payload, tag | **[tag]** | V2 |
+> | `COSE_Signature` | protected, signature | omitted | RFC 8152 string |
+> | `COSE_Sign` | protected, payload | omitted | RFC 8152 string |
+> | `COSE_Encrypt` | protected, ciphertext | omitted | RFC 8152 string |
+> | `COSE_Encrypt0` | protected, ciphertext | omitted | RFC 8152 string |
+>
+> **The count is by type slot, and §3.3's own example is what proves it.** One
+> element for `COSE_Sign1` holds only if `payload` is the *second* bstr field,
+> which requires `protected` to be the first and `payload : bstr / nil` to
+> count as a bstr field. Both follow from the CDDL and from nothing else §3.3
+> says. (`COSE_recipient` is a `Headers`-bearing structure that §3.3's target
+> list does **not** enumerate, so it is left out of the table.)
+>
+> **Three consequences, in order of how much they cost us.**
+>
+> 1. **The recommendation above is scoped to an attached-payload `COSE_Sign1`.**
+>    That is the structure we export `[§1 above]`, so the receipt shape survives
+>    — but it survives as a fact about `COSE_Sign1`, not about COSE. For
+>    `COSE_Mac`/`COSE_Mac0` `other_fields` exists and carries a **MAC tag, not a
+>    signature**, so the sentence "binds the target's signature bytes" is true
+>    of exactly one of the seven enumerated targets.
+> 2. **Open question 7 is answered, and the answer is no.** Extending the target
+>    to `COSE_Sign` does **not** extend the binding: `COSE_Sign` has two bstr
+>    fields, so `other_fields` is omitted and the `Countersign_structure` reduces
+>    to body_protected + external_aad + payload. **A countersignature over a
+>    `COSE_Sign` binds no signature at all** — not one of the *n*
+>    `COSE_Signature` entries, whose bytes live inside the `signatures` array
+>    that the count never reaches. A witness receipt over a *k*-of-*n* export
+>    would attest the payload and the body protected header and say nothing
+>    about *who signed it*, which is the whole content of a threshold statement.
+>    Countersigning each `COSE_Signature` individually is not the escape either:
+>    its two bstr fields are `protected` and `signature`, so `other_fields` is
+>    omitted there too, and §3.3's field descriptions — which define `payload`
+>    as "The payload to be signed", not as "the target's second bstr field" —
+>    never say where a `COSE_Signature`'s own signature lands. `[9338 §1]` says
+>    of that structure "The exception to this is the COSE_Signature structure
+>    where there is no cryptographically computed value", which cannot be read
+>    off `COSE_Signature = [Headers, signature : bstr]`. **[inference]** Recorded
+>    as an ambiguity in RFC 9338 and not resolved here; what it means for us is
+>    that neither route gives a *k*-of-*n* receipt, so question 7's first branch
+>    — accept the interchange gap — is the only one with a defined mechanism
+>    behind it.
+> 3. **A second scope limit, from `payload : bstr / nil`.** A **detached-payload**
+>    `COSE_Sign1` has three bstr fields by type slot and **two by wire item**, so
+>    on the wire-item reading `other_fields` is omitted and the signature binding
+>    disappears. Nothing in RFC 9338 resolves it: "detach" and "nil" each occur
+>    **zero** times in the whole document, and §3.3's only calibration is the
+>    attached case. Detached content is ordinary COSE practice `[9052 §4.1,
+>    §5.1, §6.1]`. The failure is at least not silent *between* implementations
+>    — the context string flips with the count, so signer and verifier reading it
+>    differently get a verification failure rather than a false accept — but two
+>    implementations that agree on the wire-item reading produce a
+>    countersignature that binds nothing cryptographic. For us this is latent
+>    rather than live, because **reject 5 above already excludes detachment from
+>    the D5 package**; it becomes live the moment reject 5 is revisited, which is
+>    why it is recorded against §6 and not only against reject 5.
+
+**Recommendation:** countersignatures are out of the D5 export mapping, and
+after the correction above the recommendation is **narrower, not weaker**: what
+is out is the primitive, and what is now known is that the one use it was
+retained for works only over an attached-payload `COSE_Sign1`. Revisit
 when there is a receipt or transparency increment. A COSE library we depend on
 must still be able to *verify* label 7 for backward compatibility `[9052 §3.1]`
 — that is a library-selection note, not a model change.
@@ -645,6 +726,37 @@ Each names who decides and what it blocks. Ordered by what blocks Oct 28 first.
    anywhere. **David**, confirmed by Paul, before he builds two mappings.
 7. **Threshold export.** Accept "no export for a *k*-of-*n* speaker" as a
    documented interchange gap, or extend the target to `COSE_Sign`? **Paul.**
+
+   **[update] 2026-10-20 — the second branch is now priced, and the price is
+   the receipt.** Still Paul's call; what has changed is that one branch is no
+   longer free. The question as written does not say which "target" it means,
+   and the finding answers both readings the same way.
+
+   - **The export-structure reading** (extend the D5 mapping from `COSE_Sign1`
+     to `COSE_Sign`, §6's "better served by `COSE_Sign`'s *n* `COSE_Signature`
+     entries"): structurally available `[9052 §4.1]`, and it **forfeits the one
+     countersignature use §6 retained**. `COSE_Sign` has exactly two bstr
+     fields — `protected` and `payload` — so `[9338 §3.3]`'s `other_fields` is
+     omitted, the context string falls back to the RFC 8152 `"CounterSignature"`
+     value, and a countersignature over it binds **no signature at all**. A
+     transparency receipt over a *k*-of-*n* export would therefore witness the
+     payload and the body protected header and say nothing about *who signed
+     it*. A `COSE_Sign1` export can carry such a receipt; a `COSE_Sign` export
+     cannot.
+   - **The countersignature-target reading** (extend §6's countersignature
+     target to `COSE_Sign`): there is nothing to extend. Same two bstr fields,
+     same omission, and countersigning the individual `COSE_Signature` entries
+     does not recover it either — see the correction in §6, which also records
+     what RFC 9338 leaves undefined about that case.
+
+   So the branches are no longer symmetric. **Accepting the interchange gap
+   keeps a receipt-capable export; extending to `COSE_Sign` trades the
+   threshold statement's exportability against its witnessability**, and
+   nothing in COSE recovers the second once the first is taken. `R-O-04` is
+   Could priority so this blocks nothing today, but it belongs in the DEC-002
+   ADR as a cost of the threshold case rather than being discovered later.
+   Derivation and the verbatim §3.3 rule are in §6; counted from
+   `schema/cose.cddl`, not from prose.
 8. **Ed25519 or ES256 as the primary D5 fixture algorithm?** (D11.) **David**,
    with Paul on the crypto-suite implication. Byte-exact fixtures need a
    deterministic scheme.
@@ -737,4 +849,4 @@ against each other will find the difference and should know it is the source's.
 | §5 D2 | That we must pin protected-header map ordering ourselves. | §9 scopes its restrictions to `Sig_structure` / `Enc_structure` / `MAC_structure`, and §3 says the `bstr` wrapper exists to avoid a common canonical map encoding. The obligation on us is the inference. |
 | §5 D6 | That a five-element `Sig_structure` with an empty `sign_protected` is a live implementation trap. | §4.4 says the field "is omitted for the `COSE_Sign1` signature structure"; that this is a trap worth asserting against is experience, not text. |
 | §5 D11 | That ECDSA signatures are non-reproducible run-to-run and that Ed25519 or deterministic ECDSA is needed for byte-exact fixtures. | RFC 9052 does not discuss signature nonce determinism at all. External cryptographic knowledge. |
-| §6 | That the COSE countersignature is wrong for `Endorse` and right for a receipt. | The primitive's properties are `[9338 §2, §3, §3.3, §5.1]`; the fit judgement against `Endorse` and `DEC-009` is ours. |
+| §6 | That the COSE countersignature is wrong for `Endorse` and right for a receipt **over an attached-payload `COSE_Sign1` and nothing else**. | The primitive's properties are `[9338 §2, §3, §3.3, §5.1]`; the fit judgement against `Endorse` and `DEC-009` is ours. *[update 2026-10-20]* The scope is **not** inferred — it is counted from `[9338 §3.3]`'s own rule against RFC 9052's verbatim CDDL, and the row previously read as though the receipt fit held for COSE generally. What remains inferred is only the two readings marked **[inference]** in the §6 correction: that §3.3 leaves a `COSE_Signature` target's own signature field unplaced, and that `payload : bstr / nil` leaves the detached count open. RFC 9338 states neither and resolves neither. |

@@ -49,16 +49,209 @@ def _strip_comment(v):
     return v
 
 
+def _split_flow(inner):
+    """Split a flow collection's body on top-level commas."""
+    out, buf, depth, q = [], [], 0, None
+    i = 0
+    while i < len(inner):
+        c = inner[i]
+        if q:
+            buf.append(c)
+            if q == '"' and c == "\\":
+                if i + 1 < len(inner):
+                    buf.append(inner[i + 1])
+                    i += 2
+                    continue
+            elif c == q:
+                if q == "'" and inner[i + 1:i + 2] == "'":
+                    buf.append(inner[i + 1])
+                    i += 2
+                    continue
+                q = None
+        elif c in "\"'":
+            q = c
+            buf.append(c)
+        elif c in "[{":
+            depth += 1
+            buf.append(c)
+        elif c in "]}":
+            depth -= 1
+            buf.append(c)
+        elif c == "," and depth == 0:
+            out.append("".join(buf))
+            buf = []
+        else:
+            buf.append(c)
+        i += 1
+    if "".join(buf).strip():
+        out.append("".join(buf))
+    return out
+
+
+def _flow_map(v):
+    """Parse `{a: 1, b: "x, y"}` into a dict, or return None if it is not one.
+
+    bin/_record_yaml.py has always done this; this parser did not, so an
+    inline flow map became a single STRING KEY holding the whole brace
+    expression. 4331 lines in the library are written that way, including two
+    records at profile: full, so the two readers disagreed on all of them —
+    one lane measured 358 keys present under one reader and absent under the
+    other in a single file, and the key COUNTS matched, which is what hid it
+    (library#39).
+    """
+    if not (v.startswith("{") and v.endswith("}")):
+        return None
+    inner = v[1:-1].strip()
+    if not inner:
+        return {}
+    out = {}
+    for part in _split_flow(inner):
+        part = part.strip()
+        if not part:
+            continue
+        k, sep, val = part.partition(":")
+        if not sep:
+            return None        # not a map after all; leave it as text
+        out[_scalar(k.strip())] = _scalar(val.strip())
+    return out
+
+
+# Escapes resolved inside a double-quoted scalar, and why the list stops where
+# it does. A quote and a backslash are unambiguous: a double-quoted scalar
+# cannot carry either one bare, so each can only be an escape. The `n` and `t`
+# forms are resolved because bin/_record_yaml.py already resolved them and the
+# library's records were authored against that.
+#
+# Everything else is left EXACTLY as written, deliberately. The test vectors
+# carry EDN literals in the brace form that YAML does not define (107 sites in
+# the CBOR lane), and rfc-9804 prose names hex escapes as notation. There the
+# escape text IS the subject matter, so resolving it would rewrite the records
+# that discuss escaping. See .claude/skills/extract/hazards.md #3.
+#
+# ONE PASS, LEFT TO RIGHT. Sequential str.replace() cannot do this: it rescans
+# text it has already produced, so a doubled backslash followed by `n` came out
+# as a backslash and a real NEWLINE instead of a backslash and an `n`. That was
+# the sixth reader disagreement found in this family (library#39).
+_DQ_ESCAPES = {'"': '"', chr(92): chr(92), "n": "\n", "t": "\t"}
+
+
+def _unescape_dq(body):
+    """Resolve the double-quoted escapes in `_DQ_ESCAPES`, in a single pass."""
+    if chr(92) not in body:
+        return body
+    out = []
+    i = 0
+    while i < len(body):
+        c = body[i]
+        if c == chr(92) and i + 1 < len(body) and body[i + 1] in _DQ_ESCAPES:
+            out.append(_DQ_ESCAPES[body[i + 1]])
+            i += 2
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
 def _scalar(v):
     v = _strip_comment(v.strip()).strip()
     if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
         # single-quoted YAML escapes a quote by doubling it: 'it''s' -> it's
-        return v[1:-1].replace("''", "'") if v[0] == "'" else v[1:-1]
+        return v[1:-1].replace("''", "'") if v[0] == "'" else _unescape_dq(v[1:-1])
     if v == "[]":
         return []
     if v == "{}":
         return {}
+    if v[:1] == "{" and v[-1:] == "}":
+        m = _flow_map(v)
+        if m is not None:
+            return m
+    # A flow sequence. bin/_record_yaml.py has always returned a list here and
+    # this parser returned the bracket text, so the library's two readers
+    # disagreed on 14,069 sites. Making them agree is the point: several
+    # extraction passes had to hand-work around the difference.
+    if v[:1] == "[" and v[-1:] == "]":
+        return [_scalar(p.strip()) for p in _split_flow(v[1:-1].strip())]
     return v
+
+
+# A line that reads as the next map key or sequence item rather than as the
+# continuation of a wrapped scalar. Used only to bound that continuation.
+_NEXT_ENTRY = re.compile(r"^(?:-\s|-$|[A-Za-z_][\w.-]*:(?:\s|$))")
+
+
+def _quote_closed(v):
+    """Is the quoted scalar `v` terminated on its own line?"""
+    q = v[0]
+    j = 1
+    while j < len(v):
+        if q == '"' and v[j] == "\\":
+            j += 2
+            continue
+        if v[j] == q:
+            # In single-quoted YAML '' is an escaped quote, not a terminator.
+            if q == "'" and v[j + 1:j + 2] == "'":
+                j += 2
+                continue
+            return True
+        j += 1
+    return False
+
+
+def _quoted_continuation(lines, i, v):
+    """Join a quoted scalar that wraps across lines. Returns (text, next_i).
+
+    YAML folds a wrapped flow scalar onto one line with a single space. This
+    parser used to keep only the first line AND its opening quote, so
+    `text: "Threat modeling is a security focused design activity` became a
+    value beginning with a stray quote and ending mid-sentence. 71 lines in
+    the library wrap this way, most of them `text:` fields in
+    requirements.yaml — the one field FX-1's verbatim checks exist to read
+    (library#39).
+    """
+    if v[:1] not in "\"'" or _quote_closed(v):
+        return v, i
+    while i < len(lines):
+        nxt = lines[i].strip()
+        # Stop at anything that reads as the next entry rather than as more of
+        # this sentence. Records in this library contain genuinely unterminated
+        # quoted scalars — draft-ietf-cbor-edn-literals' requirements.yaml line
+        # 152 ends `''...#R-0066''` with no closing quote — and without this
+        # guard the scalar swallows the `verb:` line after it. bin/_record_yaml
+        # is lenient the same way, by ending such a scalar at its line break.
+        if _NEXT_ENTRY.match(nxt):
+            break
+        i += 1
+        v += " " + nxt
+        if _quote_closed(v):
+            break
+    return v, i
+
+
+def _flow_continuation(lines, i, v):
+    """Join a flow collection that wraps across lines. Returns (text, next_i).
+
+    This parser deliberately does NOT parse flow collections: `["a", "b"]`
+    comes back as its own text, and 14,000-odd call sites in the library rely
+    on that. What it must not do is return a TRUNCATED prefix. Before this,
+    a `constrained_by` list wrapped over two lines silently lost every id
+    after the first line — three of them in rfc-8392's protocol.yaml and
+    state-machine.yaml (library#39). Nothing warned: the value simply ended
+    mid-list, and the continuation line was then read as garbage at an
+    unexpected indent.
+
+    Bracket counting ignores quoting, so a flow collection holding a string
+    with an unbalanced bracket in it still wraps wrongly. That is a smaller
+    wrong than losing data, and the honest fix is a real YAML parser.
+    """
+    if v[:1] not in "[{":
+        return v, i
+    depth = (v.count("[") - v.count("]")) + (v.count("{") - v.count("}"))
+    while depth > 0 and i < len(lines):
+        nxt = lines[i].strip()
+        i += 1
+        v += " " + nxt
+        depth += (nxt.count("[") - nxt.count("]")) + (nxt.count("{") - nxt.count("}"))
+    return v, i
 
 
 def _block(lines, i, parent_indent, style, chomp):
@@ -120,11 +313,26 @@ def parse(text):
         indent = len(raw_e) - len(raw_e.lstrip())
         line = raw.strip()
 
-        while len(stack) > 1 and indent < stack[-1][0]:
+        is_item = line.startswith("- ") or line == "-"
+        # A block sequence may sit at the SAME indent as its key — `rows:` then
+        # `- a` at column zero is valid YAML — so such a list is pushed at its
+        # key's indent and has to be popped by the next line that is not one of
+        # its items. Without the second clause, `a:` / `- 1` / `b: 2` would
+        # append `b` to a's list.
+        while len(stack) > 1 and (
+                indent < stack[-1][0]
+                or (indent == stack[-1][0] and isinstance(stack[-1][1], list)
+                    and not is_item)):
             stack.pop()
         cur = stack[-1][1]
 
-        if pending_key and indent > pending_key[0]:
+        # `indent == pending_key[0]` only for a sequence: a MAP at the key's own
+        # indent is the next sibling key, not the key's value. 13 files in the
+        # library write a column-zero sequence this way and BOTH readers lost
+        # every one of them entirely — including three requirements.yaml whose
+        # whole list was invisible to every tool in bin/ (library#39).
+        if pending_key and (indent > pending_key[0]
+                            or (indent == pending_key[0] and is_item)):
             d, k = pending_key[1], pending_key[2]
             cur = [] if line.startswith("- ") or line == "-" else {}
             d[k] = cur
@@ -142,6 +350,8 @@ def parse(text):
                 style, chomp = m.group(1), (m.group(2) or m.group(4))
                 d[k], i = _block(lines, i, key_indent, style, chomp)
             elif v and not _strip_comment(v).strip() == "":
+                v, i = _quoted_continuation(lines, i, v)
+                v, i = _flow_continuation(lines, i, v)
                 d[k] = _scalar(v)
             else:
                 d[k] = {}
@@ -151,7 +361,14 @@ def parse(text):
             item = line[2:].strip()
             if not isinstance(cur, list):
                 continue
-            if re.match(r"^[^\s\"'][^:]*:(\s|$)", item) and not item.startswith(("http:", "https:")):
+            # A flow collection first: `- {id: 1, why: x}` otherwise matches
+            # the map-key pattern below on `{id:` and becomes a dict with the
+            # brace expression as its key. 4331 lines in the library are
+            # written this way (library#39).
+            if item[:1] in "[{":
+                item, i = _flow_continuation(lines, i, item)
+                cur.append(_scalar(item))
+            elif re.match(r"^[^\s\"'][^:]*:(\s|$)", item) and not item.startswith(("http:", "https:")):
                 k, _, v = item.partition(":")
                 d = {}
                 cur.append(d)
@@ -166,6 +383,12 @@ def parse(text):
                     val, i = _block(lines, i, indent, m.group(1), m.group(2) or m.group(4))
                     cur.append(val)
                 else:
+                    # A bare sequence item wraps the same way a key's value
+                    # does, and used to truncate the same way — this branch is
+                    # how `error_paths: [- "None. §7.1 ...` lost its second
+                    # line in rfc-8392's protocol.yaml.
+                    item, i = _quoted_continuation(lines, i, item)
+                    item, i = _flow_continuation(lines, i, item)
                     cur.append(_scalar(item))
         elif ":" in line:
             k, _, v = line.partition(":")

@@ -18,21 +18,522 @@ content:
   retrieved: "2026-09-22"
   local: false
 relations:
-  see_also: []
+  # Added 2026-10-20 by the summary pass. Both `contradicts` edges are
+  # curatorial judgements with their reasons in summary.md, as
+  # docs/references.md requires — an unexplained contradiction is an
+  # unresolved one.
+  contradicts:
+    # RFC 9054 §4.1 defines "Filter Only" as "not to be used for purposes that
+    # require collision resistance" and registers SHA-1 (-14) and SHA-256/64
+    # (-15) under it. RFC 9360 §5 asserts "The security of the algorithm used
+    # for 'x5t' does not affect the security of the system", while §2 makes a
+    # PROTECTED `x5t` the sanctioned integrity binding for an `x5chain` in the
+    # UNPROTECTED bucket that "allows an intermediary to remove or add
+    # certificates". That position needs second-preimage resistance at
+    # minimum, and collision resistance where the attacker can influence
+    # issuance — the identity-misbinding attack §5's own next paragraph
+    # describes. `COSE_CertHash` excludes no registry value and the only
+    # constraint is "MUST support SHA-256" for interop. The two cannot both
+    # stand. ROOT: internal to this document (§2 vs §5); RFC 9054 §3.2 only
+    # inherits it, citing this document's draft as the justification.
+    - rfc-9054
+    # RFC 9679 §5.4 writes: "the "x5t" (X.509 certificate SHA-1 thumbprint)
+    # [RFC9360] value". "SHA-1" occurs ZERO times in RFC 9360; `x5t` here is
+    # `[hashAlg, hashValue]` with SHA-256 mandatory to support. The
+    # parenthetical is RFC 7515 §4.1.7's JOSE registry name, where `x5t` IS a
+    # SHA-1 digest — imported wholesale and attached to the COSE citation.
+    # rfc-9679 is at profile: full and its FX-1 pass captured the sentence in
+    # normative.md without flagging it; reported there, not edited from here.
+    - rfc-9679
+  # A citation gap, not a similarity: §4.3 registers `application/cose-x509`
+  # whose content is "a CBOR sequence of single-entry COSE_X509 structures"
+  # and cites RFC 8742 ZERO times, though RFC 8742 defines CBOR sequences and
+  # `application/cbor-seq`.
+  see_also:
+    - rfc-8742
   part_of:
     - ietf-cose-wg
 bears_on:
+  # Widened 2026-10-20 by the summary pass; each addition is argued in
+  # summary.md.
+  #   DEC-002 — the sharpest cut in this lane, and it cuts by EVASION:
+  #     `COSE_X509` is `bstr` holding DER (§2), and a reduced-CBOR profile
+  #     does not reach inside a byte string. Eight IANA allocations, zero
+  #     CBOR tags, so option 5's literal "no IANA tags" clause survives
+  #     untouched while the profile acquires ASN.1 — a second encoding,
+  #     parser, canonical form and trust system.
+  #   R-O-01 — `kid` occurs ZERO times in the document. Four ways to identify
+  #     a key, none related to COSE's own key identifier, so a cert-bearing
+  #     COSE object may satisfy no KeyId without a rule we write.
+  #   R-O-05 — ADOPT: `x5t` carries `hashAlg` in-band and (in §2's
+  #     recommended configuration) inside the PROTECTED bucket — an
+  #     authenticated algorithm indicator, the shape R-O-05's type-indicator
+  #     clause wants, and the opposite of rfc-9679's bare `ckt`.
+  #   R-M-12 — §3's x5*-sender labels (-27/-28/-29) live in the COSE Header
+  #     ALGORITHM Parameters registry (§4.2), so they mean these things only
+  #     under the five ECDH-SS algorithms in Table 2. IANA's own answer to
+  #     label scoping is (algorithm, label) — not R-M-12's (key, local label),
+  #     but the nearest ratified relative, and proof the pattern fits inside
+  #     COSE without a registry per extension point.
+  #   R-O-03 — ADDED 2026-10-20 by the FX-1 extraction (pass 1), evidenced in
+  #     distilled/design-notes.md section 5 rather than assumed. `canonical`,
+  #     `canonicalization` and `deterministic` occur ZERO times, so the
+  #     document cites no canonicalization — and then INHERITS ONE SILENTLY,
+  #     inside a byte string: section 2 line 314 says the bstr holds a DER-encoded
+  #     certificate, and DER is itself a canonical encoding with its own rules.
+  #     That is the exact failure mode R-O-03 exists to prevent, arrived at by
+  #     omission rather than by invention. It also names the "COSE Algorithms"
+  #     registry as the source of `hashAlg` and cites rfc-9054 ZERO times, so
+  #     the one algorithm identifier an implementer needs is referenced only by
+  #     a live IANA URL.
+  - DEC-002
   - DEC-003
   - DEC-005
+  - R-O-01
+  - R-O-03
+  - R-O-05
+  - R-M-12
+applicability:
+  security: core
+  cryptography: adjacent
+  this_project: core
 topic: cbor-implementation
 tags:
   - signatures
   - naming
+  - key-management
   - ietf
-status: fetched
+  - prior-art
+distillation:
+  standard: "FX-1"
+  # `profile: full` DECLARED on the cross-check pass's report, 2026-10-21.
+  # Every artifact in FX-1's set is present with NO `not_applicable`
+  # declaration at all.
+  #
+  # `distillation.passes` below is the ONLY authority for which passes have
+  # run. DO NOT RESTATE THE PASS COUNT here or in any artifact: a restatement
+  # goes stale the moment the next pass lands and nothing reports it. This
+  # comment was itself the proof, reading "pass 2 and pass 3 have NOT run"
+  # after both had.
+  #
+  # ONE THING A READER SHOULD KNOW BEFORE BUILDING ON distilled/schema/: pass 3
+  # found that `x5-headers.derived.cddl` PARSED PERFECTLY AND BOUND NOTHING.
+  # Its x5 entries sit inside a map that also carries `* label => any`, and
+  # RFC 8610 section 3.5.4 says of its own structurally identical example that
+  # an item with a wrongly typed value "does match this specification: while
+  # the first entry of the group does not match, the second one (the wildcard)
+  # does." So a map carrying a nonsense value under label 34 matched the rule
+  # for two passes. The cut operator is now applied to all seven x5 entries.
+  # A schema that parses is not a schema that binds, and no parse check can
+  # see the difference.
+  #
+  # What `full` does NOT mean: no `reviewed_by` is signed on any artifact, so
+  # pass 4 (human review) is outstanding and nothing may be BUILT on these yet
+  # (docs/requirements.md). They may be read.
+  profile: full
+  artifacts:
+    - kind: normative
+      path: distilled/normative.md
+      coverage: >-
+        29 verbatim regions covering every normative statement of section 1 to
+        section 5, in source order, each an exact run of source lines with its
+        line range and its own sha256 (the region's lines joined by \n, no
+        trailing newline). Includes section 2's four parameter definitions
+        whole, Table 1 with its lead-in and caption, the two CDDL lines with the
+        DER sentence under them, Table 2, the complete section 4.3 media-type
+        template, and ALL NINE PARAGRAPHS OF SECTION 5 AS NINE SEPARATE REGIONS
+        so their order is on the record - which is what establishes that the x5t
+        security claim is paragraph 9 of 9 and the identity-misbinding attack is
+        paragraph 3. NO SECTION IS SPLIT AND NOTHING IS WELDED: this rendering
+        has ZERO form feeds and no running headers or footers in 614 lines,
+        checked with the same patterns that match 25 page breaks in RFC 8392, so
+        there are no gaps to weld across. Built with split("\n"), never
+        splitlines(). 390 distinct source lines are quoted and no line is quoted
+        twice. The section 1.1 BCP 14 recital is quoted here and deliberately
+        never in requirements.yaml
+      reviewed_by: ""
+    - kind: requirements
+      path: distilled/requirements.yaml
+      coverage: >-
+        129 entries R-0001 to R-0129 in source order with no gaps: 14 stated,
+        115 inferred. source_keyword_count and extracted_keyword_count both 14
+        and AGREEING, by keyword as well as in total (10 MUST, 3 MUST NOT, 1
+        SHOULD), with a 5.7 kB reconciliation written anyway. All 129 texts
+        verified MECHANICALLY as contiguous substrings of the
+        whitespace-normalised source, 0 failures, and a terminator check found
+        26 spans that ran past their own sentence into the next and every one
+        was tightened before the file was written. THE SHAPE OF THE 14 IS THE
+        FIRST FINDING: four of the ten MUSTs are ONE SENTENCE RESTATED once per
+        carrying parameter ("The end-entity certificate MUST be integrity
+        protected by COSE", lines 163, 198, 261 and conditionally 463), each of
+        the first three followed by "This can, for example, be done by" and
+        three mechanisms with NONE MANDATED (line 229's restatement is about the
+        IDENTIFICATION of the certificate and is followed by "This can be done
+        by", without the "for example"); and the document's strongest
+        prohibition - the public key of an untrusted certificate "cannot be used
+        for cryptographic operations" - is LOWER CASE and binds nobody. What was
+        counted instead: every sentence of the four parameter definitions split
+        where separately testable, all four Table 1 rows, both CDDL rules and
+        the DER sentence, all three sender parameters and all three Table 2
+        rows, both IANA registry actions, the section 4.3 template - 20 of its
+        21 label lines plus the two `usage` bullets and the lead-in, 24 entries
+        under locator section 4.3; the one label with no entry is the container
+        `Additional information:` at line 420, which has no value and is carried
+        in normative.md - and all nine paragraphs of section 5. Every text
+        carries its source_lines, and bin/check-locators reports all 129
+        locators contained
+      reviewed_by: ""
+    - kind: schema
+      path: distilled/schema
+      coverage: >-
+        7 files: 2 verbatim, 4 derived, 1 README. RFC 9360 SHIPS TWO LINES OF
+        CDDL AND NOTHING ELSE - ABNF, ASN.1, JSON Schema, schema and grammar
+        each occur ZERO times, CDDL occurs twice (the lead-in and the RFC 8610
+        reference). cose-x509.cddl is lines 311-312 byte for byte with the
+        source's margin; source-renderings.txt carries Table 1, the CDDL block,
+        Table 2 and the media-type template as 4 regions with line ranges and
+        digests. Derived: x5-headers.derived.cddl (the header grammar the
+        document does not ship, with the requirement id behind every line, the
+        COSE structures NAMED not redefined, and this library's narrowing as a
+        second section); x5t-hashalg-policy.derived.yaml, which is the artifact
+        that earns its place - all eight of rfc-9054's hash identifiers with a
+        per-value PERMIT/REFUSE verdict for the integrity-binding position,
+        because RFC 9360 restricts hashAlg to NO SUBSET of the registry;
+        cose-cert-hash.derived.schema.json with $id
+        urn:library:rfc-9360:cose-cert-hash.derived; and cddl-parse.derived.txt,
+        the output of running RFC 8610 Appendix B's grammar - transcribed from
+        this library's own capture and gated on RFC 8610's prelude plus three
+        negatives - which establishes that both rules parse AS PRINTED and as
+        TYPE rules, and that the 2* forbidding the one-element array is a
+        deliberate choice rather than a grammatical necessity. Header markers
+        and filenames agree on all six non-README files. PASS 3 RE-IMPLEMENTED
+        THE PARSER INDEPENDENTLY - a set-returning recogniser over the same
+        RFC 8610 Appendix B grammar, gated on 13 positives and negatives and on
+        RFC 8610's own 40-rule prelude - and reproduced every verdict in both
+        records' parse reports exactly, then found a defect in
+        x5-headers.derived.cddl that the parse report could not see: an
+        optional map entry followed by a `* label => any` wildcard matches a
+        WRONGLY-TYPED value, per RFC 8610 section 3.5.4, so `{ 34: "nonsense" }`
+        satisfied x5-signature-header and the one thing this file exists to
+        say was unsaid. CDDL's cut, `^ =>`, is the fix; the file re-parses
+        whole with the same twelve rules and the same kinds
+    - kind: messages
+      path: distilled/messages.yaml
+      coverage: >-
+        7 structures and 21 fields with the actual code points and octet-level
+        layouts: COSE_X509, COSE_CertHash, the four general header parameters,
+        the three algorithm-scoped ones, the application/cose-x509 media-type
+        payload, the x5u retrieval exchange, and the carrying locations. EVERY
+        LAYOUT WAS ENCODED FOR THIS
+        PASS from RFC 8949 section 3 with a CBOR encoder written here - no CBOR,
+        COSE or X.509 library - because the source prints NOT ONE BYTE, and
+        every octet count is re-derived at write time. constrained_by IS WIRED:
+        78 of the 129 requirement ids, 0 dangling, every one SELECTED FROM THE
+        ID TABLE BY SCRIPT with a predicate on the entry's own locator, object
+        and field that refuses to resolve unless unique. Three fields are listed
+        BECAUSE THEY ARE ABSENT and the absence is the finding: kid (zero
+        occurrences in 614 lines), external_aad's encoding (offered four times
+        as an integrity mechanism and never specified), and the missing
+        x5bag-sender - each named by a requirement and answered by an entry
+        that records WHAT IS MISSING AND THE MEASUREMENT BEHIND IT, which is
+        how an absent field is closed. Two cross-record ids are cited, both
+        spelled in full and selected from rfc-9054's own id table. Pass 3 added
+        the x5u-retrieval structure (F-2's GET and its response, neither
+        defined by RFC 9360) with the four permitted target media types
+        R-0051 to R-0054, which no artifact had wired
+      reviewed_by: ""
+    - kind: protocol
+      path: distilled/protocol.yaml
+      coverage: >-
+        APPLICABLE, and the verdict is measured rather than assumed. Three
+        flows: F-1, the relying party's nine-step validation with the section 5
+        JOIN at its end; F-2, the six-step x5u retrieval with the document's
+        only SHOULD; and F-3, the three-step INTERMEDIARY REWRITE the document
+        admits itself, twice. Five error paths, six roles, 37 requirement ids
+        wired, 0 dangling. protocol.md carries a Mermaid sequence diagram per
+        flow. WHY APPLICABLE, counted over all 614 lines as whole words with a
+        hyphen counting as a word boundary and an underscore not: sender 13
+        (three of them the x5*-sender labels), party 6, "relying party" 4 (one
+        of the four broken across lines 185-186 - pass 1 counted 3),
+        recipient 3 or 4 with COSE_recipient, intermediary 2, server 2,
+        retrieve 2, GET 1 (case-sensitively; a lower-case "get" at line 451 is
+        not the method), client 1 - against verifier 0 and verify 0, in a document whose
+        whole subject is what a verifier may conclude. There is no numbered
+        procedure (steps 0, step 1), so the flows are the document's obligations
+        arranged in the order it imposes. The absent list carries nine items, of
+        which the three that matter are: NO ERROR REPORTING OF ANY KIND, no
+        revocation mechanism, and no encoding for external_aad
+      reviewed_by: ""
+    - kind: state-machine
+      path: distilled/state-machine.yaml
+      coverage: >-
+        APPLICABLE and deliberately small, with what was MEASURED separated from
+        what was MODELLED at the top of the file. Measured: RFC 9360 has NO
+        STATE VOCABULARY AT ALL - state, states, lifecycle, transition, revoke,
+        rotate, rotation, expire, expiry, expiration, issuance and enroll each
+        ZERO occurrences in 614 lines; revocation occurs 4 times and names no
+        mechanism. Modelled anyway, because two normative statements are
+        propositions about a system changing over time and dropping them would
+        lose both: M-1, the end-entity certificate from untrusted input to
+        usable key, whose finding is that TWO INDEPENDENT PATHS lead into the
+        accept state and section 5 argues both orders and fixes only the join;
+        and M-2, the trust-anchor set, whose only forbidden transition is the
+        one thing in the document stated THREE TIMES - twice as a MUST NOT and
+        once, in section 5, in lower case. 9 states, 8 permitted transitions, 1
+        forbidden, 15 requirement ids, and an eight-item absent list. EVERY
+        STATE NAME IS THIS EXTRACTION'S: the document names none, and the file's
+        own `note` separates what was measured from what was modelled so a
+        reviewer can disagree with the modelling without disagreeing with the
+        measurement. (Pass 1's sentence stopped at "EXTRACTION'S"; completed by
+        pass 2 from the artifact's own coverage field.)
+      reviewed_by: ""
+    - kind: examples
+      path: distilled/examples/vectors.yaml
+      coverage: >-
+        8 vectors, and SEVEN OF THE EIGHT WOULD NOT EXIST IF THE SOURCE HAD
+        PRINTED ANYTHING: Figure, Appendix, vector and "test vector" each occur
+        ZERO times in 614 lines, there is no hex and no base64, and the six
+        occurrences of example are all prose. So every vector is marked source:
+        computed or derived and nothing is presented as printed. TWO RESULTS ARE
+        IDENTITIES BETWEEN BYTE STRINGS RATHER THAN OBSERVATIONS ABOUT
+        IMPLEMENTATIONS: V-0004, a filtering x5t and a binding x5t with the same
+        algorithm are THE SAME BYTES - 23 octets with SHA-1, and the identity
+        holds for every value of hashAlg - because COSE_CertHash has exactly two
+        fields and Filter Only is a registry column; and V-0003, for ONE
+        certificate the x5chain array framing and the application/cose-x509
+        CBOR-sequence framing are THE SAME BYTES. V-0006 executes section 2's
+        own recommended configuration and shows the protected bucket's bytes are
+        IDENTICAL across an intermediary rewrite, so the digest comparison is
+        the whole binding. V-0008 shows [-16, h''] - an EMPTY digest declaring
+        itself SHA-256 - conforms to the document's own grammar. The
+        certificates are PLACEHOLDERS that are deliberately not valid X.509,
+        because a fabricated certificate presented as a fixture would invite
+        someone to parse it. 28 requirement ids wired, 3 cross-record ids cited
+        in full
+      reviewed_by: ""
+    - kind: design-notes
+      path: distilled/design-notes.md
+      coverage: >-
+        15 sections. THE HEADLINE IS A CORRECTION TO THIS RECORD'S OWN SUMMARY
+        that sharpens the finding rather than weakening it: section 5 has NINE
+        paragraphs, the x5t security claim is the NINTH AND LAST with nothing
+        after it, the identity-misbinding attack is the THIRD - 41 lines earlier
+        - and the paragraph immediately BEFORE the claim says that protecting
+        x5bag, x5chain AND x5t in the protected bucket mitigates a misbehaving
+        CA. The adjacent pair is the better citation. MD-3 MAPPED HEADER BY
+        HEADER over 10 of our fields, each with its carrier, label, registry and
+        option-5 verdict, plus the export mapping in one line and what we
+        deliberately do not carry. THEN FIVE CUTS AGAINST MD-3, each naming the
+        DEC-002 option it costs: (1) the DER cut, which costs EVERY option
+        identically - eight IANA allocations, zero CBOR tags, so the no-tags
+        clause survives untouched while the profile acquires ASN.1 - so it is an
+        argument about SCOPE and the decision belongs to DEC-003; (2) option 5
+        inherits the COSE Header Parameters registry at two octets a label,
+        costing option 5 where options 1 and 3 are registry-free; (3) the export
+        format carries THREE framings of one list and two of them are the same
+        bytes, failing canonical-encoding condition (1) inside a format option 5
+        exports to; (4) the export format admits a Filter Only algorithm in a
+        binding position and cannot say which, costing option 5 by construction;
+        (5) the export format makes the key identifier OPTIONAL, which option 1
+        cannot pay at all because it has no separate identifier field. All six
+        canonical-encoding conditions scored, with THREE FAILS and condition (3)
+        named as the structural one: the document's own digest definition makes
+        a verifier re-encode untrusted input during verification unless it
+        digests the received bytes verbatim, and nothing says to. 3 adopts, 4
+        adaptations, 7 rejections. All nine of the summary's findings tested:
+        four confirmed, one REFUTED as stated, three scoped, one confirmed with
+        a positive control on the errata search. 9 source defects reported and
+        never repaired (D-1 to D-9). 6 open questions. QUOTATIONS, RE-MEASURED
+        BY PASS 2 WITH THE METHOD STATED, because pass 1's "15 of 15" is not
+        reproducible: of the spans delimited by double quote marks, 11 resolve
+        EXACTLY in a cached source - 9 in RFC 9360, 2 in RFC 9054 - and 0 need
+        any relaxation; three further verbatim spans are delimited by single
+        quotes or backticks. Every quotation of a mofn document is marked
+        UNVERIFIABLE FROM THIS REPOSITORY, following rfc-9741 and rfc-9964, and
+        pass 2 corrected the R-O-03 wording to the form five other records in
+        this library quote
+      reviewed_by: ""
+  not_applicable: []
+  passes:
+    - pass: extract
+      by: "claude-opus-5 (pass 1 of library#39 Tier 2, COSE X.509 / hash lane; single agent, whole artifact set, two records)"
+      effort: max
+      date: "2026-10-20"
+      note: >-
+        Read only .cache/rfc-9360.txt - never summary.md and never another
+        record's artifacts, except where a cross-record claim had to be
+        verified against another record's own cached source (rfc-9679's zero
+        citations of RFC 9054, rfc-9053's leftmost-bits truncation sentence)
+        or against an artifact this library already holds at profile: full
+        (rfc-8610's CDDL grammar and its 44 enumerated grammar gaps).
+
+        EVERY VERBATIM BLOCK AND EVERY QUOTATION WAS LIFTED FROM THE CACHE BY
+        LINE RANGE BY SCRIPT, never retyped, and verified mechanically rather
+        than by eye: 129 of 129 requirement texts and 15 of 15 design-note
+        quotations are contiguous substrings of the whitespace-normalised
+        source, 0 failures. 29 normative.md regions and 4 schema regions carry
+        their own sha256 over the region's lines joined by \n with no trailing
+        newline. A terminator check caught 26 spans that ran past their own
+        sentence and all were tightened. There is no page decoration in this
+        source to exclude - zero form feeds, checked - so no region is split.
+
+        THE CBOR WAS CLOSED IN THIS PASS rather than deferred. The source
+        prints NOT ONE BYTE, so a CBOR encoder and decoder were written here
+        from RFC 8949 section 3 - no CBOR, COSE or X.509 library - and every
+        code point, framing and cost in messages.yaml and examples/ was
+        encoded and re-derived at write time. A recursive-descent parser for
+        RFC 8610 Appendix B's grammar was also written for this pass, gated
+        first on RFC 8610's own prelude, on this document's two rules and on
+        three deliberate negatives, before being used on anything.
+
+        CROSS-ARTIFACT CONSISTENCY WAS CHECKED AT WRITE TIME AND BY A LANE-WIDE
+        JOIN AUDIT. Every requirement id cited by messages.yaml,
+        protocol.yaml, state-machine.yaml, examples/vectors.yaml and the schema
+        files was SELECTED FROM THE ID TABLE BY A UNIQUENESS-ENFORCING
+        PREDICATE, never typed or pattern-matched; the audit then resolved all
+        271 citations across both records to the requirement texts they point
+        at and printed the pairs for reading. 0 dangling, 14 cross-record, and
+        every cross-record id is spelled in full because both records define
+        the same bare numbers. Both of the library's YAML readers parse every
+        file written here and agree on every `text` byte for byte.
+
+        ONE CLAIM IN THIS RECORD'S OWN summary.md IS REFUTED AS STATED and the
+        falsified wording is recorded in place rather than edited away: the
+        identity-misbinding attack is not described by "section 5's own next
+        paragraph" - it is section 5's third paragraph of nine, the x5t claim is
+        the ninth and last, and the real neighbour is a sharper citation.
+    - pass: verify
+      by: "claude-opus-5 (pass 2 of library#39 Tier 2, COSE X.509 / hash lane; adversarial, did not extract; rfc-9054 and rfc-9360 verified against each other)"
+      effort: max
+      date: "2026-10-21"
+      note: >-
+        KEYWORDS RECOUNTED AND LOCATED. bin/bcp14-count gives 14 and by keyword
+        10 MUST, 3 MUST NOT, 1 SHOULD. Each of the 14 maps one-to-one onto a
+        requirement: lines 154, 156, 163, 189, 191, 198, 229, 239, 261, 270,
+        277 in section 2 (R-0018, R-0019, R-0022, R-0030, R-0031, R-0034,
+        R-0044, R-0047, R-0057, R-0060, R-0061) and 458, 463, 479 in section 5
+        (R-0116, R-0117, R-0122). The other 11 uppercase occurrences are
+        section 1.1's recital at lines 96-98, stripped by the counter and
+        deliberately absent from requirements.yaml. The 129 texts carry exactly
+        those 14 keywords between them, so the counts agree at 14 by keyword as
+        well as in total, and no requirement text imports a keyword from a
+        quoted reference or the section 4.3 registry template.
+
+        VERBATIM AND LOCATORS, RE-DERIVED INDEPENDENTLY. 129 of 129 texts are
+        contiguous substrings of the whitespace-normalised source; 129 of 129
+        source_lines ranges contain their own text; 129 of 129 locators resolve
+        to a containing section under bin/check-locators AND under an
+        innermost-containing-section check written for this pass. All 29
+        normative.md regions and all 4 schema/source-renderings.txt regions
+        reproduce BYTE FOR BYTE against their line ranges and their declared
+        sha256; 390 distinct source lines are quoted and none twice;
+        cose-x509.cddl matches lines 311-312 byte for byte. Section 5 has
+        exactly 9 paragraphs and the 29 regions include all 9 at exactly the
+        paragraph boundaries, which is what makes the "paragraph 9 of 9" and
+        "41 lines earlier" claims checkable - both hold.
+
+        DROPPED-STATEMENT SWEEP, MEASURED. Of the 348 non-blank body lines of
+        sections 1-5, 339 are inside a normative.md or schema region and the 9
+        that are not are ALL SECTION HEADINGS. 53 lines are outside every
+        requirement range: the headings, the BCP 14 recital, section 1's
+        motivation paragraphs, table rules and captions, the three
+        "x5*-sender:" label lines whose definitions are carried, and section
+        4.3's container label. The one statement I judge arguably dropped from
+        requirements.yaml is line 288, "The labels assigned to each header
+        parameter can be found in Table 1." - a pointer sentence with no
+        obligation, which normative.md carries and docs/requirements.md
+        section 2 excludes by rule.
+
+        FIXTURES RECOMPUTED FROM SCRATCH with a CBOR encoder written for this
+        pass and hashlib: all 7 label encodings, all 9 COSE_X509 framings and
+        their octet counts, all 8 COSE_CertHash values and both octet columns,
+        V-0006's protected and unprotected buckets (protected identical at 39
+        octets across the rewrite, sha256(cert A) and sha256(cert C) as
+        printed), and all 4 V-0008 cases - every value reproduces exactly. 46
+        hex literals decoded here rather than trusted; 0 disagree with a
+        declared octet count.
+
+        DEFECTS FOUND AND FIXED IN THIS RECORD. (1) THE 25-OCTET FOSSIL: the
+        V-0004 identity was stated as "the same 25 octets" at 8 sites in this
+        record and 1 in rfc-9054, while the artifact's own field says 23 and
+        the encoding gives 23 (0x82 array head, 0x2d for -14, 0x54 bstr head,
+        20 SHA-1 octets). Corrected everywhere, with the algorithm named,
+        because the count is the algorithm's and the identity is not. (2) Four
+        YAML scalars that no strict parser accepts: vectors.yaml's "9054 (the
+        registry's defining document)" and "[-16, h'00'] - one octet...",
+        messages.yaml's absent_by_measurement entry, which escaped its inner
+        quotes with BACKSLASHES that YAML does not define inside single quotes
+        and so carried two literal backslashes in the data, and
+        state-machine.yaml line 168's "anchor-set(T')" where the same value is
+        correctly doubled at lines 173 and 187. Both of the library's readers
+        were lenient about all four, which is why nothing reported them. (3)
+        "relying party" counted 3 where it occurs 4 times - the fourth is
+        broken across lines 185-186, and this record's own `party` list already
+        counted line 186. Fixed in protocol.yaml twice and in record.yaml, with
+        the word-boundary convention now stated, since `sender` 13 counts
+        hyphenated compounds and `recipient` 4 counts COSE_recipient. (4)
+        messages.yaml's external_aad locator said "section 2 (three times),
+        section 5"; it occurs 4 times, at lines 167, 202, 232 and 265, all in
+        section 2, and the entry's own note already said FOUR TIMES. (5)
+        V-0007's census says 15 terms, "thirteen of them at zero"; 14 are at
+        zero, `example` at 6 being the only one that is not. (6) V-0008 said a
+        decoder "accepts all three cases below" with four cases below. (7) The
+        state-machine coverage sentence in record.yaml was truncated
+        mid-sentence at "EVERY STATE NAME IS THIS EXTRACTION'S". (8)
+        distilled/README.md's examples row read 430 lines against 535. (9) The
+        comparison "rfc-9338 carries six figures" is wrong in kind: `Figure`
+        occurs ZERO times in RFC 9338 too - what it carries is six worked
+        examples at Appendix A.1 to A.6. (10) The R-O-03 quotation read
+        "canonicalization algorithm SHALL be cited, not invented silently",
+        which is neither rfc-9054's wording of the same rule nor the wording
+        five other records in this library quote.
+
+        QUOTE AUDIT, LANE-WIDE AND BY WHOLE SPAN. Longest span first,
+        exact-first across both lane sources plus every other cached source,
+        then named relaxation channels: of the spans delimited by double quote
+        marks, 191 resolve EXACTLY in a cached source, 17 need only a
+        comment-prefix join, 8 - all of them in rfc-9054, none here - join
+        across that source's "|" NOTE-box margin, and 3 are visibly-marked
+        elisions whose halves both resolve in the sentence they are attributed
+        to. 0 heals, 0 splices, 0 unresolved spans presented as the source's
+        words; the remaining 123 were read one by one and are our own prose,
+        YAML scalar values, mofn quotations marked unverifiable, or quotations
+        of docs/ and topics/, which resolve in this repository. Working
+        LANE-WIDE rather than per record is what found the ninth site of the
+        25-octet figure, in rfc-9054's design-notes: the number is this
+        record's measurement and it had crossed into the sibling, where a
+        per-record pass would never have looked for it. The undelimited sweep
+        found no smuggled verbatim span. The whole-scalar pass over 2524 leaf scalars
+        found 139 whole-scalar verbatim quotations and 17 scalars carrying an
+        uppercase keyword that are not verbatim, all of them our own
+        commentary about those keywords.
+
+        ID JOINS READ, NOT JUST RESOLVED. 587 citation occurrences across the
+        lane, 0 dangling, 501 distinct file/id pairs, 19 occurrences
+        cross-record - measured at the end of this pass, these notes included. This record has 10 duplicate-text groups covering 21
+        requirements - the x5bag/x5chain restatements - and every citation of a
+        group member was printed beside its own requirement and read: the
+        x5bag field cites the x5bag member of each pair and the x5chain field
+        the x5chain member, in every case, so 0 resolve to a different
+        statement. Ids written against the sibling's layout: none.
+
+        BOTH READERS AGREE ON VALUES: 7 YAML artifacts here, identical key sets
+        and identical values under bin/_yaml.py and bin/_record_yaml.py, only
+        int/bool coercion differing. Bibliographic cells verified three ways:
+        content.sha256 matches a fresh shasum and the summary.md Digest row,
+        and the front page says "Category: Standards Track", which is what
+        maturity: standard records. The 25-page-break control in RFC 8392 is
+        real - 25 form feeds and 25 "[Page N]" markers there, 0 of each here.
+        bin/validate: 0 errors and the 9 expected collision warnings.
+    - pass: cross-check
+      by: "claude-opus-5 (pass 3 of 3, independent; did not extract and did not verify; cross-checked with rfc-9054 as one lane)"
+      effort: max
+      date: "2026-10-21"
+      note: 'ALL FOUR CLOSURES CLOSED, TWO OF THEM ONLY AFTER A FIX. (a) 16 distinct structure and field tokens from all 129 entries, and ONE REAL GAP: R-0051 to R-0054, the four permitted x5u target media types, were named by requirements and appeared in NO artifact outside requirements.yaml. Now carried by a new x5u-retrieval structure. (b) 3 flows, 18 steps, and TWO OF THEM WERE MESSAGES NOTHING DEFINED - F-2 step 2, the HTTP or CoAP GET, and step 3, the response and its media types. The same structure closes both; 18 of 18 now. Writing it surfaced a finding of its own, recorded rather than smoothed: R-0050 reads "The referenced resource CAN BE any of the following media types" - lower case, no keyword - so "exactly four" is the extraction reading of a PERMISSIVE sentence and a fifth type is prohibited by no text, while protocol.yaml calls the list closed. (c) 9 of 9 triggers resolve to a named event, including the out-of-band role protocol.yaml says in terms exists so that M-2 one permitted anchor transition has a trigger. (d) 38 checks 0 failures, every byte string re-encoded from scratch, including the 7 label encodings, V-0002 seven cases with all four declared INVALID failing for the stated reason, and the array-versus-sequence octet delta of exactly 1 in both the 2- and 3-certificate cases. THE SHARPEST FINDING: x5-headers.derived.cddl PARSED PERFECTLY AND BOUND NOTHING. Its x5 entries are optional map entries inside a map that also carries the wildcard, and RFC 8610 section 3.5.4 - lines 1307 to 1363 of the cached source - gives this EXACT shape as its worked example and states that an item with a wrongly typed value "does match this specification: while the first entry of the group does not match, the second one (the wildcard) does." So a map carrying nonsense under label 34 matched x5-signature-header through passes 1 and 2, while the file own header says it exists precisely because nothing in the document says in a grammar that label 34 carries a COSE_CertHash. The cut operator is now applied to all seven x5 entries and to both mofn rules; re-parsed, whole-input, same twelve rules, same kinds. THE SAME ERROR HAD PROPAGATED INTO TWO PROSE ARTIFACTS, both listing that binding among the things NO schema here can check and attributing it to the SOURCE rather than to our own grammar. A schema that parses is not a schema that binds, and no parse check can see the difference. The 8 PERMIT/REFUSE verdicts were re-derived from rfc-9054 registry rows read out of the cache directly: Recommended is Filter Only for -14 and -15 and Yes for the other six, so REFUSE/REFUSE/PERMIT times six follows exactly, and the digest-bit columns check against sections 3.2 and 3.3 prose. FIVE OF THE EIGHT ROWS CARRIED NO registry_row ID while the structurally identical table in rfc-9054 carries all eight, and two carried a verdict with NO why at all; both fixed, which is what takes bin/validate warnings from 9 to 14, every one a bare-id collision that was read and is correct. M-1 two independent paths are sound and both orders section 5 argues are representable, but the signature branch guard read NONE STATED where R-0122, a MUST, requires the key be checked against the algorithm BEFORE the key is used - and signature validation uses the key. Also fixed: a hyphenation heal in summary.md that falsifies pass 2 "0 heals" - source lines 471 to 472 break on-path AT THE HYPHEN, so the normalised source reads "passive on- path attacker" and the quoted token occurs nowhere in RFC 9360, surviving two passes because the quotation also carries an elision that defeated the elision test; three nested quote marks re-punctuated, where requirements.yaml, normative.md and design-notes.md all keep the source marks; two false vector counts; an F-1 summary naming the wrong two steps for the one ordering the document constrains; and an F-1 step citing 3 of the 5 positions its own locator names, the two missing ones being members of a DUPLICATE-TEXT GROUP, so the citation resolved to a byte-identical statement and nothing automated could have caught it. bin/validate 0 errors; 129 of 129 locators contained; 14 = 14 keywords by keyword; 29 + 4 regions byte-for-byte AND digest-exact; both readers agreeing on every leaf path; 612 citations 0 dangling and all 24 cross-record sites read, 0 resolving to a different statement.'
+status: distilled
 usefulness:
   verdict: marginal
-  reason: "X.509 carriage is the identifier model m-of-n is arguing against, but DEC-003 must say why, and interop may need it."
-  assessed: "2026-09-22"
-confidence: medium
+  reason: "X.509 carriage is the identifier model m-of-n is arguing against, and DEC-003 must say why. Kept for three things it supplies: §5's identity-misbinding attack, which is the RFC's own argument for ARCH-0002 P1; §2's in-band protected `hashAlg`, which R-O-05 should copy; and the DEC-002 finding that option 5's exclusions stop at the CBOR layer while DER sits below it."
+  assessed: "2026-10-20"
+confidence: high
 owner: S1

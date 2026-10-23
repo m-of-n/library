@@ -1,0 +1,213 @@
+; =====================================================================
+; envelopes.derived.cddl
+;
+; DERIVED - not verbatim. RFC 9277 DEFINES THREE ENVELOPES IN PROSE AND
+; SUPPLIES CDDL FOR NONE OF THEM. Its four CDDL snippets
+; (cddl-snippets.cddl, verbatim) are content-format tag assertions:
+; Appendix B.1's two carry only the INNER tag, and Appendix D.1's two
+; carry the 55801 header. There is no rule anywhere in the document for
+; the CBOR Tag Wrapped envelope or for the Labeled CBOR Sequence label.
+; The rules below were written for this record from the prose of
+; sections 2.2, 2.3 and Appendix D and MUST NEVER be quoted as the
+; source's own grammar.
+;
+; Derived from RFC 9277:
+;   section 2.2      the two nested tags, outer 55799  (rfc-9277#R-0046
+;                    to #R-0050)
+;   section 2.3      the 12-byte label, outer 55800, inner tag content
+;                    'BOR'                 (#R-0061 to #R-0077)
+;   Appendix D       the 12-byte header, outer 55801   (#R-0183 to #R-0191)
+;   section 2.1      the inner tag value is in
+;                    0x01000000..0xFFFFFFFF            (#R-0039)
+;   Appendix B       TN(ct) as printed      (#R-0154), and the
+;                    "Exceptionally" rule   (#R-0159 to #R-0165)
+;
+; [correction] 2026-10-20, pass 2. ALL FIVE RANGES ABOVE WERE WRONG, and
+; every endpoint resolved to a real but different statement, so nothing
+; in bin/ could see it. What they used to say, and what each endpoint
+; actually is:
+;   section 2.2 was given as R-0045..R-0049. R-0045 is a SECTION 2.1
+;     statement ("For CBOR data items that form a representation that is
+;     already described by such a Content-Format Number, a tag number
+;     has proactively been allocated in Section 4.3...") and the range
+;     stopped one short of R-0050, the innermost tag content.
+;   section 2.3 was given as R-0059..R-0074. R-0059 and R-0060 are
+;     SECTION 2.2.1's fingerprint halves, not section 2.3; and the range
+;     stopped at R-0074, three short of section 2.3's last entry.
+;   Appendix D was given as R-0168..R-0176. That is APPENDIX B.1 and the
+;     first entry of Appendix C -- off by fifteen.
+;   section 2.1's tag-range statement was given as R-0040, which is the
+;     EMBEDDED-ZERO-BYTE suggestion. The range statement is R-0039.
+;   Appendix B was given as R-0133 and R-0138..R-0144. R-0133 is
+;     Appendix A's "Some considerations in the form of survey questions
+;     follow." and R-0138..R-0144 is APPENDIX A.2's concatenation
+;     discussion. The TN formula is R-0154 and the "Exceptionally" rule
+;     is R-0159..R-0165.
+; The cause is the one pass 1 diagnosed in its own messages.yaml draft:
+; a 195-entry id layout written from memory against a 61-entry record's
+; shape. It recurred here because pass 1 audited messages.yaml and not
+; schema/.
+;
+; THE DIALECT is CDDL as of RFC 8610, plus RFC 9682's corrected
+; collected ABNF. The `#6.<n>(...)` tag notation is RFC 8610 section
+; 2.2.2's and is the notation the document's own snippets use.
+;
+; WHAT CANNOT BE WRITTEN HERE, and it is the reason this file is not a
+; complete schema: CDDL CANNOT STATE A TOP-LEVEL CBOR SEQUENCE. That is
+; RFC 8742 section 4.1 in its own words -- "Currently, CDDL does not
+; provide for unadorned CBOR Sequences as a top-level subject of a
+; specification" -- so E2 below is an ARRAY RULE standing in for a
+; sequence rule, corrected by a comment, exactly as RFC 8742 section
+; 4.1 instructs and exactly as
+; records/ietf/rfc-8742/distilled/schema/cbor-seq-container.derived.cddl
+; C1 does. The two records hit the same wall from opposite sides.
+;
+; Source of every quoted sentence: RFC 9277, cached source sha256
+;   bd637eafad9ef940c8f5d029076f70c58af7bde6beb38efee5ba7af3690289f7
+; =====================================================================
+
+; ---------------------------------------------------------------------
+; E1. CBOR TAG WRAPPED (section 2.2)
+;     "This data item is enveloped into two nested tags:"
+;     The whole file is ONE CBOR data item.
+; ---------------------------------------------------------------------
+
+cbor-tag-wrapped = #6.55799(protocol-tagged-item)
+
+protocol-tagged-item = #6.<protocol-tag>(any)
+  ; CDDL CANNOT WRITE THIS LINE. The inner tag number is a parameter of
+  ; the protocol, not a constant, and CDDL's `#6.<n>` requires a literal
+  ; `n`: RFC 8610 section 2.2.2 gives `#6.<uint>(type)` with uint a
+  ; LITERAL, and no control operator in RFC 8610, RFC 9165, RFC 9741 or
+  ; RFC 9682 ranges over tag numbers. (RFC 9682 section 3.2 adds
+  ; `#7.<type>` for simple values, which is the nearest thing and does
+  ; not reach major type 6.) So a conforming CDDL rule has to name ONE
+  ; tag number; a rule for "any registered CBOR Protocol" is not
+  ; writable. The pseudo-production above is OURS and is not CDDL.
+  ;
+  ; The constraint the document does state on that number
+  ; (rfc-9277#R-0039 - [correction] 2026-10-21, pass 3: this read
+  ; rfc-9277#R-0040, which is the EMBEDDED-ZERO-BYTE suggestion, "It is
+  ; further suggested to avoid values that have an embedded zero byte in
+  ; the 4 bytes of their binary representation (such as 0x12003456), as
+  ; these may confuse implementations that treat the magic number as a C
+  ; string." Pass 2 corrected the SAME wrong id in this file's `Derived
+  ; from` header above and did not look at the body): "In order to be in the 4-byte range, and so that
+  ; there are no leading zero bytes in the 4-byte encoding of the tag
+  ; number, the value needs to be in the range 0x01000000 (decimal
+  ; 16777216) to 0xFFFFFFFF (decimal 4294967295) inclusive."
+
+; Concrete instance, from section 2.2.1 with TN(112):
+senml-tag-wrapped = #6.55799(#6.1668546929([* senml-record]))
+senml-record      = any   ; RFC 8428 is not held in this library
+  ; NOTE THE TAG CONTENT IS AN ARRAY, NOT A BYTE STRING. That follows
+  ; Appendix B's exception -- "Exceptionally, when used immediately as
+  ; tag content of one of the tags 55799, 55800, or 55801 ... 1. The
+  ; CBOR data item within the representation (without byte-" /
+  ; "string wrapping)." -- and it is why Appendix B.1's own
+  ; `senml-cbor = #6.1668546929(bstr)` DOES NOT MATCH section 2.2.1's
+  ; example. Reported in README.md, not repaired.
+
+; ---------------------------------------------------------------------
+; E2. LABELED CBOR SEQUENCE (section 2.3)
+;     "This method prepends a newly constructed, separate data item to
+;      the CBOR Sequence, the _label_."
+;     The label is a SEPARATE DATA ITEM. The file is a CBOR Sequence.
+; ---------------------------------------------------------------------
+
+; This defines an array, the elements of which are to be used
+; in a CBOR Sequence:
+labeled-cbor-sequence = [cbor-sequence-label, * any]
+  ; THE TOP-LEVEL RULE IS A FICTION and the comment above is the actual
+  ; specification of the container, per RFC 8742 section 4.1. A
+  ; conforming instance of this rule is a CBOR array; the file is not
+  ; one.
+
+cbor-sequence-label = #6.55800(#6.<protocol-tag>('BOR'))
+  ; Same unwritable inner tag as E1. Concretely, with TN(272):
+
+missing-blocks-label = #6.55800(#6.1668547090('BOR'))
+  ; "The total length of the label is 12 bytes." (rfc-9277#R-0064
+  ; - [correction] 2026-10-21, pass 3: this read rfc-9277#R-0062, which
+  ; is section 2.3's method sentence, "This method prepends a newly
+  ; constructed, separate data item to the CBOR Sequence, the _label_."
+  ; - a real statement, and not the one quoted)
+  ; Bytes: d9 d9f8 | da 63740212 | 43 | 42 4f 52.
+  ; THE 12 BYTES HOLD ONLY UNDER PREFERRED SERIALIZATION, which nothing
+  ; in RFC 9277 requires. 30 definite-length spellings are enumerated in
+  ; prefix-spellings.derived.txt and exactly ONE is 12 bytes long.
+  ; CDDL CANNOT EXPRESS THE DIFFERENCE: a schema constrains the data
+  ; model, not the serialisation, so all 30 satisfy this rule. That is
+  ; rfc-8949's finding about determinism being an encoder-side property,
+  ; and it applies to the one thing this document delivers.
+
+; ---------------------------------------------------------------------
+; E3. CBOR-LABELED NON-CBOR DATA (Appendix D)
+;     The ONE envelope the document gives CDDL for, in D.1 - and only
+;     for the header, because the payload is not CBOR.
+; ---------------------------------------------------------------------
+
+cbor-labeled-non-cbor-header = #6.55801(#6.<protocol-tag>('BOR'))
+  ; Appendix D.1's own two instances, verbatim in cddl-snippets.cddl:
+  ;   td-json-header      = #6.55801(#6.1668547250('BOR'))
+  ;   json-deflate-header = #6.55801(#6.1668557910('BOR'))
+  ; THERE IS NO RULE FOR THE FILE, and there cannot be: "The actual
+  ; Non-CBOR Protocol data then follow directly appended to the CBOR
+  ; representation of the header." (rfc-9277#R-0189
+  ; - [correction] 2026-10-21, pass 3: this read rfc-9277#R-0174, AND
+  ; R-0174 IS ONE OF THE TWO DUPLICATE-TEXT IDS bin/check-id-joins
+  ; --surface names for this record. It is Appendix B.1's "The following
+  ; CDDL snippet can be used to identify application/", byte-identical to
+  ; R-0169. The sentence quoted here is Appendix D's and is R-0189. Pass 2
+  ; found and fixed the same id in this file's `Derived from` header and
+  ; audited no citation in its body) After byte 12 the
+  ; file is not CBOR at all, so no CDDL rule can describe it. This is
+  ; the only one of the three envelopes whose incompleteness is forced
+  ; rather than accidental.
+
+; ---------------------------------------------------------------------
+; E4. THE CONTENT-FORMAT TAG, OUTSIDE AN ENVELOPE (Appendix B)
+; ---------------------------------------------------------------------
+
+content-format-tagged = #6.<TN-of-ct>(bstr)
+  ; The general case, which Appendix B.1 justifies: "Note that a byte
+  ; string is used as the type of the tag content because a media type
+  ; representation in general can be any byte string."
+  ; (rfc-9277#R-0170 - [correction] 2026-10-21, pass 3: this read
+  ; rfc-9277#R-0154, which is the TN FORMULA itself, "TN(ct) = 0x63740101
+  ; + (ct / 255) * 256 + ct % 255." The sentence quoted is Appendix B.1's
+  ; justification for `bstr` and is R-0170. Note the direction of this
+  ; one: pass 2 INTRODUCED R-0154 into this file's header as the correct
+  ; id for the formula, and R-0154 was already wrong here for a different
+  ; sentence)
+  ;
+  ; AND THE TAG CONTENT IS NOT DETERMINED BY THE TAG NUMBER. Immediately
+  ; inside 55799 the content is the bare item or the sequence's items in
+  ; an array; immediately inside 55800 or 55801 it is 'BOR'; anywhere
+  ; else it is a byte string. Section 4.3's registry Data Item field is
+  ; a disjunction for this reason -- "byte string or any CBOR data item
+  ; (see Appendix B)" -- and a decoder cannot resolve it from the tag
+  ; number alone. Deciding which reading applies needs the media type's
+  ; own structure and its content coding, neither of which the tag
+  ; number carries and neither of which the CoAP Content-Formats
+  ; registry states as a field. See content-format-tag.derived.yaml
+  ; -> tag_content_is_not_determined_by_the_tag_number.
+
+; ---------------------------------------------------------------------
+; WHAT NONE OF THE FOUR SUPPLIES, and it is the condition-(4) finding
+; ---------------------------------------------------------------------
+; AN AUTHENTICATED TYPE INDICATOR. Under E1 the two tag heads ENCLOSE
+; the payload, so they are outside anything the payload signs; under E2
+; and E3 the label or header is a SEPARATE DATA ITEM in front of the
+; payload, so it is outside it twice over. There is no rule above in
+; which the label could be covered by a signature over the content, and
+; no rule the document supplies in which it could be. Section 3 states
+; the adjacent problem without drawing the conclusion: "Protective
+; applications (that check data) cannot rely on the applications they
+; try to protect (that use the data) to make exactly the same decisions
+; in recognizing file formats.  (This is an instance of a check versus
+; use issue.)" So relabelling a stored artifact -- swapping the inner
+; tag -- breaks no signature and can route the same bytes to a
+; different parser. The canonical-encoding topic's condition (4) is
+; NOT discharged by either method. See ../design-notes.md.
+; =====================================================================

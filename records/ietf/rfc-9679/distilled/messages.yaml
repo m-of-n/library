@@ -1,0 +1,296 @@
+record: rfc-9679
+reviewed_by: ""
+
+# ---------------------------------------------------------------------------
+# Single-line scalars throughout: bin/_yaml.py is not a YAML implementation and
+# supports no multi-line scalars and no flow collections, so every sequence is
+# a block sequence and every id is quoted (ids contain "#"). Apostrophes are
+# avoided in values rather than escaped, because a single-quoted YAML scalar
+# needs them doubled.
+applicability: 'FULL for structures, NONE for exchanges. RFC 9679 defines no protocol messages and no wire exchange: it defines one computation over one structure, one output value, one CWT claim member and one URI form. What this file captures is therefore (a) the COSE_Key as the document constrains it on input to the computation, with the parameters it drops marked as dropped; (b) the thumbprint input - the exact map that is hashed - as five byte-level structures, one per key type of Sections 4.1 to 4.5; (c) the thumbprint value itself; (d) the "ckt" member of the CWT "cnf" claim registered by Section 8; and (e) the Section 5.7 URI form, which is the only representation in which a thumbprint carries the identity of the hash function that produced it. Byte offsets are given exactly where the source prints bytes (the Section 6 EC2 example, 75 octets) and as head-byte rules elsewhere, because the source prints no other bytes.'
+
+note: 'constrained_by is wired throughout: every one of the 29 fields carries at least one rfc-9679#R-NNNN id, and 47 of the 68 requirements are wired to a field. Matching rule, applied in order: (1) the requirement whose text the layout quotes; (2) failing that, the requirement at the same locator whose subject is the same field. Statements that follow from the source rather than being in it are prefixed "Derived:" in the layout and name the requirement they follow from. The 21 requirements NOT wired to any field, and why: R-0001 to R-0003 and R-0006 are the procedure and the permission to support further hash algorithms, which constrain the computation rather than any field - and there is no distilled/protocol.yaml to put them in, because protocol is declared not_applicable in record.yaml: the procedure lives in schema/thumbprint-computation.derived.json instead - and R-0056, the derived map-key order, is structural in the same way, so it is cited in the layout of every thumbprint-input message rather than on one field; R-0021 is background about what RFC 9052 permits, the premise of the y constraints R-0022 to R-0024, which ARE wired; R-0035 directs a reader to another specification; R-0037, R-0038, R-0041, R-0042, R-0054 and R-0055 are properties of, or statements about, the value and the worked example rather than constraints on a field; R-0039 constrains an application profile; R-0043 and R-0044 are relations to other specifications; R-0057, R-0059, R-0061 and R-0064 are conditions on use rather than on bytes; and R-0065 is IANA registration prose whose two load-bearing values, R-0066 and R-0067, are wired to the ckt field.'
+
+# ---------------------------------------------------------------------------
+messages:
+
+  - name: cose-key-as-received
+    locator: "§3 (step 1), §4"
+    encoding: 'CBOR map (COSE_Key, RFC 9052 §7). Encoding of the received key is NOT constrained by this document: it may be any valid CBOR, deterministic or not.'
+    normative_status: 'input to the computation, not a structure this document defines'
+    fields:
+      - name: kty
+        type: 'int (label 1)'
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0008"
+          - "rfc-9679#R-0009"
+          - "rfc-9679#R-0010"
+        layout: 'Label 1, encoded 0x01. Value is the integer from the IANA COSE Key Types registry - 1 OKP, 2 EC2, 3 RSA, 4 Symmetric, 5 HSS-LMS - each a single byte 0x01 to 0x05 under preferred serialization. The tstr form that RFC 9052 §7.1 admits for kty is excluded by R-0010 and so cannot reach the hash input.'
+      - name: type_specific_required_parameters
+        type: 'the set named by §4.1 to §4.5 for this kty'
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0007"
+          - "rfc-9679#R-0012"
+          - "rfc-9679#R-0016"
+          - "rfc-9679#R-0025"
+          - "rfc-9679#R-0029"
+          - "rfc-9679#R-0032"
+        layout: 'Carried through to the thumbprint input unchanged in value. See the five per-key-type structures below for labels, types and bytes.'
+      - name: kid
+        type: 'bstr (label 2)'
+        required: false
+        constrained_by:
+          - "rfc-9679#R-0007"
+          - "rfc-9679#R-0058"
+        layout: 'Label 2, encoded 0x02. DROPPED by step 1. Named as excluded at §7: "Key identifiers are not included in the thumbprint calculation". The §6 example carries a kid whose value is exactly the thumbprint of that same key, which is the documented use case (§1, §5.2).'
+      - name: alg
+        type: 'int or tstr (label 3)'
+        required: false
+        constrained_by:
+          - "rfc-9679#R-0007"
+          - "rfc-9679#R-0011"
+        layout: 'Label 3, encoded 0x03. DROPPED by step 1. Derived from R-0011: the string "alg" appears nowhere in RFC 9679, so this parameter is excluded by silence - no required-parameter list names it and R-0007 admits nothing else. This is the single most consequential exclusion for a key identifier: see distilled/design-notes.md.'
+      - name: key_ops
+        type: 'array (label 4)'
+        required: false
+        constrained_by:
+          - "rfc-9679#R-0007"
+          - "rfc-9679#R-0011"
+        layout: 'Label 4, encoded 0x04. DROPPED by step 1, by silence, as for alg.'
+      - name: base_iv
+        type: 'bstr (label 5)'
+        required: false
+        constrained_by:
+          - "rfc-9679#R-0007"
+          - "rfc-9679#R-0011"
+        layout: 'Label 5, encoded 0x05. DROPPED by step 1, by silence, as for alg.'
+      - name: private_key_parameter
+        type: 'bstr (label -4 for OKP and EC2; labels -3 to -9 for RSA per RFC 8230)'
+        required: false
+        constrained_by:
+          - "rfc-9679#R-0007"
+          - "rfc-9679#R-0011"
+        layout: 'DROPPED by step 1. Consequence: a private key and its public key produce the SAME thumbprint for OKP, EC2 and RSA, because the required-parameter lists of §4.1, §4.2 and §4.3 contain only public parameters.'
+      - name: any_other_parameter
+        type: any
+        required: false
+        constrained_by:
+          - "rfc-9679#R-0007"
+          - "rfc-9679#R-0036"
+        layout: 'DROPPED by step 1, whatever it is. §5.1 states the point of the rule: absence or presence of an optional parameter does not alter the resulting value.'
+    layout: 'Any valid COSE_Key map. Step 1 reads it and CONSTRUCTS a new map containing only the fields marked required above; it does not delete entries from the received encoding in place. The §6 example makes the difference visible: its own printed encoding is A5 01 02 | 20 01 | 21 5820 ... | 22 5820 ... | 02 5820 ..., with kid LAST, which is not the RFC 8949 §4.2.1 order (label 2, encoded 0x02, would sort second, immediately after label 1).'
+    notes: 'Defect recorded, not repaired: because deletion from a deterministically ordered map leaves a deterministically ordered map, a filter-in-place would in fact have produced the right bytes for THIS example; the example simply is not in deterministic order to begin with. An implementation that filters in place is nonetheless wrong in general, because a received key need not be deterministically encoded at all - this document places no encoding requirement on the input key.'
+
+  - name: okp-thumbprint-input
+    locator: "§4.1"
+    encoding: 'CBOR, RFC 8949 §4.2.1 deterministic encoding'
+    normative_status: normative
+    fields:
+      - name: kty
+        type: 'int, value 1'
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0013"
+          - "rfc-9679#R-0008"
+        layout: 'Offset 1: label 0x01. Offset 2: value 0x01 (OKP). Verbatim source bullet: "kty" (label: 1, data type: int, value: 1).'
+      - name: crv
+        type: int
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0014"
+        layout: 'Offset 3: label 0x20 (the encoding of -1). Offset 4: the curve identifier from the IANA COSE Elliptic Curves registry - X25519 is 4 (0x04), Ed25519 is 6 (0x06); a value of 24 or more takes a two-byte head 0x18 nn under preferred serialization. Verbatim source bullet: "crv" (label: -1, value: int).'
+      - name: x
+        type: bstr
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0015"
+        layout: 'Label 0x21 (the encoding of -2), then a bstr head, then the public-key octets. Head: 0x40+len for len up to 23, 0x58 nn for 24 to 255 (32 octets is 0x58 0x20, the X25519 and Ed25519 case), 0x59 nnnn above that. Verbatim source bullet: "x" (label: -2, value: bstr).'
+    layout: 'a3 | 01 <kty> | 20 <crv> | 21 <bstr x>. Offset 0 is the map head 0xa3 (map of 3, definite length, preferred serialization). Derived from R-0056: the three entries appear in exactly this order, because RFC 8949 §4.2.1 sorts map keys bytewise by their encoded form and 0x01 < 0x20 < 0x21. No d (label -4) enters.'
+    notes: 'Section 4.1 labels its own columns differently from §4.2 to §4.5 - it writes "value: int" and "value: bstr" for crv and x where the others write "data type:" - while its own kty bullet writes both. Read as data type; reported in distilled/schema/README.md, defect 1, and reproduced as printed in distilled/normative.md.'
+
+  - name: ec2-thumbprint-input
+    locator: "§4.2, §6"
+    encoding: 'CBOR, RFC 8949 §4.2.1 deterministic encoding'
+    normative_status: normative
+    fields:
+      - name: kty
+        type: 'int, value 2'
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0017"
+          - "rfc-9679#R-0008"
+        layout: 'Offset 1: label 0x01. Offset 2: value 0x02 (EC2). Confirmed by the §6 bytes: A4 01 02 ...'
+      - name: crv
+        type: int
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0018"
+        layout: 'Offset 3: label 0x20 (-1). Offset 4: the curve identifier - P-256 is 1 (0x01), P-384 is 2, P-521 is 3. Confirmed by the §6 bytes: ... 20 01 ...'
+      - name: x
+        type: bstr
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0019"
+        layout: 'Offset 5: label 0x21 (-2). Offsets 6 to 7: bstr head 0x58 0x20 (32 octets). Offsets 8 to 39: the x-coordinate, 65eda5a12577c2bae829437fe338701a10aaa375e1bb5b5de108de439c08551d in the §6 example. For P-384 the head is 0x58 0x30 and for P-521 0x58 0x42.'
+      - name: y
+        type: 'bstr, uncompressed point only'
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0020"
+          - "rfc-9679#R-0022"
+          - "rfc-9679#R-0023"
+          - "rfc-9679#R-0024"
+        layout: 'Offset 40: label 0x22 (-3). Offsets 41 to 42: bstr head 0x58 0x20. Offsets 43 to 74: the y-coordinate, 1e52ed75701163f7f9e40ddf9f341b3dc9ba860af7e0ca7ca7e9eecd0084d19c in the §6 example. The bool form that RFC 9053 §7.1 admits for y (the sign bit of a compressed point) CANNOT appear: R-0022 requires the uncompressed representation for interoperability and R-0024 requires a compressed point to be converted before the thumbprint is computed.'
+    layout: 'a4 | 01 02 | 20 <crv> | 21 <bstr x> | 22 <bstr y>. The §6 worked input is exactly 75 octets: A4 0102 2001 21 5820 <32 octets> 22 5820 <32 octets>. Derived from R-0056: entry order is 1, -1, -2, -3 because 0x01 < 0x20 < 0x21 < 0x22 bytewise; a positive label sorts before every negative one, which is why kty leads.'
+    notes: 'This is the one structure the source prints bytes for, and the bytes verify: sha256 of the 75 octets reproduces the §6 thumbprint 496bd8afadf307e5b08c64b0421bf9dc01528a344a43bda88fadd1669da253ec, and its unpadded base64url reproduces the §5.7 string SWvYr63zB-WwjGSwQhv53AFSijRKQ72oj63RZp2iU-w. Both checked mechanically in pass 1. Every other key type below is byte-level by rule only; the source prints no bytes for them.'
+
+  - name: rsa-thumbprint-input
+    locator: "§4.3"
+    encoding: 'CBOR, RFC 8949 §4.2.1 deterministic encoding'
+    normative_status: normative
+    fields:
+      - name: kty
+        type: 'int, value 3'
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0026"
+          - "rfc-9679#R-0008"
+        layout: 'Offset 1: label 0x01. Offset 2: value 0x03 (RSA).'
+      - name: n
+        type: bstr
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0027"
+        layout: 'Label 0x20 (-1), then a bstr head, then the modulus octets. A 2048-bit modulus is 256 octets, head 0x59 0x01 0x00; a 3072-bit modulus is 384 octets, head 0x59 0x01 0x80. Labels follow RFC 8230.'
+      - name: e
+        type: bstr
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0028"
+        layout: 'Label 0x21 (-2), then a bstr head, then the exponent octets. 65537 is three octets 01 00 01 with head 0x43.'
+    layout: 'a3 | 01 03 | 20 <bstr n> | 21 <bstr e>. Derived from R-0056: order 1, -1, -2.'
+    notes: 'Defect recorded, not repaired: NO NORMALISATION IS STATED FOR EITHER BSTR, AND NONE IS CITED. §4.3 gives n and e as bare byte strings and says nothing about leading zero octets or fixed width; unlike §4.1 and §4.2 it cites no defining specification at all. 65537 as 0x43 010001 and as 0x44 00010001 are two different thumbprints for one key, as are a modulus with and without a leading 0x00. §7 makes a single unambiguous representation the precondition for a thumbprint identifying a key at all (R-0057), and for RSA §4 does not supply one. CORRECTED BY THE VERIFY PASS: this note previously said RFC 8230 §4 "only requires that they be byte strings", which is false - RFC 8230 §4 requires that all numeric key parameters be an unsigned big-endian octet sequence in a CBOR byte string and that "The octet sequence MUST utilize the minimum number of octets needed to represent the value", which closes the question exactly and makes 00010001 non-conforming. The surviving defect is that RFC 9679 never cites RFC 8230 anywhere, so the rule is unreachable from this document and its reference list. Anything we build on this must pin the normalisation and cite RFC 8230 §4 for it.'
+
+  - name: symmetric-thumbprint-input
+    locator: "§4.4"
+    encoding: 'CBOR, RFC 8949 §4.2.1 deterministic encoding'
+    normative_status: normative
+    fields:
+      - name: kty
+        type: 'int, value 4'
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0030"
+          - "rfc-9679#R-0008"
+        layout: 'Offset 1: label 0x01. Offset 2: value 0x04 (Symmetric).'
+      - name: k
+        type: 'bstr, the key material itself'
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0031"
+          - "rfc-9679#R-0060"
+          - "rfc-9679#R-0062"
+          - "rfc-9679#R-0063"
+        layout: 'Label 0x20 (-1), then a bstr head, then the secret. A 128-bit key is 16 octets, head 0x50; a 256-bit key is 32 octets, head 0x58 0x20.'
+    layout: 'a2 | 01 04 | 20 <bstr k>. Derived from R-0056: order 1, -1, because 0x01 sorts before 0x20. Two entries only, so the hashed bytes are a four-byte prefix plus a one- or two-byte bstr length head, plus the secret.'
+    notes: 'The hashed bytes CONTAIN THE SECRET, which is why §7 carries three obligations about this one field: sufficient entropy (R-0060, MUST), never passwords or other low-entropy secrets (R-0062, MUST NOT), and not at all where entropy cannot be established (R-0063, MUST NOT). The prefix is short and fully predictable - a2 01 04 20 plus a one- or two-byte length head - so a thumbprint of a symmetric key is a digest of a known prefix over a secret, and offline guessing costs one hash per candidate.'
+
+  - name: hss-lms-thumbprint-input
+    locator: "§4.5"
+    encoding: 'CBOR, RFC 8949 §4.2.1 deterministic encoding'
+    normative_status: normative
+    fields:
+      - name: kty
+        type: 'int, value 5'
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0033"
+          - "rfc-9679#R-0008"
+        layout: 'Offset 1: label 0x01. Offset 2: value 0x05 (HSS-LMS).'
+      - name: pub
+        type: 'bstr, the LMS public key'
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0034"
+        layout: 'Label 0x20 (-1), then a bstr head, then the LMS public key as RFC 8778 defines it, which itself begins with the LMS and LM-OTS typecodes. RFC 8778 Section 2.2: "The LMS public key can be summarized as: u32str(lms_algorithm_type) || u32str(otstype) || I || T[1]", and RFC 8778 Section 2.1 makes that the HSS public key too. Fixed-width throughout - 4 + 4 + 16 (I, the 16-byte tree identifier, RFC 8778 Section 3) + 32 (T[1], m-byte Merkle root, m=32 for the only hash [HASHSIG] supports) = 56 octets - with no length prefix, no optional field and no variable-length integer, which is why no normalisation rule is owed here and one IS owed for RSA n and e. NOT byte-verified: RFC 8778 prints no COSE_Key and no pub value, so this layout is read off its prose. RFC 9679 cites neither RFC 8778 nor RFC 8554, 0 occurrences of each.'
+    layout: 'a2 | 01 05 | 20 <bstr pub>. Derived from R-0056: order 1, -1. Derived, not printed anywhere: a 56-octet pub makes the whole hashed input 62 octets - a2 (1) + 01 05 (2) + 20 58 38 (3) + 56 - the 58 38 being the minimal bstr head for 56 under RFC 8949 Section 4.2.1. No HSS-LMS thumbprint is computable from any document this library holds, so examples/ carries no vector for it and none was synthesised.'
+    notes: 'The one of the FIVE key types of Sections 4.1 to 4.5 whose hashed bytes include its algorithm parameters, because RFC 8778 puts the LMS and LM-OTS typecodes inside pub - and the only key type in this library whose parameters sit in the KEY MATERIAL rather than in a map entry. [correction] 2026-10-20, maintenance pass on this profile: full record (library#39 Tier 2). This note previously opened "The one key type whose hashed bytes include its algorithm parameters" and closed "For every other key type the algorithm binding is outside the thumbprint entirely". Both halves are FALSE of AKP, kty 7, which Section 4.6 delegates and RFC 9964 Section 6 answers: an AKP thumbprint requires alg (label 3), so its digest carries a COSE Algorithms allocation as a map entry - the hazard this record spends its design notes on. The surviving distinction is not WHETHER algorithm parameters are hashed but WHERE they sit: inside pub for HSS-LMS, in a map entry for AKP, nowhere for OKP, EC2, RSA and Symmetric. That distinction is the load-bearing one, because only the HSS-LMS form is unreachable by any choice of which map entries to digest. See distilled/design-notes.md, open question 4.'
+
+  - name: cose-key-thumbprint
+    locator: "§3, §5.6"
+    encoding: 'raw octets; a CBOR bstr where it is carried in CBOR'
+    normative_status: normative
+    fields:
+      - name: digest
+        type: 'bstr of H output length'
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0004"
+          - "rfc-9679#R-0005"
+          - "rfc-9679#R-0046"
+        layout: 'H applied to the thumbprint-input octets. 32 octets for SHA-256, the algorithm every implementation supports (R-0005). As a CBOR bstr that is 0x58 0x20 followed by 32 octets. §6 example: 496bd8afadf307e5b08c64b0421bf9dc01528a344a43bda88fadd1669da253ec.'
+      - name: hash_function_identifier
+        type: none
+        required: false
+        constrained_by:
+          - "rfc-9679#R-0040"
+          - "rfc-9679#R-0049"
+        layout: 'ABSENT BY CONSTRUCTION. The value is a bare digest: it carries no algorithm identifier, no length prefix beyond the CBOR head and no version. The only representation that names H is the §5.7 URI form below. Derived from R-0040: two parties on different H therefore never match on any key, and neither can tell why.'
+    layout: 'Opaque octets of H output length. Nothing self-describing.'
+    notes: 'This is the value a key identifier would be. Its stability is exactly the stability of the input, and the input excludes alg (R-0011) and kid (R-0058) while including kty and crv - so the identifier is stable across algorithm and parameter-set changes but changes if the curve or the key type changes. See distilled/design-notes.md for what that buys and costs.'
+
+  - name: ckt-cwt-confirmation-member
+    locator: "§5.6, §8"
+    encoding: 'CBOR, inside a CWT (RFC 8392) cnf claim (RFC 8747)'
+    normative_status: normative
+    fields:
+      - name: cnf_claim
+        type: 'map (CWT claim key 8)'
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0045"
+          - "rfc-9679#R-0047"
+        layout: 'Claim key 8, encoded 0x08, whose value is a map. RFC 8747 defines the claim; this document adds one member to it.'
+      - name: ckt
+        type: 'bstr (confirmation key 5)'
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0045"
+          - "rfc-9679#R-0046"
+          - "rfc-9679#R-0066"
+          - "rfc-9679#R-0067"
+        layout: 'Key 5, encoded 0x05, inside the cnf map. Value is the thumbprint as a binary string - a CBOR bstr of the raw digest, NOT the base64url text form, which §5.7 reserves for URIs. For SHA-256 the encoded member is 05 58 20 followed by 32 octets. Registry fields, verbatim: "Confirmation Key:  5" and "Confirmation Value Type(s):  binary string".'
+    layout: 'Inside the CWT claims map: 08 a1 05 58 20 <32 octets> for a SHA-256 thumbprint as the sole member of cnf. The §5.6 example, in diagnostic notation, is /cnf/ 8 : { /ckt/ 5 : h(496bd8af...da253ec) }.'
+    notes: 'Defect recorded, not repaired: the §8 registration describes this member as "COSE Key SHA-256 Thumbprint", but §3 requires only that SHA-256 be supported and permits other algorithms (R-0005, R-0006), and the member has nowhere to name H. A ckt computed with SHA-384 is indistinguishable on the wire from one computed with SHA-256, and a recipient that supports both cannot tell which to recompute. §5.5 also records that this document registers no JWT counterpart (R-0044).'
+
+  - name: cose-key-thumbprint-uri
+    locator: "§5.7"
+    encoding: 'URI (text), URN namespace urn:ietf:params:oauth'
+    normative_status: normative
+    fields:
+      - name: prefix
+        type: 'fixed string'
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0048"
+          - "rfc-9679#R-0068"
+        layout: 'The literal urn:ietf:params:oauth:ckt, registered in the IANA OAuth URI registry by §8. The use of oauth in the namespace is for alignment with RFC 9278 only and implies no OAuth relationship.'
+      - name: hash_algorithm_identifier
+        type: 'Hash Name String'
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0049"
+          - "rfc-9679#R-0050"
+          - "rfc-9679#R-0051"
+        layout: 'Preceded by a colon. MUST be a value from the Hash Name String column of the IANA Named Information Hash Algorithm Registry (R-0050) - sha-256, sha-384, sha-512 and so on, lowercase and hyphenated as that registry writes them. A URI whose identifier is not in that registry is not valid, and applications MUST detect and handle the error (R-0051), which the document does not further define.'
+      - name: thumbprint
+        type: 'base64url text, no padding'
+        required: true
+        constrained_by:
+          - "rfc-9679#R-0052"
+          - "rfc-9679#R-0053"
+        layout: 'Preceded by a colon. The §3 output, base64url encoded without padding: the URL- and filename-safe alphabet of RFC 4648 §5, all trailing equals signs omitted, no line breaks, whitespace or other characters (definition adopted from RFC 7515). A SHA-256 thumbprint is 43 characters. §6 example: SWvYr63zB-WwjGSwQhv53AFSijRKQ72oj63RZp2iU-w.'
+    layout: 'urn:ietf:params:oauth:ckt : <hash-name-string> : <base64url-digest>, with no spaces. Full §5.7 example: urn:ietf:params:oauth:ckt:sha-256:SWvYr63zB-WwjGSwQhv53AFSijRKQ72oj63RZp2iU-w (the source prints it with a line break added for readability).'
+    notes: 'This is the ONLY form in which a COSE Key Thumbprint is self-describing. It is also the only place the hash function becomes part of the identifier, which means a URI-form identifier and a bare-digest identifier for the same key are different strings with different stability properties: change H and the URI changes visibly, while a bare ckt changes silently.'

@@ -1,0 +1,103 @@
+# rfc-8392 — the CWT claim-key allocation policy, as data
+# DERIVED - not verbatim. The tiers are quoted from §9.1.1's `Claim Key` field
+# (verbatim, in schema/source-renderings.txt and in requirements.yaml R-0076 to
+# R-0079). The `cost_octets` column is NOT in RFC 8392: it was computed by this
+# extraction from RFC 8949 §3 head encodings and is marked as ours throughout.
+record: rfc-8392
+locator: "§9.1.1, the Claim Key field; §9.1's range restriction"
+reviewed_by: ""
+
+note: >-
+  WHY THIS FILE EXISTS. §9.1.1 states the four allocation policies inside a
+  prose template field, not in a table, so nothing in the document collects
+  them and nothing prices them. Pricing them is what turns "CWT has a claim
+  registry" into a number: THE ONLY POLICY-FREE RANGE IS THE MOST EXPENSIVE
+  ONE, in a format whose stated reason to exist (§1) is byte efficiency on
+  low-power radio.
+
+  Computed, not quoted: a CBOR integer head is 1 octet for 0..23 and -1..-24,
+  2 for up to +-256, 3 for up to +-65536, 5 for up to +-2^32 and 9 beyond
+  (RFC 8949 §3, major types 0 and 1). A text-string key costs 1 octet of head
+  plus its UTF-8 length for lengths up to 23.
+
+tiers:
+  - tier: 1
+    policy: "Standards Action"
+    space: "integer -256 to 255; text strings of length 1"
+    quoted: "Integer values from -256 to 255 and strings of length 1 are designated as Standards Action."
+    cost_octets:
+      integer: "1 for 0..23 and -1..-24; 2 for the rest of the range"
+      text_string: 2
+    cheapest_possible: true
+    note: >-
+      §9.1 adds a second gate on exactly this range: "Registrations for the
+      limited set of values between -256 and 255 and strings of length 1 are to
+      be restricted to claims with general applicability." So the cheap labels
+      are governed twice - by the policy and by a general-applicability test -
+      and the seven claims this document registers all sit here at 1 octet
+      each.
+  - tier: 2
+    policy: "Specification Required"
+    space: "integer -65536 to -257 and 256 to 65535; text strings of length 2"
+    quoted: "Integer values from -65536 to -257 and from 256 to 65535 along with strings of length 2 are designated as Specification Required."
+    cost_octets:
+      integer: 3
+      text_string: 3
+  - tier: 3
+    policy: "Expert Review"
+    space: "integer greater than 65535; text strings of length greater than 2"
+    quoted: "Integer values greater than 65535 and strings of length greater than 2 are designated as Expert Review."
+    cost_octets:
+      integer: "5 up to 4294967295; 9 beyond"
+      text_string: "4 for length 3, and 1 + length to length 23; 2 + length for lengths 24 to 255"
+    note: >-
+      THE ONE CELL WHERE A SUMMARY OF THIS TABLE GOES WRONG. The integer side
+      of this tier costs 5 octets, but the string side costs 4 for a
+      three-character key, so "Expert Review costs 5 bytes" is true of
+      integers only. Stated here because an earlier reading of this tier
+      flattened both sides to 5.
+
+      [correction 2026-10-20, pass 2 — verify] This cell read "4 for length 3,
+      and 1 + length thereafter". The "thereafter" was unbounded and wrong:
+      RFC 8949 §3 gives a text string a 1-octet head only up to length 23, so a
+      24-character key costs 26 octets, not 25. Re-derived by encoding lengths
+      1-25 with an independent RFC 8949 encoder gated on Appendix A. The tier's
+      own finding - that the string side is 4 where the integer side is 5 - is
+      unaffected, and the `note` at the head of this file already stated the
+      bound correctly ("for lengths up to 23"); only this cell generalised past
+      it. This is the SECOND defect found in this one row by two successive
+      passes, the first being the flattening the paragraph above records.
+  - tier: 4
+    policy: "Private Use"
+    space: "integer less than -65536"
+    quoted: "Integer values less than -65536 are marked as Private Use."
+    cost_octets:
+      integer: "5 down to -4294967296; 9 beyond"
+      text_string: "none - there is no Private Use range for text keys at all"
+    policy_free: true
+    note: >-
+      THE FINDING. This is the only range anyone may use without IETF process,
+      and it costs 5 octets against 1 for the cheapest - five times. Seven
+      claims of our own at -65537..-65543 pay 35 octets of keys against the 7
+      octets the seven registered claims pay. And there is NO TEXT-STRING
+      PRIVATE USE RANGE: a long text key is Expert Review, so "pick a URI-ish
+      label and avoid the registry" is not available either.
+
+      It is also unscoped. Two issuers that both reach for -65537 collide with
+      nothing to disambiguate them, and §3 makes the collision SILENT rather
+      than loud: "all claims that are not understood by implementations MUST
+      be ignored". A conforming verifier drops the other issuer's claim
+      instead of failing closed. design-notes.md, R-M-12.
+
+measured:
+  cheapest_claim_key_octets: 1
+  registered_claim_keys_1_to_7_octets_each: 1
+  seven_private_use_keys_total_octets: 35
+  seven_registered_keys_total_octets: 7
+  ratio_private_use_to_cheapest: 5
+  method: >-
+    Computed by this extraction from RFC 8949 §3 head encodings over the
+    boundary values of each range (-256, -25, -24, -1, 0, 23, 24, 255; -65536,
+    -257, 256, 65535; 65536, 4294967295, 4294967296; -65537, -4294967296,
+    -4294967297). Not quoted from RFC 8392, which gives no byte costs
+    anywhere.

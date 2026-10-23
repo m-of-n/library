@@ -1,0 +1,861 @@
+# =====================================================================
+# rfc-8610 messages -- for a schema LANGUAGE, the messages are its
+# syntactic constructs. Each entry below is one construct of CDDL (or,
+# where marked EDN-text, of the Extended Diagnostic Notation that
+# Appendix G defines normatively), its parts, and its concrete syntax.
+#
+# `constrained_by` is OMITTED THROUGHOUT and deliberately so. RFC 8610
+# carries two BCP 14 keyword occurrences in 125 KB, one of which is a
+# quotation of RFC 7071, so almost nothing here is constrained by a
+# requirement id; inventing ids to fill the key would be worse than
+# leaving it out (docs/extraction.md, R-O-03).
+#
+# Quoted sentences are RFC 8610's own words. Anything marked OURS is
+# this library's reading, not the document's.
+#
+# The pass-3 cross-check added `locator_join` below. It is a SECTION
+# cross-reference and nothing more: it says which requirement locators no
+# construct's locator reaches. It is NOT `constrained_by` under another
+# name, and it names no requirement as constraining any field.
+#
+# Source: RFC 8610, cached source sha256
+#   3713f2a50e23a2bea0a6147ad6c4433605a00c3d00a868bfa86a42b204997089
+# =====================================================================
+record: rfc-8610
+reviewed_by: ""
+
+# ---------------------------------------------------------------------
+# locator_join -- the only honest join between requirements.yaml and this
+# file. Not a requirement link. Added by the cross-check pass (2026-10-19).
+# ---------------------------------------------------------------------
+locator_join:
+  basis: >-
+    Each construct's `locator` and each requirement's `locator` name sections
+    of RFC 8610. Joining them by section (a requirement at §x.y.z meets any
+    construct whose locator is §x.y.z or an ancestor) puts 130 of the 139
+    requirements in requirements.yaml at a construct or at a file in
+    ../schema. The join is mechanical and carries no claim that the
+    requirement constrains the construct.
+  not_a_requirement_link: >-
+    `constrained_by` remains absent throughout, for the reason in the header.
+    A shared section number is evidence of subject, not of obligation.
+  requirements_whose_section_no_construct_reaches:
+    - 'rfc-8610#R-0001 (§1.2) -- a typographic convention of this document'
+    - 'rfc-8610#R-0002 (§1.2) -- ditto, and it is why examples/vectors.yaml keeps the source''s own double quotes around a CDDL fragment lifted from prose'
+    - 'rfc-8610#R-0003 (§1.2) -- "byte" means octet in this document'
+    - 'rfc-8610#R-0004 (§2) -- the subject is the `group` construct (§2.1)'
+    - 'rfc-8610#R-0005 (§2) -- the subject is `cddl-specification`.`root` (§2.2.4)'
+    - 'rfc-8610#R-0006 (§2) -- the subject is `type2`.`value` and the four literal constructs'
+    - 'rfc-8610#R-0043 (§3.3) -- an explicit ABSENCE (no predefined names for arrays or maps), so no construct can carry it; see ../schema/grammar-gaps.derived.txt (G-40)'
+    - 'rfc-8610#R-0044 (§3.4) -- the subject is `type2`.`array`'
+    - 'rfc-8610#R-0132 (Appendix F) -- the status of an appendix, not a construct'
+  verdict: >-
+    OURS. No requirement names a field that is missing from this file or from
+    ../schema. Four of the nine above are statements about the document rather
+    than about CDDL (R-0001..R-0003, R-0132), one is an absence (R-0043), and
+    four have a construct recorded at a finer locator than the requirement's
+    (R-0004, R-0005, R-0006, R-0044). Nothing is added to close the gap.
+
+messages:
+  - name: 'cddl-specification'
+    locator: '§2.2.4, Appendix C'
+    encoding: CDDL-text
+    fields:
+      - name: 'rules'
+        type: 'sequence of rule'
+        required: true
+        layout: 'One or more; `cddl = S 1*(rule S)`. An empty file is not a CDDL specification.'
+      - name: 'root'
+        type: 'the FIRST rule, implicitly'
+        required: true
+        layout: 'No syntax marks it: "There is no special syntax to identify the root of a CDDL data structure definition: that role is simply taken by the first rule defined in the file." It must be a TYPE: "(Note that there is no way to use a group as a root -- it must be a type.)"'
+      - name: 'prelude'
+        type: '40 rules, prepended automatically'
+        required: true
+        layout: 'Appendix D. "The following prelude is automatically added to each CDDL file. (Note that technically, it is a postlude, as it does not disturb the selection of the first rule as the root of the definition.)" It is fixed and cannot be extended.'
+    layout: 'cddl = S 1*(rule S)'
+    notes: 'The whole specification denotes ONE type: "The entire CDDL specification defines a type (the one defined by its first _rule_), which formally is the set of CBOR data items that are acceptable as "instances" for this specification." Rule order is otherwise significant only where rules contribute to one choice (Appendix C).'
+  - name: 'rule'
+    locator: '§3.1, Appendix B, Appendix C'
+    encoding: CDDL-text
+    fields:
+      - name: 'name'
+        type: 'id'
+        required: true
+        layout: 'typename or groupname, both `= id`. Case sensitive. "It is preferred style to start a name with a lowercase letter."'
+      - name: 'genericparm'
+        type: 'genericparm'
+        required: false
+        layout: '`"<" S id S *("," S id S ) ">"`, immediately after the name.'
+      - name: 'assign'
+        type: 'one of "=", "/=", "//="'
+        required: true
+        layout: '`assignt = "=" / "/="` for a type rule, `assigng = "=" / "//="` for a group rule.'
+      - name: 'rhs'
+        type: 'type (type rule) or grpent (group rule)'
+        required: true
+        layout: 'A type rule takes a full `type`; a group rule takes a single `grpent`, not a `group` -- so a bare `a = b, c` is not a rule.'
+    layout: 'rule = typename [genericparm] S assignt S type / groupname [genericparm] S assigng S grpent'
+    notes: 'DEFECT, acknowledged by the source: which of the two alternatives applies is not decided by syntax. "Note that whether the name defined by a rule stands for a type or a group isn''t always determined by syntax alone: e.g., "a = b" can make "a" a type if "b" is a type, or a group if "b" is a group." And: "this semantic processing may need to span several levels of rule definitions before a determination can be made." A plain "=" is "an error if the name was already defined with a different expression".'
+  - name: 'type-extension'
+    locator: '§2.2.2, Appendix C'
+    encoding: CDDL-text
+    fields:
+      - name: 'name'
+        type: 'typename'
+        required: true
+        layout: 'The type being extended; need not already exist.'
+      - name: 'operator'
+        type: '"/="'
+        required: true
+        layout: 'Literal.'
+      - name: 'alternative'
+        type: 'type'
+        required: true
+        layout: 'Appended to the type choice.'
+    layout: 'typename [genericparm] S "/=" S type'
+    notes: '"additional alternatives can be added to a rule later in separate rules by using "/=" and "//=", respectively, instead of "="." Order matters under PEG: "that choice is populated in the order the rules are given". "It is not an error if a name is first used with a "/=" or "//=" (there is no need to "create it" with "=")."'
+  - name: 'group-extension'
+    locator: '§2.2.2, Appendix C'
+    encoding: CDDL-text
+    fields:
+      - name: 'name'
+        type: 'groupname'
+        required: true
+        layout: 'The group being extended; need not already exist.'
+      - name: 'operator'
+        type: '"//="'
+        required: true
+        layout: 'Literal.'
+      - name: 'alternative'
+        type: 'grpent'
+        required: true
+        layout: 'Appended to the group choice.'
+    layout: 'groupname [genericparm] S "//=" S grpent'
+    notes: 'The group-choice counterpart of "/=". §3.9 makes it the mechanism for plugging a group socket, "potentially in separate files that are concatenated to build the full specification".'
+  - name: 'generic-parameters'
+    locator: '§3.10'
+    encoding: CDDL-text
+    fields:
+      - name: 'names'
+        type: 'one or more id'
+        required: true
+        layout: 'Formal parameters, comma separated, in angle brackets.'
+    layout: 'genericparm = "<" S id S *("," S id S ) ">"'
+    notes: '"Using angle brackets, the left-hand side of a rule can add formal parameters after the name being defined". "Generic rules can be used for establishing names for both types and groups."'
+  - name: 'generic-arguments'
+    locator: '§3.10'
+    encoding: CDDL-text
+    fields:
+      - name: 'args'
+        type: 'one or more type1'
+        required: true
+        layout: 'Actual arguments, comma separated. Note the production is `type1`, not `type`, so a bare type CHOICE cannot be passed without parentheses.'
+    layout: 'genericarg = "<" S type1 S *("," S type1 S ) ">"'
+    notes: '"the formal parameters are bound to the actual arguments supplied (also using angle brackets), within the scope of the generic rule (as if there were a rule of the form parameter = argument)." Nothing is said about shadowing, recursion or arity mismatch; the source concedes "there are some limitations to the nesting of generics in the CDDL tool described in Appendix F".'
+  - name: 'type-choice'
+    locator: '§2.2.2, Appendix C'
+    encoding: CDDL-text
+    fields:
+      - name: 'alternatives'
+        type: 'one or more type1'
+        required: true
+        layout: 'Separated by "/". "The entire choice construct can be put into parentheses if this is required to make the construction unambiguous."'
+    layout: 'type = type1 *(S "/" S type1)'
+    notes: 'PRIORITIZED choice, not symmetrical: "The choice uses PEG semantics as discussed in Appendix A: the first choice that matches wins." Appendix A maps CDDL "/" to PEG "/" with the remark "prioritized choice, limited to types only".'
+  - name: 'type1'
+    locator: 'Appendix B, Appendix C'
+    encoding: CDDL-text
+    fields:
+      - name: 'left'
+        type: 'type2'
+        required: true
+        layout: 'The target.'
+      - name: 'operator'
+        type: 'rangeop or ctlop'
+        required: false
+        layout: '`rangeop = "..." / ".."` or `ctlop = "." id`. At most ONE.'
+      - name: 'right'
+        type: 'type2'
+        required: false
+        layout: 'Required if and only if an operator is present.'
+    layout: 'type1 = type2 [S (rangeop / ctlop) S type2]'
+    notes: 'THE SINGLE OPERATOR SLOT. Because the bracket may be taken at most once, ranges and controls do not chain and are not associative: §3.8.6 has to write `(number .gt 0) .default 1`. Table 1 gives "..", "..." and ".ctrl" precedence 7, which implies a composition the grammar forbids. The grammar''s own comment: "; space may be needed before the operator if type2 ends in a name".'
+  - name: 'type2'
+    locator: 'Appendix B, Appendix C'
+    encoding: CDDL-text
+    fields:
+      - name: 'value'
+        type: 'value'
+        required: false
+        layout: 'A literal: "which matches only a data item with that specific value (no conversions defined)".'
+      - name: 'typename'
+        type: 'typename [genericarg]'
+        required: false
+        layout: 'A reference to a rule.'
+      - name: 'parenthesized'
+        type: '"(" S type S ")"'
+        required: false
+        layout: '"parentheses may be necessary to override some operator precedence".'
+      - name: 'map'
+        type: '"{" S group S "}"'
+        required: false
+        layout: '"matches a valid CBOR map the key/value pairs of which can be ordered in such a way that the resulting sequence matches the group expression".'
+      - name: 'array'
+        type: '"[" S group S "]"'
+        required: false
+        layout: '"matches a CBOR array the elements of which -- when taken as values and complemented by a wildcard (matches anything) key each -- match the group".'
+      - name: 'unwrap'
+        type: '"~" S typename [genericarg]'
+        required: false
+        layout: 'See the unwrap construct.'
+      - name: 'enumeration'
+        type: '"&" S "(" S group S ")" / "&" S groupname [genericarg]'
+        required: false
+        layout: 'See the enumeration construct.'
+      - name: 'tagged'
+        type: '"#" "6" ["." uint] "(" S type S ")"'
+        required: false
+        layout: '"a tagged data item, tagged with the "uint" given and containing the type given as the tagged value".'
+      - name: 'major_type'
+        type: '"#" DIGIT ["." uint]'
+        required: false
+        layout: '"a data item of a major type (given by the DIGIT), optionally constrained to the additional information given by the uint".'
+      - name: 'any'
+        type: '"#"'
+        required: false
+        layout: '"any data item". Appendix A: "The DOT (".") from PEG is replaced by the unadorned "#" or its alias "any"."'
+    layout: 'type2 = value / typename [genericarg] / "(" S type S ")" / "{" S group S "}" / "[" S group S "]" / "~" S typename [genericarg] / "&" S "(" S group S ")" / "&" S groupname [genericarg] / "#" "6" ["." uint] "(" S type S ")" / "#" DIGIT ["." uint] / "#"'
+    notes: 'The ten alternatives are a PRIORITIZED choice: the "#" forms must be tried longest-first, which is why `"#" "6" ...` precedes `"#" DIGIT ...` precedes `"#"`. The fields above are the alternatives, not co-occurring parts -- exactly one applies.'
+  - name: 'range'
+    locator: '§2.2.2.1'
+    encoding: CDDL-text
+    fields:
+      - name: 'lower'
+        type: 'a value or a name denoting one'
+        required: true
+        layout: 'Always included in the matching set.'
+      - name: 'operator'
+        type: '".." (inclusive) or "..." (upper-exclusive)'
+        required: true
+        layout: '"A range can be inclusive of both bounds given (denoted by joining two values by ".."), or it can include the lower bound and exclude the upper bound (denoted by instead using "...")."'
+      - name: 'upper'
+        type: 'a value or a name denoting one'
+        required: true
+        layout: 'Included for "..", excluded for "...".'
+    layout: 'rangeop = "..." / ".."   (inside type1: type2 S rangeop S type2)'
+    notes: 'SIDE CONDITIONS THE GRAMMAR DOES NOT CARRY: both bounds must be integers or both floating-point ("BAD-range1 = 0..10.0 ; NOT DEFINED"); an inverted range is the empty set, not an error ("this behavior can be desirable when generics (Section 3.10) are being used"); and because "." continues a name, "min..max" lexes as ONE identifier, not a range.'
+  - name: 'control'
+    locator: '§3.8'
+    encoding: CDDL-text
+    fields:
+      - name: 'target'
+        type: 'type2'
+        required: true
+        layout: 'The type being controlled. "Note that _target_ or _controller_ might need to be parenthesized."'
+      - name: 'operator'
+        type: 'ctlop'
+        required: true
+        layout: '`ctlop = "." id` -- "special identifiers prefixed by a dot".'
+      - name: 'controller'
+        type: 'type2'
+        required: true
+        layout: 'The controlling type, read per-operator.'
+    layout: 'target .control-operator controller'
+    notes: 'The extension point of the language: "Note that CDDL uses controls as its main extension point." Which operators exist, and what target and controller each admits, is prose only -- `ctlop = "." id` would accept `.nonsense`. The fourteen defined operators are the next construct; their matching rules are held as schema/control-operators.derived.yaml.'
+  - name: 'control-operator'
+    locator: '§3.8.1-§3.8.6, §6.1'
+    encoding: CDDL-text
+    fields:
+      - name: '.size'
+        type: 'uint or a range of uints'
+        required: false
+        layout: 'Target: text string, byte string or uint. For strings, "it directly controls the number of bytes in the string"; for a uint, "uint .size N" is equivalent to "0...BYTES_N", where BYTES_N == 256**N". Not a representation constraint.'
+      - name: '.bits'
+        type: 'a type of bit numbers'
+        required: false
+        layout: 'Target: byte string or uint. "only the bits numbered by a number in the control type are allowed to be set. (Bits are counted the usual way, bit number "n" being set in "str" meaning that "(str[n >> 3] & (1 << (n & 7))) != 0".)" Says nothing about length.'
+      - name: '.regexp'
+        type: 'a text string value (an XSD regular expression)'
+        required: false
+        layout: 'Target: text string. "needs to match the XML Schema Definition (XSD) regular expression given as a value in the control type". Carries the document''s only own BCP 14 keyword (§3.8.3.1, SHOULD identify which Unicode versions are addressed).'
+      - name: '.cbor'
+        type: 'any type'
+        required: false
+        layout: 'Target: byte string. "the byte string carries a CBOR-encoded data item. Decoded, the data item matches the type given as the right-hand-side argument".'
+      - name: '.cborseq'
+        type: 'a type an array can match'
+        required: false
+        layout: 'Target: byte string. "the byte string carries a sequence of CBOR-encoded data items. When the data items are taken as an array, the array matches the type given".'
+      - name: '.within'
+        type: 'any type'
+        required: false
+        layout: 'Intersection, plus the INTENT that the target is a subset: "a tool might flag an error if type1 allows data items that are not allowed by type2".'
+      - name: '.and'
+        type: 'any type'
+        required: false
+        layout: '"the data item matches both the left-hand-side type and the type given as the right-hand side. (Formally, the resulting type is the intersection of the two types given.)"'
+      - name: '.lt'
+        type: 'a type containing just a single value'
+        required: false
+        layout: 'Numeric types only. Target less than the value.'
+      - name: '.le'
+        type: 'a type containing just a single value'
+        required: false
+        layout: 'Numeric types only. Target less than or equal.'
+      - name: '.gt'
+        type: 'a type containing just a single value'
+        required: false
+        layout: 'Numeric types only. Target greater than.'
+      - name: '.ge'
+        type: 'a type containing just a single value'
+        required: false
+        layout: 'Numeric types only. Target greater than or equal.'
+      - name: '.eq'
+        type: 'a type containing just a single value'
+        required: false
+        layout: 'Numeric and non-numeric. Text and byte strings equal if "bytewise identical"; arrays if "the same number of elements, all of which are equal pairwise in order"; maps if "the same number of key/value pairs, and there is pairwise equality between the key/value pairs"; tagged values if "they both have the same tag and the values are equal"; "All other cases are not equal (e.g., comparing a text string with a byte string)."'
+      - name: '.ne'
+        type: 'a type containing just a single value'
+        required: false
+        layout: 'The negation of .eq under the same equality rules.'
+      - name: '.default'
+        type: 'a type containing just the default value'
+        required: false
+        layout: 'A variant of .ne: "the implied .ne control is there to prevent this value from being sent over the wire. This control is only meaningful when the control type is used in an optional context".'
+    layout: 'All fourteen appear as `ctlop = "." id`; none has dedicated syntax.'
+    notes: 'Exactly these fourteen are defined and are the initial contents of the IANA "CDDL Control Operators" registry (§6.1); "All other control operator names are Unassigned." Registration policy: "Specification Required" (Expert Review) for a name with no internal dot, "IETF Review" for one with an internal dot, with the reviewer instructed that "other Standards Development Organizations (SDOs) may want to define control operators that are specific to their fields". The fields above are alternatives, not co-occurring parts: a type1 admits at most one.'
+  - name: 'enumeration-from-group'
+    locator: '§2.2.2.2, Appendix C'
+    encoding: CDDL-text
+    fields:
+      - name: 'operator'
+        type: '"&"'
+        required: true
+        layout: 'Prefix.'
+      - name: 'group'
+        type: 'a parenthesized group or a groupname [genericarg]'
+        required: true
+        layout: 'The grammar admits only these two forms, not an arbitrary type.'
+    layout: 'type2 = "&" S "(" S group S ")" / "&" S groupname [genericarg]'
+    notes: '"Instead of naming each of these integers and then accumulating them into a choice, CDDL allows building a choice from a group by prefixing it with an "&" character." It "matches any value that is within the set of values that the values of the group given can take" -- so the group''s entries must HAVE values. "the member names have only documentary value (in particular, they might be used by a tool when displaying integers that are taken from that choice)." Unrelated to PEG''s AND predicate, which CDDL does not have.'
+  - name: 'unwrap'
+    locator: '§3.7, Appendix C'
+    encoding: CDDL-text
+    fields:
+      - name: 'operator'
+        type: '"~"'
+        required: true
+        layout: 'Prefix, "which suggested the thread-like "~" character".'
+      - name: 'typename'
+        type: 'typename [genericarg]'
+        required: true
+        layout: 'Must name a map, an array or a tag type; the grammar does not check that.'
+    layout: 'type2 = "~" S typename [genericarg]'
+    notes: '"The "unwrap" operator [...] can be used to strip the type defined for a name by one layer, exposing the underlying group (for maps and arrays) or type (for tags)." Omitting it nests instead of splicing: "leaving out the first unwrap operator in the latter example would lead to nesting the basic-header in its own array inside the advanced-header". "This can be used for various applications often solved by inheritance in programming languages."'
+  - name: 'representation-type'
+    locator: '§2.2.3, §3.6'
+    encoding: CDDL-text
+    fields:
+      - name: 'hash'
+        type: '"#"'
+        required: true
+        layout: 'Alone it is "any data item"; the prelude names it `any = #`.'
+      - name: 'major_type'
+        type: 'DIGIT (0-7)'
+        required: false
+        layout: '"a hash mark ("#") optionally followed by a number from 0 to 7 identifying the major type".'
+      - name: 'additional_information'
+        type: '"." uint'
+        required: false
+        layout: '"which then can be followed by a dot and a number specifying the additional information".'
+      - name: 'tagged_type'
+        type: '"(" S type S ")"'
+        required: false
+        layout: 'Only after `#6[.uint]`: "Where a major type of 6 (Tag) is used, the type of the tagged item can be specified by appending it in parentheses."'
+    layout: '"#" / "#" DIGIT ["." uint] / "#" "6" ["." uint] "(" S type S ")"'
+    notes: 'TERMINOLOGICAL DEFECT, ours: §2.2.3 calls the number after the dot "the additional information", which is true for `#7.25` but not for a tag -- in `#6.55799` the 55799 is a TAG NUMBER, which does not fit in additional information at all. Appendix C repeats the loose wording. The crucial semantic caveat is the source''s own: ""#7.25" specifies the set of values that can be represented as half-precision floats; it does not mandate that these values also do have to be serialized as half-precision floats: CDDL does not provide any language means to restrict the choice of serialization variants."'
+  - name: 'group'
+    locator: '§2.1, Appendix C'
+    encoding: CDDL-text
+    fields:
+      - name: 'choices'
+        type: 'one or more grpchoice'
+        required: true
+        layout: 'Separated by "//".'
+    layout: 'group = grpchoice *(S "//" S grpchoice)'
+    notes: '"A group matches any sequence of key/value pairs that matches any of the choices given (again using PEG semantics)." §2.2.2: "A group choice matches the union of the sets of name/value pair sequences that the alternatives in the choice can." "//" binds more weakly than every other operator (Table 1, precedence 2).'
+  - name: 'group-choice'
+    locator: '§2.1, Appendix C'
+    encoding: CDDL-text
+    fields:
+      - name: 'entries'
+        type: 'zero or more grpent, each followed by an optcom'
+        required: true
+        layout: '`grpchoice = *(grpent optcom)` -- note the "*": an EMPTY alternative is grammatical.'
+    layout: 'grpchoice = *(grpent optcom)'
+    notes: '"Each of the component groups is given as a sequence of group entries. For a match, the sequence of key/value pairs given needs to match the sequence of group entries in the sequence given." In an array context the order is load-bearing; in a map context it is not, "(but there is still a need to write down group entries in a sequence)".'
+  - name: 'group-entry'
+    locator: '§2.1.2, Appendix C'
+    encoding: CDDL-text
+    fields:
+      - name: 'occur'
+        type: 'occur'
+        required: false
+        layout: 'Occurrence indicator, in front. Default is exactly once.'
+      - name: 'memberkey'
+        type: 'memberkey'
+        required: false
+        layout: 'Absent is legal and meaningful: "If the memberkey is not given, the entry can only be used for matching arrays, not for maps."'
+      - name: 'value'
+        type: 'type'
+        required: true
+        layout: 'The value type, "which needs to be matched by the value part of a single element".'
+      - name: 'named_group'
+        type: 'groupname [genericarg]'
+        required: false
+        layout: 'Alternative form: the entry is a reference to a named group, spliced in, not nested.'
+      - name: 'parenthesized_group'
+        type: '"(" S group S ")"'
+        required: false
+        layout: 'Alternative form: an inline group, "again with a possible occurrence indicator".'
+    layout: 'grpent = [occur S] [memberkey S] type / [occur S] groupname [genericarg] / [occur S] "(" S group S ")"'
+    notes: 'THE GRAMMAR FLAGS ITS OWN REDUNDANCY: the second alternative carries the comment "; preempted by above", because `type` already admits a typename. OURS: the third is preempted the same way whenever the parenthesised content is also a valid `type`. "A basic entry consists of a _keytype_ and a _valuetype_, both of which are types (Section 2.2); this entry matches any name/value pair the name of which is in the keytype and the value of which is in the valuetype."'
+  - name: 'member-key'
+    locator: '§3.5.1, §3.5.4, Appendix C'
+    encoding: CDDL-text
+    fields:
+      - name: 'key_type'
+        type: 'type1'
+        required: false
+        layout: 'Arrow form only: any type as the key type.'
+      - name: 'cut'
+        type: '"^"'
+        required: false
+        layout: 'Arrow form only, between key type and arrow. "once the member key matches the name part of an entry that carries a cut, other potential matches for the key of the member that occur in later entries in the group of the map are no longer allowed."'
+      - name: 'arrow'
+        type: '"=>"'
+        required: false
+        layout: 'Read "keytype maps to valuetype".'
+      - name: 'bareword'
+        type: 'id'
+        required: false
+        layout: 'Colon form: "an identifier that is followed by a colon can be directly used as the text string for a member key". "Rule names (types or groups) do not appear in the actual CBOR encoding, but names used as "barewords" in member keys do."'
+      - name: 'literal'
+        type: 'value'
+        required: false
+        layout: 'Colon form: "as can a double-quoted string or a number".'
+      - name: 'colon'
+        type: '":"'
+        required: false
+        layout: 'IMPLIES A CUT. "the ":" shortcut is actually defined to include the cut semantics."'
+    layout: 'memberkey = type1 S ["^" S] "=>" / bareword S ":" / value S ":"'
+    notes: 'Three forms, and an expressiveness hole, ours: "^" is available only on the arrow form and the colon always carries a cut, so CDDL can write arrow-without-cut, arrow-with-cut and colon-with-cut but NOT colon-without-cut. "the double arrow is necessary if a type is named by an identifier (which, when followed by a colon, would be interpreted as a "bareword" and turned into a text string)." Appendix C: "A bareword is an alternative way to write a type with a single text string value; it can only be used in the syntactic context given above."'
+  - name: 'occurrence-indicator'
+    locator: '§3.2, Appendix C'
+    encoding: CDDL-text
+    fields:
+      - name: 'lower'
+        type: 'uint'
+        required: false
+        layout: 'In the n*m form; "n is the lower limit (default 0)".'
+      - name: 'star'
+        type: '"*"'
+        required: false
+        layout: 'Zero or more, or the separator of the n*m form.'
+      - name: 'upper'
+        type: 'uint'
+        required: false
+        layout: 'In the n*m form; "m is the [...] upper limit (default no limit)".'
+      - name: 'plus'
+        type: '"+"'
+        required: false
+        layout: 'One or more.'
+      - name: 'question'
+        type: '"?"'
+        required: false
+        layout: 'Optional -- zero or one.'
+    layout: 'occur = [uint] "*" [uint] / "+" / "?"'
+    notes: '"If no occurrence indicator is specified, the group entry is to occur exactly once (as if 1*1 were specified)." Appendix C reads it as an infinite group choice: "it acts as a (possibly infinite) group choice that contains choices with the group repeated each of the occurrences times." Greedy, per Appendix A: "*a a" can never match. In a map with a fixed key an occurrence above one collapses: "due to the restrictions imposed by the data model, the third line pretty much turns into: ? bedroom: size". Note `uint` admits 0x and 0b, so `0x2*0x4 person` is grammatical.'
+  - name: 'optional-comma'
+    locator: '§2.1.2, Appendix B, Appendix C'
+    encoding: CDDL-text
+    fields:
+      - name: 'comma'
+        type: '","'
+        required: false
+        layout: 'Optional everywhere, including after the final entry.'
+    layout: 'optcom = S ["," S]'
+    notes: '"The comma is actually optional (not just in the final entry), but it is considered good style to set it." Appendix C: "(Optional commas do not influence the matching.)" Appendix A: "sequence, comma is decoration only". DEFECT, ours: Table 1 nonetheless lists "," as a binary operator on groups with arity 2 and precedence 3. Appendix H''s compact example omits every comma.'
+  - name: 'type-socket'
+    locator: '§3.9'
+    encoding: CDDL-text
+    fields:
+      - name: 'name'
+        type: 'id beginning with a single "$"'
+        required: true
+        layout: '"Names that start with a single "$" are "type sockets", starting out as an empty type, and intended to be extended via "/="."'
+      - name: 'plugs'
+        type: 'zero or more "/=" rules for the same name'
+        required: false
+        layout: '"As a convention, all definitions (plugs) for socket names must be augmentations".'
+    layout: '$name used as a type; $name /= <type> elsewhere'
+    notes: 'CONVENTION, NOT GRAMMAR: "Per convention, CDDL extension points are marked with a leading dollar sign (types) or two leading dollar signs (groups). Tools honor that convention by not raising an error if such a type or group is not defined at all; the symbol is then taken to be an empty type choice (group choice), i.e., no choice is available." `id` admits "$" like any other character, so nothing stops `$foo = 1`.'
+  - name: 'group-socket'
+    locator: '§3.9'
+    encoding: CDDL-text
+    fields:
+      - name: 'name'
+        type: 'id beginning with "$$"'
+        required: true
+        layout: '"Names that start with a double "$$" are "group sockets", starting out as an empty group choice, and intended to be extended via "//="."'
+      - name: 'plugs'
+        type: 'zero or more "//=" rules for the same name'
+        required: false
+        layout: 'Each plug is one alternative of the group choice.'
+    layout: '* $$name inside a group; $$name //= ( ... ) elsewhere'
+    notes: '"In either case, it is not an error if there is no definition for a socket at all; this then means there is no way to satisfy the rule (i.e., the choice is empty)." The mechanism exists for files: "potentially in separate files that are concatenated to build the full specification". Figure 12 replaces Figure 7''s untyped `* tstr => any` wildcard with a socket, which closes the map to unknown keys again.'
+  - name: 'name'
+    locator: '§3.1, Appendix B'
+    encoding: CDDL-text
+    fields:
+      - name: 'first_character'
+        type: 'EALPHA = ALPHA / "@" / "_" / "$"'
+        required: true
+        layout: '"starting with an alphabetic character (including "@", "_", "$")".'
+      - name: 'continuation'
+        type: 'runs of "-" / "." followed by EALPHA or DIGIT'
+        required: false
+        layout: '`id = EALPHA *(*("-" / ".") (EALPHA / DIGIT))` -- so a name may not END in "-" or "."; "ending in such a character or a digit".'
+    layout: 'id = EALPHA *(*("-" / ".") (EALPHA / DIGIT))'
+    notes: '"Names are case sensitive." Style, not syntax: "The hyphen is preferred over the underscore (except in a "bareword" (Section 3.5.1), where the semantics may actually require an underscore). The period may be useful for larger specifications, to express some module structure (as in "tcp.throughput" vs. "udp.throughput")." The dot is the lexical trap behind "min..max".'
+  - name: 'integer-literal'
+    locator: '§2.2.1, Appendix B'
+    encoding: CDDL-text
+    fields:
+      - name: 'sign'
+        type: '"-"'
+        required: false
+        layout: '`int = ["-"] uint`.'
+      - name: 'digits'
+        type: 'uint'
+        required: true
+        layout: '`uint = DIGIT1 *DIGIT / "0x" 1*HEXDIG / "0b" 1*BINDIG / "0"` -- decimal with no leading zero, hex, binary, or the bare zero.'
+    layout: 'int = ["-"] uint'
+    notes: '"The value notation is based on the C language, but does not offer all the syntactic variations". An integer literal is a type of ONE value and is DISJOINT from the float literals: "the type "1" does not include any floating-point numbers". The four uint alternatives are ordered so that the lone "0" comes last -- Appendix A cites exactly this as how the grammar was made safe to read as a PEG. Hex and binary prefixes are case insensitive because they are ABNF quoted strings.'
+  - name: 'float-literal'
+    locator: '§2.2.1, Appendix B'
+    encoding: CDDL-text
+    fields:
+      - name: 'integer_part'
+        type: 'int'
+        required: true
+        layout: 'Including an optional sign.'
+      - name: 'fraction'
+        type: '"." 1*DIGIT'
+        required: false
+        layout: 'Presence of either this or the exponent makes it a float.'
+      - name: 'exponent'
+        type: '"e" ["+"/"-"] 1*DIGIT'
+        required: false
+        layout: 'Case insensitive ("e" is an ABNF quoted string).'
+    layout: 'number = hexfloat / (int ["." fraction] ["e" exponent ])   ; fraction = 1*DIGIT ; exponent = ["+"/"-"] 1*DIGIT'
+    notes: 'The grammar carries the type distinction only as a comment: "; This is a float if it has fraction or exponent; int otherwise". So `1e3` and `1.5` "are both floating-point numbers and do not include any integer numbers", following ISO 6093 NR1 / NR2 / NR3. Appendix E notes this reads differently against JSON, where 10, 10.0, 1e1, 1.0e1 and 100e-1 all match "uint".'
+  - name: 'hexfloat-literal'
+    locator: 'Appendix B, Appendix G.5'
+    encoding: CDDL-text
+    fields:
+      - name: 'sign'
+        type: '"-"'
+        required: false
+        layout: 'Optional.'
+      - name: 'prefix'
+        type: '"0x"'
+        required: true
+        layout: 'Case insensitive.'
+      - name: 'mantissa'
+        type: '1*HEXDIG ["." 1*HEXDIG]'
+        required: true
+        layout: 'Hexadecimal digits with an optional hexadecimal fraction.'
+      - name: 'exponent'
+        type: '"p" exponent'
+        required: true
+        layout: 'MANDATORY -- `hexfloat = ["-"] "0x" 1*HEXDIG ["." 1*HEXDIG] "p" exponent`, a binary exponent in decimal.'
+    layout: 'hexfloat = ["-"] "0x" 1*HEXDIG ["." 1*HEXDIG] "p" exponent'
+    notes: 'Tried FIRST in `number`, which it must be: otherwise `0x18p-4` would lex as the hex integer 0x18 followed by junk. Appendix G.5 gives the equivalences 1.5 = 0x1.8p0 = 0x18p-4. The "p" is an ABNF quoted string and therefore case insensitive.'
+  - name: 'text-string-literal'
+    locator: '§3.1, Appendix B'
+    encoding: CDDL-text
+    fields:
+      - name: 'open'
+        type: '%x22 (")'
+        required: true
+        layout: 'Double quotation mark.'
+      - name: 'chars'
+        type: '*SCHAR'
+        required: true
+        layout: '`SCHAR = %x20-21 / %x23-5B / %x5D-7E / %x80-10FFFD / SESC` -- excludes the quote, the backslash, every control character AND %x7F; does NOT admit a line break.'
+      - name: 'escape'
+        type: 'SESC'
+        required: false
+        layout: '`SESC = "\" (%x20-7E / %x80-10FFFD)` -- a backslash before ANY printable character.'
+      - name: 'close'
+        type: '%x22'
+        required: true
+        layout: 'Double quotation mark.'
+    layout: 'text = %x22 *SCHAR %x22'
+    notes: '"They follow the conventions for strings as defined in Section 7 of [RFC8259]" -- a side condition the grammar does not carry: SESC admits escapes JSON does not define and does not require \u to be followed by four hex digits. "(ABNF users may want to note that there is no support in CDDL for the concept of case insensitivity in text strings; if necessary, regular expressions can be used (Section 3.8.3).)" DEFECT, ours: %x80-10FFFD spans the surrogate range U+D800-U+DFFF, which cannot be encoded in the UTF-8 that §3.1 mandates.'
+  - name: 'byte-string-literal'
+    locator: '§3.1, Appendix B'
+    encoding: CDDL-text
+    fields:
+      - name: 'prefix'
+        type: 'bsqual'
+        required: false
+        layout: '`bsqual = "h" / "b64"`. Unprefixed: "the string is interpreted as with a text string, except that single quotes must be escaped and that the resulting UTF-8 bytes are marked as a byte string (major type 2)".'
+      - name: 'open'
+        type: '%x27 ('')'
+        required: true
+        layout: 'Single quotation mark.'
+      - name: 'chars'
+        type: '*BCHAR'
+        required: true
+        layout: '`BCHAR = %x20-26 / %x28-5B / %x5D-10FFFD / SESC / CRLF` -- excludes the single quote and the backslash, but ADMITS %x7F and a line break, both of which SCHAR excludes.'
+      - name: 'close'
+        type: '%x27'
+        required: true
+        layout: 'Single quotation mark.'
+    layout: 'bytes = [bsqual] %x27 *BCHAR %x27'
+    notes: '"If prefixed as "h" or "b64", the string is interpreted as a sequence of pairs of hex digits (base16 [...]) or a base64(url) string [...] respectively (as with the diagnostic notation in Section 6 of [RFC7049]; cf. Appendix G.2); any whitespace present within the string (including comments) is ignored in the prefixed case." The grammar deliberately stops there: "Note that this ABNF does not attempt to reflect the detailed rules of what can be in a prefixed byte string." Appendix G.2 lists FOUR EDN prefixes -- h, b32, h32, b64 -- where CDDL admits two.'
+  - name: 'comment'
+    locator: '§3.1, Appendix B'
+    encoding: CDDL-text
+    fields:
+      - name: 'semicolon'
+        type: '";"'
+        required: true
+        layout: 'Opens the comment.'
+      - name: 'text'
+        type: '*PCHAR'
+        required: true
+        layout: '`PCHAR = %x20-7E / %x80-10FFFD` -- printable, excluding %x7F.'
+      - name: 'terminator'
+        type: 'CRLF'
+        required: true
+        layout: 'REQUIRED by the grammar: `COMMENT = ";" *PCHAR CRLF`, with `CRLF = %x0A / %x0D.0A`.'
+    layout: 'COMMENT = ";" *PCHAR CRLF'
+    notes: '"Comments are started by a ";" (semicolon) character and finish at the end of a line (LF or CRLF)." A comment is WHITESPACE (`NL = COMMENT / CRLF`), so it may appear anywhere whitespace may, including inside a prefixed byte string. DEFECT, ours: because CRLF is mandatory, a comment on the last line of a file with no trailing newline does not parse. Note too that EDN (Appendix G.6) uses an entirely different comment syntax -- paired slashes.'
+  - name: 'whitespace'
+    locator: '§3.1, Appendix B'
+    encoding: CDDL-text
+    fields:
+      - name: 'space'
+        type: 'SP = %x20'
+        required: true
+        layout: 'The ONLY horizontal whitespace. There is no HTAB in CDDL.'
+      - name: 'newline'
+        type: 'NL = COMMENT / CRLF'
+        required: true
+        layout: '`CRLF = %x0A / %x0D.0A` -- a bare LF is accepted.'
+      - name: 'run'
+        type: 'S = *WS, WS = SP / NL'
+        required: true
+        layout: 'Zero or more, admissible at every S in the grammar.'
+    layout: 'S = *WS ; WS = SP / NL ; SP = %x20 ; NL = COMMENT / CRLF ; CRLF = %x0A / %x0D.0A'
+    notes: '"Except within strings, whitespace (spaces, newlines, and comments) is used to separate syntactic elements for readability (and to separate identifiers, range operators, or numbers that follow each other); it is otherwise completely optional." TWO DEFECTS, ours: (1) `CRLF` is REDEFINED relative to RFC 5234, where CRLF is %x0D %x0A only, while ALPHA, DIGIT, HEXDIG and SP are redefined identically -- a reader who assumes the core rules are merely restated gets CRLF wrong; (2) no horizontal tab is admitted anywhere, not even inside a text string, and the document never says so.'
+  - name: 'prelude'
+    locator: 'Appendix D (Figure 14)'
+    encoding: CDDL-text
+    fields:
+      - name: 'any'
+        type: '#'
+        required: true
+        layout: 'Any data item.'
+      - name: 'uint / nint / int'
+        type: '#0 / #1 / uint / nint'
+        required: true
+        layout: 'Major types 0 and 1 and their choice.'
+      - name: 'bstr / bytes'
+        type: '#2 / bstr'
+        required: true
+        layout: 'Byte string, under two names.'
+      - name: 'tstr / text'
+        type: '#3 / tstr'
+        required: true
+        layout: 'Text string, under two names.'
+      - name: 'tdate'
+        type: '#6.0(tstr)'
+        required: true
+        layout: 'RFC 7049 tag 0, a text date.'
+      - name: 'time'
+        type: '#6.1(number)'
+        required: true
+        layout: 'Tag 1, epoch time.'
+      - name: 'number'
+        type: 'int / float'
+        required: true
+        layout: 'Any CBOR number.'
+      - name: 'biguint / bignint / bigint'
+        type: '#6.2(bstr) / #6.3(bstr) / biguint / bignint'
+        required: true
+        layout: 'Tags 2 and 3, the bignums.'
+      - name: 'integer / unsigned'
+        type: 'int / bigint ; uint / biguint'
+        required: true
+        layout: 'Bignum-widened integer types.'
+      - name: 'decfrac / bigfloat'
+        type: '#6.4([e10: int, m: integer]) / #6.5([e2: int, m: integer])'
+        required: true
+        layout: 'Tags 4 and 5.'
+      - name: 'eb64url / eb64legacy / eb16'
+        type: '#6.21(any) / #6.22(any) / #6.23(any)'
+        required: true
+        layout: 'Tags 21-23, expected encodings.'
+      - name: 'encoded-cbor'
+        type: '#6.24(bstr)'
+        required: true
+        layout: 'Tag 24.'
+      - name: 'uri / b64url / b64legacy / regexp / mime-message'
+        type: '#6.32(tstr) / #6.33(tstr) / #6.34(tstr) / #6.35(tstr) / #6.36(tstr)'
+        required: true
+        layout: 'Tags 32-36.'
+      - name: 'cbor-any'
+        type: '#6.55799(any)'
+        required: true
+        layout: 'Tag 55799, the self-describe tag.'
+      - name: 'float16 / float32 / float64'
+        type: '#7.25 / #7.26 / #7.27'
+        required: true
+        layout: 'Major type 7 floats by additional information.'
+      - name: 'float16-32 / float32-64 / float'
+        type: 'float16 / float32 ; float32 / float64 ; float16-32 / float64'
+        required: true
+        layout: 'Float choices. Note `float` is float16-32 / float64, so all three widths.'
+      - name: 'false / true / bool'
+        type: '#7.20 / #7.21 / false / true'
+        required: true
+        layout: 'Simple values 20 and 21.'
+      - name: 'nil / null'
+        type: '#7.22 / nil'
+        required: true
+        layout: 'Simple value 22, under two names.'
+      - name: 'undefined'
+        type: '#7.23'
+        required: true
+        layout: 'Simple value 23. Dropped from the JSON subset.'
+    layout: '40 rules, automatically prepended (technically appended) to every CDDL file.'
+    notes: '"Note that the prelude is deemed to be fixed. This means, for instance, that additional tags beyond those defined in [RFC7049], as registered, need to be defined in each CDDL file that is using them." And the stumbling point it names itself: "the prelude does not define a type "string". CBOR has byte strings ("bytes" in the prelude) and text strings ("text"), so a type that is simply called "string" would be ambiguous." Held verbatim as schema/prelude.cddl; the 40 rules are grouped above, not listed one per field.'
+  - name: 'prelude-json-subset'
+    locator: 'Appendix E (Figure 15)'
+    encoding: CDDL-text
+    fields:
+      - name: 'retained'
+        type: '18 of the prelude''s 40 rules'
+        required: true
+        layout: 'any, uint, nint, int, tstr, text, number, float16, float32, float64, float16-32, float32-64, float, false, true, bool, nil, null.'
+      - name: 'dropped'
+        type: '22 rules'
+        required: true
+        layout: 'bstr, bytes, undefined and every tag type: tdate, time, biguint, bignint, bigint, integer, unsigned, decfrac, bigfloat, eb64url, eb64legacy, eb16, encoded-cbor, uri, b64url, b64legacy, regexp, mime-message, cbor-any.'
+    layout: 'The prelude "limited" to what the JSON generic data model can carry.'
+    notes: '"The JSON generic data model (implicit in [RFC8259]) is a subset of the generic data model of CBOR. So, one can use CDDL with JSON by limiting oneself to what can be represented in JSON. Roughly speaking, this means leaving out byte strings, tags, and simple values other than "false", "true", and "null"." COUNTS ARE OURS, computed from the two figures. The figure keeps the major-type notation even though "The major types given here do not have a direct meaning in JSON".'
+  - name: 'edn-prefixed-byte-string'
+    locator: 'Appendix G.1, Appendix G.2'
+    encoding: EDN-text
+    fields:
+      - name: 'prefix'
+        type: 'h, b32, h32 or b64'
+        required: true
+        layout: '"prefixed by >h< for base16, >b32< for base32, >h32< for base32hex, or >b64< for base64 or base64url". WIDER than CDDL''s own `bsqual = "h" / "b64"`.'
+      - name: 'body'
+        type: 'base-encoded digits with free whitespace'
+        required: true
+        layout: '"In EDN, whitespace is ignored in prefixed byte strings" -- including across line breaks and mid-byte.'
+    layout: 'h''48 65 6c 6c 6f 20 77 6f 72 6c 64'''
+    notes: 'Appendix G is NORMATIVE and defines Extended Diagnostic Notation, which writes CBOR data items down rather than specifying them. "(Standardizing this together with the actual interchange format does not serve to create another interchange format but enables the use of a shared diagnostic notation in tools for and documents about CBOR.)"'
+  - name: 'edn-text-byte-string'
+    locator: 'Appendix G.2'
+    encoding: EDN-text
+    fields:
+      - name: 'quotes'
+        type: 'unprefixed single quotes'
+        required: true
+        layout: '"EDN allows the use of single quotes without a prefix to express byte strings with UTF-8 text".'
+      - name: 'escapes'
+        type: 'JSON string escaping'
+        required: true
+        layout: '"The escaping rules of JSON strings are applied equivalently for text-based byte strings, e.g., "\" stands for a single backslash and "''" stands for a single quote."'
+      - name: 'whitespace'
+        type: 'literal'
+        required: true
+        layout: '"Whitespace is included literally, i.e., the previous section does not apply to text-based byte strings."'
+    layout: '''hello world''  ==  h''68656c6c6f20776f726c64'''
+    notes: 'The same unprefixed form CDDL itself admits (§3.1: "If unprefixed, the string is interpreted as with a text string, except that single quotes must be escaped and that the resulting UTF-8 bytes are marked as a byte string (major type 2)"), with EDN''s escaping spelled out.'
+  - name: 'edn-embedded-cbor'
+    locator: 'Appendix G.3'
+    encoding: EDN-text
+    fields:
+      - name: 'open'
+        type: '"<<"'
+        required: true
+        layout: 'Opens the embedded sequence.'
+      - name: 'items'
+        type: 'zero or more data items, comma separated'
+        required: true
+        layout: '"the diagnostic notation for these zero or more CBOR data items, separated by commas".'
+      - name: 'close'
+        type: '">>"'
+        required: true
+        layout: 'Closes it.'
+    layout: '<<1, 2>>  ==  h''0102'''
+    notes: '"can be enclosed in << and >> to notate the byte string resulting from encoding the data items and concatenating the result." The notation EDN needs to write down what `.cbor` and `.cborseq` describe.'
+  - name: 'edn-string-concatenation'
+    locator: 'Appendix G.4'
+    encoding: EDN-text
+    fields:
+      - name: 'parts'
+        type: 'two or more string literals separated by whitespace'
+        required: true
+        layout: '"allowing multiple text strings or multiple byte strings to be notated separated by whitespace; these are then concatenated into a single text or byte string, respectively".'
+      - name: 'mixing'
+        type: 'byte string literals inside a text concatenation'
+        required: false
+        layout: '"Text strings and byte strings do not mix within such a concatenation, except that byte string notation can be used inside a sequence of concatenated text string notation to encode characters that may be better represented in an encoded way."'
+    layout: '"Hello" h''20'' "world"  ==  "Hello world"'
+    notes: 'Exists because of a CDDL lexical fact: BCHAR admits CRLF and SCHAR does not, so a byte string literal may span lines and a text string literal may not -- "a mechanism is needed to be able to include text strings as well as byte strings in direct UTF-8 representation into line-based documents (such as RFCs and source code)." The trap is the source''s own: "(Note that the approach of separating by whitespace, while familiar from the C language, requires some attention -- a single comma makes a big difference here.)"'
+  - name: 'edn-radix-number'
+    locator: 'Appendix G.5'
+    encoding: EDN-text
+    fields:
+      - name: 'hexadecimal'
+        type: '"0x" prefix'
+        required: true
+        layout: 'As in C.'
+      - name: 'octal'
+        type: '"0o" prefix'
+        required: true
+        layout: '"octal with 0o prefix present only" -- and NOT admitted by CDDL''s own `uint`, which has 0x and 0b only.'
+      - name: 'binary'
+        type: '"0b" prefix'
+        required: true
+        layout: 'As in C.'
+      - name: 'hexfloat'
+        type: '"0x" mantissa "p" exponent'
+        required: false
+        layout: 'Matches CDDL''s `hexfloat` production.'
+    layout: '4711 == 0x1267 == 0o11147 == 0b1001001100111 ;  1.5 == 0x1.8p0 == 0x18p-4'
+    notes: '"In addition to JSON''s decimal numbers, EDN provides hexadecimal, octal, and binary numbers in the usual C-language notation". DIVERGENCE, ours: `0o` is EDN-only; a CDDL specification cannot write an octal literal.'
+  - name: 'edn-comment'
+    locator: 'Appendix G.6'
+    encoding: EDN-text
+    fields:
+      - name: 'delimiters'
+        type: 'a pair of "/" characters'
+        required: true
+        layout: '"comments can be included, delimited by slashes ("/"). Any text within and including a pair of slashes is considered a comment."'
+      - name: 'status'
+        type: 'whitespace'
+        required: true
+        layout: '"Comments are considered whitespace. Hence, they are allowed in prefixed byte strings".'
+    layout: 'h''68 65 6c /doubled l!/ 6c 6f /hello/'''
+    notes: 'A SECOND, INCOMPATIBLE COMMENT SYNTAX in the same document: CDDL comments run from ";" to end of line; EDN comments are delimited pairs of slashes. The appendix closes with an open question rather than a rule: "(There are currently no end-of-line comments. If we want to add them, "//" sounds like a reasonable delimiter given that we already use slashes for comments, but we could also go, for example, for "#".)"'

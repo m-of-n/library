@@ -1,0 +1,224 @@
+#!/usr/bin/env python3
+"""check-locators — does each requirement's `locator` contain its `text`?
+
+The gap this closes, named by three separate FX-1 passes before anyone built
+it (library#39): every pass verifies that a requirement's `text` is a
+contiguous verbatim span of the source, and no pass has ever verified that the
+`locator` beside it points at the section the span actually falls in. A text
+can be perfectly verbatim and filed under the wrong §, and nothing notices —
+`rfc-9165`'s extraction had a ten-production range off by five sections, and
+`rfc-9682`'s had a `memberkey` locator naming one line of a three-line rule.
+Both were caught by eye.
+
+Verbatim is a property of the text. A locator is a claim about where it lives,
+and until now it was the one claim in the artifact set nothing tested.
+
+    bin/check-locators records/ietf/rfc-9741 [...]
+    bin/check-locators --all
+
+Exit 0 if every locator contains its text, 1 otherwise. Dependency-free, like
+the rest of bin/.
+
+Containment is by section, not by heading: a text filed under §2 may lie
+anywhere in §2 *including* its subsections, while a text filed under §2.1 must
+lie in §2.1's own body. A locator naming no parseable section is reported
+separately as unresolvable rather than counted as a failure — plenty of
+legitimate locators are prose ("Appendix P: ... (table)").
+"""
+import argparse
+import pathlib
+import re
+import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from _record_yaml import load_yaml
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+CACHE = ROOT / ".cache"
+
+# Column-0 headings in an RFC .txt rendering: "3.  Claims", "3.1.  The iss
+# claim", "Appendix A.  Examples". The two-space gap is the RFC convention;
+# one space is tolerated because some renderings use it.
+NUMBERED = re.compile(r"^(\d+(?:\.\d+)*)\.\s\s?(\S.*)$")
+APPENDIX = re.compile(r"^Appendix\s+([A-Z](?:\.\d+)*)\.\s\s?(\S.*)$")
+# An RFC .txt spells the first appendix heading out — "Appendix A.  Examples" —
+# and then prints every SUB-appendix bare: "A.2.1.  128-Bit Symmetric Key".
+# Matching only the spelled-out form left every sub-appendix locator in the
+# library unchecked, which the rfc-8392 verify pass caught (library#39). The
+# letter must be one an "Appendix X." heading already introduced, and at least
+# one ".<digit>" is required, so an author line like "A.  Author" cannot match.
+SUBAPPENDIX = re.compile(r"^([A-Z](?:\.\d+)+)\.\s\s?(\S.*)$")
+
+# A locator's leading section reference: §3, §3.1, Appendix B, Appendix B.2.
+LOC_SECTION = re.compile(r"^\s*(?:§\s*(\d+(?:\.\d+)*)|Appendix\s+([A-Z](?:\.\d+)*))")
+
+
+def norm_with_lines(text):
+    """Whitespace-collapse `text`, returning it with a per-character line map.
+
+    Collapsing is what every pass compares against, because an RFC wraps its
+    sentences. Keeping the line map is what lets a normalised match be turned
+    back into the source line range the locator is a claim about.
+    """
+    out, lines = [], []
+    for ln, line in enumerate(text.split("\n"), 1):
+        for tok in line.split():
+            if out:
+                out.append(" ")
+                lines.append(ln)
+            out.append(tok)
+            lines.extend([ln] * len(tok))
+    return "".join(out), lines
+
+
+def section_spans(src_lines):
+    """Map each section key to the (first, last) source line of its own body.
+
+    A section's body runs to the next heading that is not one of its
+    descendants, so §2's span covers §2.1 while §2.1's stops at §2.2.
+    """
+    letters = {m.group(1).split(".")[0]
+               for line in src_lines
+               for m in [APPENDIX.match(line)] if m}
+    heads = []
+    for i, line in enumerate(src_lines, 1):
+        m = NUMBERED.match(line)
+        if m:
+            heads.append((m.group(1), i))
+            continue
+        m = APPENDIX.match(line)
+        if m:
+            heads.append(("Appendix " + m.group(1), i))
+            continue
+        m = SUBAPPENDIX.match(line)
+        if m and m.group(1).split(".")[0] in letters:
+            heads.append(("Appendix " + m.group(1), i))
+    spans = {}
+    for idx, (key, start) in enumerate(heads):
+        end = len(src_lines)
+        for other, nxt in heads[idx + 1:]:
+            if not _descends(other, key):
+                end = nxt - 1
+                break
+        spans[key] = (start, end)
+    return spans
+
+
+def _descends(child, parent):
+    """Is `child` the same section as `parent`, or nested inside it?"""
+    return child == parent or child.startswith(parent + ".")
+
+
+def locator_key(loc):
+    """The section key a locator claims, or None if it names none."""
+    m = LOC_SECTION.match(str(loc))
+    if not m:
+        return None
+    return m.group(1) if m.group(1) else "Appendix " + m.group(2)
+
+
+def check_record(recdir):
+    """Return (checked, failures, unresolved, notes) for one record."""
+    rq = recdir / "distilled" / "requirements.yaml"
+    rec = recdir / "record.yaml"
+    if not rq.exists() or not rec.exists():
+        return 0, [], [], ["no distilled/requirements.yaml"]
+    d = load_yaml(rec) or {}
+    rid = str(d.get("id") or recdir.name)
+    cache = CACHE / f"{rid}.txt"
+    if not cache.exists():
+        return 0, [], [], [f"no .cache/{rid}.txt — run bin/fetch-source {rid}"]
+
+    raw = cache.read_text(errors="ignore")
+    src_lines = raw.split("\n")          # never splitlines(): it splits on \f
+    norm_src, line_of = norm_with_lines(raw)
+    spans = section_spans(src_lines)
+
+    reqs = (load_yaml(rq) or {}).get("requirements") or []
+    checked, failures, unresolved, notes = 0, [], [], []
+    if not reqs:
+        notes.append("requirements.yaml parsed but holds no `requirements:` list")
+    for r in reqs:
+        if not isinstance(r, dict):
+            continue
+        rid_ = str(r.get("id") or "?")
+        text, loc = r.get("text"), r.get("locator")
+        if not text or not loc:
+            continue
+        key = locator_key(loc)
+        if key is None:
+            unresolved.append((rid_, str(loc), "locator names no section"))
+            continue
+        if key not in spans:
+            unresolved.append((rid_, str(loc), f"section {key} not found in source"))
+            continue
+        norm_text, _ = norm_with_lines(str(text))
+        if not norm_text:
+            continue
+        # EVERY occurrence, not the first. A short normative sentence often
+        # repeats — RFC 9053 has one that appears in a table and again in
+        # prose — and `find` returning the earliest made this tool report 36
+        # misfilings in that record alone, all of them its own fault. The
+        # locator is a true claim if ANY occurrence falls inside its section.
+        hits, at = [], norm_src.find(norm_text)
+        while at >= 0:
+            hits.append((line_of[at], line_of[at + len(norm_text) - 1]))
+            at = norm_src.find(norm_text, at + 1)
+        if not hits:
+            # Not this tool's job: the verbatim checks own that. Reported so a
+            # non-verbatim text is never silently counted as a locator pass.
+            unresolved.append((rid_, str(loc), "text is not a contiguous span"))
+            continue
+        lo, hi = spans[key]
+        if not any(first >= lo and last <= hi for first, last in hits):
+            near = min(hits, key=lambda h: abs(h[0] - lo))
+            failures.append((rid_, str(loc), near[0], near[1], lo, hi,
+                             len(hits)))
+        checked += 1
+    return checked, failures, unresolved, notes
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("records", nargs="*", help="record directories")
+    ap.add_argument("--all", action="store_true",
+                    help="every record with a distilled/requirements.yaml")
+    ap.add_argument("-q", "--quiet", action="store_true",
+                    help="suppress the unresolvable-locator list")
+    a = ap.parse_args()
+
+    if a.all:
+        dirs = sorted(p.parent.parent for p in
+                      ROOT.glob("records/*/*/distilled/requirements.yaml"))
+    else:
+        dirs = [pathlib.Path(x).resolve() for x in a.records]
+    if not dirs:
+        ap.error("name at least one record directory, or pass --all")
+
+    tot_checked = tot_fail = tot_unres = 0
+    for recdir in dirs:
+        where = recdir.relative_to(ROOT) if recdir.is_relative_to(ROOT) else recdir
+        checked, failures, unresolved, notes = check_record(recdir)
+        for n in notes:
+            print(f"  . {where}: {n}")
+        for rid_, loc, first, last, lo, hi, n in failures:
+            also = f" ({n} occurrences, none inside)" if n > 1 else ""
+            print(f"  ! {where}: {rid_} is filed under {loc} (lines {lo}-{hi}) "
+                  f"but its text is at lines {first}-{last}{also}")
+        if not a.quiet:
+            for rid_, loc, why in unresolved:
+                print(f"  ? {where}: {rid_} locator {loc!r} — {why}")
+        if checked or failures:
+            flag = f"{len(failures)} MISFILED" if failures else "all contained"
+            print(f"  = {where}: {checked} locator(s) checked, {flag}")
+        tot_checked += checked
+        tot_fail += len(failures)
+        tot_unres += len(unresolved)
+
+    print(f"\n{len(dirs)} record(s), {tot_checked} locator(s) checked — "
+          f"{tot_fail} misfiled, {tot_unres} unresolvable")
+    return 1 if tot_fail else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

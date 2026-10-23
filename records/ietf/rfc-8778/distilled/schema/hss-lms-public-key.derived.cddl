@@ -1,0 +1,78 @@
+; rfc-8778 - HSS/LMS public key
+; DERIVED - not verbatim. RFC 8778 ships no CDDL, ABNF, ASN.1 or JSON Schema
+; (schema/source-renderings.txt measures that). This file is the library's own
+; rendering of the prose layout in RFC 8778 §2.1 and §2.2, and must never be
+; cited as the standard's own grammar.
+;
+; Source: RFC 8778, sha256 2d43646b974c76b9e13565af9b96432ac2b7ba39b66a61820d97f94f3cf1c398
+; Derived 2026-10-20, FX-1 pass 1 (extract). reviewed_by: ""
+;
+; THE WHOLE DERIVATION, EVERY WIDTH CITED. RFC 8778 §2.2 (rfc-8778#R-0053):
+;   "The LMS public key can be summarized as:
+;      u32str(lms_algorithm_type) || u32str(otstype) || I || T[1]"
+; and RFC 8778 §2.1 (rfc-8778#R-0024): "The public key for the topmost LMS tree
+; is the public key of the HSS system." So the four fields below are BOTH the
+; LMS public key and the HSS public key, and are the `pub` of a COSE kty 5 key
+; (§6.2 rfc-8778#R-0124, §6.3 rfc-8778#R-0127).
+;
+;   field                        octets  where the width comes from
+;   ---------------------------  ------  --------------------------------------
+;   u32str(lms_algorithm_type)        4  the `u32` in the notation's own name,
+;                                        NOT defined anywhere in RFC 8778
+;                                        (rfc-8778#R-0028). MEASURED instead:
+;                                        2512 - 4u - 32 == 0 mod 32 holds for
+;                                        u=4 and for no other u in {1,2,8}
+;                                        (it also holds for every u = 4 mod 8,
+;                                        so that test alone does not pin it),
+;                                        and the printed octets pin u=4
+;                                        outright - u32str(0) at offset 0 and
+;                                        the leaf number q at offset 4.
+;                                        See examples/vectors.yaml V-0003 and
+;                                        schema/README.md.
+;   u32str(otstype)                   4  same derivation.
+;   I                                16  STATED: RFC 8778 §3, rfc-8778#R-0092,
+;                                        "it is the 16-byte identifier of the
+;                                        LMS public key for the tree". The only
+;                                        statement of I's width in the
+;                                        document, and it is in a bullet about
+;                                        `kid`. §2.2 (rfc-8778#R-0049) puts I
+;                                        in the public key and gives no width.
+;   T[1]                             32  §2.2 rfc-8778#R-0052, "T[1] is the
+;                                        m-byte string associated with the root
+;                                        of the LMS tree", with §2.2
+;                                        rfc-8778#R-0039, "The [HASHSIG]
+;                                        specification supports only SHA-256
+;                                        with m=32".
+;   ---------------------------  ------
+;   total                            56
+;
+; 56 OCTETS EXACTLY, FOR EVERY PARAMETER SET RFC 8778 ADMITS. All five tree
+; sizes are M32 (rfc-8778#R-0041..R-0045) so m=32 always; all four LM-OTS
+; variants are N32 (rfc-8778#R-0073..R-0076); I's width is stated
+; unconditionally; both type codes are u32str. 5 x 4 = 20 admitted
+; combinations, one length. There is no length prefix, no optional field and no
+; variable-length integer anywhere in the structure.
+;
+; AND IT IS NOT FUTURE-PROOF, WHICH IS THE POINT. §2.2 rfc-8778#R-0046 and §2.3
+; rfc-8778#R-0077 say [HASHSIG] "establishes an IANA registry to permit the
+; registration of additional hash functions and additional tree sizes" and
+; "additional parameter sets". A future m != 32 changes T[1] and the total.
+;
+; CDDL CANNOT EXPRESS A CONCATENATION INSIDE A bstr, so the wire constraint
+; below is a length constraint and the field decomposition is in the comment
+; above, in hss-lms-octets.derived.abnf as a checkable byte grammar, and in
+; messages.yaml as an offset table. Do not read `hss-lms-pub-fields` as a wire
+; structure: it is a parser's internal model of the 56 octets after splitting.
+
+; The wire form: the `pub` parameter of a COSE kty 5 key (§6.3, label -1, bstr).
+hss-lms-pub = bstr .size 56
+
+; A parser's internal model of those 56 octets once split. NOT a wire encoding.
+hss-lms-pub-fields = [
+  lms_algorithm_type : u32,          ; IANA LMS registry code point, 4 octets
+  otstype            : u32,          ; IANA LM-OTS registry code point, 4 octets
+  I                  : bstr .size 16,; the tree identifier, also usable as `kid`
+  T1                 : bstr .size 32 ; the Merkle root, m = 32
+]
+
+u32 = 0..4294967295                  ; the value a 4-octet u32str field carries

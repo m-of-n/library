@@ -16,7 +16,7 @@ updated: "2026-10-05"
 | **Published** | |
 | **Identifier** | git: https://github.com/citation-style-language/schema |
 | **Source** | https://github.com/citation-style-language/schema |
-| **Digest** | `afb173047f46b19873d5caaa9c2db15c1e94232d0c6ad7501cc5c0d117487f67` |
+| **Digest** | `594ae2f930c8d824b67bc3ae4eefa1238cbbed0529c34e31ffd69a0e910f63d4` |
 
 ## Overview
 

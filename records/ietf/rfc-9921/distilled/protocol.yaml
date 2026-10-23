@@ -1,0 +1,354 @@
+record: rfc-9921
+reviewed_by: ""
+source_version: "RFC 9921 (February 2026), Standards Track"
+source_digest: "ba1c4dbb7b4ea83f517418a9b8963085c0a8b5e5bea0c992089d215579b78f39"
+source_lines_total: 1056
+applicability: "APPLICABLE, and the boundary measured"
+
+note: >-
+  WHY THIS FILE IS NOT A not_applicable DECLARATION. RFC 9921 defines a
+  TWO-PARTY EXCHANGE and it draws it twice. Both figures show a MessageImprint
+  and a nonce crossing from the Signer to the TSA and a timestamp coming back
+  (source lines 169-195 and 216-242), §3.1 speaks of "the request to the TSA",
+  §3.2 of "The MessageImprint sent to the TSA (Section 2.4 of [RFC3161])",
+  Appendix A prints a TimeStampReq, says "which is sent to the TSA", and prints
+  the TimeStampResp that comes back. Measured: `TSA` 24 occurrences,
+  `TimeStampReq` 2, `TimeStampResp` 2, `relying party` 3 (plus `relying
+  parties` once), `receiver` 1, `nonce` 3. That is a protocol, and §4 then puts
+  a normative obligation on the receiving end of it.
+
+  WHAT IS NOT HERE, AND THE MEASUREMENT IS THE POINT. `step` 0, `steps` 0,
+  `error` 0, `fail` 0, `reject` 0, `rejected` 0, `invalid` 0, `discard` 0,
+  `abort` 0, `accept` 0 (`accepting` once, in §5.1's "incorrectly accepting
+  signatures"), `verifier` 0, `validator` 0 (`validators` once). So there is NO
+  NUMBERED PROCEDURE and, far more serious, NO FAILURE ACTION ANYWHERE: §4 says
+  the receiver "MUST make sure that the MessageImprint ... matches a hash of
+  either the payload, signature, or signature fields" and the document never
+  says what a receiver does when it does not match. Compare rfc-8392 §7.2,
+  which spends its last keyword on exactly that ("MUST be rejected"). The
+  error paths below are therefore marked `undefined_by_source` where the
+  document defines none, and that is a finding rather than a modelling gap.
+
+  AND THE TSA SIDE IS NOT SPECIFIED HERE EITHER. No transport, no endpoint, no
+  discovery, no authentication of the requester, no trust distribution. §5
+  simply assumes "the TSA is a trusted third party"; `trust anchor` occurs 0
+  times. RFC 3161 is where the request/response protocol lives and IT IS NOT IN
+  THIS LIBRARY, so every TSA-side step below is a boundary crossing into a
+  document we do not hold.
+
+  THE TWO VERIFICATION FLOWS ARE THE DOCUMENT'S OWN CLAIM. §5.1: "each mode has
+  its own separate verification algorithm." Neither is written down - §4 is one
+  sentence covering both - so F3 and F4 below are this extraction's
+  reconstruction from §4 plus §5.1, and each step says which it is.
+
+roles:
+  - name: Signer
+    locator: "§1.1, §2.1, §2.2, §5; Appendix A"
+    aliases: ["the document signer", "the issuer", "the COSE signer", "the timestamp requester"]
+    description: >-
+      Assembles the COSE object and acquires the token. §3.2's SHOULD treats
+      the signer and the timestamp requester as possibly DIFFERENT parties -
+      "this may not be possible if the timestamp requester and the COSE message
+      signer are different entities" (source line 396) - which is the only
+      place the document splits the role. Corrected by pass 2: the quotation
+      was attributed to §3.1, whose own escape clause says something else
+      entirely - "This may not be possible if the timestamp token has been
+      obtained outside the processing context in which the COSE object is
+      assembled" (line 272), about processing context and not about parties.
+  - name: TSA
+    locator: "§1.1, §2.1, §2.2, §3.1, §3.2, §4, §5; Appendix A"
+    aliases: ["Time Stamping Authority", "a trusted third party"]
+    description: >-
+      Holds the clock and the private key that signs the TSTInfo. Assumed
+      trusted and unimpersonable (§5). How a relying party comes to trust one
+      is never addressed, and the Appendix A token's own signing certificate
+      expired on 2026-03-11, one month after this RFC published.
+  - name: Relying Party
+    locator: "§1.1, §4, §5, §5.1"
+    aliases: ["the receiver", "Validators", "relying parties"]
+    description: >-
+      Verifies. Carries §4's only MUST on a machine and §5.1's two
+      interpretation rules, and must own an ASN.1/CMS/X.509 stack and a clock
+      it did not need for COSE alone.
+  - name: Transparency Service
+    locator: "§1.1 only"
+    description: >-
+      PRESENT AS A USE CASE AND ABSENT AS A PARTY. §1.1's second use case is
+      registration into an "append-only log" at a "transparency service", which
+      is what the TTC mode exists for ("the TST must be included in the signed
+      statement"). No message to or from it is defined, and the document cites
+      no transparency-service specification - `SCITT` and `9943` each occur
+      zero times. See ../../rfc-9943 and record.yaml's `see_also`.
+
+flows:
+  - name: F1 - CTT assembly (COSE, Then Timestamp)
+    locator: "§2.1, §3.1, §3.1.1, §3.1.2, Appendix A.2"
+    summary: >-
+      Sign first, then timestamp the signature. The object exists and is signed
+      before the token is acquired, which is why the token can only land in a
+      bucket nothing signs.
+    steps:
+      - from: Signer
+        to: Signer
+        message: "COSE_Sign1 (CTT instantiation)"
+        action: "sign the payload, producing the signature field"
+        locator: "§2.1, Figure 1"
+        on_error: undefined_by_source
+        constrained_by:
+          - rfc-9921#R-0026
+      - from: Signer
+        to: Signer
+        message: "CTT MessageImprint preimage (COSE_Sign1)"
+        action: >-
+          hash the CBOR-encoded signature field INCLUDING its 0x5840 head
+          (COSE_Sign1), or the whole signatures array (COSE_Sign)
+        locator: "§3.1, §3.1.1, §3.1.2"
+        on_error: undefined_by_source
+        constrained_by:
+          - rfc-9921#R-0041
+          - rfc-9921#R-0049
+          - rfc-9921#R-0053
+      - from: Signer
+        to: TSA
+        message: TimeStampReq
+        action: "send the MessageImprint (certReq TRUE in both appendix examples; no nonce)"
+        locator: "§3.1, Appendix A.2"
+        on_error: undefined_by_source
+        constrained_by:
+          - rfc-9921#R-0107
+          - rfc-9921#R-0106
+      - from: TSA
+        to: Signer
+        message: TimeStampResp
+        action: "return a TimeStampResp containing the TST"
+        locator: "Appendix A.2"
+        on_error: undefined_by_source
+        external_dependency: "RFC 3161 - not held by this library"
+        constrained_by:
+          - rfc-9921#R-0108
+      - from: Signer
+        to: Signer
+        message: "3161-ctt"
+        action: >-
+          bstr-wrap the TST and put it in the UNPROTECTED bucket of the
+          original object, which is not re-signed
+        locator: "§3.1, §2.1, Appendix A.2"
+        on_error: undefined_by_source
+        constrained_by:
+          - rfc-9921#R-0039
+          - rfc-9921#R-0109
+
+  - name: F2 - TTC assembly (Timestamp, Then COSE)
+    locator: "§2.2, §3.2, Appendix A.1"
+    summary: >-
+      Timestamp first, then sign over the token. The signature covers the
+      token, so the token's presence and content are authenticated - but the
+      imprint can only speak about the payload, because no signature existed
+      when it was computed.
+    steps:
+      - from: Signer
+        to: Signer
+        message: "TTC MessageImprint preimage"
+        action: "hash the datum that will become the payload - the content octets only, not the bstr wrapping"
+        locator: "§2.2, §3.2"
+        on_error: undefined_by_source
+        constrained_by:
+          - rfc-9921#R-0031
+          - rfc-9921#R-0058
+      - from: Signer
+        to: TSA
+        message: TimeStampReq
+        action: "send the MessageImprint"
+        locator: "§3.2, Appendix A.1"
+        on_error: undefined_by_source
+        constrained_by:
+          - rfc-9921#R-0057
+          - rfc-9921#R-0101
+          - rfc-9921#R-0102
+      - from: TSA
+        to: Signer
+        message: TimeStampResp
+        action: "return a TimeStampResp containing the TST"
+        locator: "Appendix A.1"
+        on_error: undefined_by_source
+        external_dependency: "RFC 3161 - not held by this library"
+        constrained_by:
+          - rfc-9921#R-0103
+      - from: Signer
+        to: Signer
+        message: "3161-ttc"
+        action: "bstr-wrap the TST into the PROTECTED bucket, and make the datum the payload"
+        locator: "§2.2, §3.2, Appendix A.1"
+        on_error: undefined_by_source
+        constrained_by:
+          - rfc-9921#R-0055
+          - rfc-9921#R-0034
+          - rfc-9921#R-0035
+      - from: Signer
+        to: Signer
+        message: "COSE_Sign1 (TTC instantiation)"
+        action: "sign, so that the token is inside the signed bytes"
+        locator: "Appendix A.1"
+        on_error: undefined_by_source
+        constrained_by:
+          - rfc-9921#R-0104
+      - from: Signer
+        to: Transparency Service
+        message: "(none defined)"
+        action: >-
+          OPTIONAL AND UNSPECIFIED: register the signed parts, rendering a
+          "transparent statement". §1.1's use case; no message, no endpoint and
+          no cited specification.
+        locator: "§1.1"
+        on_error: undefined_by_source
+        constrained_by:
+          - rfc-9921#R-0017
+          - rfc-9921#R-0018
+
+  - name: F3 - CTT verification
+    locator: "§4, §5.1 (reconstructed: the document writes no algorithm)"
+    summary: >-
+      RECONSTRUCTED BY THIS EXTRACTION from §4's one sentence plus §5.1's claim
+      that "each mode has its own separate verification algorithm". Every step
+      is marked `stated` or `reconstructed`.
+    steps:
+      - from: Relying Party
+        to: Relying Party
+        message: "COSE_Sign1 (CTT instantiation)"
+        action: "reconstructed: find 3161-ctt (label 270) in the unprotected bucket; its presence selects THIS algorithm"
+        locator: "§3.1, §5.1"
+        kind: reconstructed
+        on_error: undefined_by_source
+        constrained_by:
+          - rfc-9921#R-0085
+          - rfc-9921#R-0084
+      - from: Relying Party
+        to: Relying Party
+        message: TimeStampToken
+        action: "stated: validate the token as CMS, per RFC 5652 and RFC 3161"
+        locator: "§4"
+        kind: stated
+        external_dependency: "RFC 5652 (STD 70) and RFC 3161 - NEITHER held by this library"
+        on_error: >-
+          §5 names one consequence and no action: "a denial of service can
+          occur if the attacker can adjust the relying party's clock so that
+          the CMS validation fails"
+        constrained_by:
+          - rfc-9921#R-0062
+          - rfc-9921#R-0063
+          - rfc-9921#R-0075
+      - from: Relying Party
+        to: Relying Party
+        message: "CTT MessageImprint preimage (COSE_Sign1)"
+        action: >-
+          stated: check that the embedded MessageImprint matches a hash of the
+          signature field as received - 0x5840 || signature - using the
+          algorithm named inside the imprint
+        locator: "§4, §3.1.1"
+        kind: stated
+        on_error: undefined_by_source
+        constrained_by:
+          - rfc-9921#R-0066
+          - rfc-9921#R-0065
+      - from: Relying Party
+        to: Relying Party
+        message: "COSE_Sign1 (CTT instantiation)"
+        action: "reconstructed: verify the COSE signature itself, per RFC 9052"
+        locator: "§4 - 'As part of the signature verification'"
+        kind: reconstructed
+        external_dependency: "RFC 9052 (STD 96) - records/ietf/rfc-9052"
+        on_error: undefined_by_source
+        constrained_by: []
+      - from: Relying Party
+        to: Relying Party
+        message: "(decision)"
+        action: >-
+          stated: the token is evidence of the SIGNATURE's existence at the
+          TSA's time, and this is the only mode that may be used for signature
+          validity timing
+        locator: "§5.1"
+        kind: stated
+        on_error: undefined_by_source
+        constrained_by:
+          - rfc-9921#R-0086
+          - rfc-9921#R-0089
+
+  - name: F4 - TTC verification
+    locator: "§4, §5.1 (reconstructed)"
+    summary: >-
+      The other algorithm. Same two external dependencies, a different
+      preimage, and a prohibition at the end instead of a permission.
+    steps:
+      - from: Relying Party
+        to: Relying Party
+        message: "COSE_Sign1 (TTC instantiation)"
+        action: "reconstructed: find 3161-ttc (label 269) in the protected bucket; its presence selects THIS algorithm"
+        locator: "§3.2, §5.1"
+        kind: reconstructed
+        on_error: undefined_by_source
+        constrained_by:
+          - rfc-9921#R-0056
+      - from: Relying Party
+        to: Relying Party
+        message: TimeStampToken
+        action: "stated: validate the token as CMS, per RFC 5652 and RFC 3161"
+        locator: "§4"
+        kind: stated
+        external_dependency: "RFC 5652 and RFC 3161 - neither held"
+        on_error: "§5's clock-driven denial of service applies in both modes"
+        constrained_by: []
+      - from: Relying Party
+        to: Relying Party
+        message: "TTC MessageImprint preimage"
+        action: "stated: check that the embedded MessageImprint matches a hash of the payload bytes as received"
+        locator: "§4, §3.2"
+        kind: stated
+        on_error: undefined_by_source
+        constrained_by:
+          - rfc-9921#R-0057
+      - from: Relying Party
+        to: Relying Party
+        message: "(decision)"
+        action: >-
+          stated: the token is evidence of the PAYLOAD's existence only, and
+          must not be read as proof of signature creation time
+        locator: "§5.1"
+        kind: stated
+        on_error: >-
+          §5.1 names the vulnerability and no action: "incorrectly accepting
+          signatures created after key revocation based on older payload-only
+          timestamps"
+        constrained_by:
+          - rfc-9921#R-0088
+          - rfc-9921#R-0087
+
+error_paths:
+  stated:
+    - locator: "§5"
+      path: "CMS validation fails because the relying party's clock was moved"
+      outcome: "denial of service; the timestamp validation is disrupted. No action specified."
+    - locator: "§5"
+      path: "the CTT timestamp is removed or replaced in the unprotected header"
+      outcome: >-
+        conceded as possible; the mitigation is the lower-case "the COSE Signed
+        Message should be integrity protected during transit and at rest", at a
+        layer this document does not define
+    - locator: "§5.1"
+      path: "a protected-header payload timestamp is read as proof of signature creation time"
+      outcome: "signatures created after key revocation are incorrectly accepted. No detection mechanism specified."
+  undefined_by_source:
+    - "the MessageImprint does not match (§4's MUST has no failure action; `reject`, `invalid` and `accept` occur zero times in the document)"
+    - "both 3161-ctt and 3161-ttc are present in one object"
+    - "3161-ttc is found in the unprotected bucket, or 3161-ctt in the protected one"
+    - "the TSA certificate has expired at verification time (the Appendix A token's own has, since 2026-03-11)"
+    - "the token's imprint algorithm differs from the COSE `alg` (the two SHOULDs permit it explicitly)"
+    - "the same object carries two tokens from different TSAs"
+
+absent:
+  - "No numbered procedure. `step` and `steps` occur zero times."
+  - "No failure action for the document's only machine-facing MUST."
+  - "No transport, endpoint, discovery or requester authentication for the TSA exchange."
+  - "No trust establishment for a TSA. `trust anchor` occurs zero times; §5 assumes trust."
+  - "No nonce in either example, although both figures draw one."
+  - "No message to or from the transparency service that motivates the TTC mode."
+  - "No negotiation of the imprint hash algorithm: two SHOULDs ask it to match the COSE signing algorithm and both give a reason it may not."

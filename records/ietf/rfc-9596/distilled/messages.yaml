@@ -1,0 +1,171 @@
+record: rfc-9596
+reviewed_by: ""
+
+# Every structure RFC 9596 defines or constrains. Section numbers are RFC
+# 9596's unless another document is named.
+#
+# THE DOCUMENT DEFINES ONE THING: COSE header parameter label 16, whose value
+# declares the type of the COMPLETE COSE object. Everything else here is RFC
+# 9052's, named and not redefined, and labelled as such.
+#
+# `constrained_by` IS WIRED: one agent wrote this file and ../requirements.yaml
+# in the same pass, so the ids are known rather than guessed.
+#
+# NOT ONE BYTE OF THIS IS ILLUSTRATED BY THE SOURCE. `Figure`, `hex`, `vector`
+# and `diagnostic notation` each occur ZERO times in the 232-line document and
+# `example` occurs ONCE, at line 89, as a definition rather than a fixture. So
+# every layout below is DERIVED from Table 1 and from RFC 9052 §3, not decoded
+# from printed bytes, and ../examples/ is declared not_applicable.
+
+messages:
+
+  # =========================================================================
+  - name: typ_header_parameter
+    locator: "§2, §4.1 Table 1"
+    encoding: "COSE header parameter (RFC 9052 §3): label 16 => uint / tstr"
+    summary: >-
+      The whole of what RFC 9596 defines, and §2 draws the line it depends on
+      itself: typ declares "the type of this complete COSE object, as compared
+      to the content type header parameter, which declares the type of the COSE
+      object payload."
+    layout: >-
+      0x10 => uint or tstr. DERIVED from Table 1 and RFC 9052 §3, not decoded:
+      the document prints no bytes at all. A CoAP Content-Format id costs 1
+      octet of value for ids 0-23 and 2 octets for 61 (0x18 0x3d), and a media
+      type string costs 1 + its length, so 16 octets for "application/cwt"
+      (0x6f plus 15 characters). The two spellings of ONE type therefore differ
+      by an order of magnitude in size as well as in bytes. Computed from
+      RFC 8949 §3 head encodings by this extraction, not quoted.
+
+      [correction 2026-10-21, pass 3 - cross-check] This layout read "1-2
+      octets of value (0x3d for 61)" and "18 octets for application/cwt". Both
+      figures were wrong and both disagreed with the SAME arithmetic as already
+      stated in ../design-notes.md §7.5 and §10, ../README.md and record.yaml:
+      61 does not encode as 0x3d - that octet is major type 1 with additional
+      info 29, which is ill-formed CBOR - but as 0x18 0x3d, two octets; and
+      "application/cwt" is 15 characters, so 1 + 15 = 16, not 18. Pass 2
+      verified 2-versus-16 by encoding and propagated it to every site except
+      this one, which is the artifact the measurement belongs to.
+    fields:
+      - name: "typ (type)"
+        label: 16
+        type: "uint / tstr"
+        value_registry: "[CoAP.ContentFormats] or [MediaTypes] — TWO global registries for one parameter"
+        required: false
+        encoding: "0x10 => uint (CoAP Content-Format id) or tstr (media type value)"
+        locator: "§2, §4.1 Table 1"
+        constrained_by:
+          - "rfc-9596#R-0004"
+          - "rfc-9596#R-0009"
+          - "rfc-9596#R-0010"
+          - "rfc-9596#R-0011"
+          - "rfc-9596#R-0015"
+          - "rfc-9596#R-0020"
+        note: >-
+          OPTIONAL (§2), so `required: false` is the document's position, not a
+          modelling choice. TWO VALUE REGISTRIES IS BOTH FINDINGS AT ONCE: it is
+          the ARCH-0002 P1 cut (both are global, neither is key-relative) and it
+          is the equality hazard (rfc-8392 registered 61 twice - CBOR Tag 61 in
+          §9.4.1 and CoAP Content-Format Id 61 in §9.3.1 - so `typ: 61` and
+          `typ: "application/cwt"` denote one type and compare unequal). See
+          ../design-notes.md.
+
+  # =========================================================================
+  - name: COSE_header_buckets_as_this_document_constrains_them
+    locator: "§2; RFC 9052 §3 for the buckets themselves"
+    encoding: "protected: bstr .cbor header_map; unprotected: header_map"
+    summary: >-
+      RFC 9596 defines neither bucket and adds exactly ONE rule about them, which
+      is also the document's only obligation of any kind.
+    layout: >-
+      §2: "The "typ" parameter MUST NOT be present in unprotected headers." So
+      label 16 may appear only inside the protected bstr. RFC 9052 §4.4's
+      Sig_structure is [context, body_protected, external_aad, payload], so typ
+      is INSIDE the signature - which the sibling rfc-8392 extraction in this
+      same pass demonstrated rather than read, by verifying RFC 8392's A.3
+      signature from exactly those four fields.
+    fields:
+      - name: protected
+        type: "bstr .cbor header_map"
+        required: true
+        encoding: "bstr wrapping a CBOR map; the ONLY legal home for label 16"
+        locator: "§2; RFC 9052 §3"
+        constrained_by:
+          - "rfc-9596#R-0015"
+        note: >-
+          THE STRONGEST PLACEMENT RULE IN THIS LANE. rfc-9597 §2 only RECOMMENDS
+          protected placement for its own label 15; this document makes the
+          unprotected case a MUST NOT violation. An asymmetry of strength, not
+          an incompatibility - both can be obeyed at once - and it is the reason
+          our profile should require protected placement for BOTH parameters in
+          one sentence rather than inherit two different strengths.
+      - name: unprotected
+        type: header_map
+        required: true
+        encoding: "CBOR map; label 16 MUST NOT appear here"
+        locator: "§2"
+        constrained_by:
+          - "rfc-9596#R-0015"
+          - "rfc-9596#R-0016"
+        note: >-
+          AND §2 GOES FURTHER: "The "typ" parameter does not describe the content
+          of unprotected headers. Changes to unprotected headers do not change
+          the type of the COSE object." Meanwhile rfc-9597 §2 PERMITS its CWT
+          Claims parameter to sit in this bucket and rfc-9597 §1 names typ as
+          its RECOMMENDED disambiguator. So when a producer takes the permitted
+          unprotected placement, the recommended disambiguator is declared, by
+          its own text, not to describe it.
+
+  # =========================================================================
+  - name: content_type_header_parameter
+    locator: "§2 (the comparison); RFC 9052 §3.1 for the parameter itself"
+    encoding: "COSE header parameter: label 3 => uint / tstr"
+    summary: >-
+      Named here because §2 defines typ BY CONTRAST with it and borrows its
+      syntax wholesale: "The syntax of this header parameter value is the same as
+      the content type header parameter defined in Section 3.1 of [RFC9052]".
+      RFC 9596 constrains it in no way.
+    layout: >-
+      0x03 => uint or tstr. RFC 9052 §3.1's, not this document's.
+    fields:
+      - name: "content type"
+        label: 3
+        type: "uint / tstr"
+        required: false
+        encoding: "0x03 => uint or tstr"
+        locator: "RFC 9052 §3.1"
+        constrained_by: []
+        note: >-
+          `constrained_by: []` IS A FINDING. RFC 9596 says only that typ has the
+          same syntax and a different scope - complete object versus payload -
+          and NOTHING requires the two to be consistent. Nothing forbids a typ
+          naming a CWT over a payload whose content type says otherwise, and
+          rfc-9943's Figure 3 makes content_type (3) CDDL-optional in the
+          protected header while requiring label 15. A verifier reading one and
+          not the other is conformant.
+
+coverage:
+  structures: 3
+  fields: 4
+  fields_with_constrained_by: 3
+  requirements_cited: 7
+  requirements_total: 21
+  dangling_ids: 0
+  method: >-
+    Recomputed by the generator at write time against ../requirements.yaml.
+  unwired_and_why: >-
+    FOURTEEN OF THE 21 REQUIREMENTS CONSTRAIN NO FIELD, and for this document
+    that is almost the whole content. By locator: §1's R-0001, R-0002, R-0003
+    and R-0005 are the gap statement, the imported RFC 8725 argument, what the
+    specification adds and the definition of "COSE object" - none of which binds
+    a byte; §2's R-0006, R-0007 and R-0008 say what typ DECLARES and when it
+    will and will not be used, which are facts about intent; §2's R-0012,
+    R-0013 and R-0014 say that the LIBRARY LAYER DOES NOTHING, that all
+    processing is the application's, and give an illustrative check - the three
+    sentences that between them explain why no implementation of label 16 can be
+    found; §3's R-0017, R-0018 and R-0019 are the security case by reference and
+    the two LOWER-CASE reject rules, which are the entire enforcement side of
+    the mechanism and bind nobody; and R-0021 is a completed IANA action.
+
+    THAT DISTRIBUTION IS THE RECORD. One field, one prohibition, and nineteen
+    sentences about a check the specification declines to require.

@@ -20,11 +20,84 @@ content:
   retrieved: "2026-09-22"
   local: false
 relations:
-  see_also: []
+  # Added 2026-10-19 by the FX-1 verify pass. RFC 9679 §4.3 requires RSA `n`
+  # and `e` as bare `bstr` and states no normalisation, which on its own would
+  # leave §7's uniqueness precondition unmet for RSA — 65537 as h'010001' and
+  # h'00010001' would be two thumbprints for one key. RFC 8230 §4 closes it:
+  # "The octet sequence MUST utilize the minimum number of octets needed to
+  # represent the value." But **RFC 9679 never cites RFC 8230 — 0 occurrences
+  # in the document** — so the rule exists and is unreachable from here. This
+  # edge is what makes it reachable from the library.
+  #
+  # The SAME SITUATION holds for §4.5, and no edge is authored here for it —
+  # deliberately. Checked 2026-10-20 by a maintenance pass (library#39 Tier 2).
+  # RFC 9679 §4.5 requires `pub` for an HSS-LMS thumbprint and cites NEITHER
+  # RFC 8778 NOR RFC 8554 — 0 occurrences of each in the document, re-verified
+  # by grep and against both reference subsections. RFC 8778 §6.3 is the
+  # registering entry for key type 5's label −1 and §2.1/§2.2 the only
+  # specification of the octets. `records/ietf/rfc-8778` already authors
+  # `see_also: rfc-9679` with that warrant written out.
+  #
+  # Why not reciprocate: `docs/references.md` §2 makes `see_also` SYMMETRIC —
+  # its inverse is itself — and states the rule for exactly that case:
+  # "Inverses are derived, never authored. ... Authoring both sides guarantees
+  # they drift." `bin/reindex`'s INVERSE map carries `see_also: see_also`, so
+  # the crosswalk already shows `rfc-9679 → rfc-8778` from rfc-8778's single
+  # authored edge; confirmed by re-running that derivation over all records.
+  # rfc-8230 is the local precedent and it points the same way: its own record
+  # holds `see_also: []`, and this record's cross-check pass observed "the
+  # crosswalk symmetrising it to rfc-8230". One side authors, the tool derives
+  # the other. The §4.5 analysis itself is in distilled/design-notes.md, open
+  # question 4 and defect 12.
+  see_also:
+    - rfc-8230
+  # NO `contradicts: rfc-9360` edge here, and the omission is the rule rather
+  # than an oversight. Checked 2026-10-20 by a maintenance pass (library#39
+  # Tier 2). §5.4 of this document glosses `x5t` as "(X.509 certificate SHA-1
+  # thumbprint) [RFC9360]"; "SHA-1" occurs ZERO times in RFC 9360 under every
+  # spelling checked, where `x5t` is `COSE_CertHash = [hashAlg, hashValue]`
+  # with SHA-256 only "MUST support ... but can use other hash algorithms".
+  # `records/ietf/rfc-9360/record.yaml` authors `contradicts: rfc-9679` with
+  # the reason written out in its `summary.md`, which is what
+  # docs/references.md §2 requires of a `contradicts` edge.
+  #
+  # Why not reciprocate: that same §2 makes `contradicts` SYMMETRIC - its
+  # inverse is itself - and states "Inverses are derived, never authored. ...
+  # Authoring both sides guarantees they drift." `bin/reindex`'s INVERSE map
+  # carries `contradicts: contradicts`, so the crosswalk already shows
+  # `rfc-9679 -> rfc-9360` from rfc-9360's single authored edge; confirmed by
+  # re-running that derivation over all 439 records, 0 dangling. Identical
+  # reasoning to the rfc-8778 note above, and it is also why no reason is owed
+  # in THIS summary.md: the edge is not authored here. The falsification is
+  # recorded anyway, in distilled/README.md item 4 (third instance of one
+  # pattern in §5.4-§5.5), annotated at the capture site in
+  # distilled/normative.md, and summarised in summary.md's Limits.
   part_of:
     - ietf-cose-wg
 bears_on:
+  # Widened 2026-10-18 by the FX-1 extraction, which found the record informs
+  # far more than the one decision it named. Each addition is evidenced in
+  # distilled/design-notes.md, not assumed:
+  #   DEC-002 — nine named cuts, including §5.5 eliminating option 4 on a
+  #     ground DEC-002 never listed (two KeyIds per principal), and §5.4
+  #     conceding the construction is syntax-portable, so DEC-003 does not
+  #     wait on DEC-002.
+  #   R-O-01 — "Every signed object SHALL have an issuer key that can be
+  #     specified as KeyId" (ARCH-0001 §7). This document is the candidate
+  #     definition of that KeyId.
+  #   R-O-03 — a digest over (kty, pub) would not be a COSE Key Thumbprint
+  #     and so would be an invention rather than a citation.
+  #   R-M-12 — key-relative naming, promoted to ARCH-0002 P1 by ADR-0001. If
+  #     KeyId is an AKP thumbprint, `alg` is inside the digest, so the same
+  #     key material under ML-DSA-44 and -65 yields different KeyIds and
+  #     therefore different namespace roots.
+  # R-O-02 was also suggested but is NOT added: it was not verified against
+  # ARCH-0001, and the schema says do not invent relevance.
+  - DEC-002
   - DEC-003
+  - R-O-01
+  - R-O-03
+  - R-M-12
 topic: cbor-implementation
 tags:
   - naming
@@ -32,7 +105,166 @@ tags:
   - signatures
   - ietf
   - normative
-status: fetched
+distillation:
+  standard: "FX-1"
+  # `full` set 2026-10-19 by the cross-check pass, the third and last. All six
+  # artifact kinds are present and both not_applicable kinds carry a reason
+  # re-tested against every artifact; all four cross-checks pass. No human has
+  # reviewed any of it - every `reviewed_by` below is empty, deliberately.
+  profile: full
+  artifacts:
+    - kind: normative
+      path: distilled/normative.md
+      coverage: "93 verbatim prose runs and 19 fenced blocks (byte-exact source line runs, three-space RFC margin retained), §2-§8 in source order; §1, §9, Acknowledgements, Authors' Addresses and front matter dropped and stated as dropped. 180 mechanical checks over texts and locators, 0 failures; a dropped-statement sweep over 123 sentence units in §3-§8 found 0 genuinely dropped. Independently re-derived by the verify pass against a section map built from the source's own headings, parents covering their subsections: 159 quoted items (66 stated requirement texts plus 93 prose runs) x 2 assertions each = 318 substring-and-locator checks plus 19 fence checks, 0 failures, and all 19 fences located as exact source line runs (L109-113, L119-128, L155-159, L168-174, L190-194, L200-202, L208-210, L315-323, L341, L361-368, L373, L378-380, L397-411, L416-419, L430-437, L442-444, L448, L488-494, L499-502). Exactly three normalisations are relied on and all three are named per-entry: the hyphen rejoin in R-0062 and in the §7 run at normative.md, the quote-margin strip in R-0053 alone, and the '*  ' bullet marker, which all 14 source bullets drop and no entry reproduces. The verify pass corrected one thing: the stated rule for finding a quoted run, which said first-and-last quote on the line and is falsified by the six lines whose annotation itself quotes a word"
+      reviewed_by: ""
+    - kind: requirements
+      path: distilled/requirements.yaml
+      coverage: "68 entries R-0001 to R-0068 in source order, no gaps: 66 stated, 2 inferred (the exclusion rule and the map-key order, both declaring that no BCP 14 keyword backs them). Only 13 entries carry a BCP 14 verb and 55 are verb: none, because the binding content is stated in lowercase - the three procedure steps, all five required-parameter lists, the exclusion rule, the ordering statements and the registration values. source and extracted keyword counts both 13; the §2 BCP 14 boilerplate is deliberately not an entry, since quoting it would have inflated the extracted count to 24 for no obligation gained (13 body occurrences plus the boilerplate's 11 = 24, arithmetic confirmed by the verify pass). 5 entries are testable: no - R-0021, R-0035, R-0039, R-0059, R-0064 - each with a reason. The verify pass recounted all 13 source occurrences by line and matched each to exactly one entry, a bijection, and corrected two claims in the reconciliation: TWO source sentences carry two keywords each, not three, and this coverage line previously said 11 entries were testable: no, where the file has 5"
+      reviewed_by: ""
+    - kind: schema
+      path: distilled/schema
+      coverage: "3 derived and 0 verbatim - a 6-rule CDDL of the thumbprint input, the §3 procedure and §4 label table as JSON data, and a JSON Schema 2020-12 with five oneOf branches for §4.1-§4.5. The source ships NO formal grammar of any kind, so every formal artifact here is ours. CDDL checked for closure and for collision with RFC 8610 prelude names (the RFC 8785 defect); no cddl or jsonschema tool is installed here, so this is closure and collision checking, not a parse"
+      reviewed_by: ""
+    - kind: messages
+      path: distilled/messages.yaml
+      coverage: "9 structures, 29 fields, every field carrying a non-empty constrained_by; 47 of the 68 requirements wired. The 21 left unwired are enumerated with a reason each so an adversarial reader can falsify the claim cheaply"
+      reviewed_by: ""
+    - kind: examples
+      path: distilled/examples/vectors.yaml
+      coverage: "13 vectors V-0001 to V-0013. EVERY printed value in the document reproduces, recomputed with a CBOR encoder written by hand against RFC 8949 §4.2.1 plus hashlib and no CBOR or COSE library: both §6 encodings, the SHA-256 thumbprint, the §6 kid, the §5.6 ckt, the §5.7 base64url form and the full URN. 8 of the 13 are marked source: constructed with a constructed_why - V-0001 to V-0007 and V-0013 - and the remaining 5, V-0008 to V-0012, are the source's own and carry six printed values between them, because RFC 9679 prints exactly one complete computation and every other printed value descends from it. All 13 were recomputed independently in the verify pass with a second hand-written RFC 8949 §4.2.1 encoder: 13 of 13 reproduce, the §6 input is 75 octets, and the pass-1 split of 7 constructed / 6 printed was a miscount of vectors against printed values. The cross-check pass then ran every vector against the three derived schema files through a checker transcribed from them - 8 accepted by one CDDL rule and exactly one oneOf branch, V-0001 correctly rejected, V-0004 to V-0006 correctly outside the five branches because §4.6 delegates, V-0008 carrying a thumbprint rather than being one - and wired 48 constrains/violates links over 37 distinct requirements, one link_rationale each, 0 dangling"
+      reviewed_by: ""
+    - kind: design-notes
+      path: distilled/design-notes.md
+      coverage: "the complete hashed set per key type; an ADAPT verdict on RFC 9679 as ARCH-0001 KeyId with three blockers, two of them ours rather than the RFC's; the alg-inside-the-digest hazard adjudicated to §4.6 -> RFC 9964 §6 directly, or §4.6 -> RFC 9964 §3 -> §5.1 by derivation, never to §4, with the COSE Key parameter alg verified absent from the whole document as a bare word and as a quoted name; and nine named cuts against MD-3, including §5.5 eliminating DEC-002 option 4 on a ground DEC-002 never listed"
+      reviewed_by: ""
+  not_applicable:
+    - kind: protocol
+      reason: "RFC 9679 defines a computation, a value, one CWT claim member and one URI. §5.6 NAMES three roles - issuer, presenter, recipient - but defines no message, no ordering and no error path; that flow is RFC 8747's, and the key-resolution step is expressly assumed away: \"This approach assumes that the recipient is able to obtain the identified COSE Key using the thumbprint contained in the \"ckt\" member.\" Modelling it here would be extracting a different document. The only other multi-party sentence is a precondition rather than an exchange: \"it is crucial that they know and use the same hash function to ensure consistent results.\" Re-attacked by the verify pass, which swept every section for a message, an ordering or an error path and found exactly one error path in the whole document, in §5.7 rather than §5.6: unregistered hash identifiers \"are not considered valid, and applications MUST detect and handle this error, should it occur\" (R-0051). That is a local accept/reject predicate on a string one party already holds - no peer, no message, no response, no recovery and no retry - so it is a validation rule on the §5.7 URI form, captured in messages.yaml on the cose-key-thumbprint-uri structure, and it does not make a protocol. Nothing in §3, §4.1-§4.6, §5.1-§5.7, §6, §7 or §8 defines a message or an ordering between parties."
+    - kind: state-machine
+      reason: "No lifecycle. A thumbprint is a pure function of a key: \"Including only the required parameters ensures that the COSE Key Thumbprint remains consistent for a given key, regardless of any additional attributes.\" No issuance, rotation, revocation or expiry of a thumbprint appears anywhere in the document, and there is no state a thumbprint can be in. The nearest thing is a one-shot validity predicate on the URI form - unknown hash identifiers \"are not considered valid, and applications MUST detect and handle this error\" - which is an accept/reject test, not a lifecycle. §8 does contain registrations, but they are IANA registry entries made once by this document for the `ckt` member and the `urn:ietf:params:oauth:ckt` URN, not a registration step in the life of any thumbprint; the verify pass narrowed this reason from \"No registration ... appears anywhere in the document\", which §8 contradicts on its face."
+  passes:
+    - pass: extract
+      by: "claude-opus-5 (2 parallel agents, one per artifact group)"
+      effort: max
+      date: "2026-10-18"
+      note: "each agent read only .cache/rfc-9679.txt. The two disagreed about whether RFC 9679 itself places `alg` in the digest; the orchestrator settled it against the source rather than between the agents, and the finding is recorded in design-notes.md. The settling claim was stated as 'the string `alg` occurs zero times in the document, as does `AKP`'; the verify pass falsified the first half - `alg` occurs six times inside 'algorithm'/'algorithms' - and confirmed the load-bearing form, that the COSE Key parameter `alg` is named nowhere, as a bare word or as a quoted name, and that `AKP` really is zero"
+    - pass: verify
+      by: "claude-opus-5 (single adversarial agent, independent of the extract pass)"
+      effort: max
+      date: "2026-10-19"
+      note: >-
+        Adversarial re-derivation, not a re-read: every count, quotation,
+        locator and fixture recomputed from .cache/rfc-9679.txt rather than
+        checked against pass 1's working. Confirmed - the 13 BCP 14 occurrences
+        enumerated by source line and matched one-to-one to the 13
+        keyword-bearing entries; 318 substring-and-locator assertions plus 19
+        fence checks with 0 failures; 0 dropped statements over 89 prose
+        sentences and 102 fenced non-prose lines in §3-§8; 13 of 13 vectors
+        reproduced with a second independently written RFC 8949 §4.2.1 encoder;
+        the §6 chain (75-octet input, 496bd8af..9da253ec,
+        SWvYr63zB-WwjGSwQhv53AFSijRKQ72oj63RZp2iU-w) exact; §4.2.1 vs §4.2.3
+        coinciding for every required set; the §6 full key not in §4.2.1 order
+        with kid second under it; the ckt/SHA-256 registration clash; and §5.5
+        misattributing both cross-references, now checked against RFC 7517 and
+        RFC 9449 themselves rather than from memory. [A 2026-10-20 maintenance
+        pass found a THIRD misattribution, in §5.4, which this pass did not
+        reach; see distilled/README.md item 4. "Both" above is correct as a
+        statement about §5.5 and incorrect as a count of the document's
+        misattributed cross-references, of which there are three.] Falsified
+        and FIXED in
+        place - (1) "the string alg occurs zero times", false by grep, narrowed
+        to the parameter claim that is true and load-bearing; (2) "RFC 8230 §4
+        does not close" the RSA normalisation, false - RFC 8230 §4 requires the
+        minimum number of octets needed to represent the value - narrowed to the
+        true defect, that RFC 9679 never cites RFC 8230; (3) 11 entries
+        testable: no, where the file has 5; (4) 7 constructed / 6 printed
+        vectors, where the file has 8 and 5; (5) the §6 input called 102 octets
+        in three places, where it is 75; (6) three source sentences carrying two
+        keywords each, where there are two; (7) normative.md's own rule for
+        delimiting a quoted run, falsified by six of its own lines; (8)
+        messages.yaml pointing at a distilled/protocol.yaml that does not exist
+        and is declared not_applicable. The alg chain was also sharpened to name
+        RFC 9964 §6, which states the AKP thumbprint set outright, alongside the
+        §3 -> §5.1 derivation pass 1 gave. RFC 8230 was fetched to .cache via
+        bin/fetch-source and verified against its recorded digest; RFC 7517 and
+        RFC 9449 were read outside the repo for cross-reference checking only.
+        No profile is claimed: cross-check has NOT run.
+    - pass: cross-check
+      by: "claude-opus-5 (single agent, artifact against artifact)"
+      effort: max
+      date: "2026-10-19"
+      note: >-
+        Artifact against artifact, not artifact against source: the source was
+        opened only to adjudicate a disagreement between two artifacts. All
+        four cross-checks pass. (1) FIELD COVERAGE - all 68 requirements
+        walked; 64 constrained_by links resolve with 0 dangling across 29
+        fields; the computed wired set is exactly 47 and the computed unwired
+        set exactly 21, matching the enumeration in messages.yaml id for id
+        once its "R-0001 to R-0003" range is expanded. Every unwired reason
+        re-tested and still holding, each against the artifact that does carry
+        it: R-0001 to R-0003 in thumbprint-computation.procedure, R-0006 in
+        hash_function.may_support, R-0039 in chosen_by, R-0035 on the §4.6
+        key type, R-0065 on confirmation_method, and R-0056 in entry_order
+        plus the layout of all five thumbprint-input structures. The reverse
+        check also holds - every COSE_Key parameter any requirement names is
+        modelled in messages.yaml or the schema, `cnf` as the field cnf_claim.
+        (2) PROTOCOL - swept every artifact for exchange vocabulary; 15 hits,
+        every one either the Acknowledgements section name, the ckt
+        "indistinguishable on the wire" defect, or the denial itself. No
+        artifact implies an exchange. The document's one error path was
+        re-located by line (L352-353, §5.7, exactly one occurrence of "detect
+        and handle") and confirmed wired on cose-key-thumbprint-uri, not
+        modelled as a message. (3) STATE MACHINE - swept for lifecycle
+        vocabulary; 29 hits, all the verb "states", the literal kind name, the
+        README state line, or our own R-O-02 revocation question. FOUND AND
+        FIXED one real cross-artifact contradiction - distilled/README.md
+        still read "No registration, issuance, rotation, revocation or expiry
+        appears anywhere", the exact wording the verify pass had removed from
+        this file as falsified by §8, which registers `ckt` and the URN. The
+        two artifacts now agree. (4) EXAMPLES AGAINST SCHEMA, the main job - a
+        checker was transcribed from the three derived schema files (a CDDL
+        parser over the 6 rules, enough JSON Schema 2020-12 to run the five
+        oneOf branches as written, and an executor for the §3 procedure and §4
+        label table) with no CBOR, COSE or jsonschema library. 12 of the 13
+        vectors have a thumbprint input; 8 are accepted by one CDDL rule and
+        exactly one oneOf branch; V-0001 is correctly REJECTED (entry -3:
+        expected bstr, got bool); V-0004 to V-0006 are correctly outside the
+        five branches because §4.6 delegates; V-0008 carries a thumbprint
+        rather than being one. The §3 steps re-executed from key_hex reproduce
+        7 inputs and digests exactly, plus 2 hash-only and the 3 AKP vectors
+        under the RFC 9964 §6 set - 13 of 13 accounted for. All 12 inputs are
+        §4.2.1-deterministic and round-trip, while the §6 FULL key decodes as
+        01 20 21 22 02 and is confirmed non-deterministic, corroborating
+        defect 2 rather than repairing it. DISCRIMINATION PROVEN - 5 missing
+        required parameters rejected; 5 extra optional parameters (kid, alg,
+        key_ops, Base IV, d) EXCLUDED rather than rejected, digest unchanged at
+        496bd8af in every case, with the unreduced map rejected by the same
+        closed CDDL map so R-0007 and R-0011 are enforced from both sides; 4
+        wrong-kty cases rejected including the tstr form R-0010 removes; and a
+        non-minimal RSA `n` correctly ACCEPTED, reproducing V-0002 and V-0003
+        exactly, with the RFC 8230 §4 predicate applied separately rejecting
+        only the padded spelling. ALSO DONE - 48 constrains/violates links over
+        37 distinct requirements added to the vectors with a link_rationale
+        each, 0 dangling; the see_also rfc-8230 edge confirmed to resolve, with
+        bin/reindex reporting 0 dangling library-wide and the crosswalk
+        symmetrising it to rfc-8230; the BCP 14 arithmetic independently
+        recounted (24 total, 11 in the §2 boilerplate at L109-111, 13 in the
+        body as 10 MUST / 2 MUST NOT / 1 MAY, matching bin/bcp14-count and the
+        recorded bijection line for line). FALSIFIED IN summary.md, written by
+        the orchestrator on 2026-10-19 and corrected here - its digest read
+        ea9db2b5f0a6, where the retrieved .txt hashes to f6b460e38ba1, and it
+        dated the RFC September 2024 where the masthead and this file both say
+        December 2024. Every other number pass 2 moved was re-derived from the
+        files and agrees across all six artifacts: 5 testable: no, two doubled
+        sentences, 75 octets, 8 constructed / 5 printed, and the `alg` claim
+        in its parameter form with the string falsification recorded. Three
+        source defects left untouched as instructed - the §6 non-deterministic
+        example, the SHA-256-pinned ckt, §5.5's two misattributions and the
+        §4.3 missing citation. [Two corrections to that sentence, 2026-10-20
+        maintenance pass. It says "Three" and then lists FOUR, which is this
+        record's own miscount, not the source's. And §5.5's two are now known
+        to be three, the third being in §5.4: distilled/README.md item 4.]
+status: distilled
 usefulness:
   verdict: useful
   reason: "DEC-003 lists 'COSE key thumbprint' as an option and requires canonical key bytes before hashing. This is that specification."

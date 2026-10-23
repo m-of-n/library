@@ -1,0 +1,502 @@
+# =====================================================================
+# rfc-8742 messages -- this document defines no message, no envelope and
+# no header. It defines ONE BYTE LAYOUT, whose entire content is "no
+# layout", and THREE REGISTRATION RECORDS. So, as in
+# records/ietf/rfc-9741/distilled/messages.yaml, the "messages" here are
+# the structures the document actually defines: the sequence, its
+# element, section 4.3's wrapped element, and the three IANA records.
+#
+# THE FINDING THIS FILE EXISTS TO MAKE CONCRETE. The CBOR Sequence has
+# ZERO framing bytes: no magic number, no version, no length, no
+# separator, no terminator, no count, no checksum. Every other entry
+# below is a registration record held OUT OF BAND. So the only in-band
+# bytes in an RFC 8742 file are the elements themselves, and nothing in
+# the file says how many there should be. `constrained_by` on the
+# `framing` pseudo-field cites the three requirements that each state a
+# piece of that absence.
+#
+# `constrained_by` IS USED HERE. 31 of the 61 requirements are cited by
+# a named field; the 30 that are not are listed in `requirements_no_field_cites`
+# with a reason each.
+#
+# [correction] 2026-10-20, pass 2: this comment read "44 of the 61 ...
+# the 17 that are not", which contradicted BOTH the
+# `requirements_no_field_cites` block below (30 entries, and it says 31
+# of 61) and the `counts` block at the end of this file (31 and 30).
+# Recomputed at pass 2 over the `constrained_by:` lists alone: 37 cite
+# sites, 31 distinct requirements cited, 30 not cited, and the listed
+# set is exactly set-equal to the computed one. The header was the stale
+# figure -- probably the pre-audit draft's 44/17 -- and it is the first
+# thing a reader of this file sees.
+#
+# Quoted sentences are RFC 8742's own words. Anything marked OURS is
+# this library's reading, not the document's.
+#
+# Source: RFC 8742, cached source sha256
+#   4462966836b60f42ebae9b5f1d2a479c328e16f0380a3434311a083bccbce30e
+# =====================================================================
+record: rfc-8742
+reviewed_by: ""
+
+messages:
+
+  # ------------------------------------------------------ the format
+  - name: 'cbor-sequence'
+    locator: "§2"
+    encoding: 'raw bytes; a CBOR Sequence is a byte string, not a CBOR data item'
+    media_type: 'application/cbor-seq (§6.1)'
+    coap_content_format: 63
+    structured_syntax_suffix: '+cbor-seq (§6.3)'
+    definition_quote: >-
+      Formally, a CBOR Sequence is a sequence of bytes that is recursively
+      defined as either of the following: * an empty (zero-length) sequence of
+      bytes * the sequence of bytes making up an encoded CBOR data item
+      [RFC7049] followed by a CBOR Sequence.
+    fields:
+      - name: 'elements'
+        type: 'zero or more cbor-sequence-element, concatenated'
+        required: false
+        cardinality: '0..*'
+        note: 'required: FALSE, and that is not a slip -- "an empty (zero-length) sequence of bytes" is case one of the definition, so a zero-element sequence is valid and decodes to zero values'
+        constrained_by: ['rfc-8742#R-0008', 'rfc-8742#R-0009', 'rfc-8742#R-0010', 'rfc-8742#R-0011']
+      - name: 'framing'
+        type: 'none -- there is no framing field of any kind'
+        required: false
+        width_bytes: 0
+        note: >-
+          OURS, as an enumeration; each clause is a requirement of the document.
+          No magic number ("Magic number(s): N/A", §6.1), no file extension
+          ("File extension(s): N/A", §6.1), no version, no length prefix, no
+          separator or marker between items ("CBOR Sequences, unlike JSON Text
+          Sequences [RFC7464], do not use a marker between items"), no
+          terminator ("There is no end-of-sequence indicator."), no element
+          count, and no integrity check ("This format provides no cryptographic
+          integrity protection of any kind").
+        constrained_by: ['rfc-8742#R-0013', 'rfc-8742#R-0015', 'rfc-8742#R-0046', 'rfc-8742#R-0047', 'rfc-8742#R-0041']
+    layout: >-
+      element[0] || element[1] || ... || element[n-1], with nothing before,
+      between or after. Total length = sum of the element lengths. n is not
+      recoverable from the file: it is the number of items the decoder happened
+      to read before running out of bytes.
+    completeness: >-
+      NOT DECIDABLE FROM THE BYTES, and the document says so three times. (a)
+      "an empty (zero-length) sequence of bytes" is a valid sequence, so an
+      empty file is a valid empty log; (b) "There is no end-of-sequence
+      indicator."; (c) the format "can reliably detect truncation of the bytes
+      making up the last CBOR data item in the sequence, but it cannot detect
+      entirely missing CBOR data items at the end." OURS, following from those
+      three: truncating an append-only log at an item boundary is in spec and
+      undetectable. ../state-machine.yaml restates this as an indistinguishability
+      between two FILES, which is what its `indistinguishable_pairs` actually
+      holds; [correction] 2026-10-20, pass 2: this field used to say "the same
+      finding as an indistinguishability between two STATES", which is not what
+      that block says -- a complete log and one truncated at an item boundary are
+      BOTH `input-exhausted-at-boundary`, one state and two files. THIS FIELD, not
+      the state machine, is where the finding lives, and ../examples/vectors.yaml
+      rfc-8742#D-0001, #D-0004 and #D-0005 are where it is executable.
+    constrained_by_count: 9
+
+  - name: 'cbor-sequence-element'
+    locator: "§2"
+    encoding: 'one encoded CBOR data item'
+    normative_reference: >-
+      [RFC7049] -- the OBSOLETED CBOR specification. RFC 8949 (STD 94) is named
+      nowhere in RFC 8742 and the header carries no `Updates:` or `Obsoleted
+      by:` line. Well-formedness did not change across the restatement, so the
+      FORMAT survives; the CITATION does not.
+    fields:
+      - name: 'head'
+        type: 'CBOR head -- initial byte plus argument bytes'
+        required: true
+        note: >-
+          NOT DEFINED HERE. RFC 8742 defines no byte-level structure of its own
+          at all; the element is whatever [RFC7049] says it is. The head is
+          enumerated in
+          records/ietf/rfc-8949/distilled/schema/cbor-head.derived.abnf.
+        constrained_by: ['rfc-8742#R-0010', 'rfc-8742#R-0001']
+      - name: 'content'
+        type: 'per the head'
+        required: false
+        note: 'absent for major types 0, 1 and 7 with no payload'
+        constrained_by: ['rfc-8742#R-0010']
+    self_delimiting: >-
+      The whole format rests on this one property: "This is possible because
+      CBOR-encoded data items are self delimiting and the end can always be
+      calculated." OURS: the claim holds for WELL-FORMED items only, which the
+      document concedes two paragraphs later -- "if any data item in the
+      sequence is not well formed, it is not possible to reliably decode the
+      rest of the sequence."
+    layout: 'per RFC 8949 §3; no byte of the element is contributed by RFC 8742'
+    constrained_by_count: 2
+
+  - name: 'byte-string-wrapped-element'
+    locator: "§4.3"
+    encoding: 'a CBOR byte string (major type 2) whose content is an encoded CBOR data item'
+    cddl_from_source: 'my-element = bytes .cbor my-element-structure'
+    purpose_quote: >-
+      In certain applications, being able to efficiently skip an element without
+      the need for decoding its substructure, or efficiently fanning out
+      elements to multi-threaded decoding processes, is of the utmost importance.
+    fields:
+      - name: 'byte-string head'
+        type: 'CBOR major type 2 head carrying the element length in bytes'
+        required: true
+        width_bytes: '1 for a payload under 24 bytes, 2 under 256, 3 under 65536, 5 under 2**32, 9 beyond'
+        note: >-
+          OURS, from RFC 8949 §3's head widths; RFC 8742 states only that byte
+          strings "carry length information in bytes". This head is the entire
+          cost of the mitigation.
+        constrained_by: ['rfc-8742#R-0038']
+      - name: 'embedded item'
+        type: 'an encoded CBOR data item, per RFC 8610 §3.8.4 .cbor'
+        required: true
+        constrained_by: ['rfc-8742#R-0038', 'rfc-8742#R-0029']
+    recovery_bound: >-
+      "Within limits, this may also enable recovering from elements that
+      internally are not well formed; the limitation is that the sequence of
+      byte strings does need to be well formed as such." OURS: the failure
+      boundary moves in one level and does not go away -- a corrupt byte-string
+      HEAD still strands the tail.
+    layout: 'bstr-head(n) || n bytes of embedded item, repeated; the sequence is then a sequence of byte strings'
+    note_ours: >-
+      OURS. This is tag 24's pattern (RFC 8949 §3.4.5.1, encoded CBOR data item)
+      WITH THE TAG REMOVED, which is the move rfc-8949's design notes already
+      record for a tag-free signed payload. It is also the only mitigation in
+      the document for the tail loss of rfc-8742#R-0021, and the document
+      presents it as a performance optimisation rather than as a durability one.
+    constrained_by_count: 2
+
+  # --------------------------------------------- the three registrations
+  - name: 'media-type-registration'
+    locator: "§6.1"
+    encoding: 'an RFC 6838 media type registration template; held in the IANA "Media Types" registry, OUT OF BAND'
+    verbatim: 'schema/registrations.txt region R01, source lines 278-317'
+    fields:
+      - name: 'Type name'
+        value: 'application'
+        required: true
+        constrained_by: ['rfc-8742#R-0045']
+      - name: 'Subtype name'
+        value: 'cbor-seq'
+        required: true
+        constrained_by: ['rfc-8742#R-0045', 'rfc-8742#R-0004']
+      - name: 'Required parameters'
+        value: 'N/A'
+        required: true
+        constrained_by: ['rfc-8742#R-0045']
+      - name: 'Optional parameters'
+        value: 'N/A'
+        required: true
+        note: 'OURS: so there is no parameter by which a profile, a version or a schema could be named on the media type. application/cbor-seq is one undifferentiated thing.'
+        constrained_by: ['rfc-8742#R-0045']
+      - name: 'Encoding considerations'
+        value: 'binary'
+        required: true
+        constrained_by: ['rfc-8742#R-0050']
+      - name: 'Security considerations'
+        value: 'See RFC 8742, Section 5.'
+        required: true
+        constrained_by: ['rfc-8742#R-0040', 'rfc-8742#R-0041']
+      - name: 'Interoperability considerations'
+        value: 'Described herein.'
+        required: true
+        note: 'DANGLING. No part of RFC 8742 is headed interoperability. The nearest content is §2''s truncation paragraph and §4.3''s skipping advice, neither so headed. Reported, not repaired.'
+        constrained_by: ['rfc-8742#R-0049']
+      - name: 'Published specification'
+        value: 'RFC 8742.'
+        required: true
+        constrained_by: ['rfc-8742#R-0045']
+      - name: 'Applications that use this media type'
+        value: 'Data serialization and deserialization.'
+        required: true
+        constrained_by: ['rfc-8742#R-0045']
+      - name: 'Fragment identifier considerations'
+        value: 'N/A'
+        required: true
+        note: >-
+          THIS IS THE FIELD §6.3's FIRST SHOULD DEFERS TO, AND SO WHAT MAKES IT
+          A DEFERRAL. §6.3's two SHOULDs define fragment identifiers for
+          +cbor-seq by reference to the syntax "that specified for
+          "application/cbor-seq"", which is this field, registered N/A.
+          [cross-check] 2026-10-21, pass 3: this note read "THIS IS WHAT MAKES
+          TWO OF THE DOCUMENT'S FOUR BCP 14 KEYWORDS VACUOUS". Pass 2 overturned
+          the vacuity claim in four places and this was not one of them --
+          rfc-8742#R-0055 is DEFERRED (rfc-8742#R-0056's temporal qualifier,
+          held verbatim there with its capital) and rfc-8742#R-0057 is not vacuous
+          at all, since its three cases collapse onto rfc-8742#R-0060. See
+          ../design-notes.md §7 defect 1.
+        constrained_by: ['rfc-8742#R-0048', 'rfc-8742#R-0055', 'rfc-8742#R-0056']
+      - name: 'Deprecated alias names for this type'
+        value: 'N/A'
+        required: false
+        constrained_by: ['rfc-8742#R-0045']
+      - name: 'Magic number(s)'
+        value: 'N/A'
+        required: false
+        note: >-
+          THE DATUM THIS RECORD WAS READ FOR. A CBOR tag would be in the bytes;
+          RFC 8742 asks for none, and its own media type registration says so.
+          OURS: RFC 9277 Appendix B plus this media type's content-format 63
+          makes one constructible -- TN(63) = 1668546880 = 0x63740140, label
+          d9d9f8 da63740140 43 424f52 -- and RFC 9277 carries no `Updates: 8742`,
+          so the registration a reader consults and the RFC that makes its magic
+          number derivable disagree. See ../design-notes.md.
+        constrained_by: ['rfc-8742#R-0046']
+      - name: 'File extension(s)'
+        value: 'N/A'
+        required: false
+        note: 'OURS: with no magic number AND no file extension, two of the three out-of-band substitutes rfc-8949''s design notes list are unavailable for this media type by its own registration. The media type itself is the only one left.'
+        constrained_by: ['rfc-8742#R-0047']
+      - name: 'Macintosh file type code(s)'
+        value: 'N/A'
+        required: false
+        constrained_by: ['rfc-8742#R-0045']
+      - name: 'Person & email address to contact for further information'
+        value: 'cbor@ietf.org'
+        required: true
+        constrained_by: ['rfc-8742#R-0045']
+      - name: 'Intended usage'
+        value: 'COMMON'
+        required: true
+        constrained_by: ['rfc-8742#R-0051']
+      - name: 'Author'
+        value: 'Carsten Bormann (cabo@tzi.org)'
+        required: true
+        constrained_by: ['rfc-8742#R-0045']
+      - name: 'Change controller'
+        value: 'IETF'
+        required: true
+        constrained_by: ['rfc-8742#R-0045']
+    layout: 'a registry record, not bytes in a file. OUT OF BAND by construction: it lives in a Content-Type header, in filesystem metadata, or nowhere.'
+    constrained_by_count: 12
+
+  - name: 'coap-content-format-row'
+    locator: "§6.2"
+    encoding: 'a row of the "CoAP Content-Formats" subregistry of the CoRE Parameters registry; carried in a CoAP Content-Format Option, OUT OF BAND'
+    verbatim: 'schema/registrations.txt region T01, source lines 326-332 (Table 1)'
+    allocation_policy: 'Expert Review (0-255) range, [RFC8126] -- which is an INFORMATIVE reference of this document (§7.2)'
+    fields:
+      - name: 'Media type'
+        value: 'application/cbor-seq'
+        required: true
+        constrained_by: ['rfc-8742#R-0052']
+      - name: 'Encoding'
+        value: '-'
+        required: true
+        note: 'identity content-coding'
+        constrained_by: ['rfc-8742#R-0052']
+      - name: 'ID'
+        value: 63
+        required: true
+        note: >-
+          OURS, and the distinction matters: CoAP Content-Format 63 and CBOR
+          TAG 63 are DIFFERENT NAMESPACES and the matching numeral is a
+          coincidence. The IANA CBOR Tags registry does carry tag 63 with
+          semantics "Encoded CBOR Sequence RFC 8742" -- referenced to
+          draft-bormann-cbor-notable-tags-02, Section 2.1
+          (records/iso/iana-cbor-tags/distilled/tables.yaml, verified at this
+          pass) -- an allocation RFC 8742 never requested, made by an individual
+          draft, attributing a code point to this RFC in a prose semantics
+          field.
+        constrained_by: ['rfc-8742#R-0053']
+      - name: 'Reference'
+        value: 'RFC 8742'
+        required: true
+        constrained_by: ['rfc-8742#R-0053']
+    layout: 'a 16-bit unsigned integer in a CoAP option (RFC 7252 §5.10.3); not a byte of the file'
+    constrained_by_count: 2
+
+  - name: 'structured-syntax-suffix-registration'
+    locator: "§6.3"
+    encoding: 'an RFC 6838 structured syntax suffix registration; held in the IANA "Structured Syntax Suffix Registry", OUT OF BAND'
+    verbatim: 'schema/registrations.txt region R02, source lines 341-377'
+    note_ours: >-
+      OURS: the registration is performed "in accordance with [RFC6838]" and
+      RFC 6838 is an INFORMATIVE reference of this document (§7.2). The
+      procedure the registration conforms to is cited informatively.
+    fields:
+      - name: 'Name'
+        value: 'CBOR Sequence'
+        required: true
+        constrained_by: ['rfc-8742#R-0054']
+      - name: '+suffix'
+        value: '+cbor-seq'
+        required: true
+        constrained_by: ['rfc-8742#R-0054', 'rfc-8742#R-0006', 'rfc-8742#R-0026']
+      - name: 'References'
+        value: 'RFC 8742'
+        required: true
+        constrained_by: ['rfc-8742#R-0054']
+      - name: 'Encoding considerations'
+        value: 'binary'
+        required: true
+        constrained_by: ['rfc-8742#R-0054']
+      - name: 'Fragment identifier considerations'
+        value: 'two BCP 14 SHOULDs and a parenthesis withdrawing their referent'
+        required: true
+        note: >-
+          ONE SHOULD IS DEFERRED AND THE OTHER IS UNIVERSAL; NEITHER IS VACUOUS.
+          The first defers to the same syntax and semantics as "that
+          specified for "application/cbor-seq"", which §6.1 registers as
+          "Fragment identifier considerations: N/A" and which §6.3 then calls
+          absent "(At the time of publication of this document, there is no
+          fragment identification syntax defined for "application/cbor-seq".)"
+          -- a temporal qualifier, so it binds if and when one is registered.
+          The second reads "The
+          syntax and semantics for fragment identifiers for a specific
+          "xxx/yyy+cbor-seq" SHOULD be processed as follows:" and then branches
+          its three cases on "the +cbor-seq rules", which no document defines.
+          The three cases therefore collapse to the third, since with no
+          +cbor-seq rules every case is one "not defined in +cbor-seq" --
+          rfc-8742#R-0060, which is universal and determinate at publication and
+          is the one keyword of the four with an applicable effect on the day the
+          RFC shipped.
+          [cross-check] 2026-10-21, pass 3: this note read "BOTH SHOULDS ARE
+          VACUOUS AT PUBLICATION BY THE DOCUMENT'S OWN ADMISSION". Pass 2
+          overturned that in four places and this was not one of them; pass 1's
+          own final sentence (the collapse onto the third case) is the premise
+          that defeats it. The replacement defect is that §6.1 and §6.3 register
+          CONTRADICTORY fragment-identifier dispositions for the same format and
+          §6.3 does not reconcile them. See ../design-notes.md §7 defect 1.
+        constrained_by: ['rfc-8742#R-0055', 'rfc-8742#R-0056', 'rfc-8742#R-0057', 'rfc-8742#R-0058', 'rfc-8742#R-0059', 'rfc-8742#R-0060']
+      - name: 'Interoperability considerations'
+        value: 'n/a'
+        required: true
+        note: 'AND §6.1''s corresponding field reads "Described herein." for the same format. The two registrations of one format disagree about whether this document has interoperability considerations. Reported, not repaired.'
+        constrained_by: ['rfc-8742#R-0061', 'rfc-8742#R-0049']
+      - name: 'Security considerations'
+        value: 'See RFC 8742, Section 5'
+        required: true
+        note: 'OURS: §6.1''s identical field ends with a full stop and this one does not. Editorial; recorded only because the two templates are otherwise parallel.'
+        constrained_by: ['rfc-8742#R-0054']
+      - name: 'Contact'
+        value: 'CBOR WG mailing list (cbor@ietf.org), or any IESG-designated successor.'
+        required: true
+        note: 'the source severs "IESG-" / "designated" at lines 373/374; schema/registrations.txt carries the break unhealed, and this field states the joined form as OURS'
+        constrained_by: ['rfc-8742#R-0054']
+      - name: 'Author/Change controller'
+        value: 'IETF'
+        required: true
+        constrained_by: ['rfc-8742#R-0054']
+    layout: 'a registry record; the suffix appears in a media type NAME, which is out of band'
+    constrained_by_count: 11
+
+# ---------------------------------------------------------------------
+# locator_join -- which requirements no field cites, and why.
+# Computed MECHANICALLY at pass 1 over the `constrained_by:` lists above
+# (prose mentions of an id elsewhere in this file do NOT count as a
+# cite; the first draft of this block counted them and was wrong by 12).
+# 31 of 61 are cited by a named field. The 30 below are not, each for a
+# stated reason, and the list is set-equal to the computed set.
+#
+# The split is lopsided ON PURPOSE and it is itself the finding: HALF OF
+# SECTION 2 CANNOT BE ATTACHED TO A FIELD, because the format's content
+# is a DECODING PROCEDURE and an enumeration of what cannot be
+# detected, not a set of fields. Those 11 entries are carried by
+# ../state-machine.yaml instead. Compare rfc-9741, where 48 of 61 were
+# cited by a field, and rfc-8610, where constrained_by is omitted
+# throughout.
+# ---------------------------------------------------------------------
+# NOTE ON FORM, and it is a finding about this library rather than about
+# RFC 8742. The 30 entries below were first written as INLINE FLOW MAPS
+# (`- {id: ..., reason: ...}`), which is valid YAML and which bin/_yaml.py
+# MIS-PARSED SILENTLY AT THE TIME: it returned {'{id': "'rfc-8742#R-0002',
+# reason: '...'}"} -- one key, named "{id", holding the rest of the line
+# as a string. No tool in bin/ could read the block, so it was rewritten
+# as block maps, which is what it still is and what this library prefers.
+#
+# [cross-check] 2026-10-21, pass 3: THE READER CLAIM IS NOW A FOSSIL and the
+# tense above is corrected. Commit 9322447 ("_yaml: parse flow collections,
+# so the two readers stop disagreeing", 2026-10-20) fixed it. Re-measured at
+# pass 3 on the exact two-entry sample this note describes: BOTH readers now
+# return [{'id': 'rfc-8742#R-0002', 'reason': ...}, ...] with the keys `id`
+# and `reason`. The block maps stay -- they are the library's preference
+# (hazards.md #6) and nothing here needs flow -- but a reader of this file
+# must not infer that bin/_yaml.py still loses a flow map. What DOES still
+# break is a MULTI-LINE flow SEQUENCE: bin/_record_yaml.py raises ValueError
+# on one, measured at pass 3. No file of this record uses either form, and
+# bin/validate reports both readers parsing all four YAML artifacts.
+# The pointer this note used to carry -- "the related multi-line
+# flow-SEQUENCE truncation is reported in ../design-notes.md" -- DANGLED:
+# design-notes.md contains no such report (0 hits for flow / reader /
+# parser at pass 3). The measurement above replaces it.
+requirements_no_field_cites:
+  # (a) statements about the DOCUMENT, about CBOR, or about vocabulary -- 5
+  - id: 'rfc-8742#R-0002'
+    reason: 'a scope statement about this document'
+  - id: 'rfc-8742#R-0003'
+    reason: 'a capability claim about implementations -- incremental consumption without a substructure-streaming parser -- not a field of any structure'
+  - id: 'rfc-8742#R-0005'
+    reason: 'a fact about RFC 7049, namely that it defines the "+cbor" suffix'
+  - id: 'rfc-8742#R-0007'
+    reason: 'the definition of "byte" as a synonym for "octet"; it governs every width above rather than being one'
+  - id: 'rfc-8742#R-0028'
+    reason: 'a permission addressed to an application meeting the media type; no field'
+  # (b) the DECODING PROCEDURE and the completeness hole -- 11.
+  #     Every one of these is a state or a transition in ../state-machine.yaml.
+  - id: 'rfc-8742#R-0012'
+    reason: 'the concatenation closure property; it is a property of the operation, and it is the sentence rfc-9277 Appendix A.2 qualifies for LABELLED sequences'
+  - id: 'rfc-8742#R-0016'
+    reason: 'self-delimitation; stated on the `cbor-sequence-element` entry as `self_delimiting`, which is prose and not a field'
+  - id: 'rfc-8742#R-0017'
+    reason: 'the head of the decoding rule'
+  - id: 'rfc-8742#R-0018'
+    reason: 'decoding the empty sequence -- a transition, and one of the three completeness statements'
+  - id: 'rfc-8742#R-0019'
+    reason: 'the decoding step itself; the one sentence that says how to decode the format, and it is lower-case "must"'
+  - id: 'rfc-8742#R-0020'
+    reason: 'the streaming-decoder consequence: emit each value as soon as its bytes are available'
+  - id: 'rfc-8742#R-0021'
+    reason: 'the tail loss on a malformed item; an absorbing state, not a field'
+  - id: 'rfc-8742#R-0022'
+    reason: 'a lower-case permission to recover from near-well-formed bytes; no field, and no criterion'
+  - id: 'rfc-8742#R-0023'
+    reason: 'the scope exclusion for malformed data'
+  - id: 'rfc-8742#R-0024'
+    reason: 'the truncation-detection limit; stated on `cbor-sequence` as `completeness`, which is prose and not a field'
+  - id: 'rfc-8742#R-0025'
+    reason: 'the suspend/resume permission; it is the whole basis of ../state-machine.yaml and names no field'
+  # (c) the alternative container, and the schema and notation gaps -- 9.
+  #     All nine are carried by schema/ rather than by a field, because
+  #     they are statements about a SPECIFICATION LANGUAGE, not about bytes.
+  - id: 'rfc-8742#R-0014'
+    reason: 'the definite-or-indefinite array alternative; it describes a DIFFERENT structure, and schema/cbor-seq-container.derived.cddl C3 and C4 carry it'
+  - id: 'rfc-8742#R-0027'
+    reason: 'the lower-case fallback to "+cbor" for formats that do not qualify; a drafting rule for a specification author'
+  - id: 'rfc-8742#R-0030'
+    reason: 'CDDL cannot state a top-level CBOR Sequence; an explicit absence of capability in the schema language. schema/README.md and cbor-seq.derived.abnf carry it'
+  - id: 'rfc-8742#R-0031'
+    reason: 'the array-plus-English-text workaround; schema/cbor-seq-container.derived.cddl C1 is the instantiation'
+  - id: 'rfc-8742#R-0032'
+    reason: 'a statement about possible future versions of CDDL'
+  - id: 'rfc-8742#R-0033'
+    reason: 'diagnostic notation cannot state an unadorned sequence either; a statement about a NOTATION, carried by ../examples/README.md'
+  - id: 'rfc-8742#R-0034'
+    reason: 'the lower-case recommendation to enclose items in an array when writing notation'
+  - id: 'rfc-8742#R-0035'
+    reason: 'the bracket-free notation permission; ../examples/vectors.yaml V-0002 is the instance'
+  - id: 'rfc-8742#R-0036'
+    reason: 'the zero-length case in notation; a statement about diagnostic notation'
+  # (d) section 4.3 motivation and section 5 -- 5
+  - id: 'rfc-8742#R-0037'
+    reason: 'the motivation for the byte-string wrapper (skipping, fan-out); a statement about applications'
+  - id: 'rfc-8742#R-0039'
+    reason: 'the bounded recovery the wrapper buys; stated on `byte-string-wrapped-element` as `recovery_bound`, which is prose and not a field'
+  - id: 'rfc-8742#R-0042'
+    reason: 'per-element versus whole-sequence COSE; it is about what a SIGNATURE covers, which no field of this document carries. ../design-notes.md Cut 3 is built on it'
+  - id: 'rfc-8742#R-0043'
+    reason: 'the untrusted-input framing assumption; lower-case "must", and no field'
+  - id: 'rfc-8742#R-0044'
+    reason: 'THE DOCUMENT''S ONLY BCP 14 MUST, and it attaches to no field: "decoders MUST fail gracefully in the face of malicious inputs" is a behaviour of an implementation, not a property of a structure. Worth seeing in this list rather than inferring it'
+
+counts:
+  messages: 6
+  field_entries: 37
+  requirements_total: 61
+  requirements_cited_by_a_field: 31
+  requirements_not_cited: 30
+  of_which_carried_by_state_machine: 11
+  of_which_carried_by_schema: 9
+  framing_bytes_contributed_by_this_document: 0
+  bcp14_requirements_cited_by_a_field: 3     # R-0026, R-0055, R-0057
+  bcp14_requirements_not_cited: 1            # R-0044, the only MUST

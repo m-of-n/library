@@ -20,19 +20,738 @@ content:
   retrieved: "2026-09-22"
   local: false
 relations:
-  see_also: []
+  # Added 2026-10-20 while settling `bears_on` (library#39 Tier 2). §1.1's
+  # second use case — "the notarization of a signed document by registering it
+  # with a transparency service", "statements", the "append-only log", and a
+  # "transparent statement" — is written in SCITT's vocabulary word for word,
+  # and the document cites RFC 9943 nowhere (0 occurrences of "SCITT" and of
+  # "9943"). The TTC mode exists for that architecture: §1.1 says the TST
+  # "must be included in the signed statement" precisely so registration does
+  # not lose it. The dependency is real and unreachable from the document's own
+  # references, so the edge is made from here — the same move rfc-9679 needed
+  # for RFC 8230.
+  see_also:
+    - rfc-9943
   part_of:
     - ietf-cose-wg
-bears_on: []
+bears_on:
+  # Resolved 2026-10-20 (library#39 Tier 2), from `bears_on: []` + verdict
+  # `marginal`. The old reason — "relevant only if we need third-party time
+  # attestation" — scoped the record by whether we want the FEATURE. What the
+  # document is actually evidence about is what a COSE header parameter costs
+  # a reduced-CBOR profile, and that holds whether or not we ever timestamp
+  # anything. Each identifier is evidenced by locator:
+  #   DEC-002 — the hardest finding, and it is a cost MD-3's premise does not
+  #     price. §3.1 and §3.2 each place "a DER-encoded TST [RFC3161] wrapped
+  #     in a CBOR byte string (Major type 2)" in a COSE header; §6 allocates
+  #     label 269 (`3161-ttc`) and 270 (`3161-ctt`) with Value Type `bstr` and
+  #     Value Registry "-", i.e. no CBOR-side schema is imposed at all.
+  #     Appendix A.1 measures it: 5453 octets of ASN.1 DER, carrying a
+  #     two-certificate X.509 chain, inside ONE protected-header parameter,
+  #     against a 20-octet payload. **A reduced-CBOR profile reduces the CBOR;
+  #     it does not reduce what is inside a byte string** — so the canonical
+  #     encoding stops at the bstr boundary, and §4 makes it the COSE
+  #     receiver's own obligation to go past it: "the receiver MUST make sure
+  #     that the MessageImprint in the embedded timestamp token matches a hash
+  #     of either the payload, signature, or signature fields", with CMS
+  #     [RFC5652] named as where that verification is defined. A CBOR verifier
+  #     acquires an ASN.1/CMS/X.509 stack and a clock. Option 5 separately
+  #     forbids "native use of COSE header parameters", so the capability is
+  #     unreachable natively and reachable only on export.
+  #     And the half that cuts the other way, recorded with equal weight:
+  #     §3.1.1 computes the CTT MessageImprint over "the bstr-wrapped
+  #     signature... (including the heading bytes 0x5840)". The CBOR HEAD of
+  #     the `signature` field is in a third party's digest preimage, and the
+  #     COSE signature does not cover it. So a TSA authenticates an encoding
+  #     choice the envelope itself leaves free, and the ambiguity closes only
+  #     under RFC 8949 §4.2.1 determinism. That is an argument for requiring
+  #     deterministic encoding on the EXPORT path, not only natively.
+  #   R-M-12 — an extension point must be a (key, local label) pair. This is
+  #     the cleanest available demonstration that making the LABEL
+  #     key-relative buys nothing when the VALUE is a foreign format. The
+  #     whole capability is two centrally allocated COSE header labels (§6),
+  #     and the 5453 octets they carry are registry-rooted end to end — OIDs,
+  #     X.509 names, CMS content types. Relabel it `(our key,
+  #     "rfc3161-timestamp")` and every identifier inside the value is still
+  #     IANA/ITU-allocated. ADR-0001's "escape from a registry, not a
+  #     namespace", arrived at from the value side rather than the label side.
+  #   R-O-05 — two findings, one adopt and one hazard.
+  #     ADOPT: §3.2's TTC imprint is "the hash of the payload of the COSE
+  #     Signed Message. This does not include the bstr wrapping -- only the
+  #     payload bytes", while §3.1's CTT imprint deliberately DOES include the
+  #     wrapper. Two digests in one document, two answers to "does the wrapper
+  #     count", each written down; and §4 has the verifier hash the bytes as
+  #     received and compare, never re-serialise. R-O-05's ordering, arrived
+  #     at independently, and the citation that the wrapper question must be
+  #     settled per digest rather than once.
+  #     HAZARD: §5.1 says "each mode has its own separate verification
+  #     algorithm", and the only discriminator between them is which header
+  #     label carries the TST — one of which, `3161-ctt` (270), is in the
+  #     UNPROTECTED bucket. §5 concedes it: "an attacker could manipulate the
+  #     unprotected header by removing or replacing the timestamp. To avoid
+  #     that, the COSE Signed Message should be integrity protected during
+  #     transit and at rest" — lowercase, and it pushes the integrity
+  #     requirement outside the envelope. An unauthenticated type indicator
+  #     selecting a verification algorithm is exactly the shape R-O-05 exists
+  #     to forbid, and §5.1 names the consequence: "incorrectly accepting
+  #     signatures created after key revocation based on older payload-only
+  #     timestamps."
+  #   NOT CLAIMED, deliberately: R-001. DECIDED BY PASS 3 (cross-check),
+  #     2026-10-21, on the question pass 2 left open. Issue library#39 cites
+  #     "survey R-001 §10" for timestamping being first-class for long-lived
+  #     attestations. `R-001` occurs ZERO times in records/, topics/ and docs/
+  #     except in the notes about it, and its SHAPE is not one this library
+  #     uses: every rule id here is `R-<letter>-<digits>` (R-M-12, R-O-05,
+  #     R-I-01), and `R-001` has no letter segment, so it is not an id of the
+  #     family the three verified entries above belong to. It names a section
+  #     of an `mofn` survey this standalone library does not hold.
+  #     schema/record.schema.yaml says of `bears_on`: "Do not invent
+  #     relevance." An identifier that cannot be resolved here, and whose form
+  #     does not match any rule family here, cannot be checked by any reader of
+  #     this repository, so it is NOT added.
+  #     THE SUBSTANCE IS PRESENT AND LOCATED, so a reader who does hold `mofn`
+  #     can wire it in one step rather than re-derive it: §1.1 source lines
+  #     98-100, "The primary use case is that of \"long-term signatures\",
+  #     i.e., signatures that can still be verified even after the signing
+  #     certificate has expired" (R-0008), with R-0009 to R-0011 carrying what
+  #     a CTT timestamp then lets a relying party conclude;
+  #     distilled/design-notes.md §8.5, which is where the capability and the
+  #     MD-3 mapping collide; and distilled/state-machine.yaml's M5
+  #     `signature-trust-over-time`, the five-state lifecycle that question is
+  #     actually about. This follows the convention design-notes.md §0 keeps
+  #     for every `mofn` identifier, and the DEC-005 entry below.
+  #   NOT CLAIMED, deliberately: DEC-005. RFC 9921 is COSE-only by
+  #     construction (§3.1/§3.2 define the imprint over the CBOR-encoded
+  #     `signature`/`signatures` field or the payload of a COSE Signed
+  #     Message), so time attestation is available to one DEC-005 option and
+  #     not the other — the same asymmetry as rfc-9964's Cut D. Establishing
+  #     it needs the DSSE record as well as this one, so it is left to the
+  #     extraction rather than asserted from this document alone.
+  - DEC-002
+  - R-M-12
+  - R-O-05
 topic: cbor-implementation
 tags:
   - signatures
+  - encoding
   - ietf
+  - evidence
   - prior-art
-status: fetched
+distillation:
+  standard: "FX-1"
+  # `profile: full` DECLARED on the cross-check pass's report, 2026-10-21.
+  # Every artifact in FX-1's set is present with NO `not_applicable`
+  # declaration at all.
+  #
+  # `distillation.passes` below is the ONLY authority for which passes have run.
+  # DO NOT RESTATE THE PASS COUNT here or in any artifact: a restatement goes
+  # stale the moment the next pass lands and nothing reports it. This very
+  # comment is the proof - it read "pass 2 (verify) and pass 3 (cross-check)
+  # have NOT run" after both had, sitting directly above the list that recorded
+  # them. The same class was found in four files at once in rfc-9338 and four
+  # in rfc-8778.
+  #
+  # Corrections to the pass-1 and pass-2 notes below are recorded IN PLACE, in
+  # brackets, rather than only in the pass-3 entry - the convention this lane
+  # has kept throughout, so a reader of any note sees its own corrections
+  # without having to reach the end of the block.
+  #
+  # What `full` does NOT mean: no `reviewed_by` is signed on any artifact, so
+  # pass 4 (human review) is outstanding and nothing may be BUILT on these yet
+  # (docs/requirements.md). They may be read.
+  profile: full
+  artifacts:
+    - kind: normative
+      path: distilled/normative.md
+      coverage: >-
+        29 verbatim regions covering the Abstract and §1-§7 and both
+        appendices, in source order, each an exact run of source lines with its
+        line range and its own sha256 (the region's lines joined by \n, no
+        trailing newline). Includes §1.2's BCP 14 recital, BOTH FIGURES WHOLE,
+        §6's Table 1 whole and the whole reference list. COVERAGE IS MEASURED,
+        NOT ASSERTED: every statement-bearing line of source lines 17-23 and
+        79-1014 is inside a region except section headings and blank lines - 0
+        uncovered. TWO of the 29 regions are DECLARED WITH THEIR DIGEST rather
+        than reproduced: L598-763 (166 lines) and L841-1013 (173 lines), the
+        two final Appendix A objects, each carrying 5453 octets of DER as 159
+        lines of hex. PASS 2 CORRECTED THE DESCRIPTION: these are not "the two
+        159-line hex blocks" - the declared regions are 7 and 14 lines larger
+        than the hex runs they contain, and 15 of those 21 extra lines are the
+        CBOR diagnostic notation that frames the hex, so what is not reproduced
+        here includes the printed structure of both final COSE objects (their
+        octet-by-octet layout is in messages.yaml and examples/ V-0009,
+        V-0013). So of the 29 regions 27 carry a printed block and 29 carry a
+        digest. RE-VERIFIED BY PASS 3 INDEPENDENTLY: 29 declared regions, 27
+        printed blocks byte-identical to their declared line ranges, 29 of 29
+        digest-correct, 0 form feeds. RE-VERIFIED BY PASS 2 by script against the cache: 27 of 27
+        printed blocks byte-identical to their declared line ranges AND
+        digest-correct, 2 of 2 declared-only regions digest-correct, and no
+        region contains a form feed, a running header or a running footer. The two sentences that displayed blocks
+        INTERRUPT (§3.1.1, §3.1.2) are quoted as whole regions so the
+        interruption is visible, and nothing is welded across a gap. No
+        pagination to guard against: this rendering has ZERO form feeds and no
+        running headers, unlike the paginated RFCs elsewhere in this library.
+        PASS 3 CORRECTED THE EXCLUSION SENTENCE, which named source lines
+        25-77 as "the only statement-bearing lines outside that span": the
+        non-blank lines outside it are THREE runs, 1-15 (the front-page header
+        block), 25-77 (Status of This Memo, Copyright Notice, Table of
+        Contents) and 1015-1056 (Acknowledgments, Contributors, Authors'
+        Addresses) - 83 lines in all, each excluded deliberately and now each
+        named in normative.md.
+      reviewed_by: ""
+    - kind: requirements
+      path: distilled/requirements.yaml
+      coverage: >-
+        111 entries in source order, no duplicate ids: 11 stated and 100
+        inferred. R-0001 to R-0109 are pass 1's, numerically contiguous;
+        R-0110 and R-0111 were ADDED BY PASS 2 as dropped statements and are
+        placed in SOURCE order rather than appended, so file order is source
+        order and id order is not. source_keyword_count and
+        extracted_keyword_count BOTH 8 AND AGREEING (6 MUST, 2 SHOULD), with a
+        reconciliation written anyway. THE FINDING IS WHERE THE EIGHT ARE NOT:
+        six of them are in §3.1 and §3.2 and they bind three things only -
+        which bucket each label lives in, what each mode hashes, and that the
+        two hash algorithms should agree; one binds the receiver (§4) and one
+        binds a human (§5.1, "Implementers MUST clearly differentiate"). NOT
+        ONE is in §6, so neither IANA registration is normatively stated
+        anywhere but a table; not one constrains the CONTENTS of the byte
+        string either parameter carries; and not one requires deterministic
+        encoding, a value schema, TSA trust establishment or integrity
+        protection of the unprotected bucket. NINE LOWER-CASE FORCE WORDS are
+        entries with `verb: none` and the carrier phrase named in `field`, and
+        TWO OF THEM ARE THE DOCUMENT'S ANSWERS TO ITS OWN STATED ATTACKS (§5's
+        "should be integrity protected during transit and at rest" and §1.1's
+        "the TST must be included in the signed statement"). All 111 texts were
+        CUT FROM THE CACHE BY SCRIPT and located by anchor in the
+        whitespace-normalised source; all 111 verified by PASS 2 as contiguous
+        substrings of it - 111 of 111, and ZERO needed any relaxation (the
+        audit retries every non-resolving fragment under terminal-punctuation
+        swap, hyphenation heal, line-break heal and case fold). `source_lines`
+        IS MEASURED, NOT ASSERTED: pass 1 said a per-character line map made a
+        wrong range impossible, and pass 2 re-derived every range from such a
+        map and found ONE wrong - R-0004 declared L84-89 for a text ending on
+        L88 - so 108 of 109 were exact, that one is corrected, and the
+        impossibility claim is withdrawn in favour of the measurement: 111 of
+        111 exact. THE TWO ADDED ENTRIES ARE THE OPENING FRAGMENTS of §3.1.1's
+        and §3.1.2's interrupted sentences ("Given the COSE_Sign1 message",
+        "Given the COSE_Sign message"): each of those sentences is interrupted
+        TWICE, by the CBOR object and then by the byte listing, so it has
+        THREE fragments, and pass 1 carried two of the three while describing
+        the sentence as having two halves and one interruption. Neither added
+        text carries a keyword, so the counts stay 8 = 8. §1.2's BCP 14 recital
+        is deliberately NOT an entry - bin/validate recounts these texts with
+        stripping OFF, so quoting it would add 11 phantom keywords.
+      reviewed_by: ""
+    - kind: schema
+      path: distilled/schema
+      coverage: >-
+        1 verbatim file and 4 derived, plus a README. RFC 9921 SHIPS NO GRAMMAR
+        OF ANY KIND - `CDDL`, `ABNF`, `ASN.1`, `JSON Schema`, `schema` and
+        `grammar` each occur ZERO times in its 1056 lines, and so do `canonical`
+        and `deterministic`. source-renderings.txt is therefore the only
+        unmarked file and carries the twelve places the document renders a
+        structure by printing it, as 12 regions with per-region line ranges and
+        digests, ALL 12 RE-VERIFIED BY PASS 2 digest-and-content against the
+        cache. Counted by that file's own per-region captions, which pass 2
+        corrected from "four ASN.1 value dumps ... and four byte listings":
+        §6's Table 1, SIX ASN.1 value dumps, THREE CBOR diagnostic objects and
+        TWO byte listings - 1 + 6 + 3 + 2 = 12. Derived:
+        cose-headers.derived.cddl (the two labels, the opaque value, both
+        bucket constraints, THREE object productions - ttc-cose-sign1,
+        ctt-cose-sign1 and the ctt-cose-sign PASS 3 ADDED, because §3.1's MUST
+        reaches COSE_Sign and §3.1.2 prints a worked example of it while no
+        production covered it - and ALL THREE IMPRINT PREIMAGES WRITTEN OUT
+        OCTET BY OCTET with the digest each reproduces);
+        header-parameters.derived.yaml (§6's two registrations as data,
+        REASSEMBLED and declared as such, because Table 1's rows are
+        column-wrapped across five source lines each so NO CELL - not even
+        `3161-ttc` - is a contiguous span of the source);
+        timestamp-token.derived.outline.txt (what the 5453 octets actually
+        contain, produced by DECODING Appendix A.1's hex with a DER parser
+        written for this pass, with four internal consistency checks; PASS 3
+        RE-DECODED IT WITH A SECOND, INDEPENDENT PARSER and corrected the
+        ContentInfo/SignedData block, which gave encapContentInfo as 391 -
+        neither its content length 388 nor its element total 392 - mixed
+        content lengths among element totals and ran the [0] EXPLICIT tag
+        straight into SignedData, so the block summed to 5449 against 5453 and
+        5427 against 5430; the length convention is now declared and every
+        level's sum is printed beside it); and
+        cose-headers.derived.schema.json with $id
+        urn:library:rfc-9921:cose-headers.derived, over a JSON projection that
+        is OURS since RFC 9921 defines none. Header markers and filenames agree
+        on all five files. WHAT NO SCHEMA HERE CAN CHECK is stated in the
+        README: the 5453 octets inside the byte string, because §6 gives Value
+        Registry "-" and not even CDDL's `.cbor` operator could reach a payload
+        that is not CBOR.
+      reviewed_by: ""
+    - kind: messages
+      path: distilled/messages.yaml
+      coverage: >-
+        13 structures and 48 fields with octet-level layouts: both header
+        parameters, the three COSE instantiations the document prints
+        (COSE_Sign1 TTC, COSE_Sign1 CTT, COSE_Sign CTT), MessageImprint,
+        TimeStampReq, TimeStampResp, TimeStampToken, TSTInfo, and ALL THREE
+        MESSAGEIMPRINT PREIMAGES AS BYTE SEQUENCES with the digest each one
+        reproduces. EVERY LAYOUT WAS PRODUCED BY DECODING - the CBOR with a
+        codec and the DER with a parser, both written for this pass over
+        hashlib alone, no CBOR/COSE/ASN.1/CMS/X.509/crypto library - and every
+        octet count was re-derived by the generator at write time. The headline
+        numbers live here: the 5453-octet token is 5456 octets as a header
+        field - 98.15 per cent of a 5559-octet object whose payload is 20
+        octets, the token itself being 98.09 per cent of it (pass 3 separated
+        the two; the file had 98.09 beside 5456, and 98.09 is 5453/5559).
+        `constrained_by` IS WIRED and NO ID WAS TYPED: each was
+        resolved by script from a fragment of the requirement's own text, and
+        a join audit printed every id beside the full text it resolved to. 24
+        empty lists across 48 fields, enumerated exhaustively in the file
+        rather than claimed in a blanket: 7 RFC 9052, 5 RFC 5652, 12 RFC 3161
+        - RFC 9921 constrains exactly four things about the wire. PASS 3
+        CLOSED FIVE OF THEM AND CORRECTED THE CLAIM, which read "29 ... every
+        one belongs to RFC 9052, RFC 5652 or RFC 3161": the four components of
+        the COSE_Sign CTT preimage and the `signature` component of the
+        COSE_Sign1 one are in a third party's digest BECAUSE OF §3.1.1 and
+        §3.1.2 - this record's central finding, denied by the one empty list
+        that described it. Both preimage structures also gained a
+        structure-level `constrained_by` naming all three fragments of the
+        sentence that defines them (R-0110/R-0048/R-0049 and
+        R-0111/R-0052/R-0053), which is where pass 2's two added statements
+        were finally wired. TWO FINDINGS THE FILE EXISTS TO MAKE LEGIBLE: the COSE_Sign CTT
+        preimage is 77 octets for a 64-octet signature, 5 of the 13 extra being
+        the per-signature UNPROTECTED map; and of the two maps the document
+        prints with more than one key, A.1's protected map IS in RFC 8949
+        §4.2.1 order and A.2's unprotected map is NOT.
+      reviewed_by: ""
+    - kind: protocol
+      path: distilled/protocol.yaml
+      coverage: >-
+        APPLICABLE, and the boundary measured. 4 roles, 4 flows (CTT assembly,
+        TTC assembly, CTT verification, TTC verification), 20 steps, and a
+        Mermaid sequence diagram per flow in protocol.md. The verdict is
+        measured rather than assumed: `TSA` occurs 24 times, `TimeStampReq` and
+        `TimeStampResp` 2 each, `relying party` 3, `receiver` 1, `nonce` 3, and
+        BOTH FIGURES DRAW A REQUEST CROSSING TO THE TSA AND A TIMESTAMP COMING
+        BACK, while §4 puts a normative obligation on the receiving end. Every
+        `message:` names a structure defined in messages.yaml. THE TWO
+        VERIFICATION FLOWS ARE MARKED STEP BY STEP as `stated` or
+        `reconstructed`, because §5.1 asserts that "each mode has its own
+        separate verification algorithm" and THE DOCUMENT WRITES NEITHER DOWN -
+        §4 is one sentence covering both. `error_paths` separates the 3 the
+        document states from the 6 it leaves `undefined_by_source`, of which
+        the sharpest is the failure branch of its own only machine-facing MUST:
+        `reject`, `rejected`, `invalid`, `discard`, `abort` and `accept` each
+        occur ZERO times in the source, so §4 requires the imprint to match and
+        never says what happens when it does not. `absent` records seven things
+        no diagram can show, including that the whole TSA side - transport,
+        endpoint, discovery, requester authentication, trust distribution -
+        belongs to RFC 3161, which this library does not hold.
+      reviewed_by: ""
+    - kind: state-machine
+      path: distilled/state-machine.yaml
+      coverage: >-
+        APPLICABLE, and the lifecycle is the one the document never names. 5
+        machines, 28 states, 23 transitions, and 10 `error_states` entries of
+        which EIGHT ARE NAMED ERROR STATES and two are explicit "(none
+        defined)" markers on the assembly machines, recording that the document
+        gives no failure branch at all there (pass 2 made that split explicit:
+        the count of list entries was right, and read as two named states more
+        than exist). The vocabulary is
+        absent - `state`, `states`, `lifecycle`, `revoke`, `revoked`, `expire`,
+        `expiry`, `expiration`, `rotate` and `step` each occur ZERO times -
+        while `expired` occurs twice and `revocation` twice, and the document's
+        stated purpose is "long-term signatures, i.e., signatures that can
+        still be verified even after the signing certificate has expired". So
+        M1 and M2 are the two ASSEMBLY ORDERS, which are the document's entire
+        subject matter (§2: "two different modes of composing COSE protection
+        and timestamping") and whose only difference is which of signature and
+        token exists first; M3 and M4 are the two verification algorithms,
+        every state and guard marked `reconstructed`; and M5 is the
+        long-term-validity lifecycle inferred from §1.1 and §5.1, driven by the
+        passage of time rather than by messages. THE FINDING THE FILE EXISTS TO
+        MAKE LEGIBLE: in M3 the transition that CHOOSES THE MACHINE is guarded
+        on an unauthenticated byte, and NO STATE ANYWHERE RECORDS THAT A
+        TIMESTAMP WAS EXPECTED - so §5's conceded stripping attack leaves a
+        well-formed object that verifies as an untimestamped one and nothing
+        detects the deletion. M5 also carries a state the document has no
+        vocabulary for and this pass measured: the fixture's own TSA signing
+        certificate expired 2026-03-11, one month after publication.
+      reviewed_by: ""
+    - kind: examples
+      path: distilled/examples
+      coverage: >-
+        15 vectors V-0001 to V-0015 (11 printed, 4 derived) plus two
+        5453-octet .hex fixture files, each one line of lower-case hex that
+        `xxd -r -p` turns back into DER. THE HEADLINE: THE DOCUMENT PRINTS FOUR
+        DIGESTS, THREE REPRODUCE BYTE FOR BYTE AND ONE DOES NOT. §3.1.1's
+        imprint reproduces from sha256(0x5840 || signature); §3.1.2's from
+        sha256 of the 77-octet signatures array; Appendix A.1's from
+        sha256('This is the content.'), matching both the printed request and
+        the imprint embedded in the token. APPENDIX A.2's DOES NOT, and 207
+        candidate preimages assembled from the document's own printed bytes
+        were tried before saying so - including the head written
+        non-canonically as 59 0040, 5a 00000040, 5b and indefinite-length.
+        Also verified, needing no key: both tokens' CMS messageDigest attribute
+        equals sha512 of their eContent, both signingCertificate ESSCertID
+        hashes equal sha1 of the embedded signing certificate, and every length
+        and offset in both tokens is consistent. WHAT COULD NOT BE VERIFIED IS
+        STATED: neither COSE signature (the signer's public key is nowhere in
+        the document and `kid` is the two octets '11') and neither token's RSA
+        signature (the chain needs a trust anchor and RFC 5652's rules, and
+        neither is here). Two derived censuses: where a CBOR head sits inside a
+        third party's digest, and what the fixture's TSA actually is - Free
+        TSA, www.freetsa.org, TSAPolicyId 1.2.3.4.1 (a placeholder arc), 75.26
+        per cent of each token being its two-certificate chain, and a signing
+        certificate that EXPIRED 2026-03-11. examples/README.md says plainly
+        that these are not conformance vectors and which tests they are still
+        good for.
+      reviewed_by: ""
+    - kind: design-notes
+      path: distilled/design-notes.md
+      coverage: >-
+        The DEC-002 cut measured BOTH WAYS. The cost leg: 5453 octets of DER,
+        75.26 per cent of it certificates, inside one `bstr` with Value
+        Registry "-", and §4 making the COSE receiver run an ASN.1/CMS/X.509
+        stack and a clock - scored as EVASION rather than violation, costing
+        every DEC-002 option identically, which makes it a SCOPE question for
+        DEC-003 rather than a point against option 5, following
+        records/ietf/rfc-9360 §7.2 and adding that this record NESTS that cut
+        (a CMS message carrying a certificate chain). The leg that cuts the
+        other way: §3.1.1 puts the CBOR head 0x5840 inside a third party's
+        digest preimage, which the COSE signature does not cover, so a legal
+        re-encode destroys an external attestation silently - AN ARGUMENT FOR
+        REQUIRING RFC 8949 §4.2.1 DETERMINISM ON THE EXPORT PATH, a clause no
+        DEC-002 option states. R-M-12 argued from the VALUE side: the whole
+        capability is two centrally allocated labels, and the 27 distinct OIDs
+        inside the value - 25 in the CMS wrapper plus 2 reachable only by
+        decoding the TSTInfo inside its eContent OCTET STRING, a scope pass 3
+        made explicit because the file's own list had mixed the two - are
+        ITU-T's, NIST's, RSA's and IANA's, so relabelling changes nothing. R-O-05 with one adopt (two digests, two written
+        answers to "does the wrapper count", and a verifier that hashes what it
+        received) and one hazard (an UNAUTHENTICATED TYPE INDICATOR SELECTING A
+        VERIFICATION ALGORITHM), plus a third leg the summary did not name: §4
+        runs the DER parser on unauthenticated bytes BEFORE the signature
+        result. All six canonical-encoding conditions scored, with (4) SPLIT
+        DOWN THE MIDDLE BY ONE MECHANISM - the TTC indicator is inside the
+        signed bytes and the CTT indicator is not - and the new finding that
+        condition (4) and R-M-12 are in TENSION, because the only authenticated
+        indicator COSE offers is one the registry owns. MD-3 MAPPED HEADER BY
+        HEADER over nine carriers, then FIVE CUTS AGAINST IT, each naming the
+        option it affects: (1) export-only costs option 5 a capability options
+        2 and 4 have natively; (2) option 5's determinism clause does not reach
+        the export path, a missing clause rather than another option's win; (3)
+        the only authenticated type indicator is registry-owned, costing every
+        option; (4) the DER payload evades every option equally, so the
+        decision belongs to DEC-003 - and stated in option 5's favour, it is
+        the option where the evasion is easiest to SEE; (5) the mode that
+        proves the useful thing is the one the mapping must reject, which costs
+        the FEATURE and points at rfc-9338. The inverted modes VERIFIED LEG BY
+        LEG (8 legs, all confirmed) and FORCED IN TWO LEGS, which pass 2
+        separated: leg A is NORMATIVE AND THE DOCUMENT'S OWN - §3.1's two MUSTs
+        (L256, L262) bind the signature-covering imprint to the UNPROTECTED
+        parameter and §3.2's two (L383, L389) bind the PROTECTED parameter to a
+        payload hash, so the four together leave no RFC 9921 parameter able to
+        carry a signature-covering imprint in the signed bytes, and a second
+        signature pass does not open one; leg B is OURS and marked
+        `[analysis]`, the dependency order (the signature must exist before its
+        own timestamp). Measured for leg B: `re-sign`, `resign`, `second
+        signature` and `already signed` occur ZERO times, `cannot` twice and
+        neither about placement, so the document closes the alternative
+        normatively and never argues it. Also §1.1's uncited SCITT vocabulary
+        with counts, 11 source defects (D-1 to D-11), 8 open questions (Q-1 to
+        Q-8 - pass 3 added Q-8, the COSE_Sign unprotected-bucket ambiguity the
+        schema-to-examples closure exposed) and an adopt/adapt/reject table.
+        QUOTATIONS, RECOUNTED BY PASS 3 WITH THE METHOD STATED IN §0, because a
+        count whose span rule is not written down cannot be reproduced and
+        neither pass 1's "25" nor pass 2's "29 / 24 / 38" could be: taking
+        every maximal non-overlapping delimited span on a line - a `*"..."*`
+        span counted ONCE, not twice as both an italic and a quoted span -
+        splitting on visible elisions and keeping parts of four words or more,
+        27 inline spans resolve VERBATIM in the source, 25 of them distinct,
+        and 4 of the 27 sit in §12's table where the span tested is
+        summary.md's claim rather than a direct quotation; plus 9 blockquote
+        quotations of which 8 are exact whole
+        and 1 carries a visible `...` elision whose halves are each verbatim -
+        36 quotation instances, ZERO relaxations needed under
+        terminal-punctuation swap, hyphenation heal, line-break heal or case
+        fold. Quotations of in-repository library documents also resolve,
+        each against THAT document with this record's own files excluded from
+        the corpus: 7 in
+        topics/canonical-encoding.yaml (the six conditions and the indicator
+        clause), 2 in records/ietf/rfc-9360's design notes, 1 in rfc-9964's,
+        and - added by pass 3 - 1 in CLAUDE.md, which stood as undelimited
+        prose with a bare `(CLAUDE.md)` citation and had replaced "this one"
+        with `mofn`, swapping the referent of the sentence it leaned on.
+        Quotations of `mofn` documents are MARKED UNVERIFIABLE FROM THIS
+        REPOSITORY with the document named, following records/ietf/rfc-9741,
+        and pass 2 extended that marking to the one other unverifiable claim in
+        the record: the RFC 9921 errata lookup, which was read from the network
+        and cannot be re-checked here.
+      reviewed_by: ""
+  # NONE. All eight artifact kinds are present. The two that are commonly
+  # declined in this lane were each MEASURED before being kept, and the
+  # measurements are in the artifacts themselves:
+  #   protocol - APPLICABLE. The document defines a real two-party exchange:
+  #     `TSA` 24 occurrences, `TimeStampReq` 2, `TimeStampResp` 2, `relying
+  #     party` 3, `receiver` 1, both figures drawing a request to the TSA and a
+  #     timestamp back, Appendix A printing a request and saying "which is sent
+  #     to the TSA", and §4 putting a MUST on the receiving end. What is absent
+  #     is the PROCEDURE (`step` 0, `steps` 0) and every failure action
+  #     (`reject` 0, `invalid` 0, `accept` 0), which is recorded as
+  #     `undefined_by_source` rather than smoothed over.
+  #   state-machine - APPLICABLE. No lifecycle VOCABULARY (`state`, `states`,
+  #     `lifecycle`, `expire`, `expiry`, `expiration`, `revoke`, `rotate` all
+  #     0) and a real lifecycle: `expired` 2, `revocation` 2, and a document
+  #     whose stated purpose is signatures that outlive their certificates. The
+  #     two assembly ORDERS are the document's subject matter and the two
+  #     verification algorithms are asserted by §5.1 and written down nowhere.
+  not_applicable: []
+  passes:
+    - pass: extract
+      by: "claude-opus-5 (pass 1 of library#39 Tier 2, RFC 3161-in-COSE lane; single agent, whole artifact set)"
+      effort: max
+      date: "2026-10-20"
+      note: >-
+        Read only .cache/rfc-9921.txt - never summary.md, never record.yaml's
+        own commentary and never another record's artifacts, except to read
+        records/ietf/rfc-9360, rfc-9052, rfc-9943 and
+        topics/canonical-encoding.yaml for OUR OWN decision vocabulary, which
+        this standalone library holds nowhere else. EVERY QUOTATION AND EVERY
+        REQUIREMENT TEXT WAS LIFTED FROM THE CACHE BY SCRIPT, never retyped,
+        and verified mechanically rather than by eye: 109 of 109 requirement
+        texts and every design-note quotation are contiguous substrings of
+        the whitespace-normalised source, 0 failures and 0 RELAXATIONS NEEDED
+        under terminal-punctuation swap, hyphenation heal, line-break heal or
+        case fold. (PASS 2 NARROWED THREE OF THOSE CLAIMS, each stated too
+        widely rather than wrongly measured: the design-note quotation count of
+        25 reproduces under no method pass 2 can construct and is recounted in
+        the design-notes coverage above; a fragment-level audit of the OTHER
+        artifacts was not run by pass 1, and whole-span grading found three
+        relaxations outside design-notes.md - see the verify pass below; and
+        `source_lines` held one wrong range.) 29 normative.md regions and 12
+        schema regions carry their own sha256 over the region's lines joined by
+        \n with no trailing newline; 39 of the 41 were re-verifiable
+        digest-and-content after writing and the other 2 are the declared-only
+        normative regions, which have a digest and no printed block.
+        `source_lines` was read back off a per-character line map, which
+        corrected 43 hand-written line ranges before anything was emitted - and
+        left one, R-0004's, wrong. NO
+        ID WAS TYPED ANYWHERE: every `constrained_by` entry was resolved by
+        script from a fragment of the requirement's own text, the resolver
+        REFUSES an ambiguous fragment (it did so five times and each was
+        disambiguated by locator or by anchoring), and bin/check-id-joins
+        reports 240 citations with 0 dangling. [PASS 3: 240 was a true
+        measurement of PASS 1's artifacts and is a fossil of the kind
+        .claude/skills/extract/hazards.md §6 describes - the tool counts every
+        record-qualified id INCLUDING each requirement's own `id:` field, so
+        pass 2's two added entries made it 242 the moment they landed, and pass
+        3's wiring makes it 268. Recount with the tool; do not carry the
+        number.] THE ARITHMETIC WAS CLOSED IN
+        THIS PASS rather than deferred: a CBOR codec and a DER parser were
+        written over hashlib alone with no CBOR, COSE, ASN.1, CMS, X.509 or
+        cryptography library, four printed digests were tested (three
+        reproduce, one does not), and both tokens' CMS messageDigest and
+        ESSCertID hashes were re-derived. Cross-artifact consistency was
+        checked at write time: every `message:` in a protocol flow names a
+        structure in messages.yaml, every state-machine trigger is a defined
+        message or a named event, and both of the library's YAML readers parse
+        every file here with identical key sets and leaf paths. ONE DEFECT OF
+        THIS PASS'S OWN was found that way and fixed: a protocol.yaml locator
+        written with escaped inner double quotes stored differently under the
+        two readers. THE RECORD'S OWN summary.md IS OVERTAKEN, not falsified -
+        its "No `distilled/`, deliberately" paragraph is replaced by the
+        artifact set, and its warning about what an extraction here would owe
+        was correct about the reason.
+    - pass: verify
+      by: "claude-opus-5 (pass 2 of library#39 Tier 2, RFC 3161-in-COSE lane; independent of pass 1, adversarial)"
+      effort: max
+      date: "2026-10-21"
+      note: >-
+        NINE DEFECTS FOUND AND FIXED, and the two highest-value ones were not on
+        pass 1's self-nominated list, exactly as .claude/skills/extract/hazards.md
+        predicts.
+
+        (1) TWO DROPPED STATEMENTS. §3.1.1's L283 "Given the COSE_Sign1 message"
+        and §3.1.2's L328 "Given the COSE_Sign message" were not extracted. Each
+        is the OPENING fragment of the single sentence whose other two fragments
+        pass 1 did carry (R-0048/R-0049, R-0052/R-0053), and each sentence is
+        interrupted TWICE - by the CBOR diagnostic object and then by the byte
+        listing - not once. Proof: no sentence-terminating punctuation occurs
+        anywhere in L283-309 or L328-367, and the second fragment is lower case.
+        Added as R-0110 and R-0111, placed in source order; the sentence
+        structure is corrected in four notes and in the reconciliation; counts
+        propagated to 111 entries / 100 inferred / 103 `verb: none` in
+        requirements.yaml, record.yaml, distilled/README.md and summary.md. The
+        keyword count is unchanged and re-measured: 8 = 8.
+
+        (2) FOUR LEAKED GENERATOR TEMPLATES in design-notes.md. Lines 364, 367,
+        544 and 546 carried the literal wrapper `{Q("...")}` around four
+        quotations - an unexpanded placeholder from the script that wrote the
+        file, visible in the rendered table and in the DEC-005 paragraph. The
+        quoted text inside each was verbatim, which is why every
+        quotation-resolution audit passed it: the defect was in the delimiter,
+        not the quotation. Rewritten to the file's own `*"..."*` form.
+
+        (3) THREE RELAXED QUOTATIONS, found by grading WHOLE SPANS longest-first
+        rather than fragments, and all three OUTSIDE the files pass 1 audited.
+        messages.yaml put a full stop inside a §5.1 quotation that the source
+        continues with "and should rely exclusively"; normative.md §3's prose
+        lower-cased "To clearly separate their semantics"; protocol.md
+        lower-cased "As part of the signature verification", which
+        design-notes.md writes with the capital in two places - the same span,
+        two artifacts, two spellings. After the fixes the audit is 140 resolving
+        spans across all 13 files, 140 exact, ZERO relaxations.
+
+        (4) A QUOTATION ATTRIBUTED TO THE WRONG SECTION, with a gloss that
+        depended on the attribution. protocol.yaml's Signer role read "§3.1's
+        SHOULD treats the signer and the timestamp requester as possibly
+        DIFFERENT parties" and quoted "this may not be possible if the timestamp
+        requester and the COSE message signer are different entities" - which is
+        §3.2's sentence at L396. §3.1's own escape clause (L272) is about
+        processing context and says nothing about parties, so the claim was true
+        only of the section it did not name.
+
+        (5) ONE WRONG `source_lines` RANGE, and the blanket claim it falsified.
+        R-0004 declared L84-89 for a text ending at L88. Pass 1 had written that
+        reading ranges off a per-character line map made a wrong range
+        impossible; pass 2 re-derived all 109 from such a map and got 108 exact.
+        Corrected, and the impossibility claim replaced by the measurement.
+
+        (6) ONE WRONG LINE in the keyword reconciliation: the eight keywords
+        were listed by source line and §3.2's SHOULD was given as L394, its
+        sentence's first line, where the keyword is on L395. The other seven
+        name the keyword's own line.
+
+        (7) "THE TWO 159-LINE HEX BLOCKS" MIS-DESCRIBED WHAT NORMATIVE.MD LEAVES
+        OUT, in three files. The hex runs are 159 lines each (599-757, 847-1005)
+        but the regions declared rather than reproduced are L598-763 (166) and
+        L841-1013 (173), and 15 of the 21 extra lines are CBOR diagnostic
+        notation - the printed structure of both final COSE objects. The "0
+        uncovered" measurement is sound; the description of the exclusion was
+        not. Corrected in normative.md (twice), record.yaml and
+        distilled/README.md, with the 27-printed / 29-digested split made
+        explicit.
+
+        (8) A SCHEMA SUB-BREAKDOWN THAT DID NOT MATCH ITS OWN FILE.
+        source-renderings.txt's header and record.yaml both said "four ASN.1
+        value dumps, three CBOR diagnostic objects and four byte listings". The
+        file's twelve per-region captions say 1 IANA table, 6 ASN.1 value dumps,
+        3 CBOR diagnostic objects and 2 byte listings. The total was right and
+        the split was wrong in both halves.
+
+        (9) "10 ERROR STATES" counted ten `error_states` entries of which two
+        are explicit "(none defined)" markers, so eight are named states. Split
+        out rather than renumbered, since the entry count is a true count.
+
+        AND ONE UNVERIFIABLE CLAIM NOW MARKED AS SUCH. V-0011's errata record
+        (ID 9177, status, reporter, date, cause, and a positive control counting
+        RFC 3161's errata) was read from the network by pass 1 and cannot be
+        re-checked from this repository. Marked UNVERIFIABLE FROM THIS
+        REPOSITORY in vectors.yaml, examples/README.md, design-notes.md and
+        summary.md, following the convention design-notes.md §0 already applies
+        to `mofn` documents. The mismatch the erratum is about needs no network
+        and is verified independently here.
+
+        THE CENTRAL ANALYTICAL CLAIM WAS RE-DERIVED AT SOURCE, NOT CONFIRMED.
+        "The inversion is forced, not chosen" turned out to be UNDER-stated:
+        pass 1 rested it on an `[analysis]` inference from the dependency order
+        plus "the document could have said so and does not". The document does
+        say it, normatively - §3.1's two MUSTs (L256, L262) bind the
+        signature-covering imprint to the UNPROTECTED parameter and §3.2's two
+        (L383, L389) bind the PROTECTED parameter to a payload hash, so the four
+        together leave no RFC 9921 parameter that can carry a signature-covering
+        imprint inside the signed bytes, and a second signature pass does not
+        open one. design-notes.md §9 now separates leg A (normative, the
+        document's own, with a 2x2 matrix) from leg B (mechanical, ours, still
+        marked `[analysis]`), and records what was measured for leg B:
+        `re-sign`, `resign`, `second signature` and `already signed` occur ZERO
+        times, `cannot` twice and neither about placement, `countersignature`
+        once. Nothing in the document permits the other order and nothing argues
+        for the one it takes.
+
+        WHAT WAS CHECKED AND HELD. Digest three ways: `shasum -a 256` of the
+        cache, `content.sha256`, and summary.md's Digest row all give
+        ba1c4dbb...; maturity `standard` matches "Category: Standards Track" on
+        the front page and the three authors, affiliations and February 2026
+        date are read off lines 5-11. bin/bcp14-count gives 8 (6 MUST, 2
+        SHOULD); the eight are at source lines 256, 262, 270 (§3.1), 383, 389,
+        395 (§3.2), 411 (§4) and 468 (§5.1), each inside one requirement text
+        and nowhere else - none arrives from a quotation of RFC 3161, from an
+        ASN.1 block or from the §6 registry template, and the 11 keywords of
+        §1.2's recital are excluded by not quoting it. 111 of 111 texts
+        contiguous, 111 of 111 `source_lines` exact against a per-character line
+        map, 111 of 111 locators equal to the INNERMOST section containing the
+        text (bin/check-locators reports 109 checked, 0 misfiled, 2
+        unresolvable - the two `Abstract` locators, both correct). A
+        sentence-level coverage sweep of the source's prose: 64 paragraphs, 102
+        sentences, and after the two additions every sentence outside the
+        declared exclusions (§1.2's recital, Acknowledgments, Contributors,
+        Status/Copyright/ToC) is carried. Line-level: the only non-blank,
+        non-heading lines of 17-23 and 79-1014 outside a requirement range are
+        the figures' ASCII art, the displayed CBOR/ASN.1/hex blocks and Table
+        1's two rule lines - every one of them captured verbatim in normative.md
+        or schema/source-renderings.txt, and the two figure CAPTIONS likewise.
+        Both YAML readers parse all 7 YAML files with identical leaf paths and
+        identical values but for int/bool/null coercion - no `text:` field
+        differs. bin/validate 0 errors and no warning naming this record;
+        bin/check-id-joins 240 citations, 0 dangling, and the 2 duplicate-text
+        groups (R-0050/R-0054, R-0103/R-0108) each read correctly at every
+        citation; 22 distinct BARE `R-NNNN` and 15 bare `V-NNNN` references
+        resolved by script, 0 dangling and each naming the statement meant.
+        [PASS 3: THE CITATION FIGURE WAS ALREADY STALE WHEN THIS PASS WROTE IT.
+        bin/check-id-joins counts every record-qualified id, each requirement's
+        own `id:` field among them, so adding R-0110 and R-0111 took it from
+        240 to 242 in the same commit that recorded 240. Measured after pass
+        3's wiring: 268 citations, 0 dangling. The duplicate-text and bare-id
+        findings were re-read in full by pass 3 and hold - 97 bare `R-NNNN`
+        occurrences over 29 distinct ids, 50 bare `V-NNNN` over 15 distinct, 0
+        dangling, and every one resolves to the statement meant, R-0050/R-0054
+        and R-0103/R-0108 included, each cited only where its own section
+        applies.]
+        FIXTURES RE-DERIVED WITH AN INDEPENDENT CBOR CODEC AND DER PARSER
+        WRITTEN FOR THIS PASS over hashlib alone: both .hex files are
+        byte-identical to the source's own hex joined across its display wrap,
+        5453 octets each, and both file and byte digests match; the four printed
+        digests behave exactly as claimed (§3.1.1 from sha256(0x5840 ||
+        signature), §3.1.2 from sha256 of a 77-octet array re-encoded
+        independently, A.1 from sha256 of the 20 payload octets and equal to the
+        embedded imprint, A.2 from nothing); 5465 + 5 + 21 + 66 + 2 = 5559
+        octets with the token at 98.09 per cent and 272.65 : 1; A.1's protected
+        map in RFC 8949 §4.2.1 order and A.2's unprotected map not; 25 distinct
+        OIDs; 4104 of 5453 octets (75.26 per cent) in two certificates of 2053
+        and 2051 octets; 367-octet eContent (6.73 per cent); messageDigest ==
+        sha512(eContent) and ESSCertID == sha1(cert[0]) in both tokens; policy
+        OID 1.2.3.4.1; signing certificate notAfter 2026-03-11 01:57:39Z. Fifty
+        source word counts asserted across the artifacts were re-measured and
+        all fifty agree, including `TSA` 24, `countersignature` 1, `expired` 2,
+        `revocation` 2, `statement` 9 and twenty-four separate zeros.
+
+        STILL OPEN FOR PASS 3 — [DECIDED BY PASS 3, 2026-10-21: NOT ADDED, and
+        the grounds are in the `bears_on` comment block above and in
+        design-notes.md §0. `R-001` has no letter segment, so it is not of the
+        `R-<letter>-<digits>` family every rule id in this library belongs to;
+        it names a section of an `mofn` survey this repository does not hold;
+        and schema/record.schema.yaml says of `bears_on` "Do not invent
+        relevance." The substance is located to a line range, a design-notes
+        section and a state machine so a reader who holds `mofn` can wire it in
+        one step.] The record names no `R-001` and `R-001` occurs
+        ZERO times anywhere in records/, topics/ or docs/, so the survey section
+        library#39 cites for long-lived attestations is not wired to this
+        record. The substance is present and located - §1.1's "long-term
+        signatures, i.e., signatures that can still be verified even after the
+        signing certificate has expired", design-notes.md §8.5, and
+        state-machine.yaml's M5 - but pass 2 will not assert a `bears_on`
+        identifier it cannot verify from this repository, which is the same rule
+        design-notes.md §0 keeps for `DEC-002`, `R-M-12` and `R-O-05`. A human
+        or pass 3 should add the edge with a locator if R-001 §10 is what the
+        issue means.
+    - pass: cross-check
+      by: "claude-opus-5 (pass 3 of 3, independent; did not extract and did not verify)"
+      effort: max
+      date: "2026-10-21"
+      note: 'ALL FOUR FX-1 CLOSURES MEASURED AND CLOSED, with one genuine gap found and fixed. (a) FIELDS: 68 of 111 requirements name a wire artefact and 0 of the named artefacts are absent from messages.yaml (13 structures, 48 fields) or schema/. THE WIRING HALF WAS NOT CLOSED AND IS THE SUBSTANCE OF THIS PASS: before, 52 of 111 requirements were cited by any constrained_by and 19 of 48 fields had a non-empty list; after, 66 of 111 and 24 of 48. R-0110 and R-0111 - the two dropped sentence fragments pass 2 ADDED but never wired - are now cited in two places each, naming all three fragments of each preimage sentence; four more requirements naming defined structures were also unwired and are now wired; and BOTH SHOULDs (R-0044, R-0060) cited nothing, so all 8 BCP 14 statements are now wired. 12 namers remain unwired BY DESIGN - scope sentences, use cases, figure presentation rules and cross-references - none constraining a wire field. (b) 4 flows, 20 steps, 11 distinct message values: 9 resolve to structures and 2 are declared pseudo-messages. (c) 5 machines, 28 states, 23 transitions, 12 distinct triggers: 8 defined messages and 4 named events. (d) EXAMPLES - THE REAL GAP: V-0004, section 3.1.2 printed COSE_Sign worked example, VALIDATED AGAINST NO PRODUCTION, although the Abstract, section 1 and section 3.1 second imprint alternative all cover COSE_Sign. A ctt-cose-sign production was added, and it EXPOSED A SOURCE AMBIGUITY now recorded as Q-8 rather than resolved: a COSE_Sign has two unprotected buckets and section 3.1 never says which carries label 270. The per-signature bucket is unsatisfiable, since the preimage is the whole signatures array INCLUDING that bucket, so a token there would sit inside its own digest preimage - which argues for the body bucket, and is marked [analysis] rather than asserted as the document. TWO LEAKED TEMPLATE ESCAPES, THE SAME CLASS PASS 2 FOUND AND IN A DIFFERENT FILE: messages.yaml carried {{4: 11}} and {{1: -7}} with DOUBLED BRACES, a Python format or f-string escape. a1 04 42 3131 decodes to a ONE-KEY MAP; doubled braces denote a map containing a map, and vectors.yaml writes the same notation with single braces. Both earlier quotation audits walked past them for the same reason they walked past pass 2s: the text inside was right. A repo-wide sweep now finds zero. A BYTE LAYOUT WITH NONSENSE BOUNDARIES: a1 04 42 31 31 was printed as `a1044 23131` - right digits, wrong grouping, in a field read as a layout. THREE ARITHMETIC DEFECTS, each re-derived with a CBOR codec and DER parser written over hashlib alone: a TimeStampToken decomposition summing to 5449 against a stated 5453, because the 4-octet [0] EXPLICIT header was dropped (4 + 11 + 5438 = 5453); a derived outline whose encapContentInfo length matched NEITHER reading and which summed to 5449 and 5427 against 5453 and 5430, now rewritten with the length convention declared and every level printed; and a percentage that did not follow from the fraction beside it - 5456/5559 is 98.15 per cent, while 98.09 is 5453/5559, so the field and the token figures were conflated. AN UNDELIMITED NEAR-QUOTATION OF THIS REPOSITORY OWN CLAUDE.md, and the most consequential find of the pass: design-notes rendered it as `not mofn` where CLAUDE.md reads `not this one`, with a comma also dropped. THAT SWAPS THE REFERENT - `this one` is the library, so m-of-n is a CONSUMER of it, not the excluded party. Caught only by resolving against CLAUDE.md with this record own files excluded from the corpus, which is the rule hazards.md gained today from rfc-8778; now a delimited verbatim quotation resolving exact. A SECOND FALSE BLANKET CLAIM, the one pass 2 warning predicted: messages.yaml said all 29 empty constrained_by lists belong to RFC 9052, 5652 or 3161. FIVE DID NOT - the four components of the COSE_Sign CTT preimage and the signature component of the COSE_Sign1 one are in a third party digest BECAUSE OF RFC 9921 sections 3.1.1 and 3.1.2, so an empty list there denied this record central finding in the one artifact that exists to state it. Now 24, with an exhaustive 7 + 5 + 12 enumeration replacing the blanket. Also: two TRANSPOSED self-references in design-notes (section 0 citing section 9 for what is section 10, and section 8.5 citing section 10 for what is section 9); a cross-reference naming section 6 for an R-O-05 citation that is in 5.1; "the only statement-bearing lines outside that span are 25-77" where there are THREE runs totalling 83 lines; "25 distinct OIDs" followed by a list containing two that are NOT among the 25, the union being 27, both figures defensible and the mixing not; and an RDN count of 8 followed by six, all eight now listed. THE R-001 DECISION: NOT ADDED to bears_on, and the grounds are checkable from here rather than resting on absence alone - every rule id in this library is R-<letter>-<digits>, with R-M-12 at 363 occurrences and R-O-03 at 330, while `R-001` carries NO LETTER SEGMENT and so is not of that family at all; it reads as a section of an m-of-n survey this standalone repository does not hold. schema/record.schema.yaml on bears_on: "Do not invent relevance." The substance is located in three places so a holder of mofn can wire it in one step. FOSSILS: the "240 citations" figure is one, in two notes - the tool counts each requirement own id field, so pass 2 two added entries made it 242 IN THE SAME COMMIT THAT RECORDED 240; the live figure is 268 and should be recomputed, never carried. The "38 quotation instances" reproduces under no rule that could be constructed; restated as 27 inline / 25 distinct / 9 blockquotes = 36 WITH ITS METHOD. Everything else re-measured and correct: 111 entries, 100 inferred, 103 verb none, 27 of 29 regions, the 1/6/3/2 renderings split, 8 of 10 error states, 20 steps, 23 transitions, 28 states, 13 structures, 48 fields, 15 vectors. Both .hex fixtures re-derived byte-identical at 5453 octets; 13 of 13 vector region digests verify; 272.65:1, 75.26 per cent (and 75.33 on the [0]-inclusive reading, so the reading matters), 6.73 per cent, 77 = 64 + 13 and the certificate and signerInfo budgets all confirm. 268 citations 0 dangling, plus 97 bare R-ids over 29 distinct and 50 bare V-ids over 15, every resolved pair read: 0 wrong. Whole-span audit over all 18 text files: 0 relaxations. Both readers identical on all 7 YAML files. bin/validate 0 errors and no warning naming this record.'
+status: distilled
 usefulness:
-  verdict: marginal
-  reason: "Carries an RFC 3161 timestamp in a COSE header. Relevant only if we need third-party time attestation."
-  assessed: "2026-09-22"
+  verdict: useful
+  reason: "Upgraded from marginal 2026-10-20. Read for the encoding question rather than for timestamps: §3.1/§3.2 put 5453 octets of ASN.1 DER (Appendix A.1) inside a bstr in a COSE header with no value registry (§6), which is the measured demonstration that a reduced-CBOR profile does not reduce what is inside a byte string. Also §3.1.1's imprint over the CBOR head bytes of the `signature` field, and §5/§5.1's unprotected mode discriminator."
+  assessed: "2026-10-20"
 confidence: medium
 owner: S1

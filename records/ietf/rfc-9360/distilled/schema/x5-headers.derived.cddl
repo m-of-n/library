@@ -1,0 +1,118 @@
+; =====================================================================
+; x5-headers.derived.cddl
+;
+; DERIVED -- NOT verbatim.  This file is this library's, not RFC 9360's.
+; Do not cite it as the standard's grammar; cite cose-x509.cddl, which
+; holds the source's own two lines, and source-renderings.txt, which
+; holds its tables.
+;
+; WHY IT EXISTS.  RFC 9360 defines two TYPES and seven LABELS, and it
+; never writes a header map.  Its Table 1 and Table 2 give (name,
+; label, value type) as prose tables; nothing in the document says, in
+; a grammar, that label 34 carries a COSE_CertHash.  An implementer who
+; wants to validate a COSE protected header against RFC 9360 has to
+; build this file.  So it is built, from Table 1, Table 2 and §2's
+; prose, with the requirement id behind every line.
+;
+; THE COSE STRUCTURES ARE NAMED, NEVER REDEFINED.  COSE_Sign1,
+; COSE_Signature, COSE_recipient, protected and unprotected belong to
+; RFC 9052 (records/ietf/rfc-9052).  RFC 9360 adds entries to buckets
+; it does not define, and this file keeps that boundary visible.
+;
+; Parses under RFC 8610 Appendix B's grammar - checked, see
+; cddl-parse.derived.txt.
+; =====================================================================
+
+; --- the two types, as RFC 9360 defines them (cose-x509.cddl is the
+; --- verbatim copy; these two lines are reproduced so this file stands
+; --- alone as a grammar, and they are byte-identical to the source's
+; --- apart from the removal of its three-column left margin).
+COSE_X509 = bstr / [ 2*certs: bstr ]            ; rfc-9360#R-0069
+COSE_CertHash = [ hashAlg: (int / tstr), hashValue: bstr ]  ; rfc-9360#R-0070
+
+; The contents of every `bstr` above are the bytes of a DER-encoded
+; certificate (rfc-9360#R-0071).  CDDL CANNOT SAY THIS, and that is the
+; DEC-002 finding: a reduced-CBOR profile does not reach inside a byte
+; string.  `.cbor` would be wrong here - the content is ASN.1, not CBOR.
+
+; --- the four general header parameters (Table 1).  OURS: the document
+; --- gives the labels in a table and the types in prose.
+; ---
+;
+; EVERY ENTRY CARRIES CDDL'S CUT `^`, AND WITHOUT IT THIS RULE WOULD SAY
+; NOTHING.  These groups are used below inside maps that end in
+; `* label => any`, because a COSE header map may carry any other label.
+; RFC 8610 section 3.5.4 is explicit about what that costs.  Its own
+; worked example is a map of an optional key and a wildcard, and of the
+; item carrying a wrongly-typed value it says it
+;   "does match this specification: while the first entry of the group
+;   does not match, the second one (the wildcard) does."
+; With the cut inserted, section 3.5.4 says that
+;   "once the member key matches the name part of an entry that carries
+;   a cut, other potential matches for the key of the member that occur
+;   in later entries in the group of the map are no longer allowed"
+; so a label 34 carrying anything but a COSE_CertHash makes the whole map
+; fail.  Pass 3 added the cuts; before them `{ 34: "nonsense" }` matched
+; both header rules below, and the one thing this file exists to say was
+; unsaid.
+;
+x5-header-entries = (
+  ? 32 ^ => COSE_X509        ; x5bag    rfc-9360#R-0064
+  ? 33 ^ => COSE_X509        ; x5chain  rfc-9360#R-0065
+  ? 34 ^ => COSE_CertHash    ; x5t      rfc-9360#R-0066
+  ? 35 ^ => uri              ; x5u      rfc-9360#R-0067
+)
+
+; --- the three algorithm-scoped parameters (Table 2).  THESE MEAN THESE
+; --- THINGS ONLY under ECDH-SS+HKDF-256, ECDH-SS+HKDF-512,
+; --- ECDH-SS+A128KW, ECDH-SS+A192KW and ECDH-SS+A256KW.  CDDL has no
+; --- way to express that scoping, so it is a comment here and a
+; --- condition in ../messages.yaml - which is itself the R-M-12
+; --- finding.
+x5-sender-header-entries = (
+  ? -27 ^ => COSE_CertHash   ; x5t-sender      rfc-9360#R-0078
+  ? -28 ^ => uri             ; x5u-sender      rfc-9360#R-0079
+  ? -29 ^ => COSE_X509       ; x5chain-sender  rfc-9360#R-0080
+)
+
+; --- where RFC 9360 says these may appear.  Two locations and no more:
+; --- COSE_Encrypt, COSE_Mac and COSE_Mac0 are named nowhere in the
+; --- document (rfc-9360#R-0062, rfc-9360#R-0063).
+x5-signature-header = { x5-header-entries, * label => any }
+x5-recipient-header = { x5-header-entries, x5-sender-header-entries,
+                        * label => any }
+label = int / tstr           ; RFC 9052's, named not redefined
+
+; --- the media type application/cose-x509 (§4.3), which is NOT one of
+; --- the types above: it is a CBOR SEQUENCE of single-entry COSE_X509
+; --- structures (rfc-9360#R-0055).  CDDL describes single data items, so a
+; --- sequence cannot be written as a type; RFC 8742 is the construct
+; --- and RFC 9360 cites it zero times.  The shape of one element:
+cose-x509-sequence-element = bstr
+
+; =====================================================================
+; THE PROFILE THIS LIBRARY WOULD USE, IF IT CARRIED CERTIFICATES AT
+; ALL.  Nothing below is RFC 9360's.  It is the narrowing design-notes.md
+; argues for, written out so it can be tested rather than described.
+; =====================================================================
+
+; (a) x5t's hashAlg restricted to values whose Recommended column is
+;     "Yes" in the COSE Algorithms registry.  RFC 9360 restricts NOTHING
+;     - its only constraint is a floor on SUPPORT (rfc-9360#R-0047) -
+;     so a conforming message may carry -14 (SHA-1) or -15 (SHA-256/64),
+;     both registered Filter Only by rfc-9054.  See
+;     x5t-hashalg-policy.derived.yaml for the per-value verdicts.
+mofn-CertHash = [ hashAlg: mofn-hash-alg, hashValue: bstr ]
+mofn-hash-alg = -16 / -17 / -18 / -43 / -44 / -45   ; NOT -14, NOT -15
+
+; (b) x5t in the PROTECTED bucket whenever it carries the binding.
+;     RFC 9360 permits either bucket (rfc-9360#R-0043) while also making
+;     x5t the sanctioned integrity binding (rfc-9360#R-0046).
+mofn-x5-protected = { 34 ^ => mofn-CertHash, * label => any }
+mofn-x5-unprotected = { ? 32 ^ => COSE_X509, ? 33 ^ => COSE_X509,
+                        ? 35 ^ => uri, * label => any }
+
+; (c) and the rule CDDL cannot carry, stated so it is not lost: the
+;     digest in hashValue is over the whole DER certificate, which is
+;     NOT "canonical key bytes before hashing".  Under DEC-003 an x5t
+;     value is therefore not a KeyId and must not be used as one.

@@ -1,0 +1,263 @@
+draft-ietf-cbor-cde — the CDE-checking decoder predicate
+=======================================================
+
+DERIVED - not verbatim.  draft-ietf-cbor-cde-13 ships no decoder
+algorithm; Appendix C.3.2 states the checking decoder's duties as three
+numbered MUSTs plus a closing rule, and Appendix D.3 supplies eight hex
+counter-examples.  The predicate below was written for this record from
+those.  It must never be quoted as the source's own algorithm.
+
+The source's own formal material is two artifacts, both held verbatim in
+this directory: cde-control-operator.cddl (Section 4, one CDDL rule) and
+try-float16-encode.c (Appendix F, Figure 1).  Nothing else.
+
+Source: .cache/draft-ietf-cbor-cde.txt, sha256
+bc554e3d2d37182f5f37c88aac2e61298089438068ccbc7c674d0940e675605c.
+Locators in [brackets] are sections of that document unless marked
+[RFC 8949 ...], which means the rule is INHERITED and not restated here.
+
+Companion: cde-encode.derived.pseudocode.txt is the encoder side, and is
+where the shared definitions (head(), lex_strictly_greater()) are stated.
+
+
+0.  WHO THIS APPLIES TO
+-----------------------
+[Section 1.2; Appendix C preamble; Appendix C.3.2]
+
+  Not every decoder.  "CBOR decoders in general (as opposed to
+  'CDE-checking decoders' specifically advertised as supporting CDE) are
+  not required to check for preferred serialization or CDE and reject
+  inputs that do not fulfill these requirements."  But: "Decoder
+  implementations that advertise 'support' for preferred serialization or
+  CDE need to check the encoding and reject input that is not encoded to
+  the encoding specification in use." [Appendix C preamble]
+
+  Why it matters at all -- the whole security argument rests on this one
+  hinge: "The use of deterministic encoding can mitigate issues arising
+  out of the use of non-preferred serializations specially crafted by an
+  attacker.  However, this effect only accrues if the decoder actually
+  checks that deterministic encoding was applied correctly."
+  [Section 5, Security Considerations]
+
+  THE CHEAP IMPLEMENTATION, from the source itself: "If a generic decoder
+  needs to be used that does not 'support' CDE, a simple (but somewhat
+  clumsy) way to check its input for proper CDE encoding is to re-encode
+  the decoded data with CDE and check for bit-to-bit equality with the
+  original input." [Appendix C preamble]  That is:
+
+      is_cde(input)  ==  ( cde_encode(generic_decode(input)) == input )
+
+  and it is correct wherever cde_encode is.  Section 1 below is the
+  single-pass form, for implementations that cannot afford to re-encode.
+  NOTE the one asymmetry: re-encoding cannot distinguish "not CDE" from
+  "not well-formed", and it loses the locator of the failure.
+
+
+1.  THE PREDICATE
+-----------------
+
+  PREDICATE is_cde(input) -> ACCEPT | REJECT(reason, offset)
+      (p, _) = check_item(input, 0)
+      IF p != len(input):
+          ; NOT ADDRESSED BY THIS DOCUMENT.  Whether trailing bytes after
+          ; the top-level data item are an error is a framing question the
+          ; draft never raises; .cdeseq [Section 4] implies a sequence is
+          ; a separate case.  Decide locally and say which you chose.
+          REJECT "trailing data", p
+      ACCEPT
+
+  FUNCTION check_item(buf, p) -> (p_after, encoded_bytes_of_item)
+      start = p
+      ib = buf[p];  mt = ib >> 5;  ai = ib & 0x1f;  p = p + 1
+
+      ; --- 1.1  definite-length-only  [C.3.2 item 1; Section 3.2; C.2] ---
+      IF ai == 31:
+          REJECT "indefinite length", start
+          ; Covers mt 2, 3, 4, 5 heads and the 0xff break stop code (which
+          ; is mt 7, ai 31).  Table 6 last row: 5f4101420203ff.
+      IF ai IN {28, 29, 30}:
+          REJECT "not well-formed", start      ; [RFC 8949 Section 3]
+
+      (arg, p) = read_argument(buf, p, ai)     ; 0, 1, 2, 4 or 8 bytes
+
+      ; --- 1.2  shortest-head  [C.3.2 item 1; C.1.1 item 1] -------------
+      IF mt != 7:
+          IF ai != minimal_ai(arg):
+              REJECT "non-shortest head", start
+          ; minimal_ai: arg<=23 -> arg; <=255 -> 0x18; <=65535 -> 0x19;
+          ; <=2^32-1 -> 0x1a; else 0x1b.  See shortest-head.derived.cddl.
+          ; Table 6: 1900ff (integer 255 with ai 0x19) and 98020405
+          ; (array length 2 with ai 0x18) are rejected here.
+
+      SWITCH mt:
+
+      ; --- 1.3  major types 0 and 1 --------------------------------------
+      CASE 0, 1:
+          RETURN (p, buf[start..p])
+          ; Nothing further: 1.2 already enforced the whole constraint.
+
+      ; --- 1.4  major types 2 and 3: strings ------------------------------
+      CASE 2:
+          p = p + arg
+          RETURN (p, buf[start..p])
+      CASE 3:
+          octets = buf[p .. p+arg]
+          IF NOT valid_utf8(octets):
+              REJECT "invalid UTF-8", p
+              ; "To complete checking for basic validity of the CBOR
+              ;  encoding (see Section 5.3.1 of RFC 8949 [STD94],
+              ;  CDE-checking decoders MUST check the validity of the UTF-8
+              ;  encoding of text strings (major type 3)." [C.3.2 item 3]
+              ;  (the unbalanced parenthesis is the source's own)
+          ; NO NORMALIZATION CHECK.  "CDE does NOT include a requirement
+          ; for Unicode normalization [UAX-15]" [C.3.1 item 3].  Rejecting
+          ; non-NFC input makes the decoder an ALDR checker (dCBOR), not a
+          ; CDE checker [Appendix B].
+          p = p + arg
+          RETURN (p, buf[start..p])
+
+      ; --- 1.5  major type 4: arrays --------------------------------------
+      CASE 4:
+          FOR i IN 1 .. arg:
+              (p, _) = check_item(buf, p)
+          RETURN (p, buf[start..p])
+
+      ; --- 1.6  major type 5: maps  [C.3.2 item 2; Section 3.3] -----------
+      CASE 5:
+          prev_key = NONE
+          FOR i IN 1 .. arg:
+              (p, key) = check_item(buf, p)
+              IF prev_key != NONE:
+                  IF NOT lex_strictly_greater(key, prev_key):
+                      REJECT "map keys not strictly increasing", start
+                      ; "they need to check for strict ordering of map
+                      ;  (major type 5) entries by lexicographically
+                      ;  comparing their keys (including rejecting
+                      ;  duplicate map keys)." [C.3.2 item 2]
+                      ; Table 6 row 1: a2616200616101 for {"b":0,"a":1}.
+              prev_key = key
+              (p, _) = check_item(buf, p)       ; the value
+          IF map_contains_both_zeros(keys):
+              REJECT "equivalent map keys (RFC 8949 5.6.1)", start
+              ; f90000 and f98000 are distinct, correctly ordered byte
+              ; strings, so 1.6's ordering check accepts a map holding
+              ; both.  The document flags exactly this: it "needs to be
+              ; checked with extra code for a full validity checker"
+              ; [Section 3.3 aside].  See cde-encode...txt section 4.2.
+          RETURN (p, buf[start..p])
+
+      ; --- 1.7  major type 6: tags  [Section 3.1.1; C.1.1 item 3] ---------
+      CASE 6:
+          IF arg == 2 OR arg == 3:
+              (p, content) = check_item(buf, p)
+              IF major_type_of(content) != 2:
+                  REJECT "bignum content is not a byte string", start
+                  ; [RFC 8949 Section 3.4.3]; inherited, not restated.
+              body = byte_string_payload(content)
+              IF len(body) > 0 AND body[0] == 0x00:
+                  REJECT "bignum with leading zero bytes", start
+                  ; "Leading zeros MUST NOT be present in the byte string
+                  ;  content of tag 2 and 3." [C.1.1 item 3]
+                  ; Table 6: c34a00010000000000000000.
+              magnitude = be_integer(body)
+              IF magnitude <= 18446744073709551615:        ; i.e. < 2^64
+                  REJECT "integer value too small for bignum", start
+                  ; From the two MUSTs of C.1.1 item 3 read as a decoder
+                  ; rule: 0..2^64-1 MUST be type 0 and -(2^64)..-1 MUST be
+                  ; type 1, so a bignum whose value lies in the basic range
+                  ; is non-preferred.  Table 6: c243010000 for 65536.
+                  ; ONE bound serves both tags.  Tag 3's content encodes
+                  ; -1-n [RFC 8949 Section 3.4.3], so n <= -(2^64)-1
+                  ; exactly when magnitude >= 2^64 -- the same test as for
+                  ; tag 2.  Table 4 confirms the boundary from both sides:
+                  ; -18446744073709551616 is 3bffffffffffffffff (type 1)
+                  ; and -18446744073709551617 is c349010000000000000000.
+              RETURN (p, buf[start..p])
+          ; any other tag:
+          (p, _) = check_item(buf, p)
+          ; OPEN-ENDED, AND UNCHECKABLE IN GENERAL.  A tag may define its
+          ; own preferred serialization, which a CDE-checking decoder would
+          ; then also have to check [Section 3.1]; the document concedes
+          ; that "not in all cases the tag's deterministic encoding
+          ; constraints will be confined to its definition of Preferred
+          ; Serialization" [Section 3.1.1 aside].  A decoder that does not
+          ; know a tag cannot fully check it.  It must NOT therefore reject
+          ; the tag -- CDE is defined over the whole generic data model
+          ; [Appendix A.1] -- so an unknown tag's internals are checked
+          ; only by the generic rules above.  SAY SO in any conformance
+          ; claim: "CDE-checking" is not a closed property over the tag
+          ; registry.
+          RETURN (p, buf[start..p])
+
+      ; --- 1.8  major type 7  [Section 3.1.2; C.1.1 item 2] ---------------
+      CASE 7:
+          IF ai <= 23:                      ; simple value in the head
+              RETURN (p, buf[start..p])
+          IF ai == 0x18:                    ; one-byte simple value
+              IF arg < 32:
+                  REJECT "not well-formed", start   ; [RFC 8949 Section 3.3]
+              RETURN (p, buf[start..p])
+          IF ai == 0x19:                    ; binary16 -- always shortest
+              RETURN (p, buf[start..p])
+          IF ai == 0x1a:                    ; binary32
+              IF representable_as_binary16(value):
+                  REJECT "float not in preferred serialization", start
+              RETURN (p, buf[start..p])
+          IF ai == 0x1b:                    ; binary64
+              IF representable_as_binary16(value)
+                 OR representable_as_binary32(value):
+                  REJECT "float not in preferred serialization", start
+              RETURN (p, buf[start..p])
+          ; representable_as_* is defined, NaN payloads and all, in
+          ; float-shortest-head.derived.pseudocode.txt.  Table 6 rows:
+          ; fa41280000 for 10.5 and fa7fc00000 for NaN are both rejected
+          ; here, the second because its f32 quiet NaN with zero payload
+          ; shortens to f97e00.
+          ; Note that ai 0x19/0x1a/0x1b in major type 7 are NOT subject to
+          ; the 1.2 minimal_ai test -- that is why mt 7 is excluded there.
+          ; Here ai is a format selector, and "shortest" is a property of
+          ; the VALUE, not of the argument's magnitude.
+
+
+2.  THE CLOSING RULE
+--------------------
+[Appendix C.3.2, final paragraph]
+
+  "To be called a CDE-checking decoder, it MUST NOT present to the
+   application a decoded data item that fails one of these checks (except
+   maybe via special diagnostic channels with no potential for confusion
+   with a correctly CDE-decoded data item)."
+
+  So REJECT is not advisory and not a warning channel.  A decoder that
+  surfaces the item and a flag alongside it has not met C.3.2 unless the
+  flag travels on a channel that cannot be mistaken for the value.  This
+  is the requirement most easily lost in an API that returns
+  (value, error) and is called by code that checks only value.
+
+  Two further duties that this predicate does not express, from the same
+  appendix:
+   - Decoders must still ACCEPT what preferred serialization allows when
+     they are not checking CDE: "both definite-length and indefinite-length
+     arrays or maps MUST be accepted", "Infinites and NaNs, and thus NaN
+     payloads, MUST be accepted and presented to the application"
+     [C.1.2 items 2, 3 and 4].  A CDE-checking decoder rejects some of
+     these; the two checklists are for different artifacts and do not
+     contradict each other.
+   - "Leading zero bytes in the tag content of a tag 2 or 3 MUST be
+     ignored" [C.1.2 item 5] -- that is the lenient DECODER rule, for a
+     decoder that is not CDE-checking.  A CDE-checking decoder rejects them
+     (1.7).  Do not implement both in the same code path.
+
+
+3.  WHAT THE DOCUMENT LEAVES TO THE IMPLEMENTER
+-----------------------------------------------
+
+  - Depth and size limits.  Not mentioned; a recursive check_item is a
+    stack-exhaustion surface on attacker-supplied input, and Section 5
+    inherits RFC 8949 Section 10 without adding anything here.
+  - Trailing data after the top-level item (1.1 above).
+  - Whether to check unknown tags' internals (1.7).
+  - Whether the two spellings definite-length-encoding (Section 2,
+    Table 1) and definite-length-only (Section 3.2, C.2) are the same
+    constraint.  They are, but nothing in the document says so; see
+    cde-constraints.derived.cddl.

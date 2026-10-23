@@ -1,0 +1,49 @@
+; rfc-8778 - the two COSE envelope shapes, as Appendix A instantiates them
+; DERIVED - not verbatim. RFC 8778 defines no envelope: §3 (rfc-8778#R-0081)
+; says only "This specification makes use of the signature with appendix scheme
+; for hash-based signatures", `Sig_structure` occurs 0 times, the word `tag`
+; occurs 0 times, and no COSE header parameter is registered (§6 touches three
+; registries and COSE Header Parameters is not among them). THE DOCUMENT NEVER
+; STATES WHERE THE SIGNATURE OCTETS GO. The structures below are read off the
+; two Appendix A examples and re-encoded to the document's own stated sizes.
+;
+; Source: RFC 8778, sha256 2d43646b974c76b9e13565af9b96432ac2b7ba39b66a61820d97f94f3cf1c398
+; Derived 2026-10-20, FX-1 pass 1 (extract). reviewed_by: ""
+;
+; BOTH EXAMPLES ARE IANA-TAGGED AND THE UNTAGGED FORM IS NEVER PRINTED:
+; Appendix A.1 is tag 98 (COSE_Sign, encoded d862) and A.2 is tag 18
+; (COSE_Sign1, encoded d2). Verified by re-encoding: 2560 and 2552 octets,
+; exactly as rfc-8778#R-0133 and rfc-8778#R-0135 state.
+
+HSS_LMS_COSE_Sign_Tagged  = #6.98(HSS_LMS_COSE_Sign)
+HSS_LMS_COSE_Sign1_Tagged = #6.18(HSS_LMS_COSE_Sign1)
+
+HSS_LMS_COSE_Sign = [
+  protected   : bstr,                 ; A.1: h'a10300' = {3: 0}, content type 0
+  unprotected : {},                   ; A.1: empty
+  payload     : bstr,                 ; A.1: 'This is the content.', 20 octets
+  signatures  : [+ HSS_LMS_COSE_Signature],
+]
+
+HSS_LMS_COSE_Signature = [
+  protected   : bstr,                 ; A.1: h'a101382d' = {1: -46}, alg HSS-LMS
+  unprotected : { ? 4 => bstr },      ; A.1: {4: 'ItsBig'} - kid, 6 ASCII octets
+  signature   : hss-lms-signature,
+]
+
+HSS_LMS_COSE_Sign1 = [
+  protected   : bstr,                 ; A.2: h'a101382d' = {1: -46}, alg HSS-LMS
+  unprotected : { ? 4 => bstr },      ; A.2: {4: 'ItsBig'}
+  payload     : bstr,                 ; A.2: 'This is the content.', 20 octets
+  signature   : hss-lms-signature,
+]
+
+; The HSS signature value (§2.1 rfc-8778#R-0027 / #R-0029, §2.2 #R-0062,
+; §2.3 #R-0079). Its length depends on p and h and is therefore NOT a constant:
+; both Appendix A signatures measure 2512 octets at p=67, h=10. See
+; hss-lms-octets.derived.abnf and parameter-sets.derived.yaml.
+hss-lms-signature = bstr
+
+; ITS OWN KID SUGGESTION IS NOT TAKEN BY ITS OWN EXAMPLES. §3 rfc-8778#R-0090
+; says a `kid` MAY be the 16-octet I (#R-0092); both examples use 'ItsBig', six
+; ASCII octets. Anyone adopting the suggestion is the first.

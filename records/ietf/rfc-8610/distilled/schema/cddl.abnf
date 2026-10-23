@@ -1,0 +1,226 @@
+; =====================================================================
+; cddl.abnf
+;
+; VERBATIM.  This is RFC 8610's own grammar, copied unchanged.  It was
+; NOT authored by this project.  Do not edit it, do not correct it, do
+; not reformat it.  Defects found in it are recorded in README.md,
+; never repaired here.  The companion derived file that mechanically
+; dedents it for tools is cddl-dedented.derived.abnf.
+;
+; ---------------------------------------------------------------------
+; CURRENCY, added 2026-10-19 by the rfc-9682 extraction (library#39
+; Tier 2).  THIS FILE IS STILL CORRECT AND IS NOT SUPERSEDED AS AN
+; EXTRACTION: it is RFC 8610's grammar and remains exactly that.  What
+; it is not is CURRENT CDDL.  RFC 9682 ("Updates to the Concise Data
+; Definition Language (CDDL) Grammar") replaces its Appendix B with a
+; 55-rule grammar: 8 rules new, 6 with a changed right-hand side, 41
+; carried over unchanged, 0 dropped.
+;
+; The six whose right-hand side CHANGED -- read records/ietf/rfc-9682
+; before building a parser from any of them:
+;
+;     cddl    S 1*(rule S)          ->  S *(rule S)        RELAXATION
+;     type2   #6 ["." uint]         ->  ["." head-number]  RELAXATION
+;                                       and adds #7 ["." head-number]
+;     SCHAR   ... %x80-10FFFD       ->  ... NONASCII        RESTRICTION
+;     SESC    "\" (%x20-7E/%x80-)   ->  eight named escapes RESTRICTION
+;                                       plus \u{hex}        + RELAXATION
+;     BCHAR   ... %x5D-10FFFD       ->  ... %x5D-7E /       RESTRICTION
+;                                       NONASCII, and adds "\'" back
+;                                       explicitly, because the new SESC
+;                                       no longer reaches it
+;     PCHAR   %x20-7E / %x80-10FFFD ->  %x20-7E / NONASCII  RESTRICTION
+;
+; Counted, not asserted: SCHAR loses 2080 code points (U+0080-U+009F and
+; U+D800-U+DFFF), BCHAR 2081 (those plus U+007F), PCHAR 2080.  None of
+; the three gains one.  `"\'"` is a two-character sequence, not a code
+; point, so it does not offset BCHAR's loss.
+;
+; TWO of the 44 side conditions in grammar-gaps.derived.txt are CLOSED
+; there -- G-32 (surrogates: NONASCII = %xA0-D7FF / %xE000-10FFFD, and
+; the escape path is closed too) and G-33 (unrestricted escapes).  G-31
+; is half-closed (the DEL asymmetry is fixed and stated; the
+; CRLF/line-spanning asymmetry stands, still unstated anywhere) and
+; G-04 is amended rather than fixed.  TWO are restated but not closed --
+; G-12 (the prefixed-byte-string caveat moves from a normative appendix
+; into one declared informative) and G-28 (case sensitivity: RFC 9682's
+; Appendix A does not reproduce Appendix B's preamble, below).  The
+; other 38 stand: 2 + 1 + 1 + 2 + 38 = 44.
+;   [arithmetic corrected 2026-10-20 by rfc-9682 pass 2 (verify), which
+;   re-derived the partition: the five buckets are pairwise disjoint and
+;   cover G-01..G-44 exactly once each.  This note had omitted the two
+;   restated conditions and so summed to 42.]
+;
+; NOT fixed by RFC 9682: the bare-LF `CRLF = %x0A / %x0D.0A` below is
+; carried into RFC 9682's normative appendix BYTE-IDENTICAL, in a
+; document titled *Updates to the CDDL Grammar* that rewrites PCHAR two
+; lines above it and says nothing about it.
+;
+;   [narrowed 2026-10-19 by the rfc-9165 extraction.  An earlier draft
+;   of this note said the defect "now sits in three current CDDL
+;   documents", counting RFC 9165 and draft-ietf-cbor-cddl-modules
+;   alongside RFC 8610.  That conflates an idiom with an error.
+;   RFC 9165 §3 makes the IDENTICAL redefinition but DECLARES it, scopes
+;   it exactly -- "As is customary for ABNF, the syntax of ABNF itself
+;   (_not_ the syntax expressed in ABNF!) is relaxed to allow a single
+;   line feed as a newline" (source lines 294-298) -- and is written by
+;   one of RFC 8610's own authors.  So the SUBSTANCE is deliberate
+;   community practice, and what is defective about it HERE is only that
+;   it is undeclared and sits camouflaged among four core rules
+;   redefined identically.  README.md's defect list is narrowed the same
+;   way; the defect is real and it is a documentation defect, not a
+;   grammar one.]
+;
+; `bsqual = "h" / "b64"` is likewise unchanged at two
+; prefixes.  And none of Table 1's three disagreements with this
+; grammar is resolved: RFC 9682's scope is Appendix B, Table 1 is in
+; §3.11.
+;
+; The hazard worth knowing before trusting either grammar: the escape
+; change SILENTLY DISAGREES rather than failing.  `"D\u{6f}mino"`
+; parses under BOTH grammars with DIFFERENT meanings and no diagnostic
+; on either side, because this file's SESC consumes backslash plus one
+; character and `{`, `6`, `f`, `}` are then ordinary SCHARs.  Verified
+; mechanically against both productions.
+; ---------------------------------------------------------------------
+;
+; Locator:  RFC 8610, "Concise Data Definition Language (CDDL): A
+;           Notational Convention to Express Concise Binary Object
+;           Representation (CBOR) and JSON Data Structures",
+;           Birkholz, Vigano & Bormann, June 2019, Standards Track,
+;           ISSN 2070-1721.  Appendix B, "ABNF Grammar" (Figure 13:
+;           CDDL ABNF).  Source text lines 2480-2597.
+;           <https://www.rfc-editor.org/rfc/rfc8610.txt>
+;
+; Source digest (sha256 of the full cached source text):
+;   3713f2a50e23a2bea0a6147ad6c4433605a00c3d00a868bfa86a42b204997089
+;
+; Appendix B is NORMATIVE.  Its own preamble, quoted:
+;
+;      This appendix is normative.
+;
+;      The following is a formal definition of the CDDL syntax in ABNF
+;      [RFC5234].  Note that, as is defined in ABNF, the quote-delimited
+;      strings below are case insensitive (while string values and names are
+;      case sensitive in CDDL).
+;
+; and its closing note, quoted (source lines 2601-2602):
+;
+;      Note that this ABNF does not attempt to reflect the detailed rules of
+;      what can be in a prefixed byte string.
+;
+; THE RFC'S FIVE-COLUMN LEFT MARGIN IS PRESERVED on every grammar line.
+; That makes this file faithful but NOT directly consumable by an ABNF
+; tool: under RFC 5234 a line beginning with whitespace continues the
+; previous rule, so an indented grammar collapses into one rule.  Dedent
+; by exactly five columns first, or use cddl-dedented.derived.abnf.
+;
+; The grammar crosses two RFC page frames.  It is therefore reproduced as
+; three contiguous regions (the page footer, U+000C form feed, running
+; head and surrounding blank lines fall between them and are NOT
+; reproduced).  No region contains any page furniture.  Concatenating
+; B-1, B-2 and B-3 in order, with one blank line where each page frame
+; stood, reconstructs Appendix B's grammar in full: 47 productions,
+; cddl through CRLF, nothing dropped at a page break.
+; =====================================================================
+
+; ---- BEGIN VERBATIM B-1 (source lines 2480-2516, sha256 6689bc055a11a5a49600a880c2a244ffc1baa1f2bd8cb499cb276897a56c89be) ----
+     cddl = S 1*(rule S)
+     rule = typename [genericparm] S assignt S type
+          / groupname [genericparm] S assigng S grpent
+
+     typename = id
+     groupname = id
+
+     assignt = "=" / "/="
+     assigng = "=" / "//="
+
+     genericparm = "<" S id S *("," S id S ) ">"
+     genericarg = "<" S type1 S *("," S type1 S ) ">"
+
+     type = type1 *(S "/" S type1)
+
+     type1 = type2 [S (rangeop / ctlop) S type2]
+     ; space may be needed before the operator if type2 ends in a name
+
+     type2 = value
+           / typename [genericarg]
+           / "(" S type S ")"
+           / "{" S group S "}"
+           / "[" S group S "]"
+           / "~" S typename [genericarg]
+           / "&" S "(" S group S ")"
+           / "&" S groupname [genericarg]
+           / "#" "6" ["." uint] "(" S type S ")"
+           / "#" DIGIT ["." uint]                ; major/ai
+           / "#"                                 ; any
+
+     rangeop = "..." / ".."
+
+     ctlop = "." id
+
+     group = grpchoice *(S "//" S grpchoice)
+
+     grpchoice = *(grpent optcom)
+; ---- END VERBATIM B-1 ----
+
+; ---- BEGIN VERBATIM B-2 (source lines 2527-2566, sha256 c03e96cff0f74fa8132e574393eb7954765ce22759e47c031c20f520bd8d2557) ----
+     grpent = [occur S] [memberkey S] type
+            / [occur S] groupname [genericarg]  ; preempted by above
+            / [occur S] "(" S group S ")"
+
+     memberkey = type1 S ["^" S] "=>"
+               / bareword S ":"
+               / value S ":"
+
+     bareword = id
+
+     optcom = S ["," S]
+
+     occur = [uint] "*" [uint]
+           / "+"
+           / "?"
+
+     uint = DIGIT1 *DIGIT
+          / "0x" 1*HEXDIG
+          / "0b" 1*BINDIG
+          / "0"
+
+     value = number
+           / text
+           / bytes
+
+     int = ["-"] uint
+
+     ; This is a float if it has fraction or exponent; int otherwise
+     number = hexfloat / (int ["." fraction] ["e" exponent ])
+     hexfloat = ["-"] "0x" 1*HEXDIG ["." 1*HEXDIG] "p" exponent
+     fraction = 1*DIGIT
+     exponent = ["+"/"-"] 1*DIGIT
+
+     text = %x22 *SCHAR %x22
+     SCHAR = %x20-21 / %x23-5B / %x5D-7E / %x80-10FFFD / SESC
+     SESC = "\" (%x20-7E / %x80-10FFFD)
+
+     bytes = [bsqual] %x27 *BCHAR %x27
+     BCHAR = %x20-26 / %x28-5B / %x5D-10FFFD / SESC / CRLF
+     bsqual = "h" / "b64"
+; ---- END VERBATIM B-2 ----
+
+; ---- BEGIN VERBATIM B-3 (source lines 2583-2597, sha256 d3be4c27ca7e4f45f7b717aac39f5efc2ee44368043128bc94264babb1db799e) ----
+     id = EALPHA *(*("-" / ".") (EALPHA / DIGIT))
+     ALPHA = %x41-5A / %x61-7A
+     EALPHA = ALPHA / "@" / "_" / "$"
+     DIGIT = %x30-39
+     DIGIT1 = %x31-39
+     HEXDIG = DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
+     BINDIG = %x30-31
+
+     S = *WS
+     WS = SP / NL
+     SP = %x20
+     NL = COMMENT / CRLF
+     COMMENT = ";" *PCHAR CRLF
+     PCHAR = %x20-7E / %x80-10FFFD
+     CRLF = %x0A / %x0D.0A
+; ---- END VERBATIM B-3 ----

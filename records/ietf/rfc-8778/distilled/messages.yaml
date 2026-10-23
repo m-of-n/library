@@ -1,0 +1,590 @@
+record: rfc-8778
+reviewed_by: ""
+source_version: "RFC 8778"
+source_digest: "2d43646b974c76b9e13565af9b96432ac2b7ba39b66a61820d97f94f3cf1c398"
+source_lines_total: 772
+structure_count: 11
+field_count: 35
+
+# Every message, structure, header or envelope the document defines.
+#
+# RFC 8778 DEFINES NO MESSAGE AND NO EXCHANGE. What it defines is a byte string
+# and a key, and the structures below are those two plus the envelopes its own
+# Appendix A puts them in. `protocol`, `exchange`, `sender`, `recipient` and
+# `verifier` each occur 0 times in the source; see protocol.yaml.
+#
+# WHAT IS DERIVED HERE, DECLARED ONCE. Every `octets` and every `offset` below
+# is DERIVED. RFC 8778 states not one byte offset and not one field width except
+# `I`'s 16 (§3, rfc-8778#R-0092). The widths come from: `u32str` = 4, MEASURED as
+# the only width in {1, 2, 8} that makes the printed Appendix A signature an
+# integer number of 32-octet elements AND the only width consistent with the
+# printed octets - the leading u32str(0) and the leaf number q sit at offsets 0
+# and 4 (schema/README.md works both legs; corrected 2026-10-21, FX-1 pass 2,
+# which found the divisibility test alone satisfied by every u = 4 mod 8);
+# m = 32 and n = 32,
+# stated at rfc-8778#R-0039 and rfc-8778#R-0066; p = 67 and h = 10 for the
+# Appendix A fixtures, MEASURED (examples/vectors.yaml V-0003, V-0004) because
+# rfc-8778#R-0072 defers every value of p to [HASHSIG] Appendix B. `constrained_by`
+# names the requirement that carries each field; where a field belongs to RFC 8152
+# rather than to this document the list is empty and `note` says so.
+#
+# THE DOCUMENT PRINTS NO KEY. `COSE_Key` occurs 0 times, `kty` once and `pub`
+# once as a word, and no `pub` value appears anywhere. So S-0001, S-0002, S-0007
+# and S-0008 below are structures with no worked instance in the source, and no
+# HSS-LMS COSE Key Thumbprint is computable from any document this library
+# holds. Stated again in examples/README.md, where it belongs.
+#
+# OCTET CONVENTION. For the flat octet structures (S-0001 to S-0006) `octets` is
+# the field width and `offset` its position in the byte string. For the CBOR
+# structures (S-0007 to S-0011) `octets` is the ENCODED size of the field
+# INCLUDING its CBOR head, and `encoded` gives those head bytes, so the field
+# sizes sum to the structure total. Every one was computed with an RFC 8949
+# encoder written for this pass; no CBOR or COSE library was used.
+
+messages:
+
+  # =====================================================================
+  - id: S-0001
+    name: HSS_LMS_Public_Key
+    locator: "§2.1 and §2.2"
+    encoding: "flat octet string; the `pub` value of a COSE kty 5 key (bstr, label -1)"
+    octets: 56
+    note: >-
+      THE LOAD-BEARING STRUCTURE OF THIS RECORD. §2.2 rfc-8778#R-0053 gives the
+      layout and §2.1 rfc-8778#R-0024 makes the topmost LMS tree's public key the
+      HSS public key, so this one structure is the LMS public key, the HSS public
+      key and the COSE `pub` parameter. 56 octets for every one of the 20
+      parameter-set combinations RFC 8778 admits: no length prefix, no optional
+      field, no variable-length integer. §6.3 rfc-8778#R-0127 registers it as the
+      only key type parameter for kty 5.
+    fields:
+      - name: lms_algorithm_type
+        type: "u32str - unsigned 32-bit integer, big-endian"
+        required: true
+        octets: 4
+        offset: 0
+        value: "an IANA code point in the LMS registry [HASHSIG] establishes"
+        constrained_by: [rfc-8778#R-0053, rfc-8778#R-0046, rfc-8778#R-0028]
+        note: >-
+          RFC 8778 names five tree sizes (rfc-8778#R-0041..R-0045) and prints no
+          code point for any of them. Appendix A's signatures carry 00000006 in
+          the corresponding signature field, which this document cannot resolve
+          to a name. The 4-octet width is MEASURED, not stated.
+      - name: otstype
+        type: "u32str - unsigned 32-bit integer, big-endian"
+        required: true
+        octets: 4
+        offset: 4
+        value: "an IANA code point in the LM-OTS registry [HASHSIG] establishes"
+        constrained_by: [rfc-8778#R-0053, rfc-8778#R-0077, rfc-8778#R-0028]
+        note: >-
+          Four variants named (rfc-8778#R-0073..R-0076), no code point printed.
+          Appendix A carries 00000003 here. Width MEASURED.
+      - name: I
+        type: "octet string"
+        required: true
+        octets: 16
+        offset: 8
+        value: "the tree identifier; the only field whose width this document states"
+        constrained_by: [rfc-8778#R-0053, rfc-8778#R-0092, rfc-8778#R-0047, rfc-8778#R-0048, rfc-8778#R-0049]
+        note: >-
+          The width is stated in §3's `kid` bullet (rfc-8778#R-0092) and nowhere
+          else; §2.2 rfc-8778#R-0049 puts I in the public key and gives no width.
+          §3 rfc-8778#R-0090 permits this value to be used as a COSE `kid`, which
+          makes it the only identifier in this library that is a FIELD OF a key
+          rather than a function of one. Nothing binds a `kid` to it.
+      - name: T[1]
+        type: "octet string - the m-byte Merkle root"
+        required: true
+        octets: 32
+        offset: 24
+        value: "the root of the topmost LMS tree"
+        constrained_by: [rfc-8778#R-0053, rfc-8778#R-0052, rfc-8778#R-0039, rfc-8778#R-0051]
+        note: >-
+          32 because §2.2 rfc-8778#R-0039 says only SHA-256 with m=32 is
+          supported. A future registered m (rfc-8778#R-0040, R-0046) changes this
+          field and the total length with it.
+    layout: |
+      offset  size  field
+      ------  ----  --------------------------------------------------
+           0     4  u32str(lms_algorithm_type)   IANA LMS code point
+           4     4  u32str(otstype)              IANA LM-OTS code point
+           8    16  I                            tree identifier
+          24    32  T[1]                         Merkle root, m = 32
+      ------  ----
+              56  total, invariant over all 20 admitted parameter sets
+      DERIVED: every offset here. RFC 8778 states only the field order
+      (rfc-8778#R-0053) and I's 16 (rfc-8778#R-0092).
+
+  # =====================================================================
+  - id: S-0002
+    name: LMS_Public_Key_subordinate
+    locator: "§2.1 and §2.2"
+    encoding: "flat octet string, inside a signed_public_key inside an HSS signature"
+    octets: 56
+    note: >-
+      Structurally identical to S-0001 - the same four fields, the same 56 octets
+      - and it is a different thing: a child tree's public key, carried INSIDE a
+      signature rather than published. §2.1 rfc-8778#R-0025 has the parent tree's
+      private key sign it and rfc-8778#R-0030 defines the carrier. NOT EXERCISED
+      BY ANY EXAMPLE: both Appendix A signatures are stand-alone trees with
+      Nspk = 0, so the subordinate form has no worked instance in RFC 8778.
+    fields:
+      - name: "(as S-0001)"
+        type: "see S-0001"
+        required: true
+        octets: 56
+        offset: 0
+        constrained_by: [rfc-8778#R-0053, rfc-8778#R-0025, rfc-8778#R-0030]
+    layout: "identical to S-0001; see rfc-8778#R-0030 for where it sits"
+
+  # =====================================================================
+  - id: S-0003
+    name: LM_OTS_Signature
+    locator: "§2.3"
+    encoding: "flat octet string, inside an LMS signature"
+    octets: "4 + n + n*p; 2180 for the Appendix A fixtures (n = 32, p = 67)"
+    note: >-
+      §2.3 rfc-8778#R-0079. Its length is NOT computable from RFC 8778: p is
+      deferred to [HASHSIG] Appendix B by rfc-8778#R-0072 and no value appears
+      anywhere in the document. The 2180 below is measured off the printed
+      signatures. SOURCE DEFECT: rfc-8778#R-0070 defines p as "The number of
+      n-byte string elements that make up the LM-OTS signature", and this layout
+      holds p + 1 of them - C plus the p values of y. See normative.md
+      observation 7.
+    fields:
+      - name: otstype
+        type: "u32str"
+        required: true
+        octets: 4
+        offset: 0
+        value: "00000003 in both Appendix A signatures (measured)"
+        constrained_by: [rfc-8778#R-0079, rfc-8778#R-0077]
+      - name: C
+        type: "n-byte octet string"
+        required: true
+        octets: 32
+        offset: 4
+        value: "91291de76ce6e24d1e2a9b60266519bc8ce889f814deb0fc00edd3129de3ab9b in BOTH Appendix A signatures"
+        constrained_by: [rfc-8778#R-0078, rfc-8778#R-0079, rfc-8778#R-0066]
+        note: >-
+          rfc-8778#R-0078 calls C "an n-byte random value". The two printed
+          signatures carry the SAME C, over two different Sig_structure contexts
+          from two different leaves of one tree. Measured; examples/vectors.yaml
+          V-0005.
+      - name: "y[0..p-1]"
+        type: "p consecutive n-byte octet strings"
+        required: true
+        octets: "32*p; 2144 for p = 67"
+        offset: 36
+        constrained_by: [rfc-8778#R-0079, rfc-8778#R-0066, rfc-8778#R-0072]
+    layout: |
+      offset  size      field
+      ------  --------  ----------------------------------------
+           0         4  u32str(otstype)
+           4        32  C            an n-byte random value
+          36      32*p  y[0] .. y[p-1]
+      ------  --------
+            4+32+32p    total; 2180 at p = 67 (measured)
+
+  # =====================================================================
+  - id: S-0004
+    name: LMS_Signature
+    locator: "§2.2"
+    encoding: "flat octet string, inside an HSS signature value"
+    octets: "4 + |ots_signature| + 4 + m*h; 2508 for the Appendix A fixtures"
+    note: >-
+      §2.2 rfc-8778#R-0062, with rfc-8778#R-0054..R-0058 naming the four elements
+      and rfc-8778#R-0059..R-0061 constraining the path.
+    fields:
+      - name: q
+        type: "u32str"
+        required: true
+        octets: 4
+        offset: 0
+        value: "1 in Appendix A.1, 0 in Appendix A.2 (measured)"
+        constrained_by: [rfc-8778#R-0062, rfc-8778#R-0055]
+        note: >-
+          The leaf number, and therefore the one-time counter. §4
+          rfc-8778#R-0101 is the obligation that no value of q is ever reused and
+          §4 rfc-8778#R-0097 is the obligation to record which have been.
+      - name: ots_signature
+        type: "S-0003"
+        required: true
+        octets: "2180 at p = 67"
+        offset: 4
+        constrained_by: [rfc-8778#R-0062, rfc-8778#R-0056, rfc-8778#R-0079]
+      - name: type
+        type: "u32str - the LMS algorithm type code"
+        required: true
+        octets: 4
+        offset: "4 + |ots_signature|; 2188 in both Appendix A signatures"
+        value: "00000006 in both (measured)"
+        constrained_by: [rfc-8778#R-0062, rfc-8778#R-0057, rfc-8778#R-0046]
+        note: >-
+          This field is the whole of the length self-description §3
+          rfc-8778#R-0084 relies on - and finding it requires knowing p, which
+          requires resolving the otstype code point, which RFC 8778 does not
+          print. The offset above was recovered by solving the length equation,
+          not by reading a table.
+      - name: "path[0..h-1]"
+        type: "h consecutive m-byte octet strings"
+        required: true
+        octets: "32*h; 320 at h = 10"
+        offset: "2192 in both Appendix A signatures"
+        constrained_by: [rfc-8778#R-0062, rfc-8778#R-0058, rfc-8778#R-0059, rfc-8778#R-0060, rfc-8778#R-0061]
+        note: >-
+          rfc-8778#R-0061 fixes the order, leaf sibling first. Testable against
+          the document's own examples and tested: A.1 is leaf 1 and A.2 is leaf 0
+          of one tree, so the two paths must agree above the leaf. path[0]
+          differs, path[1..9] are byte-identical. examples/vectors.yaml V-0006.
+    layout: |
+      offset  size      field
+      ------  --------  --------------------------------------------
+           0         4  u32str(q)              the leaf number
+           4  4+32+32p  ots_signature          S-0003
+      4+ots           4 u32str(type)           IANA LMS code point
+      8+ots      32*h    path[0] .. path[h-1]  authentication path
+      ------  --------
+                        total 2508 at p = 67, h = 10 (measured)
+
+  # =====================================================================
+  - id: S-0005
+    name: HSS_Signature_Value_standalone
+    locator: "§2.1"
+    encoding: "flat octet string; the `signature` field of a COSE_Sign1 or COSE_Signature"
+    octets: 2512
+    note: >-
+      §2.1 rfc-8778#R-0027, "u32str(0) || lms_signature". THE SHAPE BOTH
+      APPENDIX A SIGNATURES TAKE, measured: octets 0..3 of each are 00000000.
+      rfc-8778#R-0031 makes Nspk the number of levels minus 1, so 0 is a
+      single-level tree.
+    fields:
+      - name: Nspk
+        type: "u32str"
+        required: true
+        octets: 4
+        offset: 0
+        value: "0 (measured in both Appendix A signatures)"
+        constrained_by: [rfc-8778#R-0027, rfc-8778#R-0031, rfc-8778#R-0023]
+      - name: lms_signature
+        type: "S-0004"
+        required: true
+        octets: 2508
+        offset: 4
+        constrained_by: [rfc-8778#R-0027, rfc-8778#R-0062, rfc-8778#R-0026]
+    layout: |
+      offset  size  field
+      ------  ----  ------------------------------------
+           0     4  u32str(0)       Nspk = 0
+           4  2508  lms_signature   S-0004
+      ------  ----
+              2512  total (measured, both examples)
+
+  # =====================================================================
+  - id: S-0006
+    name: HSS_Signature_Value_hierarchical
+    locator: "§2.1"
+    encoding: "flat octet string"
+    octets: "4 + Nspk*(|lms_signature| + 56) + |lms_signature|"
+    note: >-
+      §2.1 rfc-8778#R-0029, with rfc-8778#R-0030 defining signed_public_key as
+      "the lms_signature over the public key followed by the public key itself".
+      NO EXAMPLE EXERCISES THIS FORM. Both of the document's fixtures are
+      stand-alone trees, so the hierarchy the document is named for has no worked
+      instance in it.
+    fields:
+      - name: Nspk
+        type: "u32str"
+        required: true
+        octets: 4
+        offset: 0
+        value: "levels in the hierarchy minus 1"
+        constrained_by: [rfc-8778#R-0029, rfc-8778#R-0031]
+      - name: "signed_public_key[0..Nspk-1]"
+        type: "Nspk consecutive (S-0004 || S-0002) pairs"
+        required: "only when Nspk > 0"
+        octets: "Nspk * (|lms_signature| + 56)"
+        offset: 4
+        constrained_by: [rfc-8778#R-0029, rfc-8778#R-0030, rfc-8778#R-0025]
+      - name: lms_signature
+        type: "S-0004 - the signature over the actual message"
+        required: true
+        octets: "2508 at p = 67, h = 10"
+        offset: "after the last signed_public_key"
+        constrained_by: [rfc-8778#R-0029, rfc-8778#R-0026, rfc-8778#R-0062]
+    layout: |
+      u32str(Nspk) || signed_public_key[0] || ... || signed_public_key[Nspk-1]
+                   || lms_signature
+      where signed_public_key = lms_signature || lms_public_key   (R-0030)
+
+  # =====================================================================
+  - id: S-0007
+    name: HSS_LMS_COSE_Key
+    locator: "§3, §6.2 and §6.3"
+    encoding: "CBOR map (COSE_Key, RFC 8152 §7)"
+    octets: "62 minimal; 65 with alg; more with kid and key_ops"
+    note: >-
+      ASSEMBLED, NOT PRINTED. RFC 8778 contains no COSE_Key: `COSE_Key` occurs 0
+      times and `kty` exactly once, in §3's checklist (rfc-8778#R-0086). This
+      structure is §3's five checks plus §6.2's and §6.3's two registrations.
+      THERE IS NO PRIVATE FORM: §5 rfc-8778#R-0115 withholds the encoding of the
+      private key and its state deliberately, and §6.3 registers exactly one key
+      type parameter for kty 5 - the public key.
+    fields:
+      - name: kty
+        type: int
+        label: 1
+        required: true
+        value: 5
+        encoded: "01 05"
+        constrained_by: [rfc-8778#R-0086, rfc-8778#R-0124, rfc-8778#R-0125]
+        note: "The only unconditional obligation about a key in the document."
+      - name: alg
+        type: int
+        label: 3
+        required: false
+        value: -46
+        encoded: "03 382d"
+        constrained_by: [rfc-8778#R-0087, rfc-8778#R-0120, rfc-8778#R-0121]
+        note: >-
+          CONDITIONAL ON PRESENCE, and that is a load-bearing fact: a conforming
+          HSS-LMS COSE key need not carry `alg` at all, and RFC 9679 §4.5 does
+          not require it, so the COSE Algorithms value -46 is NOT in the
+          thumbprint preimage. design-notes.md works out what follows.
+      - name: kid
+        type: bstr
+        label: 2
+        required: false
+        value: "any; MAY be the 16-octet I"
+        encoded: "02 50 <16 octets> if the suggestion is taken"
+        constrained_by: [rfc-8778#R-0090, rfc-8778#R-0092]
+        note: >-
+          Both Appendix A examples use 'ItsBig' - six ASCII octets, encoded
+          04 46 49 74 73 42 69 67 in the unprotected bucket - so the document's
+          own suggestion has no worked instance anywhere in it.
+      - name: key_ops
+        type: "array of int"
+        label: 4
+        required: false
+        value: "MUST include 1 (sign) when signing, 2 (verify) when verifying"
+        encoded: "04 81 01 for [sign]"
+        constrained_by: [rfc-8778#R-0088, rfc-8778#R-0089]
+      - name: pub
+        type: bstr
+        label: -1
+        required: true
+        value: "S-0001, 56 octets"
+        encoded: "20 5838 <56 octets>"
+        constrained_by: [rfc-8778#R-0127, rfc-8778#R-0128, rfc-8778#R-0053, rfc-8778#R-0024]
+    layout: |
+      MINIMAL PUBLIC KEY, RFC 8949 section 4.2.1 order (1 then -1, bytewise
+      0x01 < 0x20) -- 62 octets, DERIVED:
+        a2 01 05 20 5838 <56 octets of pub>
+      WITH alg -- 65 octets, order 1, 3, -1 (0x01 < 0x03 < 0x20):
+        a3 01 05 03 382d 20 5838 <56 octets of pub>
+      Both lengths computed with an RFC 8949 encoder written for this pass.
+
+  # =====================================================================
+  - id: S-0008
+    name: HSS_LMS_COSE_Key_Thumbprint_Input
+    locator: "§6.2 and §6.3 (RFC 9679 §4.5 selects the parameters)"
+    encoding: "CBOR map, RFC 8949 §4.2.1 deterministic encoding"
+    octets: 62
+    note: >-
+      CROSS-RECORD AND NOT FROM RFC 8778. RFC 9679 §4.5 - see
+      records/ietf/rfc-9679, at profile: full - requires exactly `kty` (label 1,
+      int, value 5) and `pub` (label -1, bstr) for an HSS-LMS COSE Key
+      Thumbprint, and cites NEITHER RFC 8778 NOR RFC 8554 for what the `pub`
+      octets are. RFC 8778 §2.1 and §2.2 are the only specification of them
+      anywhere, which is what makes that edge real.
+      MEASURED: this input is BYTE-IDENTICAL to S-0007's minimal form, both 62
+      octets, for every admitted parameter set - the same property rfc-9964 found
+      for AKP. A thumbprint input is not a reduced form of an HSS-LMS key; it is
+      the whole public key plus two octets of map framing.
+      NOT COMPUTABLE FROM ANY DOCUMENT THIS LIBRARY HOLDS: RFC 8778 prints no
+      `pub` value, so no HSS-LMS KeyId exists to check against. The template is
+      exact; the digest is unavailable. examples/README.md says what would close
+      it.
+    fields:
+      - name: kty
+        type: int
+        label: 1
+        required: true
+        value: 5
+        encoded: "01 05"
+        constrained_by: [rfc-8778#R-0124, rfc-8778#R-0125]
+      - name: pub
+        type: bstr
+        label: -1
+        required: true
+        value: "S-0001, 56 octets"
+        encoded: "20 5838 <56 octets>"
+        constrained_by: [rfc-8778#R-0127, rfc-8778#R-0128, rfc-8778#R-0053]
+    layout: |
+      a2 01 05 20 5838 <56 octets of pub>        62 octets, DERIVED
+      KeyId = SHA-256(that) = 32 octets          RFC 9679 section 3 step 3
+      SO THE KEY IS 24 OCTETS LARGER THAN ITS OWN THUMBPRINT, and the minimal
+      COSE_Key carrying it is 30 octets larger. design-notes.md, R-M-02.
+
+  # =====================================================================
+  - id: S-0009
+    name: COSE_Sign_tag98
+    locator: "Appendix A.1"
+    encoding: "CBOR, tag 98 (encoded d862)"
+    octets: 2560
+    note: >-
+      RFC 8778 NEVER STATES THIS STRUCTURE. §3 rfc-8778#R-0081 says only that the
+      specification "makes use of the signature with appendix scheme";
+      `Sig_structure` occurs 0 times and the word `tag` occurs 0 times. The shape
+      below is read off Appendix A.1 and re-encoded: 2560 octets, exactly as
+      rfc-8778#R-0133 states. Every field except `signature` belongs to RFC 8152,
+      so most `constrained_by` lists here are empty and that is a finding rather
+      than an omission.
+    fields:
+      - name: protected
+        type: bstr
+        required: true
+        value: "h'a10300' = {3: 0}, content type 0"
+        octets: 4
+        encoded: "43 a10300"
+        constrained_by: []
+        note: "RFC 8152's `content type` header, label 3. Not this document's."
+      - name: unprotected
+        type: map
+        required: true
+        value: "{} (empty)"
+        octets: 1
+        encoded: "a0"
+        constrained_by: []
+      - name: payload
+        type: bstr
+        required: true
+        value: "'This is the content.' - 20 octets of content"
+        octets: 21
+        encoded: "54 <20 octets>"
+        constrained_by: []
+      - name: signatures
+        type: "array of COSE_Signature"
+        required: true
+        value: "one element, S-0010"
+        octets: 2531
+        encoded: "81 <S-0010>"
+        constrained_by: []
+    layout: |
+      d862 84 43a10300 a0 54 'This is the content.' 81 <S-0010>
+      2 + 1 + 4 + 1 + 21 + 2531 = 2560 octets, re-encoded with an RFC 8949
+      encoder written for this pass and matching rfc-8778#R-0133 exactly.
+      ENVELOPE OVERHEAD: 2560 - 2512 = 48 octets around the signature.
+
+  # =====================================================================
+  - id: S-0010
+    name: COSE_Signature
+    locator: "Appendix A.1"
+    encoding: "CBOR array of 3, inside S-0009's `signatures`"
+    octets: 2530
+    fields:
+      - name: protected
+        type: bstr
+        required: true
+        value: "h'a101382d' = {1: -46}, alg HSS-LMS"
+        octets: 5
+        encoded: "44 a101382d"
+        constrained_by: [rfc-8778#R-0087, rfc-8778#R-0120, rfc-8778#R-0121]
+        note: >-
+          THE ONE PLACE -46 ACTUALLY APPEARS IN THE DOCUMENT AS BYTES: 382d
+          inside h'a101382d', in both examples. §6.1's registration states the
+          value; Appendix A is where it is encoded.
+      - name: unprotected
+        type: map
+        required: true
+        value: "{4: 'ItsBig'} - kid, 6 ASCII octets"
+        octets: 9
+        encoded: "a1 04 46 497473426967"
+        constrained_by: [rfc-8778#R-0090]
+        note: >-
+          §3 rfc-8778#R-0090 says a `kid` MAY be the 16-octet I
+          (rfc-8778#R-0092). This one is not: 'ItsBig' is six ASCII octets. The
+          document's own suggestion is unexercised by the document's own
+          examples.
+      - name: signature
+        type: bstr
+        required: true
+        value: "S-0005 - 2512 octets, Nspk 0, q 1, otstype 3, lms type 6"
+        octets: 2515
+        encoded: "5909d0 <2512 octets>"
+        constrained_by: [rfc-8778#R-0082, rfc-8778#R-0027, rfc-8778#R-0062, rfc-8778#R-0079]
+    layout: |
+      83 44a101382d a1 04 46 'ItsBig' 5909d0 <2512 octets>
+      1 + 5 + 9 + 2515 = 2530 octets. The bstr head for 2512 octets is 59 09d0,
+      a two-octet length argument.
+
+  # =====================================================================
+  - id: S-0011
+    name: COSE_Sign1_tag18
+    locator: "Appendix A.2"
+    encoding: "CBOR, tag 18 (encoded d2)"
+    octets: 2552
+    note: >-
+      Read off Appendix A.2 and re-encoded: 2552 octets, exactly as
+      rfc-8778#R-0135 states. ENVELOPE OVERHEAD 2552 - 2512 = 40 octets - eight
+      fewer than the COSE_Sign form, which is the whole structural difference
+      between the two examples at the byte level.
+    fields:
+      - name: protected
+        type: bstr
+        required: true
+        value: "h'a101382d' = {1: -46}, alg HSS-LMS"
+        octets: 5
+        encoded: "44 a101382d"
+        constrained_by: [rfc-8778#R-0087, rfc-8778#R-0120]
+      - name: unprotected
+        type: map
+        required: true
+        value: "{4: 'ItsBig'}"
+        octets: 9
+        encoded: "a1 04 46 497473426967"
+        constrained_by: [rfc-8778#R-0090]
+      - name: payload
+        type: bstr
+        required: true
+        value: "'This is the content.' - 20 octets of content"
+        octets: 21
+        encoded: "54 <20 octets>"
+        constrained_by: []
+      - name: signature
+        type: bstr
+        required: true
+        value: "S-0005 - 2512 octets, Nspk 0, q 0, otstype 3, lms type 6"
+        octets: 2515
+        encoded: "5909d0 <2512 octets>"
+        constrained_by: [rfc-8778#R-0082, rfc-8778#R-0027, rfc-8778#R-0062]
+    layout: |
+      d2 84 44a101382d a1 04 46 'ItsBig' 54 'This is the content.'
+         5909d0 <2512 octets>
+      1 + 1 + 5 + 9 + 21 + 2515 = 2552 octets, verified by re-encoding.
+      SIGNATURE AGAINST PAYLOAD: 2512 octets of signature for 20 octets of
+      payload, a ratio of 125.6 to 1. The other half of rfc-8778#R-0007, quoted
+      whole: "The HSS/LMS signature algorithm uses small public keys, and it has
+      low computational cost; however, the signatures are quite large."
+
+# =======================================================================
+# COVERAGE, and what is deliberately not here.
+#
+# 11 structures, 35 fields, 43 distinct rfc-8778#R-ids cited and 0 dangling.
+# `constrained_by` is wired on 30 of the 35. THE FIVE EMPTY LISTS ARE A FINDING
+# RATHER THAN AN OMISSION: they are S-0009's `protected`, `unprotected`,
+# `payload` and `signatures` and S-0011's `payload` - every one of them an
+# RFC 8152 field that RFC 8778 does not constrain at all. This binding adds
+# three registry entries, constrains FIVE fields of a key, and contributes
+# nothing whatever to the envelope.
+#
+# NOT STRUCTURES, SO NOT HERE: §6.1, §6.2 and §6.3's three IANA registration
+# templates. They are registry actions completed once by this document, carried
+# verbatim in normative.md and in schema/source-renderings.txt, and cited as
+# rfc-8778#R-0119..R-0128 from the fields above.
+#
+# NO MESSAGE IS MISSING. The document defines no request, no response, no
+# header parameter (the word `header` occurs 0 times and §6 touches three
+# registries, none of them COSE Header Parameters) and no claim. Everything it
+# defines is above.

@@ -53,6 +53,19 @@ Recorded here because they are conclusions about the source, not extraction note
   is not byte-stable without our own sort.
 - **ES256 is not byte-reproducible** (randomised ECDSA), so the primary D5
   fixture should be Ed25519.
+- **[update] 2026-10-20 — a countersignature binds a *signature* for exactly
+  one of these structures.** RFC 9338 §3.3's `other_fields` is "Omitted if there
+  are only two bstr fields in the target structure", and `protected` is always
+  the first (`empty_or_serialized_map` is a `bstr` either way). Counted against
+  `schema/cose.cddl`: `COSE_Sign1` gets `[signature]`, `COSE_Mac` and
+  `COSE_Mac0` get `[tag]` — a MAC, not a signature — and `COSE_Signature`,
+  `COSE_Sign`, `COSE_Encrypt` and `COSE_Encrypt0` get nothing and keep the
+  RFC 8152 context string. **So a countersignature over a `COSE_Sign` binds
+  none of its *n* signatures**, which prices `design-notes.md` open question 7:
+  a *k*-of-*n* export can be witnessed as to its payload and never as to its
+  signers. `design-notes.md` §6 carries the derivation, the detached-payload
+  ambiguity that follows from `payload : bstr / nil`, and what RFC 9338 leaves
+  undefined for a `COSE_Signature` target.
 - **Note for ARCH-0001:** the §3.2 comparison table row for CWT claims cites
   RFC 8392 for "COSE protected header 15". Label 15 is real but is registered by
   **RFC 9597** (§2, "CWT Claims"), which this library already holds as

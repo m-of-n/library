@@ -1,0 +1,147 @@
+======================================================================
+cddl-parse.derived.txt
+
+DERIVED -- NOT verbatim. This is the OUTPUT of a check this pass ran.
+Nothing here is RFC 9054's text; do not cite it as such.
+
+WHAT WAS RUN. A recursive-descent parser for RFC 8610 Appendix B's
+grammar, transcribed production for production from
+records/ietf/rfc-8610/distilled/schema/cddl-dedented.derived.abnf (this
+library's mechanical dedent of RFC 8610 Figure 13; the verbatim bytes
+are in cddl.abnf beside it). No production was added, removed or
+widened. A parse counts as successful only if it consumes the WHOLE
+input. The parser was first gated on CDDL this library already holds -
+RFC 8610's own prelude (40 rules) and RFC 9360 section 2's two rules - and on
+three deliberate negatives, before it was pointed at anything here.
+
+THE HEADLINE, AND IT CORRECTS A CLAIM THIS RECORD'S OWN SUMMARY MAKES.
+summary.md says of COSE_Hash_V that "the fragment does not parse". IT
+DOES PARSE. What it does not do is MEAN what it looks like: `#` is
+CDDL's tag operator (`type2 = ... / "#" DIGIT ["." uint] / "#"`), so
+each `#` is read as the "any" type and each word of each comment as a
+bare type reference. The grammar sees 24 group entries where the author
+wrote 4. A CDDL tool then rejects the file at NAME RESOLUTION, not at
+syntax, because 15 of those references are undefined names that do not
+begin with "$" and so are not silenced by RFC 8610 section 3.9's socket
+convention. The defect is real; the mechanism stated in the summary is
+not the mechanism.
+======================================================================
+
+----------------------------------------------------------------------
+COSE_Hash_V AS PRINTED (erratum 7335 present)
+  whole-input parse        : YES (206 of 206 chars)
+  rule the grammar accepts : ['group-rule']
+  forced as a TYPE rule    : NO (failed after 14 chars)
+  forced as a GROUP rule   : YES
+  group entries recognised : 24
+      '1 : int / tstr'
+      '#'
+      'Algorithm'
+      'identifier'
+      '2 : bstr'
+      '#'
+      'Hash'
+      'value'
+      '? 3 : tstr'
+      '#'
+      'Location'
+      'of'
+      'object'
+      'that'
+      'was'
+      'hashed'
+      '? 4 : any'
+      '#'
+      'object'
+      'containing'
+      'other'
+      'details'
+      'and'
+      'things'
+
+----------------------------------------------------------------------
+COSE_Hash_V WITH ERRATUM 7335 APPLIED (# -> ;)
+  whole-input parse        : YES (206 of 206 chars)
+  rule the grammar accepts : ['group-rule']
+  forced as a TYPE rule    : NO (failed after 14 chars)
+  forced as a GROUP rule   : YES
+  group entries recognised : 4
+      '1 : int / tstr'
+      '2 : bstr'
+      '? 3 : tstr'
+      '? 4 : any'
+
+----------------------------------------------------------------------
+COSE_Hash_Find AS PRINTED
+  whole-input parse        : YES (68 of 68 chars)
+  rule the grammar accepts : ['type-rule']
+  forced as a TYPE rule    : YES
+  forced as a GROUP rule   : YES
+  group entries recognised : 2
+      'hashAlg : int / tstr'
+      'hashValue : bstr'
+
+----------------------------------------------------------------------
+THE 15 UNDEFINED NAMES COSE_Hash_V ACQUIRES AS PRINTED
+
+  Algorithm  identifier  Hash  value  Location  of  object  that  was
+  hashed  containing  other  details  and  things
+
+Sixteen bare type references in all; `object` occurs twice.  Not one
+begins with "$", so RFC 8610 section 3.9's socket convention does not turn
+them into silent empty types (this library's grammar-gaps.derived.txt,
+items G-23 and G-40).  With the erratum applied the count is ZERO.
+
+----------------------------------------------------------------------
+AND EVEN REPAIRED, COSE_Hash_V IS A GROUP, NOT A TYPE
+
+Forced as a type rule it fails after 14 characters - i.e. immediately
+after `COSE_Hash_V = ` - because `type2`'s parenthesised alternative is
+`"(" S type S ")"` and a `type` cannot contain member keys.  Forced as
+a group rule it succeeds.  COSE_Hash_Find, by contrast, parses as a
+TYPE rule, because `"[" S group S "]"` IS a `type2`.
+
+That difference is decisive rather than stylistic.  RFC 8610 section 2.2.4:
+"there is no way to use a group as a root -- it must be a type" (quoted
+in grammar-gaps.derived.txt, G-04).  A CDDL file whose first rule is
+COSE_Hash_V has no usable root.  Something must wrap it, the member
+keys mean that something is a map (G-03: "If the memberkey is not
+given, the entry can only be used for matching arrays, not for maps" -
+and these keys ARE given), and RFC 9054 never supplies it.
+cose-hash.derived.cddl supplies it and says so.
+
+Note the grammar CANNOT catch that misuse either: `X = COSE_Hash_V`
+parses.  RFC 8610 Appendix C concedes it - "a = b" can make "a" a type
+if "b" is a type, or a group if "b" is a group (G-01) - so the
+type/group error is a side condition a tool must carry, not a parse
+error.  Checked:
+
+  X = COSE_Hash_V      (illegal use of a group as a type) parse: YES
+  X = { COSE_Hash_V }  (the map wrapper)                 parse: YES
+
+----------------------------------------------------------------------
+WHAT THIS MEANS FOR US
+
+1. R-O-03's ALGORITHM HALF IS CITABLE AND ITS CARRIER HALF IS NOT.
+   RFC 9054 registers eight identifiers and offers two structures, one
+   of which does not say what it looks like and neither of which is
+   normative or registered. Citing -16 discharges the ALGORITHM half of
+   "Canonicalization algorithm for each concrete encoding SHALL be
+   cited, not invented silently" (R-O-03, ARCH-0001 section 5.3, as five
+   other records in this library quote it - UNVERIFIABLE FROM THIS
+   REPOSITORY); the structure around it stays ours.
+
+2. THE TWO-FIELD SHAPE IS ARRIVED AT TWICE BY THE SAME AUTHOR.
+   COSE_Hash_Find is `[hashAlg: int / tstr, hashValue: bstr]`;
+   rfc-9360's COSE_CertHash is
+   `[ hashAlg: (int / tstr), hashValue: bstr ]`. Same names, same
+   types, same order; the only difference is a pair of parentheses that
+   changes nothing. Neither document cites the other's structure.
+   That is as close to a settled COSE digest shape as the registry gets,
+   and it is settled by coincidence rather than by reference.
+
+3. AND IT IS THE SHAPE WITH NO ROOM FOR A PURPOSE. Two fields, so
+   "Filter Only" - which is a registry column - cannot be carried.
+   ../examples/vectors.yaml demonstrates that a filtering use and a
+   binding use of -14 are byte-identical.
+======================================================================

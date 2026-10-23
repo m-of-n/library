@@ -1,0 +1,84 @@
+; =====================================================================
+; bignums.cddl
+;
+; VERBATIM.  The twelve lines between the BEGIN and END markers below are
+; draft-ietf-cbor-serialization-08's own CDDL, reproduced byte-for-byte
+; from Appendix F ("CDDL for Big Numbers"), lines 1811-1822 of the cached
+; text rendering (.cache/draft-ietf-cbor-serialization.txt, sha256
+; a612e6c4f674da61b1c888431a06dca13457aaea53c1cd86c8b50f8999b47112),
+; their three-space page margin and the two-space alignment inside
+; `pplus-biguint  =` included.  Introduced in the source by the sentence
+; "The following CDDL can be used:".  Nothing here is ours; the derived
+; artifacts in this directory are named `*.derived.*`.
+; =====================================================================
+;
+; WHAT APPENDIX F IS FOR.  It is the draft's answer to a problem it
+; creates: Section 4.1 rule 5 merges the big number tags into the integer
+; space ("If a value can be encoded using major type 0 or 1, then it MUST
+; be encoded with major type 0 or 1, never as a big number"), and no CDDL
+; prelude type describes that merged space.  Appendix F says so in the
+; first sentence - "The types bigint and biguint in the CDDL Standard
+; Prelude (Appendix D of [RFC8610]) do NOT describe the big numbers
+; described in this document or in Section 3.4.3 of [STD94], not even for
+; general serialization" - and then concedes the point for its own rules
+; too: "The types integer and unsigned can be used, but note that they do
+; not fully express the rules that govern the choice between major types
+; 0 and 1 and the big number tags.  CDDL-described protocols SHOULD use
+; integer and unsigned and in prose state that these values correspond to
+; either Section 4 of this document or Section 3.4.3 of [STD94]."
+;
+; So the draft's own recommendation to a protocol author is NOT to use
+; the rules below: it is to write `integer` / `unsigned` and carry the
+; rest in prose.  These rules exist to show the shape of the thing.
+;
+; WHAT IT DOES NOT CONSTRAIN, and there is a lot of it:
+;
+;   * Leading zeros.  Section 4.1 rule 5 bullet 1 is "Leading zeros MUST
+;     NOT be encoded"; `bstr .size (8..bnmax)` constrains the length of
+;     the byte string and says nothing about its first byte.  The two
+;     general-only vectors h'c24e0000ffff...' and h'c34c00000001...'
+;     (Appendix L.2, positive_bignum.edn and negative_bignum.edn) both
+;     satisfy this CDDL and both violate rule 5.
+;   * The integer/big-number choice itself, in the other direction.
+;     `pplus-biguint = #0 / pplus-tag2bstr` is a plain type choice, so
+;     any value matches it in both arms; the rule that the major-type-0
+;     arm MUST be taken whenever it can represent the value is not in
+;     the grammar.  See prefp-encode.derived.pseudocode.txt, which is
+;     where this library states it as a procedure.
+;   * The upper bound.  `bnmax = 1000` is admitted in the source's own
+;     comment to be a fiction: "big number byte strings are of unlimited
+;     size, but that can't be expressed in CDDL, so a limit of 1,000".
+;   * Anything at all about tags 2 and 3 appearing in *general*
+;     serialization, where both the leading zeros and the unification
+;     are permitted.  The `pplus-` prefix is load-bearing.
+;
+; AND ONE DEFECT, recorded here and not repaired, because this file is
+; the source's bytes.  `.size (8..bnmax)` admits an 8-byte content, and
+; no 8-byte content can occur in preferred-plus serialization.  An
+; 8-byte tag 2 content without leading zeros has a value of at most
+; 2^64-1, which major type 0 represents, so rule 5 bullet 2 forbids it;
+; one with leading zeros is forbidden by bullet 1.  The same argument
+; bounds tag 3 by -1-(2^64-1) = -2^64, which major type 1 represents.
+; The smallest content either tag can legally carry is 9 bytes, which is
+; exactly what the draft's own preferred-plus vector in Appendix L.2
+; shows: negative_bignum.edn's h'c349010000000000000000' is tag 3 with a
+; 9-byte content, and its note says it is "the value closest that can be
+; represented as a big number, not a type 1 integer".  The bound should
+; read (9..bnmax).  Reported, not corrected: see README.md and
+; ../examples/vectors.yaml.
+; =====================================================================
+
+; ---- BEGIN VERBATIM (draft-ietf-cbor-serialization-08, Appendix F) ----
+   ; big number byte strings are of unlimited size, but that
+   ; can't be expressed in CDDL, so a limit of 1,000
+   bnmax = 1000
+   bnbstr = bstr .size (8..bnmax)
+
+   pplus-tag2bstr = #6.2(bnbstr)
+   pplus-biguint  = #0 / pplus-tag2bstr
+
+   pplus-tag3bstr = #6.3(bnbstr)
+   pplus-bignint  = #1 / pplus-tag3bstr
+
+   pplus-bigint = pplus-biguint / pplus-bignint
+; ---- END VERBATIM ----

@@ -1,0 +1,70 @@
+; rfc-8778 - byte grammar for the four flat octet layouts
+; DERIVED - not verbatim. RFC 8778 contains no ABNF (`ABNF` occurs 0 times in
+; its 772 lines). This grammar is the library's own transcription of the `||`
+; concatenation renderings in §2.1, §2.2 and §2.3 into RFC 5234 ABNF so that
+; the LENGTHS are machine-checkable. It must never be cited as the standard's
+; own grammar.
+;
+; Source: RFC 8778, sha256 2d43646b974c76b9e13565af9b96432ac2b7ba39b66a61820d97f94f3cf1c398
+; Derived 2026-10-20, FX-1 pass 1 (extract). reviewed_by: ""
+;
+; WIDTH PROVENANCE. u32str = 4 octets: not stated in RFC 8778 (§2.1
+; rfc-8778#R-0028 defers the notation to [HASHSIG]), MEASURED - the only width
+; in {1, 2, 8} that makes the printed Appendix A signature an integer number of
+; 32-octet elements, and the only width consistent with the printed octets
+; (u32str(0) at offset 0, the leaf number q at offset 4). Corrected 2026-10-21,
+; FX-1 pass 2: the divisibility test alone holds for every u = 4 mod 8, so it
+; does not pin the width by itself. See schema/README.md.
+; m = 32 and n = 32: §2.2 rfc-8778#R-0039 and §2.3 rfc-8778#R-0066.
+; I = 16: §3 rfc-8778#R-0092. p: NOT given anywhere in RFC 8778 (§2.3
+; rfc-8778#R-0072 defers it to Appendix B of [HASHSIG]); the rule below is
+; therefore parameterised, and p = 67 / h = 10 for the Appendix A fixtures is a
+; MEASUREMENT (examples/vectors.yaml V-0003, V-0004), not a citation.
+
+OCTET          = %x00-FF
+
+u32str         = 4OCTET              ; width measured, not stated - see above
+m-byte-string  = 32OCTET             ; m = 32, rfc-8778#R-0039
+n-byte-string  = 32OCTET             ; n = 32, rfc-8778#R-0066
+I              = 16OCTET             ; rfc-8778#R-0092
+
+; ---- the public key, §2.2 rfc-8778#R-0053 with §2.1 rfc-8778#R-0024 --------
+; 4 + 4 + 16 + 32 = 56 octets, for all 20 parameter-set combinations RFC 8778
+; admits.
+lms-public-key = lms-algorithm-type ots-type I T1
+hss-public-key = lms-public-key     ; rfc-8778#R-0024
+lms-algorithm-type = u32str
+ots-type           = u32str
+T1                 = m-byte-string
+
+; ---- the LM-OTS signature, §2.3 rfc-8778#R-0079 ---------------------------
+; u32str(otstype) || C || y[0] || ... || y[p-1]  =  4 + 32 + 32p octets.
+; p is not expressible in ABNF without a value; the Appendix A fixtures have
+; p = 67, giving 2180 octets, and that rule is spelled out below.
+ots-signature-p67 = ots-type C 67y
+C  = n-byte-string                  ; rfc-8778#R-0078, "an n-byte random value"
+y  = n-byte-string
+
+; ---- the LMS signature, §2.2 rfc-8778#R-0062 ------------------------------
+; u32str(q) || ots_signature || u32str(type) || path[0] ... path[h-1]
+; = 4 + (4 + 32 + 32p) + 4 + 32h. For p = 67, h = 10: 2508 octets.
+lms-signature-p67-h10 = q ots-signature-p67 lms-algorithm-type 10path
+q    = u32str                       ; the leaf number, rfc-8778#R-0055
+path = m-byte-string                ; a sibling node, rfc-8778#R-0059..#R-0061
+
+; ---- the HSS signature, §2.1 rfc-8778#R-0027 (stand-alone tree) -----------
+; u32str(0) || lms_signature. Both Appendix A signatures take this shape:
+; 4 + 2508 = 2512 octets, with Nspk = 0 measured at octets 0..3 of each.
+hss-signature-standalone-p67-h10 = nspk-zero lms-signature-p67-h10
+nspk-zero = %x00.00.00.00           ; Nspk = 0, rfc-8778#R-0027 / #R-0031
+
+; ---- the HSS signature with subordinate trees, §2.1 rfc-8778#R-0029 -------
+; u32str(Nspk) || signed_public_key[0..Nspk-1] || lms_signature, where a
+; signed_public_key is "the lms_signature over the public key followed by the
+; public key itself" (rfc-8778#R-0030). NOT EXERCISED BY ANY EXAMPLE: both of
+; the document's fixtures are stand-alone trees, so the multi-level form has no
+; worked instance anywhere in RFC 8778.
+signed-public-key-p67-h10 = lms-signature-p67-h10 lms-public-key
+hss-signature-1level-p67-h10 = nspk-one signed-public-key-p67-h10
+                               lms-signature-p67-h10
+nspk-one = %x00.00.00.01

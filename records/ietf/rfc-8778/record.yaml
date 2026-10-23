@@ -18,18 +18,515 @@ content:
   retrieved: "2026-09-22"
   local: false
 relations:
-  see_also: []
+  # Added 2026-10-20 while settling `bears_on` (library#39 Tier 2).
+  #   rfc-9679 — the load-bearing edge, and it is the RFC 8230 situation
+  #     again. RFC 9679 §4.5 requires `pub` (label -1, bstr) for an HSS-LMS
+  #     thumbprint and cites NEITHER RFC 8778 NOR RFC 8554 — 0 occurrences of
+  #     each in the document. RFC 8778 §6.3 is the registry entry that defines
+  #     that label, and §2.1/§2.2 are the only specification of what the
+  #     octets are. rfc-9679's open question 4 settled HSS-LMS by calling
+  #     `pub` an opaque byte string "with no numeric interpretation, so there
+  #     is nothing to normalise". That conclusion is right and the reason is
+  #     not: `pub` is not opaque, it is a fixed-width structure, and THAT is
+  #     why it needs no normalisation. This edge is what makes the citation
+  #     reachable.
+  #   rfc-8554 — [HASHSIG], the normative reference. Every parameter, registry
+  #     and state rule this document relies on is defined there; the record is
+  #     a stub.
+  #   rfc-9964 — the other post-quantum COSE signature binding. See `bears_on`
+  #     below: this document supplies a second independent instance of
+  #     rfc-9964's Cut B and refutes that cut's escape clause.
+  see_also:
+    - rfc-8554
+    - rfc-9679
+    - rfc-9964
   part_of:
     - ietf-cose-wg
-bears_on: []
+bears_on:
+  # Resolved 2026-10-20 (library#39 Tier 2), from `bears_on: []` + verdict
+  # `marginal`. The old reason — "algorithm suite is deferred by NG3; relevant
+  # if post-quantum signing is admitted" — is true about the SUITE and is the
+  # wrong axis. NG3 defers which algorithm we pick; it does not defer what a
+  # key IS or how long a principal lives, and this document constrains both.
+  # Each identifier is evidenced by locator:
+  #   DEC-002 — a SECOND, INDEPENDENT instance of rfc-9964's Cut B, by a
+  #     different mechanism, and it refutes that cut's escape clause. rfc-9964
+  #     found that a post-quantum KeyId contains an IANA allocation (COSE `alg`
+  #     -48/-49/-50) inside the digest preimage, and concluded that "An AKP
+  #     `pub` is `alg`-independent" and therefore "for AKP keys `DEC-003`
+  #     option 1 is immune to this hazard and option 2 ("COSE key thumbprint")
+  #     is not". [corrected 2026-10-21, FX-1 pass 2: this quotation read "a raw
+  #     `pub` is `alg`-independent, so DEC-003 option 1 is immune to this
+  #     hazard and option 2 ('COSE key thumbprint') is not" — a sentence that
+  #     occurs in NEITHER rfc-9964's current text NOR its own record of the
+  #     superseded wording. It welded that record's retracted opening ("A raw
+  #     `pub` is `alg`-independent, so", which its distilled/README.md
+  #     preserves as superseded) to the corrected tail with "for AKP keys"
+  #     removed, so it restored the over-general claim rfc-9964's correction
+  #     block exists to retract. distilled/README.md and
+  #     distilled/design-notes.md had it right throughout.] **For HSS/LMS the
+  #     raw `pub` is not parameter-independent.** §2.2: the LMS public key is
+  #     "u32str(lms_algorithm_type) || u32str(otstype) || I || T[1]", and §2.1
+  #     makes that the HSS public key — "The public key for the topmost LMS
+  #     tree is the public key of the HSS system." Both leading u32 values are
+  #     IANA code points: §2.2 and §2.3 say [HASHSIG] "establishes an IANA
+  #     registry to permit the registration of additional hash functions and
+  #     additional tree sizes" and of "additional parameter sets". So the
+  #     allocation sits in the KEY MATERIAL, where no choice of digest input
+  #     can remove it — option 1 carries it, option 2 (RFC 9679 §4.5's
+  #     `{kty: 5, pub}`) digests it, and rfc-9964's "digest (kty, pub) alone"
+  #     escape digests it too. Registry-independence is unavailable for this
+  #     principal under EVERY option, and for a harder reason than for ML-DSA.
+  #     And the BOUND, which matters as much: the mechanism rfc-9964 named does
+  #     NOT occur here. §3 makes `alg` conditional — "If the 'alg' field is
+  #     present, it MUST be 'HSS-LMS'" — and RFC 9679 §4.5 requires only `kty`
+  #     and `pub`, so the COSE Algorithms value -46 is not in the preimage. The
+  #     dependence arrives from the LMS and LM-OTS parameter registries through
+  #     the key octets, not from the COSE Algorithms registry through a map
+  #     entry. rfc-9964's general proposition reproduces; its stated mechanism
+  #     is AKP-specific.
+  #     [Not byte-verifiable from this source: the document prints NO COSE_Key
+  #     and no `pub` value — `kty` occurs exactly once, in §3's checklist. The
+  #     layout is from §2.1/§2.2; the u32str type-code convention is confirmed
+  #     in the printed signatures, whose octets 8..11 are `00000003` in both
+  #     Appendix A examples. [corrected 2026-10-21, FX-1 pass 2] This sentence
+  #     continued "= LMOTS_SHA256_N32_W8", which is wrong and which summary.md,
+  #     distilled/examples/README.md and distilled/examples/vectors.yaml all
+  #     already refuted while this comment kept it: the structural arithmetic
+  #     fixes p = 67 for both signatures, and 67 is the w = 4 parameter count,
+  #     so `00000003` cannot be the W8 code point. RFC 8778 prints no code
+  #     point for any of its nine named parameter sets, so it supports NEITHER
+  #     reading — what the printed octets confirm is the WIDTH, not the name.]
+  #     Separately NOT claimed under DEC-002: both examples are tagged (98 and
+  #     18) with the untagged form never printed. That is a third instance of
+  #     rfc-9964's Cut A, not a new finding.
+  #   DEC-003 — §3's fifth bullet is a sixth answer to "what is a KeyId", and
+  #     the only one in the library where the identifier is a FIELD OF the key
+  #     rather than a function of it: "If the 'kid' field is present, it MAY be
+  #     used to identify the top of the HSS tree. In [HASHSIG], this identifier
+  #     is called 'I', and it is the 16-byte identifier of the LMS public key
+  #     for the tree." §2.2 puts `I` inside the public key and says "the same I
+  #     value is used for all computations with the same LMS tree. The value I
+  #     is also available in the public key." No digest, no canonicalisation,
+  #     no agreement needed — and no binding either, since nothing proves the
+  #     `kid` is this key's `I`. DEC-003's mandatory clause is "Must specify:
+  #     canonical key bytes before hashing"; §2.1 + §2.2 ARE that
+  #     specification for HSS/LMS — "u32str(lms_algorithm_type) ||
+  #     u32str(otstype) || I || T[1]", with "The public key for the topmost LMS
+  #     tree is the public key of the HSS system" — and RFC 9679 §4.5 requires
+  #     those bytes without citing them (see `relations`).
+  #   R-M-02 — "A principal MAY be identified solely by key or key digest."
+  #     rfc-9964 made this a size trade: 1312-2592 octets to carry an ML-DSA
+  #     key against 32 for its thumbprint. **For HSS/LMS the trade collapses.**
+  #     §2.2's layout with m=32 ("supports only SHA-256 with m=32") and §3's
+  #     16-byte `I` give a 56-octet public key (4 + 4 + 16 + 32) — 24 octets
+  #     more than its own SHA-256 thumbprint. §1 says it in words: "The
+  #     HSS/LMS signature algorithm uses small public keys, and it has low
+  #     computational cost; however, the signatures are quite large", and
+  #     Appendix A.2 measures the other side at 2512 octets of signature for a
+  #     20-octet payload. So rfc-9964's "carry the Key, not the KeyId" is
+  #     nearly free for this key type and the expense moves to the signature.
+  #     [derived: the 56 is computed from §2.1/§2.2/§3, not printed — the
+  #     document contains no COSE_Key example at all; `kty` occurs exactly
+  #     once, in §3's checklist.]
+  #   ARCH-0002 P1 — the finding no other record in this lane supplies, and
+  #     the one that matters most. P1 roots every name in a key. §5 gives that
+  #     root a COUNTED lifetime: "the number of signatures that can be
+  #     generated is bounded by the size of the overall HSS set of trees. When
+  #     all of the LM-OTS signatures have been used to produce a signature,
+  #     then the establishment of a new trust anchor is required" — and the
+  #     budget is not even exactly knowable, because "nodes are sacrificed to
+  #     ensure that none are used more than once. As a result, the total number
+  #     of signatures that can be generated might be less than the overall HSS
+  #     set of trees." §5 then refuses to define a serialisation for the
+  #     private key and its state, on purpose: "A COSE Key Type Parameter for
+  #     encoding the HSS/LMS private key and the state about which tree nodes
+  #     have been used is deliberately not defined. It was not defined to avoid
+  #     creating the ability to save the private key and state, generate one or
+  #     more signatures, and then restore the private key and state. Such a
+  #     restoration operation provides disastrous opportunities for tree node
+  #     reuse." A namespace root that cannot be backed up, replicated or
+  #     migrated, and that retires by exhaustion rather than by policy.
+  #     rfc-9964's open question — whether `KeyId` means "this key, now" or
+  #     "this principal, across changes" — is deferrable for ML-DSA and is
+  #     FORCED here.
+  #   R-O-01 — "Every signed object SHALL have an issuer key that can be
+  #     specified as KeyId." Under this algorithm that SHALL has a per-object
+  #     price that no other candidate carries: §4, "An implementation MUST
+  #     ensure that an LM-OTS private key is used to generate a signature only
+  #     one time and ensure that it cannot be used for any other purpose", and
+  #     "Along with the private key, the implementation MUST keep track of
+  #     which leaf nodes in the tree have been used. Loss of integrity of this
+  #     tracking data can cause a one-time key to be used more than once" —
+  #     with "failed writes, virtual machine snapshotting or cloning" named as
+  #     the ways it is lost. Every signed object consumes one leaf,
+  #     irreversibly, and a crash between signing and state commit is a
+  #     forgery risk rather than a retry.
+  #   DEC-005 — §6.1 registers HSS-LMS as COSE `alg` -46 with "Recommended:
+  #     Yes", so a stateful one-time-signature scheme is a RECOMMENDED COSE
+  #     algorithm, and §3 states the COSE integration in five key checks and
+  #     nothing more. Appendix A gives both a COSE_Sign (tag 98) and a
+  #     COSE_Sign1 (tag 18) example, so both envelope shapes are exercised.
+  #     The cost side is operational rather than cryptographic and is in §5:
+  #     admitting this algorithm means a signer that cannot be backed up,
+  #     replicated or migrated, and a finite signature budget per key.
+  - DEC-002
+  - DEC-003
+  - DEC-005
+  - R-M-02
+  - R-O-01
+  - ARCH-0002 P1
 topic: cbor-implementation
 tags:
   - signatures
+  - key-management
   - ietf
-status: fetched
+  - evidence
+distillation:
+  # FX-1 PASSES 1-3 HAVE RUN, AND `profile: full` IS DECLARED on pass 3's
+  # report. Pass 1 (extract) ran 2026-10-20 at effort max; pass 2 (verify) and
+  # pass 3 (cross-check) on 2026-10-21, both at effort max. Read `passes` for
+  # what each did; it is the normative record, not this comment.
+  #
+  # `profile: partial` would be WRONG here, and the distinction is worth
+  # stating because this record leans on a document the library does not hold.
+  # `partial` is a deliberately REDUCED SCOPE - a paywalled source, a secondary
+  # reference. The scope here is not reduced: RFC 8778 itself is covered end to
+  # end, every artifact is present and substantive, and the only external
+  # dependency is a REFERENCED document, which FX-1 does not require extracting.
+  # What that dependency costs is recorded instead, at every site that rests on
+  # it - see below and design-notes.md open question 7.
+  #
+  # What `full` does NOT mean: no `reviewed_by` is signed on any artifact, so
+  # pass 4 (human review) is outstanding and nothing may be BUILT on these yet
+  # (docs/requirements.md). They may be read.
+  profile: full
+  # [corrected 2026-10-21, FX-1 pass 3: this read "FX-1 PASS 1 OF 3 ONLY ...
+  # verify and cross-check have NOT run" while `passes` below already recorded
+  # the verify pass. The same stale sentence stood in distilled/README.md,
+  # distilled/requirements.yaml and summary.md.]
+  #
+  # WHAT PASS 1 PRODUCED: 135 requirements with the keyword counts reconciled
+  # exactly (9 = 9), 20 byte-exact verbatim source renderings, 7 schema files
+  # (1 verbatim + 6 derived), 11 message structures with 35 fields and
+  # `constrained_by` wired on 30 of them, 11 example vectors and 4 byte
+  # fixtures with both of the document's stated sizes reproduced, an APPLICABLE
+  # two-machine state model, and design notes carrying six cuts against MD-3.
+  # distilled/README.md is the index; it records what each later pass found.
+  #
+  # ON THE UNVERIFIABLE-HERE IDENTIFIERS: DEC-002, DEC-003, DEC-005, R-M-02,
+  # R-O-01 and ARCH-0002 P1 are defined in `mofn` documents this library does
+  # not hold - it is standalone by design (CLAUDE.md) - so their quotations
+  # cannot be checked from this repository. distilled/design-notes.md states
+  # that rather than implying it, following records/ietf/rfc-9741 and
+  # records/ietf/rfc-9964. Every FINDING here is measured against
+  # .cache/rfc-8778.txt.
+  standard: "FX-1"
+  artifacts:
+    - kind: normative
+      path: distilled/normative.md
+      coverage: >-
+        Every normative sentence of the Abstract, §1-§6 and Appendix A with its
+        locator, INCLUDING §1.1's motivation, which the file now carries with the
+        judgement visible: four of its eight sentences are entries R-0010 to
+        R-0013 and four have no entry, like the Abstract and the §1.2 recital,
+        and all eight are quoted. (Pass 2, 2026-10-21, found §1.1 absent from
+        normative.md altogether with nothing saying so, while this sentence
+        claimed every normative sentence of §1-§6; its sentence-level sweep
+        resolved 137 of 143 units before the fix and 141 of 143 after, the two
+        residuals being the Appendix A diagnostic blocks this record carries in
+        pieces.) Plus 25 FENCED BLOCKS that are byte-exact runs of source lines -
+        every bullet list, all five `can be summarized as` concatenation
+        renderings, §3's five COSE-key checks, §4's state paragraph, the whole of
+        §5 and all three IANA registration templates - each with its line range
+        and the sha256 of the region's lines joined by "\n". FOUR LINE-BREAK
+        SEVERANCES DECLARED AND NOT HEALED (source lines 84-85 hash-based, 85-86
+        and 117-118 HSS/LMS, 373-374 brute-force), quoted exactly as the
+        normalised source renders them so nothing is truncated either. The
+        Abstract and the §1.2 BCP 14 recital appear here with NO requirements
+        entry and the file says why. Nine source observations, three of which
+        cost a reader something.
+      reviewed_by: ""
+    - kind: requirements
+      path: distilled/requirements.yaml
+      coverage: >-
+        135 entries R-0001 to R-0135 in source order, no gaps: 9 `stated` (8
+        MUST, 1 MAY) and 126 `inferred` with the carrying phrase named in
+        `field`. source_keyword_count and extracted_keyword_count both 9 and
+        reconciled at length. THE FINDING IS WHERE THE NINE ARE: all of them in
+        §3 (5) and §4 (4), and NOT ONE in §2, §5 or §6 - the data model, the
+        whole lifecycle and all three registrations. 135/135 texts are
+        contiguous substrings of the whitespace-normalised source and 135/135
+        locators resolve inside their stated section (bin/check-locators: 0
+        misfiled, 0 unresolvable). NO ENTRY'S TEXT IS OUR OWN WORDING: the
+        derived quantities this record is read for - the 56-octet public key,
+        the 4-octet u32str width, p=67 and h=10, the 2512-octet signature - are
+        in messages.yaml, schema/ and examples/ instead, each citing the R-ids
+        it was derived from. Four lowercase near-misses are entries with the
+        lowercase form named, two of them (§4's `must` and §5's `required`)
+        carrying more weight than some of the nine.
+      reviewed_by: ""
+    - kind: schema
+      path: distilled/schema
+      coverage: >-
+        1 verbatim + 6 derived. RFC 8778 SHIPS NO GRAMMAR OF ANY KIND - `ABNF`,
+        `ASN.1` and `JSON Schema` each occur zero times and `CDDL` once, in the
+        title of the RFC 8610 entry in the INFORMATIVE references - so
+        source-renderings.txt is not a grammar: it is the document's 20
+        structural renderings, cut by line range and never retyped, each with
+        its own sha256. The six derived files carry `.derived.` and agree with
+        their headers: three CDDL (the 56-octet public key, the kty 5 COSE_Key
+        with RFC 9679 §4.5's thumbprint input over it, both Appendix A envelope
+        shapes), one ABNF byte grammar for the four flat octet layouts, one
+        JSON Schema (`$id: urn:library:rfc-8778:hss-lms-public-key.derived`) and
+        one parameter-set table. 14 CDDL rules across three files, 13 distinct,
+        every referenced rule defined and no prelude collision; 21 ABNF rules,
+        closed. schema/README.md carries the full width derivation INCLUDING THE
+        ONE WIDTH NO DOCUMENT IN THIS LIBRARY HOLDS STATES: `u32str` = 4
+        octets, measured in two legs - the only width in {1, 2, 8} that makes
+        the printed 2512-octet signature an integer number of 32-octet
+        elements, and the only width consistent with the printed octets
+        (u32str(0) at offset 0, the leaf number q at offset 4). Pass 2
+        (2026-10-21) corrected "the only width" here: the divisibility test
+        alone holds for every u = 4 mod 8. Records the three gaps the
+        renderings leave: no width, no code point for any of the nine named
+        parameter sets, and no value of p.
+      reviewed_by: ""
+    - kind: messages
+      path: distilled/messages.yaml
+      coverage: >-
+        11 structures, 35 fields, with octet offsets for the flat layouts and
+        encoded sizes plus CBOR head bytes for the five CBOR ones, every one
+        computed with an RFC 8949 encoder written for this pass: the 56-octet
+        public key, the subordinate key, all three signature layers, both HSS
+        signature forms, the kty 5 COSE_Key, RFC 9679 §4.5's thumbprint input,
+        and both Appendix A envelopes. `constrained_by` IS WIRED: 30 of 35
+        fields carry at least one rfc-8778#R-NNNN, 43 distinct ids cited, 0
+        dangling. THE FIVE EMPTY LISTS ARE A FINDING - every one is an RFC 8152
+        field this document does not constrain, so the binding adds three
+        registry entries, constrains five fields of a key, and contributes
+        nothing to the envelope. Also records what cannot be constrained: the
+        private key (no format exists), a `kid`'s relation to I (nothing binds
+        it), and leaf-usage state (required and unformatted).
+      reviewed_by: ""
+    - kind: state-machine
+      path: distilled/state-machine.yaml
+      coverage: >-
+        APPLICABLE, and declared so against a word count that points the other
+        way. `lifecycle`, `revoke`, `rotate`, `expire` and `exhaust` each occur
+        ZERO times, and eight requirements in six groups define a lifecycle anyway: R-0097
+        (keep track of which leaf nodes have been used), R-0101 (one-time use),
+        R-0098 (loss of tracking integrity causes reuse), R-0111 (the signer
+        maintains state across invocations), R-0109/R-0110 (a counted budget
+        with a terminal condition) and R-0115/R-0116 (the deliberately undefined
+        private-key-and-state encoding). TWO MACHINES: one LM-OTS leaf, 4 states
+        and 4 transitions, and the HSS key / trust anchor, 5 states and 6
+        transitions, with 2 error states that have NO WAY OUT, 2
+        `forbidden_transitions` and 5 explicitly `unspecified` behaviours. The
+        sharpest of the five is the one a protocol model would have carried: the
+        ORDERING between emitting a signature and committing the state change,
+        which R-0112 defers to [HASHSIG] §9.2 and which fails differently each
+        way round.
+      reviewed_by: ""
+    - kind: examples
+      path: distilled/examples
+      coverage: >-
+        11 vectors V-0001 to V-0011 and 4 byte fixtures, under a THREE-WAY
+        provenance convention: `printed`, `derived`, and `template` - new here,
+        for a structure the source specifies with no value anywhere in it. BOTH
+        STATED SIZES REPRODUCE EXACTLY: re-encoding the printed diagnostic
+        notation under RFC 8949 gives 2560 and 2552 octets, matching R-0133 and
+        R-0135, and both re-encoded messages decode fully to tag 98 and tag 18
+        with a 2512-octet signature byte-identical to a fresh cut from the
+        source. Both signatures parse against the document's own renderings with
+        nothing left over. THE u32str WIDTH IS MEASURED HERE. One POSITIVE TEST
+        of R-0061 that passes - A.1 is leaf 1 and A.2 leaf 0 of one tree, so
+        their authentication paths must agree above the leaf, and 9 of 10 nodes
+        are byte-identical - and two NEGATIVE observations: both signatures
+        carry the same C, and both use a six-octet `kid` where §3 suggests the
+        16-octet I. NOTHING WAS SYNTHESISED: no cryptographic verification is
+        possible because the document prints no key, and V-0009 and V-0010 are
+        templates rather than vectors with elided values.
+      reviewed_by: ""
+    - kind: design-notes
+      path: distilled/design-notes.md
+      coverage: >-
+        The three-leg reproduces / refutes / bounds result against rfc-9964,
+        re-derived from the source rather than inherited; DEC-003's sixth answer
+        to "what is a KeyId" and the only one where the identifier is a FIELD OF
+        the key; R-M-02's inverted size trade with both halves measured;
+        ARCH-0002 P1's namespace root with a counted lifetime and no backup
+        format, and the NameCert regress that follows; R-O-01's per-object
+        price; DEC-005's recommended stateful algorithm; R-M-12, R-O-03 and
+        topics/canonical-encoding's conditions (1)-(6) plus rfc-9679's own
+        condition (0), one by one, with (0) DISCHARGED for kty 5 and (5) and (6)
+        inert; SIX CUTS AGAINST MD-3, each naming the DEC-002 option it moves,
+        of which two support the narrowing and are labelled as such; one
+        [inference] about replicated and threshold signers with no R-id
+        asserted; seven open questions; the sibling records re-derived and not
+        edited; and the nine source defects. Marks every `mofn` quotation as
+        unverifiable from this standalone repository.
+      reviewed_by: ""
+  not_applicable:
+    - kind: protocol
+      reason: >-
+        RFC 8778 defines a byte string and five conditions on a key. It defines
+        no protocol, and the measurement is written out in protocol.yaml rather
+        than the conclusion asserted: `protocol`, `exchange`, `handshake`,
+        `negotiate`, `verifier`, `sender`, `recipient`, `party`, `parties`,
+        `role`, `flow`, `step`, `procedure`, `response`, `client`, `server` and
+        `issuer` each occur ZERO times in its 772 lines; `signer` occurs 3 times
+        (lines 91, 159, 394) and none is a role in a flow; `request` once (line
+        6, the masthead). §3's five checks are preconditions in the PASSIVE
+        VOICE with no actor and no failure action ("the following checks are
+        made", R-0085). NEITHER SIGNING NOR VERIFICATION IS SPECIFIED: both are
+        cited to [HASHSIG] by section (§3.3, §4.4, §4.5, Appendix B, §9.2), and
+        `validation` occurs once while `validate` occurs zero times. And the
+        document NEVER SAYS WHERE THE SIGNATURE OCTETS GO: `Sig_structure` 0,
+        `tag` 0, `header` 0, with §3 R-0081 saying only that it "makes use of
+        the signature with appendix scheme for hash-based signatures". The
+        envelope is RFC 8152's and only the non-normative Appendix A shows it.
+        THE ORDERING A SEQUENCE DIAGRAM WOULD HAVE CARRIED IS RECORDED UNDER
+        `unspecified` IN state-machine.yaml, which is APPLICABLE, rather than
+        invented as a flow here.
+  passes:
+    - pass: extract
+      by: "claude-opus-5 (single agent, run alone: HSS-LMS shares no dependency chain with the other unstarted records)"
+      effort: max
+      date: "2026-10-20"
+      note: >-
+        135 requirements (9 stated / 126 inferred, 9 = 9 reconciled), 25 fenced
+        source regions in normative.md and 20 in schema/source-renderings.txt,
+        every one cut programmatically by line range, 7 schema files, 11
+        message structures with 35 fields, 11 vectors with 4 byte fixtures, a
+        two-machine state model, six MD-3 cuts. MECHANICAL RESULTS:
+        bin/check-locators 135 checked / 0 misfiled / 0 unresolvable; a quote
+        audit over every artifact, 225 quotations against ten corpora with 0 not
+        verbatim in any of them; an id join audit resolving every cited id to
+        its requirement's text, 127 of 135 cited outside requirements.yaml with
+        0 dangling and 0 foreign-id collisions; bin/check-id-joins --resolve 468
+        citations / 0 dangling and --surface 0 duplicate-text groups, so no two
+        requirements share identical text and a wrong id cannot match the quoted
+        words; every YAML artifact round-trips through BOTH library readers,
+        which agree on every nested value and not merely on the top-level keys -
+        re-checked after the five bin/_yaml.py truncation fixes landed mid-pass,
+        with no wrapped flow sequence, no wrapped quoted scalar outside a block
+        scalar, no inline flow map and no column-zero sequence item anywhere in
+        this record's YAML. VERIFIED BY COMPUTATION
+        rather than by reading: both of the document's stated example sizes
+        reproduce exactly (2560 and 2552 octets) with a CBOR encoder written for
+        this pass and no CBOR, COSE or HSS/LMS library; both signatures parse to
+        2512 octets against the document's own concatenation renderings; and THE
+        u32str WIDTH, WHICH NO DOCUMENT THIS LIBRARY HOLDS STATES, IS PINNED AT
+        4 OCTETS - as the only width in {1, 2, 8} making the printed signature
+        an integer number of 32-octet elements, and as the only width
+        consistent with the printed octets. (Pass 2, 2026-10-21, corrected the
+        original "the only width": the divisibility leg alone holds for every
+        u = 4 mod 8 and was stated as uniqueness in six places.)
+        THREE DEFECTS IN THIS PASS'S OWN WORK,
+        found by those checks and not by eye: an artifact bin/_record_yaml.py
+        could not parse (caught by bin/validate), a quotation SPLICED ACROSS TWO
+        DIFFERENT DOCUMENTS (docs/extraction.md and the extract skill, caught by
+        the quote audit's longest-prefix test), and two elided quotations marked
+        with "...". All three are recorded in distilled/README.md.
+        RE-DERIVED AND NOT EDITED: the 2026-10-20 narrowings in
+        records/ietf/rfc-9964 and records/ietf/rfc-9679, both of which stand,
+        with one addition this record can make and they could not - the two
+        u32str widths they treat as given from the notation's name are now
+        pinned by measurement.
+    - pass: verify
+      by: "claude-opus-5 (independent of pass 1; did not extract)"
+      effort: max
+      date: "2026-10-21"
+      note: >-
+        ADVERSARIAL, reading only .cache/rfc-8778.txt and the artifacts, with
+        every count in record.yaml and distilled/README.md recounted against the
+        artifacts as they now are.
+
+        WHAT HELD. bin/bcp14-count 9 (8 MUST, 1 MAY) = 9 recomputed over the
+        entry texts the way bin/validate does, and the nine are at source lines
+        330/332/334/337/340 (§3) and 352/354/362/365 (§4) - nowhere else, and
+        none smuggled in from a quoted reference. 135/135 texts are contiguous
+        spans of the normalised source and each occurs in it EXACTLY ONCE;
+        135/135 locators resolve, and after one fix all 135 name the INNERMOST
+        containing section. All 45 region digests verify AND every printed block
+        is byte-for-byte identical to its declared line range (25 in
+        normative.md, 20 in schema/source-renderings.txt); the source has 0 form
+        feeds and no running header or footer, so no region can contain page
+        furniture. All 4 byte fixtures reproduce: both printed signatures are
+        byte-identical to a fresh cut, and both whole messages to an independent
+        RFC 8949 encoder written for this pass - 2560 and 2552 octets, matching
+        R-0133 and R-0135. The layout was DERIVED FROM THE BYTES rather than
+        read off the record: Nspk 0, q 1/0, otstype 3 at octets 8-11, C at 12-43
+        identical in both, u32str(type) 00000006 at 2188, 10 path nodes from
+        2192, 9 of them identical, LM-OTS 2180 / LMS 2508 / HSS 2512. The 56-,
+        62-, 32-, 24-, 30-, 48- and 40-octet figures and 125.6x / 44.9x all
+        recompute. Every YAML artifact parses under BOTH readers with 0 keys
+        missing on either side and only int/bool coercion differing. The six
+        literal escape sequences this record writes - all of them inside a
+        sentence about the region-digest convention - survive both readers
+        unresolved, and this note's own mention of one makes seven. The `protocol`
+        not_applicable verdict was re-derived from the source and every word
+        count behind it re-measured: 17 role/flow words at 0, signer 3 (lines
+        91/159/394), request 1 (line 6), subject 1 (line 41), validation 1 /
+        validate 0, Sig_structure / header / tag / COSE_Key 0, kty 1, pub 1,
+        8152 7, 9052 0, §5 carrying no BCP 14 keyword at all. The verdict is
+        correct. The whole-span quote audit (longest first, attribution-aware,
+        with blockquote and comment markers stripped and a named relaxation
+        channel) graded 416 delimited and blockquote spans of >=30 normalised
+        characters: 396 exact, 20 not, and 19 of those 20 are JSON description
+        strings, front-matter titles, or this record's own superseded wording
+        inside a declared correction block.
+
+        WHAT DID NOT HOLD - SEVEN FINDINGS, all in this record's prose and none
+        in the source, and bin/validate reported none of them. (1) record.yaml
+        alone still read 00000003 as LMOTS_SHA256_N32_W8, the claim summary.md,
+        examples/README.md and examples/vectors.yaml had each already corrected
+        - a correction propagated to three artifacts and not the fourth, inside
+        a bears_on warrant. (2) record.yaml and summary.md quoted rfc-9964 with
+        a sentence occurring in NEITHER its current text NOR its own record of
+        the superseded text; record.yaml's version welded the retracted opening
+        to the corrected tail with "for AKP keys" deleted, restoring the
+        over-general claim that record's correction exists to retract.
+        distilled/README.md and design-notes.md were right throughout. (3) The
+        u32str uniqueness argument was an over-claim in six places: the
+        divisibility test holds for every u = 4 mod 8, so u = 12, 20 and 28 pass
+        it. u = 4 is pinned by a second leg pass 1 had measured and not used -
+        octets 0-3 of both signatures are 00000000, R-0027's u32str(0), and the
+        two first differ at octet 7, the leaf number q. (4) Four count fossils,
+        fixed at every site: "six `can be summarized as` renderings" (five -
+        source-renderings.txt's own "those eleven blocks" only sums with five),
+        "the ten parameter-set names" (nine), the 225-quotation breakdown that
+        sums to 233, and "the 11 constrained_by wirings citing more than one id"
+        (28 fields, across 10 of the 11 structures). (5) R-0132 to R-0135 filed
+        at Appendix A rather than A.1/A.2, with R-0133's note claiming its
+        sentence "appears twice in the document" when every one of the 135
+        occurs exactly once. (6) normative.md carried no §1.1 section although
+        R-0010 to R-0013 are §1.1 entries, while this coverage claimed every
+        normative sentence of §1-§6. A sentence-level sweep of the Abstract,
+        §1-§6 and Appendix A against every artifact resolved 137 of 143 units
+        before the fix and 141 of 143 after it, the two residuals being the
+        Appendix A diagnostic blocks this record carries in pieces. §1.1 is now
+        a section of normative.md: four sentences with their entries, four with
+        none, all eight verbatim. (7) Two smaller ones: the ABNF's terminals, and one
+        percentage given for two envelope overheads.
+
+        NOT CLOSED, and left for pass 3: the 194/41 quotation tallies in
+        design-notes.md, which no stated method reproduces; and three facts
+        asserted about RFC 8554, which this library holds only as a stub with no
+        digest and no cached bytes - that it states the u32str width, that
+        Appendix B's table gives p = 67 for w = 4 and p = 34 for w = 8, and that
+        Appendix F prints LMS public keys. All three are unverifiable from this
+        repository and are now the strongest argument for extracting RFC 8554.
+    - pass: cross-check
+      by: "claude-opus-5 (pass 3 of 3, independent; did not extract and did not verify)"
+      effort: max
+      date: "2026-10-21"
+      note: 'ALL FOUR FX-1 CLOSURES RUN, and closure (a) was run in BOTH DIRECTIONS because pass 2 named the reverse direction as its explicit gap. FORWARD: 19 distinct field-level names harvested by script from all 135 requirements `object` and `field` keys; 18 of 19 are fields of messages.yaml and all 19 have a representation in schema/, the nineteenth being T[r], which is T[1] generic form and not a wire field. Plus 7 scalar parameters named by requirements, of which TWO WERE CLOSED ONLY BY THE LETTER - `ls` and `H` appeared in schema/ only inside a verbatim block of source-renderings.txt while their own siblings n, w and p had structured rows, and one requirement names p and ls in a single sentence. Both now have structured homes: 26 of 26 closed, 2 of them by this pass. REVERSE: messages.yaml carries 11 structures, 35 fields, 24 distinct field names, and 24 of 24 have a counterpart in schema/ - as a CDDL member key, a kebab-cased ABNF rule, or a JSON property, with the four RFC 8152 common parameters appearing as integer labels because that is the only form CDDL admits for a COSE map. 0 field names without a schema counterpart and 0 schema rules without a field behind them: 14 CDDL rules (13 distinct), 21 ABNF rules closed, 7 JSON properties. (b) VACUOUS and the protocol N/A verdict holds - roles, flows and error_paths are all empty, and the counts behind the verdict re-measured: 17 role and exchange words at ZERO, `signer` 3, `request` 1 at the masthead. (c) 2 machines, 9 states, 10 transitions, 5 distinct trigger events, NONE a message (the document defines none) and all 5 named events with resolving constrained_by ids; every transition endpoint a declared state. (d) Both printed signatures parse against the derived ABNF with 2512 octets consumed and nothing left over; both whole messages decode against the derived CDDL to tag 98 and tag 18 with 0 trailing octets and an inner signature byte-identical to a fresh cut from the cache, re-encoding to 2560 and 2552 under an independent RFC 8949 encoder. ONE ITEM LEFT UNRESOLVED AND NOW STATED RATHER THAN SILENT: the derived JSON Schema has no instance to validate against, because its vector is a template. FIVE OF PASS 2 TWELVE CORRECTIONS HAD NOT REACHED EVERY ARTIFACT, which makes this SEVEN OF SEVEN cross-check passes finding that class - and the laggards were NOT summary.md and record.yaml this time, as they had been twice before, but THE TWO KINDS OF FILE NOBODY GREPS: five block headers in a .txt reading `rendering N of 6` where the source says `can be summarized as` exactly five times (lines 173, 181, 235, 258, 308), with a phantom sixth that re-named rendering 1; and the ninth site of the u32str over-claim, a `description` string in a derived JSON Schema, unscoped and carrying neither the bound nor the second leg. Also stale: a README claiming six requirements define a lifecycle where state-machine.yaml and record.yaml say eight in six groups; a reconciliation saying the `state` family occurs `inside sections 4-5` where all five occurrences are in SECTION 5 at lines 394, 397, 403, 405 and 406 - the sharper fact, since section 4 states the one-time-use and tracking obligations WITHOUT using the word; and a pass-state sentence stale in FOUR files at once, each of them the file that records the pass it denied. THE 194/41/225 QUOTATION TALLIES WERE DELETED RATHER THAN RE-DERIVED, because no method can reproduce them: a delimited-span count over this directory is dominated by YAML scalar VALUES that are not quotations, so the denominator is a property of the extractor rather than of the record. Replaced with three checks that recompute, each carrying its method - 135 of 135 requirement texts verbatim and each occurring EXACTLY ONCE, 11 of 11 markdown blockquotes verbatim, and every foreign-attributed span resolved against the document it names with SELF EXCLUDED. No total is recorded for the third, deliberately, because the paragraph quotes the quotations it would count. THE MARKUP CONVENTION WAS DECIDED FROM EVIDENCE rather than asserted: two m-of-n quotations carried code-span backticks the source does not have, and the library already keeps the rule demonstrably - MD-3 own emphasis is reproduced identically by rfc-9964 AND draft-mcnally-deterministic-cbor, while the two inserted spans are plain in both. So the convention is REPRODUCE THE QUOTED DOCUMENT MARKUP, ADD NONE, because a reader cannot tell an added emphasis from the source own. Both insertions removed and the rule written into design-notes.md. Three example vectors carried a region_sha256 that did not digest the run their locator named, against the file own header convention - one naming no line range at all while carrying a digest, another digesting a run its locator does not contain; each now states which run is digested and the digests of the runs it is not. THE THREE RFC 8554 FACTS ARE NOW FLAGGED AT ALL FIVE SITES, and why they cannot be closed from here was verified rather than asserted: records/ietf/rfc-8554 carries an EMPTY content.sha256, so bin/fetch-source has no digest to verify bytes against, and its content.url points at the HTML page rather than the .txt FX-1 needs. Closing it is an INGEST, not something a cross-check can do from inside this record. The split now made explicit matters: the W8 refutation has a floor needing no second document, since RFC 8778 prints no code point for any of its nine names, so 00000003 resolves to neither W8 NOR W4, and p = 67 is measured from the printed bytes - only the NAMING of 67 as the w = 4 count depends on RFC 8554 Appendix B. Recounted and sound: 469 citations 0 dangling; 640 unqualified references 0 dangling, a figure that was 609 before this pass edits and 640 after, which is exactly why the README declines to record a total; 135 of 135 R-ids cited outside requirements.yaml; all 45 region digests AND every printed block byte-for-byte against its declared range; 9 = 9 keywords at nine lines and nowhere else; SIX mid-token wraps in the source, the 4 declared severances plus 2 URLs, so `the only four in the body` is exact; 2428 leaf paths across 7 YAML files with 0 keys missing on either reader. bin/validate 0 errors and NOT ONE LINE naming this record; bin/check-locators 135 of 135, 0 misfiled; bin/check-id-joins --quote-join 0 to read, and not vacuously - it collected pairs and every one resolved.'
+status: distilled
 usefulness:
-  verdict: marginal
-  reason: "Stateful hash-based signatures in COSE. Algorithm suite is deferred by NG3; relevant if post-quantum signing is admitted."
-  assessed: "2026-09-22"
+  verdict: useful
+  reason: "Upgraded from marginal 2026-10-20. Not read for the suite choice NG3 defers, but for what it says about keys: §2.1/§2.2 specify the HSS-LMS public-key octets that RFC 9679 §4.5 requires and does not cite; §3 offers a `kid` that is a field of the key (`I`); and §5 describes a namespace root with a counted lifetime and, deliberately, no private-key serialisation at all. It is also the second document to put an IANA allocation inside a post-quantum KeyId preimage, and it bounds rfc-9964's claim that DEC-003 option 1 escapes that — the HSS/LMS public key begins with two IANA parameter-set code points."
+  assessed: "2026-10-20"
 confidence: medium
 owner: S1

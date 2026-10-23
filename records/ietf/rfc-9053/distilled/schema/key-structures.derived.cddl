@@ -1,0 +1,122 @@
+; =====================================================================
+; key-structures.derived.cddl
+;
+; DERIVED - not verbatim.  RFC 9053 §7 defines the members of
+; COSE_Key for four key types in PROSE and in Tables 17-21 and ships
+; no CDDL for any of them.  Every rule below is this library's
+; rendering.  Cite RFC 9053 §7.1.1, §7.2, §7.3 and Tables 17-21, never
+; this file.
+;
+; Locator: RFC 9053 §7, Tables 17, 18, 19, 20, 21.
+; Extraction status: derived.
+;
+; Boundary, stated once: COSE_Key itself - the generic map, the common
+; parameters `kty` (1), `kid` (2), `alg` (3), `key_ops` (4), `Base IV`
+; (5) - is RFC 9052 §7, NOT RFC 9053.  RFC 9053 §7 supplies only the
+; per-key-type members at negative labels and the `kty` values.  The
+; rules below therefore show the common parameters as a group
+; reference and do not restate them; see
+; records/ietf/rfc-9052/distilled/schema/cose.cddl.
+;
+; What it does NOT constrain: see README.md.
+; =====================================================================
+
+; Common parameters live in RFC 9052 §7.  Stubbed so this file is
+; readable on its own; it is NOT a definition of them.
+COSE_Key_Common_Parameters_9052 = (
+    1 => int / tstr,        ; kty      - values for 1/2/4 from §7 Table 17
+    ? 2 => bstr,            ; kid
+    ? 3 => int / tstr,      ; alg
+    ? 4 => [+ (int / tstr)],; key_ops
+    ? 5 => bstr             ; Base IV
+)
+
+; --- §7.1.1 Double Coordinate Curves - kty 2 (EC2) -------------------
+; Table 19 gives crv (-1, int/tstr), x (-2, bstr), y (-3, bstr/bool),
+; d (-4, bstr).  §7.1.1's required sets are the two arms below:
+;   public:  "it is REQUIRED that "crv", "x", and "y" be present"
+;   private: "it is REQUIRED that "crv" and "d" be present", and
+;            "x" and "y" are RECOMMENDED but omittable
+COSE_Key_EC2 = COSE_Key_EC2_Public / COSE_Key_EC2_Private
+
+COSE_Key_EC2_Public = {
+    1 => 2,                 ; kty = EC2
+    -1 => crv_9053_ec2_value / int / tstr,
+    -2 => bstr,             ; x-coordinate, SEC1, leading zeros PRESERVED
+    -3 => bstr / bool,      ; y: full value, or sign bit as false/true
+    COSE_Key_Common_Parameters_EC2_rest
+}
+
+COSE_Key_EC2_Private = {
+    1 => 2,                 ; kty = EC2
+    -1 => crv_9053_ec2_value / int / tstr,
+    -4 => bstr,             ; d, the private key
+    ? -2 => bstr,           ; x - RECOMMENDED, recomputable
+    ? -3 => bstr / bool,    ; y - RECOMMENDED, recomputable
+    COSE_Key_Common_Parameters_EC2_rest
+}
+
+COSE_Key_Common_Parameters_EC2_rest = (
+    ? 2 => bstr,
+    ? 3 => int / tstr,
+    ? 4 => [+ (int / tstr)],
+    ? 5 => bstr
+)
+
+; --- §7.2 Octet Key Pair - kty 1 (OKP) -------------------------------
+; Table 20 gives crv (-1, int/tstr), x (-2, bstr, "Public Key"),
+; d (-4, bstr).  There is NO y.  §7.2's required sets:
+;   public:  "it is REQUIRED that "crv" and "x" be present"
+;   private: "it is REQUIRED that "crv" and "d" be present"
+COSE_Key_OKP = COSE_Key_OKP_Public / COSE_Key_OKP_Private
+
+COSE_Key_OKP_Public = {
+    1 => 1,                 ; kty = OKP
+    -1 => crv_9053_okp_value / int / tstr,
+    -2 => bstr,             ; public key, "as defined by the algorithm"
+    COSE_Key_Common_Parameters_EC2_rest
+}
+
+COSE_Key_OKP_Private = {
+    1 => 1,                 ; kty = OKP
+    -1 => crv_9053_okp_value / int / tstr,
+    -4 => bstr,             ; d, the private key
+    ? -2 => bstr,           ; x - RECOMMENDED, recomputable
+    COSE_Key_Common_Parameters_EC2_rest
+}
+
+; --- §7.3 Symmetric Keys - kty 4 -------------------------------------
+; Table 21 gives k (-1, bstr).  §7.3: "it is REQUIRED that "k" be
+; present".  "This key structure does not have a form that contains
+; only public members."
+COSE_Key_Symmetric = {
+    1 => 4,                 ; kty = Symmetric
+    -1 => bstr,             ; k, the key value
+    COSE_Key_Common_Parameters_EC2_rest
+}
+
+; --- Label collision, recorded because it is load-bearing ------------
+; Label -1 is `crv` under kty 1 and 2 (Tables 19, 20) and `k` under
+; kty 4 (Table 21).  Label -2 is `x` under kty 1 and 2 and undefined
+; under kty 4.  A COSE_Key map is therefore NOT self-describing: the
+; meaning of every negative label depends on the value at label 1,
+; which is why the rules above are keyed on a literal `kty` and why
+; §7.1 requires that "Applications MUST check that the curve and the
+; key type are consistent and reject a key if they are not."
+COSE_Key_9053 = COSE_Key_EC2 / COSE_Key_OKP / COSE_Key_Symmetric
+
+; --- §2.1 ECDSA signature value --------------------------------------
+; Not a COSE_Key member but the other byte-level structure §2 defines.
+; §2.1: "Signature = I2OSP(R, n) | I2OSP(S, n)" where
+; "n = ceiling(key_length / 8)".  The sizes below follow from that
+; formula applied to the three curves §2.1 admits; the RFC prints the
+; formula, NOT the sizes.  Arithmetic is OURS.
+ECDSA_signature_P_256 = bstr .size 64      ; n = 32  (OURS)
+ECDSA_signature_P_384 = bstr .size 96      ; n = 48  (OURS)
+ECDSA_signature_P_521 = bstr .size 132     ; n = 66  (OURS - ceiling(521/8))
+
+; --- §2.2 EdDSA signature value --------------------------------------
+; RFC 9053 gives NO size and NO layout: "[RFC8032] describes the method
+; of encoding the signature value."  Any size written here would be
+; this library quoting RFC 8032 under an RFC 9053 heading, so none is.
+EdDSA_signature = bstr                     ; size per RFC 8032, not 9053

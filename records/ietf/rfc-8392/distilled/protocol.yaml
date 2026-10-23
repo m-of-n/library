@@ -1,0 +1,350 @@
+record: rfc-8392
+reviewed_by: ""
+source_version: "RFC 8392 (May 2018)"
+source_digest: "9021ff7c4d274cf34873fe4f4fb17c4fe323247dd0f96bfcab54909bfcdc5f13"
+source_lines_total: 1403
+applicability: "APPLICABLE, with the boundary measured"
+
+note: >-
+  WHY THIS FILE IS NOT A not_applicable DECLARATION, unlike rfc-9597's and
+  rfc-9596's in the same lane. §7.1 ("Creating a CWT") and §7.2 ("Validating a
+  CWT") are two NUMBERED PROCEDURES - six steps and seven steps - each with a
+  loop, and §7.2 carries the document's only failure action. `step` and
+  `steps` occur 15 times in the source and `return` twice, both in "return to
+  Step 3" and "return to Step 1". That is real procedural content and it is
+  modelled below.
+
+  BUT THERE IS NO EXCHANGE, AND THE MEASUREMENT MATTERS AS MUCH AS THE MODEL.
+  Whole-word, case-insensitive, over all 1403 lines: `verifier` 0, `sender` 0,
+  `receiver` 0, `recipients` 0, `exchange` 0, `handshake` 0, `negotiate` 0,
+  `response` 0. `protocol` occurs ONCE, at line 378, and not as this
+  document's own: "the use of the "application/cwt" content type by a
+  transport protocol". `recipient` occurs 8 times and every one is in §8's
+  security prose or an Appendix A figure caption ("a signed CWT with a single
+  recipient"), never as a party in a flow. `request` occurs twice - line 6 is
+  the RFC masthead and line 583 is "Request to register claim: example", an
+  email subject line.
+
+  SO THE TWO FLOWS BELOW ARE EACH ONE-SIDED. They are what a producer does to
+  make bytes and what a recipient does to accept them. Nothing in RFC 8392
+  says how the bytes travel, who asks for them, what happens on failure beyond
+  "treated by the application as invalid input", or how a key is obtained. A
+  Mermaid diagram of each is in protocol.md and is drawn as a single lane with
+  the external dependency shown, rather than as two parties pretending to
+  converse.
+
+  THE PROTECTION ALGORITHMS ARE NOT HERE EITHER, BY THE DOCUMENT'S OWN WORDS.
+  §7.1 step 4 says it three times - once per case - and each time the same
+  way: "all steps specified in [RFC8152] ... MUST be followed". Three of the
+  document's nine BCP 14 keywords are those three delegations. See
+  records/ietf/rfc-9052 and records/ietf/rfc-9053, which hold what RFC 8152
+  became.
+
+roles:
+  - name: producer
+    locator: "§7.1"
+    description: >-
+      The party that assembles the claims and creates the CWT. The document
+      calls it "producers" once, in §8's sign-then-encrypt sentence, and
+      otherwise addresses it in the imperative ("Create a CWT Claims Set").
+  - name: recipient
+    locator: "§7.2, §8"
+    description: >-
+      The party that validates. §8 is explicit about what it needs and cannot
+      get from the format: "it is not only important to protect the CWT in
+      transit but also to ensure that the recipient can authenticate the party
+      that assembled the claims and created the CWT."
+  - name: application
+    locator: "§3, §6, §7.2 step 3, §7.2 preamble"
+    description: >-
+      NOT A PARTY BUT A DECIDER, and it carries four things the format does
+      not: which claims are required (§3), whether a structure is a CWT at all
+      (§6, "application dependent"), the COSE message type when no tag is
+      present (§7.2 step 3), and what "invalid input" does (§7.2 preamble).
+      `application` and `applications` occur 21 times between them.
+  - name: IANA and the Designated Experts
+    locator: "§9.1"
+    description: >-
+      Parties to a REGISTRATION procedure, not to a CWT exchange. §9.1's
+      three-week review on cwt-reg-review@ietf.org, the 21-day IESG
+      escalation and the expert-composition guidance are a real process with
+      real actors, and it runs once per claim rather than once per message.
+      Modelled as the third flow below because an implementer who needs a new
+      claim key has to execute it.
+
+flows:
+  - name: create-a-cwt
+    locator: "§7.1"
+    actor: producer
+    ordering: >-
+      "The order of the steps is not significant in cases where there are no
+      dependencies between the inputs and outputs of the steps." (§7.1) So the
+      sequence below is the document's listing order, not a required order -
+      except that steps 2, 4 and 5 do depend on their predecessors' outputs.
+    steps:
+      - n: 1
+        action: "Create a CWT Claims Set containing the desired claims."
+        message: CWT_Claims_Set
+        constrained_by:
+          - "rfc-8392#R-0048"
+      - n: 2
+        action: "Let the Message be the binary representation of the CWT Claims Set."
+        message: CWT_Claims_Set
+        constrained_by:
+          - "rfc-8392#R-0049"
+        on_error: "none specified"
+        note: >-
+          NAMES NO CANONICAL FORM. This is the step at which determinism would
+          have to be decided and is not. See ../design-notes.md, R-O-03.
+      - n: 3
+        action: "Create a COSE Header containing the desired set of Header Parameters."
+        message: CWT_Envelope_variants
+        guard: "The COSE Header MUST be valid per the [RFC8152] specification."
+        constrained_by:
+          - "rfc-8392#R-0050"
+      - n: 4
+        action: >-
+          Protect: one of three branches - COSE_Sign/COSE_Sign1,
+          COSE_Mac/COSE_Mac0, or COSE_Encrypt/COSE_Encrypt0 - with the Message
+          as payload or plaintext.
+        message: CWT_Envelope_variants
+        # [correction 2026-10-21, pass 3 - cross-check] This guard read "all
+        # steps specified in [RFC8152] for creating the object MUST be
+        # followed". The phrase "for creating the object" occurs NOWHERE in the
+        # source: each of §7.1 step 4's three bullets names its own structure
+        # ("for creating a COSE_Sign/ COSE_Sign1 object", and the Mac/Encrypt
+        # variants), so the quotation conflated three bullets into one sentence
+        # the document does not contain. Now the elided form the rest of this
+        # record already used (requirements.yaml line 22, messages.yaml line
+        # 34, protocol.yaml line 38, normative.md line 898); the three verbatim
+        # bullets are R-0052, R-0053 and R-0054.
+        guard: "all steps specified in [RFC8152] ... MUST be followed"
+        constrained_by:
+          - "rfc-8392#R-0051"
+          - "rfc-8392#R-0052"
+          - "rfc-8392#R-0053"
+          - "rfc-8392#R-0054"
+        external_dependency: "RFC 8152 (now RFC 9052 + RFC 9053)"
+      - n: 5
+        action: >-
+          If nesting, let the Message be the TAGGED COSE object just produced
+          and return to step 3.
+        message: CWT_Envelope_variants
+        loop_to: 3
+        constrained_by:
+          - "rfc-8392#R-0055"
+        note: >-
+          The inner object is TAGGED here. §7.2 step 6 is what reads that tag
+          back, so the nesting signal is the COSE tag and nothing else.
+      - n: 6
+        action: >-
+          If the application needs them, prepend the COSE CBOR tag and then the
+          CWT CBOR tag.
+        message: CWT_Tagged
+        constrained_by:
+          - "rfc-8392#R-0056"
+          - "rfc-8392#R-0046"
+        note: >-
+          AFTER THE SIGNATURE EXISTS. With §7.2 step 2 this is the document's
+          own proof that no tag is authenticated. Both tags are conditional on
+          "If needed by the application", so the untagged form is reachable
+          here - and Appendix A never prints it.
+    error_paths:
+      # [correction 2026-10-20, pass 2 — verify] This entry was a WRAPPED
+      # DOUBLE-QUOTED SCALAR inside a block sequence, and bin/_record_yaml.py
+      # rejected the whole file: "protocol.yaml:144: unexpected indent 9,
+      # wanted 0". So this artifact did not parse AT ALL for any reader in
+      # bin/, while bin/validate — which checks only that the path exists —
+      # reported nothing. The wording is unchanged; only the encoding is. It
+      # is the same hazard class that state-machine.yaml line 114 warns about
+      # one file away, left in the very file that warning points at.
+      #
+      # It is written on ONE line, not as a block scalar: bin/_record_yaml.py
+      # does not support a bare block scalar as a sequence item either (`- >-`
+      # falls through parse_list to _scalar(">-") and the continuation lines
+      # then raise "unexpected indent"). Only `- key: >-` is supported. The
+      # wording is unchanged from pass 1.
+      - "None. §7.1 specifies no failure action anywhere; a producer that cannot complete a step is outside the document."
+
+  - name: validate-a-cwt
+    locator: "§7.2"
+    actor: recipient
+    ordering: >-
+      Same disclaimer as §7.1, and the same real dependencies: steps 2, 3 and 5
+      each consume the previous step's output.
+    steps:
+      - n: 1
+        action: "Verify that the CWT is a valid CBOR object."
+        message: CWT_Envelope_variants
+        on_error: reject
+        constrained_by:
+          - "rfc-8392#R-0059"
+        note: >-
+          The candidate bytes may be any of the forms CWT_Envelope_variants
+          covers, with or without the tag layers CWT_Tagged describes; the
+          step distinguishes none of them, because the tags are not stripped
+          until steps 2 and 3.
+      - n: 2
+        action: >-
+          If the object begins with the CWT CBOR tag, remove it and verify that
+          one of the COSE CBOR tags follows it.
+        message: CWT_Tagged
+        on_error: reject
+        constrained_by:
+          - "rfc-8392#R-0060"
+          - "rfc-8392#R-0046"
+        note: >-
+          STRIPPED BEFORE VALIDATION. The other half of the unauthenticated-tag
+          proof.
+      - n: 3
+        action: >-
+          If a COSE CBOR tag is present, remove it and use it to determine the
+          CWT type; if absent, take the type from the application context.
+        message: CWT_Envelope_variants
+        on_error: reject
+        constrained_by:
+          - "rfc-8392#R-0061"
+        note: >-
+          THE UNTAGGED CASE IS PERMITTED OUTRIGHT HERE, which is what makes
+          MD-3 option 5's no-tags export conformant - and the type then comes
+          from outside the bytes, which is the gap rfc-9596's `typ` fills
+          inside the signature.
+      - n: 4
+        # [correction 2026-10-21, pass 3] "supported, or that" had a comma the
+        # source does not print: §7.2 step 4 reads "both understood and
+        # supported or that are specified as being ignored". R-0062 carries it
+        # verbatim and was already right.
+        action: >-
+          Verify that the resulting COSE Header includes only parameters and
+          values whose syntax and semantics are both understood and supported
+          or that are specified as being ignored when not understood.
+        message: CWT_Envelope_variants
+        on_error: reject
+        constrained_by:
+          - "rfc-8392#R-0062"
+        note: >-
+          The only use of the word "syntax" in the document (line 485). Note
+          the asymmetry with §3: an unknown HEADER PARAMETER is a rejection
+          unless marked ignorable, an unknown CLAIM must be ignored.
+      - n: 5
+        action: >-
+          Validate the protection: COSE_Sign/COSE_Sign1 per RFC 8152 §4,
+          COSE_Mac/COSE_Mac0 per §6, COSE_Encrypt/COSE_Encrypt0 per §5; let the
+          Message be the payload or the resulting plaintext.
+        message: COSE_signing_and_MAC_inputs
+        on_error: reject
+        constrained_by:
+          - "rfc-8392#R-0063"
+          - "rfc-8392#R-0064"
+          - "rfc-8392#R-0065"
+          - "rfc-8392#R-0066"
+        external_dependency: "RFC 8152 §4, §5, §6 (now RFC 9052 §4, §5, §6)"
+      - n: 6
+        action: >-
+          If the Message begins with a COSE CBOR tag, it is a nested CWT:
+          return to step 1 using the Message as the CWT.
+        message: CWT_Envelope_variants
+        loop_to: 1
+        on_error: reject
+        constrained_by:
+          - "rfc-8392#R-0067"
+        note: >-
+          THE ASYMMETRY WITH §7.1 STEP 5, which is worth an implementer's
+          attention: creation re-enters at step 3, validation at step 1. So
+          validation re-runs the CBOR-validity check and BOTH tag-stripping
+          steps on every inner layer, which means an inner layer may legally
+          carry its own tag 61. Creation never re-creates the claims set.
+      - n: 7
+        action: "Verify that the Message is a valid CBOR map; let the CWT Claims Set be this CBOR map."
+        message: CWT_Claims_Set
+        on_error: reject
+        constrained_by:
+          - "rfc-8392#R-0068"
+    error_paths:
+      - path: reject
+        trigger: "any of the seven steps fails"
+        action: >-
+          "If any of the listed steps fail, then the CWT MUST be rejected --
+          that is, treated by the application as invalid input." (§7.2)
+        constrained_by:
+          - "rfc-8392#R-0058"
+        note: >-
+          THE DOCUMENT'S ONLY FAILURE ACTION, and it is one word delegated:
+          what "invalid input" DOES is the application's. There is no error
+          code, no distinguishable failure reason, and no requirement that the
+          failure be reported at all. One error path for seven steps.
+
+  - name: register-a-claim-key
+    locator: "§9.1, §9.1.1"
+    actor: "registrant, Designated Experts, IANA, IESG"
+    ordering: "sequential; the review period is a real wait"
+    steps:
+      - n: 1
+        action: >-
+          Send a registration request to cwt-reg-review@ietf.org using the
+          §9.1.1 template, with "an appropriate subject (e.g., "Request to
+          register claim: example")".
+        # Block, not flow: a flow sequence wrapped over several lines was
+        # silently truncated at its first line by bin/_yaml.py and raised in
+        # bin/_record_yaml.py, so four of these eight ids were invisible to
+        # every tool in bin/. Fixed 2026-10-20 (library#39).
+        constrained_by:
+          - "rfc-8392#R-0075"
+          - "rfc-8392#R-0081"
+          - "rfc-8392#R-0082"
+          - "rfc-8392#R-0083"
+          - "rfc-8392#R-0084"
+          - "rfc-8392#R-0089"
+          - "rfc-8392#R-0090"
+          - "rfc-8392#R-0091"
+      - n: 2
+        action: >-
+          Three-week review period, then Designated Expert advice against the
+          §9.1 criteria - duplication, general applicability, clarity - and the
+          §9.1.1 Claim Key policy for the range requested.
+        guard: >-
+          "Registrations for the limited set of values between -256 and 255 and
+          strings of length 1 are to be restricted to claims with general
+          applicability."
+        constrained_by:
+          - "rfc-8392#R-0074"
+          - "rfc-8392#R-0076"
+          - "rfc-8392#R-0077"
+          - "rfc-8392#R-0085"
+          - "rfc-8392#R-0086"
+          - "rfc-8392#R-0087"
+          - "rfc-8392#R-0088"
+      - n: 3
+        action: "IANA records the registration, acting only on Designated Expert instruction."
+        constrained_by:
+          - "rfc-8392#R-0073"
+          - "rfc-8392#R-0078"
+    error_paths:
+      - path: escalate
+        trigger: "undetermined for longer than 21 days"
+        action: >-
+          "Registration requests that are undetermined for a period longer than
+          21 days can be brought to the IESG's attention (using the
+          iesg@ietf.org mailing list) for resolution."
+        constrained_by:
+          - "rfc-8392#R-0075"
+    note: >-
+      THIS FLOW IS THE COST MD-3 HAS TO PRICE. The only claim-key range that
+      does not require it is Private Use (integer < -65536), which costs 5
+      octets against 1 for the cheapest range and is unscoped. The two
+      cheapest tiers are Standards Action, i.e. an IETF document on an IETF
+      timescale. schema/claim-key-policy.derived.yaml prices every tier.
+
+# [correction 2026-10-20, pass 2 — verify] Four of these seven entries were
+# WRAPPED double-quoted scalars and three carried an unescaped inner `"`.
+# Together with error_paths above they made this file unreadable by
+# bin/_record_yaml.py. Each is now one line, and an inner quotation of the
+# source is single-quoted so the scalar is well formed. No wording changed.
+absent:
+  - 'No transport. §6 mentions "a transport protocol" as something else''s job.'
+  - "No request/response pair, no roles that address each other, no framing."
+  - "No key distribution, resolution or discovery step. The recipient has the key already."
+  - "No algorithm negotiation or agility procedure, and no algorithm at all."
+  - "No error codes, no failure reporting, and no distinguishable failure reasons: one rejection for all seven validation steps."
+  - 'No claim VALIDATION. §7.2 step 7 stops at "a valid CBOR map"; nothing checks exp, nbf or aud. §3 puts that outside scope, so a conformant validator accepts an expired CWT.'
+  - "No replay protection, freshness rule or nonce, though cti exists and is never given that job."

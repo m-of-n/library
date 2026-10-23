@@ -1,0 +1,164 @@
+; =====================================================================
+; cddl-updated.abnf
+;
+; VERBATIM.  This is RFC 9682's own grammar, copied unchanged.  It was
+; NOT authored by this project.  Do not edit it, do not correct it, do
+; not reformat it.  Defects found in it are recorded in README.md,
+; never repaired here.  The companion derived file that mechanically
+; dedents it for tools is cddl-updated-dedented.derived.abnf.
+;
+; Locator:  RFC 9682, "Updates to the Concise Data Definition Language
+;           (CDDL) Grammar", C. Bormann, November 2024, Standards
+;           Track, ISSN 2070-1721.  Updates: 8610.
+;           <https://www.rfc-editor.org/rfc/rfc9682.txt>
+;
+; Source digest (sha256 of the full cached source text):
+;   d35602e7f784e509a5984283ea8d998adfee23f086ad0d77bd22f98c6cdea89c
+;
+; Appendix A, "Updated Collected ABNF for CDDL" (Figure 11: ABNF for
+; CDDL as Updated).  Source text lines 482-591.
+;
+; Appendix A is NORMATIVE.  Its own preamble, quoted in full (source
+; lines 477-480):
+;
+;      This appendix is normative.
+;
+;      It provides the full ABNF from [RFC8610] as updated by the present
+;      document.
+;
+; and Section 1 states its replacement scope (source lines 88-90):
+;
+;      the updated collected ABNF syntax in Figure 11 in Appendix A
+;      replaces the collected ABNF syntax in Appendix B of [RFC8610].
+;
+; THIS GRAMMAR REPLACES RFC 8610 APPENDIX B IN WHOLE.  Of its 55 rule
+; definitions, 8 are new, 6 have a changed right-hand side, 41 are
+; carried over unchanged, and 0 are dropped.  The production-by-
+; production statement of the change is production-changes.derived.txt.
+;
+; THE RFC'S THREE-COLUMN LEFT MARGIN IS PRESERVED on every grammar line.
+; That makes this file faithful but NOT directly consumable by an ABNF
+; tool: under RFC 5234 a line beginning with whitespace continues the
+; previous rule, so an indented grammar collapses into one rule.  Dedent
+; by exactly three columns first, or use the derived companion.
+;
+; THERE ARE NO PAGE FRAMES IN THIS DOCUMENT.  Unlike RFC 8610, whose
+; Appendix B grammar crosses two page frames and had to be captured as
+; three regions, rfc9682.txt carries no form feed, no running head and
+; no "[Page n]" footer anywhere in its 699 lines.  Figure 11 is
+; therefore ONE unbroken region, and nothing is omitted between its
+; first and last line.
+; =====================================================================
+
+; ---- BEGIN VERBATIM A-1 (source lines 482-591, sha256 27e7e6d1691db57a4d1676858eff86a9998a909ea078205029f8da4a29e981e5) ----
+   cddl = S *(rule S)
+   rule = typename [genericparm] S assignt S type
+        / groupname [genericparm] S assigng S grpent
+
+   typename = id
+   groupname = id
+
+   assignt = "=" / "/="
+   assigng = "=" / "//="
+
+   genericparm = "<" S id S *("," S id S ) ">"
+   genericarg = "<" S type1 S *("," S type1 S ) ">"
+
+   type = type1 *(S "/" S type1)
+
+   type1 = type2 [S (rangeop / ctlop) S type2]
+   ; space may be needed before the operator if type2 ends in a name
+
+   type2 = value
+         / typename [genericarg]
+         / "(" S type S ")"
+         / "{" S group S "}"
+         / "[" S group S "]"
+         / "~" S typename [genericarg]
+         / "&" S "(" S group S ")"
+         / "&" S groupname [genericarg]
+         / "#" "6" ["." head-number] "(" S type S ")"
+         / "#" "7" ["." head-number]
+         / "#" DIGIT ["." uint]                ; major/ai
+         / "#"                                 ; any
+   head-number = uint / ("<" type ">")
+
+   rangeop = "..." / ".."
+
+   ctlop = "." id
+
+   group = grpchoice *(S "//" S grpchoice)
+
+   grpchoice = *(grpent optcom)
+
+   grpent = [occur S] [memberkey S] type
+          / [occur S] groupname [genericarg]  ; preempted by above
+          / [occur S] "(" S group S ")"
+
+   memberkey = type1 S ["^" S] "=>"
+             / bareword S ":"
+             / value S ":"
+
+   bareword = id
+
+   optcom = S ["," S]
+
+   occur = [uint] "*" [uint]
+         / "+"
+         / "?"
+
+   uint = DIGIT1 *DIGIT
+        / "0x" 1*HEXDIG
+        / "0b" 1*BINDIG
+        / "0"
+
+   value = number
+         / text
+         / bytes
+
+   int = ["-"] uint
+
+   ; This is a float if it has fraction or exponent; int otherwise
+   number = hexfloat / (int ["." fraction] ["e" exponent ])
+   hexfloat = ["-"] "0x" 1*HEXDIG ["." 1*HEXDIG] "p" exponent
+   fraction = 1*DIGIT
+   exponent = ["+"/"-"] 1*DIGIT
+
+   text = %x22 *SCHAR %x22
+   SCHAR = %x20-21 / %x23-5B / %x5D-7E / NONASCII / SESC
+
+   SESC = "\" ( %x22 / "/" / "\" /                 ; \" \/ \\
+                %x62 / %x66 / %x6E / %x72 / %x74 / ; \b \f \n \r \t
+                (%x75 hexchar) )                   ; \uXXXX
+
+   hexchar = "{" (1*"0" [ hexscalar ] / hexscalar) "}" /
+             non-surrogate / (high-surrogate "\" %x75 low-surrogate)
+   non-surrogate = ((DIGIT / "A"/"B"/"C" / "E"/"F") 3HEXDIG) /
+                   ("D" %x30-37 2HEXDIG )
+   high-surrogate = "D" ("8"/"9"/"A"/"B") 2HEXDIG
+   low-surrogate = "D" ("C"/"D"/"E"/"F") 2HEXDIG
+   hexscalar = "10" 4HEXDIG / HEXDIG1 4HEXDIG
+             / non-surrogate / 1*3HEXDIG
+
+   bytes = [bsqual] %x27 *BCHAR %x27
+   BCHAR = %x20-26 / %x28-5B / %x5D-7E / NONASCII / SESC / "\'" / CRLF
+   bsqual = "h" / "b64"
+
+   id = EALPHA *(*("-" / ".") (EALPHA / DIGIT))
+   ALPHA = %x41-5A / %x61-7A
+   EALPHA = ALPHA / "@" / "_" / "$"
+   DIGIT = %x30-39
+   DIGIT1 = %x31-39
+   HEXDIG = DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
+   HEXDIG1 = DIGIT1 / "A" / "B" / "C" / "D" / "E" / "F"
+   BINDIG = %x30-31
+
+   S = *WS
+   WS = SP / NL
+   SP = %x20
+   NL = COMMENT / CRLF
+   COMMENT = ";" *PCHAR CRLF
+   PCHAR = %x20-7E / NONASCII
+   NONASCII = %xA0-D7FF / %xE000-10FFFD
+   CRLF = %x0A / %x0D.0A
+; ---- END VERBATIM A-1 ----

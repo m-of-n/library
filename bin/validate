@@ -9,6 +9,7 @@ import pathlib, re, sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from _yaml import parse as miniyaml
+import _record_yaml
 import _bcp14
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -118,6 +119,80 @@ def check_derived_naming(recdir, where, errs, warns):
             if idv and not idv.group(1).startswith("urn:library:"):
                 errs.append(f"{where}: {rel} has a $id that is not a "
                             f"urn:library:<record>:<artifact> — docs/extraction.md, Schema $id")
+
+
+ID_DEF = re.compile(r'^\s*-?\s*id:\s*["\']?([a-z0-9][a-z0-9.\-]*)#((?:R|V|G|N)-[0-9]+)', re.M)
+# The lookbehind makes the match start at a real identifier head. Without it,
+# a record id broken across a line — `…-cbor#V-0001` — matches on its tail and
+# reads as a *foreign* reference, which is how this check first mis-flagged
+# draft-mcnally-deterministic-cbor's own paragraph warning about that very wrap.
+ID_REF = re.compile(r'(?<![\w.\-…])([a-z0-9][a-z0-9.\-]*?)#((?:R|V|G|N)-[0-9]+)\b')
+ID_FILES = {".yaml", ".md", ".txt", ".cddl", ".abnf", ".json"}
+
+
+def check_artifact_parses(recdir, where, warns):
+    """Warn where a distilled/ YAML artifact cannot be read by both readers.
+
+    bin/validate checked only that an artifact's PATH EXISTS, so rfc-8392
+    shipped a protocol model and a state machine that bin/_record_yaml.py —
+    the reader bin/ingest, bin/fetch-source, bin/_record_html and
+    bin/check-locators all import — could not parse at all, and nothing said
+    so (library#39). An artifact no reader can read is not an artifact.
+
+    A warning rather than an error: 19 of 308 artifacts in the library are in
+    this state already, several in records at profile: full, so erroring would
+    fail the build on history instead of on new drift. Library#20 tracks the
+    wider divergence between the two readers.
+    """
+    d = recdir / "distilled"
+    if not d.is_dir():
+        return
+    for f in sorted(x for x in d.rglob("*.yaml") if x.is_file()):
+        rel = f.relative_to(recdir)
+        try:
+            text = f.read_text(errors="ignore")
+        except OSError:
+            continue
+        for name, read in (("bin/_yaml.py", lambda: miniyaml(text)),
+                           ("bin/_record_yaml.py", lambda: _record_yaml.load_yaml(f))):
+            try:
+                read()
+            except Exception as e:                       # noqa: BLE001
+                warns.append(f"{where}: {rel} cannot be parsed by {name} "
+                             f"({type(e).__name__}) — an artifact no reader "
+                             f"can read is not an artifact")
+
+
+def check_id_collisions(recdir, rid, where, warns):
+    """Warn where a cited foreign id's bare form is also one of this record's.
+
+    Ids are *defined* record-qualified (`rfc-8949#R-0001`) but prose cites them
+    bare. So a record that cites `rfc-8610#R-0079` while also defining its own
+    `R-0079` has a bare `R-0079` that resolves two ways, and a prefix-blind
+    reader — human or script — silently gets the wrong requirement. Nothing
+    else catches it: both ids exist, so no reference is dangling.
+
+    Found by draft-ietf-cbor-cddl-modules' cross-check (#39), whose own
+    README listed two of its four cross-record refs and missed both of the
+    colliding ones. A warning rather than an error: the collisions predate the
+    check and some sit in records already at profile: full.
+    """
+    own, foreign = set(), {}
+    for f in sorted(x for x in recdir.rglob("*") if x.is_file()):
+        if f.suffix not in ID_FILES:
+            continue
+        try:
+            text = f.read_text(errors="ignore")
+        except OSError:
+            continue
+        own |= {i for who, i in ID_DEF.findall(text) if who == rid}
+        for who, i in ID_REF.findall(text):
+            if who != rid:
+                foreign.setdefault((who, i), f.relative_to(recdir))
+    for (who, i), rel in sorted(foreign.items()):
+        if i in own:
+            warns.append(f"{where}: cites {who}#{i} while defining its own {i} "
+                         f"({rel}) — a bare '{i}' in prose resolves two ways")
 
 
 def check_full(recdir, d, where, errs):
@@ -303,6 +378,8 @@ def main():
         # Not gated on profile: full — the drift this catches (#44) happens
         # the moment a schema/ directory exists, not when the record finishes.
         check_derived_naming(rec.parent, where, errs, warns)
+        check_id_collisions(rec.parent, rid, where, warns)
+        check_artifact_parses(rec.parent, where, warns)
         if (rec.parent / "distilled.md").exists():
             errs.append(f"{where}: distilled.md is superseded by distilled/ (schema v5)")
         # A summary must not declare the absence of a distilled/ the record
@@ -317,6 +394,32 @@ def main():
                     f"{where}: summary.md declares 'No `distilled/`' but distilled/ "
                     f"exists \u2014 state the artifact set instead"
                 )
+        # A digest quoted in summary.md must be the one record.yaml records.
+        # The summary's metadata table is written by hand, and a hand-written
+        # digest is a hand-invented digest: library#39 shipped two wrong ones
+        # (rfc-9679, draft-ietf-cbor-serialization), each caught only because a
+        # later extraction pass happened to recompute it. In a library that
+        # holds digests and URLs INSTEAD of documents, this is the one field
+        # whose wrongness defeats the whole arrangement \u2014 a reader cannot tell
+        # a typo from a substituted source. Prefixes are allowed because the
+        # table elides (`f6b460e38ba1\u2026`); a prefix that does not match the
+        # recorded digest is an error, not a warning.
+        # Scoped to the metadata table's Digest row ONLY. Prose may legitimately
+        # quote a superseded digest \u2014 the IANA registry summaries do exactly
+        # that when explaining that a live registry moved under its pinned hash
+        # \u2014 so checking every backticked hex string in the file reports those
+        # as errors. The table row is the one place that must state the digest
+        # this record currently cites.
+        recorded = str((d.get("content") or {}).get("sha256") or "")
+        if recorded and sm.exists():
+            row = re.search(r"^\|\s*\*\*Digest\*\*\s*\|([^|]*)\|", sm.read_text(), re.M)
+            if row:
+                m = re.search(r"`(?:sha-?256:)?([0-9a-f]{8,64})[\u2026.]*`", row.group(1))
+                if m and not recorded.startswith(m.group(1)):
+                    errs.append(
+                        f"{where}: summary.md's Digest row says {m.group(1)[:16]}\u2026 but "
+                        f"content.sha256 is {recorded[:16]}\u2026 \u2014 copy it, never retype it"
+                    )
         for f in rec.parent.rglob("*"):
             if f.suffix.lower() in {".pdf", ".xlsx", ".epub", ".docx", ".zip"}:
                 errs.append(f"{where}: third-party file committed ({f.name}) — record the digest, not the bytes")

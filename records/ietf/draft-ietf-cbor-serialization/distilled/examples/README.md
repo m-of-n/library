@@ -1,0 +1,350 @@
+---
+record: draft-ietf-cbor-serialization
+kind: examples
+title: "draft-ietf-cbor-serialization — examples and test vectors"
+extracted: "2026-10-18"
+pass: 3
+reviewed_by: ""
+---
+
+# CBOR Serialization and Determinism — examples and test vectors
+
+`vectors.yaml` holds **105 vectors**: every encoded byte string printed anywhere
+in draft-ietf-cbor-serialization-08, in source order, with no gaps.
+
+| where | vectors | what |
+|---|---|---|
+| §1, Table 1 | 2 | `[1, 2]` definite vs indefinite — the document's opening illustration |
+| §3 | 6 | the bullet list of what general serialization permits |
+| §4.1 item 4 | 3 | the float rule's own worked examples: `0.0`, `0.1`, the canonical NaN |
+| §9.1 | 5 | the covert-channel enumeration: the value `1` in all five argument widths |
+| Appendix L.2 | 89 | the 25 `.edn` example files, every encoding in each |
+| **total** | **105** | |
+
+Of the 89 from Appendix L.2, each is one row of one file's
+`general-serializations` list — which in all 25 files is a superset of that
+file's `preferred-plus-serializations` and `deterministic-serialization`
+lists, so iterating the general list reaches every encoding the document
+prints.
+
+## `expect` needs a denominator, and this is it
+
+This document defines no format that bytes can be well-formed or ill-formed
+against. It defines **three nested serializations** — general (§3),
+preferred-plus (§4), deterministic (§5) — and *every* byte string it prints is
+well-formed, valid CBOR and valid general serialization. The source says so
+itself: "All examples are well-formed and valid" (Appendix L.1).
+
+So a bare valid/invalid verdict would be meaningless. Each vector carries:
+
+| field | meaning |
+|---|---|
+| `expect` | the verdict under **preferred-plus**, which §4.3 calls "the recommended default" |
+| `conformance.general` | always `valid` — see above |
+| `conformance.preferred_plus` | same as `expect` |
+| `conformance.deterministic` | preferred-plus **plus** map key ordering |
+| `violates` | why `expect` is `invalid`, cited by section. Present on every `invalid` |
+| `violates_deterministic` | present wherever deterministic serialization rejects for §5.1 item 2, the one rule it adds. On the **10** vectors preferred-plus accepts it is the sole reason for rejection; on V-0052 and V-0053 it is an *additional* reason alongside `violates`, because those two maps are unsorted as well as ill-framed. 12 vectors carry the field, 10 of them the preferred-plus/deterministic delta |
+| `violates_requirements` | the same reason as **requirement ids** rather than prose. Added by the cross-check pass on all **64** vectors that carry `violates`, 109 links over 13 distinct ids, each id derived from the bytes and then checked clause-by-clause against the prose it sits beside (0 disagreements). Where §4.1 item 1 is the rule, the id set names the *bullet* the argument's value falls under — R-0026 for an argument of 0..23, R-0027 for 24..255, and so on — beside the umbrella R-0025 |
+| `violates_deterministic_requirements` | the same for `violates_deterministic`, on all **12** vectors that carry it. Always `R-0055`, the sort rule, because §5.1 item 2 is the only rule deterministic serialization adds. Kept as a separate key rather than merged into `violates_requirements` so the 12-field / 10-delta contract above stays exact: merging would make a deterministic-only rejection indistinguishable from a preferred-plus one |
+
+The split:
+
+| serialization | valid | invalid |
+|---|---|---|
+| general | 105 | 0 |
+| preferred-plus | 41 | 64 |
+| deterministic | 31 | 74 |
+
+The 10 vectors that are valid preferred-plus and invalid deterministic are the
+unsorted maps, and they are the **only** difference between the two modes in
+the entire corpus. That is not an artefact of the vector set; it is the
+document's claim: "The only difference between preferred-plus and deterministic
+serialization is that in deterministic serialization, maps are required to be
+sorted by their keys" (§5.3.2). The vectors confirm it exhaustively.
+
+### `invalid` means "a checking decoder must reject this"
+
+Not "no decoder will read it". Appendix H defines the optional conformance
+pass, and Appendix L.1.3 defines the test these negative vectors drive: "for
+each example, supply the decoder with every representation permitted under
+general serialization except those allowed for the target serialization type.
+Decoding each such input must result in a conformance-checking error."
+
+A **non**-checking preferred-plus decoder may well accept them, and Appendix
+L.1.4 expects it to: "It is common for preferred-plus and deterministic
+decoders to accept non-shortest-length arguments." Nothing in §4.2 requires a
+decoder to reject anything. The negative vectors therefore test the *checking*
+mode, and that is why there are more of them than positive ones.
+
+## Every vector was run against the schema, and which layer caught it
+
+The cross-check pass (2026-10-19) transcribed `../schema/` into a runnable
+checker and put all 105 vectors through it, checking **all four verdicts on
+each** — `expect` and all three `conformance` entries, 420 in total. The
+grammar is not retyped: the ABNF layer **parses
+`../schema/prefp-head.derived.abnf` itself** and matches `prefp-head` at every
+head position, so the checker cannot drift from the artifact it is checking.
+
+| layer | source | decides |
+|---|---|---|
+| **0 · well-formed** | RFC 8949 §3, the precondition both pseudocode files make non-negotiable | the `general` verdict — general serialization is "the complete set of all encodings standardized in Section 3 of [STD94]" |
+| **A · head grammar** | `prefp-head.derived.abnf`, parsed from the file | indefinite framing, non-shortest arguments at every width, both big-number bullets, and the float patterns that are wrong at every value |
+| **B · check** | `serialization-check.derived.pseudocode.txt`, PART 2 | only what no grammar reaches: float width by Appendix D's arithmetic, and map key order under `dtrm` |
+| **C · encode** | `prefp-encode.derived.pseudocode.txt` | decode → `ENCODE` → compare bytes. A whole-artifact cross-check on A and B |
+
+**Result: 420 of 420 verdicts reproduced, 0 mismatches.** The census of the 64
+preferred-plus rejections, and of the 74 deterministic ones:
+
+| layer | reason | prefp | dtrm |
+|---|---|---|---|
+| A | argument not in shortest form | 27 | 27 |
+| A | indefinite-length head or break | 12 | 12 |
+| A | big number: leading zero or content < 9 bytes | 9 | 9 |
+| A | float pattern wrong at every value (non-canonical NaN; infinity or zero at single/double) | 10 | 10 |
+| B | float not in the shortest width that preserves precision | 6 | 6 |
+| B | map keys not in bytewise lexicographic order | — | 10 |
+| C | — | 0 | 0 |
+| | **total** | **64** | **74** |
+
+**Layer C caught nothing the earlier layers had not,** which is the result
+worth having: the head grammar plus two value-dependent predicates are
+*complete* for this corpus. C is not vacuous — with layer B disabled it catches
+the same six float-width and ten map-order cases by re-encoding (`a302617903617a016178`
+→ `a301617802617903617a`), so the agreement is a real cross-check and not an
+unreachable branch. The one place C and B disagree is byte-identical duplicate
+map keys, which B rejects and C accepts; that is the divergence
+`serialization-check.derived.pseudocode.txt` already flags, since its
+`not BYTEWISE_LT(prev, key)` is a stricter reading than the draft states, and
+**no vector in the corpus exercises it**.
+
+**Every invalid vector failed for its stated reason.** The checker's finding
+category was matched against the prose `violates` clause by clause across all
+64: 0 disagreements. That mapping is what `violates_requirements` was derived
+from.
+
+### The checker discriminates — 210 cases the source never prints
+
+105 vectors prove nothing about a checker that accepts everything, so the pass
+also ran a negative-control suite of **210 cases, 181 of which appear nowhere
+in the corpus**, each with its expected verdict asserted: **0 failures.**
+
+| family | n | what it probes |
+|---|---|---|
+| indefinite heads | 10 + 6 partners | all four heads, the bare break, an indefinite string nested in an array and an indefinite map inside a tag — against the definite partners that must be accepted |
+| non-preferred widths | 85 + 18 partners | every major type that carries an argument × each of the four wider forms × the boundary arguments, plus the shortest-form encoding at each of the eight boundaries (23/24, 255/256, 65535/65536, 2^32−1/2^32, 2^64−1) which must be accepted |
+| maps | 9 | misordered integer, equal-length text and unequal-length text keys; keys spanning the 0x80 boundary, where a signed-char comparison mis-sorts; an unsorted map nested in a map and in an array; and a byte-identical duplicate key |
+| big-number edges | 14 | the 9-byte floor accepted and the 8-byte content rejected for both tags; leading zeros at 9 and 10 bytes; empty and 1-byte content; the 23/24-byte head boundary; a non-shortest length on the big number's own byte string; indefinite content; tag 2 whose content is not a byte string |
+| reserved `ai` | 36 + 1 | `ai` 28–30 on all eight major types, `ai` 31 on major types 0, 1 and 6, the bare break, and simple values 24–31 in the two-byte form — against `f820`, which must be accepted |
+| floats | 29 + 2 | every non-canonical half NaN; half infinities and zeros, which are legal; single and double zeros, infinities and NaNs, which are not; and the value-dependent pairs — 65504 (half) against 65536 (single only), the smallest half subnormal against 2^-26 |
+
+The ABNF's own census claim was re-derived from the grammar **as parsed**:
+224 of RFC 8949's 229 well-formed initial bytes admitted, 28 per major type,
+excluding exactly `5f 7f 9f bf ff`. The alternation was asserted unambiguous at
+every head matched — no input in the corpus or the control suite produced two
+match lengths.
+
+### What it found
+
+One defect in this library's own material, now fixed:
+`serialization-check.derived.pseudocode.txt` applied `CHECK_SHORTEST` to major
+type 7, so as written it rejected `h'f90000'` — V-0006, V-0009 and V-0082, the
+encoding of 0.0 that §4.1 item 4 states as a MUST. `../schema/README.md`
+records it. The ABNF never had the bug, so the two derived artifacts disagreed
+and the ABNF was right.
+
+One defect in the source, which the corpus does **not** catch: Appendix D's
+`S2H_MIN_SUBNORM_EXP 102` narrows ±2^-25 to half ±0.0. Exhaustive exact
+enumeration of all 63,493 inputs the function narrows found exactly 2 that
+change value. No vector exercises them — see *What the vectors do not cover*.
+
+## Provenance: every byte is the document's
+
+**All 105 hex strings are printed in the source. None is computed by this
+library.** The document gives bytes for every example it states, including the
+ones buried in prose, so no vector had to be reconstructed from a diagnostic
+form — the honesty rule that forces a `notes` disclosure never fired.
+
+Checked mechanically: 103 of the 105 appear in the cached text as a contiguous
+hex string — as an `h''` literal in Appendix L.2, or after `0x` in the prose
+sections — and were matched against it by script. Two normalisations, neither
+touching a byte:
+
+- **Letter case.** §9.1 writes two of its five encodings with uppercase hex
+  digits (`0x1A00000001`, `0x1B0000000000000001`). Everything here is lower
+  case.
+- **Rejoining, for V-0001 and V-0002 only.** Table 1 prints their bytes spaced
+  *and* wrapped across two lines of a table cell — `0x82 0x01` on source line
+  186 and `0x02` on line 187; `0x9f 0x01` on 189 and `0x02 0xff` on 190. Both
+  vectors say so in their own `notes`.
+
+**And every one was decoded.** An independent CBOR decoder re-derived each
+value and each per-serialization verdict from the bytes, and the generator
+aborts if a verdict stated in the file is not the one the decoder computes. The
+`decoded` text is therefore checked against the source's EDN rather than copied
+from it.
+
+### The verdicts reproduce the author's own classification exactly
+
+The strongest check available, and it passes: for all **25** Appendix L.2
+files, the set of encodings this file marks `preferred_plus: valid` is
+**identical** to that file's own `preferred-plus-serializations` list, and the
+set marked `deterministic: valid` is identical to its
+`deterministic-serialization` list. Zero mismatches, 34 and 24 encodings
+respectively. The verdicts were *computed* from §4.1 and §5.1 by a decoder that
+had never seen those lists, so this is an independent agreement rather than a
+transcription. Counted mechanically, the appendix prints 148 `h''` literals, 90
+of them distinct: the 89 encodings here, plus `h'010203'`, which is
+byte_string.edn's unencoded EDN *value* and is recorded as the `diagnostic` of
+V-0037 … V-0039 rather than as a vector. Nothing in Appendix L.2 is unaccounted
+for.
+
+In each of the 25 files the `general-serializations` list is a superset of the
+`preferred-plus-serializations` list, which is in turn a superset of the
+`deterministic-serialization` list — also checked, in all 25. Three byte strings the source prints only as a diagnostic *value* —
+`0x1ff` as a NaN significand at three widths — were confirmed arithmetically:
+`0x1ff << 13 = 0x3fe000` and `0x1ff << 42 = 0x7fc0000000000`, matching
+`fa7fbfe000` and `fb7ff7fc0000000000`.
+
+## Six hex strings appear twice, on purpose
+
+`00`, `1800`, `190000`, `f90000`, `fa00000000` and `f97e00` each appear as both
+a prose example and an Appendix L.2 vector, and `f90000` appears three times
+(§3, §4.1, float_zero.edn). They are separate vectors because they are separate
+examples in the source with different locators and different force — §4.1's
+`f90000` is the one place the document states the reduction as a **MUST**,
+while float_zero.edn's is a fixture. Each says so in its notes.
+
+## What the vectors do *not* cover
+
+The 25 files are a deliberate subset, and the source says which: "They cover
+only what is defined in this document and therefore do not provide complete or
+general CBOR test coverage" (Appendix L.1). Specifically absent:
+
+- **No vector for the 8-byte argument as a *shortest* form** except
+  `3bffffffffffffffff` (65_bit_neg.edn). Since §4.1 item 1 never states the
+  8-byte case at all (see below), nothing tests the boundary at 2^32.
+- **No vector for `0.1`** in Appendix L.2 — the document's only
+  precision-irreducible float lives in §4.1 prose and is V-0010 here. The
+  Appendix L.2 double vector (`1.7976931348623157e+308`) is irreducible for
+  *range* instead, which exercises a different branch of Appendix D's code.
+- **No map anywhere in the document has keys of differing encoded length — so
+  the corpus cannot tell the right sort order from the wrong one.** This is the
+  sharpest gap in the set, and it was measured rather than guessed, twice.
+  §5.1 item 2 goes out of its way to say which sort it is *not* ("not the same
+  as Section 3.9 of [RFC7049] / Section 4.2.3 of [STD94]", the length-first
+  order), and the sort key it names is "their deterministic encodings of the
+  map keys". Taking it at its word: the document prints **16** map encodings in
+  all, every one of them in Appendix L.2, and their keys are the integers 1, 2,
+  3 (deterministic encodings `01`, `02`, `03` — 1 byte each) and the strings
+  "abc", "def", "ghi" (`63616263`, `63646566`, `63676869` — 4 bytes each). Keys
+  of equal length make length-first sorting degenerate to its bytewise
+  tiebreak, so bytewise order and RFC 7049 length-first order agree on **all
+  16, with zero disagreements**, and both pick the same single deterministic
+  encoding for map.edn and for map_strings.edn. All 12 preferred-plus-valid map
+  encodings have equal-length keys (1 byte in map.edn, 4 in map_strings.edn);
+  so do the 4 that preferred-plus rejects. **A library that implements the
+  RFC 7049 length-first sort passes this entire test suite.**
+
+  Pass 1 reported *one* disagreement here. The verify pass could reproduce that
+  number only by sorting each key's bytes **as printed** rather than its
+  deterministic encoding, which is not what §5.1 item 2 says and not what
+  RFC 7049 §3.9 means either — §3.9 is part of Canonical CBOR, which already
+  requires the shortest form of every key. Under that other reading the one
+  encoding on which the orders differ is
+  `bf7f6161626263ff017f6264656166ff027f63676869ff03ff` (map_strings.edn), whose
+  keys are printed as indefinite-length text strings of 7, 7 and 6 bytes; it is
+  rejected by both preferred-plus and deterministic serialization anyway, for
+  its indefinite framing (§4.1 items 2 and 3). Worth keeping as the one place
+  where a naive encoder sorting raw key bytes would diverge, but it is not a
+  counterexample under the rule as written — and the corrected count makes the
+  finding stronger, not weaker: there is no map encoding in the document, valid
+  or invalid, on which the required order and the rejected order differ.
+- **No duplicate-key vector**, because the document states no duplicate-key
+  rule (see the schema README).
+- **No Unicode vector.** §9.1 lists "Varying the Unicode representation of text
+  strings" as a surviving covert channel and Appendix B raises normalization as
+  protocol-design advice, but no rule and no fixture address it.
+- **No negative-zero vector** at any width, although `-0.0` is exactly the kind
+  of value the shortening rule has to get right.
+- **No tag-2 boundary vector.** negative_bignum.edn pins the tag 3 floor at
+  nine content bytes; there is no tag 2 equivalent (the smallest positive big
+  number, 2^64, as `c249010000000000000000`).
+- **No vector anywhere near the half-precision subnormal floor — which is
+  where Appendix D is wrong.** Added by the cross-check pass. The float
+  subnormal vectors are 2^-15 (`float_half_subnormal.edn`), 2^-127
+  (`float_single_subnormal.edn`) and 2^-1074 (`float_double_subnormal.edn`);
+  none comes near 2^-24, the smallest half subnormal, which is the boundary
+  `pref_plus_single_to_half()` gets off by one (`../design-notes.md` item 17).
+  That is why every one of the 105 vectors reproduces correctly against a
+  checker that transcribes Appendix D faithfully, bug included. Two vectors
+  would close it: `h'fa33000000'` (2^-25 — must stay single, because half
+  cannot represent it) and `h'fa33800000'` (2^-24 — must narrow to
+  `h'f90001'`). An implementation that copies Appendix D passes the whole
+  corpus and silently encodes 2^-25 as zero.
+
+## Three examples in the source are not data items, and so are not vectors here
+
+Held elsewhere rather than dropped:
+
+| source | what | where it lives |
+|---|---|---|
+| §6 | the worked special-serialization specification text ("Deterministic serialization MUST be used, except that maps and arrays MUST be encoded with indefinite lengths…") | `../requirements.yaml` R-0060 … R-0062, and `../messages.yaml` under `indefinite-length-head` |
+| §8 | the two CDDL examples of `.serial` | `../schema/serial-control-operator.cddl`, verbatim |
+| App. B | the two hypothetical application-layer specifications (the birth date; the fluid level measurement) | `../requirements.yaml` R-0072 … R-0075 |
+
+Appendix D's C code is likewise an example — "Figure 1: Example C Code" — and
+is held verbatim as `../schema/pref-plus-float.c`.
+
+## Source issues these vectors expose (recorded, not repaired)
+
+1. **§3 says `0xc34100` encodes 0; it encodes −1.** (V-0008) The bullet
+   reads "Big number representation of values that are also representable using
+   major types 0 and 1 (for example, 0 can be encoded as the big number
+   0xc34100)". `0xc3` is tag **3**, the *negative* big number, whose value is
+   −1−*n*; with a content of `0x00` these bytes are −1. The positive big number
+   0 is `0xc2 0x41 0x00` or `0xc2 0x40`, and zero.edn lists exactly those two
+   (`h'c2420000'`, `h'c240'`) — never `0xc34100`. The bullet's *point* survives,
+   since −1 is also representable with a major type, but the stated value is
+   wrong. Verified by decoding.
+2. **§4.1 item 1 never states the 8-byte case.** Its enumeration stops at "65536
+   to 4294967295 … (ai = 0x1a)", yet zero.edn, three.edn, minus_twenty_five.edn
+   and map.edn all treat `1b`-headed arguments as general-only. §9.1 counts five
+   argument widths; §4.1 rules out three explicitly and the fourth only by
+   implication from its opening sentence.
+3. **float_nan_payload.edn cannot drive the encode test.** Its
+   `edn-representations` list is empty — "there is no EDN representation for
+   that" — but Appendix L.1.1's encode test takes the EDN as its input. The
+   fixture is decode-side and check-side only. Not a contradiction, but a hole
+   in the test matrix the document describes.
+4. **`deterministic-serialization` is singular where its four siblings are
+   plural**, in Table 3 and in every file's key name, yet it holds an array
+   everywhere. Cosmetic.
+5. **The `.edn` files are EDN, not JSON**, despite JSON-shaped bodies — they
+   carry `h''` byte-string literals. The extension says so; the appendix never
+   does.
+6. **Table 1's bytes are split across table-cell lines**, which is a rendering
+   artefact of the text version rather than a defect, but it is the only place
+   in the document where a byte string cannot be lifted contiguously.
+
+## Using the file
+
+Each vector is self-contained: `hex` is the input, `decoded` says what it
+means, `conformance` says what each of the three serializations does with it.
+For the four test procedures the document defines — encode (L.1.1), decode
+(L.1.2), checking decoder (L.1.3), non-checking decoder (L.1.4) — see
+`../schema/serialization-check.derived.pseudocode.txt`, Part 3, which renders
+them as procedure.
+
+One caution carried from Appendix L.1.1: for the **encode** test the pass
+condition is "produces **any** of the encoded representations given in the
+example for that serialization type". For preferred-plus with maps that is
+genuinely plural — map.edn admits six outputs — so an encode test must compare
+against the set of vectors whose `conformance.preferred_plus` is `valid` for
+that example, not against a single expected string. Under deterministic
+serialization the set is a singleton, which is the whole point of the mode.
+
+The upstream fixtures are also published as individual files at
+`https://github.com/cbor-wg/draft-ietf-cbor-serialization/tree/main/examples`
+(`[Examples-Repo]` in the source). Those were **not** fetched; every vector here
+comes from the draft text itself.

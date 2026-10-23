@@ -1,0 +1,142 @@
+; rfc-9964 - the AKP thumbprint inputs, COSE and JOSE
+;
+; DERIVED - not verbatim. RFC 9964 states these two parameter sets as bullet
+; lists in prose (section 6) and ships no grammar of any kind. The bullet lists
+; themselves are reproduced byte-for-byte in akp-source-renderings.txt. Do not
+; cite this file as RFC 9964's grammar.
+;
+; Built from: section 6 (lines 240-279), section 3 (103-121). The structures it
+; describes are those RFC 9679 section 3 hashes and RFC 7638 section 3 hashes.
+;
+; THIS IS THE FILE THE RECORD EXISTS FOR. RFC 9679 section 4.6 delegates the
+; required-parameter set to each key type's defining specification; RFC 9964
+; section 6 is the one specification that takes the delegation up, and it is the
+; only defined COSE Key Thumbprint whose required set contains `alg`.
+;
+; Prelude names used (RFC 8610 Appendix D): int, bstr, tstr.
+
+; ---------------------------------------------------------------------------
+; 1. The COSE Key Thumbprint input
+; ---------------------------------------------------------------------------
+;
+; Section 6, verbatim bullets:
+;
+;   *  "kty" (label: 1, data type: int, value: 7)
+;   *  "alg" (label: 3, data type: int, value: int)
+;   *  "pub" (label: -1, value: bstr)
+;
+; The map is CLOSED. That is the whole content of "the required parameters for
+; AKPs are" read against RFC 9679 section 3 step 1, which builds a COSE_Key
+; containing only the required parameters: a fourth entry is not a thumbprint
+; input, it is a different document's digest.
+;
+; `pub`'s data type is the one bullet section 6 states without a "data type:"
+; label - it gives `value: bstr` where the other two give `data type:`. Read as
+; bstr; the IANA row (section 8.1.3.1, "CBOR Type: bstr") agrees.
+
+AKP-COSE-Key-Thumbprint-Input = {
+  1 => 7,                         ; kty, int, fixed at 7
+  3 => int,                       ; alg, int - THE ENTRY NO OTHER KEY TYPE HAS
+  -1 => bstr,                     ; pub
+}
+
+; The three sets this document registers code points for (section 8.1.1).
+ML-DSA-44-Thumbprint-Input = { 1 => 7, 3 => -48, -1 => bstr .size 1312 }
+ML-DSA-65-Thumbprint-Input = { 1 => 7, 3 => -49, -1 => bstr .size 1952 }
+ML-DSA-87-Thumbprint-Input = { 1 => 7, 3 => -50, -1 => bstr .size 2592 }
+
+ML-DSA-Thumbprint-Input =
+    ML-DSA-44-Thumbprint-Input
+  / ML-DSA-65-Thumbprint-Input
+  / ML-DSA-87-Thumbprint-Input
+
+; ---------------------------------------------------------------------------
+; 2. The JWK Thumbprint input
+; ---------------------------------------------------------------------------
+;
+; Section 6 gives a second set, for RFC 7638, as member NAMES rather than
+; labels, plus an explicit ordering:
+;
+;   *  "kty"   *  "alg"   *  "pub"
+;   Their lexicographic order, per Section 3.3 of [RFC7638], is:
+;   *  "alg"   *  "kty"   *  "pub"
+;
+; CDDL over a JSON object is a rendering convenience, not the hashed artifact:
+; RFC 7638 hashes a UTF-8 JSON string with no whitespace and members in
+; lexicographic order. That order is NOT expressible in CDDL (see section 4).
+; The exact byte sequence is in akp-parameters.derived.json and the three
+; worked instances are in ../examples/vectors.yaml.
+
+AKP-JWK-Thumbprint-Input = {
+  "alg" => tstr,                  ; first in lexicographic order
+  "kty" => "AKP",
+  "pub" => tstr,                  ; base64url, no padding (section 3)
+}
+
+; ---------------------------------------------------------------------------
+; 3. The consequence, stated so it cannot be read past
+; ---------------------------------------------------------------------------
+;
+; `alg` is inside AKP-COSE-Key-Thumbprint-Input. For every key type RFC 9679
+; section 4.1-4.5 defines it is outside, because section 5.1 excludes optional
+; parameters and `alg` is optional for those types. RFC 9964 section 3 makes it
+; REQUIRED here - "The alg JSON Web Key (JWK) parameter or COSE Key Common
+; parameter is REQUIRED for all AKP keys" - so section 5.1 cannot drop it, and
+; section 6 states the set outright so no derivation is needed.
+;
+; [analysis] Therefore one byte-identical `pub` under two of the three
+; registered algorithms yields two unrelated 32-octet digests. The library has
+; measured this on the document's own 1312-byte ML-DSA-44 key:
+;
+;   {1:7, 3:-48, -1:<that pub>} -> b8969ab4...d3a8059a  (printed by RFC 9964
+;                                                        as the kid of Figure 6)
+;   {1:7, 3:-49, -1:<that pub>} -> f507c417...f187315d  (computed here)
+;   {1:7, 3:-50, -1:<that pub>} -> de68d5ec...e128f62b  (computed here)
+;
+; Full values, with the printed/computed distinction kept, in
+; ../examples/vectors.yaml V-0007, V-0010 and V-0011.
+;
+; Why the document is not being gratuitous: AKP has no `crv`, and section 3 says
+; "The parameters for public and private information classes contain byte
+; strings in a format specified by the alg value." Without `alg` a `pub` has no
+; defined interpretation, so there is no unambiguous COSE Key representation to
+; digest. The requirement follows from the key type having no other
+; discriminator.
+
+; ---------------------------------------------------------------------------
+; 4. What this grammar deliberately does NOT constrain
+; ---------------------------------------------------------------------------
+;
+; (a) BYTE ORDER AND ENCODING DETERMINISM - the properties that actually define
+;     a thumbprint input. RFC 9679 section 3 step 2 requires RFC 8949 section
+;     4.2.1 deterministic encoding; CDDL describes maps as unordered sets of
+;     entries and cannot express either rule. Validating a byte string against
+;     AKP-COSE-Key-Thumbprint-Input therefore does NOT establish that it is a
+;     well-formed thumbprint input. The rules live in
+;     akp-parameters.derived.json.
+;
+;     For these three sets the order is 1, 3, -1 - encoded 0x01, 0x03, 0x20 -
+;     which section 4.2.1's bytewise order and section 4.2.3's length-first
+;     order agree on, every label being one octet. Measured: the whole input is
+;     `a3 01 07 03 38 2f 20 59 05 20 <1312 bytes>` for ML-DSA-44 - map(3), 1,
+;     7, 3, -48, -1, bstr(1312) - 1322 bytes in all.
+;
+; (b) THE HASH FUNCTION. Neither set names one. RFC 9679 section 3 step 3 takes
+;     a hash function as a parameter; the one registered confirmation method
+;     (RFC 9679 section 8) is SHA-256 and the Appendix A kid values reproduce
+;     under SHA-256. RFC 9964 itself never writes "SHA-256".
+;
+; (c) WHETHER `pub` IS A VALID KEY. See akp-key.derived.cddl section 4(c). A
+;     `.size`-conforming bstr of the right length is accepted here and may be
+;     cryptographic nonsense; RFC 9679 section 7's uniqueness argument assumes
+;     a valid key and section 7.3 of RFC 9964 requires the validation that
+;     establishes it.
+;
+; (d) THE OUTPUT ENCODING. RFC 7638's thumbprint is base64url-encoded without
+;     padding when written as a `kid`; the COSE thumbprint is a bare 32-octet
+;     bstr. Neither is a structure, so neither has a rule here.
+;
+; (e) THAT THE TWO INPUTS AGREE. They do not, and cannot: one hashes JSON text
+;     with base64url `pub`, the other hashes CBOR with a raw `pub`. The same key
+;     has two different thumbprints, both printed by this document as `kid`.
+;     Measured for all three parameter sets in ../examples/vectors.yaml V-0012.

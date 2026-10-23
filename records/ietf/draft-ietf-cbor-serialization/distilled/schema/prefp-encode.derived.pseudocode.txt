@@ -1,0 +1,353 @@
+=====================================================================
+prefp-encode.derived.pseudocode.txt
+
+DERIVED - not verbatim.  draft-ietf-cbor-serialization-08 states its
+encoder requirements as two numbered prose lists (Section 4.1, five
+rules; Section 5.1, two rules) and gives no procedure for them.  The
+one exception is Appendix D, the C conversion code, which covers float
+width and nothing else and is held verbatim beside this file as
+pref-plus-float.c.  Everything below was written for this record and
+must never be quoted as the draft's own algorithm.
+
+Derived from draft-ietf-cbor-serialization-08:
+  Section 4.1   the five preferred-plus encoder requirements
+  Section 5.1   deterministic = 4.1 plus sorted map keys
+  Section 4.4   what preferred-plus changes relative to RFC 8949
+                preferred serialization
+  Appendix C.4  NaN equivalence, and that it does NOT apply to sorting
+  Appendix D    the float width conversion, as called below
+  Appendix E/G  the unified integer space, and library strategies for it
+  Appendix F    the CDDL, and what it cannot say
+and, for the frame, RFC 8949 (STD 94) Sections 3, 3.1-3.4 and 4.2.1.
+
+NOTATION.  `||` is byte concatenation.  `b[i]` is a byte.  MUST / MUST
+NOT / SHOULD in capitals inside a step are quoted from the draft; the
+locator is in the comment on the same line.  `fail(...)` means the
+encoder refuses the input - the draft permits refusal only where it
+says so, and those places are marked.
+=====================================================================
+
+PROFILES
+--------
+  general        every encoding RFC 8949 Section 3 standardizes
+                 (Section 3 of this draft names the set; this file does
+                 not implement it - there is nothing to decide)
+  prefp          preferred-plus serialization            (Section 4)
+  dtrm           deterministic serialization             (Section 5)
+
+  dtrm = prefp + MAP_SORT.  Section 5.2: "deterministic encoding imposes
+  no requirements over and above the requirements for decoding
+  preferred-plus serialization" - the difference is entirely on the
+  encoder, and entirely about maps.  Section 5.3.2: "The only difference
+  between preferred-plus and deterministic serialization is that in
+  deterministic serialization, maps are required to be sorted by their
+  keys."
+
+
+ENCODE_HEAD(mt, argument) -> bytes                       [Section 4.1 r1]
+-------------------------------------------------------------------
+  mt is 0..7.  argument is the unsigned number the head carries: the
+  value itself for major type 0; n where the value is -1-n for major
+  type 1; the content length for major types 2 and 3; the number of
+  entries for 4 and 5; the tag number for 6.
+
+  1  if argument <= 23        return byte(mt<<5 | argument)
+  2  if argument <= 255       return byte(mt<<5 | 24) || u8(argument)
+  3  if argument <= 65535     return byte(mt<<5 | 25) || u16be(argument)
+  4  if argument <= 4294967295
+                              return byte(mt<<5 | 26) || u32be(argument)
+  5  if argument <= 18446744073709551615
+                              return byte(mt<<5 | 27) || u64be(argument)
+  6  fail("argument out of range")
+
+  Steps 1-4 are the draft's four bullets verbatim in effect: "0 to 23
+  and -1 to -24 MUST be encoded in the same byte as the major type",
+  "24 to 255 and -25 to -256 ... only with an additional byte (ai =
+  0x18)", "256 to 65535 ... (ai = 0x19)", "65536 to 4294967295 ... (ai =
+  0x1a)".
+
+  STEP 5 IS OURS.  The draft's enumeration stops at the four-byte form
+  and never states the eight-byte case, although its own Appendix L.2
+  vectors treat h'1b00000000000000NN' as general-only.  Step 5 is the
+  only reading consistent with the rule's opening sentence, "The
+  shortest-form of the CBOR argument must be used for all major types".
+  Recorded as a gap in the source; not repaired there.
+
+  This procedure never emits ai = 31.  Sections 4.1 r2 and r3 remove
+  every indefinite-length form, so there is no streaming entry point in
+  this encoder at all - which is the whole of the difference between
+  this and RFC 8949 preferred serialization for strings, arrays and
+  maps ("Definite lengths are a requirement, not a preference",
+  Section 4.4).
+
+
+ENCODE(value, profile) -> bytes
+-------------------------------------------------------------------
+  dispatch on the data-model type of `value`:
+
+    integer (see ENCODE_INTEGER - big numbers are integers here)
+    byte string          -> ENCODE_BSTR
+    text string          -> ENCODE_TSTR
+    array                -> ENCODE_ARRAY
+    map                  -> ENCODE_MAP
+    tagged value         -> ENCODE_TAGGED
+    simple value         -> ENCODE_SIMPLE
+    floating-point       -> ENCODE_FLOAT
+
+
+ENCODE_INTEGER(n, profile) -> bytes                      [Section 4.1 r5]
+-------------------------------------------------------------------
+  The draft has ONE integer type.  Tags 2 and 3 are not a separate data
+  type: Appendix E, "the text in Section 3.4.3 of [STD94] ... defines
+  these encodings to be equivalent rather than distinct", and Section 7
+  forbids any future tag from doing the same thing again.  So this
+  procedure, not the caller, decides between major types 0/1 and the
+  big number tags.
+
+  1  if 0 <= n <= 18446744073709551615             ; 2^64-1
+       return ENCODE_HEAD(0, n)
+  2  if -18446744073709551616 <= n <= -1           ; -2^64 .. -1
+       return ENCODE_HEAD(1, -1 - n)
+  3  ; beyond major types 0 and 1 - a big number is now required
+     if n > 0  then tag := 2 ; magnitude := n
+               else tag := 3 ; magnitude := -1 - n
+  4  content := minimal_be_bytes(magnitude)        ; no leading 0x00
+  5  return ENCODE_HEAD(6, tag) || ENCODE_HEAD(2, len(content)) || content
+
+  Steps 1 and 2 are "If a value can be encoded using major type 0 or 1,
+  then it MUST be encoded with major type 0 or 1, never as a big
+  number."  Step 4 is "Leading zeros MUST NOT be encoded."  Section 5
+  repeats both for determinism: "any big number that can be represented
+  as an integer must be encoded as an integer.  This rule is inherited
+  from preferred-plus serialization."
+
+  CONSEQUENCE WORTH STATING, because the draft never does and its own
+  CDDL gets it wrong: after step 4, len(content) >= 9 always.  Steps 1
+  and 2 have already absorbed everything up to 2^64-1 in magnitude, and
+  a minimal big-endian encoding of a magnitude of 2^64 or more needs 9
+  bytes or more.  Appendix F's `bnbstr = bstr .size (8..bnmax)` admits
+  8, which no output of this procedure can be.  See bignums.cddl.
+
+  minimal_be_bytes(0) = the empty byte string.  This encoder never
+  reaches it (step 1 catches 0), but a *decoder* must accept it:
+  Section 4.2 r5, "An empty byte string MUST be accepted and treated as
+  the value zero."  That asymmetry - encoders never produce it,
+  decoders must accept it - is one of the three differences from RFC
+  8949 preferred serialization listed in Section 4.4.
+
+
+ENCODE_BSTR(b, profile) -> bytes                         [Section 4.1 r3]
+ENCODE_TSTR(s, profile) -> bytes
+-------------------------------------------------------------------
+  1  bytes := b (for text: the UTF-8 encoding of s)
+  2  return ENCODE_HEAD(2 or 3, len(bytes)) || bytes
+
+  "If text or byte strings are encoded, they MUST use definite-length
+  encoding (never indefinite-length)."  There is no chunking branch.
+
+  NOT CONSTRAINED HERE, and the draft says so where it matters: the
+  Unicode form of the text.  Appendix B - "deterministic CBOR protocol
+  designers should be mindful of variability in Unicode text, as some
+  characters can be encoded in multiple ways" - is advice to the
+  protocol designer, not a normalization requirement on the encoder.
+  Section 9.1 lists "Varying the Unicode representation of text strings"
+  as a covert channel that survives both of this draft's serializations.
+  Contrast draft-mcnally-deterministic-cbor, which does require NFC.
+
+
+ENCODE_ARRAY(items, profile) -> bytes                    [Section 4.1 r2]
+-------------------------------------------------------------------
+  1  out := ENCODE_HEAD(4, count(items))
+  2  for each item in items, in the array's own order:
+       out := out || ENCODE(item, profile)
+  3  return out
+
+  "If maps or arrays are encoded, they MUST use definite-length encoding
+  (never indefinite-length)."  Array order is the array's own and is
+  never sorted: an array is a sequence in the data model, so it carries
+  no ordering freedom to remove.
+
+
+ENCODE_MAP(entries, profile) -> bytes            [Section 4.1 r2, 5.1 r2]
+-------------------------------------------------------------------
+  1  encoded := [ (ENCODE(k, profile), ENCODE(v, profile))
+                  for (k, v) in entries ]
+  2  if profile = dtrm:
+       sort `encoded` by its first component, using BYTEWISE_LT below,
+       over the WHOLE encoded key - head and content together
+  3  out := ENCODE_HEAD(5, count(encoded))
+  4  for each (ek, ev) in encoded:  out := out || ek || ev
+  5  return out
+
+  Step 2 is Section 5.1 rule 2 in full: "If a map is encoded, the items
+  in it MUST be sorted in the bytewise lexicographic order of their
+  deterministic encodings of the map keys."  The draft adds, in the same
+  rule, which sort this is NOT: "(Note that this is the same as the
+  sorting in Section 4.2.1 of [STD94] and not the same as Section 3.9 of
+  [RFC7049] / Section 4.2.3 of [STD94].)"  The rejected one is the old
+  Canonical CBOR length-first order - shorter encodings first, ties
+  broken bytewise.  Getting this wrong is silent: the two orders agree
+  on every map whose keys all encode to the same length, which includes
+  the draft's own two map vectors, and diverge only when key lengths
+  differ.
+
+  Note the phrase "their deterministic encodings".  The key is sorted
+  as the bytes THIS procedure produces for it, so the sort is defined
+  over canonical encodings, not over whatever bytes a key may have
+  arrived in.  Appendix C.4 draws the line on the other side for floats:
+  "this equivalence does not apply to map sorting.  Sorting operates on
+  the fully encoded and serialized representation, not on the abstract
+  data model."  A half-precision key and a double-precision key that are
+  the same value are duplicates (so one of them must go - C.4, "A map key
+  encoded as half-precision MUST be considered a duplicate of one encoded
+  as double-precision"), but they are not thereby equal for sorting: by
+  the time sorting happens, the surviving key has one encoding, and that
+  is what is compared.
+
+  Step 2 is skipped entirely for prefp.  Section 5.3.2 explains the
+  split: "Preferred-plus serialization exists as a separate mode solely
+  because map sorting can be too expensive in some constrained
+  environments."
+
+  WHAT NEITHER PROFILE DOES.  Duplicate key detection is not in this
+  draft at all - no rule in Section 4.1 or 5.1 mentions it, and the
+  only sentence touching duplicates is Appendix C.4's float equivalence.
+  Nor is it inherited: RFC 8949 Section 4.2.1's duplicate prohibition is
+  not restated here.  An implementation that needs it must say so
+  itself.  Recorded as an omission.
+
+
+ENCODE_TAGGED(tag, content, profile) -> bytes
+-------------------------------------------------------------------
+  1  if tag is 2 or 3: this is an integer, not a tagged value -
+       route to ENCODE_INTEGER on the value the tag denotes
+  2  return ENCODE_HEAD(6, tag) || ENCODE(content, profile)
+
+  The tag number is an argument and goes through ENCODE_HEAD, so it is
+  shortest-form like everything else - which is what makes the draft's
+  h'd8011a69e4fbd3' (Appendix L.2, date_epoch_tag.edn) general-only.
+  The profile reaches through the tag into the content: the same example
+  notes "The tag content in this example does vary by serialization
+  type."
+
+  IT DOES NOT REACH THROUGH A BYTE STRING.  Section 8: the scope of
+  .serial "does not extend into byte strings or other data items that
+  happen to contain encoded CBOR.  Every instance of embedded CBOR that
+  requires specific serialization must specify it explicitly."  Appendix
+  K.2, for COSE: "determinism requirements do not extend into CBOR
+  inside of byte strings.  Once CBOR data is wrapped in a byte string,
+  its internal encoding is treated as opaque."  So a tag 24 payload, a
+  COSE protected header bucket and a COSE payload each carry their own
+  profile, chosen by whoever defined them.
+
+
+ENCODE_SIMPLE(v, profile) -> bytes
+-------------------------------------------------------------------
+  1  if v <= 23   return byte(0xE0 | v)
+  2  if v >= 32   return byte(0xF8) || u8(v)
+  3  fail("simple values 24..31 are not well-formed")   ; RFC 8949 3.3
+
+  Step 3 is RFC 8949's, not this draft's.  Section 4.1 rule 1 read
+  literally ("24 to 255 ... MUST be encoded only with an additional
+  byte") would put 24..31 in the two-byte form, which RFC 8949 Section
+  3.3 forbids outright.  The draft never mentions the exception.
+  Recorded; see prefp-head.derived.abnf.
+
+  No simple value is otherwise restricted.  Appendix L.2's simple111.edn
+  ships h'f86f' as both a preferred-plus and a deterministic vector, and
+  `undefined` (0xf7) is nowhere excluded.
+
+
+ENCODE_FLOAT(f, profile) -> bytes                        [Section 4.1 r4]
+-------------------------------------------------------------------
+  1  if is_nan(f):
+       if is_signaling(f) or payload(f) != 0 or signbit(f):
+         ; a non-trivial NaN, Appendix C.1's definition
+         EITHER fail("non-trivial NaN")                  ; permitted
+         OR     f := the canonical quiet NaN             ; permitted
+       return h'f9' || h'7e00'
+  2  ; f is finite or an infinity
+     if width(f) = 64:
+       s := pref_plus_double_to_single(bits64(f))        ; Appendix D
+       if s != -1 then f := single_from_bits(s)
+  3  if width(f) = 32:
+       h := pref_plus_single_to_half(bits32(f))          ; Appendix D
+       if h != -1 then f := half_from_bits(h)
+  4  emit h'f9' || u16be(bits16(f))   if width(f) = 16
+       or h'fa' || u32be(bits32(f))   if width(f) = 32
+       or h'fb' || u64be(bits64(f))   if width(f) = 64
+
+  Step 1 is Section 4.1 rule 4 bullet 3: "Encoders MUST NOT output any
+  NaN other than the half-precision NaN 0xf9 0x7e 0x00 (sign bit clear,
+  most significant significand bit set, all remaining significand bits
+  clear).  When a signaling NaN, a NaN with a non-zero payload, or a NaN
+  with the sign bit set is presented to an application or library for
+  encoding, the encoder MUST either reject it or encode it as 0xf9 0x7e
+  0x00."  The choice between rejecting and flattening is the
+  implementation's; both are conforming.  The consequence, stated in the
+  same bullet: "the floating-point values that can be encoded are the
+  finite numbers, positive and negative infinity, and a single NaN."
+
+  Steps 2 and 3 are rule 4 bullet 2, "Values MUST be encoded in the
+  shortest of double, single or half-precision that preserves
+  precision", run exactly as Appendix D instructs: "If the input is a
+  double, pref_plus_double_to_single() must be called first; if it
+  succeeds, pref_plus_single_to_half() is then called".  A -1 return
+  means the narrowing would lose precision or overflow, so the wider
+  width stands.  Subnormals narrow like anything else: "Subnormal
+  numbers MUST be supported in this shortest-length encoding" - and the
+  draft ships one vector per width to prove it (float_half_subnormal,
+  float_single_subnormal, float_double_subnormal in Appendix L.2).
+
+  Infinity falls out of steps 2-3 without a special case: both Appendix
+  D functions narrow it (the `mant == 0` branch under the all-ones
+  exponent), so +/-Infinity always reaches half and h'f9fc00' is the
+  only conforming encoding of -Infinity.  Zero likewise, via the
+  `exp == *_ZERO_SUBNORM_EXP, mant == 0` branch: "0.0 can always be
+  reduced to half-precision so it MUST be encoded as 0xf90000".
+
+  Half-precision is not optional on this side: "Half-precision MUST be
+  supported" (rule 4 bullet 1).  Nor is the draft's float handling a
+  departure from RFC 8949 except in one place: "Aside from the
+  requirement allowing only the half-precision quiet NaN, these are the
+  same floating-point requirements as Section 4.1 of [STD94] and also as
+  Section 4.2.1 of [STD94]."
+
+  NOT A FLOAT QUESTION, BUT ADJACENT: nothing here converts between the
+  integer and float data types.  A value of 2 presented as a float is
+  encoded as a float.  Appendix B holds this out as a *protocol* design
+  problem - "the number 2 can be represented as an integer, float, big
+  number, decimal fraction and other ... Most protocols designs will
+  just specify one number type" - and points at
+  [I-D.mcnally-deterministic-cbor]'s numeric reduction for the other
+  choice.  This draft deliberately does not take it.
+
+
+BYTEWISE_LT(a, b) -> boolean                             [Section 5.1 r2]
+-------------------------------------------------------------------
+  The exact comparison, spelled out because "bytewise lexicographic" is
+  the thing implementations get wrong.
+
+  1  n := min(len(a), len(b))
+  2  for i in 0 .. n-1:
+       if a[i] != b[i]:  return a[i] < b[i]      ; UNSIGNED byte compare
+  3  return len(a) < len(b)
+
+  Step 2 compares bytes as unsigned 0..255.  A signed-char comparison in
+  C reverses the order of every byte >= 0x80, which silently mis-sorts
+  every map with a key whose encoding reaches the top half of the byte
+  range - text keys outside ASCII, most byte strings, and every negative
+  integer key (major type 1 heads start at 0x20 but 0x38-0x3b arguments
+  commonly exceed 0x7f).
+
+  Step 3 cannot be reached for two distinct CBOR keys: a well-formed
+  encoded data item is never a proper prefix of another well-formed
+  encoded data item, because each head fixes the length of everything
+  that follows it.  It is written anyway, so that the comparator is
+  total, and because reaching it means the two keys are equal, which is
+  a duplicate-key condition the caller may want to notice.
+
+  NOT length-first.  Sorting shorter encodings before longer ones and
+  breaking ties bytewise is RFC 7049 Section 3.9 / RFC 8949 Section
+  4.2.3, which Section 5.1 explicitly names as the sort this is not.
+=====================================================================

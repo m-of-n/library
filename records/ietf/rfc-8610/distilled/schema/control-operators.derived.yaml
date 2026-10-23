@@ -1,0 +1,368 @@
+# =====================================================================
+# control-operators.derived.yaml
+#
+# DERIVED -- NOT verbatim. This table is this library's rendering, not
+# RFC 8610's. Do not cite it as the standard's text. Every `quote` field
+# below IS the source's own wording, marked as such; everything else
+# (the target/controller admissibility fields, the predicate forms, the
+# `grammar_gap` notes) is ours, written from the prose in Section 3.8.
+#
+# Why it exists: RFC 8610 ships a grammar for control SYNTAX
+# (`type1 = type2 [S (rangeop / ctlop) S type2]`, `ctlop = "." id`) and
+# nothing at all for control SEMANTICS. Which operators exist, what each
+# one's target and controller may be, and what each one means are given
+# only in prose. A tool needs them as data.
+#
+# Source: RFC 8610, Section 3.8 (and Section 6.1 for the registry),
+#   cached source sha256
+#   3713f2a50e23a2bea0a6147ad6c4433605a00c3d00a868bfa86a42b204997089
+# =====================================================================
+record: rfc-8610
+artifact: control-operators
+claim: derived
+reviewed_by: ""
+
+syntax:
+  form: "target .control-operator controller"
+  locator: "§3.8"
+  grammar: 'type1 = type2 [S (rangeop / ctlop) S type2]   ;  ctlop = "." id'
+  quote: >-
+    The syntax for a control type is "target .control-operator
+    controller", where control operators are special identifiers prefixed
+    by a dot. (Note that _target_ or _controller_ might need to be
+    parenthesized.)
+  non_associative: true
+  non_associative_note: >-
+    OURS. The grammar admits at most ONE rangeop-or-ctlop per `type1`, so
+    controls do not chain: `number .gt 0 .default 1` does not parse. The
+    source never says this, but it demonstrates it -- the §3.8.6 example
+    is written `(number .gt 0) .default 1`. Table 1 gives `.ctrl` a
+    precedence (7), which implies a chaining that the grammar forbids.
+  extension_point:
+    locator: "§3.8, §6.1"
+    quote: >-
+      Further control operators may be defined by new versions of this
+      specification or by registering them according to the procedures in
+      Section 6.1.
+    registry: "CDDL Control Operators (within the Concise Data Definition Language (CDDL) registry)"
+    name_syntax: "leading dot followed by a text string conforming to the production \"id\" in Appendix B"
+    policy_no_internal_dot: "Specification Required (RFC 8126; involves an Expert Review)"
+    policy_internal_dot: "IETF Review"
+    policy_note: >-
+      §6.1 instructs the expert reviewer that other SDOs may want to define
+      control operators specific to their fields and that "the review
+      process should strive to facilitate such an undertaking".
+    # [correction] 2026-10-19, found by the rfc-9741 extraction (library#39
+    # Tier 2) — which is precisely what rfc-8610's gate existed to catch.
+    #
+    # This key previously read: "All names other than the fourteen below are
+    # Unassigned." That sentence was OURS, not RFC 8610's, and it is FALSE as
+    # a statement of registry state. RFC 9741 §1 says verbatim: "RFCs have
+    # added to this extension point in both an application-specific [RFC9090]
+    # and a more general [RFC9165] way." RFC 9741 §4 then registers 14 more.
+    # So the registry holds AT LEAST 28 and strictly more than that.
+    #
+    # The fourteen below remain exactly right as "the operators RFC 8610
+    # itself defines", which is what this file is an extraction OF. Only the
+    # claim about everything else was wrong. `counts.operators: 14` is to be
+    # read the same way, and `grammar-gaps.derived.txt`'s G-11, headed
+    # "§3.8 (all fourteen operators)", means RFC 8610's fourteen.
+    # [correction] 2026-10-20, rfc-9741 pass 2 (verify). The sentence this key
+    # ended with — "None of the 44 side conditions in grammar-gaps.derived.txt
+    # is closed by any of them" — was itself FALSE, and was written here by the
+    # rfc-9741 extraction (commit 9adcb8d) before rfc-9165 had been extracted
+    # (commit 56bb0b8). RFC 9741 closes none of the 44; RFC 9165 closes ONE,
+    # PARTIALLY. Scoped correctly below. A pass that corrects a profile: full
+    # record is not thereby licensed to assert anything about documents it did
+    # not read, which is the lesson of the first correction repeated.
+    registry_state_is_not_rfc_8610: >-
+      This file is an extraction of RFC 8610 and states what RFC 8610 defines.
+      For current registry state, read records/ietf/rfc-9741 (14 more
+      operators, Specification Required / IETF Review) together with
+      rfc-9165 and rfc-9090, which RFC 9741 §1 names as earlier additions.
+      Of the 44 side conditions in grammar-gaps.derived.txt, RFC 9741 closes
+      NONE (it adds 10 of its own, N-01..N-10, in that record's
+      control-operators.derived.yaml). G-35 — case insensitivity in text
+      strings — is PARTIALLY CLOSED by rfc-9165, whose `.abnf` controllers are
+      case-insensitive by default because RFC 9165 §1.1 brings RFC 7405 into
+      scope and in RFC 5234 a quoted string is case-insensitive unless marked
+      %s; see records/ietf/rfc-9165. That is the only one of the 44 any of
+      these documents closes, and rfc-9090 was not read by either pass.
+
+operators:
+  - name: ".size"
+    locator: "§3.8.1"
+    iana_initial_entry: true
+    target: "text string, byte string, or unsigned integer"
+    controller: "a type of unsigned integers (a single value or a range, e.g. `(1..63)`)"
+    predicate: >-
+      OURS. For tstr/bstr: len_in_bytes(target) is a member of the
+      controller type. For uint: target is a member of 0...(256**N) where N
+      is the controller value -- i.e. an exclusive upper bound.
+    quote: >-
+      A ".size" control controls the size of the target in bytes by the
+      control type. The control is defined for text and byte strings, where
+      it directly controls the number of bytes in the string. It is also
+      defined for unsigned integers (see below). [...] In other words,
+      "uint .size N" is equivalent to "0...BYTES_N", where
+      BYTES_N == 256**N.
+    not_a_representation_constraint:
+      quote: >-
+        Note that, as with value restrictions in CDDL, this control is not a
+        representation constraint; a number that fits into fewer bytes can
+        still be represented in that form, and an inefficient implementation
+        could use a longer form (unless that is restricted by some format
+        constraints outside of CDDL, such as the rules in Section 3.9 of
+        [RFC7049]).
+    grammar_gap: >-
+      Nothing in the grammar restricts `.size` to those three target types,
+      and nothing makes the controller a uint. `tstr .size "x"` parses.
+
+  - name: ".bits"
+    locator: "§3.8.2"
+    iana_initial_entry: true
+    target: "byte string or unsigned integer"
+    controller: "a type of bit numbers (typically a `&(...)` enumeration, optionally in a type choice with a range)"
+    predicate: >-
+      OURS. For bstr `str`: for every n with
+      (str[n >> 3] & (1 << (n & 7))) != 0, n must be a member of the
+      controller type. For uint `i`: for every n with (i & (1 << n)) != 0,
+      n must be a member of the controller type.
+    quote: >-
+      A ".bits" control on a byte string indicates that, in the target, only
+      the bits numbered by a number in the control type are allowed to be
+      set. (Bits are counted the usual way, bit number "n" being set in
+      "str" meaning that "(str[n >> 3] & (1 << (n & 7))) != 0".) Similarly,
+      a ".bits" control on an unsigned integer "i" indicates that for all
+      unsigned integers "n" where "(i & (1 << n)) != 0", "n" must be in the
+      control type.
+    grammar_gap: >-
+      `.bits` says nothing about LENGTH. The source makes the point itself
+      about Figure 10: "a valid all-clear instance of flag bytes could be
+      "h''" or "h'00'" or even "h'000000'" as well." Pair it with `.size`
+      if a length is meant.
+
+  - name: ".regexp"
+    locator: "§3.8.3"
+    iana_initial_entry: true
+    target: "text string"
+    controller: "a text string value holding an XSD regular expression"
+    predicate: >-
+      OURS. target matches, in the XSD sense (W3C REC-xmlschema-2-20041028
+      Appendix F), the regular expression that is the controller's single
+      text value. XSD match is anchored (whole-string), unlike PCRE search.
+    quote: >-
+      A ".regexp" control indicates that the text string given as a target
+      needs to match the XML Schema Definition (XSD) regular expression
+      given as a value in the control type. XSD regular expressions are
+      defined in Appendix F of [W3C.REC-xmlschema-2-20041028].
+    two_levels_of_escaping:
+      quote: >-
+        Note that XSD regular expressions do not support the usual \x or \u
+        escapes for hexadecimal expression of bytes or Unicode code points.
+        However, in CDDL the XSD regular expressions are contained in text
+        strings, the literal notation for which provides \u escapes; this
+        should suffice for most applications that use regular expressions
+        for text strings. (Note that this also means that there is one level
+        of string escaping before the XSD escaping rules are applied.)
+    carries_the_documents_only_own_bcp14_keyword: true
+    bcp14_quote: >-
+      Similar considerations apply to Unicode character classes; where these
+      are used, the specification that employs CDDL SHOULD identify which
+      Unicode versions are addressed.
+    surprises:
+      - "no direct support for case insensitivity; it must be written out, as in \"[Cc][Aa][Ss][Ee]\""
+      - "\\w and \\d are based on Unicode character properties, 'often not what is desired in an ASCII-based protocol'"
+      - "\\s and \\S do have their more conventional meanings"
+      - "\".\" matches any character but the line-ending characters \\r or \\n"
+      - "XSD supports character class subtraction, 'a feature often not found in regular expression libraries'"
+    flavour_note:
+      quote: >-
+        There are many flavors of regular expression in use in the
+        programming community. For instance, Perl-Compatible Regular
+        Expressions (PCREs) are widely used and probably are more useful
+        than XSD regular expressions. However, there is no normative
+        reference for PCREs that could be used in the present document.
+        Instead, we opt for XSD regular expressions for now.
+
+  - name: ".cbor"
+    locator: "§3.8.4"
+    iana_initial_entry: true
+    target: "byte string"
+    controller: "any type"
+    predicate: >-
+      OURS. decode_cbor(target) is well-formed and matches the controller
+      type. The source says nothing about what happens when the bytes are
+      not well-formed CBOR, nor whether trailing bytes are permitted.
+    quote: >-
+      A ".cbor" control on a byte string indicates that the byte string
+      carries a CBOR-encoded data item. Decoded, the data item matches the
+      type given as the right-hand-side argument (type1 in the following
+      example).
+    example: '"bytes .cbor type1"'
+
+  - name: ".cborseq"
+    locator: "§3.8.4"
+    iana_initial_entry: true
+    target: "byte string"
+    controller: "a type that an array can match"
+    predicate: >-
+      OURS. the target is a concatenation of zero or more well-formed CBOR
+      encodings; the array of the decoded items matches the controller type.
+    quote: >-
+      Similarly, a ".cborseq" control on a byte string indicates that the
+      byte string carries a sequence of CBOR-encoded data items. When the
+      data items are taken as an array, the array matches the type given as
+      the right-hand-side argument (type2 in the following example).
+      [...] (The conversion of the encoded sequence to an array can be
+      effected, for instance, by wrapping the byte string between the two
+      bytes 0x9f and 0xff and decoding the wrapped byte string as a
+      CBOR-encoded data item.)
+    example: '"bytes .cborseq type2"'
+
+  - name: ".within"
+    locator: "§3.8.5"
+    iana_initial_entry: true
+    target: "any type"
+    controller: "any type"
+    predicate: "OURS. target INTERSECT controller -- identical to .and."
+    quote: >-
+      A variant of the ".and" control is the ".within" control, which
+      expresses an additional intent: the left-hand-side type is meant to be
+      a subset of the right-hand-side type. [...] While both forms have the
+      identical formal semantics (intersection), the intention of the
+      ".within" form is that the right-hand side gives guidance to the types
+      allowed on the left-hand side, which typically is a socket
+      (Section 3.9): [...] For ".within", a tool might flag an error if
+      type1 allows data items that are not allowed by type2.
+    grammar_gap: >-
+      The subset expectation is INTENT, not semantics -- "a tool MIGHT flag
+      an error". Two specifications that differ only in `.and` vs `.within`
+      accept exactly the same instances.
+
+  - name: ".and"
+    locator: "§3.8.5"
+    iana_initial_entry: true
+    target: "any type"
+    controller: "any type"
+    predicate: "OURS. target INTERSECT controller."
+    quote: >-
+      A ".and" control on a type indicates that the data item matches both
+      the left-hand-side type and the type given as the right-hand side.
+      (Formally, the resulting type is the intersection of the two types
+      given.) [...] In contrast, for ".and", there is no expectation that
+      type1 is already a subset of type2.
+    example: '"type1 .and type2"'
+
+  - name: ".lt"
+    locator: "§3.8.6"
+    iana_initial_entry: true
+    target: "numeric type only"
+    controller: "a type containing just a single value"
+    predicate: "OURS. target < the controller's single value."
+    quote: >-
+      The controls .lt, .le, .gt, .ge, .eq, and .ne specify a constraint on
+      the left-hand-side type to be a value less than, less than or equal
+      to, greater than, greater than or equal to, equal to, or not equal to
+      a value given as a right-hand-side type (containing just that single
+      value). In the present specification, the first four controls (.lt,
+      .le, .gt, and .ge) are defined only for numeric types, as these have a
+      natural ordering relationship.
+
+  - name: ".le"
+    locator: "§3.8.6"
+    iana_initial_entry: true
+    target: "numeric type only"
+    controller: "a type containing just a single value"
+    predicate: "OURS. target <= the controller's single value."
+    see: ".lt (same quote covers all six comparison controls)"
+
+  - name: ".gt"
+    locator: "§3.8.6"
+    iana_initial_entry: true
+    target: "numeric type only"
+    controller: "a type containing just a single value"
+    predicate: "OURS. target > the controller's single value."
+    see: ".lt"
+
+  - name: ".ge"
+    locator: "§3.8.6"
+    iana_initial_entry: true
+    target: "numeric type only"
+    controller: "a type containing just a single value"
+    predicate: "OURS. target >= the controller's single value."
+    see: ".lt"
+    example: "speed = number .ge 0  ; unit: m/s"
+
+  - name: ".eq"
+    locator: "§3.8.6"
+    iana_initial_entry: true
+    target: "numeric values and values of other types"
+    controller: "a type containing just a single value"
+    predicate: "OURS. target equals the controller's single value, under the equality below."
+    equality_rules:
+      quote: >-
+        .ne and .eq are defined for both numeric values and values of other
+        types. If one of the values is not of a numeric type, equality is
+        determined as follows: text strings are equal (satisfy .eq / do not
+        satisfy .ne) if they are bytewise identical; the same applies for
+        byte strings. Arrays are equal if they have the same number of
+        elements, all of which are equal pairwise in order between the
+        arrays. Maps are equal if they have the same number of key/value
+        pairs, and there is pairwise equality between the key/value pairs
+        between the two maps. Tagged values are equal if they both have the
+        same tag and the values are equal. Values of simple types match if
+        they are the same values. Numeric types that occur within arrays,
+        maps, or tagged values are equal if their numeric value is equal and
+        they are both integers or both floating-point values. All other
+        cases are not equal (e.g., comparing a text string with a byte
+        string).
+      ours: >-
+        Note the asymmetry this leaves: the integer/float distinction is
+        stated for numbers occurring INSIDE arrays, maps and tagged values,
+        and §2.2.1 separately makes `1` and `1.0` disjoint types at top
+        level -- but the equality paragraph never states the top-level case
+        in its own words. Map equality is also specified as "pairwise
+        equality between the key/value pairs", with no statement of how the
+        pairs are paired in an unordered map.
+
+  - name: ".ne"
+    locator: "§3.8.6"
+    iana_initial_entry: true
+    target: "numeric values and values of other types"
+    controller: "a type containing just a single value"
+    predicate: "OURS. NOT (.eq) under the equality rules recorded for .eq."
+    see: ".eq"
+
+  - name: ".default"
+    locator: "§3.8.6"
+    iana_initial_entry: true
+    target: "any type, but only meaningful in an optional context"
+    controller: "a type containing just the default value"
+    predicate: "OURS. identical to .ne -- target must NOT equal the default value."
+    quote: >-
+      A variant of the ".ne" control is the ".default" control, which
+      expresses an additional intent: the value specified by the
+      right-hand-side type is intended as a default value for the
+      left-hand-side type given, and the implied .ne control is there to
+      prevent this value from being sent over the wire. This control is only
+      meaningful when the control type is used in an optional context;
+      otherwise, there would be no way to make use of the default value.
+    example: |
+      timer = {
+        time: uint,
+        ? displayed-step: (number .gt 0) .default 1
+      }
+    grammar_gap: >-
+      "Only meaningful when used in an optional context" is advice, not a
+      rule: `a = int .default 1` parses and simply excludes 1. The default
+      VALUE itself is not expressible in the instance -- CDDL carries no
+      mechanism for an absent entry to acquire it; that is left to the
+      application.
+
+counts:
+  operators: 14
+  iana_initial_entries: 14
+  defined_for_numeric_only: 4        # .lt .le .gt .ge
+  byte_string_targets: 4             # .size .bits .cbor .cborseq
+  pure_intent_variants: 2            # .within (of .and), .default (of .ne)

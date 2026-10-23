@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-9964
 record: rfc-9964
 type: summary
-updated: "2026-10-03"
+updated: "2026-10-20"
 ---
 
 # ML-DSA for JSON Object Signing and Encryption (JOSE) and CBOR Object Signing and Encryption (COSE)
@@ -88,10 +88,24 @@ not claim they have been.
 |---|---|
 | `record.yaml` | metadata |
 | `summary.md` | this document |
+| `distilled/normative.md` | every normative sentence of §3–§7 with its locator |
+| `distilled/requirements.yaml` | 88 requirements, 9 stated / 79 inferred, counts reconciled |
+| `distilled/schema/` | 1 verbatim renderings file + 5 derived (3 CDDL, 2 JSON) |
+| `distilled/messages.yaml` | 9 structures, 36 fields, octet-level layouts, `constrained_by` wired |
+| `distilled/examples/` | 12 vectors — the library's first post-quantum fixtures |
+| `distilled/design-notes.md` | the `KeyId` consequence, six cuts against `MD-3`, six source defects |
+| `distilled/protocol.yaml` · `protocol.md` · `state-machine.yaml` | **not applicable, with the measurement** — no protocol and no lifecycle |
 
-No `distilled/`. **FX-1 extraction for this record is owned by #39** (Tier 2),
-not by the NIST lane — this issue owns ingest, summary and the relation graph
-only, and the `distillation` block is deliberately untouched.
+The **FX-1 extraction is complete at `profile: full`** (#39 Tier 2 — not the
+NIST lane, which owned ingest, summary and the relation graph only).
+`distilled/README.md` states the per-artifact coverage and the corrections each
+pass made; consult it rather than this table for anything beyond the file list.
+The line this replaces read "No `distilled/`", true when written and false the
+moment the record was scaffolded — the stale-absence defect library#70 fixed on
+three records, and the eighth of nine summaries still carrying the phrase. Its
+replacement then said "in progress", which went stale the moment pass 3 landed;
+that is the drift `bin/validate`'s declared-absence check exists for
+(library#68), so this table now states the set rather than its status.
 
 ## Limits
 
@@ -117,3 +131,16 @@ only, and the `distillation` block is deliberately untouched.
   hedge could not express it in COSE today.
 - **Standards Track does not mean deployed.** Published May 2026. The
   algorithm code points are stable; the ecosystem is not yet.
+- The extraction is at **pass 3 of 3 complete** — extract, verify, cross-check,
+  each at effort max, each reading only `.cache/rfc-9964.txt`. The record is at
+  `distillation.profile: full`. **Nothing carries a human sign-off** (every
+  `reviewed_by` is empty), so these artifacts are readable and citable but not
+  yet buildable-on.
+- **Two quotation classes, and only one of them is checkable here.** The
+  `ARCH-0001` / `ARCH-0002` / `ADR-0001` / `DECISIONS-0001` / `MD-3` /
+  `DEC-00n` / `R-M-*` / `R-O-*` / `R-I-*` quotations in this record — including
+  **`R-M-02` above** and the seven identifiers `record.yaml`'s `bears_on` names
+  — are **not verifiable from this repository**: the library is standalone by
+  design and holds none of those files. Re-check them against `mofn` before
+  relying on them. `distilled/design-notes.md`'s provenance block has the full
+  list, and the list of in-library quotations pass 3 *did* verify.

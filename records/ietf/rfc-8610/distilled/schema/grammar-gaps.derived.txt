@@ -1,0 +1,416 @@
+=====================================================================
+grammar-gaps.derived.txt
+
+DERIVED -- NOT verbatim. This enumeration is this library's, not
+RFC 8610's. Do not cite it as the standard's text. Where a line is the
+source's own wording it is in "double quotes" with its section; every
+numbered item's framing, id and "checkable" verdict is ours.
+
+WHAT IT IS FOR. cddl.abnf is the complete formal definition of CDDL's
+SYNTAX. It is not a definition of CDDL. The grammar accepts strings the
+type system rejects, and it cannot express most of what Appendix C,
+Appendix A and Section 3 state in prose. This file is the list of side
+conditions a conforming tool must carry in addition to the grammar.
+
+Source: RFC 8610, Appendices A, B, C, D and Sections 2-3, cached source
+sha256 3713f2a50e23a2bea0a6147ad6c4433605a00c3d00a868bfa86a42b204997089
+=====================================================================
+
+Column "checkable": whether a tool can decide the condition statically
+from the specification alone (S), only against a given instance (I), or
+not at all / only by convention (N). Ours.
+
+
+-- A. THE GRAMMAR CANNOT TELL A TYPE FROM A GROUP -------------------
+
+G-01  §App C (rule)                                          checkable: S
+      Whether a rule defines a type or a group is not decided by syntax.
+      "e.g., "a = b" can make "a" a type if "b" is a type, or a group if
+      "b" is a group. More subtly, in "a = (b)", "a" may be used as a
+      type if "b" is a type, or as a group both when "b" is a group and
+      when "b" is a type (a good convention to make the latter case stand
+      out to the human reader is to write "a = (b,)")." The appendix adds
+      that "this semantic processing may need to span several levels of
+      rule definitions before a determination can be made."
+      Consequence for the grammar itself: `rule`'s two alternatives are
+      distinguished only by the assignment operator, and for "=" the
+      first alternative is tried first; a group-valued rule written with
+      "=" is reached only by backtracking out of `type`.
+
+G-02  §App B (grpent), the grammar's own comment             checkable: S
+      `grpent`'s second alternative is marked "; preempted by above" in
+      the source: `type` already admits a `typename`, so a bare group
+      name is matched by the first alternative. The third alternative is
+      preempted the same way for a parenthesized expression with no comma
+      and no "//", since `type2` admits `"(" S type S ")"`. The grammar
+      documents its own redundancy and leaves the resolution to the
+      implementation.
+
+G-03  §App C (grpent)                                        checkable: S
+      "If the memberkey is not given, the entry can only be used for
+      matching arrays, not for maps." Nothing in the grammar says so.
+
+G-04  §2.2.4                                                 checkable: S
+      The root is the FIRST rule, and "there is no way to use a group as
+      a root -- it must be a type." The grammar has no notion of a root.
+
+G-05  §App C (assignt/assigng)                               checkable: S
+      "it is an error if the name was already defined with a different
+      expression" -- a uniqueness condition over the whole rule set.
+      Conversely, "It is not an error to extend a rule name that has not
+      yet been defined", and §2.2.2 repeats it: a name may be first used
+      with "/=" or "//=" with no prior "=".
+
+
+-- B. THE TYPE SYSTEM REJECTS STRINGS THE GRAMMAR ACCEPTS -----------
+
+G-06  §2.2.2.1                                               checkable: S
+      Range operands must be both integers or both floating-point.
+      "CDDL currently only allows ranges between integers (matching
+      integer values) or between floating-point values (matching
+      floating-point values)." The source's own examples of what the
+      grammar accepts and the type system does not:
+          BAD-range1 = 0..10.0 ; NOT DEFINED
+          BAD-range2 = 0.0..10 ; NOT DEFINED
+      This is THE canonical demonstration that cddl.abnf is not a
+      definition of CDDL. Both lines parse.
+
+G-07  §2.2.2.1                                               checkable: S
+      An inverted range is not an error: "If the lower bound exceeds the
+      upper bound, the resulting type is the empty set (this behavior can
+      be desirable when generics (Section 3.10) are being used)."
+
+G-08  §2.2.1                                                 checkable: I
+      Integer and floating-point literals denote DISJOINT types: "the
+      type "1" does not include any floating-point numbers while the
+      types "1e3" and "1.5" are both floating-point numbers and do not
+      include any integer numbers." The grammar's `number` production
+      carries the distinction only as a comment: "; This is a float if it
+      has fraction or exponent; int otherwise".
+
+G-09  §3.7                                                   checkable: S
+      The unwrap operator "~" is defined only for a name whose type is a
+      map, an array, or a tag: it strips "the type defined for a name by
+      one layer, exposing the underlying group (for maps and arrays) or
+      type (for tags)". `type2` permits "~" before ANY typename.
+
+G-10  §2.2.2.2, §App C                                       checkable: S
+      The "&" enumeration operator requires a group whose entries carry
+      values -- it "matches any value that is within the set of values
+      that the values of the group given can take". The grammar permits
+      "&" before any group.
+
+G-11  §3.8 (all fourteen operators)                          checkable: S/I
+      Each control operator admits only certain targets and controllers
+      (`.size`: strings and uints; `.bits`: byte strings and uints;
+      `.regexp`: text strings; `.cbor`/`.cborseq`: byte strings;
+      `.lt`/`.le`/`.gt`/`.ge`: numeric types only). `ctlop = "." id`
+      constrains none of this, and does not even require the operator to
+      be one that exists. See control-operators.derived.yaml.
+
+G-12  §App B, closing note                                   checkable: S
+      "Note that this ABNF does not attempt to reflect the detailed rules
+      of what can be in a prefixed byte string." `bsqual = "h" / "b64"`
+      is the whole of it; whether the body is valid base16 or base64(url)
+      is not a grammatical question. §3.1 adds that in the prefixed case
+      "any whitespace present within the string (including comments) is
+      ignored".
+
+
+-- C. PEG, NOT BNF: ORDER AND GREED ---------------------------------
+
+G-13  §App A, §App C (type)                                  checkable: N
+      "/" and "//" are PRIORITIZED choice: "The choice uses PEG semantics
+      as discussed in Appendix A: the first choice that matches wins. (As
+      a result, the order of rules that contribute to a single rule name
+      can very well matter.)" ABNF's "/" is symmetrical, so the notation
+      cannot express this; Appendix A says the CDDL grammar was WRITTEN
+      so that both readings coincide -- "This was made possible by
+      ordering the choices in the grammar such that a successful match
+      made on the left-hand side of a "/" operator is always the intended
+      match [...] (for example, note the sequence of alternatives in the
+      rule for "uint", where the lone zero is behind the longer match
+      alternatives that start with a zero)." That is a property of this
+      grammar's authoring, not of the notation.
+
+G-14  §App A                                                 checkable: S
+      A later alternative can be unreachable. "A = "a" / "a" "b"" (2):
+      "the second alternative will never match, as any input string
+      starting with an "a" will already succeed in the first alternative,
+      locking in the match."
+
+G-15  §App A                                                 checkable: S
+      Occurrence indicators are GREEDY: ""a* a" in PEG notation or "*a a"
+      in CDDL syntax never can match anything, as all input matching "a"
+      is already consumed by the initial "a*", leaving nothing to match
+      the second "a"" -- the quote begins inside the source's own
+      parenthetical, which closes ")." after the final "a".
+
+G-16  §App A                                                 checkable: N
+      CDDL omits PEG's syntactic predicates: "CDDL does not provide the
+      syntactic predicate operators NOT ("!") or AND ("&") from PEG,
+      reducing expressiveness as well as complexity." Note the collision
+      of notation: CDDL's "&" is the enumeration operator, unrelated to
+      PEG's AND.
+
+
+-- D. MAPS ARE NOT MATCHED BY THE PEG ALGORITHM ---------------------
+
+G-17  §3.5.3                                                 checkable: I
+      "While the way arrays are matched is fully determined by the PEG
+      formalism (see Appendix A), matching is more complicated for maps,
+      as maps do not have an inherent order. For each candidate name/value
+      pair that the PEG algorithm would try, a matching member is picked
+      out of the entire map."
+
+G-18  §3.5.3                                                 checkable: N
+      Pathological non-determinism is possible and undetected:
+          do-not-do-this = {
+            int => int,
+            int => 6,
+          }
+      "When this expression is matched against "{3: 5, 4: 6}", the first
+      group entry might pick off the "3: 5", leaving "4: 6" for matching
+      the second one. Or it might pick off "4: 6", leaving nothing for the
+      second entry. [...] At the time of writing, CDDL tools cannot detect
+      such cases automatically, and for the present version of the CDDL
+      specification, the specification writer is simply urged to not write
+      pathologically non-deterministic specifications."
+      THERE IS NO CONFORMANCE RULE HERE. The document resolves its one
+      genuine ambiguity by urging authors not to trigger it.
+
+G-19  §3.5.4, §App C (memberkey)                             checkable: I
+      The cut. "A cut in this position means that once the member key
+      matches the name part of an entry that carries a cut, other
+      potential matches for the key of the member that occur in later
+      entries in the group of the map are no longer allowed. [...] when a
+      group entry would pick a key/value pair based on just a matching
+      key, it "locks in" the pick -- this rule applies, independently of
+      whether the value matches as well, so when it does not, the entire
+      map fails to match."
+
+G-20  §3.5.4                                                 checkable: S
+      The ":" shortcut IMPLIES a cut: "Since the desire for this kind of
+      exclusive matching is so frequent, the ":" shortcut is actually
+      defined to include the cut semantics." Two consequences the grammar
+      hides: `"k": int` and `"k" => int` differ in meaning, not just in
+      spelling; and since `memberkey`'s "^" is available only on the "=>"
+      form, CDDL can express "colon with a cut" and "arrow with a cut"
+      and "arrow without a cut" but NOT "colon without a cut".
+
+G-21  §3.2                                                   checkable: I
+      An occurrence above one on a map entry with a fixed key collapses:
+      for `* bedroom: size`, "due to the restrictions imposed by the data
+      model, the third line pretty much turns into: ? bedroom: size".
+      "(Occurrence indicators beyond one are still useful in maps for
+      groups that allow a variety of keys.)" The grammar cannot express
+      the target data model's no-duplicate-keys rule at all.
+
+G-22  §2.1                                                   checkable: I
+      Map matching is exhaustive in both directions: "A map matches a
+      specification given as a group when the group matches a sequence of
+      name/value pairs such that all of these name/value pairs are present
+      in the map AND the map has no name/value pair that is not covered by
+      the group." (emphasis ours)
+
+
+-- E. CONVENTIONS THAT ARE NOT RULES --------------------------------
+
+G-23  §3.9                                                   checkable: N
+      Socket/plug is convention, twice over. "Per convention, CDDL
+      extension points are marked with a leading dollar sign (types) or
+      two leading dollar signs (groups). Tools honor that convention by
+      not raising an error if such a type or group is not defined at all
+      [...]" (the source continues "; the symbol is then taken to be an
+      empty type choice (group choice), i.e., no choice is available.")
+      And: "As a convention, all definitions (plugs) for socket names must
+      be augmentations, i.e., they must be using "/=" and "//=",
+      respectively." `id` admits "$" and "$$" like any other character;
+      nothing stops `$foo = 1`.
+
+G-24  §3.1                                                   checkable: N
+      Naming style is preference, not syntax: "It is preferred style to
+      start a name with a lowercase letter. [...] The hyphen is preferred
+      over the underscore [...] The period may be useful for larger
+      specifications, to express some module structure (as in
+      "tcp.throughput" vs. "udp.throughput")."
+
+G-25  §3.11                                                  checkable: N
+      Precedence is to be avoided rather than relied on: "the
+      specification writer is encouraged not to rely on them, but to
+      insert parentheses liberally to guide readers that are not familiar
+      with CDDL precedence rules:"
+
+G-26  §5                                                     checkable: N
+      "Writers of CDDL specifications are strongly encouraged to value
+      clarity and transparency of the specification over its elegance."
+
+
+-- F. LEXICAL TRAPS IN THE GRAMMAR ITSELF ---------------------------
+
+G-27  §2.2.2.1                                               checkable: S
+      "." is a name continuation character, so
+          min..max
+      "is not a range expression but a single name. When using a name as
+      the left-hand side of a range operator, use spacing as in
+          min .. max
+      to separate off the range operator." The same trap applies to
+      control operators; the grammar carries it as a comment on `type1`:
+      "; space may be needed before the operator if type2 ends in a name".
+
+G-28  §App B preamble                                        checkable: S
+      Case sensitivity is split between two notations in one grammar.
+      "as is defined in ABNF, the quote-delimited strings below are case
+      insensitive (while string values and names are case sensitive in
+      CDDL)". So `0X1F`, `0B10`, `H'00'`, `B64'...'`, `1E3` and `0x1P4`
+      are all admitted via the quoted literals, while `ALPHA = %x41-5A /
+      %x61-7A` and `EALPHA` are numeric and therefore exactly as written.
+      A reader who takes the grammar literally and ignores the appendix's
+      preamble gets a different language.
+
+G-29  §App B (CRLF)                                          checkable: S
+      THE GRAMMAR REDEFINES AN RFC 5234 CORE RULE. `CRLF = %x0A / %x0D.0A`
+      admits a bare LF; RFC 5234's own CRLF is `%x0D %x0A` only. ALPHA,
+      DIGIT, HEXDIG and SP are redefined identically to RFC 5234, so a
+      reader may reasonably assume the core rules are being restated --
+      and then get CRLF wrong. §3.1 agrees with the grammar, not with
+      RFC 5234: comments "finish at the end of a line (LF or CRLF)".
+
+G-30  §App B (WS, SP)                                         checkable: S
+      THERE IS NO HORIZONTAL TAB IN CDDL. `WS = SP / NL` and `SP = %x20`,
+      so a tab is not whitespace; and `SCHAR` begins at %x20, so a literal
+      tab cannot appear inside a text string either. RFC 5234's WSP
+      includes HTAB. §3.1's prose says "whitespace (spaces, newlines, and
+      comments)", which is consistent with the grammar, but no sentence in
+      the document tells an implementer that a tab is a syntax error.
+
+G-31  §App B (SCHAR vs BCHAR)                                 checkable: S
+      The two string productions are not parallel, in two ways we did not
+      find stated anywhere in the document:
+        - SCHAR allows %x5D-7E then %x80-10FFFD, so U+007F (DEL) is
+          EXCLUDED from text strings; BCHAR allows %x5D-10FFFD, so
+          U+007F is INCLUDED in byte strings.
+        - BCHAR includes CRLF, so a byte string literal may span lines;
+          SCHAR does not, so a text string literal may not. (Appendix G.4
+          adds whitespace-separated concatenation to EDN partly for this
+          reason: "a mechanism is needed to be able to include text
+          strings as well as byte strings in direct UTF-8 representation
+          into line-based documents".)
+
+G-32  §App B (SCHAR, BCHAR, PCHAR, SESC)                      checkable: S
+      All four admit the surrogate range. `%x80-10FFFD` spans
+      U+D800-U+DFFF, which are not Unicode scalar values and cannot be
+      encoded in UTF-8, while §3.1 says "CDDL uses UTF-8 [RFC3629] for its
+      encoding." The grammar therefore describes strings that the stated
+      encoding cannot represent. (The upper bound 10FFFD, rather than
+      10FFFF, excludes the last two noncharacters only.)
+
+G-33  §App B (SESC) vs §3.1                                   checkable: S
+      §3.1 says text strings "follow the conventions for strings as
+      defined in Section 7 of [RFC8259]", but `SESC = "\" (%x20-7E /
+      %x80-10FFFD)` admits a backslash before ANY printable character. The
+      grammar neither restricts escapes to JSON's set (\" \\ \/ \b \f \n
+      \r \t \uXXXX) nor requires \u to be followed by four hex digits. A
+      tool must apply RFC 8259 §7 on top of the grammar.
+
+G-34  §App B (COMMENT)                                        checkable: S
+      `COMMENT = ";" *PCHAR CRLF` REQUIRES a line terminator, so a comment
+      on the final line of a file that does not end in a newline does not
+      parse. Nothing in §3.1 hints at this.
+
+G-35  §App B (text) vs §3.1                                   checkable: S
+      §3.1: "ABNF users may want to note that there is no support in CDDL
+      for the concept of case insensitivity in text strings; if necessary,
+      regular expressions can be used (Section 3.8.3)."
+
+
+-- G. WHAT CDDL DOES NOT DESCRIBE AT ALL -----------------------------
+
+G-36  §2.2.3                                                 checkable: N
+      CDDL constrains the DATA MODEL, never the encoding. ""#7.25"
+      specifies the set of values that can be represented as
+      half-precision floats; it does not mandate that these values also do
+      have to be serialized as half-precision floats: CDDL does not
+      provide any language means to restrict the choice of serialization
+      variants." This is the single most load-bearing sentence in the
+      document for anyone pairing CDDL with a deterministic encoding.
+
+G-37  §3.2                                                   checkable: N
+      "CDDL, outside any directives/annotations that could possibly be
+      defined, does not make any prescription as to whether arrays or maps
+      use definite-length or indefinite-length encoding. That is, there is
+      no correlation between leaving the size of an array "open" in the
+      spec and the fact that it is then interchanged with definite or
+      indefinite length."
+
+G-38  §3.5                                                   checkable: N
+      Key order cannot be fixed. "the key/value pairs in CBOR maps have no
+      fixed ordering. (One could imagine situations where fixing the
+      ordering may be of use. [...] Unfortunately, neither JSON nor CBOR
+      supports this, so no attempt was made to support this in CDDL
+      either.)"
+
+G-39  §4.2                                                   checkable: N
+      There is no conformance level for a checker. "The need for
+      thoroughness of such compliance checking depends on the
+      application. For example, an application may decide not to check the
+      data structure at all [...] On the other hand, the application may
+      also implement a checking mechanism that goes as far as checking
+      that all mandatory map members are available. The matter of how far
+      the data description must be enforced by an application is left to
+      the designers and implementers of that application, keeping in mind
+      related security considerations."
+
+G-40  §App D                                                 checkable: S
+      The prelude is fixed and cannot be extended: "additional tags beyond
+      those defined in [RFC7049], as registered, need to be defined in
+      each CDDL file that is using them." And it has no "string": "CBOR
+      has byte strings ("bytes" in the prelude) and text strings
+      ("text"), so a type that is simply called "string" would be
+      ambiguous." A specification that writes `string` has an undefined
+      name, which §3.9 turns into a silent empty type only if the name
+      begins with "$".
+
+G-41  §3.10                                                  checkable: N
+      Generic instantiation is specified by analogy, not formally: "the
+      formal parameters are bound to the actual arguments supplied (also
+      using angle brackets), within the scope of the generic rule (as if
+      there were a rule of the form parameter = argument)." No rule is
+      given for shadowing, recursion or arity mismatch, and the document
+      concedes tool limits: "(At this time, there are some limitations to
+      the nesting of generics in the CDDL tool described in Appendix F.)"
+
+
+-- H. WHERE TABLE 1 DISAGREES WITH THE GRAMMAR -----------------------
+
+Table 1 (§3.11) is explicitly a summary -- "The operator precedences, in
+sequence of loose to tight binding, are defined in Appendix B and
+summarized in Table 1." Three disagreements, ours:
+
+G-42  "," is listed as a binary operator on groups at precedence 3. In
+      the grammar it is not an operator: `optcom = S ["," S]`, and
+      Appendix A's own mapping table says "sequence, comma is decoration
+      only". §2.1.2 agrees: "The comma is actually optional (not just in
+      the final entry), but it is considered good style to set it."
+      Appendix H's compact reputon example omits every comma.
+
+G-43  "^" (the cut) is absent from Table 1 altogether, though it is an
+      operator in `memberkey` with a defined position and a defined
+      semantics (§3.5.4).
+
+G-44  "..", "..." and ".ctrl" are given precedence 7, which implies they
+      compose. `type1 = type2 [S (rangeop / ctlop) S type2]` admits at
+      most one of them per type1, so they do not compose at all; the
+      §3.8.6 example has to be written `(number .gt 0) .default 1`.
+      Table 1 also narrows ":" to "name: type" although `memberkey`
+      admits `value S ":"`, and widens "&" to "&group" and "~" to "~type"
+      although the grammar restricts their operands (G-09, G-10).
+
+
+=====================================================================
+44 items, G-01 through G-44. 41 carry a checkability verdict (ours):
+S (statically decidable from the specification) 23, I (decidable only
+against an instance) 5, S/I 1, N (not decidable / convention only) 12.
+The three items in section H are disagreements between Table 1 and the
+grammar rather than conditions a tool checks, so they carry none.
+=====================================================================

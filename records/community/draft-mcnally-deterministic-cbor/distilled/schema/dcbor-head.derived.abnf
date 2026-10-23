@@ -1,0 +1,129 @@
+; =====================================================================
+; dcbor-head.derived.abnf
+;
+; DERIVED - not verbatim.  draft-mcnally-deterministic-cbor-18 contains
+; no ABNF at all; its only grammar notation is one quoted CDDL prelude
+; rule (cddl-prelude-number.cddl).  Every rule below was written for this
+; record from the source's prose and tables, and must never be quoted as
+; the source's own grammar.
+;
+; Derived from draft-mcnally-deterministic-cbor-18:
+;   Section 2.1    definite-length items only, for byte strings, text
+;                  strings, arrays and maps - encoder MUST only emit,
+;                  decoder MUST reject indefinite length
+;   Section 2.6    only false (0xf4), true (0xf5), null (0xf6) and the
+;                  floating point values are valid in major type 7
+;   Section 2.5    the three float widths are all retained (the reduction
+;                  rules constrain which one, not whether)
+;   Section 8.2    (non-normative) why `undefined` is excluded
+;   Section 8.4    (non-normative) why the other simple values are
+; and, for the frame this narrows, from RFC 8949 (STD 94):
+;   Section 3      the initial byte, the argument and the head; argument
+;                  widths 0/1/2/4/8; reserved additional information
+;                  28, 29, 30
+;   Section 3.1    Table 1, the major types
+;   Section 3.2    Table 2, the indefinite-length heads; 3.2.1 "break"
+;   Section 3.3    Tables 3 and 4, major type 7 and the simple values
+;
+; The language is ABNF (RFC 5234).  Terminals are single bytes.  OCTET is
+; the RFC 5234 core rule and is used, not redefined.
+;
+; ---------------------------------------------------------------------
+; SCOPE.  This grammar covers exactly the *head* of a data item - the
+; initial byte plus the bytes consumed to build the argument - in the
+; sense RFC 8949 Section 3 gives the word.  It cannot cover a whole data
+; item: the content length of a string and the number of enclosed items
+; of an array or map are given by the argument just parsed, a
+; context-sensitive dependency no ABNF expresses.  Nesting, map arity and
+; "no bytes left over" are decided by Figure 1 of RFC 8949 Appendix C and
+; by dcbor-validate.derived.pseudocode.txt.
+;
+; WHY IT EARNS ITS PLACE.  Two of dCBOR's seven narrowing rules are
+; decidable from the initial byte alone, and this is the only artifact in
+; this directory that decides them by construction rather than by a
+; procedure: Section 2.1 (no indefinite length) and Section 2.6 (no
+; simple value other than false, true, null).  The division against the
+; CDDL is exact.  Section 2.1 is invisible in the generic data model -
+; RFC 8949 Section 2 hides the serialization variant on purpose - so
+; dcbor-profile.derived.cddl cannot express it at all.  Section 2.6 that
+; file does express, at the data-model level; what it cannot do is check
+; it on encoded bytes, which is how 0xf7 and 0xf8 arrive.
+;
+; THE CENSUS, which is the checkable claim this file makes.  Of the 229
+; initial bytes that are well-formed under RFC 8949, dCBOR admits 202.
+; The 27 it excludes are exactly:
+;   5f 7f 9f bf   the four indefinite-length heads     (Section 2.1)
+;   ff            the "break" stop code, which only an indefinite-length
+;                 item can need                        (Section 2.1)
+;   e0-f3         simple values 0 through 19           (Section 2.6)
+;   f7            `undefined`                          (Sections 2.6, 8.2)
+;   f8            the one-byte simple value head, i.e. simple values
+;                 32-255                               (Sections 2.6, 8.4)
+; Beyond those four indefinite-length heads, nothing is excluded in major
+; types 0-6: each admits 28 initial bytes, which is all 28 that are
+; well-formed for major types 0, 1 and 6, and 28 of the 29 well-formed
+; for major types 2-5 (the one lost is the indefinite-length head itself).
+; Everything dCBOR still asks of those types is a predicate over the
+; *value* (Section 2.2 preferred serialization, Section 2.5 DCBOR_INT)
+; and not over the initial byte.
+;
+; WHAT IT DOES NOT DECIDE.  Everything value-dependent, which for dCBOR
+; is most of the document.  It enumerates the five legal argument widths
+; but cannot require the shortest one that carries the value (Section
+; 2.2); it admits 1b-headed negative integers but cannot see that the
+; argument must stay below 2^63 (Table 4); and it admits f9/fa/fb but
+; cannot tell a canonical NaN from a payload NaN, a reducible 42.0 from
+; an irreducible 1.5, or a preferred f97c00 Infinity from a rejected
+; fa7f800000.  Those are numeric-reduction.derived.pseudocode.txt.
+; =====================================================================
+
+; A dCBOR head.  Note the absence of any `break` rule and of any
+; indefinite-length alternative: Section 2.1 removes both, so this
+; grammar has no counterpart to RFC 8949's head-or-break.
+dcbor-head = uint-head / nint-head / bstr-head / tstr-head
+           / array-head / map-head / tag-head
+           / dcbor-simple-head / dcbor-float-head
+
+; --- major types 0 and 1: integers (RFC 8949 Section 3.1) ------------
+; Unrestricted at head level.  Section 2.2 requires the shortest of these
+; five forms that carries the value, and Table 4 bounds the major type 1
+; argument by 2^63 - 1; neither is expressible here.
+uint-head = %x00-17 / %x18 arg1 / %x19 arg2 / %x1a arg4 / %x1b arg8
+nint-head = %x20-37 / %x38 arg1 / %x39 arg2 / %x3a arg4 / %x3b arg8
+
+; --- major types 2 and 3: strings (Section 2.1) ----------------------
+; 0x5f and 0x7f are absent by construction: the indefinite-length byte
+; and text string heads of RFC 8949 Table 2.
+bstr-head = %x40-57 / %x58 arg1 / %x59 arg2 / %x5a arg4 / %x5b arg8
+tstr-head = %x60-77 / %x78 arg1 / %x79 arg2 / %x7a arg4 / %x7b arg8
+
+; --- major types 4 and 5: arrays and maps (Section 2.1) --------------
+; 0x9f and 0xbf are absent by construction, as above.
+array-head = %x80-97 / %x98 arg1 / %x99 arg2 / %x9a arg4 / %x9b arg8
+map-head   = %xa0-b7 / %xb8 arg1 / %xb9 arg2 / %xba arg4 / %xbb arg8
+
+; --- major type 6: tags ----------------------------------------------
+; Any tag number: the source places no restriction on which tags appear
+; (Section 8.5 calls tags the escape hatch), only on the conformance of
+; the content, which is a recursion this grammar cannot perform.  Tag 201
+; of Section 3 and Section 6 is %xd8 %xc9 - one argument byte, not two,
+; because 201 < 256 and Section 2.2 requires the preferred encoding of
+; the tag number as much as of anything else.
+tag-head = %xc0-d7 / %xd8 arg1 / %xd9 arg2 / %xda arg4 / %xdb arg8
+
+; --- major type 7 (Section 2.6) ---------------------------------------
+; The whole of dCBOR's narrowing of major type 7 is the shortness of
+; these two rules.  Six of the 29 well-formed major type 7 initial bytes
+; survive.
+dcbor-simple-head = %xf4 / %xf5 / %xf6       ; false, true, null
+
+; Section 2.5 retains all three widths and chooses between them by value:
+; half for the canonical NaN 0xf97e00 and for the two infinities, and
+; otherwise the shortest width that preserves the value.
+dcbor-float-head = %xf9 arg2 / %xfa arg4 / %xfb arg8
+
+; --- arguments (RFC 8949 Section 3, network byte order per 1.2) ------
+arg1 = OCTET
+arg2 = 2OCTET
+arg4 = 4OCTET
+arg8 = 8OCTET

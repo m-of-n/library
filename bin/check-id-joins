@@ -1,0 +1,535 @@
+#!/usr/bin/env python3
+"""check-id-joins — where can a cited requirement id be WRONG but not dangling?
+
+The defect this exists for: a `constrained_by` or `Derived from` citation that
+resolves to a real requirement which is not the one meant. It is not dangling,
+so no closure check sees it; the text is verbatim, so no verbatim check sees
+it; the locator is right, so bin/check-locators passes it. Two lanes in
+library#39 shipped 41 of these between them (30 in one record's messages.yaml,
+11 more in the files that pass never audited), and every one was found only by
+resolving the id and reading the sentence back.
+
+Two things it does, both cheap:
+
+  --surface   List the requirements that share IDENTICAL text. A group of size
+              greater than one is the ONLY place a wrong id can still match the
+              quoted words, so it is the complete attack surface for this
+              class. rfc-9277 has exactly two such groups and BOTH were
+              mis-joined; its sibling rfc-8742 has zero, which is structurally
+              why that record was clean at 0 of 243 citations.
+
+  --resolve   Print every cited id beside its own requirement's locator and
+              the opening of its text, so a verifier can read the pairs
+              instead of hand-building the harness. Four passes built this by
+              hand before it was a tool.
+
+  --quote-join
+              The mechanised version of reading those pairs. Wherever a
+              QUOTATION sits immediately beside a citation, assert the quoted
+              span is a substring of THAT id's own text. This is what actually
+              catches the defect: rfc-9277's cross-check found SIX wrong ids
+              with it, all in distilled/schema/, one of them citing a member of
+              a duplicate-text group — which is why --surface alone could not
+              have found it. Across library#39 it would have caught eight.
+
+    bin/check-id-joins --surface --all
+    bin/check-id-joins --resolve records/ietf/rfc-9277
+    bin/check-id-joins --quote-join --all
+
+Exit 1 if any citation dangles, else 0. A duplicate-text group is not a defect
+and does not affect the exit status — it is a place to look. A --quote-join
+mismatch is a finding to READ, not an error, for the same reason, and it is
+scoped deliberately narrowly; see `_adjacent_quote`.
+
+--quote-join REPORTS ITS OWN COVERAGE, and that is not cosmetic. The first
+version printed only mismatches, so "0 pairs, 0 to read" meant the same thing
+whether it had examined nothing or examined twenty and found them all sound.
+It then collected ZERO on rfc-9054/rfc-9360 — the lane with 11 duplicate-text
+groups over 23 requirements, i.e. the one this check exists for — because
+`QUOTE` cannot span a quotation containing a nested mark, and the clean report
+read as coverage. Over-reporting is loud and gets scoped; under-reporting to
+zero is silent. The summary now always says how many pairs were EXAMINED
+beside how many need reading, so an absence of findings can be told apart from
+an absence of looking.
+"""
+import argparse
+import collections
+import pathlib
+import re
+import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from _yaml import parse as miniyaml
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+# A citation carrying its record name. The bare form is deliberately NOT
+# collected: inside a record's own files it correctly means that record, and
+# bin/validate already warns where a bare form is ambiguous with a sibling's.
+CITE = re.compile(r"(?<![\w.\-…])([a-z0-9][a-z0-9.\-]*?)#((?:R|V|G|N)-[0-9]+)\b")
+SCAN = {".yaml", ".md", ".txt", ".cddl", ".abnf", ".json"}
+MIN_TEXT = 40          # below this, identical text is a coincidence, not a trap
+
+
+def _entries(path, key):
+    try:
+        d = miniyaml(path.read_text(errors="ignore")) or {}
+    except Exception:                                    # noqa: BLE001
+        return []
+    v = d.get(key)
+    return v if isinstance(v, list) else []
+
+
+def requirements(recdir):
+    """{bare id: (locator, text)} for one record.
+
+    R-ids come from requirements.yaml and V-ids from examples/vectors.yaml,
+    which are the two namespaces with a canonical home. G- and N- ids live in
+    per-record derived files whose shape varies by record, so they are left to
+    bin/validate's collision check rather than resolved here — reporting them
+    as dangling would be this tool's error, not the record's.
+    """
+    out = {}
+    for r in _entries(recdir / "distilled" / "requirements.yaml", "requirements"):
+        if isinstance(r, dict) and r.get("id"):
+            out[str(r["id"]).split("#")[-1]] = (
+                str(r.get("locator") or ""),
+                " ".join(str(r.get("text") or "").split()))
+    for v in _entries(recdir / "distilled" / "examples" / "vectors.yaml", "vectors"):
+        if isinstance(v, dict) and v.get("id"):
+            out[str(v["id"]).split("#")[-1]] = (
+                str(v.get("locator") or v.get("source_lines") or ""),
+                " ".join(str(v.get("matches") or v.get("notes")
+                             or v.get("expect") or "").split()))
+    return out
+
+
+def surface(recdir, rid):
+    """Groups of requirements whose text is identical."""
+    groups = collections.defaultdict(list)
+    for bare, (_, text) in requirements(recdir).items():
+        if len(text) >= MIN_TEXT:
+            groups[text].append(bare)
+    return {k: sorted(v) for k, v in groups.items() if len(v) > 1}
+
+
+def citations(recdir):
+    """[(file, record, bare id)] for every record-qualified citation."""
+    out = []
+    for f in sorted(x for x in recdir.rglob("*") if x.is_file()):
+        if f.suffix not in SCAN:
+            continue
+        try:
+            text = f.read_text(errors="ignore")
+        except OSError:
+            continue
+        for who, i in CITE.findall(text):
+            if i[0] in "GN":        # no canonical home; see requirements()
+                continue
+            out.append((f.relative_to(recdir), who, i))
+    return out
+
+
+# --- quote-join -------------------------------------------------------------
+#
+# The scoping matters more than the comparison, because the first version of
+# any new check in this library has over-reported (four for four). The pass
+# that hand-built this found 6 real defects against 14 false positives, and
+# every false positive was one of five shapes. Each is excluded below:
+#
+#   1. a `constrained_by` LIST beside a note quoting a different field's
+#      statement — a list of ids is not an attribution, so lists are skipped
+#   2. a `no id` bullet whose commentary names some other id
+#   3. a CORRECTION note, which quotes the wording it is correcting and cites
+#      the id it says is wrong — the most common shape in this library
+#   4. UNDER-citation: a span covering two adjacent requirements that cites
+#      only one. Reported separately as `partial`, never as a mismatch
+#   5. an explicit disclaimer ("R-0017's neighbour"), i.e. prose that says the
+#      id is NOT the span's own
+#   6. `(rec#R-0134)'s section`, which attributes the quotation to the SECTION
+#      the id lives in rather than to the id's own sentence. The library writes
+#      it 23 times, and it is #5's shape said positively
+#
+# Anything still flagged is a pair a human must read. Keep it that way.
+
+QUOTE = re.compile(r"[\"“]([^\"“”]{40,1200})[\"”]", re.S)
+# A candidate that contains YAML structure is not a quotation: it is the text
+# BETWEEN two quote marks belonging to different scalars. Measured: without
+# this, messages.yaml alone supplied thousands of "quotations" made of
+# `name:`/`index:`/`- ` lines, and the check flagged 4479 of 4482 pairs.
+_YAMLISH = re.compile(r"\n\s*(?:-\s|[A-Za-z_][\w.-]*:(?:\s|$))")
+# Prose that means "the id beside this quotation is not its id".
+_DISCLAIM = re.compile(
+    r"correction|corrected|this read|was cited|should be|not the one|"
+    r"neighbour|neighbor|no id\b|wrong id|mis-?join", re.I)
+_LIST_CTX = re.compile(r"constrained_by|requirements:\s*\[|\bids:\s*\[")
+
+
+# A quotation wrapped inside a comment block carries the comment marker on
+# every continuation line. rfc-8742 quoted a requirement verbatim in an .abnf
+# file and the span came back as "... encoded CBOR data ; items generates ...".
+# Stripping the marker is part of normalising, not a relaxation.
+_COMMENT_CONT = re.compile(r"\s*(?:;+|#+|//+)\s*")
+
+
+def _norm(s):
+    return " ".join(_COMMENT_CONT.sub(" ", s).split())
+
+
+# A span of braces, brackets and punctuation is not a quotation: it is the text
+# between two quote marks of a JSON or CDDL structure. rfc-9679's derived JSON
+# Schema supplied `"} } } } }, {"` this way. Require real words.
+def _is_prose(s):
+    if len(re.findall(r"[A-Za-z]{2,}", s)) < 5:
+        return False
+    # Two or more `key: value` pairs on one line is a YAML flow mapping, not a
+    # sentence. _YAMLISH only sees structure that spans a newline, and
+    # slsa-1-2's vectors supplied `", schema: ..., expected: invalid, result:"`
+    # on a single line.
+    #
+    # The closing quote before the colon is OPTIONAL because JSON puts one
+    # there. Requiring a word character immediately before the colon let
+    # rfc-9679's derived JSON through as four "quotations" — spans of
+    # `"layout": "…", "separator": ":", "requirements": [` welded together by
+    # the `":"` separators, which read as nested quotations because a colon
+    # between two spaces is both opener- and closer-shaped. The span is
+    # structure either way; only this test was in a position to say so.
+    return len(re.findall(r"""[A-Za-z_][\w.-]*["']?:\s""", s)) < 2
+
+
+# An elision is a legitimate quotation shape in this library, declared and
+# visible. Plain substring matching fails on every one of them, and they were
+# the largest remaining false-positive class once multi-id attribution was
+# handled, so they are resolved segment by segment instead.
+_ELLIPSIS = re.compile(r"\s*(?:…|\.\.\.)\s*")
+
+
+def _carries(quote, target):
+    """Is `quote` — possibly elided — a span of `target`?"""
+    parts = [p for p in _ELLIPSIS.split(quote) if len(p) > 3]
+    if not parts:
+        return False
+    i = 0
+    for p in parts:
+        j = target.find(p, i)
+        if j < 0:
+            return False
+        i = j + len(p)
+    return True
+
+
+# Between a closing quote and the citation that attributes it, only this may
+# stand. Measured: a 120-character window with "no long word between" flagged
+# 9135 of 9171 pairs library-wide — in dense prose there is nearly always SOME
+# quotation nearby, and it is usually not an attribution of that id. Requiring
+# true adjacency is the whole scope of the check.
+_JOIN = re.compile(r"^[\s—–()\[\]{}*`,;:.\-]{0,14}$")
+
+
+_MARK = re.compile(r"[\"“”]")
+# A real opening delimiter follows a line start, whitespace or an opener —
+# never a word character, which is how `don"t`-shaped noise is excluded.
+# The SINGLE QUOTE belongs in that set, and leaving it out was the whole reason
+# this check saw 25 of rfc-8747's 38 pairs. The library's commonest attributed
+# shape is a YAML single-quoted scalar opening on the quotation itself —
+#     quoted_evidence:
+#       - '"The COSE_Key representation is used as the plaintext …" (rec#R-0047)'
+# — so the quotation's `"` is preceded by `'` and nothing else. It cannot be an
+# apostrophe in that position: an apostrophe sits between two word characters,
+# where no quotation starts.
+_OPENS = re.compile(r"(?:^|[\s(\[{*`—–>|'’-])$")
+# `(rec#R-0134)'s section` attributes the SECTION the id lives in, not the id's
+# own sentence, and the library says so 23 times. It is `_DISCLAIM`'s shape —
+# prose stating the id is not the span's — but it is matched immediately after
+# the citation rather than anywhere in a 400-character context, because at that
+# width it would also silence the real mis-joins sitting beside it.
+_OF_SECTION = re.compile(r"^[`'\"”]?['’]s\s+(?:section|clause|appendix)\b", re.I)
+
+
+def _nested_quote(window):
+    """The OUTERMOST quoted span closing at the end of `window`, if any.
+
+    Why this exists, and it is the whole of hazard "a new check can under-report
+    to zero": QUOTE's character class excludes `"`, so a quotation CONTAINING a
+    nested quote mark — `"restricted to values whose "COSE Algorithms" column
+    is Yes"` — matches nothing at all. On the rfc-9054/rfc-9360 lane, which has
+    11 duplicate-text groups over 23 requirements and is therefore the lane most
+    exposed to a wrong-but-resolving id, the check collected ZERO pairs and
+    reported them as a clean result. Over-reporting is loud; this was silent.
+
+    An even count of interior marks is NOT enough, and the first version of
+    this failed exactly there: `"A" prose "B"` also has two, so longest-first
+    welded two adjacent quotations together with the prose between them and the
+    library-wide count went from 4 to 101. The two cases separate structurally:
+
+        nested   "restricted … "COSE Algorithms" … is Yes"
+                                ^opener        ^closer
+        welded   "…review" `party` at line 403, inside "is i"
+                          ^closer                      ^opener
+
+    So the interior marks must PAIR UP: an even count, every first mark of a
+    pair looking like an OPENER (preceded by space or a bracket) and every
+    second like a CLOSER (followed by space or punctuation), and every inner
+    quotation short. A single pair was admitted at first, which is one short of
+    what the library writes — §7.1's sentence quotes two registry names in one
+    breath, `… the IANA "CWT Confirmation Methods" registry for CWT "cnf"
+    member values.` — and the rule generalises without weakening, because what
+    excludes welding is the ORIENTATION test, not the count: in `"A" prose "B"`
+    the first interior mark is preceded by `A`, so it is a closer, and no
+    pairing of it is admitted however many marks follow.
+
+    Bounded by the caller's window and by the same prose and structure tests
+    the strict path uses.
+    """
+    if not window or not _MARK.match(window[-1]):
+        return None
+    for i in [m.start() for m in _MARK.finditer(window[:-1])]:   # longest first
+        if not _OPENS.search(window[:i] or "\n"):
+            continue
+        body = window[i + 1:-1]
+        if not (40 <= len(body) <= 400):
+            continue
+        marks = [m.start() for m in _MARK.finditer(body)]
+        if not marks or len(marks) % 2:
+            continue
+        ok = True
+        for a, b in zip(marks[::2], marks[1::2]):
+            if not (a == 0 or body[a - 1] in " ([{—–-"):
+                ok = False                            # first is not an opener
+            elif not (b == len(body) - 1 or body[b + 1] in " ,.;:)]}—–"):
+                ok = False                            # second is not a closer
+            elif b - a > 80 or "\n" in body[a:b]:
+                ok = False                            # inner span too long
+            if not ok:
+                break
+        if not ok:
+            continue
+        if _YAMLISH.search(body) or not _is_prose(body):
+            continue
+        return body
+    return None
+
+
+def _plain_quote(window):
+    """The span closing at the end of `window` with NO interior marks.
+
+    Anchored on the closing delimiter and scanning back for its partner, which
+    is what makes the result independent of where the caller's window starts.
+    The version this replaced iterated QUOTE over the window instead, so
+    pairing began at an arbitrary byte offset: if the cut landed mid-quotation
+    every subsequent pair shifted by one and whichever quotation happened to
+    fall on the wrong side was never examined at all. On rfc-8747 that reported
+    25 pairs where an exhaustive join finds 38 — an undercount determined by
+    POSITION rather than by evidence, in the very number the summary prints as
+    coverage.
+    """
+    if not window or not _MARK.match(window[-1]):
+        return None
+    for i in [m.start() for m in _MARK.finditer(window[:-1])][::-1]:
+        if not _OPENS.search(window[:i] or "\n"):
+            continue
+        body = window[i + 1:-1]
+        if not (40 <= len(body) <= 1200) or _MARK.search(body):
+            continue
+        if _YAMLISH.search(body) or not _is_prose(body):
+            continue
+        return body
+    return None
+
+
+def _adjacent_quote(text, pos, end):
+    """The quoted span this citation ATTRIBUTES, if any.
+
+    BOTH directions, because both occur and each caught a real defect:
+      `"…" (rec#R-0001)`   the citation follows the closing delimiter
+      `(rec#R-0001): "…"`  the citation introduces the quotation
+    Either way only whitespace, a bracket, a dash or light punctuation may
+    stand between. Anything else is proximity, not attribution.
+
+    Both backward paths are anchored on a closing delimiter adjacent to the
+    citation — never on the window edge — so what gets examined depends on the
+    text, not on the arithmetic of the window.
+    """
+    window = text[max(0, pos - 1400):pos]
+    for cut in range(len(window), max(0, len(window) - 15), -1):
+        if not _JOIN.match(window[cut:]):
+            continue
+        head = window[:cut]
+        plain = _plain_quote(head)             # the common shape
+        if plain:
+            return plain
+        nested = _nested_quote(head)           # one balanced interior pair
+        if nested:
+            return nested
+    ahead = text[end:end + 1400]
+    m = QUOTE.search(ahead)
+    if m and _JOIN.match(ahead[:m.start()]) and not _YAMLISH.search(m.group(1)):
+        return m.group(1)
+    return None
+
+
+def quote_joins(recdir, known):
+    """[(file, line, ids, quote, verdict)] for each attributed quotation.
+
+    Driven by the CITATION, with quote pairing done inside a window around it.
+    Pairing quote marks across a whole file was tried and abandoned: these
+    files carry apostrophes, inch marks and nested quotations, so an unbalanced
+    mark anywhere above shifts every span below it and the real quotation stops
+    being found at all. A window re-pairs locally and is stable.
+
+    A sentence routinely cites SEVERAL ids — `(§2.2.4, rec#R-0027; Appendix C,
+    rec#R-0101). "…"` — where the quotation belongs to one of them and not the
+    nearest. Comparing against the nearest alone flagged eight such sentences
+    in rfc-8610 when every one was correctly attributed, so the quotation is
+    accepted if it is in ANY id cited in the same breath.
+    """
+    out = []
+    for f in sorted(x for x in recdir.rglob("*") if x.is_file()):
+        if f.suffix not in SCAN:
+            continue
+        try:
+            text = f.read_text(errors="ignore")
+        except OSError:
+            continue
+        seen = set()
+        for m in CITE.finditer(text):
+            who, bare = m.group(1), m.group(2)
+            if bare[0] in "GN" or bare not in known.get(who, {}):
+                continue
+            if _OF_SECTION.match(text[m.end():m.end() + 24]):
+                continue                      # shape 6: attribution to a section
+            quote = _adjacent_quote(text, m.start(), m.end())
+            if not quote or not _is_prose(quote):
+                continue
+            pos = m.start()
+            line_start = text.rfind("\n", 0, pos) + 1
+            line_end = text.find("\n", pos)
+            ctx = text[max(0, pos - 400):pos + 240]
+            back = text[max(0, line_start - 240):pos]
+            if _LIST_CTX.search(back) or _DISCLAIM.search(ctx):
+                continue                      # shapes 1, 2, 3 and 5
+            q = _norm(quote)
+            key = (f, q)
+            if key in seen:
+                continue
+            # Every id cited in the same breath may be the quotation's source.
+            sent = text[max(0, line_start - 220):
+                        (line_end if line_end > 0 else len(text)) + 60]
+            ids = []
+            for c in CITE.finditer(sent):
+                w, b = c.group(1), c.group(2)
+                if b[0] not in "GN" and b in known.get(w, {}) \
+                        and (w, b) not in ids:
+                    ids.append((w, b))
+            if (who, bare) not in ids:
+                ids.append((who, bare))
+            if any(_carries(q, _norm(known[w][b][1])) for w, b in ids):
+                # Recorded, not discarded. A pair that RESOLVES is the evidence
+                # that the check looked at anything at all, and conflating it
+                # with "found nothing" is how this tool reported a clean result
+                # on the one lane it covered least — see the summary line.
+                out.append((f.relative_to(recdir),
+                            text.count("\n", 0, pos) + 1,
+                            ["%s#%s" % (w, b) for w, b in ids], q, "ok"))
+                continue
+            seen.add(key)
+            # shape 4: under-citation — the span runs into the next id
+            joined = []
+            for w, b in ids:
+                n = int(b.split("-")[1])
+                nxt = known[w].get("%s-%04d" % (b.split("-")[0], n + 1))
+                joined.append(_norm(known[w][b][1]) + " " +
+                              _norm(nxt[1] if nxt else ""))
+            verdict = ("partial" if any(_carries(q, j) for j in joined)
+                       else "MISMATCH")
+            out.append((f.relative_to(recdir),
+                        text.count("\n", 0, pos) + 1,
+                        ["%s#%s" % (w, b) for w, b in ids], q, verdict))
+    return out
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("records", nargs="*")
+    ap.add_argument("--all", action="store_true")
+    ap.add_argument("--surface", action="store_true",
+                    help="list requirements sharing identical text")
+    ap.add_argument("--resolve", action="store_true",
+                    help="print every citation beside the text it resolves to")
+    ap.add_argument("--quote-join", action="store_true",
+                    help="assert each quotation beside a citation is a "
+                         "substring of THAT id's text")
+    ap.add_argument("--width", type=int, default=90,
+                    help="characters of resolved text to print (default 90)")
+    a = ap.parse_args()
+    if not (a.surface or a.resolve or a.quote_join):
+        a.surface = True
+
+    if a.all:
+        dirs = sorted(p.parent for p in ROOT.glob("records/*/*/distilled"))
+    else:
+        dirs = [pathlib.Path(x).resolve() for x in a.records]
+    if not dirs:
+        ap.error("name at least one record directory, or pass --all")
+
+    # Every record's requirements, so a cross-record citation can be resolved.
+    known = {d.name: requirements(d) for d in sorted(ROOT.glob("records/*/*"))
+             if d.is_dir()}
+
+    tot_groups = tot_cites = tot_dangling = 0
+    tot_pairs = tot_mismatch = tot_partial = tot_ok = 0
+    for recdir in dirs:
+        rid = recdir.name
+        where = recdir.relative_to(ROOT) if recdir.is_relative_to(ROOT) else recdir
+        if a.surface:
+            g = surface(recdir, rid)
+            if g:
+                n = sum(len(v) for v in g.values())
+                print(f"  ~ {where}: {len(g)} duplicate-text group(s), {n} "
+                      f"requirement(s) — a wrong id here still matches the words")
+                for text, ids in sorted(g.items(), key=lambda kv: kv[1]):
+                    print(f"      {', '.join(ids)}")
+                    print(f"        \"{text[:a.width]}...\"")
+            tot_groups += len(g)
+        if a.resolve:
+            for rel, who, i in citations(recdir):
+                tot_cites += 1
+                tgt = known.get(who, {})
+                if i not in tgt:
+                    tot_dangling += 1
+                    print(f"  ! {where}: {rel} cites {who}#{i} — NO SUCH ID")
+                    continue
+                loc, text = tgt[i]
+                print(f"  {who}#{i}  ({loc})  {text[:a.width]}")
+                print(f"      cited by {rel}")
+        if a.quote_join:
+            pairs = quote_joins(recdir, known)
+            tot_pairs += len(pairs)
+            for rel, ln, cids, quote, verdict in pairs:
+                if verdict == "ok":
+                    tot_ok += 1
+                    continue
+                if verdict == "partial":
+                    tot_partial += 1
+                    continue
+                tot_mismatch += 1
+                print(f"  ? {where}: {rel}:{ln} — a quotation attributed to "
+                      f"{', '.join(cids)} is in NONE of their texts")
+                print(f"        quoted : \"{quote[:a.width]}\"")
+                for cid in cids:
+                    loc, text = known[cid.split("#")[0]][cid.split("#")[1]]
+                    print(f"        {cid} ({loc}): \"{text[:a.width]}\"")
+
+    print(f"\n{len(dirs)} record(s)"
+          + (f", {tot_groups} duplicate-text group(s)" if a.surface else "")
+          + (f", {tot_cites} citation(s), {tot_dangling} dangling"
+             if a.resolve else "")
+          + (f", {tot_pairs} quotation/citation pair(s) examined"
+             f" ({tot_ok} carried by their cited id), {tot_mismatch} to read"
+             + (f", {tot_partial} spanning the next id too" if tot_partial
+                else "")
+             if a.quote_join else ""))
+    return 1 if tot_dangling else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

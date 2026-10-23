@@ -1,0 +1,364 @@
+=====================================================================
+numeric-reduction.derived.pseudocode.txt
+
+DERIVED - not verbatim.  draft-mcnally-deterministic-cbor-18 ships no
+pseudocode, no algorithm listing and no reference code of any kind; it
+states Numeric Reduction in four paragraphs of prose (Section 2.5) and
+then exercises it with two tables of test vectors (Sections 7.1 and 7.2).
+Everything below was written for this record from that prose and those
+tables.  It must never be quoted as the source's own algorithm.  The
+source's one piece of formal notation is a quoted CDDL prelude rule, in
+cddl-prelude-number.cddl.
+
+Derived from draft-mcnally-deterministic-cbor-18:
+  Section 2.5    Numeric Reduction, in full: rule 1 (reduction to
+                 DCBOR_INT), rule 2 (the single NaN), rule 3 (the
+                 decoder's duty to reject), and the closing paragraph
+                 defining the dCBOR numeric model
+  Section 2.2    preferred serialization, which chooses the width
+  Section 2.4    duplicate map keys, which Part 3 serves
+  Section 7.1    Table 3, 41 rows - the positive vectors
+  Section 7.2    Table 4, 11 rows - the negative vectors
+  Section 8.1    (non-normative) why reduction exists at all
+  Section 8.3    (non-normative) why there is one NaN
+and, for the encoding frame:
+  RFC 8949 Section 3 (head and argument), Section 4.1 (preferred
+  serialization: shortest argument that carries the value, shortest
+  float width that preserves the value)
+
+WHY THIS FILE EXISTS.  Numeric Reduction is the one dCBOR rule that no
+schema language in this directory can express at all - not CDDL (a float
+and the integer it reduces to are numerically equal, so no comparison
+operator separates them) and not ABNF (the choice is a predicate over
+the value, not over the bytes).  It is also the rule the source itself
+calls out as the reason dCBOR exists (Section 8.1).  A machine-checkable
+rendering therefore has to be a procedure, and this is it.
+
+STATUS OF THIS RENDERING.  Transcribed into Python and run against all
+41 rows of Table 3 and all 11 rows of Table 4: every Table 3 value
+encodes to exactly the bytes the source gives, and every Table 4 encoding
+is rejected, each for the reason the source states.  See README.md,
+"What was checked".  That is evidence for this rendering of Section 2.5;
+it is not a claim that Section 2.5 says nothing else.
+=====================================================================
+
+---------------------------------------------------------------------
+CONSTANTS
+---------------------------------------------------------------------
+
+  DCBOR_INT_MIN = -(2^63)          = -9223372036854775808
+  DCBOR_INT_MAX =  (2^64) - 1      = 18446744073709551615
+
+    Section 2.5 rule 1 writes this set as DCBOR_INT = [-2^63, 2^64-1].
+    It is the union of the signed and unsigned 64-bit ranges, and it is
+    exactly the set of integers that CBOR major types 0 and 1 can carry
+    with a 64-bit argument.  Both endpoints are inclusive.
+
+  CANONICAL_NAN = 0xf9 0x7e 0x00
+
+    Section 2.5 rule 2: "the quiet NaN value having the half-width CBOR
+    representation 0xf97e00".  Section 8.3 gives the reasoning.
+
+---------------------------------------------------------------------
+PART 1 - ENCODER.  Section 2.5 rule 1 and rule 2.
+---------------------------------------------------------------------
+
+  ; The entry point.  `v` is one untagged number as the application
+  ; presents it, from the dCBOR numeric model: an integer, or a floating
+  ; point value of any supported width.  Returns the encoded bytes.
+  ;
+  ; Section 2 is explicit that a dCBOR implementation need not support
+  ; floating point at all; where it does not, the float branches below
+  ; are unreachable and the integer branch is the whole of Section 2.5
+  ; for that implementation.
+
+  encode_number(v):
+      if v is an integer:
+          if v < DCBOR_INT_MIN or v > DCBOR_INT_MAX:
+              fail "outside DCBOR_INT"           ; see derivation note 5
+          return encode_integer(v)
+
+      ; v is a floating point value.
+      if is_nan(v):
+          return CANONICAL_NAN                   ; rule 2, unconditional
+      if is_infinite(v):
+          return preferred_float(v)              ; no integer equals it
+
+      if fractional_part(v) == 0:                ; "integral floating
+                                                 ;  point value"
+          ; An integral binary floating point value is *exactly* some
+          ; integer n - there is no rounding to decide.  See derivation
+          ; note 2.
+          n = exact_integer_value(v)
+          if n >= DCBOR_INT_MIN and n <= DCBOR_INT_MAX:
+              return encode_integer(n)           ; rule 1: REDUCED
+
+      ; Non-zero fractional part, or out of DCBOR_INT: "the original
+      ; floating point value is used for encoding".
+      return preferred_float(v)
+
+
+  ; Section 2.2 / RFC 8949 Section 4.1 for major types 0 and 1: the
+  ; shortest argument width that carries the value.  Reduction hands its
+  ; result here, which is why Section 2.5 rule 1 can say "(Preferred
+  ; encoding will then ensure the shortest length encoding is used.)"
+
+  encode_integer(n):
+      if n >= 0:
+          return head(major_type = 0, argument = n)
+      else:
+          return head(major_type = 1, argument = (-1 - n))
+
+  head(major_type, argument):
+      mt = major_type << 5
+      if argument < 24:      return [ mt | argument ]
+      if argument < 2^8:     return [ mt | 24 ] ++ u8be(argument)
+      if argument < 2^16:    return [ mt | 25 ] ++ u16be(argument)
+      if argument < 2^32:    return [ mt | 26 ] ++ u32be(argument)
+      if argument < 2^64:    return [ mt | 27 ] ++ u64be(argument)
+      fail "argument too large"          ; unreachable from DCBOR_INT
+
+
+  ; Section 2.2 / RFC 8949 Section 4.1 for major type 7: the shortest of
+  ; the three float widths that preserves the value exactly.  dCBOR adds
+  ; nothing here except that rule 2 has already removed the one case
+  ; RFC 8949 Section 4.1 has to qualify (NaN payloads), so no
+  ; payload-preservation test is needed.
+
+  preferred_float(v):
+      if is_nan(v):
+          return CANONICAL_NAN
+      if float16(v) decodes back to exactly v:
+          return [ 0xf9 ] ++ float16_bits_be(v)
+      if float32(v) decodes back to exactly v:
+          return [ 0xfa ] ++ float32_bits_be(v)
+      return [ 0xfb ] ++ float64_bits_be(v)
+
+      ; "decodes back to exactly v" is bit-exact round-tripping, not
+      ; approximation, and it must treat subnormals as representable:
+      ; Table 3 requires f90001 for 2^-24, the smallest half-precision
+      ; subnormal, and fa00000001 for the smallest single subnormal.
+      ; +Infinity and -Infinity round-trip in half precision, which is
+      ; why Table 3 gives f97c00 and f9fc00 and Table 4 rejects every
+      ; wider spelling of them.
+
+
+---------------------------------------------------------------------
+PART 2 - DECODER.  Section 2.5 rule 3, plus the Table 4 rejections.
+---------------------------------------------------------------------
+
+  ; `E` is the complete encoded bytes of one untagged numeric data item,
+  ; already known to be well-formed CBOR (RFC 8949 Appendix C Figure 1)
+  ; and already known to be of major type 0, 1, or 7 with additional
+  ; information 25, 26 or 27.  Returns OK or a rejection reason; a dCBOR
+  ; decoder MUST reject on any reason.
+  ;
+  ; Note the scope of rule 3 as the source words it: "dCBOR decoders that
+  ; support floating point numbers: MUST reject any encoded floating
+  ; point values that are not encoded according to the above rules."  A
+  ; decoder that does not support floating point rejects f9/fa/fb as
+  ; unsupported instead, which Section 2 permits.
+
+  check_numeric(E):
+      mt = E[0] >> 5
+      ai = E[0] & 0x1f
+
+      if mt == 0 or mt == 1:
+          argument = decode_argument(E)
+          ; Section 2.2.  A decoder MUST validate preferred
+          ; serialization, so re-encoding the argument must reproduce E
+          ; byte for byte.
+          if head(mt, argument) != E:
+              reject "not preferred encoding"
+          value = (mt == 0) ? argument : (-1 - argument)
+          ; Table 4 rows 3 and 4 only - see derivation note 5.
+          if value < DCBOR_INT_MIN or value > DCBOR_INT_MAX:
+              reject "integer outside DCBOR_INT (65-bit negative)"
+          return OK
+
+      ; mt == 7, ai in {25, 26, 27}: a float of 2, 4 or 8 argument bytes.
+      v = decode_float(E)
+
+      if is_nan(v):
+          ; Rule 2 binds this directly, without going through rule 3: it
+          ; is stated for "dCBOR implementations that support floating
+          ; point numbers", not for encoders, so it is a duty in both
+          ; directions (see derivation note 9).  The ONLY admissible
+          ; encoding of any NaN is CANONICAL_NAN.  This rejects a
+          ; payload NaN
+          ; (f97e01), a signalling NaN and a negative NaN at every width
+          ; - Table 4 rows 9, 10 and 11.
+          if E != CANONICAL_NAN:
+              reject "not canonical NaN"
+          return OK
+
+      if is_infinite(v):
+          if E != preferred_float(v):
+              reject "not preferred encoding"   ; Table 4 rows 5-8
+          return OK
+
+      if fractional_part(v) == 0:
+          n = exact_integer_value(v)
+          if n >= DCBOR_INT_MIN and n <= DCBOR_INT_MAX:
+              ; Rule 1, read as a decoder duty: this value was required
+              ; to be reduced to an integer, so no float encoding of it
+              ; is admissible.  Table 4 row 1 (f94a00 = 12.0) is this
+              ; case; so is every encoding of -0.0, which Table 3
+              ; requires to be 0x00.
+              reject "integral float reducible to DCBOR_INT"
+
+      if E != preferred_float(v):
+          reject "not preferred encoding"       ; Table 4 row 2
+      return OK
+
+
+---------------------------------------------------------------------
+PART 3 - NUMERIC EQUALITY, for Sections 2.3 and 2.4.
+---------------------------------------------------------------------
+
+  ; Section 2.5's closing paragraph defines the dCBOR numeric model and
+  ; the equality it induces.  Quoted, because the boundary is exact:
+  ;
+  ;   "the dCBOR numeric model comprises only untagged integers and
+  ;    untagged floating point values in the CBOR basic generic data
+  ;    model (major types 0, 1, and 7 ...).  Numeric Reduction and the
+  ;    duplicate-key considerations in this section apply only to such
+  ;    untagged numeric values, wherever they occur in a dCBOR data item.
+  ;    Tagged data items themselves are not part of the dCBOR numeric
+  ;    model: two tagged data items are equal in dCBOR only if both their
+  ;    tag numbers and their enclosed CBOR data items are equal, and no
+  ;    tagged data item is ever considered numerically equal to an
+  ;    untagged data item."
+  ;
+  ; The consequence an encoder needs: after reduction, dCBOR equality IS
+  ; byte equality of the encodings.  So duplicate-key detection and
+  ; bytewise lexicographic ordering can both be performed on encoded key
+  ; bytes - but only *after* reduction, never on the application's own
+  ; values.
+
+  dcbor_equal(a, b):
+      return encode_dcbor(a) == encode_dcbor(b)      ; byte comparison
+
+  ; This is the mechanism behind the warning in Section 2.5 that
+  ; Numeric Reduction can turn a valid CBOR map into an invalid dCBOR
+  ; one.  The source's own example, Figures 1 and 2: the keys 10 and
+  ; 10.0 are distinct CBOR data items and both encode to 0x0a under
+  ; dCBOR, so the map has duplicate keys and Section 2.4 rejects it.
+  ; Held as a fixture in ../examples/, not here.
+  ;
+  ; An encoder therefore cannot detect duplicate keys by comparing
+  ; application values; it must reduce and encode each key first.  See
+  ; dcbor-validate.derived.pseudocode.txt, which does the ordering and
+  ; uniqueness checks on encoded keys for exactly this reason.
+
+
+---------------------------------------------------------------------
+DERIVATION NOTES.  Where this rendering goes beyond, or reads into, what
+Section 2.5 literally says.  Each one is a judgement, flagged so a
+reviewer can disagree with it.
+---------------------------------------------------------------------
+
+ 1. VALUE, NOT EXPONENT.  Rule 1 says a float stays a float if it has
+    "a non-zero fractional part, or an exponent that takes it out of
+    DCBOR_INT".  The test above is on the value, not on the exponent
+    field: the exponent is a proxy, and a value test is what Table 3
+    requires at the boundary.  18446744073709552000.0 (= 2^64 exactly,
+    Table 3) and 18446744073709550000.0 (= 2^64 - 2048, Table 3) share
+    the same decimal magnitude and differ only in whether the value is
+    within DCBOR_INT; an exponent-field test cannot separate them, and
+    Table 3 encodes the first as a float (fa5f800000) and the second as
+    an integer (1bfffffffffffff800).
+
+ 2. INTEGRAL MEANS EXACT.  A binary floating point value with a zero
+    fractional part is exactly an integer, so the conversion loses
+    nothing and no rounding mode is involved.  This is why rule 1 is
+    safe, and it is the reason the reverse direction (integer to float)
+    is never performed: that one *would* lose precision.
+
+ 3. THE RANGE TEST MUST NOT BE A CAST.  DCBOR_INT_MAX = 2^64 - 1 is not
+    representable as a binary64 value; the largest binary64 below it is
+    18446744073709549568 (0xfffffffffffff800), which is the Table 3 row
+    "18446744073709550000.0 | 1bfffffffffffff800 | Reduced.  Largest
+    double that can convert to uint64, almost UINT64_MAX."  An
+    implementation that tests the range by casting the float to a 64-bit
+    integer and comparing afterwards will wrap or trap on the very next
+    value up, 2^64 itself, which Table 3 requires to be left as a float.
+    Compare before converting.
+
+ 4. INFINITY IS HANDLED BY OMISSION.  Section 2.5 never mentions
+    Infinity.  It falls out: no integer in DCBOR_INT is numerically equal
+    to an infinity, so rule 1 leaves it alone, and Section 2.2 then picks
+    the half-width form.  Table 3 confirms the result (f97c00, f9fc00,
+    both marked "Canonicalized") and Table 4 rejects fa and fb spellings
+    of both.  The pseudocode tests it explicitly only to keep
+    `fractional_part` and `exact_integer_value` total.
+
+ 5. THE INTEGER BOUND IS APPENDIX-ONLY.  This is the sharpest reading
+    decision in the file, and it should be reviewed.  Section 2.5 rule 1
+    introduces DCBOR_INT solely as the target range for *floating point*
+    reduction.  No numbered requirement anywhere in Section 2 says that
+    an untagged *integer* outside DCBOR_INT is invalid - and RFC 8949
+    major type 1 reaches -2^64, so unrestricted CBOR allows it.  The
+    only statement that rejects it is Table 4 in Section 7.2, which
+    requires a decoder to reject 3b8000000000000000 (-2^63 - 1) and
+    3bffffffffffffffff (-2^64) with the reason "65-bit negative integer
+    value", under a heading saying these "MUST be rejected as invalid by
+    a dCBOR-compliant decoder".  Section 7 introduces the tables as
+    "intended to exercise the requirements of this specification", which
+    presupposes a requirement to exercise.  This rendering treats
+    DCBOR_INT as bounding the whole numeric model, in both directions,
+    for encoder and decoder alike - the reading the tables force - and
+    flags here that the normative text does not state it.  Recorded for
+    ../requirements.yaml and ../design-notes.md.
+
+ 6. -0.0 IS A DECODER REJECTION THAT TABLE 4 DOES NOT LIST.  Table 3
+    requires -0.0 to encode as 0x00 ("Reduced"), and Section 2.5 says so
+    in prose: the three representations 0, 0.0 and -0.0 "are all reduced
+    to the basic integer 0".  The decoder consequence - that f98000,
+    fa80000000 and fb8000000000000000 MUST all be rejected - follows from
+    rule 3 but appears in neither table.  The rendering above rejects
+    them as "integral float reducible to DCBOR_INT", and they are worth
+    adding to ../examples/ as negative vectors the source omits.
+
+ 7. TWO LABELS IN TABLE 3 ARE WRONG, and the vectors are right.  The row
+    "-127 (-2^8 - 1) | 387e" labels -127 as -2^8-1, which is -257; -127
+    is -(2^7 - 1).  The row "-32768 (-2^16) | 397fff" labels -32768 as
+    -2^16, which is -65536; -32768 is -2^15.  Both *encodings* are
+    correct for the decimal values given, and this rendering reproduces
+    them; only the parenthetical algebra is off.  Editorial, but worth
+    reporting upstream.
+
+ 8. ONE TABLE 3 NOTE IS IMPRECISE.  "-9223372036854774784.0 |
+    3b7ffffffffffffbff | Reduced.  Most negative double that converts to
+    int64."  -2^63 = -9223372036854775808 is itself exactly
+    representable as a binary64 and is in DCBOR_INT, so it converts too
+    and is more negative - Table 3's own integer row gives its encoding,
+    3b7fffffffffffffff.  The float -9223372036854775808.0 reduces to
+    that same integer.  What the vector actually pins is the most
+    negative double *strictly greater than* INT64_MIN, i.e. the next
+    representable value toward zero, which is the useful boundary case
+    for an implementation that computes the bound rather than comparing
+    against it.
+
+ 9. SECTION 2.5 LABELS ITS ROLES DIFFERENTLY FROM EVERY OTHER
+    SUBSECTION, and the difference is load-bearing.  Sections 2.1, 2.2,
+    2.3, 2.4, 2.6 and 2.7 each head their lists "dCBOR encoders:" and
+    "dCBOR decoders:".  Section 2.5 heads its first list "dCBOR
+    implementations that support floating point numbers:" - covering
+    rules 1 AND 2 - and only its third rule "dCBOR decoders that support
+    floating point numbers:".  So rule 2, the single NaN, is a duty on
+    implementations in both directions, while rule 1, reduction, is
+    worded as a conversion performed "before encoding" and reaches a
+    decoder only through rule 3.  A requirements table that keys all 15
+    items as encoder/decoder pairs will mis-key these three.  Flagged for
+    ../requirements.yaml.
+
+10. WHAT THIS FILE DOES NOT COVER.  Everything in dCBOR that is not
+    numeric: definite length (2.1), map key order (2.3), duplicate keys
+    (2.4) beyond the equality predicate of Part 3, the simple-value
+    restriction (2.6), and NFC (2.7).  Those are
+    dcbor-validate.derived.pseudocode.txt.  Nor does it decide
+    well-formedness: `check_numeric` assumes a well-formed item, and
+    well-formedness is RFC 8949 Appendix C, held verbatim in
+    records/ietf/rfc-8949/distilled/schema/well-formed.pseudocode.txt.
+=====================================================================

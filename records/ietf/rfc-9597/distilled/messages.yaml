@@ -1,0 +1,224 @@
+record: rfc-9597
+reviewed_by: ""
+
+# Every structure RFC 9597 defines or constrains. Section numbers are RFC
+# 9597's unless another document is named.
+#
+# THE DOCUMENT DEFINES ONE THING: COSE header parameter label 15, whose value is
+# a CWT Claims Set. Everything else in this file is RFC 9052's or RFC 8392's,
+# named and not redefined, and labelled as such.
+#
+# `constrained_by` IS WIRED. One agent wrote this file and ../requirements.yaml
+# in the same pass, so the ids are known rather than guessed. A requirement is
+# wired only where it constrains the field's PRESENCE, VALUE, TYPE, LENGTH,
+# PLACEMENT or USE.
+#
+# NOT ONE BYTE OF THIS IS ILLUSTRATED BY THE SOURCE. `example`, `examples`,
+# `Figure`, `hex`, `vector` and `diagnostic notation` each occur ZERO times in
+# the 265-line document, so every layout below is derived from Table 1 and from
+# RFC 9052 §3's definition of the header buckets, NOT decoded from printed
+# bytes. That is why ../examples/ is declared not_applicable, and it is the
+# sharpest practical difference between this record and rfc-8392 in the same
+# lane, where five complete CWTs are printed and all five verify.
+
+messages:
+
+  # =========================================================================
+  - name: CWT_Claims_header_parameter
+    locator: "§2, Table 1"
+    encoding: "COSE header parameter (RFC 9052 §3): label 15 => CBOR map"
+    summary: >-
+      The whole of what RFC 9597 defines. §1 gives the reason it is ONE
+      parameter holding a nested map rather than claims placed directly in the
+      header: "Directly including CWT claim values as COSE header parameter
+      values would not work, since there are conflicts between the numeric
+      header parameter assignments and the numeric CWT claim assignments."
+    layout: >-
+      0x0f => CBOR map. Two octets of label and head for a non-empty map of up
+      to 23 entries (0x0f 0xa_n), then the claim entries, each keyed by a CWT
+      claim key. DERIVED from Table 1 and RFC 9052 §3, not decoded: the
+      document prints no bytes at all. The CWT claim keys inside are
+      rfc-8392's - 1 iss, 2 sub, 3 aud, 4 exp, 5 nbf, 6 iat, 7 cti - and their
+      allocation costs are priced in
+      records/ietf/rfc-8392/distilled/schema/claim-key-policy.derived.yaml.
+    fields:
+      - name: "CWT Claims"
+        label: 15
+        type: map
+        value_registry: "[CWT.Claims] — the IANA CBOR Web Token (CWT) Claims registry"
+        required: false
+        encoding: "0x0f => CBOR map"
+        locator: "§2, Table 1"
+        constrained_by:
+          - "rfc-9597#R-0015"
+          - "rfc-9597#R-0016"
+          - "rfc-9597#R-0017"
+          - "rfc-9597#R-0018"
+          - "rfc-9597#R-0020"
+          - "rfc-9597#R-0021"
+          - "rfc-9597#R-0022"
+        note: >-
+          THE VALUE REGISTRY COLUMN IS THE COST. This parameter does not merely
+          permit a claim-registry dependence - it NAMES [CWT.Claims] as the
+          definition of its own value space. Nesting a registry inside a header
+          parameter removes the CBOR Tags dependence and installs a claim-key
+          dependence in its place. See ../design-notes.md, Cut 2.
+      - name: "claim entries inside the map"
+        label: "int / text (Claim-Label)"
+        type: any
+        required: false
+        encoding: "int (1-9 octets) or tstr (1 + length octets) => any CBOR item"
+        locator: "§2, the non-normative CDDL"
+        constrained_by:
+          - "rfc-9597#R-0016"
+          - "rfc-9597#R-0017"
+          - "rfc-9597#R-0018"
+        note: >-
+          FLAT AND GLOBAL, WITH NO KEY COMPONENT, and the only description of it
+          is one the source itself calls non-normative. The empty map validates;
+          no normative sentence forbids a float, boolean or byte-string label.
+          ARCH-0002 P1 wants (defining key, label). See ../design-notes.md,
+          Cut 3.
+
+  # =========================================================================
+  - name: COSE_header_buckets_as_this_document_constrains_them
+    locator: "§2 (placement and occurrence); RFC 9052 §3 for the buckets themselves"
+    encoding: "protected: bstr .cbor header_map; unprotected: header_map"
+    summary: >-
+      RFC 9597 defines neither bucket and adds two rules about where label 15
+      may sit in them. The rules are the substance of the document and they are
+      asymmetric: the strong one forbids DUPLICATION and the weak one asks for
+      PROTECTION.
+    layout: >-
+      §2: "It is RECOMMENDED that the CWT Claims header parameter only be used
+      in a protected header to avoid the contents being malleable." And: "The
+      header parameter MUST only occur once in either the protected or
+      unprotected header of a COSE structure." THREE SHAPES ARE CONFORMANT -
+      protected only, unprotected only, absent - and
+      schema/cwt-claims-header.derived.cddl enumerates all three because CDDL
+      cannot express "at most once across two maps".
+
+      THAT ENUMERATION IS A READING, NOT A STATEMENT. Added 2026-10-21 by pass
+      3, which found this file asserting the three shapes with no mention of
+      the ambiguity pass 2 had recorded one artifact away: ../design-notes.md
+      D-6 shows the MUST admits three readings. This file takes READING 1 - at
+      most once ACROSS the two buckets - under which the three shapes are
+      complete. Under reading 2 - at most once PER bucket - a fourth shape is
+      conformant, label 15 in both buckets once each, and the enumeration is
+      incomplete rather than wrong. ../requirements.yaml R-0021 and
+      schema/cwt-claims-header.derived.cddl now say the same thing.
+    fields:
+      - name: protected
+        type: "bstr .cbor header_map"
+        required: true
+        encoding: "bstr wrapping a CBOR map"
+        locator: "§2; RFC 9052 §3"
+        constrained_by:
+          - "rfc-9597#R-0020"
+          - "rfc-9597#R-0021"
+        note: >-
+          The RECOMMENDED home for label 15, and the only one inside
+          Sig_structure. rfc-9943 §6 closes the RECOMMENDED into a MUST for
+          Signed Statements and Receipts, which is the precedent our profile
+          should cite rather than inventing the rule (R-O-03).
+      - name: unprotected
+        type: header_map
+        required: true
+        encoding: "CBOR map"
+        locator: "§2; RFC 9052 §3"
+        constrained_by:
+          - "rfc-9597#R-0021"
+        note: >-
+          EXPRESSLY PERMITTED TO HOLD LABEL 15, and RFC 9052 §4.4's
+          Sig_structure is [context, body_protected, external_aad, payload] -
+          the unprotected header is not an input. So a fully conformant producer
+          can emit a CWT Claims header parameter, iss and sub included, that NO
+          SIGNATURE COVERS AT ALL. records/ietf/rfc-8392's extraction
+          demonstrated the coverage boundary rather than arguing it: that
+          record's A.3 signature verifies from Sig_structure's four fields
+          alone, so an unprotected map is provably not an input.
+
+  # =========================================================================
+  - name: CWT_Claims_Set_in_the_payload
+    locator: "§2 (the duplication rule); rfc-8392 §2 for the structure itself"
+    encoding: "bstr .cbor CBOR map, per RFC 8392"
+    summary: >-
+      Named here only because §2's one hard rule relates it to the header
+      parameter. RFC 9597 defines nothing about it.
+    layout: >-
+      rfc-8392 §2: "The CBOR map that contains the claims conveyed by the CWT."
+      See records/ietf/rfc-8392/distilled/messages.yaml for the field-by-field
+      layout, which that record's extraction decoded from five printed CWTs.
+    fields:
+      - name: "any claim also present in the header"
+        type: any
+        required: false
+        encoding: "as rfc-8392 defines it"
+        locator: "§2"
+        constrained_by:
+          - "rfc-9597#R-0019"
+        note: >-
+          THE DUPLICATION MUST, AND ITS TWO ESCAPE HATCHES. "In cases where CWT
+          claims are present both in the payload and the header of a CWT, an
+          application receiving such a structure MUST verify that their values
+          are identical, unless the application defines other specific
+          processing rules for these claims." (1) The `unless` clause voids it
+          by profile and nothing constrains what those rules may be. (2) It
+          fires only for "a CWT", and rfc-8392 §6 opens "How to determine that
+          a CBOR data structure is a CWT is application dependent" - while §2's
+          last paragraph here says the parameter "MAY be used in any COSE object
+          using header parameters, such as COSE_Sign objects. Its use is not
+          restricted to CWTs." So the document's only hard duplication rule
+          rests on a classification the defining document declines to specify.
+          And "identical" is undefined.
+
+coverage:
+  structures: 3
+  fields: 5
+  fields_with_constrained_by: 5
+  requirements_cited: 8
+  requirements_total: 28
+  dangling_ids: 0
+  method: >-
+    Recomputed by the generator at write time against ../requirements.yaml.
+  unwired_and_why: >-
+    TWENTY OF THE 28 REQUIREMENTS CONSTRAIN NO FIELD, because this
+    document is three normative sentences and twenty-five sentences of reason,
+    scope and consideration. By locator: §1's R-0001 to R-0014 are the use
+    cases, the JOSE precedent, the collision rationale, the scope exclusion and
+    the interpretation chain, and NOT ONE of them constrains a byte. R-0011 to
+    R-0014 - the MAY / RECOMMENDED / MAY / MUST NOT chain - constrain USE and
+    KNOWLEDGE rather than any field, and R-0014's MUST NOT is the sharpest
+    case: it is the document's main defence and it is unenforceable by the
+    producer, untestable by a conformance checker, and defeated by any COSE API
+    that merges the two header maps for its caller. §3's R-0023 is a structural
+    privacy statement about the whole mechanism. §4's R-0024 to R-0027 are
+    incorporated security considerations, a detached-content duty on the
+    application, the rationale for the duplication rule, and the lower-case
+    instruction that is the most important sentence in the document. §5's
+    R-0028 is a completed IANA action.
+
+    THE EIGHT THAT ARE WIRED ARE EXACTLY §2's EIGHT, R-0015 TO R-0022, with
+    nothing from any other section: R-0015 the registration, R-0016 to R-0018
+    the non-normative declaration and the CDDL and the label space, R-0019
+    duplication, R-0020 RECOMMENDED protected, R-0021 occur once, R-0022 any
+    COSE object. A one-section wiring is unusual and it is the measurement, not
+    an oversight: §2 is the only section of RFC 9597 that says anything about
+    bytes.
+
+    THAT DISTRIBUTION IS THE DOCUMENT. Three sentences bind bytes; the rest
+    bind a reader.
+  cross_check_2026_10_21: >-
+    PASS 3 CLOSURE, fields a requirement names against this file and ../schema/.
+    Every field named by any of the 28 requirements resolves here or in
+    ../schema/, with ONE exception, and it is a pointer rather than a gap: R-0012
+    names the "typ" (type) Header Parameter of RFC 9596 as §1's RECOMMENDED
+    carrier of the intended interpretation, and neither this file nor
+    ../schema/*.cddl defines it. It is label 16 and it is modelled in
+    records/ietf/rfc-9596/distilled/messages.yaml as typ_header_parameter; RFC
+    9597 registers only label 15 and says nothing about label 16's bytes, so
+    defining it here would be extracting the wrong document. The same holds for
+    COSE_Sign and COSE_Sign1, named by R-0022 and R-0004 and defined in
+    records/ietf/rfc-9052/distilled/messages.yaml. The header's claim that
+    everything not RFC 9597's belongs to RFC 9052 or RFC 8392 therefore misses
+    one document, RFC 9596, which this entry adds.

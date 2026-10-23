@@ -1,0 +1,344 @@
+=====================================================================
+dcbor-validate.derived.pseudocode.txt
+
+DERIVED - not verbatim.  draft-mcnally-deterministic-cbor-18 ships no
+pseudocode and no reference implementation; Section 8.6 ("Why not define
+an API?") says outright that the authors chose not to widen the document's
+scope that way, and directs the reader to the four implementations listed
+in Section 4 instead.  So the decision procedure below was written for
+this record from the source's prose, and must never be quoted as the
+source's own algorithm.  The only formal notation the source contains is
+a quoted CDDL prelude rule, in cddl-prelude-number.cddl.
+
+Derived from draft-mcnally-deterministic-cbor-18:
+  Section 2      the recursion rule and the scope of "dCBOR codec"
+  Section 2.1    definite length items          (2 numbered requirements)
+  Section 2.2    preferred serialization                             (2)
+  Section 2.3    ordered map keys                                    (2)
+  Section 2.4    duplicate map keys                                  (2)
+  Section 2.5    numeric reduction                                   (3)
+  Section 2.6    simple values                                       (2)
+  Section 2.7    strings / NFC                                       (2)
+  Section 3      tag 201 and the .dcbor control operators
+  Section 8.5    (non-normative) tags as the escape hatch
+and, for the frame:
+  RFC 8949 Section 3, Section 4.1 (preferred serialization),
+  Section 4.2.1 (bytewise lexicographic key order), Appendix C
+  (well-formedness - assumed, not reimplemented)
+  UNICODE-NORM (TR15) for Normalization Form C
+
+WHAT THIS FILE IS FOR.  It is the conformance decision that this
+directory's schemas cannot make.  dcbor-profile.derived.cddl enforces one
+and a half of dCBOR's seven narrowing rules and dcbor-head.derived.abnf
+two more at head level; this procedure decides all seven, because it
+works on encoded bytes and can therefore see encoding-level properties.
+Where a harness needs a yes/no, this is the artifact to transcribe.
+
+DIVISION OF LABOUR.  The numeric half of Section 2.5 lives in
+numeric-reduction.derived.pseudocode.txt and is called here, not
+restated.  Well-formedness is not restated either: it is RFC 8949
+Appendix C Figure 1, held verbatim at
+records/ietf/rfc-8949/distilled/schema/well-formed.pseudocode.txt, and
+`is_dcbor` below assumes its input has already passed it.  That ordering
+is deliberate and matches the source: Section 2 says a dCBOR
+implementation "produces well-formed, deterministically encoded CBOR
+according to [RFC8949]", so dCBOR narrows a set it does not define.
+=====================================================================
+
+---------------------------------------------------------------------
+ENTRY POINT
+---------------------------------------------------------------------
+
+  ; `bytes` is a complete encoded CBOR data item.  Returns OK, or the
+  ; first reason it is not dCBOR.  Both directions of every numbered
+  ; requirement are covered: a decoder runs this and rejects on any
+  ; reason, and an encoder's output must satisfy it (Section 2 makes the
+  ; two sides mirror images, which is why the source states each rule
+  ; twice, once per role).
+
+  is_dcbor(bytes):
+      if not well_formed(bytes):              ; RFC 8949 Appendix C
+          reject "not well-formed CBOR"
+      (item, rest) = check_item(bytes)
+      if rest is not empty:
+          reject "trailing bytes"             ; RFC 8949 Section 3
+      return OK
+
+
+---------------------------------------------------------------------
+THE RECURSION.  Section 2: "A CBOR data item is considered to conform to
+dCBOR only if every CBOR data item nested within it, recursively
+(including array elements, map keys and values, and the contents of
+tagged data items), also conforms to the narrowing rules in this
+section."
+---------------------------------------------------------------------
+
+  check_item(bytes):
+      ib = bytes[0]
+      mt = ib >> 5
+      ai = ib & 0x1f
+
+      ; --- Section 2.1, decoder requirement 2 --------------------------
+      ; "MUST reject any encoded indefinite-length items for byte
+      ; strings, text strings, arrays, and maps."  Decidable from the
+      ; initial byte alone; dcbor-head.derived.abnf excludes these four
+      ; bytes by construction.
+      if ai == 31 and mt in {2, 3, 4, 5}:
+          reject "indefinite length"
+      if ib == 0xff:
+          reject "break outside indefinite-length item"
+
+      ; --- Section 2.2, decoder requirement 2 --------------------------
+      ; "MUST validate that encoded CBOR conforms to preferred
+      ; serialization, and reject any encoded CBOR that does not
+      ; conform."  For every major type except 7 this is the argument
+      ; width: the shortest width that carries the argument.  It applies
+      ; to lengths and tag numbers as much as to integer values - a
+      ; byte string of length 10 headed 0x580a... is as non-conforming
+      ; as the integer 10 encoded 0x180a; the preferred heads are 0x4a
+      ; and 0x0a.
+      if mt != 7:
+          argument = decode_argument(bytes)
+          if head(mt, argument) != bytes[0 .. head_length(bytes)-1]:
+              reject "not preferred encoding"
+
+      switch mt:
+
+        case 0, 1:                            ; untagged integers
+            return check_numeric(head_bytes(bytes))      ; Section 2.5
+
+        case 2:                               ; byte string
+            ; Section 2.1 satisfied above.  dCBOR adds nothing else:
+            ; Section 8.5 is explicit that byte strings carry no
+            ; restriction "beyond those that apply to all byte strings
+            ; (definite length only)".
+            return consume(bytes, head + argument content bytes)
+
+        case 3:                               ; text string
+            s = utf8_decode(content_bytes(bytes))
+            if s is not valid UTF-8:
+                reject "invalid UTF-8"        ; RFC 8949 Section 3.1
+            ; --- Section 2.7, decoder requirement ----------------------
+            ; "MUST reject any encoded text strings that are not in NFC."
+            if nfc(s) != s:
+                reject "text string not in NFC"
+            return consume(bytes, head + content)
+
+        case 4:                               ; array
+            n = argument
+            rest = after_head(bytes)
+            repeat n times:
+                rest = check_item(rest)       ; Section 2 recursion
+            return rest
+
+        case 5:                               ; map
+            return check_map(bytes)
+
+        case 6:                               ; tag
+            ; Any tag number: the source restricts none, and Section 8.5
+            ; makes tags the sanctioned escape hatch for everything dCBOR
+            ; does not cover (bignums under tags 2 and 3, nontrivial NaNs
+            ; under tags 80-82).  Tag 201 (Sections 3 and 6) is not
+            ; special here - its declarative force is exactly the claim
+            ; that this procedure returns OK for its content.
+            ;
+            ; Section 2.5: a tagged item is NOT in the dCBOR numeric
+            ; model, so no reduction applies to the tag itself, and tag
+            ; 1 wrapping an integral float is reduced only inside - the
+            ; Section 8.1 example.
+            return check_item(after_head(bytes))         ; recursion
+
+        case 7:
+            ; --- Section 2.6, decoder requirement 2 --------------------
+            ; "MUST reject any encoded major type 7 values other than
+            ; false, true, null, and the floating point values."
+            if ib in {0xf4, 0xf5, 0xf6}:                 ; false/true/null
+                return after_head(bytes)
+            if ai in {25, 26, 27}:                       ; float16/32/64
+                return check_numeric(head_bytes(bytes))  ; Section 2.5
+            reject "simple value other than false, true, null"
+            ; This one rejection covers: `undefined` (0xf7, Section 8.2),
+            ; simple values 0-19 (0xe0-0xf3), and simple values 32-255
+            ; (0xf8 xx, Section 8.4).
+
+
+---------------------------------------------------------------------
+MAPS.  Sections 2.3 and 2.4, and the trap in Section 2.5.
+---------------------------------------------------------------------
+
+  check_map(bytes):
+      n = argument(bytes)
+      rest = after_head(bytes)
+      previous_key = none
+
+      repeat n times:
+          key_start = rest
+          rest = check_item(rest)             ; the key is a dCBOR item
+          key = key_start .. rest             ; its exact encoded bytes
+          rest = check_item(rest)             ; the value is one too
+
+          if previous_key is not none:
+              c = bytewise_compare(previous_key, key)
+
+              ; --- Section 2.4, decoder requirement 2 ------------------
+              ; "MUST reject encoded maps with duplicate keys."  Tested
+              ; before the ordering test only because equality is the
+              ; sharper diagnosis; under Section 2.3 a duplicate is
+              ; necessarily adjacent, so one comparison decides both.
+              if c == 0:
+                  reject "duplicate map key"
+
+              ; --- Section 2.3, decoder requirement 2 ------------------
+              ; "MUST validate that encoded CBOR maps have keys in
+              ; bytewise lexicographic order, and reject any encoded maps
+              ; that do not conform."
+              if c > 0:
+                  reject "map keys not in bytewise lexicographic order"
+
+          previous_key = key
+
+      return rest
+
+
+  ; RFC 8949 Section 4.2.1, last bullet, which Section 2.3 adopts by
+  ; name: compare the complete deterministic encodings of the two keys as
+  ; byte strings; if one is a proper prefix of the other, the shorter
+  ; sorts first.
+  ;
+  ; NOTE, and it is a real narrowing choice worth recording: RFC 8949
+  ; offers TWO orderings - Section 4.2.1's bytewise lexicographic and
+  ; Section 4.2.3's length-first.  Section 2.3 of dCBOR cites 4.2.1
+  ; explicitly and says nothing about 4.2.3, so length-first ordering is
+  ; excluded.  dCBOR's rule is therefore a choice between CBOR's own
+  ; alternatives, not merely a tightening of one.
+
+  bytewise_compare(a, b):
+      for i in 0 .. min(len(a), len(b)) - 1:
+          if a[i] != b[i]:
+              return a[i] < b[i] ? -1 : +1
+      if len(a) == len(b): return 0
+      return len(a) < len(b) ? -1 : +1
+
+
+---------------------------------------------------------------------
+THE ENCODER SIDE.  The same seven rules, stated as duties, because
+Section 2 words every one of them twice and a validator only shows half.
+---------------------------------------------------------------------
+
+  encode_dcbor(item):
+      switch kind of item:
+        number:       return encode_number(item)   ; Section 2.5, see
+                                                   ; numeric-reduction
+        bstr, tstr:   ; Section 2.7 encoder requirement: text strings
+                      ; MUST be emitted in NFC.  Normalize at the
+                      ; boundary, not here, if the application's own
+                      ; comparisons must agree with the encoding.
+                      s = (kind is tstr) ? nfc(item) : item
+                      return head(mt, len(s)) ++ s   ; Sections 2.1, 2.2
+        array:        return head(4, len(item))
+                             ++ concat(encode_dcbor(e) for e in item)
+        map:          return encode_map(item)
+        tagged:       return head(6, tag_number)
+                             ++ encode_dcbor(tag_content)
+        false/true/null:
+                      return 0xf4 / 0xf5 / 0xf6     ; Section 2.6
+        undefined, other simple:
+                      fail "not representable in dCBOR"   ; Section 2.6
+
+  encode_map(m):
+      ; The order matters: REDUCE AND ENCODE FIRST, THEN SORT AND CHECK.
+      ; Section 2.5 warns that Numeric Reduction can create duplicate
+      ; keys that do not exist in the application's data (its Figures 1
+      ; and 2: the distinct CBOR keys 10 and 10.0 both become 0x0a), so
+      ; an encoder that de-duplicates before reducing will emit an
+      ; invalid map and an encoder that sorts before reducing may emit a
+      ; misordered one.
+      entries = [ (encode_dcbor(k), encode_dcbor(v)) for (k, v) in m ]
+      sort entries by bytewise_compare on the encoded key
+      if any two adjacent encoded keys are equal:
+          fail "duplicate map key after numeric reduction"  ; Section 2.4
+      return head(5, len(entries)) ++ concat(k ++ v for entries)
+
+
+---------------------------------------------------------------------
+WHAT THIS PROCEDURE DOES NOT DECIDE
+---------------------------------------------------------------------
+
+ 1. WELL-FORMEDNESS.  Assumed, not reimplemented - RFC 8949 Appendix C.
+    A fixture that is not well-formed cannot be presented to any artifact
+    in this directory.
+
+ 2. WHETHER A REJECTION HAPPENED.  Every dCBOR decoder requirement is
+    "MUST reject", and a procedure that returns a reason is not the same
+    as an implementation that acts on it.  An implementation that
+    silently repairs a violation - normalizing a text string on input,
+    re-sorting a map, reducing a float it should have refused - satisfies
+    this procedure's letter and breaks the requirement.  Only a
+    differential test over an implementation sees that, and it is the one
+    gap in this directory that no artifact here can close.
+
+ 3. WHICH SUBSET OF CBOR AN IMPLEMENTATION SUPPORTS.  Section 2 is
+    explicit that "dCBOR places no direct requirement on what subset of
+    CBOR is implemented", and Section 8.5 that implementations need not
+    support bignums, complex numbers or other tagged items.  So a
+    conforming decoder MAY reject input this procedure accepts, on the
+    ground that it does not implement that type at all.  OK here means
+    "conforms to the narrowing rules", never "every dCBOR decoder must
+    accept it".
+
+ 4. APPLICATION-LEVEL KEY HYGIENE.  Section 2.5's closing advice - "In
+    general, dCBOR applications need to avoid maps that have entries with
+    keys that are semantically equivalent in dCBOR's numeric model" - is
+    guidance to a protocol designer, not a checkable property of a
+    document.  `encode_map` above turns it into a hard failure at encode
+    time, which is the strongest a codec can do.
+
+ 5. NFC's DEPENDENCY.  `nfc()` is Unicode Normalization Form C
+    (UNICODE-NORM / TR15), a normative reference this record does not
+    hold.  The procedure cannot be run without a Unicode implementation,
+    and its result is only as current as that implementation's Unicode
+    version - a property the source does not discuss and which an
+    extraction should flag, because it is the one place where two
+    conforming dCBOR implementations can disagree about the same bytes.
+
+
+---------------------------------------------------------------------
+DERIVATION NOTES
+---------------------------------------------------------------------
+
+ 1. ORDER OF CHECKS IS OURS.  The source states seven independent rules
+    and never sequences them.  The order above is chosen so that the
+    cheapest and most localized rejection fires first; any permutation
+    accepts and rejects exactly the same inputs, differing only in which
+    reason is reported.
+
+ 2. PREFERRED SERIALIZATION APPLIES TO ARGUMENTS, NOT JUST VALUES.
+    Section 2.2 says only "MUST only emit preferred serialization", with
+    the content delegated to RFC 8949 Section 4.1.  Applying it to string
+    lengths, array and map counts, and tag numbers - not just to integer
+    values - is RFC 8949's reading, carried over here.  It is what makes
+    tag 201 exactly two bytes (0xd8 0xc9).
+
+ 3. THE "BREAK" REJECTION IS BELT AND BRACES.  With all four
+    indefinite-length heads rejected, a well-formed item can never
+    contain a 0xff; the explicit check is kept because this procedure is
+    meant to be transcribed, and a transcription that drops the
+    well-formedness precondition should still fail closed.
+
+ 4. SECTION 2.7 RESTARTS ITS NUMBERING, and this file follows the
+    source rather than silently repairing it.  Every other subsection
+    numbers the decoder requirement after the encoder one (2.1: 1 then 2;
+    2.6: 1 then 2; 2.5: 1, 2 then 3), but 2.7 numbers both its encoder
+    item and its decoder item "1".  There are 15 numbered normative items
+    in Sections 2.1-2.7 either way; the slip only means that "2.7
+    requirement 1" is ambiguous and must be cited by role.  Flagged for
+    ../requirements.yaml, which has to key them.
+
+ 5. TAG CONTENT IS CHECKED, TAG SEMANTICS ARE NOT.  Section 2's
+    recursion covers "the contents of tagged data items", so the content
+    is validated as a dCBOR item.  Whether the content is *admissible*
+    for that tag number - RFC 8949 Section 5.3.2's tag validity, e.g.
+    tag 1 requiring a number - is outside dCBOR, and the CBOR-side
+    constraints for every tag RFC 8949 defines are held in
+    records/ietf/rfc-8949/distilled/schema/cbor-data-model.derived.cddl.
+=====================================================================

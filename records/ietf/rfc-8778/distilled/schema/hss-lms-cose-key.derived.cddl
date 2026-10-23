@@ -1,0 +1,61 @@
+; rfc-8778 - HSS-LMS COSE_Key, and the RFC 9679 thumbprint input over it
+; DERIVED - not verbatim. RFC 8778 prints NO COSE_Key anywhere: `COSE_Key`
+; occurs 0 times, `kty` once (§3's checklist) and `pub` once as a word (§6.3's
+; registration template). This map is assembled from §3's five checks and §6.2
+; and §6.3's two registration templates. It must never be cited as the
+; standard's own grammar.
+;
+; Source: RFC 8778, sha256 2d43646b974c76b9e13565af9b96432ac2b7ba39b66a61820d97f94f3cf1c398
+; Derived 2026-10-20, FX-1 pass 1 (extract). reviewed_by: ""
+;
+; WHAT IS REGISTERED, AND WHAT IS NOT. §6.2 (rfc-8778#R-0124) registers key type
+; HSS-LMS = 5. §6.3 (rfc-8778#R-0127) registers EXACTLY ONE key type parameter
+; for it: `pub`, label -1, CBOR type bstr. §5 (rfc-8778#R-0115) says a COSE Key
+; Type Parameter for the private key and its state "is deliberately not
+; defined", so THERE IS NO PRIVATE FORM AT ALL and this file cannot define one.
+; The common parameters below (`kty`, `alg`, `kid`, `key_ops`) are RFC 8152's,
+; not this document's; RFC 8778 only constrains their values (§3).
+
+hss_lms_cose_key = {
+  1  => 5,                      ; kty: MUST be HSS-LMS (rfc-8778#R-0086, #R-0124)
+  ? 3 => -46,                   ; alg: IF PRESENT MUST be HSS-LMS (rfc-8778#R-0087, #R-0120)
+  ? 2 => bstr,                  ; kid: IF PRESENT MAY be the 16-octet I (rfc-8778#R-0090, #R-0092)
+  ? 4 => [+ key_op],            ; key_ops: IF PRESENT MUST include the op in use (#R-0088, #R-0089)
+  -1 => hss-lms-pub,            ; pub: the 56 octets (rfc-8778#R-0127, #R-0053)
+}
+
+key_op = 1 / 2 / 3 / 4 / 5 / 6 / 7 / 8   ; RFC 8152's values; 1 = sign, 2 = verify
+
+; The minimal public key: kty and pub and nothing else. 62 octets, measured.
+; Encoding, RFC 8949 §4.2.1, entry order 1 (0x01) then -1 (0x20):
+;   a2 01 05 20 5838 <56 octets>
+hss_lms_cose_key_minimal = {
+  1  => 5,
+  -1 => hss-lms-pub,
+}
+
+; CROSS-RECORD, AND NOT FROM RFC 8778. RFC 9679 §4.5 - see records/ietf/rfc-9679,
+; which is at profile: full - requires exactly `kty` (label 1, int, value 5) and
+; `pub` (label -1, bstr) for an HSS-LMS COSE Key Thumbprint, and cites NEITHER
+; RFC 8778 NOR RFC 8554 for what those octets are. §2.1 and §2.2 of RFC 8778 are
+; the only specification of them anywhere, which is what makes this edge real.
+;
+; MEASURED: the thumbprint input is BYTE-IDENTICAL to hss_lms_cose_key_minimal,
+; both 62 octets, for every parameter set - the same property rfc-9964 found for
+; AKP. A thumbprint input is not a reduced form of this key; it is the whole
+; public key plus two octets of map framing.
+;
+; NOT COMPUTABLE FROM ANY DOCUMENT THIS LIBRARY HOLDS. RFC 8778 prints no `pub`
+; value, so the 56 octets are unknown and no HSS-LMS KeyId exists to check
+; against. The template is exact; the digest is not available. See
+; examples/README.md.
+hss_lms_thumbprint_input = hss_lms_cose_key_minimal
+
+; COSE alg -46 is NOT in this preimage, and that is a finding rather than an
+; omission: §3 makes `alg` conditional on presence (rfc-8778#R-0087) and
+; RFC 9679 §4.5 requires only `kty` and `pub`. The two IANA allocations that ARE
+; in it arrive through the key octets - lms_algorithm_type and otstype - from
+; the LMS and LM-OTS parameter registries (rfc-8778#R-0046, #R-0077), not from
+; the COSE Algorithms registry. design-notes.md works this out.
+
+hss-lms-pub = bstr .size 56     ; defined in hss-lms-public-key.derived.cddl

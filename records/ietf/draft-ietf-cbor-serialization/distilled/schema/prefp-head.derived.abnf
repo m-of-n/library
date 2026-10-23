@@ -1,0 +1,289 @@
+; =====================================================================
+; prefp-head.derived.abnf
+;
+; DERIVED - not verbatim.  draft-ietf-cbor-serialization-08 contains no
+; ABNF at all.  Its only formal artifacts are two CDDL fragments
+; (bignums.cddl, serial-control-operator.cddl) and one block of example
+; C (pref-plus-float.c).  Every rule below was written for this record
+; from the draft's prose, and must never be quoted as the draft's own
+; grammar.
+;
+; Derived from draft-ietf-cbor-serialization-08:
+;   Section 4.1 r1  the shortest-form argument, as four value ranges
+;   Section 4.1 r2  definite-length arrays and maps only
+;   Section 4.1 r3  definite-length byte and text strings only
+;   Section 4.1 r4  half-precision support; the shortest float width;
+;                   the one permitted NaN, 0xf9 0x7e 0x00
+;   Section 4.1 r5  no leading zeros in a big number; no big number for
+;                   a value major type 0 or 1 can carry
+;   Section 5.1 r1  deterministic serialization is all of the above
+; and, for the frame this narrows, from RFC 8949 (STD 94):
+;   Section 3       the initial byte, the argument, the head; argument
+;                   widths 0/1/2/4/8; additional information 28, 29, 30
+;                   reserved
+;   Section 3.1     Table 1, the major types
+;   Section 3.2     Table 2, the indefinite-length heads; 3.2.1 "break"
+;   Section 3.3     Tables 3 and 4, major type 7 and the simple values
+;   Section 3.4.3   tags 2 and 3, the big numbers
+;
+; The language is ABNF (RFC 5234).  Terminals are single bytes.  OCTET is
+; the RFC 5234 core rule and is used, not redefined.
+;
+; ---------------------------------------------------------------------
+; SCOPE.  This grammar covers the *head* of a data item - the initial
+; byte plus the bytes consumed to build the argument - in the sense RFC
+; 8949 Section 3 gives the word, with one deliberate exception named
+; below (bignum-opening).  It cannot cover a whole data item: the
+; content length of a string and the number of enclosed items of an
+; array or map are given by the argument just parsed, a context-sensitive
+; dependency no ABNF expresses.  Nesting, map arity, map key ordering and
+; "no bytes left over" are decided by Figure 1 of RFC 8949 Appendix C and
+; by serialization-check.derived.pseudocode.txt.
+;
+; WHY IT EARNS ITS PLACE, and where it differs from the neighbouring
+; record.  draft-mcnally-deterministic-cbor's ABNF in this library
+; narrows the *initial byte* hard (27 bytes removed) and says in its own
+; header that it "cannot require the shortest [argument] form".  This
+; draft is the mirror image.  At the initial byte it is the lightest
+; narrowing imaginable - of RFC 8949's 229 well-formed initial bytes it
+; admits 224 - but Section 4.1 rule 1 states the shortest-form rule as
+; four explicit *value ranges*, and a value range over a fixed-width
+; big-endian argument is exactly a byte-range constraint.  So the rule
+; the other grammar had to defer is decided here by construction, in the
+; four `arg*` rules.  That is the whole reason this file exists.
+;
+; THE CENSUS, which is the checkable claim this file makes.  Of the 229
+; initial bytes well-formed under RFC 8949 (256 less the 24 reserved
+; additional-information values 28-30, less 0x1f, 0x3f and 0xdf, which
+; are major types 0, 1 and 6 with additional information 31), preferred-
+; plus admits 224.  The 5 it excludes are exactly:
+;   5f 7f         the indefinite-length byte and text string heads
+;                                                      (Section 4.1 r3)
+;   9f bf         the indefinite-length array and map heads
+;                                                      (Section 4.1 r2)
+;   ff            the "break" stop code, which only an indefinite-length
+;                 item can need                        (Sections 4.1 r2, r3)
+; Every one of the eight major types therefore admits 28 initial bytes.
+; Nothing in major type 7 is excluded: unlike dCBOR, this draft says
+; nothing against `undefined` (0xf7) or the unassigned simple values -
+; its own Appendix L.2 ships simple(111), h'f86f', as a preferred-plus
+; AND deterministic vector.  All of this draft's remaining force is in
+; the bytes *after* the initial byte, which is where the rest of this
+; file is.
+;
+; WHAT IT DOES NOT DECIDE.  Three things, all value-dependent across
+; widths, and all of them in serialization-check.derived.pseudocode.txt
+; instead:
+;   * The float width rule in general (Section 4.1 r4 bullet 2, "the
+;     shortest of double, single or half-precision that preserves
+;     precision").  A grammar cannot ask whether a 64-bit pattern is
+;     exactly representable in 16 bits.  What IS decided below is the
+;     always-reducible subset - every NaN but one, both infinities, and
+;     both zeros - because those are fixed bit patterns.  So this file
+;     rejects the draft's own general-only vectors h'fa00000000' and
+;     h'fb0000000000000000' (float_zero.edn) and h'faff800000' and
+;     h'fbfff0000000000000' (float_neg_infinity.edn), and accepts
+;     h'fa477fe000' (float_half.edn), which is 65504.0 in single and is
+;     just as much a violation of rule 4.
+;   * Map key ordering (Section 5.1 r2).  A sibling-ordering constraint
+;     is not a property of any one head.  This file is therefore the
+;     same for preferred-plus and for deterministic serialization: the
+;     difference between them is invisible here.
+;   * Duplicate map keys, string content, and UTF-8 well-formedness.
+;
+; AND ONE PLACE WHERE THE DRAFT AND RFC 8949 DISAGREE, recorded and not
+; repaired.  Section 4.1 rule 1 is stated "for all major types", and its
+; second bullet puts 24..255 in the one-additional-byte form.  Applied
+; literally to major type 7 that admits 0xf8 0x18 through 0xf8 0x1f -
+; simple values 24 to 31 - which RFC 8949 Section 3.3 declares not
+; well-formed ("An encoder MUST NOT issue two-byte sequences that start
+; with 0xf8 and continue with a byte less than 0x20").  The draft never
+; mentions the exception.  `simple-head` below follows RFC 8949 and
+; starts at 0x20, because the draft defines its serializations as
+; subsets of general serialization and general serialization is "the
+; complete set of all encodings standardized in Section 3 of [STD94]"
+; (Section 3), which does not include ill-formed ones.
+; =====================================================================
+
+; A preferred-plus head.  Note the absence of any `break` rule and of
+; any indefinite-length alternative: Section 4.1 rules 2 and 3 remove
+; both, so this grammar has no counterpart to RFC 8949's head-or-break.
+;
+; Also note that the choice is a true partition except for
+; bignum-opening, which replaces tags 2 and 3 inside tag-head: 0xc2 and
+; 0xc3 are absent from tag-head by construction, so there is no
+; ambiguity to resolve by precedence.
+prefp-head = uint-head / nint-head / bstr-head / tstr-head
+           / array-head / map-head / tag-head / bignum-opening
+           / simple-head / float-head
+
+; =====================================================================
+; THE ARGUMENT - Section 4.1 rule 1, the core of this file
+; =====================================================================
+; The draft's four bullets, quoted:
+;
+;   "0 to 23 and -1 to -24 MUST be encoded in the same byte as the major
+;    type."
+;   "24 to 255 and -25 to -256 MUST be encoded only with an additional
+;    byte (ai = 0x18)."
+;   "256 to 65535 and -257 to -65536 MUST be encoded only with an
+;    additional two bytes (ai = 0x19)."
+;   "65536 to 4294967295 and -65537 to -4294967296 MUST be encoded only
+;    with an additional four bytes (ai = 0x1a)."
+;
+; Read as constraints on the argument (RFC 8949 Section 3 defines the
+; argument as the unsigned big-endian number the head carries; for major
+; type 1 the encoded argument is n where the value is -1-n, which is why
+; the negative ranges above line up byte for byte with the positive
+; ones), each bullet is a lower bound on the argument for the width that
+; carries it, and a lower bound on a big-endian number is a constraint
+; on its leading bytes.  That is what these four rules are.
+;
+; GAP IN THE SOURCE, recorded and not repaired: the enumeration stops at
+; the four-byte form.  The draft never states the eight-byte case - that
+; an argument of 2^32 or more, up to 2^64-1, MUST use ai = 0x1b - even
+; though its own Appendix L.2 vectors (zero.edn, three.edn and the rest)
+; treat h'1b00000000000000NN' as a general-only encoding.  `arg8` below
+; is the obvious reading of the rule's opening sentence, "The shortest-
+; form of the CBOR argument must be used for all major types", and is
+; ours, not the draft's.
+
+arg1 = %x18-FF                   ; argument 24..255
+arg2 = %x01-FF OCTET             ; argument 256..65535: high byte nonzero
+arg4 = nzt2 2OCTET               ; argument 65536..2^32-1: top 2 not both zero
+arg8 = nzt4 4OCTET               ; argument 2^32..2^64-1: top 4 not all zero  (OURS - see above)
+
+; "not all zero", for the leading n bytes of a big-endian number.  These
+; also carry the two float zero exclusions further down.
+nzt1 = %x01-FF
+nzt2 = %x01-FF OCTET    / %x00 nzt1
+nzt3 = %x01-FF 2OCTET   / %x00 nzt2
+nzt4 = %x01-FF 3OCTET   / %x00 nzt3
+nzt5 = %x01-FF 4OCTET   / %x00 nzt4
+nzt6 = %x01-FF 5OCTET   / %x00 nzt5
+nzt7 = %x01-FF 6OCTET   / %x00 nzt6
+
+; --- major types 0 and 1: integers -----------------------------------
+; Fully decided: every non-shortest argument is outside these rules.
+; h'1800', h'190000', h'1a00000000' and h'1b0000000000000000' - the
+; draft's own general-only encodings of 0 in zero.edn - are each
+; rejected by the corresponding arg rule.
+uint-head = %x00-17 / %x18 arg1 / %x19 arg2 / %x1A arg4 / %x1B arg8
+nint-head = %x20-37 / %x38 arg1 / %x39 arg2 / %x3A arg4 / %x3B arg8
+
+; --- major types 2 and 3: strings (Section 4.1 r3) -------------------
+; 0x5f and 0x7f are absent by construction: the indefinite-length byte
+; and text string heads of RFC 8949 Table 2.  The length that follows is
+; an argument like any other, so a non-shortest length is rejected too -
+; which is what makes the draft's h'5f5801015a000000020203ff'
+; (byte_string.edn) doubly non-conforming, once for the indefinite form
+; and once for each segment length.
+bstr-head = %x40-57 / %x58 arg1 / %x59 arg2 / %x5A arg4 / %x5B arg8
+tstr-head = %x60-77 / %x78 arg1 / %x79 arg2 / %x7A arg4 / %x7B arg8
+
+; --- major types 4 and 5: arrays and maps (Section 4.1 r2) -----------
+; 0x9f and 0xbf are absent by construction, as above.  Map *ordering* is
+; not here; see the header.
+array-head = %x80-97 / %x98 arg1 / %x99 arg2 / %x9A arg4 / %x9B arg8
+map-head   = %xA0-B7 / %xB8 arg1 / %xB9 arg2 / %xBA arg4 / %xBB arg8
+
+; --- major type 6: tags ----------------------------------------------
+; Tags 2 and 3 are deliberately NOT here; see bignum-opening.  The draft
+; places no restriction on which other tags appear, only on the
+; serialization of the tag number and of the content - "There are no
+; requirements for dates in this document" (Appendix L.2,
+; date_epoch_tag.edn), even while that example's h'd8011a69e4fbd3' is
+; general-only because the tag number 1 is not in shortest form.  That
+; rejection is `arg1 = %x18-FF` doing its work on a tag number.
+tag-head = %xC0-C1 / %xC4-D7
+         / %xD8 arg1 / %xD9 arg2 / %xDA arg4 / %xDB arg8
+
+; --- tags 2 and 3: big numbers (Section 4.1 r5) ----------------------
+; THE ONE RULE HERE THAT IS NOT A PURE HEAD.  bignum-opening consumes
+; three things: the tag head, the head of the tag's byte string content,
+; and that byte string's first content byte.  It is written this way
+; because both of rule 5's bullets are decided by exactly those bytes
+; and by nothing else, and a rule that stopped at the head would decide
+; neither.  A parser using this grammar must know that this alternative
+; consumes one byte of content.
+;
+; Bullet 1, "Leading zeros MUST NOT be encoded", is the trailing
+; `%x01-FF`.
+;
+; Bullet 2, "If a value can be encoded using major type 0 or 1, then it
+; MUST be encoded with major type 0 or 1, never as a big number", is the
+; lower bound of 9 on the content length, and the two together are
+; exactly equivalent to it.  Major type 0 reaches 2^64-1 and major type
+; 1 reaches -2^64, so a tag 2 or tag 3 content is permitted only when
+; the number it carries is at least 2^64 - and with no leading zero
+; byte, a content of 9 bytes or more is always at least 2^64, while a
+; content of 8 bytes or fewer never is.  Nine is therefore both the
+; floor and sufficient; no value-dependent check survives.
+;
+; This is the second route to the Appendix F defect recorded in
+; bignums.cddl: that file's `bnbstr = bstr .size (8..bnmax)` admits an
+; 8-byte content, and no 8-byte content can occur.  The draft's own
+; preferred-plus vector h'c349010000000000000000' (negative_bignum.edn)
+; is tag 3 with the smallest legal content, 9 bytes - matched here by
+; `%xC3 %x49 %x01`.
+;
+; Upper bound: none.  Appendix F caps its byte string at 1000 bytes and
+; says in a comment why ("big number byte strings are of unlimited size,
+; but that can't be expressed in CDDL").  ABNF has the same limitation
+; in reverse - the bound could be written but would be as invented as
+; Appendix F's - so no cap is imposed here.
+bignum-opening   = (%xC2 / %xC3) bignum-bstr-head %x01-FF
+bignum-bstr-head = %x49-57                 ; content 9..23 bytes
+                 / %x58 arg1               ; content 24..255 bytes
+                 / %x59 arg2 / %x5A arg4 / %x5B arg8
+
+; --- major type 7: simple values -------------------------------------
+; Unrestricted.  The draft narrows major type 7 only for floats.
+; %x20-FF rather than the rule-1 reading %x18-FF: see the header.
+simple-head = %xE0-F7 / %xF8 %x20-FF
+
+; --- major type 7: floating-point (Section 4.1 r4) -------------------
+; All three widths are retained - "Values MUST be encoded in the
+; shortest of double, single or half-precision that preserves
+; precision" chooses between them by value, which this grammar cannot do
+; - so what follows removes only the patterns that are wrong at every
+; value: the non-canonical NaNs at all three widths, and the infinities
+; and zeros at single and double, which half always represents exactly.
+;
+; Every byte range below was checked exhaustively against IEEE 754
+; (all 65536 half patterns; all 65536 leading-two-byte patterns of
+; single and of double, with the inf/NaN split re-checked on the tail).
+;
+; A float rule consumes the head byte AND the 2, 4 or 8 bytes of the
+; value, because at these widths the value *is* the argument.
+float-head = half-float / single-float / double-float
+
+; Half-precision: exponent field all ones is 0x7C-0x7F / 0xFC-0xFF in
+; the first byte.  Everything else is finite and unconstrained here
+; (subnormals included - "Subnormal numbers MUST be supported in this
+; shortest-length encoding", Section 4.1 r4; the draft's h'f90200',
+; float_half_subnormal.edn, is one).
+half-float  = %xF9 (half-finite / half-inf / half-nan)
+half-finite = (%x00-7B / %x80-FB) OCTET
+half-inf    = (%x7C / %xFC) %x00         ; +Infinity, -Infinity
+half-nan    = %x7E %x00                  ; THE only NaN - Section 4.1 r4 b3
+                                         ; "Encoders MUST NOT output any
+                                         ; NaN other than the half-
+                                         ; precision NaN 0xf9 0x7e 0x00"
+
+; Single-precision: exponent all ones is first byte 0x7F or 0xFF with
+; the second byte 0x80 or above; those are the single NaNs and
+; infinities and none of them may be emitted.  Zero is excluded by the
+; third alternative, which requires the three trailing bytes to be
+; nonzero whenever the first byte is 0x00 or 0x80.
+single-float = %xFA single-body
+single-body  = (%x01-7E / %x81-FE) 3OCTET      ; finite, nonzero exponent bits
+             / (%x7F / %xFF) %x00-7F 2OCTET    ; finite, largest exponents
+             / (%x00 / %x80) nzt3              ; subnormal, not +/-0.0
+
+; Double-precision: exponent all ones is first byte 0x7F or 0xFF with
+; the second byte 0xF0 or above.  Same three shapes as single.
+double-float = %xFB double-body
+double-body  = (%x01-7E / %x81-FE) 7OCTET      ; finite, nonzero exponent bits
+             / (%x7F / %xFF) %x00-EF 6OCTET    ; finite, largest exponents
+             / (%x00 / %x80) nzt7              ; subnormal, not +/-0.0

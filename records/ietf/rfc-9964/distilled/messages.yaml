@@ -1,0 +1,801 @@
+record: rfc-9964
+reviewed_by: ""
+
+# Every structure RFC 9964 defines, constrains or exhibits, with the actual code
+# points. Section numbers are RFC 9964's unless another RFC is named.
+#
+# ---------------------------------------------------------------------------
+# `constrained_by` - WIRED BY THE CROSS-CHECK PASS, 2026-10-20.
+# ---------------------------------------------------------------------------
+# [correction] 2026-10-20, pass 3 (cross-check). This block used to read
+# "`constrained_by` IS DELIBERATELY ABSENT FROM EVERY FIELD IN THIS FILE",
+# because the requirement ids lived in ../requirements.yaml, which a PARALLEL
+# pass-1 agent was writing in the same commit: that pass could not know the
+# R-NNNN numbers it would assign and `docs/extraction.md` R-O-03 forbids
+# inventing a citation, so the key was omitted rather than guessed and `locator`
+# was carried on every field instead. The old text ended "A cross-check pass
+# should do exactly that and nothing else." Done. The absence was correct for
+# pass 1 and is no longer correct for the record: `docs/extraction.md` specifies
+# the messages artifact as carrying "which requirements constrain it", so a
+# `profile: full` record cannot ship without it.
+#
+# MATCHING RULE, applied in order: (1) the requirement whose text this field's
+# `note` or `layout` quotes; (2) failing that, the requirement at this field's
+# own `locator` whose subject is this field. A requirement is wired only where
+# it constrains the field's PRESENCE, VALUE, TYPE, LENGTH or ENCODING - not
+# where it merely mentions it.
+#
+# COVERAGE, recomputed rather than asserted: 36 fields, 25 of them carrying at
+# least one id; 66 of the 88 requirements wired.
+#
+# `constrained_by: []` IS A FINDING, NOT AN OMISSION. Eleven fields carry it,
+# and every one belongs to another document: `kid` in AKP_COSE_Key (RFC 9052 §7)
+# and AKP_JWK (RFC 7517 §4.5); `tag`, `protected`, `unprotected` and `payload`
+# in ML_DSA_COSE_Sign1 and all four fields of ML_DSA_Sig_structure (RFC 9052
+# §2-§4.4, reached through R-0037's deferral); and `payload` in ML_DSA_JWS
+# (RFC 7515 §3.1). RFC 9964 constrains none of them - which is the measurement
+# behind `protocol.yaml`'s not-applicable declaration, seen from the other side.
+#
+# THE 22 REQUIREMENTS NOT WIRED TO ANY FIELD, AND WHY. R-0001 to R-0003 are §1's
+# statement of scope and R-0005 to R-0007 are §3's definitional sentences about
+# the key type and the information-class concept: they constrain the structures
+# rather than any field, and the structures' `summary` quotes them. R-0004 is §2's
+# truncation convention, which bears on ../examples/ (V-0001, V-0002) and on no
+# field. R-0019 is the rationale for the seed-only choice. R-0038 to R-0042 are
+# §5's size prose and its thumbprint recommendation - properties and warnings,
+# not constraints on bytes; they are where ../design-notes.md's size budget comes
+# from. R-0052 points a reader at the Appendix A `kid` values "for examples of AKP
+# thumbprints": it illustrates and requires nothing, so wiring it would overstate
+# it - the digest those values carry is wired through R-0044 and R-0048 on
+# ML_DSA_header_parameters.kid. R-0053 to R-0055 are §7's inherited security
+# considerations and its pointer to RFC 9881. R-0057 and R-0058 are §7.1's threat
+# statements (R-0056, the protection duty, IS wired to `priv`). R-0059 to R-0061
+# are §7.2's exclusion of HashML-DSA, for which no code point exists, so there is
+# no field to constrain.
+#
+# ---------------------------------------------------------------------------
+# WHAT THIS DOCUMENT DOES NOT DEFINE, STATED UP FRONT
+# ---------------------------------------------------------------------------
+# RFC 9964 registers NO COSE header parameter and NO JOSE header parameter.
+# Section 8.1 touches six registries - COSE Algorithms, COSE Key Types, COSE
+# Key Type Parameters, JOSE Algorithms, JOSE Key Types, JWK Parameters - and
+# "COSE Header Parameters" is not among them. See ML_DSA_header_parameters below: the only
+# algorithm-specific header an ML-DSA signature carries is `alg`, which RFC
+# 9052 already defines, and the only new thing in it is the VALUE.
+#
+# RFC 9964 also defines no envelope. "When producing COSE signatures, no
+# encoding is needed; see Section 4 of [RFC9052] for more details on how COSE
+# signatures are created." (section 5). ML_DSA_COSE_Sign1, ML_DSA_Sig_structure and ML_DSA_header_parameters are therefore RFC
+# 9052's structures as RFC 9964's own Appendix A.2 instantiates them, decoded
+# byte by byte, and are labelled as such.
+#
+# ---------------------------------------------------------------------------
+# PROVENANCE OF THE BYTE LAYOUTS
+# ---------------------------------------------------------------------------
+# Every `layout` below was produced by decoding the Appendix A hex with a CBOR
+# decoder written for this pass (no CBOR, COSE or JOSE library), not by reading
+# the prose. Where a layout states a digest, ../examples/vectors.yaml says
+# whether the document printed it or this extraction computed it. Nothing
+# computed is presented as printed.
+
+messages:
+
+  # =========================================================================
+  - name: AKP_COSE_Key
+    locator: "§3, §4, §8.1.2, §8.1.3"
+    encoding: CBOR map (COSE_Key, RFC 9052 §7)
+    summary: >-
+      The generic Algorithm Key Pair key. §3: "This section specifies a generic
+      cryptographic key structure for use with algorithms not limited to those
+      registered in this document." The key type is open by design - §6 opens
+      "the AKP key type and thumbprint computations are suitable for use with
+      algorithms other than ML-DSA" - so `alg` may be a code point this
+      document does not register.
+    fields:
+      - name: kty
+        label: 1
+        type: int
+        value: 7
+        required: true
+        encoding: "0x01 => 0x07"
+        constrained_by:
+          - "rfc-9964#R-0016"
+          - "rfc-9964#R-0045"
+          - "rfc-9964#R-0075"
+          - "rfc-9964#R-0076"
+        locator: "§8.1.2.1 (Name: AKP / Value: 7); restated in §6"
+        note: >-
+          Registered in "COSE Key Types" with Capabilities [kty(7)]. The label
+          itself is RFC 9052 §7's, not this document's.
+      - name: alg
+        label: 3
+        type: int
+        required: true
+        encoding: "0x03 => int; -48 is 0x382f, -49 is 0x3830, -50 is 0x3831"
+        constrained_by:
+          - "rfc-9964#R-0008"
+          - "rfc-9964#R-0009"
+          - "rfc-9964#R-0043"
+          - "rfc-9964#R-0071"
+          - "rfc-9964#R-0072"
+          - "rfc-9964#R-0073"
+          - "rfc-9964#R-0074"
+        locator: "§3; code points §8.1.1"
+        note: >-
+          "The alg JSON Web Key (JWK) parameter or COSE Key Common parameter is
+          REQUIRED for all AKP keys." (§3). THIS IS THE STRUCTURAL NOVELTY: for
+          every key type RFC 9679 §4.1-§4.5 defines, `alg` is optional. Here it
+          is required, and §6 therefore puts it inside the thumbprint. It is
+          also what gives `pub` and `priv` a format at all - §3: "The
+          parameters for public and private information classes contain byte
+          strings in a format specified by the alg value."
+      - name: pub
+        label: -1
+        type: bstr
+        required: true
+        encoding: "0x20 => bstr"
+        constrained_by:
+          - "rfc-9964#R-0008"
+          - "rfc-9964#R-0010"
+          - "rfc-9964#R-0012"
+          - "rfc-9964#R-0014"
+          - "rfc-9964#R-0062"
+          - "rfc-9964#R-0077"
+          - "rfc-9964#R-0078"
+        locator: "§3, §8.1.3.1, §8.1.6.1"
+        note: >-
+          "The pub parameter contains public information and is REQUIRED."
+          (§3). Information Class: Public (§8.1.6.1). Present even in a private
+          key - all three Appendix A.2 private keys carry it.
+      - name: priv
+        label: -2
+        type: bstr
+        required: false
+        encoding: "0x21 => bstr"
+        constrained_by:
+          - "rfc-9964#R-0008"
+          - "rfc-9964#R-0011"
+          - "rfc-9964#R-0012"
+          - "rfc-9964#R-0014"
+          - "rfc-9964#R-0020"
+          - "rfc-9964#R-0021"
+          - "rfc-9964#R-0062"
+          - "rfc-9964#R-0065"
+          - "rfc-9964#R-0077"
+          - "rfc-9964#R-0079"
+        locator: "§3, §4, §7.3, §8.1.3.2, §8.1.6.2"
+        note: >-
+          "The priv parameter contains private information and MUST NOT be
+          present in public keys." (§3). For the ML-DSA algorithms it "MUST be
+          the seed and MUST have a length of 32 bytes" (§4) and "the seed
+          length check MUST be performed" (§7.3).
+      - name: kid
+        label: 2
+        type: bstr
+        required: false
+        encoding: "0x02 => bstr"
+        constrained_by: []   # RFC 9964 constrains this field nowhere - see `note` and the file header
+        locator: "RFC 9052 §7; exhibited in §3 Figure 2 and Appendix A.2"
+        note: >-
+          Not this document's parameter, and never made required by it. Carried
+          by every example, and in every example it is the key's COSE Key
+          Thumbprint - verified, see ../examples/vectors.yaml. §6 only says
+          "See the kid values in the JWK and COSE Key examples in Appendix A
+          for examples of AKP thumbprints", which illustrates rather than
+          requires.
+    layout: >-
+      Section 3 Figure 2 is the only structure the document renders itself, and
+      it is truncated. The complete bytes are Appendix A.2's. For ML-DSA-44
+      (Figure 6, 1392 octets, map order exactly as printed):
+        a5                  map(5)
+        02 5820 <32>        kid
+        01 07               kty = 7 (AKP)
+        03 382f             alg = -48 (ML-DSA-44)
+        20 590520 <1312>    pub
+        21 5820 <32>        priv (the 32-byte seed)
+      ML-DSA-65 (Figure 7, 2032 octets): alg 03 3830, pub 20 5907a0 <1952>.
+      ML-DSA-87 (Figure 8, 2672 octets): alg 03 3831, pub 20 590a20 <2592>.
+      NOTE THE MAP ORDER: kid (label 2) precedes kty (label 1) in all three
+      printed keys, so the printed bytes are NOT in RFC 8949 §4.2.1
+      deterministic order (which would be 1, 2, 3, -1, -2). Nothing requires
+      them to be; §4.2.1 binds the thumbprint input, not the key. See
+      ../examples/README.md.
+
+  # =========================================================================
+  - name: ML_DSA_COSE_Key
+    locator: "§4, §5, §8.1.1"
+    encoding: CBOR map (COSE_Key specialised to the three registered algorithms)
+    summary: >-
+      AKP_COSE_Key with §5's additional constraints applied. §5: "In accordance
+      with Section 3 of this document, ML-DSA key parameters have the following
+      additional constraints".
+    fields:
+      - name: kty
+        label: 1
+        type: int
+        value: 7
+        required: true
+        encoding: "0x01 => 0x07"
+        constrained_by:
+          - "rfc-9964#R-0045"
+          - "rfc-9964#R-0076"
+        locator: "§8.1.2.1"
+      - name: alg
+        label: 3
+        type: int
+        value: "-48 | -49 | -50"
+        required: true
+        encoding: "0x03 => 0x382f | 0x3830 | 0x3831"
+        constrained_by:
+          - "rfc-9964#R-0009"
+          - "rfc-9964#R-0023"
+          - "rfc-9964#R-0024"
+          - "rfc-9964#R-0025"
+          - "rfc-9964#R-0072"
+          - "rfc-9964#R-0073"
+          - "rfc-9964#R-0074"
+        locator: "§8.1.1.1-§8.1.1.3"
+        note: >-
+          ML-DSA-44 = -48, ML-DSA-65 = -49, ML-DSA-87 = -50. Each registered
+          with "Capabilities: [kty]" and "Recommended: Yes".
+      - name: pub
+        label: -1
+        type: bstr
+        required: true
+        encoding: "0x20 => bstr of 1312 | 1952 | 2592 octets"
+        constrained_by:
+          - "rfc-9964#R-0010"
+          - "rfc-9964#R-0026"
+          - "rfc-9964#R-0027"
+          - "rfc-9964#R-0028"
+          - "rfc-9964#R-0029"
+          - "rfc-9964#R-0030"
+          - "rfc-9964#R-0031"
+          - "rfc-9964#R-0062"
+          - "rfc-9964#R-0063"
+          - "rfc-9964#R-0064"
+          - "rfc-9964#R-0069"
+          - "rfc-9964#R-0070"
+          - "rfc-9964#R-0078"
+        locator: "§5 (Table 1)"
+        note: >-
+          "The pub parameter is the ML-DSA public key as described in Section
+          5.3 of US NIST [FIPS-204]." Sizes are Table 1's and were measured
+          against all six Appendix A figures. §7.3 adds that pkEncode /
+          pkDecode range checks apply - a correctly-sized bstr may still be an
+          invalid key.
+      - name: priv
+        label: -2
+        type: bstr
+        required: false
+        encoding: "0x21 => bstr of exactly 32 octets"
+        constrained_by:
+          - "rfc-9964#R-0011"
+          - "rfc-9964#R-0017"
+          - "rfc-9964#R-0018"
+          - "rfc-9964#R-0020"
+          - "rfc-9964#R-0021"
+          - "rfc-9964#R-0022"
+          - "rfc-9964#R-0032"
+          - "rfc-9964#R-0056"
+          - "rfc-9964#R-0062"
+          - "rfc-9964#R-0065"
+          - "rfc-9964#R-0066"
+          - "rfc-9964#R-0067"
+          - "rfc-9964#R-0068"
+          - "rfc-9964#R-0069"
+          - "rfc-9964#R-0070"
+          - "rfc-9964#R-0079"
+        locator: "§4, §7.3"
+        note: >-
+          The SEED, never the expanded key. §4: "the priv parameter MUST be the
+          seed and MUST have a length of 32 bytes". Table 1's "Private Key"
+          column (2560 / 4032 / 4896) is NOT this field - the table's own note
+          says "priv size is always 32 bytes and that KeyGen_internal is called
+          to produce the expanded private keys for "Private Key" in the table
+          above". The expanded form is the representation §4 deliberately
+          declines to define: "This specification intentionally does not define
+          a means of utilizing the expanded private key representation defined
+          by US NIST FIPS".
+    layout: >-
+      Identical to AKP_COSE_Key, with the three size-fixed variants given
+      there. Sizes in one line, all measured:
+        alg -48  pub 1312  sig 2420  priv 32   COSE_Key 1392 octets
+        alg -49  pub 1952  sig 3309  priv 32   COSE_Key 2032 octets
+        alg -50  pub 2592  sig 4627  priv 32   COSE_Key 2672 octets
+
+  # =========================================================================
+  - name: AKP_COSE_Key_Thumbprint_Input
+    locator: "§6"
+    encoding: CBOR map, RFC 8949 §4.2.1 deterministic encoding
+    summary: >-
+      THE STRUCTURE THIS RECORD EXISTS FOR, and the one the library needs most.
+      RFC 9679 §4.6 delegates the required-parameter set to each key type's
+      defining specification; this is what answers it for AKP, and it is the
+      only defined COSE Key Thumbprint whose required set contains `alg`. §6:
+      "When computing the COSE Key Thumbprint as described in [RFC9679], the
+      required parameters for AKPs are:" followed by the three bullets below,
+      then "The COSE Key Thumbprint is produced according to the process
+      described in Section 3 of [RFC9679]."
+      THE MAP IS CLOSED: RFC 9679 §3 step 1 builds a COSE_Key containing only
+      the required parameters, so a fourth entry makes it a different digest.
+    fields:
+      - name: kty
+        label: 1
+        type: int
+        value: 7
+        required: true
+        encoding: "0x01 => 0x07"
+        constrained_by:
+          - "rfc-9964#R-0044"
+          - "rfc-9964#R-0045"
+          - "rfc-9964#R-0048"
+        locator: '§6 bullet 1, verbatim: ''"kty" (label: 1, data type: int, value: 7)'''
+        in_thumbprint: true
+      - name: alg
+        label: 3
+        type: int
+        value: "int (the key's algorithm)"
+        required: true
+        encoding: "0x03 => 0x382f | 0x3830 | 0x3831 for the three registered algorithms"
+        constrained_by:
+          - "rfc-9964#R-0043"
+          - "rfc-9964#R-0044"
+          - "rfc-9964#R-0046"
+          - "rfc-9964#R-0048"
+        locator: '§6 bullet 2, verbatim: ''"alg" (label: 3, data type: int, value: int)'''
+        in_thumbprint: true
+        note: >-
+          A KeyId computed as a COSE Key Thumbprint over an AKP key therefore
+          DEPENDS ON `alg`. One byte-identical `pub` under -48, -49 and -50
+          yields three unrelated digests. Measured on the document's own
+          1312-byte key: b8969ab4...d3a8059a (printed by RFC 9964 as the kid of
+          Figure 6), f507c417...f187315d and de68d5ec...e128f62b (both computed
+          by this extraction). ../examples/vectors.yaml V-0007, V-0010, V-0011.
+      - name: pub
+        label: -1
+        type: bstr
+        required: true
+        encoding: "0x20 => bstr"
+        constrained_by:
+          - "rfc-9964#R-0044"
+          - "rfc-9964#R-0047"
+          - "rfc-9964#R-0048"
+        locator: '§6 bullet 3, verbatim: ''"pub" (label: -1, value: bstr)'''
+        in_thumbprint: true
+        note: >-
+          The one bullet §6 states without a "data type:" label - it gives
+          `value: bstr` where the other two give `data type:`. The IANA row
+          (§8.1.3.1, "CBOR Type: bstr") agrees, so the reading is not in doubt.
+      - name: priv
+        label: -2
+        type: bstr
+        required: false
+        encoding: n/a
+        constrained_by:
+          - "rfc-9964#R-0044"
+          - "rfc-9964#R-0048"
+        locator: "§6 (by absence)"
+        in_thumbprint: false
+        note: >-
+          EXCLUDED. §6 lists three parameters and `priv` is not one of them, so
+          RFC 9679 §3 step 1 drops it. A public and a private AKP key for the
+          same material have the same thumbprint.
+      - name: kid
+        label: 2
+        type: bstr
+        required: false
+        encoding: n/a
+        constrained_by:
+          - "rfc-9964#R-0044"
+          - "rfc-9964#R-0048"
+        locator: "§6 (by absence)"
+        in_thumbprint: false
+        note: >-
+          EXCLUDED, necessarily - it is usually the thumbprint itself.
+    layout: >-
+      For ML-DSA-44, 1322 octets, each octet accounted for:
+        a3                  map(3)
+        01 07               kty = 7
+        03 382f             alg = -48
+        20 590520 <1312>    pub
+      ML-DSA-65: a3 01 07 03 3830 20 5907a0 <1952>, 1962 octets.
+      ML-DSA-87: a3 01 07 03 3831 20 590a20 <2592>, 2602 octets.
+      Entry order is 1, 3, -1 - encoded 0x01, 0x03, 0x20 - which RFC 8949
+      §4.2.1's bytewise order and §4.2.3's length-first order agree on, every
+      label being one octet. Hash with SHA-256 for the 32-octet thumbprint.
+      §6 NAMES NO HASH FUNCTION; SHA-256 is established by the Appendix A kid
+      values reproducing under it, and the string "SHA-256" does not occur in
+      RFC 9964 at all.
+
+  # =========================================================================
+  - name: AKP_JWK_Thumbprint_Input
+    locator: "§6"
+    encoding: UTF-8 JSON text, no whitespace, members in lexicographic order (RFC 7638 §3)
+    summary: >-
+      The JOSE half of §6. "When computing the JWK Thumbprint as described in
+      [RFC7638], the required parameters for AKPs are: kty, alg, pub. Their
+      lexicographic order, per Section 3.3 of [RFC7638], is: alg, kty, pub."
+      Same three parameters, different bytes, DIFFERENT DIGEST.
+    fields:
+      - name: alg
+        label: '"alg"'
+        type: string
+        required: true
+        encoding: 'JSON member, first in lexicographic order; "ML-DSA-44" | "ML-DSA-65" | "ML-DSA-87"'
+        constrained_by:
+          - "rfc-9964#R-0049"
+          - "rfc-9964#R-0050"
+          - "rfc-9964#R-0051"
+        locator: "§6; names §8.1.4"
+        in_thumbprint: true
+      - name: kty
+        label: '"kty"'
+        type: string
+        value: '"AKP"'
+        required: true
+        encoding: "JSON member, second"
+        constrained_by:
+          - "rfc-9964#R-0049"
+          - "rfc-9964#R-0050"
+          - "rfc-9964#R-0051"
+          - "rfc-9964#R-0085"
+        locator: "§6; §8.1.5.1"
+        in_thumbprint: true
+      - name: pub
+        label: '"pub"'
+        type: string
+        required: true
+        encoding: "JSON member, third; base64url without padding (§3)"
+        constrained_by:
+          - "rfc-9964#R-0013"
+          - "rfc-9964#R-0049"
+          - "rfc-9964#R-0050"
+          - "rfc-9964#R-0051"
+          - "rfc-9964#R-0087"
+        locator: "§6; §8.1.6.1"
+        in_thumbprint: true
+        note: >-
+          §3: "When AKP keys are expressed as JWKs, the key parameters are
+          base64url encoded." 1750 / 2603 / 3456 characters for the three
+          algorithms, measured.
+    layout: >-
+      {"alg":"ML-DSA-44","kty":"AKP","pub":"<1750 base64url chars>"} - 1790
+      bytes for ML-DSA-44, 2643 for ML-DSA-65, 3496 for ML-DSA-87. SHA-256,
+      then base64url without padding, gives the 43-character `kid`. All three
+      reproduce the printed values exactly: T4xl70S7MT6Zeq6r9V9fPJGVn76wfnXJ21-
+      gyo0Gu6o, Suiu29qbfuaBaR4Ats-c6XQBePB_OpAxAwcTR_0KXVM,
+      tRn1JNIkgMsABVQBlXeDHxAIcclh-2IX0UdDEzPt5XU.
+      THE TWO THUMBPRINTS OF ONE KEY DIFFER. For the ML-DSA-44 key, whose
+      `pub` is byte-identical in Figure 3 and Figure 6: the JWK thumbprint is
+      4f8c65ef44bb313e997aaeabf55f5f3c91959fbeb07e75c9db5fa0ca8d06bbaa and the
+      COSE thumbprint is
+      b8969ab4b37da9f0684e42647eb8a0be8b5b661ebf5d76f0583bf5b8d3a8059a. Both
+      are printed by this document as that key's `kid`. ../examples/vectors.yaml
+      V-0012.
+
+  # =========================================================================
+  - name: AKP_JWK
+    locator: "§3, §4, §5"
+    encoding: JSON object (JWK, RFC 7517)
+    summary: >-
+      The JOSE serialisation. §3: "This document introduces the AKP key type in
+      [IANA.jose]". Same parameter names as the COSE form, base64url values.
+    fields:
+      - name: kty
+        label: '"kty"'
+        type: string
+        value: '"AKP"'
+        required: true
+        encoding: JSON string
+        constrained_by:
+          - "rfc-9964#R-0015"
+          - "rfc-9964#R-0084"
+          - "rfc-9964#R-0085"
+        locator: "§8.1.5.1"
+      - name: alg
+        label: '"alg"'
+        type: string
+        required: true
+        encoding: JSON string
+        constrained_by:
+          - "rfc-9964#R-0009"
+          - "rfc-9964#R-0080"
+          - "rfc-9964#R-0081"
+          - "rfc-9964#R-0082"
+          - "rfc-9964#R-0083"
+        locator: "§3; §8.1.4"
+        note: >-
+          Registered with "Algorithm Usage Location(s): alg" and "JOSE
+          Implementation Requirements: Optional" - note the asymmetry with the
+          COSE registrations, which are "Recommended: Yes".
+      - name: pub
+        label: '"pub"'
+        type: string
+        required: true
+        encoding: base64url, unpadded; 1750 / 2603 / 3456 chars
+        constrained_by:
+          - "rfc-9964#R-0010"
+          - "rfc-9964#R-0013"
+          - "rfc-9964#R-0086"
+          - "rfc-9964#R-0087"
+        locator: "§3, §8.1.6.1"
+      - name: priv
+        label: '"priv"'
+        type: string
+        required: false
+        encoding: base64url, unpadded; 43 chars (32 octets)
+        constrained_by:
+          - "rfc-9964#R-0011"
+          - "rfc-9964#R-0013"
+          - "rfc-9964#R-0020"
+          - "rfc-9964#R-0021"
+          - "rfc-9964#R-0086"
+          - "rfc-9964#R-0088"
+        locator: "§3, §4, §8.1.6.2"
+        note: 'All three examples print the all-zeros seed as "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".'
+      - name: kid
+        label: '"kid"'
+        type: string
+        required: false
+        encoding: base64url, unpadded; 43 chars
+        constrained_by: []   # RFC 9964 constrains this field nowhere - see `note` and the file header
+        locator: "RFC 7517 §4.5; exhibited §3 Figure 1 and Appendix A.1"
+    layout: >-
+      §3 Figure 1 is the document's own rendering (truncated). Complete in
+      Appendix A.1. Member order as printed: kid, kty, alg, pub, priv - which
+      is NOT the lexicographic order the thumbprint needs, so a thumbprint
+      implementation must re-order rather than re-serialise what it received.
+
+  # =========================================================================
+  - name: ML_DSA_COSE_Sign1
+    locator: "§5 (which defers to RFC 9052 §4); exhibited Appendix A.2"
+    encoding: CBOR array of 4, carried under CBOR tag 18
+    summary: >-
+      RFC 9964 defines no envelope. §5: "When producing COSE signatures, no
+      encoding is needed; see Section 4 of [RFC9052] for more details on how
+      COSE signatures are created." This entry is RFC 9052's COSE_Sign1 as RFC
+      9964's own three examples instantiate it, decoded byte by byte - which is
+      the only way to see what the document actually exhibits.
+      ALL THREE EXAMPLES ARE TAGGED. Every `sign1` hex begins 0xd2 and every
+      `sign1_diag` begins "18([", so the tagged form is what the defining
+      document for post-quantum COSE signatures prints. Tag 18 is an IANA CBOR
+      Tags allocation (RFC 9052 §2 Table 1). The document never prints the
+      untagged form and never discusses the choice.
+    fields:
+      - name: tag
+        label: "#6.18"
+        type: CBOR tag
+        value: 18
+        required: "in every example; RFC 9052 permits either form"
+        encoding: "0xd2"
+        constrained_by: []   # RFC 9964 constrains this field nowhere - see `note` and the file header
+        locator: "RFC 9052 §2 Table 1; exhibited Appendix A.2"
+      - name: protected
+        label: "array index 0"
+        type: bstr wrapping a CBOR map
+        required: true
+        encoding: "0x5827 then 39 octets, in all three examples"
+        constrained_by: []   # RFC 9964 constrains this field nowhere - see `note` and the file header
+        locator: "RFC 9052 §3; exhibited Appendix A.2"
+        note: >-
+          Contents are exactly {1: alg, 4: kid} - see ML_DSA_header_parameters. 39 octets:
+          a2 01 <alg, 2 octets> 04 5820 <32-octet kid>.
+      - name: unprotected
+        label: "array index 1"
+        type: CBOR map
+        required: true
+        encoding: "0xa0 - the EMPTY map, in all three examples"
+        constrained_by: []   # RFC 9964 constrains this field nowhere - see `note` and the file header
+        locator: "RFC 9052 §3; exhibited Appendix A.2"
+      - name: payload
+        label: "array index 2"
+        type: bstr / nil
+        required: true
+        encoding: "0x581d then 29 octets, in all three examples"
+        constrained_by: []   # RFC 9964 constrains this field nowhere - see `note` and the file header
+        locator: "RFC 9052 §4.2; exhibited Appendix A.2"
+        note: >-
+          h'68656c6c6f20706f7374207175616e74756d207369676e617475726573' =
+          "hello post quantum signatures", identical in all three COSE
+          examples. The JOSE examples use a different payload (see ML_DSA_JWS).
+      - name: signature
+        label: "array index 3"
+        type: bstr
+        required: true
+        encoding: "0x590974 <2420> | 0x590ced <3309> | 0x591213 <4627>"
+        constrained_by:
+          - "rfc-9964#R-0028"
+          - "rfc-9964#R-0029"
+          - "rfc-9964#R-0030"
+          - "rfc-9964#R-0031"
+          - "rfc-9964#R-0033"
+          - "rfc-9964#R-0034"
+          - "rfc-9964#R-0035"
+          - "rfc-9964#R-0037"
+        locator: "§5 (Table 1 sizes); RFC 9052 §4.2"
+        note: >-
+          §5: "Signatures are encoded as byte strings using the algorithms
+          defined in Section 7.2 of US NIST [FIPS-204]." Lengths measured
+          against Table 1 and agreeing exactly.
+    layout: >-
+      ML-DSA-44 (Figure 6, 2498 octets total):
+        d2                  tag 18 (COSE_Sign1)
+        84                  array(4)
+        5827 <39>           protected: a2 01 382f 04 5820 <32-octet kid>
+        a0                  unprotected: empty map
+        581d <29>           payload: "hello post quantum signatures"
+        590974 <2420>       signature
+      ML-DSA-65 (Figure 7, 3387 octets): alg 3830, signature 590ced <3309>.
+      ML-DSA-87 (Figure 8, 4705 octets): alg 3831, signature 591213 <4627>.
+      Only the two alg octets, the 32 kid octets and the signature differ
+      between the three.
+
+  # =========================================================================
+  - name: ML_DSA_Sig_structure
+    locator: "RFC 9052 §4.4; exhibited Appendix A.2 as `raw_to_be_signed`"
+    encoding: CBOR array of 4
+    summary: >-
+      What the private key actually signs. Included because the document prints
+      it for all three algorithms and it is the most directly testable fixture
+      in the record: 85 octets, differing only in the two `alg` octets and the
+      32 `kid` octets.
+    fields:
+      - name: context
+        label: "array index 0"
+        type: tstr
+        value: '"Signature1"'
+        required: true
+        encoding: "0x6a 5369676e617475726531"
+        constrained_by: []   # RFC 9964 constrains this field nowhere - see `note` and the file header
+        locator: "RFC 9052 §4.4"
+      - name: body_protected
+        label: "array index 1"
+        type: bstr
+        required: true
+        encoding: "0x5827 then the same 39 octets as COSE_Sign1's protected bucket"
+        constrained_by: []   # RFC 9964 constrains this field nowhere - see `note` and the file header
+        locator: "RFC 9052 §4.4"
+      - name: external_aad
+        label: "array index 2"
+        type: bstr
+        required: true
+        encoding: "0x40 - bstr of length ZERO in all three examples"
+        constrained_by: []   # RFC 9964 constrains this field nowhere - see `note` and the file header
+        locator: "RFC 9052 §4.4"
+      - name: payload
+        label: "array index 3"
+        type: bstr
+        required: true
+        encoding: "0x581d then 29 octets"
+        constrained_by: []   # RFC 9964 constrains this field nowhere - see `note` and the file header
+        locator: "RFC 9052 §4.4"
+    layout: >-
+      85 octets, in full for ML-DSA-44:
+        84                                array(4)
+        6a 5369676e617475726531           tstr(10) "Signature1"
+        5827 a201382f045820<32>           body_protected
+        40                                external_aad, empty
+        581d 68656c6c6f...726573          payload, 29 octets
+      ML-DSA-65 and ML-DSA-87 differ only in the alg octets (3830 / 3831) and
+      the kid. The hex of all three is printed in full by the document and
+      carried in ../examples/vectors.yaml.
+
+  # =========================================================================
+  - name: ML_DSA_header_parameters
+    locator: "§8.1 (by what it does NOT contain); exhibited Appendix A.2"
+    encoding: "CBOR map inside the protected bstr"
+    summary: >-
+      THE ALGORITHM-SPECIFIC HEADER PARAMETERS, IN FULL: there are none. RFC
+      9964 registers no COSE header parameter and no JOSE header parameter. Its
+      IANA section adds algorithms (§8.1.1, §8.1.4), key types (§8.1.2, §8.1.5)
+      and key type parameters (§8.1.3, §8.1.6) - six registries, and "COSE
+      Header Parameters" is not one of them. What ML-DSA contributes to a header
+      is three new VALUES for an existing parameter. This entry records the two
+      parameters the examples actually carry, so that an export has something
+      concrete to target.
+    fields:
+      - name: alg
+        label: 1
+        type: int
+        value: "-48 | -49 | -50"
+        required: true
+        encoding: "0x01 => 0x382f | 0x3830 | 0x3831"
+        constrained_by:
+          - "rfc-9964#R-0071"
+          - "rfc-9964#R-0072"
+          - "rfc-9964#R-0073"
+          - "rfc-9964#R-0074"
+        locator: "§8.1.1 (the values); RFC 9052 §3.1 Table 2 (the label)"
+        registered_by_rfc_9964: false
+        note: >-
+          Label 1 is RFC 9052's. Only the three values are this document's.
+          Placed in the PROTECTED bucket in all three examples. §5's "The ctx
+          parameter MUST be the empty string" is NOT a header parameter - ctx
+          is a FIPS 204 signing input with no label in any registry this
+          document touches, so that MUST is unobservable from the wire bytes
+          and unenforceable by any schema.
+      - name: kid
+        label: 4
+        type: bstr
+        required: false
+        encoding: "0x04 => 0x5820 then 32 octets, in all three examples"
+        constrained_by:
+          - "rfc-9964#R-0044"
+          - "rfc-9964#R-0048"
+        locator: "RFC 9052 §3.1 Table 2; exhibited Appendix A.2"
+        registered_by_rfc_9964: false
+        note: >-
+          In every COSE example the value is the key's COSE Key Thumbprint, so
+          it carries the digest that §6 defines - and therefore depends on
+          `alg`, which sits two entries away in the same map. §6 does not
+          require this, only illustrates it.
+    layout: >-
+      The whole protected header, 39 octets, ML-DSA-44:
+        a2                  map(2)
+        01 382f             alg = -48
+        04 5820 <32>        kid = the COSE Key Thumbprint
+      Map order 1 then 4 is RFC 8949 §4.2.1 order and also the order printed.
+      Unprotected header: a0, empty, in all three examples.
+
+  # =========================================================================
+  - name: ML_DSA_JWS
+    locator: "§5; exhibited Appendix A.1"
+    encoding: JWS Compact Serialization (RFC 7515)
+    summary: >-
+      The JOSE signature. §5: "When producing JSON Web Signatures, the signature
+      byte strings are base64url encoded and the encoded signature size is
+      larger than described in the table above." Carried here because the
+      document prints three complete JWS values, the only JOSE fixtures it
+      offers, and because the JOSE and COSE halves differ in ways an export
+      must know about.
+    fields:
+      - name: protected header
+        label: "part 1"
+        type: base64url(JSON)
+        required: true
+        encoding: "95 characters in all three examples"
+        constrained_by:
+          - "rfc-9964#R-0081"
+          - "rfc-9964#R-0082"
+          - "rfc-9964#R-0083"
+        locator: "RFC 7515 §4; exhibited Appendix A.1"
+        note: >-
+          Decodes to exactly {"alg":"ML-DSA-44","kid":"<43 chars>"} - two
+          members, in that order. `kid` here is the RFC 7638 JWK Thumbprint,
+          NOT the COSE one.
+      - name: payload
+        label: "part 2"
+        type: base64url(bytes)
+        required: true
+        encoding: "75 characters = 56 octets"
+        constrained_by: []   # RFC 9964 constrains this field nowhere - see `note` and the file header
+        locator: "RFC 7515 §3.1; exhibited Appendix A.1"
+        note: >-
+          "It’s a dangerous business, Frodo, going out your door." - 56
+          octets because of the U+2019 RIGHT SINGLE QUOTATION MARK (e2 80 99).
+          A DIFFERENT payload from the COSE examples' "hello post quantum
+          signatures", so the two halves of Appendix A are not a matched pair
+          and the signatures cannot be compared across them.
+      - name: signature
+        label: "part 3"
+        type: base64url(bytes)
+        required: true
+        encoding: "3227 | 4412 | 6170 characters = 2420 | 3309 | 4627 octets"
+        constrained_by:
+          - "rfc-9964#R-0028"
+          - "rfc-9964#R-0029"
+          - "rfc-9964#R-0030"
+          - "rfc-9964#R-0031"
+          - "rfc-9964#R-0033"
+          - "rfc-9964#R-0034"
+          - "rfc-9964#R-0035"
+          - "rfc-9964#R-0036"
+        locator: "§5 (Table 1 sizes)"
+    layout: >-
+      header.payload.signature, total 3399 / 4584 / 6342 characters for the
+      three algorithms. The signing input (the document's
+      `raw_to_be_signed`) is the ASCII string "header.payload", 171 octets in
+      all three examples - 95 + 1 + 75. Verified: base64url-decoding part 3
+      gives exactly the document's `raw_signature`, and "part1.part2" is
+      exactly its `raw_to_be_signed`, for all three algorithms.

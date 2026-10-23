@@ -1,0 +1,212 @@
+; =====================================================================
+; cdn-dedented.derived.abnf
+;
+; DERIVED -- NOT verbatim.  This file is this library's, not the
+; draft's.  Do not cite it as the specification's own text; cite the
+; unmarked file beside it, which holds the source's bytes.
+;
+; It is cdn.abnf with exactly two mechanical changes and no others:
+;   1. the draft's three-column left margin is removed from every line;
+;   2. each of the three page frames the grammar crosses is replaced
+;      by a single blank line.
+;
+; No rule name, operator, literal, numeric range or ABNF comment was
+; added, removed, reordered or retyped.  The transformation is checked by
+; round-trip: re-indenting this file by three columns reproduces the four
+; verbatim regions of cdn.abnf line for line, and the generator aborts if
+; it does not.
+;
+; Source: Concise Diagnostic Notation (CDN),
+;         draft-ietf-cbor-edn-literals-27, C. Bormann, 20 July 2026.
+;         cached source sha256 43cfb1236435a9de62d3c202b7ee653b0f5adbd40d3800bbb9379379dbdbf7e9
+;
+; WHY IT EXISTS.  Under RFC 5234 a line beginning with whitespace is a
+; continuation, so the indented original collapses into one unreadable
+; production and no ABNF tool can read it.  Same reason as
+; records/ietf/rfc-8610/distilled/schema/cddl-dedented.derived.abnf.
+;
+; It also JOINS the `hexscalar-s` rule that the page 45/46 frame cuts
+; in half in the source.  That is the one place where reading the
+; verbatim file page by page gives a wrong grammar.
+; =====================================================================
+
+
+seq             = S [item *(MSC item) SOC]
+one-item        = S item S
+item            = map / array / tagged
+                / number / simple
+                / string / streamstring
+
+string1         = (tstr / bstr) spec
+string          = string1 / ellipsis
+ellipsis        = 3*"." ; "..." or more dots
+
+number          = (hexfloat / hexint / octint / binint
+                   / decnumber / nonfin) spec
+sign            = "+" / "-"
+decnumber       = [sign] (1*DIGIT ["." *DIGIT] / "." 1*DIGIT)
+                         ["e" [sign] 1*DIGIT]
+hexfloat        = [sign] "0x" (1*HEXDIG ["." *HEXDIG] / "." 1*HEXDIG)
+                         "p" [sign] 1*DIGIT
+hexint          = [sign] "0x" 1*HEXDIG
+octint          = [sign] "0o" 1*ODIGIT
+binint          = [sign] "0b" 1*BDIGIT
+nonfin          = %s"Infinity"
+                / %s"-Infinity"
+                / %s"NaN"
+simple          = %s"false"
+                / %s"true"
+                / %s"null"
+                / %s"undefined"
+                / %s"simple(" S simple-number S ")"
+simple-number   = "25" %x30-35         ; 250-255
+                / "2" %x30-34 DIGIT    ; 200-249
+                / "1" 2DIGIT           ; 100-199
+                / %x34-39 DIGIT        ; 40-99
+                / "3" %x32-39          ; 32-39
+                ;; there are no simple values between 24-31
+                / "2" %x30-33          ; 20-23
+                / "1" DIGIT            ; 10-19
+                / DIGIT                ; 0-9
+uint            = "0" / DIGIT1 *DIGIT
+tagged          = uint spec "(" S item S ")"
+
+app-prefix      = lcalpha *lcldh ; including h and b64
+                / ucalpha *ucldh ; tagged variant, if defined
+app-string      = app-prefix sqstr
+app-sequence    = app-prefix "<<" seq ">>"
+app-rstring     = app-prefix rawstring
+rawstring       = startrawdelim
+                  raw-inner
+                  alikerawdelim
+
+rawdelim        = 1*"`"
+startrawdelim   = rawdelim
+                  ; width (number of backquotes) distinguishes
+                  ; between following alikerawdelim and shortrawdelim
+alikerawdelim   = rawdelim ; width == previous startrawdelim
+shortrawdelim   = rawdelim ; width < previous startrawdelim
+rawchars        = 1*(%x0a/%x0d / %x20-5f / %x61-7e / NONASCII)
+raw-inner       = 1*(rawchars / shortrawdelim)
+
+sqstr           = SQUOTE *single-quoted SQUOTE
+bstr            = app-string / sqstr / app-rstring / rawstring
+                / app-sequence / embedded
+                  ; note: rawstring is text; app-... can be any type
+tstr            = DQUOTE *double-quoted DQUOTE
+embedded        = "<<" seq ">>"
+
+array           = "[" (specms S item *(MSC item) SOC / spec S) "]"
+map             = "{" (specms S keyp *(MSC keyp) SOC / spec S) "}"
+keyp            = item S ":" S item
+
+; We allow %x09 HT in prose, but not in string literals
+blank           = %x09 / %x0A / %x0D / %x20
+lblank          = %x0A / %x20  ; Not HT or CR (gone)
+non-slash       = blank / %x21-2e / %x30-7F / NONASCII
+non-slash-star  = blank / %x21-29 / %x2b-2e / %x30-7F / NONASCII
+non-star        = blank / %x21-29 / %x2b-7F / NONASCII
+ends-in-star    = *non-star 1*"*"
+non-lf          = %x09 / %x0D / %x20-7F / NONASCII
+eol-comment     = "#" / "//"
+comment         = "/" non-slash-star *non-slash "/"
+                / "/*" ends-in-star
+                       *(non-slash-star ends-in-star) "/"
+                / eol-comment *non-lf %x0A
+; optional space
+S               = *blank *(comment *blank)
+; mandatory space
+MS              = (blank/comment) S
+; mandatory comma and/or space
+MSC             = ("," S) / (MS ["," S])
+; optional comma and/or space
+SOC             = S ["," S]
+
+; check semantically that strings are either all text or all bytes
+; note that there must be at least one string to distinguish
+streamstring    = "(_" MS string *(MSC string) SOC ")"
+spec            = ["_" *wordchar]
+specms          = ["_" *wordchar MS]
+
+double-quoted   = unescaped
+                / SQUOTE
+                / "\" escapable-d
+
+single-quoted   = unescaped
+                / DQUOTE
+                / "\" escapable-s
+
+escapable1      = %s"b" ; BS backspace U+0008
+                / %s"f" ; FF form feed U+000C
+                / %s"n" ; LF line feed U+000A
+                / %s"r" ; CR carriage return U+000D
+                / %s"t" ; HT horizontal tab U+0009
+                / "\"   ; \ backslash (reverse solidus) U+005C
+
+escapable-d     = escapable1
+                / DQUOTE
+                / "/"   ; / slash (solidus) U+002F (JSON!)
+                / (%s"u" hexchar) ;  uXXXX      U+XXXX
+
+escapable-s     = escapable1
+                / SQUOTE
+                / (%s"u" hexchar-s) ;  uXXXX      U+XXXX
+
+hexchar         = "{" (1*"0" [ hexscalar ] / hexscalar) "}"
+                / non-surrogate
+                / two-surrogate
+non-surrogate   = ((DIGIT / "A"/"B"/"C" / "E"/"F") 3HEXDIG)
+                / ("D" ODIGIT 2HEXDIG )
+two-surrogate   = high-surrogate "\" %s"u" low-surrogate
+high-surrogate  = "D" ("8"/"9"/"A"/"B") 2HEXDIG
+low-surrogate   = "D" ("C"/"D"/"E"/"F") 2HEXDIG
+hexscalar       = "10" 4HEXDIG / HEXDIG1 4HEXDIG
+                / non-surrogate / 1*3HEXDIG
+
+; single-quote hexchar-s: don't allow 0020..007e
+hexchar-s       = "{" (1*"0" [ hexscalar-s ] / hexscalar-s) "}"
+                / non-surrogate-s
+                / two-surrogate
+non-surrogate-s = "007F"                 ; rubout
+                / "00" ("0"/"1"/"8"/"9"/HEXDIGA) HEXDIG
+                / "0" HEXDIG1 2HEXDIG
+                / non-surrogate-1
+non-surrogate-1 = ((DIGIT1 / "A"/"B"/"C" / "E"/"F") 3HEXDIG)
+                / ("D" ODIGIT 2HEXDIG )
+hexscalar-s     = "10" 4HEXDIG / HEXDIG1 4HEXDIG
+                / non-surrogate-1 / HEXDIG1 2HEXDIG
+                / ("1"/"8"/"9"/HEXDIGA) HEXDIG
+
+                / "7F"
+                / HEXDIG1
+
+; Note that no other C0 characters are allowed, including %x09 HT
+unescaped       = %x0A ; new line
+                / %x0D ; carriage return -- ignored on input
+                / %x20-21
+                     ; omit 0x22 "
+                / %x23-26
+                     ; omit 0x27 '
+                / %x28-5B
+                     ; omit 0x5C \
+                / %x5D-7F
+                / NONASCII
+
+newline         = [%x0D] %x0A
+DQUOTE          = %x22    ; " double quote
+SQUOTE          = "'"     ; ' single quote
+DIGIT           = %x30-39 ; 0-9
+DIGIT1          = %x31-39 ; 1-9
+ODIGIT          = %x30-37 ; 0-7
+BDIGIT          = %x30-31 ; 0-1
+HEXDIGA         = "A" / "B" / "C" / "D" / "E" / "F"
+; Note: double-quoted strings as in "A" are case-insensitive in ABNF
+HEXDIG          = DIGIT / HEXDIGA
+HEXDIG1         = DIGIT1 / HEXDIGA
+lcalpha         = %x61-7A ; a-z
+lcldh           = lcalpha / DIGIT / "-"
+ucalpha         = %x41-5A ; A-Z
+ucldh           = ucalpha / DIGIT / "-"
+ALPHA           = lcalpha / ucalpha
+wordchar        = "_" / ALPHA / DIGIT ; [_a-z0-9A-Z]
+NONASCII        = %x80-D7FF / %xE000-10FFFF

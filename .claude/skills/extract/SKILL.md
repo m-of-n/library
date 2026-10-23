@@ -93,3 +93,66 @@ buildable-on.
 - **Never paraphrase normative text.** Verbatim or nothing.
 - **Never edit generated artifacts** (`bin/derive` output); fix the source artifact and regenerate.
 - **Never commit the source document.** Digest and URL only.
+
+## Hazards — read `hazards.md` before pass 1
+
+`hazards.md` beside this file is the list of defects that **actually happen**,
+every one found in this library's own artifacts and most of them more than
+once. It is not optional reading: the later passes of library#39 found more
+than the earlier ones precisely because this list grew. It also carries the
+measured **batching calibration** and what a verify pass should really attack.
+
+The one-line versions, in the order they cost you most:
+
+- **Digests and dates come from `record.yaml`, verified three ways.** Two were
+  fabricated into summary tables. `bin/validate` checks the Digest row because
+  of it. `maturity` is read off the front page — an RFC being an RFC does not
+  make it Standards Track.
+- **Never splice, never heal, and characterise breaks correctly.** Build a
+  quote audit with a *named relaxation channel* so the defect class is
+  reported rather than masked, plus a longest-prefix test for the splice
+  signature. Four lanes each found 4–5 defects in their own prose this way.
+- **Grade WHOLE SPANS, longest first, or the audit reports a false clean.** Two
+  passes found zero defects by checking fragments; a healed token resolved
+  against a *different* part of the same source. Resolve each span against the
+  section it is attributed to, add a separate whole-scalar pass for YAML, and
+  remember that an undelimited quotation is invisible to any audit. Distrust
+  every blanket claim — "nothing healed", "zero relaxations" were both false.
+- **Fixing a reader falsifies the counts measured with it.** Two coverage counts
+  were true measurements through a parser bug, and repairing the parser made
+  them false with nothing to report it. When you fix a reader, grep the records
+  for every number it produced.
+- **Resolve a foreign quotation against the foreign document only.** Never per
+  record *and* never including self: a sibling's copy of a shared wrong
+  quotation resolves it, and so does the record's own other file. One record's
+  `summary.md` was validated against its own `record.yaml`'s copy of the same
+  welded quotation, and the audit reported success.
+- **Check the arithmetic, not just the words.** A record claimed a width was
+  "the only" one its byte count admitted; the congruence admits every eighth
+  value. Enumerate the solution set before writing "only" or "uniquely".
+- **A schema that parses is not a schema that binds.** A derived CDDL parsed
+  perfectly for two passes and constrained nothing, because a `* label => any`
+  wildcard in the same map satisfied every item its rule rejected. Write down
+  the instance the schema must REJECT, and check that it does.
+- **A new check can under-report to ZERO, silently.** One collected no pairs at
+  all on the lane it existed for, and printed that as a clean result. Make every
+  check report how many candidates it EXAMINED beside what it found — an absence
+  of findings must be distinguishable from an absence of looking.
+- **Escapes resolve through editing paths.** Assemble any `\u{…}` in a script
+  and grep for the resolved character afterwards. One record carried this
+  seven times, always inside a sentence about the hazard.
+- **Emit every cited id from the id table by script, then read the resolved
+  pairs.** Two lanes shipped 41 ids that resolved to a real but *different*
+  statement — not dangling, so nothing caught them.
+  `bin/check-id-joins --surface` gives the attack surface.
+- **Prefer block sequences and maps over flow**, keep each `text:` on one line
+  or in a block scalar, and parse every artifact with **both** readers
+  comparing values rather than counts. Five data-loss defects in `_yaml.py`
+  came from this, one losing a whole `requirements.yaml` list.
+- **`split("\n")`, not `splitlines()`** (form feeds), and `python3 -I` with
+  `bin/` on the path explicitly (the shared scratch has a stale `__pycache__`).
+- **The first version of any new check over-reports.** Measure it across the
+  library and scope it narrowly before trusting it. Three for three.
+
+Tools that already exist, so no pass rebuilds them: `bin/bcp14-count`,
+`bin/check-locators`, `bin/check-id-joins`, `bin/fetch-source`, `bin/validate`.

@@ -1,0 +1,99 @@
+# =====================================================================
+# rfc-9741 test vectors -- every example RFC 9741 prints.
+#
+# Each `cddl:` block is lifted from the cached source by line range, by
+# script, never retyped; the only transformation is removal of the common
+# left margin. Each `instance:` value is the source's own, quoted from
+# §2.3 prose - the document prints instances for exactly one of its six
+# examples.
+#
+# SIX CDDL fragments, EIGHT vectors, FOUR instances (3 valid, 1 invalid).
+# F04 carries three vectors because the source gives it three instances
+# in one sentence. THE DOCUMENT PRINTS NOT ONE INSTANCE of any base
+# encoding it defines: there is no base64, hex, base32 or base45 test
+# vector anywhere in RFC 9741. See README.md.
+#
+# Source: RFC 9741, cached source sha256
+#   3234aeea39d01b7c1c8e9c70d4d7dc8745852e0b6edbea167a3e55b91e7a9ee3
+# =====================================================================
+record: rfc-9741
+reviewed_by: ""
+vectors:
+  - id: 'rfc-9741#V-0001'
+    locator: '§2.1'
+    source_lines: "159-160"
+    cddl: |
+      signature-for-json = text .b64u signature
+      signature = bytes .cbor COSE_Sign1
+    matches: 'A text string that is the base64url (no padding) encoding of a byte string that is itself a CBOR-encoded COSE_Sign1.'
+    expect: 'valid'
+    notes: 'The document''s first example, printed with no instance. It nests two controls THROUGH A RULE NAME rather than by chaining them, which is the only way CDDL composes controls - RFC 8610''s `type1 = type2 [S (rangeop / ctlop) S type2]` admits at most one control per type1. Note also what it is an example OF: a signed COSE object carried as base64url text inside a JSON-ish field. `COSE_Sign1` is never defined in this document.'
+  - id: 'rfc-9741#V-0002'
+    locator: '§2.2'
+    source_lines: "248-248"
+    cddl: |
+      yang-json-sid = text .base10 (0..9223372036854775807)
+    matches: 'A text string holding a decimal integer in 0..9223372036854775807, with no leading zeros.'
+    expect: 'valid'
+    notes: 'Printed with no instance. The upper bound is 2**63-1, i.e. YANG-JSON uint64/int64 territory (RFC 7951). Two constraints stack: the controller type bounds the VALUE, and §2.2''s regexp `0|-?[1-9][0-9]*` fixes the TEXT FORM. "007" fails the form; "9223372036854775808" fails the type.'
+  - id: 'rfc-9741#V-0003'
+    locator: '§2.3'
+    source_lines: "299-300"
+    cddl: |
+      my_alg_19 = hexlabel<19>
+      hexlabel<K> = text .printf (["0x%04x", K])
+    instance: '0x0013'
+    matches: 'The text string that an equivalent C printf("0x%04x", 19) call would produce.'
+    expect: 'valid'
+    notes: 'The instance is the source''s own, quoted in prose: "In the following example, my_alg_19 matches the text string "0x0013"". The hex digits are LOWER CASE because the format string says %x; %X would give "0x0013" too for this value, but not for 0x001A/0x001a. The document never says so.'
+  - id: 'rfc-9741#V-0004'
+    locator: '§2.3'
+    source_lines: "305-306"
+    cddl: |
+      any_alg = hexlabel<1..20>
+      hexlabel<K> = text .printf (["0x%04x", K])
+    instance: '0x0013'
+    matches: 'The printf rendering of any integer in 1..20 under "0x%04x".'
+    expect: 'valid'
+    notes: 'Same generic rule as V-0003, instantiated over a RANGE rather than a literal. This is the capability rfc-9741#R-0034 states: "The data items in the controller array do not need to be literals". 0x0013 = 19, inside 1..20.'
+  - id: 'rfc-9741#V-0005'
+    locator: '§2.3'
+    source_lines: "305-306"
+    cddl: |
+      any_alg = hexlabel<1..20>
+      hexlabel<K> = text .printf (["0x%04x", K])
+    instance: '0x0001'
+    matches: 'The printf rendering of any integer in 1..20 under "0x%04x".'
+    expect: 'valid'
+    notes: 'The source''s second positive instance for any_alg: 0x0001 = 1, the bottom of the range.'
+  - id: 'rfc-9741#V-0006'
+    locator: '§2.3'
+    source_lines: "305-306"
+    cddl: |
+      any_alg = hexlabel<1..20>
+      hexlabel<K> = text .printf (["0x%04x", K])
+    instance: '0x1234'
+    matches: 'The printf rendering of any integer in 1..20 under "0x%04x".'
+    expect: 'invalid'
+    notes: 'The source''s only negative instance in the whole document: "Here, any_alg matches the text strings "0x0013" or "0x0001" but not "0x1234"." 0x1234 = 4660, outside 1..20. The text is WELL FORMED under the format string and fails only on the controller type - which is exactly why .printf is more than a regexp.'
+  - id: 'rfc-9741#V-0007'
+    locator: '§2.4'
+    source_lines: "329-330"
+    cddl: |
+      embedded-claims = text .json claims
+      claims = {iss: text, exp: text}
+    matches: 'A text string holding a JSON text whose RFC 8949 §6.2 conversion is a map with text-string entries iss and exp.'
+    expect: 'valid'
+    notes: 'Printed with no instance. Deliberately shaped like a JWT claims set. Per rfc-9741#R-0040 the operator CANNOT constrain blank space or map-entry order, so `{"iss":"a","exp":"b"}` and `{ "exp" : "b" , "iss" : "a" }` both match this rule. Any number of distinct text strings match it.'
+  - id: 'rfc-9741#V-0008'
+    locator: '§3.1 (Figure 1)'
+    source_lines: "377-381"
+    cddl: |
+      legacy-ip-address = text .join legacy-ip-address-elements
+      legacy-ip-address-elements = [bytetext, ".", bytetext, ".",
+                                    bytetext, ".", bytetext]
+      bytetext = text .base10 byte
+      byte = 0..255
+    matches: 'A text string that is the concatenation of four decimal byte renderings separated by ".", e.g. 192.0.2.1.'
+    expect: 'valid'
+    notes: 'The document''s only figure, printed with no instance. It is the marker-based subset rfc-9741#R-0056 RECOMMENDS a validator cover: the three literal "." elements isolate the four variable ones. Note the stacking - `.join` over an array whose elements are `.base10`-controlled types over a `0..255` range - and note that the constant "." does NOT occur inside any `bytetext`, which is the third of the three drafting conditions in rfc-9741#R-0051.'
