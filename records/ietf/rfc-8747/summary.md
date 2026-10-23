@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-8747
 record: rfc-8747
 type: summary
-updated: "2026-10-20"
+updated: "2026-10-22"
 ---
 
 # Proof-of-Possession Key Semantics for CBOR Web Tokens (CWTs)
@@ -30,10 +30,11 @@ restatement of RFC 7800 and says so in terms (§3.2, §3.3).
 What makes it worth holding is not the claim. It is §3.4 and §6, which are the
 standards-track account of what a bare `kid` is **not**: its content is
 "application specific", with the hash-of-public-key construction offered as one
-thing "some applications may choose" and no preimage specified; collisions are
-to be "expected" wherever the value is not cryptographically derived from the
-key; and the value "is not necessarily the same for different parties", so one
-key can have a different Key ID on each side of a single conversation. §6 then
+thing "some applications may choose" and no preimage specified; "implementers
+should expect collisions" wherever the value is not cryptographically derived
+from the key; and the value "is not necessarily the same for different
+parties", so one key can have a different Key ID on each side of a single
+conversation. §6 then
 puts non-reuse on the *issuer* as operational discipline rather than on the
 identifier as a property, with impersonation as the stated failure. The
 document also establishes the IANA "CWT Confirmation Methods" registry (§7.2)
@@ -106,21 +107,35 @@ LICENSE files.
 |---|---|
 | `record.yaml` | metadata, and the locator-by-locator warrant for each `bears_on` id |
 | `summary.md` | this document |
+| `distilled/` | the full FX-1 artifact set — `distilled/README.md` is the index |
 
-**No `distilled/`, deliberately.** Settled 2026-10-20 (library#39 Tier 2): the
-record was unblocked from `bears_on: []` by reading the source, and the findings
-that unblocked it are short enough to live in `record.yaml`'s comment block.
-FX-1 becomes owed if DEC-003 selects the `kid` route, or if library#39 promotes
-this record out of Tier 2 — at which point the normative surface is small (8
-BCP 14 keywords, `bin/bcp14-count`) and most of what is interesting here is
-*not* normative, which the extraction would have to say in its reconciliation.
+**This record is fully extracted.** Settled 2026-10-20 (library#39 Tier 2), this
+section said *"No `distilled/`, deliberately"*, and that was true until
+library#39 promoted the record out of Tier 2 — which is exactly the trigger the
+old wording named. FX-1 ran 2026-10-21 to 2026-10-22: `normative.md`,
+`requirements.yaml` (118 entries), `distilled/schema/`, `messages.yaml`,
+`protocol.yaml`/`protocol.md`, `examples/` and `design-notes.md`, with
+`state-machine.yaml` declared not applicable with its reason written out. The
+extraction confirmed what the old wording predicted — the normative surface is
+**8** BCP 14 keywords and none of them is in §3.4 or §6, the two sections this
+record is held for, and `requirements.yaml`'s `reconciliation` says so at
+length. It also found more than a summary could: a source defect in the
+document's own worked example (`rfc-8747#D-0001`, §3.3's printed `COSE_Key` is
+not the plaintext of its printed ciphertext — the entries are in a different
+order), and six named cuts against `MD-3`, one of which ranks the `DEC-002`
+options the opposite way round from the narrowing. See `distilled/README.md`.
 
 ## Limits
 
 - **§3.1's co-presence rule does not cover the identifier members, and this is
   the one real gap.** "The "cnf" claim value MUST represent only a single
-  proof-of-possession key. At most one of the "COSE_Key" and
+  proof-of- possession key. At most one of the "COSE_Key" and
   "Encrypted_COSE_Key" confirmation values defined in Table 1 may be present."
+  (The space inside `proof-of- possession` is the line break at source lines
+  180–181. Joining at the hyphen would make the quoted token occur nowhere in
+  the document, which is the convention `requirements.yaml`, `normative.md` and
+  `distilled/README.md` all state; this file used to be the one place that
+  broke it.)
   Member 3 (`kid`) is in that same table and is *not* in that enumeration, and
   the second sentence's "may" is lowercase. RFC 9679 §8 later adds `ckt` at
   Confirmation Key 5. So `cnf: {3: …, 5: …}` — two identifiers for one key,

@@ -10,8 +10,14 @@ reviewed_by: ""
 
 **What this file is.** Every normative statement of RFC 8747, reproduced as an
 exact run of source lines with its line range and its own `sha256`, in the
-document's own section order, together with its one table and all four of its
-IANA registration blocks. Nothing here is paraphrased and nothing is retyped:
+document's own section order, together with its one table and all **three** of
+its IANA registration blocks — §7.1.1's completed claim registration, §7.2.1's
+registration template and §7.2.2's initial registry contents — plus §7's
+registration procedure and the two one-sentence registry-creation sentences at
+§7.1 and §7.2, which makes **six** regions in §7. (This said *four* IANA
+blocks, a figure that matched neither the three registration blocks nor the six
+regions; `schema/source-renderings.txt` carries the three.) Nothing here is
+paraphrased and nothing is retyped:
 each fenced block was lifted from `.cache/rfc-8747.txt` by line range by
 script. Prose outside the fences is this extraction's, and says only where a
 statement sits and what it is.

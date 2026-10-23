@@ -423,24 +423,32 @@ Recorded, not repaired, per `docs/extraction.md`.
 | `D-0005` | §3.3 line 269 | — | the protected-header annotation uses **backslash delimiters** inside a `/…/` comment. All **four** backslashes in the document are on that one line, and §2 cites only Appendix G of RFC 8610 |
 | `D-0006` | line 1 | — | the cached `.txt` begins with a **UTF-8 byte-order mark** on a line of its own. Inside the hashed bytes, so inside `content.sha256` |
 
-**And two defects in this repository, not in the source — both in
-`summary.md`.** First, it quotes rfc-8747#R-0028 with the line-break
-hyphenation **healed**: it writes `proof-of-possession` where the source reads
-`proof-of-` / `possession` across lines 180-181, so the quotation resolves only
-under a source-side hyphen heal. Second, it writes that collisions are to be
-`"expected"`, where §3.4 reads "implementers should **expect** collisions" —
-an inflection placed inside quote marks, and `expected` occurs **0** times in
-the document. Found by a short-span pass over 6–24 character spans, which the
-≥25-character whole-span audit cannot see. Both are left for a decision
-together, because each fix changes a written summary's readability and this
-pass should not quietly edit it — `requirements.yaml` carries both sentences
-unaltered.
+**And two defects were in this repository rather than in the source — both in
+`summary.md`, both now FIXED by the cross-check pass.** First, it quoted
+rfc-8747#R-0028 with the line-break hyphenation **healed**: `proof-of-possession`
+where the source reads `proof-of-` / `possession` across lines 180-181, so the
+quotation resolved only under a source-side hyphen heal. Second, it wrote that
+collisions were to be `"expected"`, where §3.4 reads "implementers should
+**expect** collisions" — an inflection placed inside quote marks, and
+`expected` occurs **0** times in the document. The second was found by a
+short-span pass over 6–24 character spans, which the ≥25-character whole-span
+audit cannot see. Both had been reported twice without being decided; the
+hyphenation now reads the way the source reads it with the break named, and the
+collision clause now quotes the document's own words. `requirements.yaml` R-0028
+and R-0056 carry both sentences unaltered, as they always did.
+
+A third defect in this repository, found by the cross-check pass and also
+fixed: **`summary.md`'s "Artifacts in this record" still said "No `distilled/`,
+deliberately"** — written 2026-10-20, before the extraction, and left standing
+through both later passes while ten artifacts were added beside it. The primary
+human- and AI-facing document said the record had no distilled artifacts.
 
 The claim that stood here, that all **seven** `bears_on` quotations in
-`record.yaml` resolved **exact**, is withdrawn: the comment block holds
-**nine** quotations, four of them m-of-n and unverifiable from this repository,
-and of the five bearing on RFC 8747 **three are exact and two are declared
-ellipses**. See `README.md`, known gap 3.
+`record.yaml` resolved **exact**, was withdrawn by pass 2: the comment block
+holds **nine** quotations, four of them m-of-n and unverifiable from this
+repository. Of the five bearing on RFC 8747, three were exact and two were
+declared ellipses; the cross-check pass removed both ellipses, so **all five
+now resolve exact**. See `README.md`, known gaps 3 and 4.
 
 ---
 
@@ -506,13 +514,17 @@ did **not** nominate. So work this list **and** choose your own targets.
    is the second half of a mid-sentence split off rfc-8747#R-0039.
    It carries the MAY, so the split is defensible, but a fragment opening with
    *and* is one step from the truncation class.
-4. **The protocol artifact is PRODUCED, not N/A.** This is the one
-   artifact-level judgement here a reasonable verifier could reverse. Test the
-   inference, not the word counts: **18** of the lane's 25 FX-1 records declare
-   it N/A on grounds this record does not share, **8** produce it, and
-   `rfc-9679` declared it N/A by pointing at *this* document. (The "five" that
-   stood here was carried over from the state-machine sentence, which is a
-   different count of a different artifact.)
+4. **The protocol artifact is PRODUCED, not N/A — SUSTAINED by the cross-check
+   pass.** This is the one artifact-level judgement here a reasonable verifier
+   could reverse. Test the inference, not the word counts: of the lane's **25**
+   FX-1 records, **18** declare this artifact N/A and **7** produce it — *this
+   record among the seven*, so six others do. `rfc-9679` is one of the 18, and
+   it declared N/A by pointing at *this* document, which is why deferring again
+   was not available. (This said "18 … N/A, **8** produce it", which is 26 of
+   25; counted from `distillation.not_applicable` and `distillation.artifacts`
+   across `records/*/*/record.yaml` for topics `cbor-implementation` and
+   `canonical-encoding` at `standard: FX-1`, it is 18 and 7. The same wrong
+   figure stood in `record.yaml`'s pass-1 note.)
 5. **The CCM result is this pass's own claim.** The AES and CCM were written
    for this pass and gated on FIPS 197 C.1 and RFC 3610 vector 1, but defect
    `D-0001` rests on them. Re-derive it independently rather than confirming
