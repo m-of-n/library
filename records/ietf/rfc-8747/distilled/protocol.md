@@ -23,7 +23,14 @@ the finding is that the arrows are missing from this end too.
 
 ## The word sweep behind that judgement
 
-Over all 683 source lines, case-insensitive, whole words:
+Over all 683 source lines, case-insensitive, matching each word **and its
+inflections** (`\bWORD\w*`). The method is stated precisely because this line
+previously read "whole words", which does not produce these numbers —
+whole-word matching gives `request` 4, `message` 5, `protocol` 2 and `nonce` 3,
+and the `where` column below counts `requested`, `messages`, `protocols` and
+`nonces`. **The nine zeros hold under both methods**, and they are what the
+not-applicable-versus-produce judgement rests on. The role counts in the next
+section are whole-word.
 
 | word | hits | where |
 |---|---|---|

@@ -35,6 +35,18 @@ instances, four of them chosen to be rejected. `hazards.md` §7 is the reason:
 nothing, because a `* label => any` wildcard in the same map satisfied every
 item its rule rejected.
 
+**Pass 2 found the mirror-image defect in the first version of this grammar,
+and it is fixed.** `other-label` claimed to write out the complement of
+`{1, 2, 3}` but enumerated only integer and text keys, so the socket **rejected**
+a byte-string, boolean, array, map, tagged or bignum map key. CBOR admits any
+data item as a map key, and `rfc-8747#R-0025` requires a member we do not
+understand to be *ignored* — i.e. tolerated — so that grammar bound **more**
+than the document does. Not a schema that fails to constrain, but one that
+constrains what the source leaves open, on this record's own central subject.
+The rule now names the remaining major types (`bstr` and `#4`/`#5`/`#6`/`#7`),
+which is exhaustive; `other-claim-label` had the same defect and the same fix.
+The table below was re-run after the change.
+
 **The instance this grammar exists to reject**, written down before it was
 tested:
 
@@ -54,18 +66,39 @@ tested:
 | `{3: "dfd1aa97"}` — `kid` as a text string | **reject** | **reject** |
 | `{2: COSE_Encrypt0, 1: "nonsense"}` | **reject** | **reject** |
 | `{1: COSE_Key, 2: COSE_Encrypt0, 9: 1}` | **reject** | **reject** |
+| `{2: 16(COSE_Encrypt0)}` — the tag carried | accept | **accept** |
+| `{4: 1}`, `{0: 1}`, `{-1: 1}`, `{2^64-1: 1}` | accept | **accept** |
+| `{"COSE_Key": COSE_Key}` — a text key is an unknown member | accept | **accept** |
+| `{1: COSE_Key, 1: COSE_Key}` — duplicate key 1 | **reject** | **reject** |
+| `{3: kid, 3: kid}` — duplicate key 3 | **reject** | **reject** |
+| `{3: [kid]}` — `kid` as an array | **reject** | **reject** |
+| `{h'00': 1}`, `{true: 1}`, `{[1]: 1}`, `{{}: 1}` — non-integer keys | accept | **accept** |
+| `{2(bignum): 1}`, `{null: 1}`, `{undefined: 1}`, `{1.5: 1}` | accept | **accept** |
+| `{8: {3: kid}}` — the CWT Claims Set fragment | accept | **accept** |
+| `{8: {3: kid}, h'00': 1}` — fragment, non-integer claim key | accept | **accept** |
+| `{1: "iss"}` — fragment without key 8 | **reject** | **reject** |
+| `{8: {1: COSE_Key, 2: COSE_Encrypt0}}` — fragment, bad `cnf` | **reject** | **reject** |
 
-**10 of 10 behave as the grammar claims.** And the vacuity probe: a naive
-rendering — optional entries for 1 and 2 beside an unrestricted `* label => any`
-in the same map — **accepts all four** instances the real grammar rejects. Two
-devices prevent that here, and both were tested rather than assumed:
+**30 of 30 behave as the grammar claims** — pass 1's 10, 11 added by pass 2's
+independent transcription, and 9 more covering the fix above and the fragment.
+The eight accepts in the last four rows are the instances the first version of
+`other-label` wrongly rejected.
+
+And the vacuity probe, re-run: a naive rendering — optional entries for 1 and 2
+beside an unrestricted `* label => any` in the same map — wrongly **accepts 7
+of the 8** rejects (everything but the fragment missing key 8, which no
+wildcard can supply). Two devices prevent that here, and both were tested
+rather than assumed:
 
 1. **The cut operator `^ =>`** on every named entry, so a wrongly typed value
    under a known label cannot fall through to the wildcard.
-2. **`other-label` excludes 1, 2 and 3 by construction** — written out as `0 /
-   nint / (4 .. 18446744073709551615) / tstr`, because CDDL has no negation on
-   literals. This is what stops the extension socket absorbing a *second* key
-   representation.
+2. **`other-label` excludes 1, 2 and 3 by construction, and nothing else** —
+   written out as `0 / nint / (4 .. 18446744073709551615) / tstr / bstr /
+   #4 / #5 / #6 / #7`, because CDDL has no negation on literals. This is what
+   stops the extension socket absorbing a *second* key representation. The
+   trailing major-type alternatives are what make it the WHOLE complement:
+   without them the rule excluded far more than three labels, which is the
+   defect recorded above.
 
 ### Where the cut is inert, said plainly
 

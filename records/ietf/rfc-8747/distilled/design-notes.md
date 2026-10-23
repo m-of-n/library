@@ -154,12 +154,19 @@ makes the intentional case *impossible* rather than merely discouraged. If we
 want the DTLS-continuity behaviour, a derived `KeyId` forbids it and something
 else has to carry session continuity.
 
-**And it cuts against §5 in the same document.** §5 advises the opposite:
+**And it stands in tension with §5 — but NOT in contradiction, which is what
+this section claimed and pass 2 reversed.** §5 advises:
 "Thus, for privacy reasons, it is recommended that different proof-of-possession keys be used when interacting with different parties." (rfc-8747#R-0085)
-§5 wants a fresh key per party; §6 wants one key across CWTs for session
-continuity. Both are lower-case advice, neither defers to the other, and the
-document never reconciles them. An extraction that reports only §6 would hand
-us half of a tension.
+§5 is a rule about **different parties**; §6's intentional case is explicitly
+"for the **same recipient**" (lines 420-421). Reusing one key across several
+CWTs issued to one recipient is therefore fully consistent with a different key
+per party, and the two statements do not conflict on the document's own terms.
+The real tension is weaker and worth keeping: §6 blesses exactly the repeated
+use of one key that makes it the correlation handle §5's rationale warns about
+— but only within a single party's view, which is the view §5 does not govern.
+An extraction that reported this as a flat contradiction would overstate the
+document's incoherence, and one that reported only §6 would hand us half of the
+tension.
 
 ### 4.3 `ARCH-0002 P1` — the contrast, verified at source
 
@@ -241,9 +248,13 @@ dependence; and the proof-of-possession protocol, which does not exist to carry
 
 ### 5.3 Where the document cuts against `MD-3`
 
-Five cuts. Three cost option 5, one corroborates a cut `rfc-8392` already
-found, and one is a point in option 5's favour — recorded because an extraction
-that only finds costs is as uninformative as one that only confirms.
+Six cuts, A–F. **Four** cost option 5 (A, B, C, D), one of which (A) also
+corroborates a cut `rfc-8392` already found; **one** is a point in option 5's
+favour (E); and **one** costs every option equally (F), recorded so the list is
+not read as a ranking on every ground. The point in favour is recorded because
+an extraction that only finds costs is as uninformative as one that only
+confirms. (This said "Five cuts" and accounted for five, leaving F out of its
+own enumeration while `README.md` correctly said six.)
 
 #### Cut A — the optional tag means one `cnf` has two wire forms, and the registry does not choose. **Costs option 5 and option 3 alike; corroborates `rfc-8392`'s cut 3.**
 
@@ -412,14 +423,24 @@ Recorded, not repaired, per `docs/extraction.md`.
 | `D-0005` | §3.3 line 269 | — | the protected-header annotation uses **backslash delimiters** inside a `/…/` comment. All **four** backslashes in the document are on that one line, and §2 cites only Appendix G of RFC 8610 |
 | `D-0006` | line 1 | — | the cached `.txt` begins with a **UTF-8 byte-order mark** on a line of its own. Inside the hashed bytes, so inside `content.sha256` |
 
-**And one defect in this repository, not in the source.** `summary.md` quotes
-rfc-8747#R-0028 with the line-break hyphenation **healed**: it
-writes `proof-of-possession` where the source reads `proof-of-` / `possession`
-across lines 180-181. The whole-span quote audit resolved it only under a
-source-side hyphen heal; all **seven** `bears_on` quotations in `record.yaml`
-resolved **exact**. Left for a later pass to decide, because the fix changes a
-written summary's readability and this pass should not quietly edit it —
-`requirements.yaml` carries the unhealed sentence.
+**And two defects in this repository, not in the source — both in
+`summary.md`.** First, it quotes rfc-8747#R-0028 with the line-break
+hyphenation **healed**: it writes `proof-of-possession` where the source reads
+`proof-of-` / `possession` across lines 180-181, so the quotation resolves only
+under a source-side hyphen heal. Second, it writes that collisions are to be
+`"expected"`, where §3.4 reads "implementers should **expect** collisions" —
+an inflection placed inside quote marks, and `expected` occurs **0** times in
+the document. Found by a short-span pass over 6–24 character spans, which the
+≥25-character whole-span audit cannot see. Both are left for a decision
+together, because each fix changes a written summary's readability and this
+pass should not quietly edit it — `requirements.yaml` carries both sentences
+unaltered.
+
+The claim that stood here, that all **seven** `bears_on` quotations in
+`record.yaml` resolved **exact**, is withdrawn: the comment block holds
+**nine** quotations, four of them m-of-n and unverifiable from this repository,
+and of the five bearing on RFC 8747 **three are exact and two are declared
+ellipses**. See `README.md`, known gap 3.
 
 ---
 
@@ -431,8 +452,11 @@ written summary's readability and this pass should not quietly edit it —
    association. A derived `KeyId` makes that impossible. *`R-O-01`'s owner, or
    the `DEC-003` ADR.*
 2. **How do §5 and §6 get reconciled in our design?** §5 advises a fresh key
-   per party (rfc-8747#R-0085); §6 wants one key across
-   CWTs. Both lower-case, neither deferring. *`DEC-003`.*
+   per party (rfc-8747#R-0085); §6 blesses one key across
+   CWTs **for the same recipient**. Both lower-case. They do not contradict —
+   §5 is cross-party and §6's case is same-party (see §4.2) — so what we owe is
+   a positive choice about correlatability within one party's view, not the
+   resolution of a conflict. *`DEC-003`.*
 3. **If a `KeyId` is derived, what are the canonical key bytes?** §3.4 is the
    demonstration that naming the construction is not enough —
    rfc-8747#R-0054 names a hash of the public key and supplies
@@ -459,10 +483,21 @@ written summary's readability and this pass should not quietly edit it —
 clean and that every serious defect a verify pass finds is in something pass 1
 did **not** nominate. So work this list **and** choose your own targets.
 
-1. **The 111 `stated` / 7 `inferred` split.** Unusually high for this lane.
-   All 118 texts are verified contiguous, but *contiguous* and *literally
-   stated rather than inferred* are different claims, and this pass leaned
-   toward `stated`.
+1. **The `stated` / `inferred` split — ADJUDICATED by pass 2 and now 110 / 8.**
+   This read 111 / 7 and said the pass had leaned toward `stated` because
+   *contiguous* and *literally stated* are different claims. Pass 2 found the
+   deeper problem: the criterion was undeclared and applied two ways. Six
+   entries carry a `force carried by '<non-keyword phrase>'` marker in their
+   `field` — the record's own sign that the force is the extraction's reading —
+   and three were `inferred` while three were `stated`. And SKILL.md's wording
+   ("anything not literally stated") cannot be the criterion here, because all
+   118 texts are verbatim contiguous substrings, which would make the split
+   118 / 0. `requirements.yaml` now **declares** the criterion it actually
+   uses — asserted obligation or binding definition versus description,
+   analogy, equivalence or framing — and applying it consistently moved
+   rfc-8747#R-0009 to `inferred`, with
+   rfc-8747#R-0011 and
+   rfc-8747#R-0076 deliberately left `stated`.
 2. **rfc-8747#R-0038 and rfc-8747#R-0052 are
    byte-identical** — the record's only duplicate-text group and therefore the
    whole attack surface for an id that resolves to a real but wrong statement.
@@ -473,9 +508,11 @@ did **not** nominate. So work this list **and** choose your own targets.
    *and* is one step from the truncation class.
 4. **The protocol artifact is PRODUCED, not N/A.** This is the one
    artifact-level judgement here a reasonable verifier could reverse. Test the
-   inference, not the word counts: five sibling records declare it N/A on
-   grounds this record does not share, and `rfc-9679` declared it N/A by
-   pointing at *this* document.
+   inference, not the word counts: **18** of the lane's 25 FX-1 records declare
+   it N/A on grounds this record does not share, **8** produce it, and
+   `rfc-9679` declared it N/A by pointing at *this* document. (The "five" that
+   stood here was carried over from the state-machine sentence, which is a
+   different count of a different artifact.)
 5. **The CCM result is this pass's own claim.** The AES and CCM were written
    for this pass and gated on FIPS 197 C.1 and RFC 3610 vector 1, but defect
    `D-0001` rests on them. Re-derive it independently rather than confirming

@@ -57,14 +57,26 @@ cnf-rest = (
     * other-label ^ => any,     ; the extension socket rfc-8747#R-0025 requires
 )
 
-; EXCLUDES 1, 2 and 3. This is what stops the socket swallowing a second key
-; representation. CDDL has no negation on literals, so the complement is
-; written out: 0, every negative integer, every unsigned integer from 4 up,
-; and every text key.
+; EXCLUDES 1, 2 and 3, AND NOTHING ELSE. This is what stops the socket
+; swallowing a second key representation. CDDL has no negation on literals, so
+; the complement is written out — and it must be the WHOLE complement, which
+; the first version of this rule was not: it enumerated 0, the negative
+; integers, the unsigned integers from 4 up and the text keys, and stopped
+; there. CBOR admits ANY data item as a map key, so that rule REJECTED a
+; byte-string, boolean, array, map, tagged or bignum key — and rfc-8747#R-0025
+; requires a member we do not understand to be IGNORED, i.e. TOLERATED. A
+; grammar that rejects it binds more than the document does, which is
+; hazards.md s7 in mirror image: not a schema that fails to constrain, but one
+; that constrains what the source leaves open. The remaining major types are
+; named by major type because that is exhaustive: 2 and 3 as `bstr`/`tstr`, and
+; 4, 5, 6 and 7 cover every array, map, tagged item (bignums among them) and
+; simple or float value.
 other-label = 0
             / nint
             / (4 .. 18446744073709551615)
             / tstr
+            / bstr
+            / #4 / #5 / #6 / #7
 
 ; Sockets. RFC 8747 defines none of these three - section 3.2 and section 3.3
 ; name them and cite [RFC8152].
@@ -76,4 +88,8 @@ COSE_Encrypt0      = any
 ; The claim as it sits in a CWT Claims Set. Claim Key 8 and value type `map`
 ; are stated only in section 7.1.1's registration.
 cwt-claims-set-fragment = { 8 ^ => cnf-claim, * other-claim-label ^ => any }
+; EXCLUDES 8 and nothing else, for the reason `other-label` gives above: a CWT
+; Claims Set may carry a claim key of any CBOR type, and this document governs
+; only key 8.
 other-claim-label = 0 / nint / (1 .. 7) / (9 .. 18446744073709551615) / tstr
+                  / bstr / #4 / #5 / #6 / #7
