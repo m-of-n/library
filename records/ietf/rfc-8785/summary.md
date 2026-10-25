@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-8785
 record: rfc-8785
 type: summary
-updated: "2026-10-03"
+updated: "2026-10-23"
 ---
 
 # JSON Canonicalization Scheme (JCS)
@@ -82,6 +82,7 @@ Two observations a build-on-it decision turns on:
 | `record.yaml` | metadata and typed relations |
 | `summary.md` | this document |
 | `distilled/` | the FX-1 artifact set — see `distilled/README.md` |
+| `distilled/design-notes.md` | bearing on our design. Produced by **library#46** (merged 2026-10-05, `de71a35`), the canonical-encoding FX-1 PR |
 
 ## Limits
 
