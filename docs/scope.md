@@ -159,6 +159,19 @@ Per-version sibling records explode the library, and we are largely interested
 in the latest. `draft-…-11` through `-18` is one record; C2PA 2.2 → 2.4 is one
 record with `version: "2.4"`.
 
+**A `versions/<version>/` entry is metadata only** (settled 2026-10-25, was
+§7.1). It holds exactly one file, `record.yaml`, carrying a one-line `delta`
+that says what the next revision changed. It never holds a `summary.md`,
+`distilled/`, or any other file. All reading, summarising and extracting is
+done against the current version in the parent record. A superseded revision
+is kept so it can be found and cited, not so it can be read again.
+`bin/validate` rejects any other file under `versions/`.
+
+Why: we use the latest version. A summary for each superseded version is a
+second summary someone owes and nobody reads. The one that existed
+(`draft-mih-scitt-agent-action-capsule/versions/-02/`) was an unfilled
+scaffold, and nothing counted it.
+
 The exception is obsolescence across document lines: **an RFC that OBSOLETES
 another is a different line** and keeps its own record, linked by `supersedes`.
 RFC 9943 does not fold into the draft it came from.
@@ -203,9 +216,9 @@ Two rules survive the removal of caps:
 
 ## 7. Open questions **[?]**
 
-1. **Does `versions/` hold the full record or just the metadata?** Keeping a
-   `summary.md` per superseded version preserves what changed; keeping only
-   `record.yaml` is cheaper. Proposed: metadata plus a one-line delta note.
+1. ~~**Does `versions/` hold the full record or just the metadata?**~~
+   **Settled 2026-10-25: metadata only**, `record.yaml` plus a one-line
+   `delta`. See §5.
 2. **Does `usefulness` need review dating?** A verdict of `not-useful` from
    before a decision was reopened may be stale. `assessed` records when, but
    nothing forces re-assessment.
