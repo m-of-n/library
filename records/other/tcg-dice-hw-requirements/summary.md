@@ -3,54 +3,52 @@ schema: "library-summary/v1"
 id: tcg-dice-hw-requirements
 record: tcg-dice-hw-requirements
 type: summary
-updated: "2026-09-26"
+updated: "2026-11-01"
 ---
 
-# Hardware Requirements for a Device Identifier Composition Engine r78
+# Hardware Requirements for a Device Identifier Composition Engine
 
 |  |  |
 |---|---|
-| **Type** | spec |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | https://trustedcomputinggroup.org/wp-content/uploads/Hardware-Requirements-for-Device-Identifier-Composition-Engine-r78_For-Publication.pdf |
-| **Source** | https://trustedcomputinggroup.org/wp-content/uploads/Hardware-Requirements-for-Device-Identifier-Composition-Engine-r78_For-Publication.pdf |
-| **Digest** | `not fetched` |
+| **Type** | spec (TCG) |
+| **Maturity** | `standard`: cover marked PUBLISHED |
+| **Authors** | Trusted Computing Group, individual contributors not recorded here |
+| **Published** | 2024-08-08 |
+| **Identifier** | TCG DICE hardware requirements, Version 1.0 Revision 0.91 |
+| **Source** | https://www.trustedcomputinggroup.org/resources/documents/hardware-requirements-for-a-device-identifier-composition-engine |
+| **Digest** | `sha256:20b1ceaa…` (full value in `record.yaml`), fetched 2026-11-01 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+DICE is a hardware root of trust for devices with no TPM (§1). At reset it reads a Unique Device Secret, measures the First Measured Code, combines the two by a one-way function into a Compound Device Identifier, locks the secret until next reset, and hands over the CDI (§5.4). Code that changes gets a different CDI, so malware cannot inherit the previous one's secrets. That is the design's central move: identity depends on what booted, without anything storing a key.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `core` | It is the root the rest of the family rests on |
+| Cryptography | `adjacent` | Requires a one-way function preserving the UDS's strength, and leaves the choice open (§5.4) |
+| This project | `adjacent` | Shows a key can be derived from state, not generated and held |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+- **R-M-02**: a key derived from the CDI identifies device and code together. What a hardware root adds to a bare key is this binding between the key and what booted.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
-
-| Name | Kind | License | URL |
-|---|---|---|---|
+**Not searched.** The batch did not survey implementations for this record, and none is named in the parts read.
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+**No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. A `spec` record owes FX-1 when someone extracts it, and no issue owns that yet. No keyword count is given because none has been reconciled.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+- **The engine itself is believed, not measured.** Revision 78 §1 says updates to the engine are not measured in the CDI and must be inherently trusted. An updatable DICE leaves the CDI unchanged after a manufacturer update (§5.2.2 SHOULD NOT).
+- **Protecting the CDI is largely out of scope.** Revision 78 §6.3 and its notes leave this to the device, and warn that a leaked CDI allows impersonation.
+- **Interoperable mixing is not specified.** Revision 78 §5 says the choice of method is the manufacturer's, so a verifier cannot recompute a CDI without knowing it.
+- **No attestation protocol.** That is in the other DICE records.
+- **Read scope.** Revision 78 was read whole. In r0.91 §1, the section list and the normative lines of §5 were read, and the rest was not compared. Where a statement above cites revision 78 its presence in r0.91 was not checked line by line.
