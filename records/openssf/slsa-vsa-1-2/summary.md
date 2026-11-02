@@ -3,54 +3,57 @@ schema: "library-summary/v1"
 id: slsa-vsa-1-2
 record: slsa-vsa-1-2
 type: summary
-updated: "2026-10-05"
+updated: "2026-11-01"
 ---
 
-# SLSA Verification Summary Attestation (VSA) v1.1
+# SLSA Verification Summary Attestation (VSA), SLSA Specification v1.2
 
 |  |  |
 |---|---|
 | **Type** | spec |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | https://slsa.dev/spec/v1.2/verification_summary |
+| **Maturity** | standard |
+| **Authors** | SLSA project contributors (slsa-framework) |
+| **Published** | 2025-11-24, Open Source Security Foundation (OpenSSF) |
+| **Identifier** | `https://slsa.dev/verification_summary/v1` |
 | **Source** | https://slsa.dev/spec/v1.2/verification_summary |
-| **Digest** | `f6234a9fed48b26fd404295ca45ed57d91754772bf9559c09389a0e5e91d0a0e` |
+| **Digest** | `sha256:f6234a9f…` (full value in `record.yaml`), fetched 2026-11-01 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+A VSA is an in-toto predicate in which a verifier states that it checked artifacts against a policy, so a consumer can accept the result without seeing the underlying attestations or the transitive dependencies. It serves two purposes: delegating a complex policy decision to a trusted party, and keeping a producer's pipeline confidential. *How to verify* gives seven mandatory consumer steps, covering the envelope signature, `subject`, `predicateType`, `verifier`, `resourceUri`, `verificationResult` and `verifiedLevels`. The first *Examples* entry says outright that a VSA with an arbitrary agreed level is analogous to traditional code signing.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `core` | A verifier is a single trusted party. The page says a VSA does not protect against compromise of the verifier |
+| Cryptography | `none` | No cryptography of its own |
+| This project | `adjacent` | A real delegation of judgement, but it is expressed only as which verifier keys a consumer configures |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+- **R-I-03** and **R-I-01**: a second predicate to map if we export to in-toto.
+- **R-M-10**: the useful contrast. The VSA's *Purpose* section is about delegating a decision, yet nothing in the predicate is a delegation. The grant lives in the consumer's preconfigured root of trust. An explicit `AuthzCert` delegation is the object this design lacks.
+- *Fields* has a useful rule: consumers must accept only specific (signer, verifier) pairs.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
+**Searched 2026-11-01.** GitHub repository metadata checked. `slsa-verifier` is listed as the project's verifier; whether it consumes VSAs was not checked.
 
 | Name | Kind | License | URL |
 |---|---|---|---|
+| slsa-verifier | open source, verifier | Apache-2.0 | https://github.com/slsa-framework/slsa-verifier |
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+**No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. A `spec` record owes FX-1 when someone extracts it, and no issue owns that yet. No keyword count is given because none has been reconciled.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+- **The spec's own examples are stale.** The change history says 1.2 fixed a typo where `verificationResult` was wrongly called `slsaResult`, but both worked cases under *Examples* still use `slsaResult`. Read *How to verify* and *Schema* as authoritative.
+- **`resourceUri` can be anything agreed.** *Fields* allows another value if the producer communicates it out of band.
+- **The result is only as good as the verifier.** The page says so, and offers no mitigation beyond choosing verifiers carefully.
+- **Read scope.** The whole page was read as rendered HTML. The Verifying Artifacts page is not covered.

@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: cox-2024-xz-timeline
 record: cox-2024-xz-timeline
 type: summary
-updated: "2026-09-26"
+updated: "2026-11-01"
 ---
 
 # Timeline of the xz open source attack
@@ -11,46 +11,45 @@ updated: "2026-09-26"
 |  |  |
 |---|---|
 | **Type** | web |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
+| **Maturity** | unofficial |
+| **Authors** | Russ Cox |
+| **Published** | 2024-04-01, research!rsc |
 | **Identifier** | https://research.swtch.com/xz-timeline |
 | **Source** | https://research.swtch.com/xz-timeline |
-| **Digest** | `not fetched` |
+| **Digest** | `sha256:2fa9c2a7…` (full value in `record.yaml`), fetched 2026-11-01 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+A dated reconstruction of the social engineering. From late 2021 a contributor named Jia Tan sent innocuous patches while accounts Cox judges likely fake pressured the maintainer, who had said publicly that their resources were limited. By late 2022 Jia Tan had commit access, and by March 2023 was tagging and building releases. The backdoor arrived in February 2024. The post argues this is a watershed, and its evidence shows every step was permitted: each grant of access was real.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `core` | The best public account of how authority was obtained |
+| Cryptography | `none` | No cryptographic content |
+| This project | `adjacent` | Authority moved by repeated informal grants, with no object recording any of them |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+- **R-M-10**: delegation here was a series of unrecorded acts. R-M-10 asks for delegation to be explicit, though an explicit grant given to a patient attacker is still a grant.
+- **R-M-06**: one maintainer could release alone. Threshold release would have needed a second, independently compromised or deceived party. The timeline shows pressure aimed at exactly that scarcity.
+- Bears on no `DEC-*`.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
-
-| Name | Kind | License | URL |
-|---|---|---|---|
+None applicable: this source describes an incident, not something to build on. No search was run.
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+**No `distilled/`.** This is the summary bar. A web source has no FX-1 obligation, and nothing here needed a further artifact.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+- **Attribution is unresolved.** Who is behind the accounts is not settled by this post, which treats them as fakes on circumstantial grounds.
+- **One superlative is disputed here.** The post calls this apparently the first serious known supply chain attack on widely used open source software. `ohm-2020-backstabbers` and the event-stream records describe earlier attacks on popular open source packages. Whether those count as serious is arguable, so no `contradicts` edge is set.
+- **It stops at 2024-03-30.** It records no later analysis, and marks some intent as speculation.
+- **Read scope.** The whole post was read, except the external sources it links.
