@@ -3,54 +3,15 @@ schema: "library-summary/v1"
 id: w3c-shacl
 record: w3c-shacl
 type: summary
-updated: "2026-10-05"
+updated: "2026-11-01"
 ---
 
-# Shapes Constraint Language (SHACL)
+# Duplicate — cite `shacl`
 
-|  |  |
-|---|---|
-| **Type** | spec |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | https://www.w3.org/TR/shacl/ |
-| **Source** | https://www.w3.org/TR/shacl/ |
-| **Digest** | `ccca77caed771f42ea649c03d190b9c7ea0b82286c22c457b9edc8087c9ad0f8` |
+**This record is a pointer, not a reference.** It has the same document, title and URL (https://www.w3.org/TR/shacl/) as `shacl`, which the tmodel fold-back brought in separately.
 
-## Overview
+The id `w3c-shacl` is kept because ids are stable forever: anything that ever cited it must not silently retarget. **Do not extend this record and do not cite it.** Cite [`shacl`](../shacl/) instead.
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+`bin/validate` enforces the pointer: `duplicate_of` must name an existing record, and this record must stay a stub. It was `status: fetched` and has moved back to `stub` for that reason.
 
-## Applicability
-
-| Axis | Rating | Why |
-|---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
-
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
-
-## Implementations
-
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
-
-| Name | Kind | License | URL |
-|---|---|---|---|
-
-## Artifacts in this record
-
-_Everything else in this directory and what it is for._
-
-| File | What it is |
-|---|---|
-| `record.yaml` | metadata |
-
-## Limits
-
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+**Held here until `shacl` takes them over.** `shacl` was out of scope for the PR that made this a pointer. It has no digest, and it does not name DEC-007. This record's digest (`ccca77ca…`, reconfirmed 2026-11-01) and its `bears_on: DEC-007` stay here until then.

@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: powder-description-resources
 record: powder-description-resources
 type: summary
-updated: "2026-09-26"
+updated: "2026-11-01"
 ---
 
 # POWDER: Description Resources
@@ -11,46 +11,45 @@ updated: "2026-09-26"
 |  |  |
 |---|---|
 | **Type** | spec |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | https://www.w3.org/TR/powder-dr/ |
+| **Maturity** | `standard` (W3C Recommendation); obsolescence proposal open |
+| **Authors** | Phil Archer, Kevin Smith, Andrea Perego (editors) |
+| **Published** | 2009-09-01 |
+| **Identifier** | REC-powder-dr-20090901 |
 | **Source** | https://www.w3.org/TR/powder-dr/ |
-| **Digest** | `not fetched` |
+| **Digest** | `sha256:ea32851b…` (full value in `record.yaml`), fetched 2026-11-01 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+POWDER lets anyone publish machine-readable claims about a group of web resources. A Description Resource (DR) has attribution, a scope, and descriptors. Every valid document must say who issued it (§2.1, §5), and that one requirement is presented as the inherent trust model: it is always clear whom to ask. It resolves the human-versus-machine tension with an operational XML dialect and formal semantics reached through a GRDDL transform to RDF/OWL (§1.1). Descriptors come from RDF vocabularies, and §2.6 advises using those rather than defining meaning in POWDER. `displaytext` and `displayicon` carry a summary for end users (§2.1). Trust is a human judgment, so §5 offers discoverable mechanisms, third-party certification and supporting evidence, and prescribes none.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `adjacent` | Attribution and optional certification, with authentication left open (§5.1, §5.6) |
+| Cryptography | `none` | Mentions digital signature and XML Signature as options, specifying neither (§5.2, §5.6) |
+| This project | `adjacent` | The closest thing to DEC-007 option 4, built on RDF, plus an uptake warning |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+- **DEC-007**: this is option 4 tried in standards form. Meaning is pushed out to dereferenceable RDF terms, so a renderer needs an RDF stack, and a vocabulary's words are not fixed by the issuer. §5.5 relies on terms being defined by IRI. Publishers are strongly advised to use one `displaytext` per DR, apart from `xml:lang` variants (§2.1, §2.8.4), so the human rendering is attached to the description and not to each value. That is close to option 3. **DEC-007** is proposed, not accepted: it exists only in ARCH-0001-PROPOSAL v0.2.0 §5, and mofn's DECISIONS-0001 item 5d asks whether it survives at all.
+- **R-M-12** (proposed text; relocated to ARCH-0002 P1 and accepted by ADR-0001): attribution via `issuedby` names an IRI describing an entity, not a key. §5.4 goes further: trust can equal the trustworthiness of the host. That is the model R-M-12 rejects.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
-
-| Name | Kind | License | URL |
-|---|---|---|---|
+**Searched 2026-11-01**, web. No maintained library was found. W3C's primer lists a validator and Perl and PHP processors, and W3C's wiki has a PHP processor page marked as under development, last edited December 2009. Their licences and status were not checked, so none is listed as usable.
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+**No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. No issue owns the eventual extraction of this record yet.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+- **It shows nothing about uptake.** That POWDER saw little use is a claim from mofn's report §6.2 and `w3c-tag-obsolete-powder`, not this document.
+- **Mutable claims.** §5.4 says the document stays under the reviewer's control and may change or disappear, subject to a valid-until date. There is no content addressing.
+- **One of a set.** Grouping of Resources and Formal Semantics are normative companions and are not held here.
+- **Errata exist** and may include normative corrections, per the document; they were not read.
+- **Read scope.** By section: Abstract, §1, §1.1, part of §2.1, the start of §2.6, the start of §2.8.4, §5 intro, §5.1, the start of §5.2, §5.4, §5.5 (start) and §5.6, plus the table of contents. §2.2 to §2.5, §2.7, §3, §4, §5.3 and the appendices were not read.
