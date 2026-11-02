@@ -3,54 +3,51 @@ schema: "library-summary/v1"
 id: gnupg-key-management
 record: gnupg-key-management
 type: summary
-updated: "2026-09-26"
+updated: "2026-11-01"
 ---
 
 # GnuPG manual: OpenPGP Key Management (tsign, trustspec)
 
 |  |  |
 |---|---|
-| **Type** | web |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | https://www.gnupg.org/documentation/manuals/gnupg/OpenPGP-Key-Management.html |
+| **Type** | web (manual) |
+| **Maturity** | `implementation`: tool manual |
+| **Authors** | The GnuPG Project |
+| **Published** | 2026 |
+| **Identifier** | GnuPG manual §4.1.3 |
 | **Source** | https://www.gnupg.org/documentation/manuals/gnupg/OpenPGP-Key-Management.html |
-| **Digest** | `not fetched` |
+| **Digest** | `sha256:cf239679…` (full value in `record.yaml`), fetched 2026-11-01 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+This manual section documents GnuPG's key-management commands. `tsign` makes a trust signature, which the manual says combines certification and trust and is useful for a Trusted Introducer in a community or group. `--quick-tsign-key` takes a `trustspec` of depth, value and optional domain, and the manual says common lengths for trust signatures are 1 and 2. `lsign` and `nrsign` make signatures non-exportable or non-revocable. So the scoped-delegation mechanism of OpenPGP exists in the tool, though at the command line and with depth in the user's hands.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `adjacent` | no direct bearing |
+| Cryptography | `none` | no direct bearing |
+| This project | `adjacent` | what R-I-04 would encounter |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+- **R-I-04** (import OpenPGP identity signatures, never as `AuthzCert` by default): `tsign` output is the object whose semantics such an import must not over-read. `lsign` signatures will not reach an importer at all.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
-
-| Name | Kind | License | URL |
-|---|---|---|---|
+GnuPG itself. License and version not checked in this record.
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+`distilled/` and a `distillation` block are absent on purpose: this is the summary bar. This is not a specification, so FX-1 does not apply to it.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+**Read:** the sections on `tsign`, `lsign`, `nrsign` and `--quick-tsign-key`, by keyword. The rest of the page was not read.
+
+- It documents commands, not trust computation. It does not say how scopes combine, which R-0007 took from source (see `delegation-models`).
+- The `trustspec` parsing rule was read in its description only and was not tried.

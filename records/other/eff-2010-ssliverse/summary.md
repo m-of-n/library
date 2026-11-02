@@ -3,54 +3,53 @@ schema: "library-summary/v1"
 id: eff-2010-ssliverse
 record: eff-2010-ssliverse
 type: summary
-updated: "2026-09-26"
+updated: "2026-11-01"
 ---
 
 # An Observatory for the SSLiverse
 
 |  |  |
 |---|---|
-| **Type** | paper |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | https://www.eff.org/files/defconssliverse.pdf |
+| **Type** | paper (in fact a 47-slide conference deck, see Limits) |
+| **Maturity** | `informational`: talk slides, not peer reviewed |
+| **Authors** | Peter Eckersley, Jesse Burns |
+| **Published** | 2010-07 |
+| **Identifier** | DEF CON 18 talk |
 | **Source** | https://www.eff.org/files/defconssliverse.pdf |
-| **Digest** | `not fetched` |
+| **Digest** | `sha256:f88c056a…` (full value in `record.yaml`), fetched 2026-11-01 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+The EFF scanned IPv4 for port 443 and collected the certificate chains, finding 16.2M listening IPs, 10.8M starting a handshake, and 1.3+M distinct valid leaves. Its question was the deck's phrase "Trust model: 1 of N CAs (N is large)": it counted 1,482 CA certificates trustable by Windows or Firefox, from 651 organisations. The point follows on the same slide: "If a CA can sign for one domain, it can sign for any domain". It asks, without answering, whether the CA model is fundamentally broken.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `core` | sizes the population that holds global signing power |
+| Cryptography | `none` | no direct bearing |
+| This project | `adjacent` | historic baseline for R-M-03 |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+- **R-M-03**: the "any domain" slide states the condition R-M-03 exists to remove.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
-
-| Name | Kind | License | URL |
-|---|---|---|---|
+The deck used NMap, a custom Python client and OpenSSL. Not evaluated.
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+`distilled/` and a `distillation` block are absent on purpose: this is the summary bar. This is not a specification, so FX-1 does not apply to it.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+**Read:** all 47 slides as extracted text; figures on image-only slides were not read.
+
+- **`type: paper` is wrong for what this is.** It is a slide deck, so it has no prose argument, and it is not peer reviewed. The type was left alone for a reviewer to decide.
+- **A quotation in R-001 is not here.** §4.8 attributes to this source "the security of HTTPS is only as strong as the practices of the least trustworthy/competent CA". That sentence does not occur in the text of this PDF. It may come from EFF's project pages, but we did not find it, so it should be re-sourced or dropped.
+- 2010 counts. 651 organisations is the deck's own number and it warns that ownerships and jurisdictions overlap.
+- Counts of CA certificates include subordinates, so it is not comparable with the 50 owners of `survey-2026-nameconstraints-measurement`.

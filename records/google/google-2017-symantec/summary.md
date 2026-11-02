@@ -3,54 +3,51 @@ schema: "library-summary/v1"
 id: google-2017-symantec
 record: google-2017-symantec
 type: summary
-updated: "2026-09-26"
+updated: "2026-11-01"
 ---
 
 # Chrome's Plan to Distrust Symantec Certificates
 
 |  |  |
 |---|---|
-| **Type** | web |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | https://security.googleblog.com/2017/09/chromes-plan-to-distrust-symantec.html |
+| **Type** | web (blog post) |
+| **Maturity** | `informational`: vendor announcement |
+| **Authors** | Devon O'Brien, Ryan Sleevi, Andrew Whalley |
+| **Published** | 2017-09-11 |
+| **Identifier** | Google Security Blog, 2017-09-11, updated 2018-01-31 |
 | **Source** | https://security.googleblog.com/2017/09/chromes-plan-to-distrust-symantec.html |
-| **Digest** | `not fetched` |
+| **Digest** | `sha256:9a700cdd…` (full value in `record.yaml`), fetched 2026-11-01 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+A January 19, 2017 posting to mozilla.dev.security.policy exposed questionable Symantec certificates, and the investigation found Symantec had let organisations issue without proper oversight. Chrome set out a phased end: Chrome 66 removed trust in certificates issued before June 1, 2016, DigiCert-run infrastructure took over on December 1, 2017, and Chrome 70 removed the old infrastructure entirely, around October 23, 2018. The staging exists so that site operators have time to replace certificates.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `core` | the cost of revoking a global anchor |
+| Cryptography | `none` | no direct bearing |
+| This project | `adjacent` | same point as `google-2016-wosign`, at scale |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+- **R-I-02**: a single global anchor cannot be withdrawn quickly. Per-issuer local scope bounds that cost.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
-
-| Name | Kind | License | URL |
-|---|---|---|---|
+Not applicable: an incident announcement.
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+`distilled/` and a `distillation` block are absent on purpose: this is the summary bar. This is not a specification, so FX-1 does not apply to it.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+**Read:** whole, from the page's script template, including the reference timeline.
+
+- **R-001 §4.8 says Symantec was "caught by CT". This post does not say that.** It attributes the discovery to the newsgroup posting and does not mention Certificate Transparency. The claim needs another source.
+- Dates marked with `~` are the post's estimates; actual Chrome releases were not checked.
