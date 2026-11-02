@@ -3,54 +3,60 @@ schema: "library-summary/v1"
 id: draft-hamr-oauth-agent-delegation
 record: draft-hamr-oauth-agent-delegation
 type: summary
-updated: "2026-09-26"
+updated: "2026-11-01"
 ---
 
 # An Attenuated Delegation Profile for Automated Agents
 
 |  |  |
 |---|---|
-| **Type** | draft |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | draft:  |
-| **Source** | https://datatracker.ietf.org/doc// |
-| **Digest** | `not fetched` |
+| **Type** | draft (individual) |
+| **Maturity** | `draft`: individual Internet-Draft, Active, no working group, per datatracker 2026-11-01 |
+| **Authors** | A. Hassan |
+| **Published** | 2026-10-22 |
+| **Identifier** | draft-hamr-oauth-agent-delegation-03 |
+| **Source** | https://www.ietf.org/archive/id/draft-hamr-oauth-agent-delegation-03.txt |
+| **Digest** | `sha256:79273784…` (full value in `record.yaml`), fetched 2026-11-01 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+This draft adds an `Agent-Delegation` HTTP field to `rfc-9421`, carrying a chain of links, each of which can only narrow scope, floors and expiry (§1, §7). Its scope rule is the bluntest possible: capability strings are opaque, containment is exact octet-for-octet set membership, and §6 forbids wildcards, hierarchy, case folding and any canonicalization, because a verifier using a richer rule could accept a chain that another rejects. Everything else is deliberately coarse. Each call has a class of r, w or x, read as in chmod, and a signed menu assigns classes (§9.4). Floors add yes-or-no attestations about the person behind the agent (§8, §11). Its motivating claim is that a limit a model enforces on itself is no limit, so the check has to sit outside the model (§1).
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `core` | Verifier placement outside the model, with explicit non-goals |
+| Cryptography | `adjacent` | Uses RFC 9421 and leaves link format open |
+| This project | `adjacent` | Bounds the design space, does not fit our object model |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+- **DEC-004**: §6 is the minimal end of the tag design space, and matches ARCH-0001's starting idea of an opaque byte-string tag under a bytes-equal profile.
+- **R-M-08**: set containment of opaque strings is defined completely and trivially. §6 calls wildcards and hierarchy future work, which is the price.
+- **R-O-02**: no revocation. A short expiry is the only limit on a link's life (§1, §17).
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
+**Checked 2026-11-01.** Both repositories are named by §16 and were confirmed through the GitHub API. §16 itself says all are single-author with no external review, and that no code at this revision implements action classes, a signed menu or budgets.
 
 | Name | Kind | License | URL |
 |---|---|---|---|
+| justabit | open source, Node.js proof of concept of the attestation side | Apache-2.0 | https://github.com/hamr0/justabit |
+| rwxmap | open source; builds a menu from an OpenAPI description | Apache-2.0 | https://github.com/hamr0/rwxmap |
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+**No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. A `draft` record owes FX-1 when someone extracts it. No issue owns that extraction yet. No keyword count is given because none has been reconciled.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+- **Not end to end.** §16 says the proof of concept has no RFC 9421 signatures, no HTTP header and no chain over two links.
+- **rwxmap's accuracy is a single self-reported run** of 4279 calls (§1).
+- **No replay protection, revocation or shared budgets.** §1, §10.4 and §11.2 say so.
+- **It defines no credential format** (§4), so two conforming systems need not interoperate.
+- **The parent-stays-valid problem is declared unsolved** in §3, with a pointer to `draft-asor-wimse-agent-delegation-chain` §9.1.
+- **Read scope.** Abstract, §1, §3, §4, §6, §7, §15, §16 (in part) and §17 were read, and §13's steps were listed. §5, §8 to §12, §14 and Appendices were not read in full, and statements on those sections come from §1 and §17.
