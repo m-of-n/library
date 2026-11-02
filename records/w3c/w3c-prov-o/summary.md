@@ -3,54 +3,15 @@ schema: "library-summary/v1"
 id: w3c-prov-o
 record: w3c-prov-o
 type: summary
-updated: "2026-10-05"
+updated: "2026-11-01"
 ---
 
-# PROV-O: The PROV Ontology
+# Duplicate — cite `prov-o`
 
-|  |  |
-|---|---|
-| **Type** | spec |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | https://www.w3.org/TR/prov-o/ |
-| **Source** | https://www.w3.org/TR/prov-o/ |
-| **Digest** | `6b96671ab84faf12ce3f041aca12c3f93a6df2ed242348810743179a68e69555` |
+**This record is a pointer, not a reference.** It has the same document, title and URL (https://www.w3.org/TR/prov-o/) as `prov-o`, which the tmodel fold-back brought in separately.
 
-## Overview
+The id `w3c-prov-o` is kept because ids are stable forever: anything that ever cited it must not silently retarget. **Do not extend this record and do not cite it.** Cite [`prov-o`](../prov-o/) instead.
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+`bin/validate` enforces the pointer: `duplicate_of` must name an existing record, and this record must stay a stub. It was `status: fetched` and has moved back to `stub` for that reason.
 
-## Applicability
-
-| Axis | Rating | Why |
-|---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
-
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
-
-## Implementations
-
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
-
-| Name | Kind | License | URL |
-|---|---|---|---|
-
-## Artifacts in this record
-
-_Everything else in this directory and what it is for._
-
-| File | What it is |
-|---|---|
-| `record.yaml` | metadata |
-
-## Limits
-
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+**Held here until `prov-o` takes them over.** `prov-o` was out of scope for the PR that made this a pointer. It has no digest, and it does not name DEC-007. This record's digest (`6b96671a…`, reconfirmed 2026-11-01) and its `bears_on: DEC-007` stay here until then.
