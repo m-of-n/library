@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: in-toto-2019
 record: in-toto-2019
 type: summary
-updated: "2026-09-26"
+updated: "2026-11-01"
 ---
 
 # in-toto: Providing farm-to-table guarantees for bits and bytes
@@ -11,46 +11,51 @@ updated: "2026-09-26"
 |  |  |
 |---|---|
 | **Type** | paper |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
+| **Maturity** | white-paper (peer-reviewed; the library has no closer value) |
+| **Authors** | Santiago Torres-Arias, Hammad Afzali, Trishank Karthik Kuppusamy, Reza Curtmola, Justin Cappos |
+| **Published** | 2019-08-14, USENIX Association |
 | **Identifier** | https://www.usenix.org/conference/usenixsecurity19/presentation/torres-arias |
-| **Source** | https://www.usenix.org/conference/usenixsecurity19/presentation/torres-arias |
-| **Digest** | `not fetched` |
+| **Source** | https://www.usenix.org/system/files/sec19-torres-arias.pdf |
+| **Digest** | `sha256:55024dfc…` (full value in `record.yaml`), fetched 2026-11-01 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+The argument is that securing each supply chain step separately fails, because nothing verifies that the right steps ran or that output was not swapped between steps. in-toto has a project owner sign a *layout*: which steps run, in what order, by which functionary keys, with what artifact rules. Functionaries sign *link* metadata recording materials and products by hash. The client verifies all of it against the layout. Security degrades by which key is lost: a functionary key affects one step, and a layout key subverts the whole chain (§5.2). The paper evaluates 30 historical compromises, 23 of which involved no key compromise.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `core` | Goals are layout integrity, artifact flow integrity and step authentication (§2.3), with a graded compromise analysis (§5.2) |
+| Cryptography | `adjacent` | Signatures and thresholds used as given. No new primitive |
+| This project | `core` | It states who may do what per step, in a signed object verified by the consumer |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+- **R-I-03**: background to the in-toto export target. The paper's link format is older than the Statement in `in-toto-attestation-v1`.
+- **R-M-07**: materials and products bind hashes at every step.
+- **R-M-06**: per-step thresholds are the mechanism §7.2 credits for surviving the five sophisticated key-compromise attacks.
+- **Topic**: this is the strongest counterexample to "no entitlement layer". A layout grants named keys named steps. `in-toto-attestation-v1` says layouts are not part of the Attestation Framework, so the part the ecosystem adopted is the evidence half.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
+**Searched 2026-11-01.** GitHub repository metadata checked. Both report `NOASSERTION`; the Apache-2.0 reading comes from `in-toto-attestation-v1`, which checked their LICENSE files.
 
 | Name | Kind | License | URL |
 |---|---|---|---|
+| in-toto (Python reference) | open source, library and CLI | Apache-2.0 | https://github.com/in-toto/in-toto |
+| in-toto-golang | open source, library and CLI | Apache-2.0 | https://github.com/in-toto/in-toto-golang |
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+**No `distilled/`.** This is the summary bar. A paper has no FX-1 obligation, and nothing here needed a further artifact.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+- **The compromise evaluation is a counterfactual.** Table 3 and the *Key Takeaway* percentages are the authors' assessment of how three deployments would have fared, not a measurement of attacks stopped. No deployment faced those attacks.
+- **Rogue insiders are outside the base model.** §5.1 assumes developer hosts are uncompromised and no developer is rogue, then treats a rogue functionary as equivalent to key compromise. An attacker who is the legitimate functionary signs valid links.
+- **Trust bootstrap is not solved.** §2.2 leaves it open and points at TUF.
+- **Read scope.** Abstract, §1 (opening), §2.2, §2.3, §3.2, §3.3, §5, the opening of §7, §7.2 and §9 were read through text extraction. §4 (metadata details), §6 (deployments), §7.1 (overhead), §8 and the appendices were not read closely, so no overhead figure is given.

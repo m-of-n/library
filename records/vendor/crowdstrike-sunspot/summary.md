@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: crowdstrike-sunspot
 record: crowdstrike-sunspot
 type: summary
-updated: "2026-09-26"
+updated: "2026-11-01"
 ---
 
 # SUNSPOT: An Implant in the Build Process
@@ -11,46 +11,43 @@ updated: "2026-09-26"
 |  |  |
 |---|---|
 | **Type** | web |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
+| **Maturity** | informational |
+| **Authors** | CrowdStrike Intelligence Team |
+| **Published** | 2021-01-11, CrowdStrike |
 | **Identifier** | https://www.crowdstrike.com/en-us/blog/sunspot-malware-technical-analysis/ |
 | **Source** | https://www.crowdstrike.com/en-us/blog/sunspot-malware-technical-analysis/ |
-| **Digest** | `not fetched` |
+| **Digest** | `sha256:08e91791…` (full value in `record.yaml`), fetched 2026-11-01 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+CrowdStrike's analysis of the implant that put SUNBURST into Orion. SUNSPOT ran on the build server, watched for `MsBuild.exe`, read the process's command line to find the Orion solution, and replaced one source file, `InventoryManager.cs`, during compilation. It restored the original afterwards. MD5 checks on the original and replacement files, and `#pragma warning` wrapping, ensured nothing failed or warned, so the developers saw a normal build. The repository therefore stayed clean, which matches `solarwinds-8k`.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `core` | Shows a trusted build as the point of compromise, in operational detail |
+| Cryptography | `adjacent` | Hash checks were used by the attacker for build safety, not by the defender |
+| This project | `adjacent` | It is why attested provenance needs a build platform it can trust, and why provenance alone would not have helped here |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+- **R-M-07**: a statement binding the output digest would have bound the backdoored build. Provenance from this builder would, on this account, have recorded a clean source, since the swap happened beneath the build definition. That is our inference, not CrowdStrike's claim. `slsa-2026-mini-shai-hulud` makes the same point five years later. Bears on no `DEC-*`.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
-
-| Name | Kind | License | URL |
-|---|---|---|---|
+None applicable: this source describes an incident, not something to build on. No search was run.
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+**No `distilled/`.** This is the summary bar. A web source has no FX-1 obligation, and nothing here needed a further artifact.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+- **It does not say how the build server was reached.** Initial access is not covered.
+- **A single sample.** The text says the identified copy replaces only one file, though the tool supports more.
+- **No attribution.** The post explicitly tracks the activity as StellarParticle, without naming an adversary. `cisa-ed-21-01` and `fireeye-sunburst` carry later attribution.
+- **Read scope.** The whole post was read from the article text, with YARA rules and indicator tables skimmed. Nothing from the post was executed.
