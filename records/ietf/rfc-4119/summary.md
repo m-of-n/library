@@ -3,54 +3,58 @@ schema: "library-summary/v1"
 id: rfc-4119
 record: rfc-4119
 type: summary
-updated: "2026-09-22"
+updated: "2026-11-01"
 ---
 
-# GEOPRIV
+# A Presence-based GEOPRIV Location Object Format
 
 |  |  |
 |---|---|
 | **Type** | rfc |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | rfc: 4119 |
-| **Source** | https://www.rfc-editor.org/rfc/rfc4119.html |
-| **Digest** | `not fetched` |
+| **Maturity** | `standard`: Proposed Standard, confirmed in `rfc4119.json` 2026-11-01 |
+| **Authors** | J. Peterson |
+| **Published** | 2005-12 |
+| **Identifier** | RFC 4119 · DOI 10.17487/RFC4119 |
+| **Source** | https://www.rfc-editor.org/rfc/rfc4119.txt |
+| **Digest** | `sha256:7d31fc52…` (full value in `record.yaml`), fetched 2026-11-01 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+RFC 4119 extends PIDF so a presence document can carry location, and invents no location format of its own (§1). Its claim is that location and the rules for handling it must travel as one object, so each `geopriv` element must hold both a `location-info` and a `usage-rules` element (§2.2). Those rules state retransmission and retention limits with privacy-preserving defaults: retransmission defaults to no, and retention to 24 hours (§2.2.2). It secures the document as a whole through S/MIME, and rejects element-level protection on the ground that nearly any partial configuration risks privacy leakage (§4).
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `adjacent` | Carries usage rules with location, and requires S/MIME for the whole object (§2.2.2, §4) |
+| Cryptography | `none` | Delegates all cryptography to S/MIME and CMS (§4) |
+| This project | `none` | Bears on no `DEC-*` or `R-*` |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+**Bears on no `DEC-*` or `R-*`.** It is held because `draft-ietf-vcon-vcon-core-04` §4.2.9 takes its Civicaddress element names from §2.2.1 (cited as `[GEOPRIV]`).
+
+Two ideas are of interest without being requirements for us. §2.2 binds policy to data inside the signed object, instead of leaving it to the channel. §4 rejects partial protection, which is the opposite pull from vCon's charter aim of disclosing parts of a vCon to different parties (`ietf-vcon-wg`).
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
+**Searched 2026-11-01.** One GitHub repository search for `pidf-lo` (5 results read), which found one implementation. This was not a survey.
 
 | Name | Kind | License | URL |
 |---|---|---|---|
+| pidf-lo-javascript | open source, JavaScript | MIT | https://github.com/dec112/pidf-lo-javascript |
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+**No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. A `rfc` record owes FX-1 when someone extracts it, and no issue owns that for this record yet: the 2026-10-25 decision on #45 moved extraction to per-set issues, and neither #69 nor #89 covers it. No keyword count is given because none has been reconciled.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+- **It is not the current civic format.** RFC 5139 revises it, and RFC 5491 and RFC 7459 update the document. vCon cites this RFC for civic labels and RFC 5491 separately for `gml:pos`. Whether vCon's list matches RFC 5139 was not checked.
+- **The rules are promises, not enforcement.** §2.2.2 sets what a Recipient may do. Nothing technical stops a Recipient, and `note-well` is for humans only.
+- **Policy was unfinished.** §2.2.2 says the GEOPRIV policy requirements were not complete at the time, and full rulesets are left to another document (§1).
+- **Errata.** `errata.json` retrieved 2026-11-01 lists 3 verified and 1 rejected. Their text was not reviewed.
+- **Read scope.** §1, §2.1, §2.2 to the start of §2.2.4, the opening of §4, and §5, from the RFC Editor `.txt`. The remainder of §2.2.1's table, §2.2.4 onward, §3, the rest of §4 and §6 were not read.
