@@ -3,90 +3,77 @@ schema: "library-summary/v1"
 id: rfc-7539
 record: rfc-7539
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-03"
 ---
 
 # ChaCha20 and Poly1305 for IETF Protocols
 
 |  |  |
 |---|---|
-| **Type** | rfc |
-| **Maturity** | `informational` — **IRTF**, not IETF Standards Track. **Obsoleted by RFC 8439** |
+| **Type** | rfc (IRTF stream, CFRG; from `draft-irtf-cfrg-chacha20-poly1305-10`) |
+| **Maturity** | `informational`: "Category: Informational" on the title page, and `pub_status` INFORMATIONAL in the RFC Editor metadata, checked 2026-11-03. IRTF documents are *"not a candidate for any level of Internet Standard"* (Status of This Memo) |
 | **Authors** | Y. Nir (Check Point), A. Langley (Google) |
 | **Published** | 2015-05 |
-| **Identifier** | RFC 7539 · DOI 10.17487/RFC7539 |
+| **Identifier** | RFC 7539 · DOI 10.17487/RFC7539 · **Obsoleted by RFC 8439** |
 | **Source** | https://www.rfc-editor.org/rfc/rfc7539.txt |
-| **Digest** | `sha256:546e12200dbbc7b08cf85c8f07ea8681be89954b7c7e0c56f0c51f775a0ba704` (the .txt, retrieved 2026-11-01). The 2026-10-03 digest `3200f936…` was of the .html, whose bytes still match |
+| **Digest** | `sha256:546e1220…` (full value in `record.yaml`), fetched 2026-11-03 |
+| **Errata** | 4 Verified, 3 Held for Document Update, 1 Rejected, checked 2026-11-03. All merged into RFC 8439 |
 
 ## Overview
 
-An IRTF reference for ChaCha20, Poly1305 and AEAD_CHACHA20_POLY1305. Its argument is about dependency, not novelty: AES has
-no widely deployed fast alternative, it is slow without hardware support, and
-many implementations are exposed to cache-collision timing attacks (§1), so
-protocols need a stable reference for a standby cipher. It introduces no new
-primitive. It fixes a 96-bit nonce and 32-bit block counter in place of the
-original 64/64 split (§2.3), and composes the two primitives into an AEAD whose
-Poly1305 key is derived per nonce from ChaCha20 block 0 (§2.6, §2.8).
+RFC 7539 is a stable reference and implementation guide for three of D. J. Bernstein's designs, and it says it *"does not introduce any new crypto"* (Abstract). The three are the ChaCha20 stream cipher (§2.1–§2.4), the Poly1305 one-time authenticator (§2.5), and their AEAD composition **AEAD_CHACHA20_POLY1305** (§2.8). The AEAD derives a one-time Poly1305 key from the first ChaCha20 block (§2.6) and encrypts from counter 1. It MACs AAD ‖ pad ‖ ciphertext ‖ pad ‖ two 64-bit little-endian lengths. It takes a 256-bit key and a 96-bit nonce, and yields a 128-bit tag. The case made for it (§1) is a standby cipher in case AES falls, plus speed and timing-attack resistance on hardware without AES instructions. The security section rests everything on **nonce uniqueness** (§4): a repeated nonce reveals the XOR of the plaintexts. Tag comparison must be constant-time. §2.7 declines to define a PRF, because Poly1305 is unsuitable for one. IANA assigned AEAD registry id 29 (§5). Test vectors fill §2 and Appendix A.
 
-**Do not cite this record for the algorithm: cite `rfc-8439`.** That RFC
-obsoletes this one, and by its own abstract merges the errata and adds a little
-text to the Security Considerations. This record exists so that a citation of
-7539 resolves and its status is visible.
+`rfc-8439` (June 2018) obsoletes it. 8439's abstract says it *"merges the errata filed against RFC 7539 and adds a little text to the Security Considerations section"*. **Cite `rfc-8439`, not this.**
+
+## What it contributes to "which attestation systems have a stated post-quantum path?"
+
+**Little, and nothing it says itself.** The word "quantum" does not occur. This is a symmetric construction, so `shor-1997` does not apply to it. The generic quantum speed-up against symmetric keys (Grover) is not held in this library, and the RFC does not discuss it. §4 claims only that ChaCha20 *"is designed to provide 256-bit security"*. The post-quantum exposure of a system using this AEAD sits in its **key establishment**, not here. In the parent project's prototype, that is the X25519 KEM of `HPKE_Curve25519_ChaCha20Poly1305` (`research/0003-cipher-suite` §7). For the topic answer, ChaCha20-Poly1305 belongs in the "no migration needed for the primitive" column. Any gap is in whatever delivers its key.
+
+## Source defects: the errata, and one internal contradiction
+
+Recorded because an implementer working from 7539 instead of 8439 would hit them:
+
+- **§2.8 prose and §2.8.1 pseudocode disagree.** The prose says the MAC input ends with the lengths *"as a 64-bit little-endian integer"*. The pseudocode writes `num_to_4_le_bytes(aad.length)` and `num_to_4_le_bytes(ciphertext.length)`. Erratum 4371 (Verified) corrects the pseudocode to 8 bytes. The test vectors follow the prose. An implementation built from the pseudocode fails interop.
+- **§2.8 arithmetic.** It gives *"247,877,906,880 bytes"* for 2^32−1 blocks of 64 bytes, and the same figure for P_MAX. The correct value is 274,877,906,880, digits transposed (erratum 4858, Verified). The C_MAX figure is off the same way (erratum 4861, Verified). `rfc-8439` §2.8 has the corrected figures.
+- Erratum 4700 (Verified) on §2.8's description of the AEAD output. 4372, 4373 and 4434, all Held, are pseudocode naming and wording in §2.5.1 and §2.6.
+
+No `contradicts` edge: the correction is in `rfc-8439`, which supersedes this record.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | `adjacent` | The AEAD matters. This revision of it no longer does |
-| Cryptography | `adjacent` | The primitives are real, but the current specification is `rfc-8439` |
-| This project | `none` | We sign statements; we do not encrypt them |
+| Security | `adjacent` | §4's nonce-uniqueness and constant-time requirements are the operational security content |
+| Cryptography | `core` | Defines the AEAD behind COSE algorithm 24 and an HPKE AEAD, as specified at the time |
+| This project | `none` | Obsoleted, and ARCH-0001 defines statement *signatures*, not encryption. NG3 defers the algorithm suite |
 
-**`bears_on` is empty, deliberately**, matching `rfc-8439`. It informs no
-`DEC-*` or `R-*`. The topic's interest is that an algorithm identifier must
-resolve to a specification, and that identifier resolves to the successor.
+**Bears on none.** No R-* in ARCH-0001 §5 concerns confidentiality. `research/0003-cipher-suite` mentions ChaCha20Poly1305 only as the AEAD of an existing prototype HPKE suite. §8 there says the wallet, attestation and delegation schemas *"will not embed a KEM"*, and nothing in it selects an AEAD. If one is ever needed, the citation is `rfc-8439`.
 
 ## Implementations
 
-Current libraries are listed on `rfc-8439` and are not repeated here. The two
-RFCs carry the same vectors: all 204 distinct offset-format hex-dump lines match.
-A GitHub repository search on `rfc7539`, run 2026-11-01, returned small
-single-purpose repositories, of which one is listed.
+**Searched 2026-11-03.** Same set as `rfc-8439`. Implementations follow the corrected (8439) behaviour, which matches 7539's test vectors.
 
 | Name | Kind | License | URL |
 |---|---|---|---|
-| levigross/ChaCha20 | open source | Apache-2.0 | https://github.com/levigross/ChaCha20 |
+| libsodium (`crypto_aead_chacha20poly1305_ietf_*`) | open source | ISC | https://libsodium.org |
+| OpenSSL | open source | Apache-2.0 | https://openssl.org |
+| Go `golang.org/x/crypto/chacha20poly1305` | open source | BSD-3-Clause | https://pkg.go.dev/golang.org/x/crypto/chacha20poly1305 |
+| RustCrypto `chacha20poly1305` | open source | MIT / Apache-2.0 | https://github.com/RustCrypto/AEADs |
 
-Commercial: not searched. The search above covered GitHub only.
+Commercial: none listed separately. Every TLS 1.3 and WireGuard stack ships this AEAD.
 
 ## Artifacts in this record
 
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata and typed relations |
+| `record.yaml` | metadata, RFC Editor and errata evidence in `content.note`, implementations, usefulness verdict |
 | `summary.md` | this document |
 
-No `distilled/`. Nothing here justifies extracting a superseded document: any
-FX-1 work belongs on `rfc-8439`, and neither record has an owning issue yet.
-Verbatim normative text lives under FX-1, so this summary cites sections only.
+**No `distilled/`, and FX-1 extraction is not claimed.** This `rfc` record is at the summary bar for m-of-n/library#45. No issue owns an FX-1 extraction, and none should be opened for an obsoleted RFC. If the AEAD ever bears on a decision, the extraction belongs on `rfc-8439`. The `superseded_by` edge to `rfc-8439` is not authored here: `rfc-8439` holds `supersedes: rfc-7539`, and `bin/reindex` derives the inverse (`docs/references.md` §2). The `.txt` is in `.cache/` and is not committed.
 
 ## Limits
 
-- **The §2.8.1 pseudocode contradicts its own prose.** §2.8 specifies both
-  lengths as 64-bit little-endian integers, and the worked buffer in §2.8.2
-  shows them as 8 bytes. The pseudocode calls `num_to_4_le_bytes` for both. RFC
-  8439 §2.8.1 has `num_to_8_le_bytes`. The prose and vectors are normative where
-  the pseudocode conflicts (§2.3.1), so the algorithm is not ambiguous, but code
-  written from the pseudocode is wrong.
-- **Eight errata are filed**: four Verified, three Held for Document Update and
-  one Rejected (rfc-editor.org, checked 2026-11-01). Sections touched include
-  §2.3, §2.3.2, §2.5.1, §2.6 and §2.8.
-- **Security rests on cited papers.** §4 states design goals and says proving
-  them is out of scope. The composition's analysis is `[Procter]`, not held.
-- **Nonce uniqueness is left to the protocol.** §4 calls it the most important
-  consideration, and repetition exposes the XOR of plaintexts and reuses the
-  Poly1305 key. §2.7 also declines to specify a PRF.
-- **P_MAX is about 256 GB per invocation** (§2.8), with the 64-bit-nonce variant
-  only sketched for file or disk encryption.
-- **Read scope:** the complete .txt, plus the RFC Editor metadata and errata
-  list. RFC 8439 was consulted only for its abstract, its §2.8.1 pseudocode and
-  a mechanical comparison of hex-dump lines.
+- **Obsoleted.** Everything here is superseded by `rfc-8439`. This record exists so citations to 7539 resolve.
+- **No security proofs.** §4 defers to the academic papers ([ChaCha], [Poly1305], [Procter] for the composition), none of which is held.
+- **96-bit nonce, no misuse resistance.** §2.8 note 1 caps a single invocation at about 256 GB. Random nonces at scale are not addressed. XChaCha20 is not in this RFC.
+- **Read scope.** §1–§5 were read in full, including all §2.8 text and pseudocode. The test vectors in §2.x.x and Appendix A were not recomputed. The §2.8 contradiction above was found by reading, and confirmed against erratum 4371 and `rfc-8439` §2.8.1. The text has 7 uses of BCP 14 keywords outside the §1.1 boilerplate (§2.4, §2.5, §2.6, §4), not reconciled as an extraction would be.
