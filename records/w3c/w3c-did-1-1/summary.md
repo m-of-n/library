@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: w3c-did-1-1
 record: w3c-did-1-1
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Decentralized Identifiers (DIDs) v1.1
@@ -20,7 +20,7 @@ updated: "2026-11-01"
 
 ## Overview
 
-DID v1.1 defines a URI scheme, `did:<method>:<id>`, plus a document data model that lists verification material. Its design goal in the abstract is that a controller can prove control "without requiring permission from any other party", decoupled from central registries, providers and CAs. The core specification does not define trust: that lies in each method, and resolution is out of scope here, in a separate specification. So it standardises a shape around identifiers, and the governance question is delegated to methods.
+DID v1.1 defines a URI scheme, `did:<method>:<id>`, plus a document data model that lists verification material. Its design goal in the abstract is that a controller can prove control "without requiring permission from any other party", decoupled from central registries, providers and CAs. How a DID and its document are created, resolved, updated and deactivated is left to separate DID method specifications (§7), so what a DID's control proof is worth depends on the method. It explains the resolution process in outline, but the resolution of a specific DID method is out of scope and left to the separate DID Resolution v0.3 specification (status section). So it standardises a shape around identifiers, and the governance question is delegated to methods.
 
 ## Applicability
 
@@ -49,5 +49,6 @@ Not searched: this batch is the summary bar and ran no implementation survey.
 
 **Read:** abstract, status section, and keyword-located parts; the security and privacy considerations and the data model were not read through.
 
-- **Standing:** a Candidate Recommendation that asks for experimental implementations and warns of change. We set `draft`, not `recommendation`, because the schema's `recommendation` would read as a finished Recommendation. `w3c-did-core` is the 1.0 record, still a stub; the line between the two was not checked.
+- **Standing:** a Candidate Recommendation that asks for experimental implementations and warns of change. We set `draft`, not `recommendation`, because the schema's `recommendation` would read as a finished Recommendation. `w3c-did-core` is the 1.0 record; the line between the two was not checked.
+- No `see_also` edges authored here: `w3c-did-core`, `did-key-method` and `w3c-did-extensions-methods` already carry them to this record.
 - Says nothing about any method's security.

@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: langley-2014-revchecking
 record: langley-2014-revchecking
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # No, don't enable revocation checking
@@ -11,16 +11,16 @@ updated: "2026-11-01"
 |  |  |
 |---|---|
 | **Type** | web (blog post) |
-| **Maturity** | `informational`: personal blog by a Chrome engineer |
+| **Maturity** | unset: personal blog by a Chrome engineer, no standing to verify |
 | **Authors** | Adam Langley |
 | **Published** | 2014-04-19 |
 | **Identifier** | ImperialViolet, 2014-04-19 |
 | **Source** | https://www.imperialviolet.org/2014/04/19/revchecking.html |
-| **Digest** | `sha256:564bc67b…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:564bc67b…` (full value in `record.yaml`), fetched 2026-11-01, re-checked 2026-11-04 |
 
 ## Overview
 
-Everyone soft-fails, because hard-fail makes OCSP a single point of failure. So an attacker who can intercept traffic can block the check, and in the DNS-hijack case they can use stored responses or get new certificates. Langley calls this security theatre, and explains CRLSets as pushed lists of some high-value revocations. He names short-lived certificates or OCSP Must-Staple as the scalable path. His one exception matters: for code signing, soft-fail still adds cost, because the attacker does not otherwise need to be on the network path.
+Everyone soft-fails: networks are noisy, captive portals block OCSP, and hard-fail would make OCSP services a single point of failure and a DDoS target. So an attacker who can intercept traffic can block the check, and in the DNS-hijack case they can staple a stored pre-revocation response or get new certificates issued. Langley calls online checking useless and points to the marks of security theater, and explains CRLSets as pushed daily lists of some high-value revocations. He names short-lived certificates or something like OCSP Must Staple as the scalable path. His one exception matters: for code signing, soft-fail still adds cost, because the attacker otherwise needs only to be able to email you, not to intercept OCSP checks.
 
 ## Applicability
 
@@ -30,7 +30,12 @@ Everyone soft-fails, because hard-fail makes OCSP a single point of failure. So 
 | Cryptography | `none` | no direct bearing |
 | This project | `core` | its code-signing exception is close to our case |
 
-- **R-O-02**: the argument applies to interactive TLS. Signed artifacts are checked offline and later, which is the exception's case, so R-O-02's preference needs its own reasoning for artifact statements and should not simply cite TLS.
+- **R-O-02**: the argument is made for interactive TLS. A signed artifact delivered by a channel the attacker does not control is the exception's case, where an online check does raise attacker cost, so R-O-02's preference needs its own reasoning for artifact statements and should not simply cite TLS.
+
+## Relations
+
+- `see_also: langley-2011-revocation`: the same author's earlier post, which tested browsers and first proposed days-long certificates; this one adds the threat cases and the code-signing exception.
+- `see_also: rfc-7633`: the TLS Feature extension behind OCSP Must-Staple, which the post names as one scalable path.
 
 ## Implementations
 
@@ -50,4 +55,4 @@ Chrome's CRLSet is described. Not evaluated.
 **Read:** whole.
 
 - An argument, not a measurement.
-- It is a browser engineer's view from 2014, before CT enforcement and before CRLite. The claim that a much larger list would be too much data was later tested by `larisch-2017-crlite`.
+- It is a browser engineer's view from 2014, before CT enforcement and before CRLite. Its remark that a system for far more revocations would mean about two orders of magnitude more data was later addressed by `larisch-2017-crlite` (that record carries the edge).

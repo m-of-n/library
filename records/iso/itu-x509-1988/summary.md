@@ -20,7 +20,7 @@ updated: "2026-11-01"
 
 ## Overview
 
-The first X.509 is an authentication framework for the X.500 Directory, not an Internet PKI. Certificates carry directory distinguished names, and users rely on "an unbroken chain of trusted points in the Directory". §6.3 states the naming premise plainly: authentication relies on each user having a unique distinguished name, allocation is the Naming Authorities' job, and each user must trust them not to issue duplicates. Global naming is therefore a stated trust assumption from the start.
+The first X.509 is an authentication framework for the X.500 Directory, not an Internet PKI. Certificates carry directory distinguished names, and users rely on "an unbroken chain of trusted points in the Directory" (§6.5). §6.3 states the naming premise plainly: authentication relies on each user having a unique distinguished name, allocation is the Naming Authorities' job, and each user must trust them not to issue duplicates. Global naming is therefore a stated trust assumption from the start.
 
 ## Applicability
 
@@ -47,7 +47,8 @@ Not applicable: superseded.
 
 ## Limits
 
-**Read:** contents, definitions in part, §6 opening clauses by section, from ITU's 2008 reedition. §§7 to 10 and the annexes were not read.
+**Read:** contents, definitions in part, §6 clause by clause, from ITU's 2008 reedition. §§7 to 10 and the annexes were not read.
 
 - It says nothing about how Naming Authorities would be organised, and it assumes a directory that was never deployed globally, as `rfc-1422` §1 expected.
-- The reedition's front matter is from 2008; the body was treated as the 1988 text without comparing originals.
+- The reedition's front matter is from 2008. Its Note 1 says the contents are identical to the Blue Book version; that was taken on trust, not compared.
+- No `see_also` edges authored here: `itu-x509` and `rfc-1422` already carry them to this record.

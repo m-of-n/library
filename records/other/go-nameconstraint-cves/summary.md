@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: go-nameconstraint-cves
 record: go-nameconstraint-cves
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Go crypto/x509 name-constraint defects (five CVEs, 2025-2026)
@@ -11,8 +11,8 @@ updated: "2026-11-01"
 |  |  |
 |---|---|
 | **Type** | dataset (five CVE records) |
-| **Maturity** | `informational`: vulnerability records |
-| **Authors** | Go Security Team |
+| **Maturity** | unset: vulnerability records; no body assigns them a standing |
+| **Authors** | Go project (the CNA; the records name no individual author) |
 | **Published** | 2026-04-08 |
 | **Identifier** | CVE-2025-58187, -61727, CVE-2026-27137, -27138, -33810 |
 | **Source** | https://cveawg.mitre.org/api/cve/ (one record each) |
@@ -50,7 +50,8 @@ Fixes are in Go's standard library. The records give fixed versions: 1.24.9 and 
 
 **Read:** the five MITRE records whole: title, description, references, affected versions. The linked Go issues, CLs and advisories were not read, so root causes are as the CVE text states them.
 
-- The publication dates run from 2025-10-29 to 2026-04-08, which is 161 days. R-001 §4.5 says "within eleven months": true, but it understates the clustering.
+- The publication dates run from 2025-10-29 to 2026-04-08, which is 161 days. R-0001 §4.5 says "within eleven months": true, but it understates the clustering.
 - Three of the affected ranges start at Go 1.26.0, so those look recent. CVE-2025-58187 and CVE-2025-61727 show ranges from version 0.
+- `see_also`: `rfc-5280` defines the name-constraint semantics (§4.2.1.10) these defects get wrong; `openssl-2022-email-overflow` is a second verifier failing on the same feature, email name constraints, though in different code and a different bug class (memory safety, not set membership). The `mozilla-bug-856060` edge is authored on that record.
 - Five CVEs in one implementation is not a rate, and no comparison with other verifiers was made.
 - The records do not show whether other verifiers have the same faults; that was not examined.
