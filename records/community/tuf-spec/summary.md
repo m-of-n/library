@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: tuf-spec
 record: tuf-spec
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # The Update Framework Specification v1.0.37
@@ -16,7 +16,7 @@ updated: "2026-11-01"
 | **Published** | 2026-10-08, The Update Framework project |
 | **Identifier** | `https://github.com/theupdateframework/specification tag v1.0.37 @ d4cb70582ba507b9265672792c0fc8a5f390b851` |
 | **Source** | https://theupdateframework.github.io/specification/v1.0.37/index.html |
-| **Digest** | `sha256:f20fda0d…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:f20fda0d…` (full value in `record.yaml`), fetched 2026-11-01, re-verified 2026-11-04 |
 
 ## Overview
 
@@ -54,6 +54,8 @@ TUF secures software update systems on the assumption that keys will be compromi
 | `summary.md` | this document |
 
 **No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. A `spec` record owes FX-1 when someone extracts it, and no issue owns that yet. No keyword count is given because none has been reconciled.
+
+**Relations.** No `see_also` is authored here. Each former edge is held on the other record: `tuf-2010` (the design origin), `tuf-tap-21`, `sigstore-2022` and `sigstore-threat-model` (TUF as Sigstore's root of trust) and `in-toto-2019` (key bootstrap) author their own. The edge to `gittuf-2025` was removed: gittuf cites the 2010 paper, not this spec. No held record is cited: the page links the 2008 package-manager paper and the Mercury paper, neither of which we hold.
 
 ## Limits
 

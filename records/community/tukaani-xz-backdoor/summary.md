@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: tukaani-xz-backdoor
 record: tukaani-xz-backdoor
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # XZ Utils backdoor
@@ -11,12 +11,12 @@ updated: "2026-11-01"
 |  |  |
 |---|---|
 | **Type** | web |
-| **Maturity** | informational |
+| **Maturity** | unset: the source states no standing |
 | **Authors** | Lasse Collin |
 | **Published** | 2025-01-17, Tukaani Project |
 | **Identifier** | https://tukaani.org/xz-backdoor/ |
 | **Source** | https://tukaani.org/xz-backdoor/ |
-| **Digest** | `sha256:778df86b…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:778df86b…` (full value in `record.yaml`), fetched 2026-11-01, re-verified 2026-11-04 |
 
 ## Overview
 
@@ -30,8 +30,8 @@ The upstream maintainer's dated statement. It separates authority by key and hos
 | Cryptography | `none` | Mentions signed tarballs only |
 | This project | `adjacent` | Shows a project stating after the fact what a signed entitlement should have said in advance |
 
-- **R-M-10**: every statement in *Facts* is an informal delegation scope, written after the incident. Nothing machine-checkable said any of it beforehand.
-- **R-M-07**: signed tarballs were signed by a maintainer whose key was legitimately trusted. Verification passes and tells you nothing.
+- **R-M-07**: the backdoored tarballs were created and signed by Jia Tan, a co-maintainer. A signature binding those bytes to their signer verifies, and says nothing about whether the bytes match the repository.
+- R-M-10 was considered and not claimed: the page says who had access to which hosts, not how that access was granted or whether it could be passed on.
 
 ## Implementations
 
@@ -45,6 +45,8 @@ None applicable: this source describes an incident, not something to build on. N
 | `summary.md` | this document |
 
 **No `distilled/`.** This is the summary bar. A web source has no FX-1 obligation, and nothing here needed a further artifact.
+
+**Relations.** `cites`: the page links "Details by Andres Freund", which is `freund-2024-xz`. No `see_also` is authored here; `cve-2024-3094` and `cox-2024-xz-timeline` author their own edges to this record.
 
 ## Limits
 

@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: event-stream-issue-116
 record: event-stream-issue-116
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # I don't know what to say.
@@ -11,12 +11,12 @@ updated: "2026-11-01"
 |  |  |
 |---|---|
 | **Type** | web |
-| **Maturity** | unofficial |
+| **Maturity** | unset: the source states no standing |
 | **Authors** | FallingSnow (issue author), dominictarr (maintainer replies) |
 | **Published** | 2018-11-20, GitHub (dominictarr/event-stream issue tracker) |
 | **Identifier** | https://github.com/dominictarr/event-stream/issues/116 |
 | **Source** | https://api.github.com/repos/dominictarr/event-stream/issues/116 |
-| **Digest** | `sha256:1c2c79d3…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:1c2c79d3…` (full value in `record.yaml`), fetched 2026-11-01, re-verified 2026-11-04 |
 
 ## Overview
 
@@ -30,7 +30,7 @@ The thread where the event-stream compromise surfaced. A user asks why a new acc
 | Cryptography | `none` | Mentions an encrypted payload only |
 | This project | `adjacent` | Publish authority moved by email, with nothing for a consumer to see or check |
 
-- **R-M-10**: the clearest example of delegation with no delegation object. The maintainer no longer held publish rights, and the transfer was invisible to every downstream consumer.
+- **R-M-10**: the clearest example of delegation with no delegation object. Comment 4 says the requester emailed and was given the module; comment 5 says the maintainer no longer had publish rights on npm. Nothing recorded whether the grant could be passed on, and nothing a downstream consumer checks changed.
 - Bears on no `DEC-*`. It is evidence for the topic question, not an input to a design.
 
 ## Implementations
@@ -45,6 +45,8 @@ None applicable: this source describes an incident, not something to build on. N
 | `summary.md` | this document |
 
 **No `distilled/`.** This is the summary bar. A web source has no FX-1 obligation, and nothing here needed a further artifact.
+
+**Relations.** No `see_also` is authored here. `ghsa-event-stream` lists this issue as a reference, so that edge is a `cites` on the advisory. `npm-event-stream` authors its own edge to this record. The edge to `ohm-2020-backstabbers` was removed: the paper discusses event-stream but cites a blog post, not this thread.
 
 ## Limits
 

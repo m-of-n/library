@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: slsa-vsa-1-2
 record: slsa-vsa-1-2
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # SLSA Verification Summary Attestation (VSA), SLSA Specification v1.2
@@ -11,7 +11,7 @@ updated: "2026-11-01"
 |  |  |
 |---|---|
 | **Type** | spec |
-| **Maturity** | standard |
+| **Maturity** | standard: the page's Status is Approved, the stable stage in SLSA's spec-stages definitions |
 | **Authors** | SLSA project contributors (slsa-framework) |
 | **Published** | 2025-11-24, Open Source Security Foundation (OpenSSF) |
 | **Identifier** | `https://slsa.dev/verification_summary/v1` |
@@ -31,12 +31,12 @@ A VSA is an in-toto predicate in which a verifier states that it checked artifac
 | This project | `adjacent` | A real delegation of judgement, but it is expressed only as which verifier keys a consumer configures |
 
 - **R-I-03** and **R-I-01**: a second predicate to map if we export to in-toto.
-- **R-M-10**: the useful contrast. The VSA's *Purpose* section is about delegating a decision, yet nothing in the predicate is a delegation. The grant lives in the consumer's preconfigured root of trust. An explicit `AuthzCert` delegation is the object this design lacks.
+- **Not R-M-10.** The VSA's *Purpose* speaks of delegating complex policy decisions to a trusted party, but that is a consumer choosing to trust a verifier's verdict, configured as a key in its preconfigured roots of trust. Nothing in the predicate grants or re-delegates authority, so it says nothing about R-M-10's delegation flag on `AuthzCert`.
 - *Fields* has a useful rule: consumers must accept only specific (signer, verifier) pairs.
 
 ## Implementations
 
-**Searched 2026-11-01.** GitHub repository metadata checked. `slsa-verifier` is listed as the project's verifier; whether it consumes VSAs was not checked.
+**Searched 2026-11-04.** GitHub repository metadata checked. The `slsa-verifier` README documents a `verify-vsa` command and links the v1.1 VSA spec; conformance to v1.2 was not tested.
 
 | Name | Kind | License | URL |
 |---|---|---|---|
@@ -51,9 +51,12 @@ A VSA is an in-toto predicate in which a verifier states that it checked artifac
 
 **No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. A `spec` record owes FX-1 when someone extracts it, and no issue owns that yet. No keyword count is given because none has been reconciled.
 
+**Relations.** No `see_also`. The page links in-toto's Statement, ResourceDescriptor and parsing rules (`in-toto-attestation-v1`), Build Provenance's `resolvedDependencies` (`slsa-provenance-1-2`) and Verified properties (`slsa-1-2`), so all three sit under `cites`.
+
 ## Limits
 
 - **The spec's own examples are stale.** The change history says 1.2 fixed a typo where `verificationResult` was wrongly called `slsaResult`, but both worked cases under *Examples* still use `slsaResult`. Read *How to verify* and *Schema* as authoritative.
 - **`resourceUri` can be anything agreed.** *Fields* allows another value if the producer communicates it out of band.
 - **The result is only as good as the verifier.** The page says so, and offers no mitigation beyond choosing verifiers carefully.
+- **A cross-version link.** The second worked example sends the reader to *Verifying artifacts* at `/spec/v1.0/`, not the v1.2 page.
 - **Read scope.** The whole page was read as rendered HTML. The Verifying Artifacts page is not covered.
