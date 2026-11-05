@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: gmy-1983-strong-signatures
 record: gmy-1983-strong-signatures
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Strong Signature Schemes
@@ -49,7 +49,7 @@ Not applicable and not searched: this is a historical scheme paper, not software
 
 - **Weaker than its abstract reads.** The abstract speaks of an adversary who has seen all previously signed messages. §2's definition fixes the message sequence T in advance. `gmr-1984-paradoxical` §IV and `gmr-1988-adaptive` §3 read the results as covering a generic chosen-message attack and say adaptive attacks are not settled. That reading fits the text.
 - **Informal definition.** §2 says it describes a strong signature scheme only informally.
-- **Sketches.** Theorems 11 and 12 are proof sketches, and the Remarks promise a fuller paper. Internal references do not line up: for example the text cites "theorem 1" and "claim 7" for items numbered otherwise.
+- **Sketches.** Theorems 11 and 12 are proof sketches, and the Remarks promise a fuller paper. Internal references do not line up: §3.6 cites "theorem 1" and "claim 7" for items numbered otherwise (checked against the page image). The bracketed citations are also off against the reference list: Diffie-Hellman is cited as [3] but listed as [4], and RSA as [8] but listed as [9], while Fact 13 cites a Shamir [12] that the 11-item list does not have.
 - **Stateful.** The first scheme signs the concatenation of all messages so far (§3.5), and the second consumes a tape of primes (§4.3).
 - **Archive copy.** Read from a 2006 Internet Archive capture of the MIT-hosted scan. Not compared with the ACM Digital Library file, which was unreachable.
 - **Read whole**, all nine pages, from an OCR text layer that garbles formulas. No sentence is quoted and the proofs were followed in outline only.

@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rabin-1979-tr212
 record: rabin-1979-tr212
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Digitalized Signatures and Public-Key Functions as Intractable as Factorization
@@ -20,7 +20,7 @@ updated: "2026-11-01"
 
 ## Overview
 
-Rabin gives a public-key function E(x) = x(x+b) mod n, with n = pq, and proves that inverting it for even a small fraction of values lets one factor n (Theorems 1 and 2, §4). His claim is that this makes forgery hard almost everywhere, not just in the worst case, which he calls the first proved result of its kind (Abstract). RSA, by contrast, is at most as hard as factoring (Introduction). To sign, the signer hashes the message with a random suffix U and retries until the result is invertible, expecting four tries (§3). Verifying needs only one multiplication, so it is several hundred times faster than RSA. §5 generalises to cubes and rejects them for signatures.
+Rabin gives a public-key function E(x) = x(x+b) mod n, with n = pq, and proves that inverting it for even a small fraction of values lets one factor n (Theorems 1 and 2, §4). His claim is that this makes forgery hard almost everywhere, not just in the worst case, which he calls the first proved result of its kind (Abstract). RSA, by contrast, is at most as hard as factoring (Introduction). To sign, the signer hashes the message with a random suffix U and retries until the result is invertible, expecting four tries (§3). Computing E takes one addition, one multiplication and one division (§1), which the Abstract puts at several hundred times faster than RSA. §5 sketches cube roots and judges the quadratic scheme best for signatures, since a random value is a cubic residue only 1/9 of the time.
 
 ## Applicability
 
@@ -52,4 +52,4 @@ Not applicable and not searched: this is a scheme report, not software we would 
 - **This is the TR, not the 1978 chapter.** `lamport-1979-one-way` improves on Rabin's earlier one-time scheme, a different construction we do not hold.
 - **C is not specified.** §3 refers to Rabin's 1978 chapter for the hash.
 - **Performance figures are 1979 comparisons** with RSA.
-- **Read whole**, all 20 PDF pages, through local OCR, which misses some formulas. Only the abstract and the §3 passage quoted above were checked against page images.
+- **Read whole**, all 20 PDF pages, through local OCR, which misses some formulas. The 2026-11-05 verify pass then re-read every text page as a page image and checked each claim and locator above, and the quoted §3 sentence, against them.

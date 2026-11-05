@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: elgamal-1985
 record: elgamal-1985
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # A Public Key Cryptosystem and a Signature Scheme Based on Discrete Logarithms
@@ -43,13 +43,15 @@ Not applicable and not searched: this is a scheme paper whose descendants are wh
 | `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
 | `summary.md` | this document |
 
+**No `see_also`.** `fips-186` authors `see_also: elgamal-1985` itself, and `schnorr-1989-smartcards` and `schnorr-1991-jcryptology` cite this paper, so none of those links is repeated here.
+
 **No `distilled/`.** `paper` is outside FX-1's type scope, and nothing here calls for extraction. The PDF stays in `.cache/` and is not committed.
 
 ## Limits
 
 - **Not the IEEE bytes.** We read a retyped copy on a KAIST course site. It presents itself as the IEEE text and matches its pagination, but it was keyed by someone else. Visible slips, such as *computer* for *compute* and a dropped letter in the Rivest-Shamir-Adleman name, show that it is not a facsimile. Nothing here depends on an exact word, so no sentence is quoted. Equations 3 and 6 were read from the rendered page. They agree in form with `schnorr-1991-jcryptology` §2, which restates them, allowing for its opposite sign convention on the public key.
 - **Cannot tell where one error comes from.** Reference [3] gives pp. 472-492 for Diffie-Hellman. The true range is 644-654. This may be the transcriber's or the original's.
-- **The CRYPTO '84 version is a different document.** We viewed only its first page, enough to see that the abstract and opening differ. It was not read. The IEEE text's acknowledgement credits a referee for Attack 6.
-- **No security proof.** §IV says twice that breaking the scheme is not proved equivalent to discrete logs. `gmr-1984-paradoxical` §IV classes it as existentially forgeable with a generic chosen-message attack and selectively forgeable with a directed one.
+- **The CRYPTO '84 version is a different document.** The MIT copy is a 9-page typescript with a Hewlett-Packard Labs affiliation. We viewed only its first page: the abstract matches this text almost word for word, and the introduction differs in small details, such as the year given for Diffie and Hellman. It was not read. The IEEE text's acknowledgement credits a referee for Attack 6.
+- **No security proof.** §I and §IV each say that breaking the signature scheme is not proved equivalent to computing discrete logarithms. `gmr-1984-paradoxical` §IV, citing the CRYPTO '84 version, classes the scheme as existentially forgeable with a generic message attack and selectively forgeable with a directed chosen message attack.
 - **Signs m directly.** Attack 6's remedy, a one-way function on the message, appears only as an aside. `schnorr-1991-jcryptology` builds the hash in.
 - **Read whole**, all four pages. The size and speed figures in §V are 1985 estimates.

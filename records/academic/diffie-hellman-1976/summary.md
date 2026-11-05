@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: diffie-hellman-1976
 record: diffie-hellman-1976
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # New Directions in Cryptography
@@ -43,12 +43,14 @@ Not applicable and not searched: this is a theory paper, not software we would b
 | `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
 | `summary.md` | this document |
 
+**No `see_also`.** `lamport-1979-one-way`, `rsa-1978`, `merkle-1980-protocols` and `merkle-1989-certified` all cite this paper, and those `cites` entries carry the link, so a judged edge would only duplicate them.
+
 **No `distilled/`.** `paper` is outside FX-1's type scope, and nothing here calls for extraction. The PDF stays in `.cache/` and is not committed.
 
 ## Limits
 
 - **Read whole**, from the author-hosted scan of the IEEE print. The text layer is OCR, so equations were read for sense and are not quoted here.
-- **No public key cryptosystem is given.** §III says the problem is still largely open, and its matrix example is called useless. RSA came later (`rsa-1978`).
+- **No public key cryptosystem is given.** §I says the problem is still largely open, and §III calls its matrix example useless. RSA came later (`rsa-1978`).
 - **The signature is not defined against an attacker.** The paper states a goal, not a security model. Signing by inverting a trap-door function directly is the construction `gmr-1988-adaptive` §3 shows is existentially forgeable with a key-only attack.
 - **Security of the key exchange is conjectural.** §III has no proof that the system is secure when logs are hard. The q^(1/2) estimate for logs is the 1976 best known, and `elgamal-1985` §V already reports subexponential algorithms.
 - **Identity is assumed.** The public file is presumed to authenticate users. How it does so is not settled here; see `merkle-1980-protocols` for certificates and tree authentication.
