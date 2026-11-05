@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: slsa-2026-mini-shai-hulud
 record: slsa-2026-mini-shai-hulud
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Mini Shai-Hulud: Where SLSA's Boundaries Fall
@@ -11,12 +11,12 @@ updated: "2026-11-01"
 |  |  |
 |---|---|
 | **Type** | web |
-| **Maturity** | informational |
+| **Maturity** | unset: the source states no standing |
 | **Authors** | Andrew McNamara |
 | **Published** | 2026-05-15, SLSA project blog |
 | **Identifier** | https://slsa.dev/blog/2026/05/mini-shai-hulud-what-slsa-can-and-cannot-do |
 | **Source** | https://slsa.dev/blog/2026/05/mini-shai-hulud-what-slsa-can-and-cannot-do |
-| **Digest** | `sha256:7bc3af34…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:7bc3af34…` (full value in `record.yaml`), fetched 2026-11-01, re-verified 2026-11-04 |
 
 ## Overview
 
@@ -46,6 +46,8 @@ None applicable: this source describes an incident, not something to build on. N
 | `summary.md` | this document |
 
 **No `distilled/`.** This is the summary bar. A web source has no FX-1 obligation, and nothing here needed a further artifact.
+
+**Relations.** `cites`: the post links pages of `slsa-1-2` (levels, threats, build and source requirements, verifying artifacts). `see_also`, each with its reason: `slsa-provenance-1-2`, the attestation format that was valid here; `slsa-vsa-1-2`, which the post proposes as the way to make layered verification tractable; `sigstore-threat-model`, whose statement that a signature proves only authentication this incident illustrates; `crowdstrike-sunspot`, an earlier compromise inside a legitimate build, which that record's summary already compares to this one. The edge to `pypi-trusted-publishers` is authored on that record.
 
 ## Limits
 

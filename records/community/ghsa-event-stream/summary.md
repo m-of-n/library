@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: ghsa-event-stream
 record: ghsa-event-stream
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Critical severity vulnerability that affects event-stream and flatmap-stream
@@ -11,12 +11,12 @@ updated: "2026-11-01"
 |  |  |
 |---|---|
 | **Type** | web |
-| **Maturity** | informational |
+| **Maturity** | unset: the source states no standing |
 | **Authors** | GitHub Advisory Database |
 | **Published** | 2018-11-26, GitHub |
 | **Identifier** | `GHSA-mh6f-8j2x-4483` |
 | **Source** | https://api.github.com/advisories/GHSA-mh6f-8j2x-4483 |
-| **Digest** | `sha256:39b59057…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:39b59057…` (full value in `record.yaml`), fetched 2026-11-01, re-verified 2026-11-04 |
 
 ## Overview
 
@@ -28,7 +28,7 @@ The advisory entry for the event-stream compromise. It says `flatmap-stream` is 
 |---|---|---|
 | Security | `adjacent` | A machine-readable identifier for the incident |
 | Cryptography | `none` | No cryptographic content |
-| This project | `none` | Names an event. It informs no design beyond R-M-07 |
+| This project | `adjacent` | Names an event. It informs no design beyond R-M-07 |
 
 - **R-M-07**: as with `cve-2024-3094`, identification is by package name and version, with no digest. Bears on no `DEC-*`.
 
@@ -45,8 +45,10 @@ None applicable: this source describes an incident, not something to build on. N
 
 **No `distilled/`.** This is the summary bar. A web source has no FX-1 obligation, and nothing here needed a further artifact.
 
+**Relations.** `cites`: the advisory's `references` list `event-stream-issue-116`. No `see_also` is authored here; `npm-event-stream` authors its own edge to this record.
+
 ## Limits
 
-- **It gives `first_patched_version` 4.0.0** for something that was never a defect to patch, and it recommends a downgrade in its own text. The structured field and the prose do not quite say the same thing.
+- **It gives `first_patched_version` 4.0.0** for something that was never a defect to patch. The description offers either a downgrade to 3.3.4 or an upgrade to 4.x, and the structured field can express only the second.
 - **The CVSS scoring is generic.** The payload targeted one build environment (`npm-event-stream`), which the 9.8 does not convey.
 - **Read scope.** The whole advisory was read, in both API and HTML form.

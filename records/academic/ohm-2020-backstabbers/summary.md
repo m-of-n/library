@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: ohm-2020-backstabbers
 record: ohm-2020-backstabbers
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Backstabber's Knife Collection: A Review of Open Source Software Supply Chain Attacks
@@ -11,12 +11,12 @@ updated: "2026-11-01"
 |  |  |
 |---|---|
 | **Type** | paper |
-| **Maturity** | white-paper (peer-reviewed; the library has no closer value) |
+| **Maturity** | unset: the enum has no value for a peer-reviewed conference paper |
 | **Authors** | Marc Ohm, Henrik Plate, Arnold Sykosch, Michael Meier |
 | **Published** | 2020, Springer |
 | **Identifier** | `10.1007/978-3-030-52683-2_2` · `2005.09535` |
 | **Source** | https://arxiv.org/pdf/2005.09535 |
-| **Digest** | `sha256:a4e53919…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:a4e53919…` (full value in `record.yaml`), fetched 2026-11-01, re-verified 2026-11-04 |
 
 ## Overview
 
@@ -45,6 +45,8 @@ None applicable: this source describes an incident, not something to build on. N
 | `summary.md` | this document |
 
 **No `distilled/`.** This is the summary bar. A paper has no FX-1 obligation, and nothing here needed a further artifact.
+
+**Relations.** No `cites`: none of the paper's references is a record we hold. No `see_also` is authored here. The link to `vu-2020-typosquatting` is authored on that record, and the link to `npm-event-stream` on that one. The paper does not cite `in-toto-2019`, and no reason to relate them was found, so that edge was removed.
 
 ## Limits
 

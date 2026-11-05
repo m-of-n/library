@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: pypi-trusted-publishers
 record: pypi-trusted-publishers
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Publishing to PyPI with a Trusted Publisher
@@ -11,12 +11,12 @@ updated: "2026-11-01"
 |  |  |
 |---|---|
 | **Type** | web |
-| **Maturity** | informational |
+| **Maturity** | unset: the source states no standing |
 | **Authors** | PyPI maintainers |
 | **Published** | 2026, Python Package Index (PyPI) documentation |
 | **Identifier** | https://docs.pypi.org/trusted-publishers/ |
 | **Source** | https://docs.pypi.org/trusted-publishers/ |
-| **Digest** | `sha256:3bb9ea16…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:3bb9ea16…` (full value in `record.yaml`), fetched 2026-11-01, re-verified 2026-11-04 |
 
 ## Overview
 
@@ -50,6 +50,8 @@ Trusted Publishing replaces long-lived PyPI API tokens. A project registers an O
 | `summary.md` | this document |
 
 **No `distilled/`.** This is the summary bar. A web source has no FX-1 obligation, and nothing here needed a further artifact.
+
+**Relations.** One `see_also`: `slsa-2026-mini-shai-hulud`, for the reason under R-O-02: the same OIDC-to-short-lived-token exchange, on npm, abused from inside a trusted workflow. Edges to `sigstore-threat-model` and `vu-2020-typosquatting` were removed: the pages read do not mention Sigstore, and trusted publishing does not touch name registration.
 
 ## Limits
 

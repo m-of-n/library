@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: vu-2020-typosquatting
 record: vu-2020-typosquatting
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Typosquatting and Combosquatting Attacks on the Python Ecosystem
@@ -11,12 +11,12 @@ updated: "2026-11-01"
 |  |  |
 |---|---|
 | **Type** | paper |
-| **Maturity** | white-paper (peer-reviewed; the library has no closer value) |
+| **Maturity** | unset: the enum has no value for a peer-reviewed conference paper |
 | **Authors** | Duc-Ly Vu, Ivan Pashchenko, Fabio Massacci, Henrik Plate, Antonino Sabetta |
 | **Published** | 2020-09, IEEE |
 | **Identifier** | `10.1109/EuroSPW51379.2020.00074` |
 | **Source** | https://conferences.computer.org/eurosp/pdfs/EuroSPW2020-7k9FlVRX4z43j4uE2SeXU0/859700a508/859700a508.pdf |
-| **Digest** | `sha256:bf91c7e9…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:bf91c7e9…` (full value in `record.yaml`), fetched 2026-11-01, re-verified 2026-11-04 |
 
 ## Overview
 
@@ -44,6 +44,8 @@ None applicable: this source describes a study, not something to build on. No se
 | `summary.md` | this document |
 
 **No `distilled/`.** This is the summary bar. A paper has no FX-1 obligation, and nothing here needed a further artifact.
+
+**Relations.** No `cites`: none of the nine references is a record we hold. One `see_also`: `ohm-2020-backstabbers`, a measurement of the same attack class across three registries with a shared author (Plate), which this paper does not cite. A `see_also` to `pypi-trusted-publishers` was removed: trusted publishing governs who may upload under a name, not which names may be registered, so it does not touch typosquatting.
 
 ## Limits
 

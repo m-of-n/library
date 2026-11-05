@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: gittuf-2025
 record: gittuf-2025
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Rethinking Trust in Forge-Based Git Security
@@ -11,16 +11,16 @@ updated: "2026-11-01"
 |  |  |
 |---|---|
 | **Type** | paper |
-| **Maturity** | white-paper (peer-reviewed; the library has no closer value) |
+| **Maturity** | unset: the enum has no value for a peer-reviewed conference paper |
 | **Authors** | Aditya Sirish A Yelgundhalli, Patrick Zielinski, Reza Curtmola, Justin Cappos |
 | **Published** | 2025-02-24, Network and Distributed System Security (NDSS) Symposium |
 | **Identifier** | `10.14722/ndss.2025.241008` |
 | **Source** | https://www.ndss-symposium.org/wp-content/uploads/2025-1008-paper.pdf |
-| **Digest** | `sha256:b86ce3bf…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:b86ce3bf…` (full value in `record.yaml`), fetched 2026-11-01, re-verified 2026-11-04 |
 
 ## Overview
 
-Forges enforce repository policy, but no one can verify that they did, so a forge is a non-verifiable trusted third party. gittuf moves policy into the repository as signed metadata: a threshold-signed root of trust and rule files saying which keys may write to which branches, tags and files, with namespaced delegations. A Reference State Log, an append-only signed log kept in a Git ref, records every push. Any client can then verify every change against the policy in force at that point, so one honest verifier is enough to catch a violation. The cost is reported as under 4% storage and under 0.59 seconds per push on Git and Kubernetes.
+Forges enforce repository policy, but no one can verify that they did, so a forge is a non-verifiable trusted third party. gittuf moves policy into the repository as signed metadata: a threshold-signed root of trust and rule files saying which keys may write to which branches, tags and files, with namespaced delegations. A Reference State Log, an append-only signed log kept in a Git ref, records every push. Any client can then verify every change against the policy in force at that point, so one honest verifier is enough to catch a violation. The abstract reports under 4% storage overhead and under 0.59 s to verify each push on the Git and Kubernetes repositories.
 
 ## Applicability
 
@@ -31,8 +31,7 @@ Forges enforce repository policy, but no one can verify that they did, so a forg
 | This project | `core` | An object saying who may write what, verified by every client, with thresholds and delegation |
 
 - **R-M-06**: root and rule files carry thresholds, so no single owner changes policy.
-- **R-M-10**: delegations are explicit and scoped by namespace.
-- **R-M-05**: verification replays an ordered log against the policy in force, which is deterministic composition over an ordered set, in another domain.
+- **R-M-10**: a contrast more than a match. A delegation is scoped to the rule's namespace and carries its own threshold, but it is signalled by the existence of a rule file named after the rule (§IV.B), not by a flag on the grant.
 - **Topic**: this is the most direct answer to the entitlement gap in the batch. Against takeovers like event-stream or xz it would help only where a threshold was configured, and the paper's text names neither incident.
 
 ## Implementations
@@ -51,6 +50,8 @@ Forges enforce repository policy, but no one can verify that they did, so a forg
 | `summary.md` | this document |
 
 **No `distilled/`.** This is the summary bar. A paper has no FX-1 obligation, and nothing here needed a further artifact.
+
+**Relations.** `cites` lists the held records in the paper's reference list: [1] `fireeye-sunburst` (the same Mandiant post, since moved to cloud.google.com), [6] `in-toto-2019`, [7] `sigstore-2022`, [9] `tuf-2010`, [25] `sp-800-218` (SSDF 1.1), [26] `sp-800-204d`. [8] cites slsa.dev with no version, [24] the SLSA v1.0 threats page where we hold v1.2, [55] the in-toto attestation repository with no version, and [79] the CNCF best-practices paper v1 where we hold v2, so none of those is listed. The rest of the list is not held. One `see_also`: `slsa-1-2`, whose Source track covers the same ground, enforcement of controls on protected refs. §VII names SLSA as an integration target, citing [69], a 2023 SLSA blog post, not a version of the spec. R-M-05 was considered and not claimed: replaying an ordered log against the policy in force is not composition of an authorization cert set.
 
 ## Limits
 

@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: sigstore-2022
 record: sigstore-2022
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Sigstore: Software Signing for Everybody
@@ -11,12 +11,12 @@ updated: "2026-11-01"
 |  |  |
 |---|---|
 | **Type** | paper |
-| **Maturity** | white-paper (peer-reviewed; the library has no closer value) |
+| **Maturity** | unset: the enum has no value for a peer-reviewed conference paper |
 | **Authors** | Zachary Newman, John Speed Meyers, Santiago Torres-Arias |
 | **Published** | 2022-11-07, ACM |
 | **Identifier** | `10.1145/3548606.3560596` |
 | **Source** | https://web.archive.org/web/20250717035128id_/https://dl.acm.org/doi/pdf/10.1145/3548606.3560596 |
-| **Digest** | `sha256:85519305…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:85519305…` (full value in `record.yaml`), fetched 2026-11-01, re-verified 2026-11-04 |
 
 ## Overview
 
@@ -54,6 +54,8 @@ Signing adoption stayed low because key management is hard, so Sigstore removes 
 | `summary.md` | this document |
 
 **No `distilled/`.** This is the summary bar. A paper has no FX-1 obligation, and nothing here needed a further artifact.
+
+**Relations.** `cites` lists the held records in the reference list: [67] `tuf-2010`, [74] `in-toto-2019`, [34] `rfc-6749`, [46] `rfc-6962`, [7] `rfc-8555`, [47] `rfc-9162`. [4] cites the TUF GitHub repository, not a spec version. [17] is not listed because it contradicts itself: its authors and title (Cooper et al., *Certification Path Building*, 2005) are RFC 4158, but its title also says RFC 5280 and its URL is rfc5280. One `see_also`: `tuf-spec`, because §4.1 makes TUF Sigstore's root of trust, and `tuf-spec` is the current statement of TUF. `sigstore-threat-model` cites this paper, so that edge lives there.
 
 ## Limits
 
