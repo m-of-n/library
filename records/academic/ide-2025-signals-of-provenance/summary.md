@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: ide-2025-signals-of-provenance
 record: ide-2025-signals-of-provenance
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Signals of Provenance: Practices & Challenges of Navigating Indicators in AI-Generated Media for Sighted and Blind Individuals
@@ -30,7 +30,12 @@ updated: "2026-11-01"
 | Cryptography | `none` | None. §7.4 only sketches signed entries in an append-only log |
 | This project | `adjacent` | The §7.4 design proposals are worth reading as proposals. The empirical results are not usable |
 
-- **DEC-007**: §7.4's call to decouple disclosure logic from presentation, with level-tiered labels in several modalities, restates DEC-007's option 2 from the accessibility side. That is an argument, and it stands or falls without the withdrawn data. It adds one thing DEC-007 does not say: a rendering may need to be non-visual. **DEC-007** is proposed, not accepted: it exists only in ARCH-0001-PROPOSAL v0.2.0 §5, and mofn's DECISIONS-0001 item 5d asks whether it survives at all.
+- **DEC-007**: §7.4's call to decouple disclosure logic from presentation, with level-tiered labels in several modalities, is close to DEC-007's option 2 (a machine-readable vocabulary, separate from any one UI), argued from the accessibility side; it does not propose signing the vocabulary itself. That is an argument, and it stands or falls without the withdrawn data. It adds one thing DEC-007 does not say: a rendering may need to be non-visual. **DEC-007** is proposed, not accepted: it exists only in ARCH-0001-PROPOSAL v0.2.0 §5, and mofn's DECISIONS-0001 item 5d asks whether it survives at all.
+
+## Relations
+
+- `see_also: cscw-2023-provenance-trust`: v1 cites that study as [40]; both concern how people read provenance indicators. Authored only here; `cscw-2023-provenance-trust` no longer repeats it.
+- `see_also: c2pa-ux-2-2`: §7.4's three-level label taxonomy (L1 "AI-generated" to L3 full log) parallels that guidance's four disclosure levels (§3.1). Authored only here.
 
 ## Implementations
 

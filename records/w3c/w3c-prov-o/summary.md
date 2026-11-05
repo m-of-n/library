@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: w3c-prov-o
 record: w3c-prov-o
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Duplicate — cite `prov-o`
@@ -14,4 +14,6 @@ The id `w3c-prov-o` is kept because ids are stable forever: anything that ever c
 
 `bin/validate` enforces the pointer: `duplicate_of` must name an existing record, and this record must stay a stub. It was `status: fetched` and has moved back to `stub` for that reason.
 
-**Held here until `prov-o` takes them over.** `prov-o` was out of scope for the PR that made this a pointer. It has no digest, and it does not name DEC-007. This record's digest (`6b96671a…`, reconfirmed 2026-11-01) and its `bears_on: DEC-007` stay here until then.
+**Held here until `prov-o` takes them over.** `prov-o` was out of scope for the PR that made this a pointer. It has no digest, and it does not name DEC-007. This record's digest (`6b96671a…`, reconfirmed 2026-11-01 and 2026-11-05) and its `bears_on: DEC-007` stay here until then.
+
+The pointer is carried by `duplicate_of` alone. A `see_also` to the same record duplicated it and was removed on 2026-11-05.

@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: cscw-2023-provenance-trust
 record: cscw-2023-provenance-trust
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Examining the Impact of Provenance-Enabled Media on Trust and Accuracy Perceptions
@@ -31,7 +31,12 @@ An online experiment with 595 valid participants from the US and UK (§3.3.2) sh
 | This project | `adjacent` | Direct evidence on what a verifier's output does to a reader |
 
 - **DEC-007**: rendering is the claim at stake. The experiment shows a correct validation state being read as a verdict on content, so a renderer that shows only a state and a colour would mislead. §5.3 suggests early deployments consider removing colour. **DEC-007** is proposed, not accepted: it exists only in ARCH-0001-PROPOSAL v0.2.0 §5, and mofn's DECISIONS-0001 item 5d asks whether it survives at all.
-- **R-O-06** (proposed): the paper supports reporting distinct results, and warns that distinct results do not stay distinct in a reader's head. That is a limit on what R-O-06 alone achieves.
+- **No other id.** An earlier draft also named R-O-06. The paper tests one provenance-state indicator; it does not study separate verifier results, so that was a stretch and is removed.
+
+## Relations
+
+- `see_also: c2pa-2-4`: the prototype implements the C2PA standard (§3.1.3), and the states it tested predate 2.4's (Limits). Authored only here.
+- `c2pa-ux-2-2`, `moruzzi-2025-content-authenticities` and `ide-2025-signals-of-provenance` author their edges to this record, so they are not repeated here.
 
 ## Implementations
 

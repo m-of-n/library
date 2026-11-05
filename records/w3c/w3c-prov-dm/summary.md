@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: w3c-prov-dm
 record: w3c-prov-dm
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # PROV-DM: The PROV Data Model
@@ -30,7 +30,12 @@ PROV-DM is the conceptual model of the W3C PROV family: a domain-agnostic way to
 | Cryptography | `none` | None |
 | This project | `adjacent` | Vocabulary to compare with, and possibly to map to under R-I-01. It does not answer DEC-007 |
 
-- **DEC-007**: this is close to option 4 in shape, but it models relations rather than values. `prov:label` is a human-readable string on an instance (§5.7.2.1), which is DEC-007's rejected option 3 in miniature: the words travel with each statement. `prov:type` extension values are identifiers, and the sections read define no resolution to a declaration of meaning. **DEC-007** is proposed, not accepted: it exists only in ARCH-0001-PROPOSAL v0.2.0 §5, and mofn's DECISIONS-0001 item 5d asks whether it survives at all.
+- **DEC-007**: this is close to option 4 in shape, but it models relations rather than values. `prov:label` is a human-readable string on an instance (§5.7.2.1), which is DEC-007's option 3 in miniature, the option the proposal says it notes mainly to reject: the words travel with each statement. `prov:type` extension values are identifiers, and the sections read define no resolution to a declaration of meaning. **DEC-007** is proposed, not accepted: it exists only in ARCH-0001-PROPOSAL v0.2.0 §5, and mofn's DECISIONS-0001 item 5d asks whether it survives at all.
+
+## Relations
+
+- `see_also: prov-o`: PROV-O is the OWL 2 encoding of this model, cross-referenced from Appendix A here. Authored only here. (`w3c-prov-o` is a duplicate pointer to `prov-o`.)
+- An earlier draft also authored `see_also: shacl` with no stated reason. This document does not reference SHACL, so the edge is removed.
 
 ## Implementations
 

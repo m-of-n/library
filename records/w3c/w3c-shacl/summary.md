@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: w3c-shacl
 record: w3c-shacl
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Duplicate — cite `shacl`
@@ -14,4 +14,6 @@ The id `w3c-shacl` is kept because ids are stable forever: anything that ever ci
 
 `bin/validate` enforces the pointer: `duplicate_of` must name an existing record, and this record must stay a stub. It was `status: fetched` and has moved back to `stub` for that reason.
 
-**Held here until `shacl` takes them over.** `shacl` was out of scope for the PR that made this a pointer. It has no digest, and it does not name DEC-007. This record's digest (`ccca77ca…`, reconfirmed 2026-11-01) and its `bears_on: DEC-007` stay here until then.
+**Held here until `shacl` takes them over.** `shacl` was out of scope for the PR that made this a pointer. It has no digest, and it does not name DEC-007. This record's digest (`ccca77ca…`, reconfirmed 2026-11-01 and 2026-11-05) and its `bears_on: DEC-007` stay here until then.
+
+The pointer is carried by `duplicate_of` alone. A `see_also` to the same record duplicated it and was removed on 2026-11-05.
