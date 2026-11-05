@@ -48,7 +48,7 @@ Not on DEC-005, though §3.8 is relevant to the `crit` analysis `ARCH-0002` P5.2
 | lakers | open source, Rust, bindings for C and Python | BSD-3-Clause | https://github.com/lake-rs/lakers |
 | uOSCORE / uEDHOC | open source, C | Apache-2.0 and MIT license files present | https://github.com/eriptic/uoscore-uedhoc |
 | libedhoc | open source, C | MIT | https://github.com/kamil-kielbasa/libedhoc |
-| aiocoap | open source, Python, CoAP stack using lakers | MIT in edhoc.py SPDX header; LICENSES directory not read | https://github.com/chrysn/aiocoap |
+| aiocoap | open source, Python, CoAP stack using lakers | MIT, per README and the edhoc.py SPDX header | https://github.com/chrysn/aiocoap |
 
 ## Artifacts in this record
 
@@ -58,6 +58,8 @@ Not on DEC-005, though §3.8 is relevant to the `crit` analysis `ARCH-0002` P5.2
 | `summary.md` | this document |
 
 **No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. An `rfc` record owes FX-1 when someone extracts it, and no issue owns that yet. No keyword count is given because none has been reconciled.
+
+**No `see_also`.** This RFC and `rfc-9529` cite each other, and `rfc-9668` cites this one, so `cites` already links all three.
 
 ## Limits
 

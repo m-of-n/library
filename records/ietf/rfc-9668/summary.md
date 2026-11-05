@@ -41,8 +41,8 @@ Bears on no `DEC-*` or `R-*`. The usefulness verdict is the point of this record
 
 | Name | Kind | License | URL |
 |---|---|---|---|
-| aiocoap | open source, Python, CoAP stack | MIT in edhoc.py SPDX header; LICENSES directory not read | https://github.com/chrysn/aiocoap |
-| libcoap | open source, C, CoAP stack, header-level hit | not stated by GitHub | https://github.com/obgm/libcoap |
+| aiocoap | open source, Python, CoAP stack | MIT, per README and the edhoc.py SPDX header | https://github.com/chrysn/aiocoap |
+| libcoap | open source, C, CoAP stack, header-level hit | BSD-2-Clause (LICENSE file; GitHub detects Other) | https://github.com/obgm/libcoap |
 
 ## Artifacts in this record
 
@@ -52,6 +52,8 @@ Bears on no `DEC-*` or `R-*`. The usefulness verdict is the point of this record
 | `summary.md` | this document |
 
 **No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. An `rfc` record owes FX-1 when someone extracts it, and no issue owns that yet. No keyword count is given because none has been reconciled.
+
+**No `see_also`.** This RFC cites `rfc-9528`, which already links the two. No reason was found for an edge to `rfc-9529` beyond both being EDHOC companions, so none is authored.
 
 ## Limits
 

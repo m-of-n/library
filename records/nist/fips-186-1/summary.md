@@ -27,7 +27,7 @@ FIPS 186-1 widens the standard from one algorithm to two: DSA stays as specified
 | Axis | Rating | Why |
 |---|---|---|
 | Security | `core` | First federal approval of RSA signatures |
-| Cryptography | `adjacent` | DSA unchanged; RSA specified elsewhere |
+| Cryptography | `core` | Defines DSA; RSA is admitted but specified elsewhere |
 | This project | `none` | Withdrawn. Current requirements are in `fips-186-5` |
 
 It bears on no open `DEC-*` or `R-*`, and `bears_on` is empty on purpose: a withdrawn standard. `fips-186-5` carries the live bearing.

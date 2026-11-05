@@ -21,9 +21,9 @@ updated: "2026-11-01"
 
 ## Overview
 
-RFC 9997 gives every Private Enterprise Number holder a block of YANG SIDs with no further request. It reserves two mega-ranges and defines the block arithmetically: PEN ppp ppp controls 3pp ppp p00 000 to 3pp ppp p99 999, and PENs below 100 000 also get a 32-bit-sized block (§1, §4). It works because it reuses a registry that exists. §3 calls the result extremely-low-threshold, with zero interaction, on top of a PEN registry that already has a low-threshold process.
+RFC 9997 gives every holder of a Private Enterprise Number below 1 000 000 a block of YANG SIDs with no further request. It reserves two mega-ranges and defines the block arithmetically: PEN ppp ppp controls 3pp ppp p00 000 to 3pp ppp p99 999, and PENs below 100 000 also get a 32-bit-sized block (§1, §4). It works because it reuses a registry that exists. §3 calls the result extremely-low-threshold, with zero interaction, on top of a PEN registry that already has a low-threshold process.
 
-§3 is frank about what that buys. There is no way to discover the module behind a SID, and the obscurity may be what a holder wants. §5 is the sentence for us: a PEN inside a SID *"is not an indicator of provenance"*. The number says who may allocate, and nothing on the wire proves who did.
+§3 is frank about what that buys. It defines no way to discover the module behind a SID, and the obscurity may be what a holder wants. §5 is the sentence for us: a PEN inside a SID *"is not an indicator of provenance"*. The number says who may allocate, and nothing on the wire proves who did.
 
 ## Applicability
 
@@ -33,7 +33,7 @@ RFC 9997 gives every Private Enterprise Number holder a block of YANG SIDs with 
 | Cryptography | `none` | No cryptography. The range is not bound to a key |
 | This project | `adjacent` | The closest prior art to R-M-12 in this batch, and the contrast with it |
 
-- **R-M-12** (relocated to `ARCH-0002` P1 by `ADR-0001`): this is a namespace by delegation without a per-entry registry, which is P1's goal reached by a different route, and it stops exactly where P1 says such routes stop. P1 says private ranges give *escape from a registry, not a namespace*. RFC 9997 goes further than a private range, since a block has an owner, and the collision P1 names is prevented for parties who follow the rule. But the owner is a registry entry and not a cryptographic root, so §5 has to disclaim provenance. P1's `(defining key, local label)` needs no such disclaimer, because the key is in the name and the statement is signed. It is the same shape `ARCH-0002` P1.1 records for a COSE `kid`: an owner with no cryptographic root.
+- **R-M-12** (relocated to `ARCH-0002` P1 by `ADR-0001`): this is a namespace by delegation without a per-entry registry, which is P1's goal reached by a different route, and it stops exactly where P1 says such routes stop. P1 says private ranges give *escape from a registry, not a namespace*. RFC 9997 goes further than a private range, since a block has an owner, and the collision P1 names is prevented for parties who follow the rule. But the owner is a registry entry and not a cryptographic root, so §5 has to disclaim provenance. P1's `(defining key, local label)` needs no such disclaimer, because the key is in the name and the statement is signed. It is the same shape `ARCH-0002` P1.1 (draft) records for a COSE `kid`: an owner with no cryptographic root.
 
 The arithmetic checks: PEN 32473 gives 303 247 300 000 and 3 324 730 000, matching the ranges §4 reserves for documentation.
 
@@ -49,6 +49,8 @@ The arithmetic checks: PEN 32473 gives 303 247 300 000 and 3 324 730 000, matchi
 | `summary.md` | this document |
 
 **No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. An `rfc` record owes FX-1 when someone extracts it, and no issue owns that yet. No keyword count is given because none has been reconciled.
+
+**No `see_also`.** This RFC cites `rfc-9254` (in `cites`), which already links the two records.
 
 ## Limits
 

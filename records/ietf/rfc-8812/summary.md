@@ -21,7 +21,7 @@ updated: "2026-11-01"
 
 ## Overview
 
-RFC 8812 exists because deployed WebAuthn and CTAP implementations already used algorithms COSE had no number for, so it registers them after the fact: RS256, RS384, RS512 and RS1 in COSE (§2), and ES256K plus the secp256k1 curve in both COSE and JOSE (§3, §4). None is recommended. Every algorithm is registered `No` except RS1, which is `Deprecated`. RS1 is the telling case: §5.3 says a number is registered for SHA-1 signatures anyway, because deployed TPMs still use them and WebAuthn must represent those attestations, while new COSE applications and protocols are told not to use it (a MUST NOT, §5.3).
+RFC 8812 registers algorithms that WebAuthn and CTAP implementations use (§1) and COSE had no number for: RS256, RS384, RS512 and RS1 in COSE (§2), and ES256K plus the secp256k1 curve in both COSE and JOSE (§3, §4). None is recommended. Every algorithm is registered `No` except RS1, which is `Deprecated`. RS1 is the telling case: §5.3 says a number is registered for SHA-1 signatures anyway, because deployed TPMs still use them and WebAuthn must represent those attestations, while new COSE applications and protocols are told not to use it (a MUST NOT, §5.3).
 
 So a registry here records deployment as much as it endorses anything. A code point's existence says nothing about whether its algorithm should be used, and the `Recommended` column is what carries that judgement.
 
