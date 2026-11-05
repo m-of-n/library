@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: tcg-dice-implicit-identity
 record: tcg-dice-implicit-identity
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Implicit Identity Based Device Attestation
@@ -20,7 +20,7 @@ updated: "2026-11-01"
 
 ## Overview
 
-Attestation here is implicit: holding the right key proves the state, because the key could not exist otherwise. First Mutable Code derives a long-lived DeviceID key pair from the CDI, and an Alias key pair from the CDI and the firmware's identity (§7.1, §7.2). DeviceID certifies Alias, with the firmware digest in an X.509 extension (§7.3.1). The vendor certifies DeviceID at manufacture, so no secret database of UDS values is needed (§4, §8.2). Updating firmware therefore re-keys the Alias and leaves DeviceID alone, while updating Layer 0 loses the device's identity (§7, §8.3.1).
+Attestation here is implicit: holding the right key proves the state, because the key could not exist otherwise. First Mutable Code derives a long-lived DeviceID key pair from the CDI, and an Alias key pair from the CDI and the firmware's identity (§7.1, §7.2, §7.2.1.1). DeviceID certifies Alias, with the firmware digest in an X.509 extension (§7.3.1). The vendor certifies DeviceID at manufacture, so no secret database of UDS values is needed (§4, §8.2). Updating firmware therefore re-keys the Alias and leaves DeviceID alone, while updating Layer 0 loses the device's identity (§7, §8.3.1).
 
 ## Applicability
 
@@ -32,7 +32,7 @@ Attestation here is implicit: holding the right key proves the state, because th
 
 - **R-I-05**: everything is X.509 and relies on a manufacturer's chain. It would import as a foreign identity assertion about a key.
 - **R-O-02**: without a secure clock, §7.3.3 sets notAfter to 99991231235959Z. In place of a short lifetime, expiry is assumed to coincide with firmware update. That is the opposite of short-lived validity.
-- **R-M-02**: DeviceID alone can only be used during Layer 0, because it must be erased before handover (§7.2). A device's long-term key is in practice a certifier.
+- **R-M-02**: DeviceID alone can only be used during Layer 0, because it must be erased before handover (§7.2). A device's long-term key is in practice a certifier: §7.3 gives certifying Alias Keys as its primary use.
 
 ## Implementations
 
@@ -44,6 +44,8 @@ Attestation here is implicit: holding the right key proves the state, because th
 |---|---|
 | `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
 | `summary.md` | this document |
+
+**`cites`** holds what the text names: the DICE hardware requirements specification it builds on (§1, §6.4) and RFC 5280 (§7.3). It has no reference list. **No `see_also`.** Every earlier edge was a duplicate: `tcg-dice-layering` and `tcg-dice-symmetric` cite this document, `tcg-dice-cert-profiles` holds the `see_also` with its reason, and the other two are now `cites`.
 
 **No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. A `spec` record owes FX-1 when someone extracts it, and no issue owns that yet. No keyword count is given because none has been reconciled.
 

@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: iso-iec-18045
 record: iso-iec-18045
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # ISO/IEC 18045, Methodology for IT security evaluation (attack potential)
@@ -20,7 +20,7 @@ updated: "2026-11-01"
 
 ## Overview
 
-The CEM is the evaluator's companion to the Common Criteria, turning assurance components into evaluation work. The part other standards reuse is Annex B, which treats a vulnerability as exploitable or not relative to the attacker assumed. Attack potential is a function of expertise, resources and motivation (§B.6). Table B.2 prices an attack path by elapsed time, expertise, knowledge of the TOE, window of opportunity and equipment. Table B.3 maps the sum to a rating from Basic to Beyond High and to the `AVA_VAN` components met. Annex B concedes that this cannot cover every circumstance, and that motivation is hard to turn into a probability of attack (§B.6).
+The CEM is the evaluator's companion to the Common Criteria, turning assurance components into evaluation work. The part other standards reuse is Annex B, which treats a vulnerability as exploitable or not relative to the attacker assumed. Attack potential is a function of expertise, resources and motivation (§B.6). Table B.2 prices an attack path by elapsed time, expertise, knowledge of the TOE, window of opportunity and equipment. Table B.3 maps the sum to a rating from Basic to Beyond High and to the `AVA_VAN` components met. Annex B concedes that the approach cannot take account of every circumstance or factor, and that except at the two extremes it is difficult to derive a probability of attack from motivation (§B.6).
 
 ## Applicability
 
@@ -45,12 +45,14 @@ Not applicable and not searched: this is an evaluation method.
 | `record.yaml` | metadata, relations, usefulness verdict |
 | `summary.md` | this document |
 
+**`cites: iso-iec-15408`**: clause 2 lists CC:2022 Revision 1 Parts 1 to 5 as normative references. **No `see_also`.** The edges to `iso-iec-15408` and `etsi-ts-102-165-1` were dropped on 2026-11-04 because both are citation edges already: this record cites the CC, and the CC and the TVRA specification each cite this one.
+
 **No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. A `spec` record owes FX-1 when someone extracts it, and no issue owns that yet. No keyword count is given because none has been reconciled.
 
 ## Limits
 
 - **Not the ISO text.** The CCRA publication was read and not compared with ISO's printing.
 - **Not the current edition.** ISO/IEC 18045:2022 is withdrawn in favour of a 2026 edition, which was not read. See `content.note`.
-- **Read scope.** Contents, and within Annex B the opening of §B.6 and Tables B.1, B.2 and B.3 with their notes. The class-by-class evaluation work was not read.
+- **Read scope.** Contents, clause 2, and within Annex B the opening of §B.6 and Tables B.1, B.2 and B.3 with their notes; re-checked 2026-11-04 against the same bytes. The class-by-class evaluation work was not read.
 - **Errata not applied.** The CCMB Errata and Interpretation v1.2 has a CEM section, recorded on `iso-iec-15408`. It was not read, so Annex B may have been corrected.
 - **A scale, not a measurement.** The factor values are a convention for rating, and §B.6 offers no evidence that they predict attacks.

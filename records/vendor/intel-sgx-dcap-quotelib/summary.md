@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: intel-sgx-dcap-quotelib
 record: intel-sgx-dcap-quotelib
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Intel SGX DCAP: ECDSA Quote Library API
@@ -20,7 +20,7 @@ updated: "2026-11-01"
 
 ## Overview
 
-An enclave's REPORT is MAC'd for local attestation, and a Quoting Enclave converts it to a Quote under a P-256 attestation key certified by a key rooted in platform fuses (§2, §2.1). Verification returns graded results, not a boolean. Some are terminal, such as invalid signature or revoked. Others are non-terminal, such as out of date or configuration needed, and need more analysis by the relying party (Verify Quote API result list). §3.8 notes the verify API establishes an enclave ran with SGX protections, without identifying whose enclave it was.
+An enclave's REPORT is MAC'd for local attestation, and a Quoting Enclave converts it to a Quote under a P-256 attestation key certified by a key rooted in platform fuses (§2, §2.1). Verification returns graded results, not a boolean. Three are terminal: invalid signature, revoked and unspecified. Six are non-terminal, OK among them; a caller wanting Intel's strict policy accepts only OK, and the others "will need more analysis before establishing trust in the attesting enclave" (§3.6.2). §3.8 notes the verify API establishes an enclave ran with SGX protections, without identifying whose enclave it was.
 
 ## Applicability
 
@@ -30,15 +30,17 @@ An enclave's REPORT is MAC'd for local attestation, and a Quoting Enclave conver
 | Cryptography | `adjacent` | ECDSA P-256 under fuse-rooted certification |
 | This project | `none` | Foreign evidence only |
 
-- **R-I-02**: the root is Intel's. The verdicts depend on Intel-published collateral, so a stale policy can change the answer.
+- **R-I-02**: the attestation key is "certified by an Intel® SGX rooted key whose certificate is distributed by Intel®" (§1), and the PCK Cert is an X.509 chain Intel signs and distributes (Table 1-1). Importing an SGX Quote means configuring Intel's root for that check, which R-I-02 requires to stay a scoped foreign root rather than a native anchor.
 
 ## Implementations
 
-**Not surveyed.** Licenses were read from each repository on 2026-11-01. No wider search was run.
+**Not surveyed.** Licenses were read from each repository on 2026-11-01 and re-read 2026-11-04. No wider search was run.
 
 | Name | Kind | License | URL |
 |---|---|---|---|
-| SGXDataCenterAttestationPrimitives | open source, Intel | see repository; GitHub reports NOASSERTION | https://github.com/intel/SGXDataCenterAttestationPrimitives |
+| confidential-computing.tee.dcap (formerly SGXDataCenterAttestationPrimitives) | open source, Intel | BSD-3-Clause, per `License.txt`; GitHub's detector reports NOASSERTION | https://github.com/intel/confidential-computing.tee.dcap |
+
+The old URL, github.com/intel/SGXDataCenterAttestationPrimitives, redirects to the renamed repository.
 
 ## Artifacts in this record
 
@@ -47,11 +49,14 @@ An enclave's REPORT is MAC'd for local attestation, and a Quoting Enclave conver
 | `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
 | `summary.md` | this document |
 
+**No `see_also` authored here.** `intel-tdx-dcap-quoting` and `intel-tdx-whitepaper` each author a `see_also` to this record, with their reasons; the edge is symmetric, so it is not repeated.
+
 **No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. A `spec` record owes FX-1 when someone extracts it, and no issue owns that yet. No keyword count is given because none has been reconciled.
 
 ## Limits
 
 - **Whose enclave is the caller's job** (§3.8).
-- **Scalable SGX has different properties.** §3.7 says multi-package platforms have different security properties from standard ones.
+- **Freshness is the caller's job.** Expired collateral only sets `p_collateral_expiration_status`; "this check alone will not cause the Verify Quote API to return an error" (§3.6.2).
+- **Scalable SGX has different properties.** §3.7 says that when `sgx_type` is 1 (scalable, multi-package platforms) the security properties are different from `sgx_type` 0 (standard). It says "may be different" and "are different" in consecutive paragraphs.
 - **A moving document** at a `latest` URL.
-- **Read scope.** §2 opening, §2.1 opening, the verification-result list, the §3.7 opening and the §3.8 opening were read. API reference sections were not. 
+- **Read scope.** §1, §2 and §2.1, §2.2, the §3.6.2 result list and its surrounding text, §3.6.9's description, §3.7 and the §3.8 opening were read, by text extraction. The rest of the API reference was not.

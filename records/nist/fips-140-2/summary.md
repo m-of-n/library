@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: fips-140-2
 record: fips-140-2
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # FIPS 140-2, Security Requirements for Cryptographic Modules (superseded by FIPS 140-3)
@@ -44,6 +44,8 @@ Not searched. The CMVP validation list is the natural place to look, and `fips-1
 |---|---|
 | `record.yaml` | metadata, relations, usefulness verdict |
 | `summary.md` | this document |
+
+**Relations.** None authored here. `fips-140-3` authors `supersedes: fips-140-2`, and `superseded_by` on this record is derived from it by `bin/reindex`, not written by hand.
 
 **No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. A `spec` record owes FX-1 when someone extracts it, and no issue owns that yet. No keyword count is given because none has been reconciled. `fips-140-3` is the record that carries an extraction, so this one is unlikely to need its own.
 

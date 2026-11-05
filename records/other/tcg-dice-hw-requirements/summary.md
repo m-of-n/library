@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: tcg-dice-hw-requirements
 record: tcg-dice-hw-requirements
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Hardware Requirements for a Device Identifier Composition Engine
@@ -20,7 +20,7 @@ updated: "2026-11-01"
 
 ## Overview
 
-DICE is a hardware root of trust for devices with no TPM (§1). At reset it reads a Unique Device Secret, measures the First Measured Code, combines the two by a one-way function into a Compound Device Identifier, locks the secret until next reset, and hands over the CDI (§5.4). Code that changes gets a different CDI, so malware cannot inherit the previous one's secrets. That is the design's central move: identity depends on what booted, without anything storing a key.
+DICE is a hardware root of trust aimed at designers of programmable components that do not have access to a TPM (§1). At reset it reads a Unique Device Secret, measures the First Measured Code, combines the two by a one-way function into a Compound Device Identifier, locks the secret until next reset, and hands over the CDI (§5.4). Code that changes gets a different CDI, so malware cannot inherit the previous one's secrets (§4). That is the design's central move: identity depends on what booted, without anything storing a key.
 
 ## Applicability
 
@@ -43,12 +43,15 @@ DICE is a hardware root of trust for devices with no TPM (§1). At reset it read
 | `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
 | `summary.md` | this document |
 
+**`cites`** lists the held records among §2's references: [2] DICE Layering Architecture and [3] NIST SP 800-57 Part 1 Rev. 5 (`sp-800-57pt1r5`). **No `see_also`.** All five earlier edges pointed at records that cite this one (`tcg-dice-implicit-identity`, `tcg-dice-symmetric`, `tcg-dice-cert-profiles`, `google-open-dice`) or that it cites (`tcg-dice-layering`).
+
 **No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. A `spec` record owes FX-1 when someone extracts it, and no issue owns that yet. No keyword count is given because none has been reconciled.
 
 ## Limits
 
-- **The engine itself is believed, not measured.** Revision 78 §1 says updates to the engine are not measured in the CDI and must be inherently trusted. An updatable DICE leaves the CDI unchanged after a manufacturer update (§5.2.2 SHOULD NOT).
-- **Protecting the CDI is largely out of scope.** Revision 78 §6.3 and its notes leave this to the device, and warn that a leaked CDI allows impersonation.
-- **Interoperable mixing is not specified.** Revision 78 §5 says the choice of method is the manufacturer's, so a verifier cannot recompute a CDI without knowing it.
+- **The engine itself is believed, not measured.** §4.1 says updates to the engine are not measured in the CDI and must be inherently trusted, and §5.2.2 item 3 says a manufacturer-controlled update SHOULD NOT change the CDI.
+- **Protecting the CDI is largely out of scope.** §4 puts how the CDI is protected outside the specification, and the §5.3 informative comment warns that a leaked CDI allows replay and impersonation.
+- **Interoperable mixing is not specified.** §4 says the method of combining UDS and measurement is the manufacturer's choice "because it does not affect interoperability", so a verifier cannot recompute a CDI without knowing it.
+- **Source defect.** The §5.3 informative comment cites "DICE Protection Environment (DPE) [3]", but [3] is NIST SP 800-57; DPE is [4].
 - **No attestation protocol.** That is in the other DICE records.
-- **Read scope.** Revision 78 was read whole. In r0.91 §1, the section list and the normative lines of §5 were read, and the rest was not compared. Where a statement above cites revision 78 its presence in r0.91 was not checked line by line.
+- **Read scope.** r0.91 was read whole on 2026-11-04, and all locators above are r0.91's. Revision 78 was read whole earlier and was not re-compared.

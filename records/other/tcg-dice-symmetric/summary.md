@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: tcg-dice-symmetric
 record: tcg-dice-symmetric
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Symmetric Identity Based Device Attestation
@@ -43,12 +43,14 @@ For microcontrollers that can run DICE but not asymmetric cryptography, this rep
 | `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
 | `summary.md` | this document |
 
+**`cites`** holds the held records among §6's references: [1] DICE hardware requirements (revision 78, the line `tcg-dice-hw-requirements` tracks) and [2] Implicit Identity. **No `see_also`.** The three earlier edges had no stated reason; two duplicated `cites` and `tcg-dice-layering` cites this document.
+
 **No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. A `spec` record owes FX-1 when someone extracts it, and no issue owns that yet. No keyword count is given because none has been reconciled.
 
 ## Limits
 
-- **Disagrees in posture with the asymmetric family.** `tcg-dice-implicit-identity` §4 and §7.1.1.2 advise against manufacturers retaining UDS or CDI values, and this document requires the verifier to know the UDS. These are different schemes, so no `contradicts` edge is set, but a deployment cannot have both properties.
+- **Disagrees in posture with the asymmetric family.** `tcg-dice-implicit-identity` §4 and §7.1.1.2 advise against manufacturers retaining UDS or CDI values, and §5.3 here says the verifier needs the device's UDS to compute CDIs for future updates. These are different schemes, so no `contradicts` edge is set, but a deployment cannot have both properties.
 - **Revocation is not addressed** (§5.4 comment).
 - **Single-infrastructure assumption** (§4).
 - **Delegating verification hands over key material**, up to the UDS for firmware-update rights (§5.4 table).
-- **Read scope.** r0.94 was read whole. r0.95 was checked for the statements above by text search and was not compared line by line.
+- **Read scope.** r0.95 was read whole on 2026-11-04, and the locators above are r0.95's. r0.94 was read whole earlier and was not re-compared.

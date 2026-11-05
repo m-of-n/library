@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: aws-snp-attestation
 record: aws-snp-attestation
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Attest an Amazon EC2 instance with AMD SEV-SNP
@@ -30,7 +30,7 @@ This is AWS's procedure for getting and verifying a SEV-SNP report from an EC2 i
 | Cryptography | `none` | None of its own |
 | This project | `adjacent` | A real instance of a cloud TEE's evidence |
 
-- **R-I-02**: the root is AMD's, and the VLEK path adds AWS as a named party. The page shows a verifier choosing to check it, not inheriting it.
+- **Bears on no `DEC-*` or `R-*`.** It is a how-to for one vendor's evidence and says nothing about how a verifier should hold the AMD root beyond fetching it from AMD's KDS at verification time (Step 3, both flows). R-I-02, which an earlier pass cited, needs a statement about trust anchors that this page does not make.
 
 ## Implementations
 
@@ -39,6 +39,10 @@ This is AWS's procedure for getting and verifying a SEV-SNP report from an EC2 i
 | Name | Kind | License | URL |
 |---|---|---|---|
 | snpguest | open source, used by the page | Apache-2.0 | https://github.com/virtee/snpguest |
+
+## Relations
+
+- **`see_also: sev-snp-primer-2026`**: the primer explains what this page leaves implicit, VCEK versus VLEK (§6.3.2), and the verifier duties the page omits: pinning the ARK, checking the CRL, enforcing a minimum TCB and checking REPORT_DATA (§6.8).
 
 ## Artifacts in this record
 
@@ -52,6 +56,7 @@ This is AWS's procedure for getting and verifying a SEV-SNP report from an EC2 i
 ## Limits
 
 - **Proves initial state.** The page's claim is limited to a genuine AMD environment and the initial boot code. `sev-snp-primer-2026` §6.7 gives the wider limits.
-- **A VLEK does not name the chip.** The page calls it issued by AMD for AWS, so the signer is not per chip.
-- **Milan only** is stated as the supported processor model in the note read, which may date.
-- **Read scope.** The page was read as extracted text for the VCEK flow, and by keyword for the VLEK flow.
+- **A VLEK does not name the chip.** The page says only that it is "issued by AMD for AWS". That VLEK certificates carry no CHIP_ID is from `sev-snp-primer-2026` §6.3.2, not from this page.
+- **Milan only** is stated as the supported processor model in the Dedicated Hosts note, which may date. Both flows' KDS URLs are also Milan-specific.
+- **The root is fetched, not pinned.** Step 3 downloads `cert_chain` from `kdsintf.amd.com` and verifies the VCEK or VLEK against it. `sev-snp-primer-2026` §6.8 says the ARK should be pinned because a network adversary could otherwise substitute it. The page also does not check the CRL, a minimum TCB, the measurement value or REPORT_DATA; its Step 4 only checks the signature and that the TCB fields match the certificate.
+- **Read scope.** The whole page was read as extracted text, both flows.
