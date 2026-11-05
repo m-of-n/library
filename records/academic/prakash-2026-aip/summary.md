@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: prakash-2026-aip
 record: prakash-2026-aip
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # AIP: Agent Identity Protocol for Verifiable Delegation Across MCP and A2A

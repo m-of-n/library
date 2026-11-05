@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: csl-json-schema
 record: csl-json-schema
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Citation Style Language — schemas (CSL-JSON)
@@ -44,10 +44,10 @@ The repository holds the schemas for the Citation Style Language: RELAX NG for s
 
 | Name | Kind | License | URL |
 |---|---|---|---|
-| citeproc-js | open source, CSL processor | not checked: GitHub reports NOASSERTION | https://github.com/Juris-M/citeproc-js |
+| citeproc-js | open source, CSL processor | CPAL-1.0 OR AGPL-3.0-or-later (`LICENSE`; the GitHub API reports NOASSERTION) | https://github.com/Juris-M/citeproc-js |
 | citeproc | open source, Haskell, CSL processor | BSD-2-Clause | https://github.com/jgm/citeproc |
 | Citation.js | open source, converter | MIT | https://github.com/citation-js/citation-js |
-| Zotero | open source, reference manager | not checked: GitHub reports NOASSERTION | https://github.com/zotero/zotero |
+| Zotero | open source, reference manager | AGPL-3.0 (`COPYING`; the GitHub API reports NOASSERTION) | https://github.com/zotero/zotero |
 
 ## Artifacts in this record
 

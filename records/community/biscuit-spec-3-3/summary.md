@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: biscuit-spec-3-3
 record: biscuit-spec-3-3
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Biscuit Specification v3.3
@@ -41,7 +41,7 @@ A Biscuit is an append-only list of signed blocks. The authority block grants ri
 
 | Name | Kind | License | URL |
 |---|---|---|---|
-| biscuit-rust | open source, Rust | not reported by the GitHub API | https://github.com/eclipse-biscuit/biscuit-rust |
+| biscuit-rust | open source, Rust | Apache-2.0, from `biscuit-auth/Cargo.toml`. The repo has no root LICENSE file, so the GitHub API reports none | https://github.com/eclipse-biscuit/biscuit-rust |
 | biscuit spec and samples | specification repository with sample tokens | Apache-2.0 | https://github.com/eclipse-biscuit/biscuit |
 
 ## Artifacts in this record
@@ -57,6 +57,6 @@ A Biscuit is an append-only list of signed blocks. The authority block grants ri
 
 - **No identity, no transport, no revocation service.** The spec generates revocation identifiers (block signatures) and leaves the list to the authorizer (Revocation identifiers).
 - **Bearer by default.** The token carries the private key needed to extend it, so possession is the authorization (Cryptography). Holder binding is left to checks.
-- **Datalog needs an engine at every verifier.** `draft-asor-wimse-agent-delegation-chain` §1.1 gives this as its reason for not using Biscuit. Resource limits on evaluation were not found in the sections read.
+- **Datalog needs an engine at every verifier.** `draft-asor-wimse-agent-delegation-chain` §1.1 sets Biscuit aside as a non-IETF wire format, "protocol buffers with an embedded Datalog engine". Resource limits on evaluation were not found in the sections read.
 - **Version 0 signatures are deprecated, and the external form is unsupported.** Implementers need the version 1 payload (Signed payload generation).
 - **Read scope.** Read: Introduction through Grammar, Scopes, Checks, Authorizer, Format, Cryptography through Optional external signature. Not read: expression semantics and opcodes, the symbol table and public key table rules, and the Appending procedure. The sample tokens were not run.

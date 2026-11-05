@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: kitchenham-charters-2007
 record: kitchenham-charters-2007
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Guidelines for performing Systematic Literature Reviews in Software Engineering
@@ -54,6 +54,8 @@ The report adapts systematic review practice from medicine to software engineeri
 |---|---|
 | `record.yaml` | metadata, relations, usefulness verdict |
 | `summary.md` | this document |
+
+**Relations.** None authored here. `wohlin-2014-snowballing` cites this report, and `prisma-2020` authors the `see_also` to it, with the reason.
 
 **No `distilled/`.** A `paper` is outside FX-1's `rfc` / `draft` / `spec` / `ietf` scope and nothing here is built against it, so extraction would only be triggered by someone deciding to add a file there. No PDF is committed.
 

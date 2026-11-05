@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: veski-2026-capmas
 record: veski-2026-capmas
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # CAPMAS: Capability-Based Delegation of Privileges in Multi-Agent Systems

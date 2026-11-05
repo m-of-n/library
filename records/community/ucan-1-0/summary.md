@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: ucan-1-0
 record: ucan-1-0
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # User Controlled Authorization Network (UCAN) Specification v1.0.0
@@ -31,7 +31,7 @@ UCAN is delegable authorization with principals named by DID and no authorizatio
 | This project | `core` | Same principal model, same SPKI ancestry, different choices on DEC-002 and R-O-05 |
 
 - **DEC-004, R-M-08**: path-prefix commands plus predicates, evaluated per invocation. No intersection operator is defined, and the core spec's only rule across a hop is that a delegated capability be equal or narrower (§Authority, §Attenuation).
-- **DEC-002**: DAG-CBOR canonical encoding, in production use, is evidence for option 5.
+- **DEC-002** (accepted, option 5, `ADR-0004`): DAG-CBOR is a restricted deterministic CBOR profile, so it is a neighbour of option 5, but not an endorsement of it. It requires tag 42 for CID links, which option 5's no-tag rule forbids, and it diverges from RFC 8949 §4.2.1 on floats and simple values (`ipld-dag-cbor`). This spec gives no deployment figures.
 - **DEC-003**: `did:key` is the one required DID method (§Cryptosuite).
 - **R-M-12**: Commands are interpreted by the Subject (§Command), which is close to key-relative meaning, though the `/ucan` namespace is globally reserved.
 - **R-O-05** (proposed): **direct conflict.** §Encoding allows presentation in other IPLD forms and conversion for signature validation, so a verifier may canonicalize untrusted input. Our rule forbids exactly that.
@@ -43,7 +43,7 @@ UCAN is delegable authorization with principals named by DID and no authorizatio
 | Name | Kind | License | URL |
 |---|---|---|---|
 | rs-ucan | open source, Rust | Apache-2.0 | https://github.com/ucan-wg/rs-ucan |
-| go-ucan | open source, Go | not an SPDX value in the GitHub API | https://github.com/ucan-wg/go-ucan |
+| go-ucan | open source, Go | Apache-2.0 OR MIT (`LICENSE.md`, the Permissive License Stack; the GitHub API reports NOASSERTION) | https://github.com/ucan-wg/go-ucan |
 
 ## Artifacts in this record
 
