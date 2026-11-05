@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-9068
 record: rfc-9068
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # JSON Web Token (JWT) Profile for OAuth 2.0 Access Tokens
@@ -16,11 +16,11 @@ updated: "2026-11-01"
 | **Published** | 2021-10 |
 | **Identifier** | RFC 9068 · DOI 10.17487/RFC9068 |
 | **Source** | https://www.rfc-editor.org/rfc/rfc9068.txt |
-| **Digest** | `sha256:68d3ff39…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:68d3ff39…` (full value in `record.yaml`), fetched 2026-11-01, re-verified 2026-11-05 |
 
 ## Overview
 
-Many OAuth deployments already used JWT access tokens with similar layouts, and this profile standardizes them (§1). Tokens must be signed, `none` is forbidden, and `typ` must declare the token as `at+jwt` (§2.1). The reason is confusion: without explicit typing, an OpenID Connect ID Token could pass as an access token (§2.1, §5). §4 gives the resource server a validation list covering `typ`, `iss`, `aud`, signature and `exp`. Authorization content stays issuer-asserted: §4 says authorization claims should be used with other context, and leaves how to the implementation.
+Many OAuth deployments already used JWT access tokens with similar layouts, and this profile standardizes them (§1). Tokens must be signed, `none` is forbidden, and `typ` must carry the `application/at+jwt` media type, which should be written `at+jwt` (§2.1). The reason is confusion: without explicit typing, an OpenID Connect ID Token could pass as an access token (§2.1, §5). §4 gives the resource server a validation list covering `typ`, `iss`, `aud`, signature and `exp`. Authorization content stays issuer-asserted: §4 says authorization claims should be used with other context, and leaves how to the implementation.
 
 ## Applicability
 
@@ -54,5 +54,6 @@ Many OAuth deployments already used JWT access tokens with similar layouts, and 
 - **No delegation.** A single issuer signs each token. There is no chain and no holder derivation, which is why `draft-asor-wimse-agent-delegation-chain` adds both.
 - **Any published key can sign.** §5 warns that a resource server has to accept signatures from any key in the issuer's metadata, so compromise of any one is enough.
 - **Authorization checks are out of scope** (§4).
-- **Errata not read.** The search lists 1 entry.
+- **Errata: none verified** (checked 2026-11-05). The one entry, 8802, asked to make `iss` optional in §2.2 and was rejected.
+- **Relations.** No `see_also`. The earlier edge to `rfc-9396` had no stated reason, and neither RFC cites the other; `draft-asor-wimse-agent-delegation-chain` cites both.
 - **Read scope.** §1 (in part), §2.1, §4 and §5 were read. The claim definitions in §2.2, §3 and §6 were not, apart from headings.

@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-6749
 record: rfc-6749
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # The OAuth 2.0 Authorization Framework
@@ -16,7 +16,7 @@ updated: "2026-11-01"
 | **Published** | 2012-10 |
 | **Identifier** | RFC 6749 · DOI 10.17487/RFC6749 |
 | **Source** | https://www.rfc-editor.org/rfc/rfc6749.txt |
-| **Digest** | `sha256:f204fc86…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:f204fc86…` (full value in `record.yaml`), fetched 2026-11-01, re-verified 2026-11-05 |
 
 ## Overview
 
@@ -56,5 +56,6 @@ OAuth 2.0 lets a client obtain limited access to an HTTP service, either for a r
 - **It is a framework.** §1.4 leaves token format and the methods of use to companion specifications. It does not say how a resource server learns what a token permits.
 - **No sender constraint.** §10.3 says it gives the resource server no way to confirm that a presented token was issued to the presenting client. `rfc-9449` and `rfc-7800` respond to this.
 - **Superseded in practice on security.** RFC 9700 updates it. We do not hold RFC 9700, so §1.3.3 and the wider §10 should not be taken as current advice.
-- **Errata not read.** The search lists 31 entries.
+- **Errata: 31 entries, none verified as technical** (checked 2026-11-05). 5 verified, all editorial; 23 reported and 2 held for document update, not assessed here; 1 rejected, 3880 on §10.16.
+- **Relations.** This RFC cites `rfc-6750` (`cites`), and `rfc-9396` cites this RFC, so neither needs a `see_also` edge. RFC 9700, which updates this RFC, is recorded in `content.note` and not as a citation, since this document cannot cite it.
 - **Read scope.** Abstract, §1.1, §1.3.3, §1.4, §3.3 and §10.3 were read, and the §10 headings were listed. Grant flows, endpoints and the rest of §10 were not read, which includes §10.16, which `macaroons-2014` relies on.
