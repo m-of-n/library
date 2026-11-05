@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: brickell-2004-daa
 record: brickell-2004-daa
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-03"
 ---
 
 # Direct Anonymous Attestation
@@ -11,7 +11,7 @@ updated: "2026-11-01"
 |  |  |
 |---|---|
 | **Type** | paper (full version of ACM CCS 2004 paper) |
-| **Maturity** | `white-paper`: an ePrint preprint |
+| **Maturity** | _unset_: an ePrint full version of a peer-reviewed conference paper, so no standards-track level applies |
 | **Authors** | E. Brickell, J. Camenisch, L. Chen |
 | **Published** | 2004-02-11 on the paper; received by ePrint 2004-08-21 |
 | **Identifier** | IACR ePrint 2004/205 |
@@ -20,7 +20,7 @@ updated: "2026-11-01"
 
 ## Overview
 
-DAA lets a TPM prove it is a valid TPM without revealing which one. It is a group signature with no opening: anonymity cannot be revoked (§1). Pseudonyms are chosen per signature, so a user can decide with the verifier whether signatures link, and a TPM whose secret was extracted and published can be detected (abstract, §1). It replaces the Privacy CA, which had to be online for every transaction and could identify a TPM by colluding with a verifier (§1). Security is proved in the random oracle model under strong RSA and DDH (abstract, §1).
+DAA lets a TPM prove it is a valid TPM without revealing which one. It is a group signature with no opening: anonymity cannot be revoked (abstract, §1). For each signature the user, in agreement with the verifier, decides whether it should be linkable to others, through a per-basename pseudonym (abstract, §1; the basename model is §2), and a TPM whose secret was extracted and published can be detected (abstract, §1). It replaces the Privacy CA, which had to be online for every transaction and could identify a TPM by colluding with a verifier (§1). Security is proved in the random oracle model under strong RSA and DDH (abstract, §1).
 
 ## Applicability
 
@@ -31,7 +31,7 @@ DAA lets a TPM prove it is a valid TPM without revealing which one. It is a grou
 | This project | `adjacent` | We name principals by key, the opposite posture, so this marks what that gives up |
 
 - **R-M-02**: identifying a principal solely by key makes every use linkable. DAA is what a design has to adopt if that is unacceptable, and the price is a group-wide issuer.
-- **R-O-02**: rogue tagging here affects only messages signed after a tag in the model (§2), which is a concrete example of the limits of revocation.
+- Not R-O-02. Rogue tagging (§2, §4) is detection of extracted keys by a verifier-held list, not a validity-period or revocation design choice, so it does not inform the short-lived-versus-revocation preference.
 
 ## Implementations
 
@@ -44,6 +44,8 @@ DAA lets a TPM prove it is a valid TPM without revealing which one. It is a grou
 | `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
 | `summary.md` | this document |
 
+**`cites: tcg-tpm-1-2-main`** is the paper's [34], the TPM 1.2 main specification that adopted DAA (§1); the record held is a later revision (rev 116) of the same line. **No `see_also`.** `tcg-tpm-2-0-library-184` already authors `see_also` to this record; the edge is symmetric, so it is not repeated here. The TPM 1.2 link is the `cites` edge above.
+
 **No `distilled/`.** This is the summary bar. A `paper` record is not an FX-1 type, and nothing here needs extraction yet.
 
 ## Limits
@@ -52,4 +54,4 @@ DAA lets a TPM prove it is a valid TPM without revealing which one. It is a grou
 - **The basename policy is not settled.** A fixed ζ gives almost no privacy, and how often to change it is left to risk management (§1).
 - **Parameters are of their time.** The proposal uses a 2048-bit modulus and a 160-bit hash (§4). Nothing here is post-quantum.
 - **Proofs assume corrupted TPMs sit in corrupted hosts** (§2).
-- **Read scope.** Abstract, §1, §2, §3 to §3.3, the security parameters in §4 and §6 were read, from the Archive capture, by text extraction. The protocol steps in §4 and the proofs in §5 were not checked. Mathematical notation extracted imperfectly.
+- **Read scope.** Abstract, §1, §2, §3 to §3.3, the high-level description and security parameters in §4, the theorem statement in §5, and the §6 conclusion were read, from the Archive capture, by text extraction. The protocol steps in §4 and the proofs in §5 were not checked. Mathematical notation extracted imperfectly.

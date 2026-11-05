@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: first-cvss
 record: first-cvss
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # FIRST, Common Vulnerability Scoring System (CVSS)
@@ -16,7 +16,7 @@ updated: "2026-11-01"
 | **Published** | undated page; v4.0 initial release November 2023, as the page states |
 | **Identifier** | https://www.first.org/cvss/ |
 | **Source** | https://www.first.org/cvss/ |
-| **Digest** | `sha256:207702046407…` (full value in `record.yaml`), fetched 2026-11-01; live page |
+| **Digest** | `sha256:207702046407…` (full value in `record.yaml`), fetched 2026-11-01; live page, not reproducible (per-response script nonce, see `content.note`) |
 
 ## Overview
 
@@ -42,6 +42,8 @@ Not applicable and not searched: this is a scoring scheme. The page links FIRST'
 |---|---|
 | `record.yaml` | metadata, relations, usefulness verdict |
 | `summary.md` | this document |
+
+**No `see_also` authored here.** `first-cvss-v3-1` and `first-cvss-v4-0` each author a `see_also` to this record; the edge is symmetric, so it is not repeated.
 
 **No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. A `spec` record owes FX-1 when someone extracts it, and no issue owns that yet. No keyword count is given because none has been reconciled. Extraction belongs on the versioned records, and this one has no specification text of its own to extract.
 

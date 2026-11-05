@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: iso-iec-15408
 record: iso-iec-15408
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # ISO/IEC 15408 (all parts), Evaluation criteria for IT security (Common Criteria)
@@ -43,12 +43,14 @@ Not applicable and not searched: these are evaluation criteria. The CC portal li
 | `record.yaml` | metadata, relations, usefulness verdict |
 | `summary.md` | this document |
 
+**`cites: iso-iec-18045`**: Part 1 clause 2 lists CEM:2022 Revision 1 as a normative reference; ISO/IEC/IEEE 24765, the other non-CC entry there, is not held. **No `see_also`.** The edges to `iso-iec-18045` and `etsi-ts-102-165-1` were dropped on 2026-11-04: the first is this `cites`, and ETSI TS 102 165-1 cites CC:2022 Parts 1 to 3 itself.
+
 **No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. A `spec` record owes FX-1 when someone extracts it, and no issue owns that yet. No keyword count is given because none has been reconciled. The CCMB errata and the CC supporting documents are not held as records.
 
 ## Limits
 
 - **Not the ISO text.** The CCRA publication was read. The Foreword names it as the ISO 2022 parts' counterpart, but no clause-by-clause comparison with ISO's printing was made.
-- **Not the current edition.** ISO's 2022 parts are withdrawn in favour of a 2026 edition, which was not read. Part 1 of 2026 is 138 pages against 167 for CC:2022 Part 1, so the texts differ in at least length, and nothing here should be read as describing 2026. See `content.note`.
+- **Not the current edition.** ISO's 2022 parts are withdrawn in favour of a 2026 edition, which was not read. ISO's catalogue gives Part 1 of 2026 as 138 pages against 142 for the withdrawn 2022 Part 1 (the CCRA printing is 167 pages, so page counts do not compare across publishers), and nothing here should be read as describing 2026. See `content.note`.
 - **Read scope.** Part 1: Foreword, Legal notice, Introduction, Scope, contents and the conformance passages. Part 4: Scope. Part 5: Scope and the EAL1 package overview. Parts 2 and 3: contents only, for the class lists. This is not a section-by-section reading.
 - **Errata.** The CCMB Errata and Interpretation v1.2 of 2025-10-15 (263 pages, sha256 `cb165f54a566…`) was fetched and only its front page read. Its corrections are not reflected here. The transition policy CCMC-2023-04-001 was read on its first page.
 - **What evaluation does not settle.** A certificate speaks only to the claimed properties at the claimed assurance. The Introduction says so itself, and it gives a relying party no statement about any other property.
