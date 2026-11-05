@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-9581
 record: rfc-9581
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Concise Binary Object Representation (CBOR) Tags for Time, Duration, and Period
@@ -31,7 +31,7 @@ RFC 9581 extends CBOR time past tags 0 and 1 with tag 1001, a map holding a base
 | Cryptography | `none` | No cryptography |
 | This project | `adjacent` | Evidence for a decided point, and a design worth comparing |
 
-- **DEC-002**: `ADR-0004`'s profile cannot carry this. It uses tags and allows floats, nested tags 4 and 5, and `null` in periods (§3.1, §3.2, §5), all forbidden natively.
+- **DEC-002**: `ADR-0004`'s profile cannot carry this. It uses tags and allows floats as base time, decimal-fraction and bigfloat content (the unwrapped content of tags 4 and 5), and `null` in periods (§3.1, §3.2, §5). Tags, floats and `null` are all forbidden natively.
 - **R-M-12** (now `ARCH-0002` P1): a CBOR tag plus two further registries for keys and timescales. The elective and critical split is still worth comparing if our own extension points need one.
 - It does not bear on R-M-09: §5 defines a period but no intersection of periods.
 

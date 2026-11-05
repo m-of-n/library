@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-9995
 record: rfc-9995
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # CBOR Object Signing and Encryption (COSE) Hash Envelope
@@ -28,12 +28,13 @@ RFC 9995 makes a digest the payload of a COSE signature, so the signature can be
 | Axis | Rating | Why |
 |---|---|---|
 | Security | `core` | Sound for what it signs. The artifact binding holds only for verifiers that hash the preimage (§5.3) |
-| Cryptography | `adjacent` | Uses COSE signing unchanged. §5.1 only asks for algorithm strength to match |
+| Cryptography | `adjacent` | Uses COSE signing unchanged. §5.1 RECOMMENDS a signature at least as strong as the payload hash, and requires a pre-hash algorithm to be registered and distinguishable |
 | This project | `adjacent` | Direct prior art for R-M-07 under a COSE export |
 
 - **R-M-07**: this meets "bind at least one content digest" under a COSE export, with the algorithm protected. It carries one digest per envelope, so several digests would need several envelopes or a structured payload.
 - **DEC-005**: an input to the COSE_Sign1 option, not a decision. `ADR-0004` keeps COSE an export envelope, and the required tag 18 in §4's CDDL stays at that boundary.
 - **R-I-03**: a candidate export form, subject to the R-I-01 mapping table.
+- **`see_also`**: `rfc-9052`, because §1 starts from its §2 detached payloads and §4.1's signature input is its §4.4 Sig_structure. `rfc-9864`, because §4.1's example uses an identifier that RFC deprecated (see Limits).
 
 ## Implementations
 
@@ -63,7 +64,7 @@ RFC 9995 makes a digest the payload of a COSE signature, so the signature can be
 - **It is not a detached payload.** The digest is usually inline (§4), and verification needs no preimage. `mofn` `research/0001-cbor/report.md` calls this detached-payload digest signing, and this record's old usefulness note did too. It can still be detached like any COSE payload (§4), but what is then detached is the digest.
 - **Its own example uses a deprecated algorithm.** §4.1 signs with ES384 (-35), which `rfc-9864` §4.2.2 deprecated in 2025. The example is informative, so no `contradicts` edge is set. Do not copy it.
 - **The names differ.** §4's CDDL uses `payload_hash_alg`, `payload_preimage_content_type` and `payload_location`. §6 and the IANA registry use `payload-hash-alg`, `preimage-content-type` and `payload-location`.
-- **Loose ends.** §4's example sets the preimage type to `bstr`, which is neither form its CDDL allows. §5.2 scopes in COSE_Sign and COSE_Mac, but the CDDL and the §6 entries describe COSE_Sign1 only. The CDDL also marks `alg` optional.
+- **Loose ends.** §4's prose example sets the preimage type to `bstr`, which is neither a content-format number nor a media-type name, the two forms §3 allows. §5.2 scopes in COSE_Sign and COSE_Mac, but the CDDL and the §6 entries describe COSE_Sign1 only. The CDDL also marks `alg` optional.
 - **No hash-agility or collision guidance beyond §5.1.**
 - **Errata.** Search on 2026-11-01 found none.
 - **Read scope.** Whole RFC from the cached `.txt`.

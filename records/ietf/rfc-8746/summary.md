@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-8746
 record: rfc-8746
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Concise Binary Object Representation (CBOR) Tags for Typed Arrays
@@ -31,12 +31,18 @@ RFC 8746 ships numeric arrays as one byte string under a tag whose bits give int
 | Cryptography | `none` | No cryptography |
 | This project | `adjacent` | Evidence for a decided point: we do not use these tags |
 
-- **DEC-002**: `ADR-0004` forbids tags, and this RFC shows the cost of allowing them. One array has many valid encodings, and RFC 8949 §4.2.1 cannot choose among them (§1).
+- **DEC-002**: `ADR-0004` forbids tags, and this RFC shows the cost of allowing them. One array has many valid encodings, and §1 names none as preferred and leaves the choice to the protocol. Our reading: RFC 8949 §4.2.1 alone therefore cannot pick one.
 - **R-M-12**: now `ARCH-0002` P1, accepted by `ADR-0001`. These are registry numbers, a block of the one-byte tag space that §4 itself calls sizable.
 
 ## Implementations
 
-**Searched 2026-11-01, none found.** GitHub code search for `RFC8746 cbor typed array` returned nothing. A narrow query, so this is not evidence that none exists.
+**Searched 2026-11-01.** GitHub code search for `RFC8746 cbor typed array` returned nothing. A narrow query: mofn's `research/0001-cbor/dimensions/open-source.md` already names cbor-x as implementing RFC 8746, and its README, read 2026-11-05, says so.
+
+| Name | Kind | License | URL |
+|---|---|---|---|
+| cbor-x | open source, JS | MIT | https://github.com/kriszyp/cbor-x |
+
+- **cbor-x**: README claims RFC 8746; which tags it supports was not tested.
 
 ## Artifacts in this record
 

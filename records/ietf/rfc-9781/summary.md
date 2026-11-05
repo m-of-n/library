@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-9781
 record: rfc-9781
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # A Concise Binary Object Representation (CBOR) Tag for Unprotected CBOR Web Token Claims Sets (UCCS)
@@ -21,7 +21,7 @@ updated: "2026-11-01"
 
 ## Overview
 
-RFC 9781 assigns tag 601 to a CWT Claims Set carried without COSE, on the argument that a secure channel can supply what the signature otherwise would (§1, §3). It is scoped hard to RATS: use elsewhere needs its own vetted security discussion, and the secure channel or protocol must define the endpoint roles (§4, §7). Trust ends with the channel, so once a UCCS is out it is ordinary unprotected data, and a forwarder is treated as its origin (§4). Appendix A gives CWT claims the formal CDDL that RFC 8392 lacked.
+RFC 9781 assigns tag 601 to a CWT Claims Set carried without COSE, on the argument that a secure channel can supply what the signature otherwise would (§1, §3). It is scoped hard to RATS: use elsewhere needs its own vetted security discussion, and the secure channel or protocol must define the endpoint roles (§4, §7). Trust ends with the channel, so once a UCCS is out it is ordinary unprotected data, and a forwarder is treated as its origin (§4). Appendix A gives CWT claims the formal CDDL that RFC 8392 lacked (§1.2), which is the reason for the `see_also` to `rfc-8392`.
 
 ## Applicability
 
@@ -51,7 +51,7 @@ RFC 9781 assigns tag 601 to a CWT Claims Set carried without COSE, on the argume
 ## Limits
 
 - **Channel setup and policy are out of scope** (§4). It defines a tag and conditions, not a protocol.
-- **The secure channel is demanding.** §1.1 takes a definition including mutual authentication, integrity and confidentiality. Replay protection is added separately through a nonce claim.
+- **The secure channel is demanding.** §1.1 takes a definition including mutual authentication, integrity and confidentiality. Replay protection, which the definition it quotes includes, is left out of that focus and can be added through a nonce claim.
 - **Not usable outside RATS without new security work** (§4, §7).
 - **Errata.** Search on 2026-11-01 found none.
 - **Read scope.** Whole RFC from the cached `.txt`, including Appendices A to C. References only skimmed.
