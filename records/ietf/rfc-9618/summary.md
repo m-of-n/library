@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-9618
 record: rfc-9618
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Updates to X.509 Policy Validation
@@ -17,7 +17,7 @@ updated: "2026-11-01"
 | **Identifier** | RFC 9618 · DOI 10.17487/RFC9618 |
 | **Source** | https://www.rfc-editor.org/rfc/rfc9618.txt |
 | **Digest** | `sha256:d36535f5…` (full value in `record.yaml`), fetched 2026-11-01 |
-| **Errata** | no errata link in RFC metadata, 2026-11-01 |
+| **Errata** | 1 reported, unverified: Errata ID 9260 (Technical, §3.1), checked 2026-11-04 |
 
 ## Overview
 
@@ -48,6 +48,7 @@ Not searched: this batch is the summary bar and ran no implementation survey.
 
 ## Limits
 
-**Read:** abstract, §1 and §1.1, §3.3, §7, and the section list. §4's graph and §5's replacement text were not read, so §1.1's equivalence claim is taken from the RFC, not checked.
+**Read:** abstract, §1 and §1.1, §3.3, §6, §7, and the section list; the errata page. §4's graph and §5's replacement text were not read, so §1.1's equivalence claim is taken from the RFC, not checked.
 
-- Updates only policy processing. Name constraints have their own cost bugs (`go-nameconstraint-cves`).
+- Updates only policy processing. Name constraints have their own cost bugs (`go-nameconstraint-cves`, CVE-2025-58187); that is the reason for the `see_also` edge.
+- Errata ID 9260 (Reported 2026-11-01, not yet verified by the RFC Editor) says §3.1 lists the RFC 5280 tree-building steps without §6.1.4 steps (a) and (b), where policy mappings act. It concerns §3's description of the old algorithm, not §5's replacement text. Not checked against RFC 5280 here.

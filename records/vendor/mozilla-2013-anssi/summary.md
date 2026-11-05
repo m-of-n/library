@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: mozilla-2013-anssi
 record: mozilla-2013-anssi
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Revoking Trust in one ANSSI Certificate
@@ -11,7 +11,7 @@ updated: "2026-11-01"
 |  |  |
 |---|---|
 | **Type** | web (blog post) |
-| **Maturity** | `informational`: vendor announcement |
+| **Maturity** | unset: a vendor announcement; no body assigns it a standing |
 | **Authors** | Kathleen Wilson |
 | **Published** | 2013-12-09 |
 | **Identifier** | Mozilla Security Blog, 2013-12-09 |
@@ -20,7 +20,7 @@ updated: "2026-11-01"
 
 ## Overview
 
-A subordinate CA of ANSSI, a French government agency operating the IGC/A root, issued an intermediate that was loaded into a man-in-the-middle traffic device and used to generate certificates for domains its owner did not control. Mozilla revoked trust in the subordinate certificate through a certificate store update. ANSSI's root issues certificates for French government sites, yet the intermediate could sign for anyone, and the fix reached users only through a browser update. Google reported it.
+A subordinate CA of ANSSI, a French government agency operating the IGC/A root, issued an intermediate that was loaded into a man-in-the-middle traffic device and used to generate certificates for domains its owner did not control. Mozilla revoked trust in the subordinate CA certificate through a Firefox certificate store update (Firefox 26 and 24 ESR), and the CA revoked the intermediate it had issued. ANSSI's IGC/A root issues certificates for French government websites, yet the intermediate let its holder act as a MITM for sites it did not own or control, and Mozilla's remedy for users was to upgrade the browser. Google reported it.
 
 ## Applicability
 
@@ -31,6 +31,11 @@ A subordinate CA of ANSSI, a French government agency operating the IGC/A root, 
 | This project | `adjacent` | evidence for R-M-03 |
 
 - **R-M-03**: a CA whose legitimate scope was one government's sites held power over every name.
+
+## Relations
+
+- `see_also: langley-2014-revchecking`: Langley names ANSSI as one of the incidents Chrome's CRLSet was used to react to; this post is Mozilla's response to the same incident by certificate store update. Together they show both browsers handling it by pushed local data, not by online revocation checking.
+- `mozilla-2013-turktrust` carries the edge between the two Mozilla posts; it was authored on both sides and is now kept only there.
 
 ## Implementations
 

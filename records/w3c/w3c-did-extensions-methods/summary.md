@@ -15,7 +15,7 @@ updated: "2026-11-01"
 | **Authors** | Manu Sporny, Markus Sabadello |
 | **Published** | 2026-10-01 |
 | **Identifier** | W3C NOTE-did-extensions-methods-20261001 |
-| **Source** | https://www.w3.org/TR/did-extensions-methods/ |
+| **Source** | https://www.w3.org/TR/2026/NOTE-did-extensions-methods-20261001/ (latest: https://www.w3.org/TR/did-extensions-methods/) |
 | **Digest** | `sha256:300cb710…` (full value in `record.yaml`), fetched 2026-11-01 |
 
 ## Overview
@@ -30,7 +30,7 @@ This W3C Group Note lists known DID methods, with 274 rows in the 2026-10-01 ver
 | Cryptography | `none` | no direct bearing |
 | This project | `core` | direct evidence on who allocates identifiers |
 
-- **R-M-12** (proposed in ARCH-0001-PROPOSAL v0.2.0; extension points are key-relative): the registry shows the global-name pattern re-forming one level up, which is the argument of ARCH-0002 P1.
+- **R-M-12** (extension points are key-relative; accepted by ADR-0001 and relocated to ARCH-0002 P1): the registry shows the global-name pattern re-forming one level up, which is the argument of ARCH-0002 P1.
 
 ## Implementations
 
@@ -50,4 +50,6 @@ This W3C Group Note lists known DID methods, with 274 rows in the 2026-10-01 ver
 **Read:** header, status section, the description of the registration process, and a row count of the table (274, from the HTML). The entries themselves were not read, and the process it points to was not followed.
 
 - Whether method names are enforced as unique was not established. A registry is social; the URI scheme does not stop two parties using one name. That reading is ours.
+- A newer Note (2026-11-03) was published after this was read; its changes were not examined.
+- `see_also`: `w3c-did-1-1` defines the `did:<method>:` syntax whose method names this registry lists. The `did-key-method` and `w3c-did-core` edges are authored on those records.
 - Listing is not review, so the count says nothing about quality or use.

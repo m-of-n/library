@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: mozilla-2013-turktrust
 record: mozilla-2013-turktrust
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Revoking Trust in Two TurkTrust Certificates
@@ -11,8 +11,8 @@ updated: "2026-11-01"
 |  |  |
 |---|---|
 | **Type** | web (blog post) |
-| **Maturity** | `informational`: vendor announcement |
-| **Authors** | Michael Coates |
+| **Maturity** | unset: a vendor announcement; no body assigns it a standing |
+| **Authors** | Michael Coates (signs the post; the byline reads "mozilla") |
 | **Published** | 2013-01-03 |
 | **Identifier** | Mozilla Security Blog, 2013-01-03 |
 | **Source** | https://blog.mozilla.org/security/2013/01/03/revoking-trust-in-two-turktrust-certficates/ |
@@ -32,6 +32,11 @@ TURKTRUST mis-issued two intermediate certificates to customers, and at least on
 
 - **R-M-03**: a certificate's power came from who issued it, not from any relation to the names it signed.
 
+## Relations
+
+- `see_also: mozilla-2013-anssi`: the same mechanism eleven months later: an intermediate chaining to an included root, placed in a MITM traffic-management device for names its holder did not own, reported by Google, and handled by Mozilla revoking trust in a certificate store update.
+- The earlier `see_also` to `foxit-2012-black-tulip` was removed on 2026-11-04: it had no stated reason, and DigiNotar was a compromise, not a mis-issuance; both already meet through `bears_on: R-M-03`.
+
 ## Implementations
 
 Not applicable.
@@ -50,5 +55,5 @@ Not applicable.
 **Read:** post and update whole, comments skimmed.
 
 - **R-001 §4.8 says TURKTRUST was "again caught by Chrome pinning". This post does not say that.** It says only that the issue was reported by Google. The claim needs another source.
-- Technical details are in a newsgroup thread that was not read.
+- Further action on the CA was referred to the mozilla.dev.security.policy forum; that discussion was not read.
 - The count of two rests on TURKTRUST's own review of its records.

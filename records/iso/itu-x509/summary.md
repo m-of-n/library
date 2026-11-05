@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: itu-x509
 record: itu-x509
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # ITU-T X.509: The Directory - Public-key and attribute certificate frameworks
@@ -14,7 +14,7 @@ updated: "2026-11-01"
 | **Maturity** | `standard`: ITU-T Recommendation, in force per the ITU page 2026-11-01 |
 | **Authors** | ITU-T Study Group 17 |
 | **Published** | 2019-10-14 |
-| **Identifier** | ITU-T X.509 (10/2019) | ISO/IEC 9594-8:2020 |
+| **Identifier** | ITU-T X.509 (10/2019) · ISO/IEC 9594-8:2020 |
 | **Source** | ITU free PDF (base text only) |
 | **Digest** | `sha256:1f4ea293…` (full value in `record.yaml`), fetched 2026-11-01 |
 
@@ -50,4 +50,5 @@ Not searched: this batch is the summary bar and ran no implementation survey.
 **Read:** front matter and summary, §7.11, §8, §9.4.2.2, the opening of Annex I.3. A 236-page standard, not read through: everything else was seen only in the contents list or by keyword.
 
 - **Corrigenda and Amd. 1 are unread.** Do not assume this text is current for any clause. RFC 9608 says Cor. 2 extended `noRevAvail` to public-key certificates, which the base text here does not do.
-- **Disagrees with PKIX on criticality:** §9.4.2.2 permits non-critical where `rfc-5280` requires critical. The Forum's exception (`cabforum-tls-br`) departs from RFC 5280, not from X.509.
+- **Looser than PKIX on criticality:** §9.4.2.2 lets the CA mark name constraints non-critical, recommending critical; `rfc-5280` narrows that to critical. A profile narrowing an option is not a contradiction, so no `contradicts` edge. The Forum's exception (`cabforum-tls-br`) departs from RFC 5280, not from X.509.
+- `see_also`: `itu-x509-1988` is the first edition of this line, kept as its own record for the naming premise in its §6.3; `rfc-5280` is the PKIX profile of this text. The `rfc-9608` edge is authored on that record.
