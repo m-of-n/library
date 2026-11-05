@@ -3,52 +3,75 @@ schema: "library-summary/v1"
 id: sp-1800-38
 record: sp-1800-38
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-03"
 ---
 
 # SP 1800-38: Migration to Post-Quantum Cryptography
 
 |  |  |
 |---|---|
-| **Type** | spec (NIST SP 1800-series practice guide, three volumes) |
-| **Maturity** | `draft`: all volumes are marked PRELIMINARY DRAFT |
-| **Authors** | W. Newhouse, M. Souppaya (NIST), W. Barker, C. Brown and consortium authors; full list in `record.yaml` |
-| **Published** | Volume A April 2023; Volumes B and C December 2023 |
-| **Identifier** | NIST SP 1800-38A, -38B, -38C |
-| **Source** | https://csrc.nist.gov/pubs/sp/1800/38/iprd-(1) |
-| **Digest** | `sha256:53474286…` for Volume C. A and B in `content.note`. Fetched 2026-11-01 |
+| **Type** | spec (NIST SP 1800-series practice guide, NCCoE), multi-volume |
+| **Maturity** | `draft`: every volume is a "Preliminary Draft" (CSRC, checked 2026-11-03). No final exists |
+| **Authors** | W. Newhouse, M. Souppaya (NIST), W. Barker (Dakota Consulting), C. Brown (MITRE). Vols B and C add consortium authors |
+| **Published** | Vol A 2023-04-24 (updated 2023-05-02). Vols B and C December 2023 (comments closed 2024-02-20) |
+| **Identifier** | NIST SP 1800-38A, 1800-38B, 1800-38C (preliminary drafts) |
+| **Source** | https://www.nccoe.nist.gov/sites/default/files/2023-04/pqc-migration-nist-sp-1800-38a-preliminary-draft.pdf |
+| **Digest** | `sha256:b0654d3a…` (Volume A. Full value, plus the B and C digests, in `record.yaml`), fetched 2026-11-03 |
+
+## What was read, exactly
+
+The record URL is CSRC `…/sp/1800/38/iprd`, the April 2023 landing page for **Volume A: Executive Summary** (5 pp.). CSRC says that page was *"Obsoleted on December 19, 2023"* by `…/iprd-(1)`, which carries three PDFs: the **same** Volume A file, **Volume B** *"Quantum Readiness: Cryptographic Discovery"* (Approach, Architecture, and Security Characteristics of Public Key Application Discovery Tools, 68 pp.), and **Volume C** *"Quantum Readiness: Testing Draft Standards"* (Quantum-Resistant Cryptography Technology Interoperability and Performance Report). The digest is of Volume A. Volume A was read in full. Volume C was read at §3, §8, §10 and Appendix C. Volume B was read only to the TOC and front matter. No later version was found (see `record.yaml` note). A 2025 NCCoE slide deck surfaced by search speaks of consolidating the volumes into one SP 1800-38 on pages.nist.gov. We could not confirm that this happened.
 
 ## Overview
 
-An NCCoE consortium project with two workstreams. Volume B demonstrates cryptographic discovery: a test plan, use case and architecture for tools that build the inventory a migration needs. Volume A notes that organizations are often unaware of how far their dependence on public-key cryptography reaches. Volume C tests interoperability and performance of pre-standard Kyber and Dilithium in SSH, TLS, QUIC, X.509 and HSMs. Its findings are operational: draft churn and codepoints break interop (C §6.4), and negotiation can land on plain classical key exchange (C §6.4). In its TLS tests, handshake impact was small (C §6.3). It also has a useful taxonomy of X.509 hybrid formats: concatenated, bound, composite, Catalyst, Chameleon (C §8.1.2).
+The guide does not set policy. It is an NCCoE consortium project of about 20 vendors plus NSA (Vol A, "Collaborators"), with two workstreams. The first is **discovery**: tools that find where quantum-vulnerable public-key cryptography is used, in CI/CD pipelines, network traffic and end-host libraries, and feed that into risk-based prioritisation (Vol A "Solution", Vol B). The second is **interoperability and performance testing** of the then-draft algorithms in TLS 1.3, SSH, QUIC, X.509 and HSMs (Vol A "Outcome", Vol C). The argument is that migration is bottlenecked on inventory and interoperability, not on algorithms. The new algorithms *"will likely not be drop-in replacements"* (Vol A "Challenge"). Vol C's headline is that core TLS/SSH integration was largely unproblematic: it gives *"confidence that migrating to the new PQC standards will be straightforward for most implementations"* (Vol C §10).
+
+## Answer to the topic question
+
+*Which attestation systems have a stated post-quantum path, and which have a gap?* The guide contributes three things.
+
+1. **X.509 has many candidate paths and no settled one** (Vol C §8). It tested pure-PQC certificates and several hybrid formats (§8.1.2). Its lessons list interest in composite keys and signatures, Chameleon delta certificates, RelatedCertificate, Catalyst alt-signature extensions, and SIA discovery (§8.4). That is evidence of plurality, not of a path.
+2. **Firmware and code signing, where attestation roots live, was out of scope.** Vol C §3.3: *"The participants also chose to exclude firmware signing and IoT uses"*. The volume that tests interoperability is silent on the attestation-heavy cases.
+3. **Signing whole messages versus pre-hashing** (Vol C Appendix C). Dilithium, Falcon and SPHINCS+ (the pre-FIPS forms Vol C tested) bind the digest step to the key operation, so the hash-then-sign split of RSA/ECDSA no longer exists. The appendix finds that *"most use-cases can leverage post-quantum signatures as they are without pre-digesting"*, and that pre-digesting remains possible *"for uses which can offer a protocol-level signature envelope"*. It also notes PKCS#11 streaming problems for Falcon and SPHINCS+ (C.5.1) and the large-message case for firmware and documents (C.5.2). This is directly relevant to statement formats, which already sign an envelope containing a content digest.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | `adjacent` | Migration practice, not a security analysis |
-| Cryptography | `adjacent` | Measures algorithms, specifies none |
-| This project | `none` | About enterprise inventory and network protocols. We are not an enterprise migration |
+| Security | `adjacent` | Inventory methodology and interop findings, with no threat analysis beyond HNDL framing |
+| Cryptography | `adjacent` | Tests draft-era algorithms (CRYSTALS-Dilithium, Falcon, SPHINCS+, Kyber; Vol C §3.1), not the FIPS versions |
+| This project | `adjacent` | Appendix C bears on what our signer feeds to the signature primitive |
 
-It bears on no open `DEC-*` or `R-*`. Two lessons are worth carrying into any later identifier work: OIDs that reference a specification version are critical while specifications change (C §8.4), and ASN.1 encodings of keys differed between specifications (C §8.4). R-I-05 would need to account for the hybrid formats of C §8.1.2 if X.509 import ever meets one, but this record claims no bearing today.
+- **R-O-05**, proposed in mofn `spec/ARCH-0001-PROPOSAL-v0.2.0.md` §6, not yet in ARCH-0001 (signed payload is the canonical encoding verbatim, with an authenticated type indicator). Vol C Appendix C's finding, that PQ signatures should take the whole message and pre-hashing belongs in a protocol envelope, is consistent with signing canonical bytes directly. It is also a caution: if a native statement is large (an embedded SBOM, say), R-O-05 plus ML-DSA means the signer must stream the whole payload. That is fine for ML-DSA, where tr is known up front, and harder for SLH-DSA (two passes; C.5.1). Our reading, not the guide's.
+- It bears on no `DEC-*`.
+
+**Relations.** `see_also` edges are named by the source: FIPS 203/204/205 and SP 800-208 (Vol C §3.1), the composite-signature draft (one of the X.509 formats tested, Vol C §8.1.2.4), and `nistir-8547` as the source of the dates this guide does not set.
 
 ## Implementations
 
-Not searched. Volume C names consortium stacks (OQS-OpenSSL, s2n-tls, Samsung SDS PQC-TLS) tested in 2023 against pre-standard algorithms, and they should not be assumed current.
+**Searched 2026-11-03.** The guide is itself the record of implementations tested. Vol C §4 lists the collaborators' products. They were 2023 draft-algorithm builds, and NIST disclaims endorsement.
+
+| Name | Kind | License | URL |
+|---|---|---|---|
+| liboqs / oqs-provider | open source, C | MIT | https://github.com/open-quantum-safe/liboqs |
+| wolfSSL | open source / commercial, C | GPL-3.0 or commercial | https://www.wolfssl.com/ |
+| Vol C HSM and toolkit collaborators (Crypto4A, CryptoNext, Entrust, Thales, Utimaco, …) | commercial | — | https://csrc.nist.gov/pubs/sp/1800/38/iprd-(1) |
+
+Vol B's discovery tools are commercial collaborator products. Vol B was not read far enough to list them.
 
 ## Artifacts in this record
 
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `record.yaml` | metadata. The digest note says which volumes and versions were fetched, with all three digests |
 | `summary.md` | this document |
 
-**No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. As a preliminary draft of a practice guide it is a poor extraction target, and no issue owns that work. Extract only if a final appears.
+**No `distilled/`, and FX-1 extraction is not claimed.** This is a `spec`-typed record at the summary bar. It is a practice guide with no BCP 14 requirements. An FX-1 pass would mostly be N/A pointers plus Vol C's test matrices, and should wait for a final volume set. No issue owns it. **One record for three volumes** is deliberate, because CSRC publishes them under one SP number and one landing page. If a final is issued per volume, splitting is a judgement for then. The `.cache/` copies (`sp-1800-38.pdf` = Vol A, `sp-1800-38b.pdf`, `sp-1800-38c.pdf`) are local and gitignored.
 
 ## Limits
 
-- **Pre-standard.** All results use Kyber and Dilithium drafts, not FIPS 203 or 204. Numbers do not carry over.
-- **Preliminary and incomplete.** Volume B says outright that there are gaps and that the document is incomplete. This record may lag: we read only what the CSRC pages list.
-- **No signed-artifact coverage.** Nothing here tests attestation or code signing formats.
-- **The title-page URL did not work for us.** The NCCoE page returned 403, so project updates there are unseen.
-- **Read scope.** Volume A in full. Volume B §1 only. Volume C §1, §2, the §6.4 and §8.4 lessons and §8.1.2's composite format. The rest of B, the SSH, QUIC and HSM sections, and the C §6.3 tables were sampled, not read.
+- **Preliminary and dated.** Every result predates FIPS 203/204/205 (August 2024). Vol C §3.1 tests the *submissions*, which `cnsa-2-0` (FAQ v2.2 p. 11) explicitly says are not the same as the standards.
+- **Vol B was not read** beyond its front matter. Any claim about discovery tooling here comes from Vol A's description.
+- **Mislabel in the source (minor).** Vol C §3.2 says *"the collaborators explored the topic of stateful hash-based signatures in Appendix C"*, but Appendix C is "Hash and Sign Analysis" and is about pre-hashing. Stateful HBS appear there only in a note that the analysis also applies to them (C.1, citing RFC 8554 and RFC 8391). The sentence that follows in §3.2 describes the actual content.
+- **No firmware, IoT, TLS 1.2 or IKEv2 testing** (Vol C §3.3), so it says nothing about the slowest-to-migrate verifiers.
+- **Not a mandate.** NCCoE practice guides carry no statutory authority. Dates and requirements come from `nistir-8547` and `cnsa-2-0`.
