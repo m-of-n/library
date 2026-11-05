@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-3339
 record: rfc-3339
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Date and Time on the Internet: Timestamps
@@ -16,11 +16,11 @@ updated: "2026-11-01"
 | **Published** | 2002-07 |
 | **Identifier** | RFC 3339 · DOI 10.17487/RFC3339 |
 | **Source** | https://www.rfc-editor.org/rfc/rfc3339.txt |
-| **Digest** | `sha256:9ab2b886…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:9ab2b886…` (full value in `record.yaml`), fetched 2026-11-01, rechecked 2026-11-04 |
 
 ## Overview
 
-RFC 3339 profiles ISO 8601 into one timestamp form for Internet protocols, on the view that the full ISO grammar is too complex and that most fields should be mandatory (§5.5). A timestamp names an instant, and every time has a stated relationship to UTC: intervals are out of scope (§1). The design values sortability (§5.1), no redundant fields (§5.4) and at most one rarely used option, fractional seconds (§5.3). It separates an offset of `-00:00`, meaning UTC is known but the local offset is not, from `Z` and `+00:00` (§4.3).
+RFC 3339 profiles ISO 8601 into one timestamp form for Internet protocols, on the view that the full ISO grammar is too complex and that most fields should be mandatory (§5.5). A timestamp names an instant, and every time has a stated relationship to UTC: intervals are out of scope (§1). The design values sortability (§5.1), no redundant fields (§5.4) and only one rarely used option, fractional seconds (§5.3). As published, it separates an offset of `-00:00`, meaning UTC is known but the local offset is not, from `Z` and `+00:00` (§4.3); RFC 9557 §2.2 has since rewritten §4.3 so that `Z` carries the unknown-offset meaning and only `+00:00` keeps the UTC-preferred one.
 
 ## Applicability
 
@@ -34,13 +34,18 @@ RFC 3339 profiles ISO 8601 into one timestamp form for Internet protocols, on th
 
 It is held because `draft-ietf-vcon-vcon-core-04` §2.2 defines its Date type by it. That draft reaches it through `rfc-8620` §1.4, which is stricter: no zero fractional part and uppercase letters. So vCon's Date is a narrower form than RFC 3339 alone, and a reader should check `rfc-8620`.
 
+## Relations
+
+- `see_also: draft-ietf-vcon-vcon-core-04`: that draft's §2.2 defines its Date type by this RFC, through `rfc-8620` §1.4. The edge is authored only here.
+- The `rfc-8620` edge is authored on `rfc-8620`, whose §1.4 profiles this RFC's `date-time`. It is not repeated here.
+
 ## Implementations
 
 **Searched 2026-11-01.** Only the one project below was checked. This was not a survey.
 
 | Name | Kind | License | URL |
 |---|---|---|---|
-| chrono | open source, Rust | see repo: GitHub reports no SPDX id | https://github.com/chronotope/chrono |
+| chrono | open source, Rust | MIT OR Apache-2.0 (per README and `LICENSE.txt`; GitHub's detector reports `NOASSERTION`) | https://github.com/chronotope/chrono |
 
 ## Artifacts in this record
 
@@ -54,8 +59,8 @@ It is held because `draft-ietf-vcon-vcon-core-04` §2.2 defines its Date type by
 ## Limits
 
 - **It does not give one byte form per instant.** Offsets, optional fractions and lowercase `t` and `z` (§5.6) all give different strings for one instant, and §5.1 says string sorting needs the same zone and the same fraction width. It is no canonical form.
-- **It is not current on its own.** RFC 9557 updates it and is not held here, so its effect on §4.3 was not assessed.
+- **It is not current on its own.** RFC 9557 updates it and is not held here. Its §2.2 replaces the text of §4.3 (checked 2026-11-04 against the RFC Editor `.txt`); the rest of RFC 9557, its IXDTF suffix syntax, was not assessed.
 - **Its leap-second table stops at 1998** (Appendix D). The live source must be consulted.
 - **§5.6 allows a space for `T` only in a note.** The ABNF does not allow it, so parsers may reasonably differ.
-- **Errata.** `errata.json` retrieved 2026-11-01 lists 4 verified and 3 held. Their text was not reviewed.
+- **Errata.** `errata.json` retrieved 2026-11-01, recounted 2026-11-04, lists 4 verified and 3 held for document update. Their text was not reviewed.
 - **Read scope.** Whole document, from the RFC Editor `.txt`.

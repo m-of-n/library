@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: ietf-vcon-wg
 record: ietf-vcon-wg
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # IETF Virtualized Conversations (vcon) Working Group
@@ -16,7 +16,7 @@ updated: "2026-11-01"
 | **Published** | _not established (see Limits)_ |
 | **Identifier** | vcon · charter-ietf-vcon-01 |
 | **Source** | https://datatracker.ietf.org/wg/vcon/about/ |
-| **Digest** | `sha256:c8b1c1a4…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:c8b1c1a4…` (full value in `record.yaml`), fetched 2026-11-01; the page is generated and the digest drifts, see `record.yaml` note. Charter text rechecked 2026-11-04 |
 
 ## Overview
 
@@ -52,6 +52,6 @@ The vcon WG exists to standardise a container for conversational data, between t
 
 - **The charter is not the output.** It records intent, and the milestones below show it has been overtaken.
 - **Milestones are stale.** The page lists draft submissions to the IESG for Jun 2024. Later status was not established beyond the revisions below.
-- **Core has moved.** Datatracker shows `draft-ietf-vcon-vcon-core` at -05, dated 2026-10-31. This library holds -04, and that revision is a matter for a separate batch.
+- **Core has moved.** Datatracker shows `draft-ietf-vcon-vcon-core` at -05, dated 2026-10-31 (rechecked 2026-11-04). This library holds -04, and that revision is a matter for a separate batch.
 - **The charter's date is unknown.** Datatracker's document timestamp for charter-ietf-vcon is 2026-03-18, but whether that is the approval date was not established, so `date` stays empty.
 - **Read scope.** The whole About page as served 2026-11-01, including charter, personnel and milestones. The WG's mailing list, meetings and document list were not read.
