@@ -3,20 +3,20 @@ schema: "library-summary/v1"
 id: psscrm-v1
 record: psscrm-v1
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Proactive Software Supply Chain Risk Management Framework (P-SSCRM) Version 1
 
 |  |  |
 |---|---|
-| **Type** | paper (framework, arXiv preprint, "will not be submitted to a conference") |
+| **Type** | paper (framework, arXiv preprint; the arXiv comment says it "will not be submitted to a conference") |
 | **Maturity** | `white-paper`: authors' framework, no standards body |
 | **Authors** | Laurie Williams, Sammy Migues, Jamie Boote, Ben Hutchison |
 | **Published** | Version 1.01, 28 April 2025. First submitted 18 April 2024 |
 | **Identifier** | arXiv:2404.12300 |
 | **Source** | https://arxiv.org/pdf/2404.12300v4 |
-| **Digest** | `sha256:751228a9…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:751228a9…` (full value in `record.yaml`), fetched 2026-11-01, rechecked 2026-11-04 |
 
 ## Overview
 
@@ -28,9 +28,13 @@ P-SSCRM unifies ten government and industry frameworks with observations from ni
 |---|---|---|
 | Security | `adjacent` | Programme-level task model, not a mechanism |
 | Cryptography | `none` | No cryptographic content |
-| This project | `adjacent` | The task mapping the sponsor asked for in the final report |
+| This project | `adjacent` | PROC-0004 lists a task mapping against it in the final report |
 
-It bears on no open `DEC-*` or `R-*`. It is a reporting obligation: mofn PROC-0004 and the project plan name a P-SSCRM task mapping for the final report. G.1.3 (produce attestation, naming in-toto) and G.1.4 (deliver provenance) are the tasks nearest to what mofn builds. The `uptake-failure` topic is a loose fit, because this document says nothing on why SPKI or PICS failed.
+It bears on no open `DEC-*` or `R-*`. It is a reporting obligation: mofn PROC-0004 §10 lists a "P-SSCRM task mapping" in the final report; PLAN-0001 only lists the paper among its references. G.1.3 (produce attestation, naming in-toto) and G.1.4 (deliver provenance) are the tasks nearest to what mofn builds. The `uptake-failure` topic is a loose fit, because this document says nothing on why SPKI or PICS failed.
+
+## Relations
+
+- `see_also: eo-14028` and `see_also: cisa-ssdf-attestation-form-2024`: two of the ten frameworks Table 1 maps, the EO and the self-attestation form, each absorbed whole (42 of 42 and 29 of 29 tasks).
 
 ## Implementations
 

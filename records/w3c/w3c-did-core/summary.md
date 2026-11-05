@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: w3c-did-core
 record: w3c-did-core
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Decentralized Identifiers (DIDs) v1.0
@@ -16,11 +16,11 @@ updated: "2026-11-01"
 | **Published** | 2022-07-19 |
 | **Identifier** | REC-did-core-20220719 |
 | **Source** | https://www.w3.org/TR/2022/REC-did-core-20220719/ |
-| **Digest** | `sha256:5e443457…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:5e443457…` (full value in `record.yaml`), fetched 2026-11-01, rechecked 2026-11-04 |
 
 ## Overview
 
-DID Core defines an identifier that resolves to a document of verification methods and services, designed so that a controller can prove control without permission from any other party (Abstract, §9.16). The core specifies the syntax, data model and representations. Everything that makes a DID work, such as how it is created, resolved, updated and deactivated, is delegated to separate DID method specifications (§8). Purposes of a key are explicit verification relationships, such as `authentication` and `assertionMethod`, and a verifier must check the method used is in the right one (§5.3). The price is plain in §9.10: uniqueness without central authority costs memorability, which §9.10 sets out as Zooko's Triangle.
+DID Core defines an identifier that resolves to a document of verification methods and services, designed so that a controller can prove control without permission from any other party (Abstract, §9.16). The core specifies the syntax, data model and representations. Everything that makes a DID work, such as how it is created, resolved, updated and deactivated, is delegated to separate DID method specifications (§8). Purposes of a key are explicit verification relationships, such as `authentication` and `assertionMethod`, and §5.3 leaves it to the verifier to check that the method used is in the right one. The price is plain in §9.10: uniqueness without central authority costs memorability, which §9.10 sets out as Zooko's Triangle.
 
 ## Applicability
 
@@ -31,10 +31,16 @@ DID Core defines an identifier that resolves to a document of verification metho
 | This project | `adjacent` | DEC-003, closed: `did:key` was rejected. R-M-12: a contrast, since extension names go to a registry |
 
 - **DEC-003** (accepted 2026-10-25, ADR-0005): `did:key` was rejected because its key type is named by a multicodec code from an outside registry. Note that the objection is to that method, not to DID Core, and `did:key` is not defined here.
-- **R-M-12** (proposed): §4.1 routes extensions to the DID Specification Registries. That is registry-mediated extension, which R-M-12's native model excludes. It is a contrast and a mapping concern at the boundary, not a model to copy.
+- **R-M-12** (accepted by `ADR-0001`, now `ARCH-0002` P1): §4.1 RECOMMENDS that extensions use the DID Specification Registries, calls that the only specified mechanism that ensures two representations work together, and lets representations define other mechanisms. Registry-mediated extension as the interoperable default is what R-M-12's native model excludes. It is a contrast and a mapping concern at the boundary, not a model to copy.
 - **R-M-02 is not listed.** A DID is an indirection that resolves to keys, so it is not a principal identified solely by key.
 
 It is held in this topic because `draft-ietf-vcon-vcon-core-04` §4.2.6 lets a party carry a `did`, so the same party can be named by DID, tel and mailto. Of these only a DID is designed for proof of control, and in §4.2.6 as read here that draft does not require anyone to perform that proof.
+
+## Relations
+
+- `see_also: w3c-did-1-1`: the v1.1 revision of this document, still a Candidate Recommendation Snapshot, so no `supersedes` yet. `w3c-did-1-1` points here instead of repeating the edge.
+- `see_also: w3c-did-extensions-methods`: the current list of DID methods. §8 delegates everything that makes a DID work to methods, and §8.1 asks method specifications to register to avoid name conflicts. That Note is the list of known methods; how it relates to the DID Specification Registries named in §8.1 was not checked. Authored only here.
+- `see_also: draft-ietf-vcon-vcon-core-04`: that draft cites this document as `[DID]` for the party `did` parameter (§4.2.6). Authored only here.
 
 ## Implementations
 
@@ -43,7 +49,7 @@ It is held in this topic because `draft-ietf-vcon-vcon-core-04` §4.2.6 lets a p
 | Name | Kind | License | URL |
 |---|---|---|---|
 | Universal Resolver | open source, resolver | Apache-2.0 | https://github.com/decentralized-identity/universal-resolver |
-| DID Test Suite | open source, conformance | see repo: GitHub reports no SPDX id | https://github.com/w3c/did-test-suite |
+| DID Test Suite | open source, conformance | W3C Document License (per `LICENSE.md`; GitHub reports `NOASSERTION`) | https://github.com/w3c/did-test-suite |
 
 ## Artifacts in this record
 

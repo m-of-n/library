@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-3966
 record: rfc-3966
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # The tel URI for Telephone Numbers
@@ -16,7 +16,7 @@ updated: "2026-11-01"
 | **Published** | 2004-12 |
 | **Identifier** | RFC 3966 · DOI 10.17487/RFC3966 |
 | **Source** | https://www.rfc-editor.org/rfc/rfc3966.txt |
-| **Digest** | `sha256:38d9aeec…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:38d9aeec…` (full value in `record.yaml`), fetched 2026-11-01, rechecked 2026-11-04 |
 
 ## Overview
 
@@ -26,13 +26,17 @@ RFC 3966 defines the `tel` URI as an identifier for a telephone number and not a
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | `adjacent` | §11: calls need explicit consent, and a number is personal data |
+| Security | `adjacent` | §11 bars web clients and similar tools from placing calls without the user's explicit consent, and notes a `tel` URI may reveal private information |
 | Cryptography | `none` | No cryptographic content |
 | This project | `none` | Bears on no `DEC-*` or `R-*` |
 
 **Bears on no `DEC-*` or `R-*`.** It is held because `draft-ietf-vcon-vcon-core-04` §4.2.1 uses it for the party `tel` parameter, where the requirement is only a SHOULD.
 
 There is a loose parallel worth a line: `phone-context` makes a local name global by scoping it to a namespace an owner controls, and §5.1.5 notes the recipient need not understand the descriptor to use the pair as an identifier. It is a parallel to key-relative naming, not evidence for it.
+
+## Relations
+
+- `see_also: draft-ietf-vcon-vcon-core-04`: that draft cites this RFC as `[TEL]` for the party `tel` parameter (§4.2.1). The edge is authored only here.
 
 ## Implementations
 
@@ -56,5 +60,5 @@ There is a loose parallel worth a line: `phone-context` makes a local name globa
 - **A `tel` URI proves nothing about who holds the number.** It is a name only (§1), and §5.1.5 says a global number need not be reachable from everywhere. Binding a person to a number is a different problem. vCon's `tel` inherits that.
 - **Equivalence takes work.** §4 strips visual separators and compares case-insensitively, so byte equality is not URI equality.
 - **RFC 5341 updates it** and is not held. Its effect was not assessed.
-- **Errata.** `errata.json` retrieved 2026-11-01 lists 2 verified and 2 held. Their text was not reviewed.
+- **Errata.** `errata.json` retrieved 2026-11-01, recounted 2026-11-04, lists 2 verified and 2 held for document update. Their text was not reviewed.
 - **Read scope.** §1 to §5.1.5 and §11, from the RFC Editor `.txt`. §5.2 to §5.4, §6 to §10, §12 and §13 were not read.

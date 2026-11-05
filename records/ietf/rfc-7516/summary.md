@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-7516
 record: rfc-7516
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # JSON Web Encryption (JWE)
@@ -16,11 +16,11 @@ updated: "2026-11-01"
 | **Published** | 2015-05 |
 | **Identifier** | RFC 7516 · DOI 10.17487/RFC7516 |
 | **Source** | https://www.rfc-editor.org/rfc/rfc7516.txt |
-| **Digest** | `sha256:722cfcdd…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:722cfcdd…` (full value in `record.yaml`), fetched 2026-11-01, rechecked 2026-11-04 |
 
 ## Overview
 
-RFC 7516 encrypts and integrity-protects an arbitrary octet sequence, with JSON structures for the metadata and the option of encrypting one content to many parties (§1). All recipients share one ciphertext, IV and tag, and differ only in a per-recipient wrapped key, so anything governing the plaintext must be the same for all (§7.2.1). Header parameters come from three places whose names must be disjoint, and only the protected header is authenticated, unless `aad` is added (§5.1 step 14, §7.2.1). JWE is therefore all-or-nothing per object: it gives each recipient the whole plaintext, and it shares its security considerations and header registry with `rfc-7515` (§11).
+RFC 7516 encrypts and integrity-protects an arbitrary octet sequence, with JSON structures for the metadata and the option of encrypting one content to many parties (§1). All recipients share one ciphertext, IV and tag, and differ only in a per-recipient wrapped key, so anything governing the plaintext must be the same for all (§7.2.1). Header parameters come from three places whose names must be disjoint, and of them only the protected header is authenticated; an `aad` value, if present, is authenticated with it (§5.1 step 14, §7.2.1). JWE is therefore all-or-nothing per object: it gives each recipient the whole plaintext. It takes its security considerations from `rfc-7515` (§11) and registers its header parameters in the registry that RFC established (§10.1).
 
 ## Applicability
 
@@ -28,9 +28,9 @@ RFC 7516 encrypts and integrity-protects an arbitrary octet sequence, with JSON 
 |---|---|---|
 | Security | `core` | vCon's confidentiality form. §11.4 and §11.5 name oracle and timing attacks |
 | Cryptography | `core` | Defines the authenticated data and the per-recipient key structure (§5.1, §7.2.1) |
-| This project | `adjacent` | Not an option for DEC-005 and no requirement of ours asks for it. The only check on vCon §5.3 |
+| This project | `adjacent` | Bears on no `DEC-*` or `R-*`. The only outside check on vCon §5.3 |
 
-**This RFC is the other half of the check on vCon's §5.** See `rfc-7515` for why nothing else corroborates that table. Read against §7.2.1:
+**This RFC is the other half of the outside check on vCon's §5.** Appendix C's CDDL renders the encrypted form again, but with the same omissions as §5.3, so it is no independent check (see `rfc-7515`). Read against §7.2.1:
 
 | vCon §5.3 says | This RFC | Result |
 |---|---|---|
@@ -44,11 +44,13 @@ RFC 7516 encrypts and integrity-protects an arbitrary octet sequence, with JSON 
 
 **Selective disclosure.** §7.2.1 gives all recipients one ciphertext. So the charter's aim that some parts may be disclosed to different parties (`ietf-vcon-wg`) cannot be met by one JWE over the whole vCon, which is what §5.3 specifies.
 
-**Decisions.**
+**Bears on no `DEC-*` or `R-*`.** The 2026-10-15 comment on #45 linked this RFC to DEC-002 and DEC-005, and earlier versions of this record carried both. Neither holds on reading. DEC-005 chooses a signing envelope for ArtifactStatement among DSSE and COSE_Sign1 (`ARCH-0001` §7), and JWE signs nothing. DEC-002 chose the native encoding (accepted 2026-10-25, `ADR-0004`), and JWE's only link to it is the JOSE header rules already carried by `rfc-7515`. No `R-*` in `ARCH-0001` asks for confidentiality. Its use to us is as the outside check on vCon above.
 
-- **DEC-005** (open): JWE is not a candidate, and DEC-005 concerns signing envelopes. It bears only through vCon, and the #45 comment's link is kept on that footing.
-- **DEC-002** (accepted 2026-10-25, ADR-0004): closed, and the bearing is thin. It shares the JOSE header rules set out in `rfc-7515`.
-- No `R-*` in `ARCH-0001` asks for confidentiality, so this bears on none.
+## Relations
+
+- `see_also: rfc-7515`: §11 imports all of JWS's security considerations, and JWS and JWE share one header parameter registry (§10.1). Authored here; `rfc-7515` does not repeat it.
+- `see_also: draft-ietf-vcon-vcon-core-04`: that draft's encrypted form is a General JWE JSON Serialization of this RFC (§5.3), checked in the table above. The draft also authors this edge, without a stated reason; it is kept here because the reason is here.
+- `rfc-7518` authors its edge to this record, so it is not repeated here.
 
 ## Implementations
 
@@ -74,5 +76,5 @@ RFC 7516 encrypts and integrity-protects an arbitrary octet sequence, with JSON 
 - **Key distribution is out of scope**, and vCon's charter also excludes key management (`ietf-vcon-wg`).
 - **§11.4's advice has force on `alg`.** A mutable `alg` is the attack it describes, and vCon's per-recipient `alg` sits in an unprotected header. Whether the mitigation of restricting a key to one algorithm is required is left to the implementer.
 - **Key commitment.** Reported erratum 7719 questions whether changing key-identifying parameters must cause failure for encryption, unless the algorithm is key-committing. It is unverified, and it was read but not assessed.
-- **Errata.** `errata.json` retrieved 2026-11-01 lists 3 reported, none verified. All three notes were read at least in part.
-- **Read scope.** §1, §4.1.2, §4.1.3, §5.1 steps 13 and 14, §7.2.1, §9 in part, and §11, from the RFC Editor `.txt`. §2, §3, the remaining §4 and §5, §7.1, §7.2.2, §8, §10 and the appendices were not read. **vCon was checked against -04.** Revision -05 appeared on 2026-10-31 and was not compared.
+- **Errata.** `errata.json` retrieved 2026-11-01, recounted 2026-11-04, lists 3 reported, none verified. All three notes were read at least in part.
+- **Read scope.** §1, §4.1.2, §4.1.3, §5.1 steps 13 and 14, §7.2.1, §9 in part, the opening of §10.1 (added 2026-11-04) and §11, from the RFC Editor `.txt`. §2, §3, the remaining §4 and §5, §7.1, §7.2.2, §8, the rest of §10 and the appendices were not read. **vCon was checked against -04.** Revision -05 appeared on 2026-10-31 and was not compared.
