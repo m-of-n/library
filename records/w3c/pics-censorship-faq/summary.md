@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: pics-censorship-faq
 record: pics-censorship-faq
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # PICS, Censorship, and Intellectual Freedom FAQ
@@ -16,23 +16,28 @@ updated: "2026-11-01"
 | **Published** | Last revised 4 August 1999 |
 | **Identifier** | https://www.w3.org/PICS/PICS-FAQ-980126.html |
 | **Source** | https://www.w3.org/PICS/PICS-FAQ-980126.html |
-| **Digest** | `sha256:a46df860…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:a46df860…` (full value in `record.yaml`), fetched 2026-11-01, rechecked 2026-11-04 |
 
 ## Overview
 
-W3C's reply to civil-liberties critics. Its core move is to separate labelling from filtering, and six roles any of which an independent party can fill: PICS itself fills none. It concedes much: PICS makes some controls easier, so more controls should be expected, and anyone can label anyone's site without approval. It nevertheless argues the net effect favours individual over central control, because a national blocklist gains little from interoperability while mixing labels and filters from different sources gains a lot. W3C takes no position on which content should be illegal, and offers only technical feedback to governments.
+W3C's reply to civil-liberties critics. Its core move is to separate labelling from filtering, and six roles any of which an independent party can fill: PICS itself fills none. It concedes much: PICS makes some controls easier, so more controls should be expected, and anyone can label anyone's site without approval. It nevertheless argues the net effect favours individual over central control, because a national blocklist gains little from interoperability while mixing labels and filters from different sources gains a lot. W3C leaves which content should be illegal to the political realm. It offers policy makers feedback on what is technically possible, and points out that end-user controls can make some bans unnecessary.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
 | Security | `adjacent` | Abuse of labelling power is addressed, by market diversity |
-| Cryptography | `none` | Mentions DSig only in passing |
+| Cryptography | `none` | Mentions W3C's Digital Signature Project only in passing |
 | This project | `adjacent` | The closest thing to a defence of third-party assertions |
 
 It bears on no open `DEC-*` or `R-*`. The role split maps well onto issuer, verifier and policy in mofn, and its answer to abusive labellers (monitor them, keep the market diverse) is the only answer on file.
 
-`contradicts: aclu-fahrenheit-451-2`: see that record for the reason. The two disagree on the direction of the net effect.
+## Relations
+
+- The `contradicts` edge with `aclu-fahrenheit-451-2` is authored on that record, with the reason: the two disagree on the direction of the net effect. It is not repeated here, and no `see_also` duplicates it.
+- `see_also: pics-1-1-labels` and `see_also: pics-1-1-services`: the label-distribution and rating-service specifications whose split of roles this FAQ defends.
+- `see_also: gvu-1998-webmaster-survey`: the FAQ says self-labelling works "only if a high percentage of the materials of a particular type are labeled"; the survey shows that share was not reached.
+- The `w3-org-pics` edge is authored on that record.
 
 ## Implementations
 

@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: ietf-spki-wg
 record: ietf-spki-wg
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # IETF SPKI Working Group charter and documents
@@ -11,12 +11,12 @@ updated: "2026-11-01"
 |  |  |
 |---|---|
 | **Type** | web (Datatracker working group page) |
-| **Maturity** | `historic`: Datatracker state Concluded |
+| **Maturity** | _unset_: a working-group page has no standing; Datatracker state Concluded |
 | **Authors** | Chairs: Perry E. Metzger, Steven M. Bellovin |
 | **Published** | Charter milestones dated February to May 1997 |
 | **Identifier** | https://datatracker.ietf.org/wg/spki/about/ |
 | **Source** | https://datatracker.ietf.org/wg/spki/about/ |
-| **Digest** | `sha256:c4105cf4…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:c4105cf4…` (full value in `record.yaml`), fetched 2026-11-01; not reproducible, see `record.yaml` note |
 
 ## Overview
 
@@ -30,7 +30,12 @@ The charter (charter-ietf-spki-01) asked for Internet standards for a public key
 | Cryptography | `none` | The page carries no technical content |
 | This project | `core` | The record of how the direct ancestor ended without a wire format |
 
-`DEC-002`: mofn R-0004 §5(a) reads the missing format as the one failure a specification can fix, and ties it to closing this decision. This page supplies only the bare record; `draft-ietf-spki-cert-structure` holds the format itself.
+`DEC-002`: mofn R-0004 §5 (row (a) of its table) classes the missing format as the one failure a specification can fix, and §8.1(a) ties it to this decision. DEC-002 has since been accepted (ADR-0004, 2026-10-25), so this record is part of its rationale, not an open input. This page supplies only the bare record; `draft-ietf-spki-cert-structure` holds the format itself.
+
+## Relations
+
+- `see_also: draft-ietf-spki-cert-structure`: the wire-format draft the charter asked for, which the documents page does not list because it expired unpublished.
+- The `rfc-2692` and `rfc-2693` edges are authored on those records. `sdsi-1-1` was dropped: the page never mentions SDSI.
 
 ## Implementations
 

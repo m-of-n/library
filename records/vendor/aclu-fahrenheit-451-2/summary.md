@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: aclu-fahrenheit-451-2
 record: aclu-fahrenheit-451-2
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-04"
 ---
 
 # Fahrenheit 451.2: Is Cyberspace Burning?
@@ -16,11 +16,11 @@ updated: "2026-11-01"
 | **Published** | Page dated 17 March 2002; the text is from after 26 June 1997 |
 | **Identifier** | https://www.aclu.org/documents/fahrenheit-4512-cyberspace-burning |
 | **Source** | https://www.aclu.org/documents/fahrenheit-4512-cyberspace-burning |
-| **Digest** | `sha256:36a3b081…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:6b0cd495…` (full value in `record.yaml`), fetched 2026-11-04; the 2026-11-01 bytes differed, see `record.yaml` note |
 
 ## Overview
 
-After *Reno v. ACLU*, the ACLU warns that voluntary rating and blocking could do what the Communications Decency Act could not. Its projected path: PICS becomes universal, one or two rating systems dominate, they ship as browser defaults, unrated speech is blocked, search engines drop it, and governments make self-rating mandatory. Six reasons oppose self-rating, including that ratings are subjective, burdensome and costly (one site has 26,000 pages to rate), and that they favour large commercial speakers. Third-party rating does not rescue it: unrated sites may still be blocked, and speakers are not told. Home blocking software is the lesser evil, if lists are disclosed and users stay in control.
+After *Reno v. ACLU*, the ACLU warns that voluntary rating and blocking could do what the Communications Decency Act could not. Its projected path: PICS becomes universal, one or two rating systems dominate, they ship as browser defaults, unrated speech is blocked, search engines drop it, and governments make self-rating mandatory. Six reasons oppose self-rating, including that it will censor controversial speech, that it is burdensome and costly (one site has more than 26,000 pages to rate), and that it will favour large commercial speakers. Third-party rating does not rescue it: unrated sites may still be blocked, and speakers are not told. Home blocking software is the lesser evil, if lists are disclosed and users stay in control.
 
 ## Applicability
 
@@ -32,7 +32,11 @@ After *Reno v. ACLU*, the ACLU warns that voluntary rating and blocking could do
 
 It bears on no open `DEC-*` or `R-*`, which is itself a gap: no requirement addresses it. Its burden argument is the supply-side finding of `gvu-1998-webmaster-survey`, stated before the data.
 
-`contradicts: pics-censorship-faq`. The FAQ's abstract argues PICS's net effect shifts policy away from central control and toward individual control. This paper projects the opposite path and calls it inevitable. Both cannot be right as predictions.
+## Relations
+
+- `contradicts: pics-censorship-faq`. The FAQ's abstract argues the net impact of PICS will be to shift government policies away from centralized controls and toward individual controls. This paper projects the opposite path and calls it "theoretical but inevitable". Both cannot be right as predictions. The edge is authored here only; it also covers the relation a `see_also` would have named.
+- `see_also: pics-1-1-labels`: the label format whose universal use is the first step of this paper's projected path.
+- `see_also: gvu-1998-webmaster-survey`: the survey measures the supply-side burden Reason #2 predicts.
 
 ## Implementations
 
