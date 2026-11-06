@@ -215,15 +215,15 @@ it does not match the header, and fails if the two counts differ with no
 reconciliation. The source count comes from `bin/bcp14-count` on the cached
 source (sources are never committed, so this is recorded, not re-derived in CI).
 
-## Multi-agent passes — maximum effort
+## Multi-agent passes — judgement at maximum effort, mechanics by script
 
-Extraction runs as independent passes, each at **maximum reasoning effort**,
-each recorded in `distillation.passes`:
+Extraction runs as independent passes, each recorded in `distillation.passes`:
 
 | pass | what | output |
 |---|---|---|
-| **1 · extract** | one agent per artifact kind, in parallel, each reading the **source** (never the summary) | the artifact set |
-| **2 · verify** | an adversarial agent that did not extract: re-derives the keyword count, checks every locator and every verbatim quote against the source, hunts for dropped statements and spliced quotes | defects fixed, count reconciled |
+| **0 · skeleton** | `bin/fx1-skeleton` (a script, no model): every BCP 14 sentence as a requirement with its verbatim text, locator and source lines; every keyword-less sentence that may bind as a candidate; every code block as a fixture | the verbatim layer |
+| **1 · extract** | one agent per artifact group, in parallel, each reading the **source** (never the summary) and filling the judgement the skeleton cannot | the artifact set |
+| **2 · verify** | an adversarial agent that did not extract: runs the mechanical checks first, then attacks what they cannot see — dropped statements, wrong joins, false claims | defects fixed, count reconciled |
 | **3 · cross-check** | requirements ↔ schema ↔ messages ↔ state machine: every field a requirement names exists in the schema; every transition's trigger is a defined message | inconsistencies fixed or recorded |
 | **4 · human review** | a person signs `reviewed_by` on each artifact | buildable-on |
 
@@ -231,13 +231,78 @@ Pass 2 exists because pass 1 fails in known ways: the vCon extraction (2026-09)
 dropped four MUSTs and spliced two non-adjacent quotes, and both were found
 only by the mechanical checks.
 
+### Quote-by-reference
+
+No agent types a quotation of the source. A requirement's `text`, `locator`
+and `source_lines` are written by `bin/fx1-skeleton` (or copied from a
+candidate it wrote); a quotation in Markdown is a marker
+`<!-- q L120-123 -->` whose words `bin/check-quotes --render` writes. Anywhere
+else in YAML, a quotation is `quote:` beside `source_lines:`. `bin/check-quotes`
+verifies every one against the cached source and exits 1 on any mismatch, so
+splicing, healing and retyping — the defect classes `hazards.md` §2 spends the
+most space on — are caught mechanically rather than by a pass.
+
+### Who runs what (amended 2026-11-06, library#86)
+
+Every pass used to run at maximum effort on the largest model, and an
+extraction took two to three days and hit the usage limit inside pass 1. The
+measured cause was that the largest model spent most of its tokens on
+mechanics a script does exactly: retyping quotations, counting keywords,
+cutting line ranges. Each agent wrote its own quote-cutting script.
+
+| role | model and effort | why |
+|---|---|---|
+| skeleton, check-quotes, check-locators, bcp14-count | script | exact, free, and re-runnable |
+| **requirements** (actor, testable, candidate verdicts, splits, inferred) | largest, **max** | judgement: what binds, who must comply |
+| **protocol, state-machine** | largest, **max** | judgement: N/A or not, what the flows are |
+| **design-notes** | largest, **max** | judgement: adopt / adapt / reject against our decisions |
+| schema, examples, messages | smaller model allowed | reproduced by script (`reproduce.py`, a schema check) and re-attacked by verify |
+| **verify** | largest, **max — never tiered** | the one tiered run: verify falsified 15 claims, 13 in the smaller-model lanes |
+| cross-check | smaller model allowed | joins by script (`bin/check-id-joins`), each pair read |
+
+A pass that ran every agent at max records `effort: max`. A pass that did not
+records `effort: tiered` and lists its agents:
+
+```yaml
+- pass: extract
+  effort: tiered
+  date: "2026-11-06"
+  agents:
+    - {role: requirements, model: claude-opus-5-5, effort: max, tokens: 210000}
+    - {role: schema+examples+messages, model: claude-sonnet-5-5, effort: medium, tokens: 79778}
+    - {role: protocol+state-machine, model: claude-opus-5-5, effort: max, tokens: 288507}
+    - {role: design-notes, model: claude-opus-5-5, effort: max, tokens: 355648}
+```
+
+`bin/validate` fails a judgement role, or verify, below max, and a `tiered`
+pass with no agents. **Record `tokens`** wherever the harness reports them: it
+is the only way to see what an extraction cost, and the next change to this
+table should be made from those numbers, not from one experiment.
+
+Measured on RFC 9679 against its max-effort extraction (library#86): 1.46M
+tokens over ~1.7 h of agent time; keyword layer 13/13 as before; 5 of the 7
+source defects that extraction found, plus ~8 it missed; two inferred rules
+lost (the excluded parameters and the map-key order), which is why
+requirements now runs at max rather than on the smaller model it ran on there.
+
 ## Tooling
 
 ```sh
-bin/extract-scaffold records/ietf/rfc-9943   # creates the full artifact set as templates
-bin/bcp14-count .cache/rfc-9943.txt          # source keyword count for the header
-bin/validate                                  # enforces all of the above
+bin/fetch-source rfc-9943 --xml              # .cache/rfc-9943.txt (verified) and .xml (structure)
+bin/extract-scaffold records/ietf/rfc-9943   # the full artifact set as templates
+bin/fx1-skeleton records/ietf/rfc-9943 --force   # the verbatim layer over the scaffold
+bin/check-quotes records/ietf/rfc-9943       # every quotation against its source lines
+bin/check-locators records/ietf/rfc-9943     # every locator contains its text
+bin/validate                                 # enforces all of the above that CI can see
 ```
+
+`.cache/` is not in CI, so `bin/check-quotes` and `bin/check-locators` are run
+by the passes and their results written into `coverage`; `bin/validate`
+enforces what it can without the source — for a skeleton-generated
+`requirements.yaml`, that every entry is `stated` or `inferred`, that `verb`
+is one BCP 14 keyword or `none` and appears in a stated text, that every
+stated entry has `source_lines`, and that every candidate has a verdict and,
+if promoted, a requirement citing it.
 
 The skill `.claude/skills/extract` carries the judgement: how to run the passes,
 what a good artifact looks like, and the failure modes to hunt for.
