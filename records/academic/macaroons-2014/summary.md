@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: macaroons-2014
 record: macaroons-2014
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Macaroons: Cookies with Contextual Caveats for Decentralized Authorization in the Cloud

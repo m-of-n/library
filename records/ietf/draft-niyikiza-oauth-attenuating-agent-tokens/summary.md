@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: draft-niyikiza-oauth-attenuating-agent-tokens
 record: draft-niyikiza-oauth-attenuating-agent-tokens
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Attenuating Authorization Tokens for Agentic Delegation Chains
@@ -11,16 +11,16 @@ updated: "2026-11-01"
 |  |  |
 |---|---|
 | **Type** | draft (individual) |
-| **Maturity** | `draft`: individual Internet-Draft, Active, no working group, per datatracker 2026-11-01 |
+| **Maturity** | `draft`: individual Internet-Draft, Active, no working group, per datatracker 2026-11-01, re-checked 2026-11-05 |
 | **Authors** | N. A. Niyikiza |
 | **Published** | 2026-10-26 |
 | **Identifier** | draft-niyikiza-oauth-attenuating-agent-tokens-02 |
 | **Source** | https://www.ietf.org/archive/id/draft-niyikiza-oauth-attenuating-agent-tokens-02.txt |
-| **Digest** | `sha256:a7e23c35…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:a7e23c35…` (full value in `record.yaml`), fetched 2026-11-01, re-verified 2026-11-05 |
 
 ## Overview
 
-AATs are holder-derived, offline-verifiable tokens that carry tools and typed argument constraints, built on a RAR profile (§1). §1.3 is the passage this topic needs. It describes SPKI's authority as the intersection of a chain's tags, and then says AATs carry the same ideas with narrowing by a subsumption relation, so that each hop is checked, the leaf states the authority exercised, and the enforcement point evaluates only the leaf's constraints. It draws the same contrast with UCAN, whose arguments must satisfy every delegation's policy. The cost is stated in §4.1: argument spaces are typically infinite, so subsumption is structural and conservative, and some valid narrowings are rejected. §9.2 calls this I4 rule the draft's main contribution.
+AATs are holder-derived, offline-verifiable tokens that carry tools and typed argument constraints, built on a RAR profile (§1). §1.3 is the passage this topic needs. It describes SPKI's authority as the intersection of a chain's tags, and then says AATs carry the same ideas with narrowing by a subsumption relation, so that each hop is checked and the leaf states the authority exercised. It draws the same contrast with UCAN, whose arguments must satisfy every delegation's policy, while an AAT enforcement point evaluates only the leaf's constraints. The cost is stated in §4.1: argument spaces are typically infinite, so subsumption is structural and conservative, and some valid narrowings are rejected. §9.2 calls this I4 rule the draft's main contribution.
 
 ## Applicability
 
@@ -30,8 +30,8 @@ AATs are holder-derived, offline-verifiable tokens that carry tools and typed ar
 | Cryptography | `adjacent` | JWS with holder-bound PoP; adds no primitive |
 | This project | `core` | Direct evidence on reduction versus containment |
 
-- **DEC-004, R-M-08**: §4.5 is a closed table of valid (parent, derived) constraint pairs, and everything else is rejected. It is a useful model for a tag profile under R-M-08, and it shows the choice between intersecting and checking subsumption.
-- **R-M-10**: the Abstract bounds derivation by depth limits. No boolean delegation flag appears in the sections read.
+- **DEC-004, R-M-08**: §4.5 is a closed table of valid (parent, derived) constraint pairs, and every other pair is rejected unless a registered extension type declares it (§5.1). It is a useful model for a tag profile under R-M-08, and it shows the choice between intersecting and checking subsumption.
+- **R-M-10**: there is no boolean delegation flag. The equivalent is depth: §4.3 makes a token terminal when `del_depth` equals `del_max_depth`, so a root with `del_max_depth: 0` cannot be delegated.
 - **R-O-02**: §9.8 defines no revocation and says short life bounds exposure. §9.4 notes that a stolen holder key exposes every token bound to it.
 - **R-O-05** (proposed): §3.5 requires verification over the signing input exactly as presented, with no re-serialization or canonicalization, which matches R-O-05. JCS is only a SHOULD for producers, for reproducibility of `par_hash`.
 
@@ -60,5 +60,6 @@ AATs are holder-derived, offline-verifiable tokens that carry tools and typed ar
 - **No re-keying.** §9.4 concedes the property HMAC chains have, and approximates it by destroying a key.
 - **No revocation** (§9.8).
 - **The leading implementation is not this wire format.** Tenuo encodes in CBOR with its own envelope (Appendix E.1).
-- **The comparison in §1.3 is the author's own**, and the reason it gives for leaving intersection is a design preference. It reports no evidence that SPKI's approach failed.
-- **Read scope.** Abstract, §1, §1.3, §3.5 (in part), §4.1, §4.5 (in part: the rules and the top of the table), §9.1.2, §9.2, §9.4, §9.8 and Appendix E (in part) were read. Issuance, derivation, PoP, §8's algorithm and the other appendices were listed by heading only.
+- **The comparison in §1.3 is the author's own.** §1.3 states no reason for moving from intersection to per-hop subsumption, beyond the leaf then stating the authority exercised, and reports no evidence that SPKI's approach failed.
+- **Relations.** This draft cites `biscuit-spec-3-3` and `draft-asor-wimse-agent-delegation-chain`, and the second cites it back, so no `see_also` is needed.
+- **Read scope.** Abstract, §1, §1.3, §3.5, §4.1, §4.2, §4.3, §4.5 (in part: the rules and the top of the table), §9.1.2, §9.2, §9.3, §9.4, §9.8 and Appendix E were read. Issuance, derivation, PoP, §8's algorithm and the other appendices were listed by heading only.

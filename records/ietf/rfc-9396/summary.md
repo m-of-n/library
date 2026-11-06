@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-9396
 record: rfc-9396
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # OAuth 2.0 Rich Authorization Requests
@@ -16,7 +16,7 @@ updated: "2026-11-01"
 | **Published** | 2023-05 |
 | **Identifier** | RFC 9396 · DOI 10.17487/RFC9396 |
 | **Source** | https://www.rfc-editor.org/rfc/rfc9396.txt |
-| **Digest** | `sha256:d6a8f032…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:d6a8f032…` (full value in `record.yaml`), fetched 2026-11-01, re-verified 2026-11-05 |
 
 ## Overview
 
@@ -50,6 +50,7 @@ Scope strings suit coarse requests but not requests such as a specific transfer 
 
 - **It does not address delegation between holders.** §6.1 is about an authorization server comparing requests, for example on refresh.
 - **The AS and RS are expected to share semantics** (§1, §9). Nothing lets a third party evaluate an object it does not understand.
-- **Tampering needs other specs.** §12 points to signed request objects when integrity matters.
-- **No errata found** on 2026-11-01.
+- **Tampering needs other specs.** Where integrity is a concern, §12 requires (MUST) clients to protect `authorization_details` against tampering and swapping, by signed request objects (RFC 9101) or a pushed `request_uri` (RFC 9126).
+- **No errata found** on 2026-11-01 or 2026-11-05.
+- **Relations.** This RFC cites `rfc-6749` (`cites`), so no `see_also` is needed. The earlier edge to `rfc-9068` had no stated reason, and neither RFC cites the other.
 - **Read scope.** §1, §2.1, §6.1, §9 and §12 were read. The request and response flows, §7 enrichment, metadata and §11 were not.

@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: zcap-ld
 record: zcap-ld
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Authorization Capabilities v0.4.0
@@ -55,7 +55,7 @@ ZCAP encodes object capabilities as chains of linked-data documents. Authority s
 
 ## Limits
 
-- **"v0.4.0" names two different texts.** Git tag `v0.4.0` (`109ab03`, 2026-10-07) keeps a MUST limit on chain length with a SHOULD limit of 10. The page served at `/v0.4.0/` was replaced on 2026-10-20 and carries a later commit, `75255e8`, that leaves only a SHOULD to limit the length. The spec's change log says all changes in the release are non-normative, which holds for the tag but not for the page. Cite the digest, not the version. This record tracks the served page.
+- **"v0.4.0" names two different texts.** Git tag `v0.4.0` (`109ab03`, 2026-10-07) keeps a MUST limit on chain length with a SHOULD limit of 10. The page served at `/v0.4.0/` was replaced on 2026-10-20 and carries two later commits: `75255e8` turns the MUST into a MAY and drops the limit of 10, and `bdb1ad5` raises the MAY to a SHOULD. The served page says only that a verifier SHOULD limit the chain length. The spec's change log says all changes in the release are non-normative, which holds for the tag but not for the page. Cite the digest, not the version. This record tracks the served page.
 - **The caveat text and the attenuation text disagree.** §Caveats still defines a `caveat` property, while §URL Path- or Query-based Attenuation says vocab-based caveats have been removed, and the examples use `caveat`. Which is normative is unclear.
 - **Algorithms are unspecified.** The backlog lists delegation-proof and invocation-proof algorithms, and revocation behaviour, as future work.
 - **Confused-deputy claims are qualified.** §Capabilities Are Safer says less vulnerable, not immune.

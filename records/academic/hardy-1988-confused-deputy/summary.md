@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: hardy-1988-confused-deputy
 record: hardy-1988-confused-deputy
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # The Confused Deputy (or why capabilities might have been invented)
@@ -31,7 +31,7 @@ A compiler holds authority to write its home directory, and a user supplies the 
 | Cryptography | `none` | No cryptography |
 | This project | `adjacent` | A test for our model, not a requirement |
 
-- **R-M-04**: ARCH-0001 keeps name bindings and authorization bindings as distinct object kinds. Hardy's lesson points the other way at first sight, since he treats separate mechanisms for choosing a target and authorizing it as a sign of poor design (p. 37). The two meet if the subject of an `AuthzCert` is a key, because a key designates and proves together. A design that resolves a name and then checks authority against the result reintroduces the gap Hardy describes. Worth checking when R-O-06's separate results are specified.
+- **R-M-04**: ARCH-0001 keeps name bindings and authorization bindings as distinct object kinds. Hardy's lesson points the other way at first sight, since he treats separate mechanisms for choosing a target and authorizing it as a sign of poor design (p. 37). The two meet if the subject of an `AuthzCert` is a key, because a key designates and proves together. A design that resolves a name and then checks authority against the result reintroduces the gap Hardy describes. Worth checking when the separate results of R-O-06, proposed in `ARCH-0001-PROPOSAL-v0.2.0` and not yet accepted, are specified.
 
 ## Implementations
 
@@ -44,11 +44,13 @@ Not searched. The paper names KeyKOS, a historical system, and the patent US 4,5
 | `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
 | `summary.md` | this document |
 
+**Relation.** `see_also: dennis-vanhorn-1966`: Dennis and Van Horn define the capability and the C-list. This paper gives the failure that motivates them, as its subtitle says. Hardy does not cite them, so the edge is ours, not a `cites` entry. It is authored on this record only.
+
 **No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. A `paper` record owes FX-1 only if someone extracts it. No issue owns that extraction yet. No keyword count is given because none has been reconciled.
 
 ## Limits
 
-- **One anecdote.** The argument is a single incident with "inessential details" changed (p. 36). The closing claims about KeyKOS size and performance are the author's and carry no measurements.
+- **One anecdote.** The argument is a single incident with "inessential details" changed (p. 36). The claims that capability-based systems came out smaller than access-list systems and performed well (p. 37) are the author's and carry no measurements.
 - **It does not show that capabilities suffice.** Hardy points at KeyKOS for the wider claim. A capability system with bearer tokens can still be confused by a caller who passes the wrong capability.
 - **Later citations stretch it.** ZCAP uses CSRF as its confused-deputy example, and agent-token drafts apply it to prompt injection. Those are analogies that this paper does not make.
 - **Read scope.** Read whole, from an OCR text layer of ACM's scanned PDF via an Internet Archive capture. Quoted text was checked against the cap-lore transcription as well.

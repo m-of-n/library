@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: wohlin-2014-snowballing
 record: wohlin-2014-snowballing
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Guidelines for snowballing in systematic literature studies and a replication in software engineering
@@ -43,7 +43,7 @@ Wohlin turns snowballing from an outlined idea into a procedure and argues it ca
 
 | Name | Kind | License | URL |
 |---|---|---|---|
-| citationchaser | open source, R package and Shiny app | not checked: GitHub reports none | https://github.com/nealhaddaway/citationchaser |
+| citationchaser | open source, R package and Shiny app | GPL-3.0-or-later (`DESCRIPTION`; no LICENSE file, so GitHub reports none) | https://github.com/nealhaddaway/citationchaser |
 
 ## Artifacts in this record
 
@@ -51,6 +51,8 @@ Wohlin turns snowballing from an outlined idea into a procedure and argues it ca
 |---|---|
 | `record.yaml` | metadata, `cites`, relations, usefulness verdict |
 | `summary.md` | this document |
+
+**Relations.** `kitchenham-charters-2007` is under `cites` (ref [7]), so it carries no `see_also`. The `see_also` to `prisma-2020` is authored on that record, with its reason there.
 
 **No `distilled/`.** A `paper` is outside FX-1's type scope. No PDF is committed.
 

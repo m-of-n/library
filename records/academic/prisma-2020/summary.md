@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: prisma-2020
 record: prisma-2020
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # The PRISMA 2020 statement: an updated guideline for reporting systematic reviews
@@ -11,7 +11,7 @@ updated: "2026-11-01"
 |  |  |
 |---|---|
 | **Type** | paper (reporting guideline) |
-| **Maturity** | `best-practice`: a consensus reporting guideline, with the caveat that its home is health research |
+| **Maturity** | _unset_: a consensus reporting guideline published as a journal article. The BMJ page was not read, and the enum's `best-practice` is for BCP- or NIST-SP-style standing, which was not verified |
 | **Authors** | Matthew J Page and 25 others, David Moher last (full list in `record.yaml`) |
 | **Published** | BMJ 2021;372:n71, 2021-03-29. The id says 2020 after the guideline's name |
 | **Identifier** | doi:10.1136/bmj.n71 · PMID 33782057 · PMC8005924 |
@@ -46,7 +46,7 @@ PRISMA 2020 replaces the 2009 statement, which it says should no longer be used 
 | Name | Kind | License | URL |
 |---|---|---|---|
 | PRISMA checklist web app | web app, named by the statement | not checked | https://prisma.shinyapps.io/checklist/ |
-| PRISMA2020 | open source, R package and Shiny app | not checked: GitHub reports NOASSERTION, a search result says MIT | https://github.com/prisma-flowdiagram/PRISMA2020 |
+| PRISMA2020 | open source, R package and Shiny app | MIT (`DESCRIPTION`: "MIT + file LICENSE"; the GitHub API reports NOASSERTION) | https://github.com/prisma-flowdiagram/PRISMA2020 |
 
 ## Artifacts in this record
 
@@ -54,6 +54,10 @@ PRISMA 2020 replaces the 2009 statement, which it says should no longer be used 
 |---|---|
 | `record.yaml` | metadata, relations, usefulness verdict |
 | `summary.md` | this document |
+
+**Relations.** Neither `see_also` target cites PRISMA 2020 or is cited by it, so the edges are ours. They are authored on this record only. The three are the methods `docs/construction.md` *Method to follow* names, and each covers a different part of the work:
+- `see_also: kitchenham-charters-2007`: the conduct half that PRISMA rules out of its scope (*Scope of the guideline*).
+- `see_also: wohlin-2014-snowballing`: the search method whose iterations item 6 (reference lists as a source) and item 16a (counts from records identified to studies included) would have to report.
 
 **No `distilled/`.** A `paper` is outside FX-1's type scope, and the checklist is short enough that nothing has needed it. No source bytes are committed.
 

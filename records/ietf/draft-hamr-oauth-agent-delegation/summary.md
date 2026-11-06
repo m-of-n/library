@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: draft-hamr-oauth-agent-delegation
 record: draft-hamr-oauth-agent-delegation
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # An Attenuated Delegation Profile for Automated Agents
@@ -11,12 +11,12 @@ updated: "2026-11-01"
 |  |  |
 |---|---|
 | **Type** | draft (individual) |
-| **Maturity** | `draft`: individual Internet-Draft, Active, no working group, per datatracker 2026-11-01 |
+| **Maturity** | `draft`: individual Internet-Draft, Active, no working group, per datatracker 2026-11-01, re-checked 2026-11-05 |
 | **Authors** | A. Hassan |
 | **Published** | 2026-10-22 |
 | **Identifier** | draft-hamr-oauth-agent-delegation-03 |
 | **Source** | https://www.ietf.org/archive/id/draft-hamr-oauth-agent-delegation-03.txt |
-| **Digest** | `sha256:79273784…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:79273784…` (full value in `record.yaml`), fetched 2026-11-01, re-verified 2026-11-05 |
 
 ## Overview
 
@@ -36,7 +36,7 @@ This draft adds an `Agent-Delegation` HTTP field to `rfc-9421`, carrying a chain
 
 ## Implementations
 
-**Checked 2026-11-01.** Both repositories are named by §16 and were confirmed through the GitHub API. §16 itself says all are single-author with no external review, and that no code at this revision implements action classes, a signed menu or budgets.
+**Checked 2026-11-01.** Both repositories are named by §16 and were confirmed through the GitHub API. §16 itself says all are single-author with no external review, and that no code at this revision implements action classes, a signed menu or budgets. §16 also lists a third, bareguard, which was not checked.
 
 | Name | Kind | License | URL |
 |---|---|---|---|
@@ -55,8 +55,9 @@ This draft adds an `Agent-Delegation` HTTP field to `rfc-9421`, carrying a chain
 ## Limits
 
 - **Not end to end.** §16 says the proof of concept has no RFC 9421 signatures, no HTTP header and no chain over two links.
-- **rwxmap's accuracy is a single self-reported run** of 4279 calls (§1).
+- **rwxmap's accuracy is self-reported.** It was scored once on 4279 calls and reproduced from a clean copy by the same author (§1, §16), against truth labels that §16 says were written by language-model agents, with the author ruling disputes.
 - **No replay protection, revocation or shared budgets.** §1, §10.4 and §11.2 say so.
 - **It defines no credential format** (§4), so two conforming systems need not interoperate.
 - **The parent-stays-valid problem is declared unsolved** in §3, with a pointer to `draft-asor-wimse-agent-delegation-chain` §9.1.
-- **Read scope.** Abstract, §1, §3, §4, §6, §7, §15, §16 (in part) and §17 were read, and §13's steps were listed. §5, §8 to §12, §14 and Appendices were not read in full, and statements on those sections come from §1 and §17.
+- **Relations.** This draft cites `rfc-9421` and `draft-asor-wimse-agent-delegation-chain`, so no `see_also` is needed.
+- **Read scope.** Abstract, §1, §3, §4, §6, §7, §15, §16 and §17 were read, and §13's steps were listed. §5, §8 to §12, §14 and Appendices were not read in full, and statements on those sections come from §1 and §17.

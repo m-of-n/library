@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: ptacek-2024-macaroons
 record: ptacek-2024-macaroons
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Macaroons Escalated Quickly
@@ -16,11 +16,11 @@ updated: "2026-11-01"
 | **Published** | 2024-01-31 |
 | **Identifier** | none |
 | **Source** | https://fly.io/blog/macaroons-escalated-quickly/ |
-| **Digest** | `sha256:73b14eaf…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Digest** | `sha256:73b14eaf…` (full value in `record.yaml`), fetched 2026-11-01. A re-fetch on 2026-11-05 hashes differently; see `content.note` |
 
 ## Overview
 
-Fly.io replaced its OAuth2 tokens with macaroons, and this post says what that took. The stated win is not theft resistance but permissions: users derive their own restricted tokens, and the platform never has to design the roles in advance (§3). Caveat evaluation keeps the rule that every caveat must pass in isolation, so adding one can only narrow (§1). The hard part is HMAC itself. Since "If you can verify a Macaroon, you can generate one", verification moved to an isolated service reached over HTTP, and only caveat clearing happens at the edge (§6). Third-party caveats, nearly dropped, became the login and SSO mechanism and a plugin interface (§5).
+Fly.io replaced its OAuth2 tokens with macaroons, and this post says what that took. The stated win is not theft resistance but permissions: users derive their own restricted tokens, and the platform never has to design the roles in advance (§3). Caveat evaluation keeps the rule that every caveat must pass in isolation, so adding one can only narrow (§1). The hard part is HMAC itself. Since "If you can verify a Macaroon, you can generate one", verification moved to an isolated service reached over HTTP, and clearing of caveats can happen anywhere (§6). Third-party caveats, nearly dropped, became the login and SSO mechanism and a plugin interface (§5).
 
 ## Applicability
 
@@ -47,6 +47,8 @@ Fly.io replaced its OAuth2 tokens with macaroons, and this post says what that t
 |---|---|
 | `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
 | `summary.md` | this document |
+
+**Relation.** The post links the NDSS paper, so `macaroons-2014` is under `cites`, not `see_also`.
 
 **No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. A `web` record owes FX-1 only if someone extracts it. No issue owns that extraction yet. No keyword count is given because none has been reconciled.
 

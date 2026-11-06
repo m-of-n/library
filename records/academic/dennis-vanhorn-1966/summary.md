@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: dennis-vanhorn-1966
 record: dennis-vanhorn-1966
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Programming Semantics for Multiprogrammed Computations
@@ -31,7 +31,7 @@ The paper defines meta-instructions for a multiprogrammed computer, and in doing
 | Cryptography | `none` | No cryptography. The supervisor is the enforcement mechanism |
 | This project | `adjacent` | Ancestry for the delegation and naming model, and no more than that |
 
-- **R-M-10**: an ownership indicator gates who may grant and delete (pp. 145, 152). That is an early form of an explicit delegation right, though it covers ownership powers generally.
+- **R-M-10**: an ownership indicator gates who may grant and delete (pp. 145, 152–153: ownership is defined on p. 152, and its powers to modify, delete and grant on p. 153). That is an early form of an explicit delegation right, though it covers ownership powers generally.
 - **R-M-03**: partial names relative to a directory reached by capability (p. 152) anticipate interpreting names only relative to an issuer. The directory here is a system object, not a signing principal, so this is an analogy.
 
 ## Implementations
