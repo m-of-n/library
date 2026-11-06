@@ -1,0 +1,4592 @@
+# w3c-vc-jose-cose protocol model, FX-1 pass 1 (protocol and state-machine agent). See protocol.md for the prose and diagrams.
+record: "w3c-vc-jose-cose"
+reviewed_by: ""
+extracted: "2026-11-03"
+extracted_by: >-
+  FX-1 pass 1 (extract), protocol and state-machine agent, effort max, from the source only
+source:
+  file: ".cache/w3c-vc-jose-cose.bin"
+  sha256: "6c70cf8d7de9d8a3ff28a743fea9d569a67a402111c3245fdafbaa2ad6709af9"
+  media_type: "text/html"
+  rendering: ".cache/w3c-vc-jose-cose.txt"
+  rendering_sha256: "f02bd4966800863d533746c6c39ad267ada1b8bfcbb92186c204b617bb46c126"
+  rendering_lines: "1980"
+  bcp14_keywords: "97"
+  version: "W3C Recommendation 15 May 2025 (REC-vc-jose-cose-20250515)"
+applicability: >-
+  This document secures documents of another specification (the VC Data Model v2.0) with envelopes
+  of other specifications (JWS, SD-JWT, COSE_Sign1). It defines no exchange: no request, response,
+  session, transport binding, acknowledgement or error message between issuer, holder and
+  verifier. What it does define is (a) how an issuer implementation turns an unsecured credential
+  or presentation into a secured one (§3.1 to §3.3), (b) how a holder carries secured credentials
+  inside a presentation (the Enveloped types of §3.1.2, §3.2.2 and §3.3.2 and the base64 data URL
+  of §3.3.1), (c) which header parameters and claims a verifier can use to find a key, and the
+  shape a controlled identifier document must give that key (§4), and (d) three verification
+  algorithms and a validation section that the holder or verifier runs on receipt (§5). Every flow
+  below is therefore one party building an object, an unspecified delivery, and the receiving
+  party processing it alone. Every on_error is local to the role that meets the failure; nothing
+  travels back. The only cross-party dependency the source states is the proof-of-possession key
+  of §4.1.3, provided by the holder to the issuer and verifiable by the verifier, and even there
+  it defines no message. Delivery steps, the choice among the three algorithms, decryption of a
+  nested JWE or COSE encryption object, and the verification of credentials enveloped in a
+  presentation are not in the source; where this file supplies them they are marked inferred, with
+  the reason.
+conventions:
+  quoting: >-
+    Every quotes item is {at, text}. text is one contiguous run of a single line of
+    .cache/w3c-vc-jose-cose.txt (each HTML block element is one line there, whitespace collapsed),
+    copied without any change, the source's typos and missing full stops included; it was checked by
+    script to lie inside the section named by at and to occur in the tag-stripped HTML, so no quote
+    carries a rendering artefact of the .txt. No quote joins two runs and nothing is elided. A
+    sentence that occurs more than once in one section (the Set and Return steps of §5.1 to §5.3,
+    the two extension-mechanism sentences of §5.4) was pinned to the .txt line of the step it is
+    quoted for.
+  step_numbers: >-
+    In the flows of §5.1, §5.2 and §5.3, n is the source's own step position: the HTML writes each
+    algorithm as an ordered list of three items whose second and third items each hold an ordered
+    list of four, and n gives the position in that nesting (2.3 is the third item of the list inside
+    item 2). The HTML carries no printed numbers, the .txt drops the nesting, and how a browser
+    labels nested items depends on the W3C stylesheet, so a locator such as §5.1, step 2.3 names a
+    list position, the same one normative.md uses. In every other flow, n is this file's own
+    ordering; the source numbers nothing outside §5.
+  basis: >-
+    kind is stated or inferred for every step. inferred: true appears only on inferred steps, with
+    inferred_reason saying what the source does and does not say. on_error_basis is stated (the
+    source says what follows), unspecified (the source names the operation and says nothing about
+    its failure; on_error then reads `unspecified by source` with the step or section), or inferred
+    (this file's reading, said so inside on_error). condition, action and note are this file's
+    wording throughout; where one repeats source words, the step's quotes carry the verbatim text.
+  constrained_by: >-
+    w3c-vc-jose-cose#R-NNNN ids of distilled/requirements.yaml whose text the step obeys or that
+    bind the structure it emits, each selected by script from the requirement's locator and a
+    fragment of its text, refusing zero or several matches. constrained_by_locators names keyword
+    sentences that have no requirement id: those of §3.1.3, which the source marks non-normative.
+    normative lists the normative.md entries (N-NNN) that hold the step's quotes, found by .txt
+    line.
+  messages: >-
+    message is the exact name of a distilled/messages.yaml entry and message_id its id; field, where
+    given, is a field of that entry. also_messages lists further entries the step applies to (the
+    same act on the other envelope). Where the source names no structure for a step, the step names
+    the nearest entry: for a decision, the object decided about (media-type-labelling); for the
+    proof-of-possession key in transit, the cnf field it ends up in, said in that step's
+    inferred_reason (key-binding).
+  roles: >-
+    from and to name roles of the roles list. In the §5 flows the source says "the holder or
+    verifier follows this algorithm"; those flows write verifier for that party and list both under
+    run_by. The signing step of each securing flow names, in conformance_class, the class the source
+    binds; the three verification flows name theirs at flow level.
+  locators: >-
+    A locator is a section sign with the .txt heading number, then a position: a step (step_numbers
+    above), or paragraph n, which counts blocks as normative.md's ¶n does (every paragraph, list,
+    table and example one; an empty paragraph not counted). Every paragraph locator here falls in §3,
+    §5 or §5.4, whose blocks before the last cited one are all paragraphs, so requirements.yaml's
+    count of paragraphs alone gives the same numbers; normative names the N entries alongside.
+  kind_of_flow: >-
+    creation-and-delivery: a party builds a secured object and an unspecified delivery carries it.
+    receive-processing: the receiving party's local processing. local-decision: a choice one party
+    makes on its own. exchange: the nearest the source comes to two parties depending on each other.
+    out-of-scope: behaviour the source assigns to a referenced specification.
+framing:
+  - id: "enveloping-proof"
+    text: "The document secures the VC data model by enveloping it, once per securing mechanism."
+    locator: "§1.1.2"
+    basis: "stated"
+    quotes:
+      - at: "§1.1.2"
+        text: |-
+          The Verifiable Credentials Data Model v2.0 describes the approach taken by this specification to secure JSON and CBOR claims by applying an enveloping proof.
+      - at: "§1.1.2"
+        text: |-
+          This specification defines how to secure different data structures using various enveloping proof mechanisms:
+  - id: "payload-is-the-document"
+    text: >-
+      The unsecured credential or presentation is the payload, with no mapping; the SD-JWT credential
+      route is the exception (§3.2.1 converts, §5.2 converts back).
+    locator: "§3, §3.1.1, §3.2.1"
+    basis: "stated"
+    quotes:
+      - at: "§3"
+        text: |-
+          A benefit to this approach is that payloads can be made to conform directly to [VC-DATA-MODEL-2.0] without any mappings or transformation, while at the same time supporting registered header parameters and claims that are understood in the context of JOSE, SD-JWT, and COSE.
+      - at: "§3.1.1"
+        text: |-
+          The unsecured verifiable credential is the unencoded JWS payload.
+      - at: "§3.2.1"
+        text: |-
+          The Issuer then converts the input JWT Claims Set (i.e., the unsecured verifiable credential) into an [SD-JWT] payload according to SD-JWT issuance instructions.
+  - id: "media-types-not-transport"
+    text: >-
+      Media types label secured objects; no transport or delivery is defined. The only mention of
+      transmission is the condition on the optional encryption.
+    locator: "§1, §3.1.1"
+    basis: "stated"
+    quotes:
+      - at: "§1"
+        text: |-
+          It uses content types [RFC6838] to distinguish between the data types of unsecured documents conforming to [VC-DATA-MODEL-2.0] and the data types of secured documents conforming to [VC-DATA-MODEL-2.0].
+      - at: "§3.1.1"
+        text: |-
+          To encrypt a secured verifiable credential when transmitting over an insecure channel, implementers MAY use JSON Web Encryption (JWE) [RFC7516] by nesting the secured verifiable credential as the plaintext payload of a JWE, per the description of Nested JWTs in [RFC7519].
+  - id: "key-discovery-precedes-verification"
+    text: "Key discovery is outside the algorithms and assumed to have succeeded before they start."
+    locator: "§5"
+    basis: "stated"
+    quotes:
+      - at: "§5"
+        text: |-
+          This specification might be used with many different key discovery protocols. Therefore, discovery of verification keys is described in 4. Key Discovery, and is assumed to have succeeded prior to beginning the verification process.
+  - id: "verification-delegated"
+    text: >-
+      Each algorithm delegates the cryptographic work to the specification of its envelope and only
+      maps the outcome to three outputs.
+    locator: "§5.1, §5.2, §5.3"
+    basis: "stated"
+    quotes:
+      - at: "§5.1"
+        text: |-
+          Follow the algorithm defined in Validating a JWT [RFC7519].
+      - at: "§5.2"
+        text: |-
+          Follow the algorithms defined in SD-JWT for verification of the SD-JWT.
+      - at: "§5.3"
+        text: |-
+          Follow the algorithm defined in CBOR Object Signing and Encryption (COSE): Structures and Process [RFC9052] under the Signing and Verification Process for COSE_Sign1.
+  - id: "verification-then-validation"
+    text: >-
+      Validation is a separate, recommended stage after a successful verification; it has no output of
+      its own.
+    locator: "§5, §5.4"
+    basis: "stated"
+    quotes:
+      - at: "§5"
+        text: |-
+          After verification has succeeded, additional validation checks SHOULD be performed as described in Section 5.4 Validation
+roles:
+  - name: "issuer"
+    kind: "party"
+    also_called:
+      - "Issuers"
+      - "Issuer"
+      - "issuer"
+      - "issuers"
+    defined_by: >-
+      VC Data Model v2.0; the HTML links the word to vc-data-model-2.0#dfn-issuers. §2 of this
+      document defines no role.
+    description: >-
+      Secures a credential: builds the JWS, SD-JWT or COSE_Sign1 around it (§3.1.1, §3.2.1, §3.3.1)
+      and sets the header values and claims §3 and §4 constrain. Receives the holder's
+      proof-of-possession key where key binding is used (§4.1.3).
+    locators:
+      - "§1.1.2.1"
+      - "§3.2.1"
+      - "§4"
+      - "§4.1.1"
+      - "§4.1.3"
+    quotes:
+      - at: "§1.1.2.1"
+        text: |-
+          Issuers, Holders, and Verifiers MUST ignore all JWT Claims Sets that have no integrity protection.
+      - at: "§3.2.1"
+        text: |-
+          The Issuer then converts the input JWT Claims Set (i.e., the unsecured verifiable credential) into an [SD-JWT] payload according to SD-JWT issuance instructions.
+  - name: "holder"
+    kind: "party"
+    also_called:
+      - "Holders"
+      - "Holder"
+      - "holder"
+      - "holders"
+    defined_by: "VC Data Model v2.0 (vc-data-model-2.0#dfn-holders)."
+    description: >-
+      Receives secured credentials and may verify them with the §5 algorithms; provides a
+      proof-of-possession key to the issuer (§4.1.3); has verification keys of its own (§4), and its
+      kid is constrained when it is identified by a URL (§4.2). That the holder is the party that
+      secures a presentation is this file's reading: the source assigns presentation securing to the
+      issuer implementation conformance classes (§3.1.2, §3.2.2, §3.3.2) and never names the party
+      (tension issuer-class-secures-presentations).
+    locators:
+      - "§1.1.2.1"
+      - "§4"
+      - "§4.1.3"
+      - "§4.2"
+      - "§5.1"
+      - "§5.2"
+      - "§5.3"
+    quotes:
+      - at: "§4"
+        text: |-
+          There are several different ways to discover the verification keys of the issuers and holders.
+      - at: "§4.2"
+        text: |-
+          When the holder is identified as a [URL], and iss is absent, the kid MUST be an absolute [URL] to a verification method listed in a controlled identifier document.
+      - at: "§5.1"
+        text: |-
+          Upon receipt of the verifiable credential or presentation secured as a JWT [RFC7519], the holder or verifier follows this algorithm:
+  - name: "verifier"
+    kind: "party"
+    also_called:
+      - "Verifiers"
+      - "Verifier"
+      - "verifier"
+      - "verifiers"
+    defined_by: "VC Data Model v2.0 (vc-data-model-2.0#dfn-verifier)."
+    description: >-
+      Discovers the key (§4), runs the §5.1, §5.2 or §5.3 algorithm, and then the §5.4 validation
+      under its own validation policies.
+    locators:
+      - "§1.1.2.1"
+      - "§4"
+      - "§4.1"
+      - "§4.1.3"
+      - "§5"
+      - "§5.4"
+    quotes:
+      - at: "§4"
+        text: |-
+          To complete the verification process, a verifier needs to obtain the cryptographic keys used to secure the credential.
+      - at: "§5"
+        text: |-
+          As a general rule, verifiers SHOULD strive to minimize the processing of untrusted data.
+      - at: "§5.4"
+        text: |-
+          All claims that are understood MUST be evaluated according the verifier's validation policies.
+  - name: "subject"
+    kind: "mentioned"
+    also_called:
+      - "subject"
+    defined_by: "VC Data Model v2.0 (vc-data-model-2.0#dfn-subjects)."
+    description: >-
+      Named only as an owner of a key that may be expressed as a DID URL, and as what a JWT Claims Set
+      is typically about. Takes part in no flow.
+    locators:
+      - "§1.1.2"
+      - "§4.1.1"
+    quotes:
+      - at: "§4.1.1"
+        text: |-
+          kid MUST be present when the key of the issuer or subject is expressed as a DID URL.
+      - at: "§1.1.2"
+        text: |-
+          A JWT Claims Set is a JSON object containing one or more claims about an entity (typically the subject of the JWT).
+  - name: "jws-issuer-implementation"
+    kind: "conformance-class"
+    played_by: "issuer for a credential (§3.1.1); for a presentation (§3.1.2) the source names no party"
+    locators:
+      - "§1.1.1"
+    quotes:
+      - at: "§1.1.1"
+        text: |-
+          A conforming JWS issuer implementation produces conforming JWS documents and MUST secure them as described in Section 3.1 With JOSE.
+  - name: "jws-verifier-implementation"
+    kind: "conformance-class"
+    played_by: "holder or verifier (§5.1)"
+    locators:
+      - "§1.1.1"
+    quotes:
+      - at: "§1.1.1"
+        text: |-
+          A conforming JWS verifier implementation verifies conforming JWS documents as described in Section 3.1 With JOSE.
+  - name: "sd-jwt-issuer-implementation"
+    kind: "conformance-class"
+    played_by: "issuer for a credential (§3.2.1); for a presentation (§3.2.2) the source names no party"
+    locators:
+      - "§1.1.1"
+    quotes:
+      - at: "§1.1.1"
+        text: |-
+          A conforming SD-JWT issuer implementation produces conforming SD-JWT documents and MUST secure them as described in Section 3.2 With SD-JWT.
+  - name: "sd-jwt-verifier-implementation"
+    kind: "conformance-class"
+    played_by: "holder or verifier (§5.2)"
+    locators:
+      - "§1.1.1"
+    quotes:
+      - at: "§1.1.1"
+        text: |-
+          A conforming SD-JWT verifier implementation verifies conforming SD-JWT documents as described in Section 3.2 With SD-JWT.
+  - name: "cose-issuer-implementation"
+    kind: "conformance-class"
+    played_by: "issuer for a credential (§3.3.1); for a presentation (§3.3.2) the source names no party"
+    locators:
+      - "§1.1.1"
+    quotes:
+      - at: "§1.1.1"
+        text: |-
+          A conforming COSE issuer implementation produces conforming COSE documents and MUST secure them as described in Section 3.3 With COSE.
+  - name: "cose-verifier-implementation"
+    kind: "conformance-class"
+    played_by: "holder or verifier (§5.3)"
+    locators:
+      - "§1.1.1"
+    quotes:
+      - at: "§1.1.1"
+        text: |-
+          A conforming COSE verifier implementation verifies conforming COSE documents as described in Section 3.3 With COSE.
+  - name: "implementer"
+    kind: "mentioned"
+    also_called:
+      - "implementers"
+      - "Implementers"
+      - "Implementations"
+    description: >-
+      The writer of the software, named as the actor of the encryption MAYs, the SD-JWT disclosure
+      SHOULDs and the reference to the SD-JWT draft. Its choices are carried out by the issuer or
+      holder software in the flows; it takes no step itself.
+    locators:
+      - "§1.1.2.2"
+      - "§3.1.1"
+      - "§3.2.1"
+      - "§3.1.2"
+      - "§3.2.2"
+    quotes:
+      - at: "§1.1.2.2"
+        text: |-
+          Implementers SHOULD refer to this draft for the full details of the SD-JWT format and processing requirements.
+      - at: "§3.2.1"
+        text: |-
+          When securing verifiable credentials with [SD-JWT], implementers SHOULD ensure that properties necessary for the validation and verification of a credential are NOT selectively disclosable (i.e., such properties SHOULD be disclosed).
+  - name: "insecure-channel"
+    kind: "channel"
+    also_called:
+      - "an insecure channel"
+    description: >-
+      Whatever carries a secured object between parties. Named only as the condition under which
+      encryption MAY be added; no transport, binding or delivery is specified.
+    locators:
+      - "§3.1.1"
+      - "§3.1.2"
+      - "§3.2.1"
+      - "§3.2.2"
+      - "§3.3.1"
+      - "§3.3.2"
+    quotes:
+      - at: "§3.3.1"
+        text: |-
+          To encrypt a secured verifiable credential when transmitting over an insecure channel, implementers MAY use COSE encryption, as defined in Section 5 of [RFC9052], by nesting the secured verifiable credential as the plaintext payload of an encrypted COSE object.
+  - name: "json-parser"
+    kind: "component"
+    also_called:
+      - "JSON parser"
+      - "JSON parsers"
+    description: >-
+      The parser that reads JSON inputs (headers, payloads). Named only in §7.2, which the source
+      marks non-normative.
+    locators:
+      - "§7.2"
+    quotes:
+      - at: "§7.2"
+        text: |-
+          To prevent these risks, it is essential to use a JSON parser that strictly validates the syntax of all input data.
+      - at: "§7.2"
+        text: |-
+          It is essential that any JSON inputs that do not conform to the JSON-text syntax defined in [RFC7159] be rejected in their entirety by JSON parsers.
+  - name: "user"
+    kind: "mentioned"
+    also_called:
+      - "users"
+      - "the user's asymmetric private and symmetric secret keys"
+    description: >-
+      Named in the non-normative considerations as a reader of them and as the owner of keys to
+      protect. Takes part in no flow.
+    locators:
+      - "§7.1"
+      - "§7.2"
+    quotes:
+      - at: "§7.2"
+        text: |-
+          This especially includes protecting the user's asymmetric private and symmetric secret keys, as well as employing countermeasures against various attacks.
+message_names_used:
+  - name: "Unsecured verifiable credential (application/vc)"
+    messages_yaml: "MSG-01"
+    defined_at: "§3.1.1"
+    used_as: "message"
+    steps_as_message: "8"
+    steps_as_also: "0"
+  - name: "Unsecured verifiable presentation (application/vp)"
+    messages_yaml: "MSG-02"
+    defined_at: "§3.1.2"
+    used_as: "message"
+    steps_as_message: "4"
+    steps_as_also: "1"
+  - name: "EnvelopedVerifiableCredential"
+    messages_yaml: "MSG-03"
+    defined_at: "§3.1.2"
+    used_as: "message"
+    steps_as_message: "3"
+    steps_as_also: "1"
+  - name: "EnvelopedVerifiablePresentation"
+    messages_yaml: "MSG-04"
+    defined_at: "§3.1.2"
+    used_as: "message"
+    steps_as_message: "1"
+    steps_as_also: "1"
+  - name: "data: URL carrying a secured credential or presentation"
+    messages_yaml: "MSG-05"
+    defined_at: "§3.3.1"
+    used_as: "message"
+    steps_as_message: "1"
+    steps_as_also: "1"
+  - name: "JWS Compact Serialization (application/vc+jwt, application/vp+jwt)"
+    messages_yaml: "MSG-06"
+    defined_at: "§3.1.1"
+    used_as: "message"
+    steps_as_message: "8"
+    steps_as_also: "2"
+  - name: "JOSE Header of a vc+jwt or vp+jwt"
+    messages_yaml: "MSG-07"
+    defined_at: "§3.1.1"
+    used_as: "message"
+    steps_as_message: "3"
+    steps_as_also: "4"
+  - name: "Registered JWT claims in the claims set (JWS and SD-JWT)"
+    messages_yaml: "MSG-08"
+    defined_at: "§3.1.3"
+    used_as: "message"
+    steps_as_message: "8"
+    steps_as_also: "0"
+  - name: "JWS JSON Serialization"
+    messages_yaml: "MSG-09"
+    defined_at: "§3.1.2"
+    used_as: "also"
+    steps_as_message: "0"
+    steps_as_also: "2"
+  - name: "Nested JWE (encrypted vc+jwt or vp+jwt)"
+    messages_yaml: "MSG-10"
+    defined_at: "§3.1.1"
+    used_as: "message"
+    steps_as_message: "3"
+    steps_as_also: "2"
+  - name: "SD-JWT compact (application/vc+sd-jwt, application/vp+sd-jwt)"
+    messages_yaml: "MSG-11"
+    defined_at: "§1.1.2.2"
+    used_as: "message"
+    steps_as_message: "7"
+    steps_as_also: "3"
+  - name: "Issuer-signed JWT header (SD-JWT)"
+    messages_yaml: "MSG-12"
+    defined_at: "§3.2.1"
+    used_as: "message"
+    steps_as_message: "2"
+    steps_as_also: "1"
+  - name: "SD-JWT payload (the converted claims set)"
+    messages_yaml: "MSG-13"
+    defined_at: "§3.2.1"
+    used_as: "message"
+    steps_as_message: "2"
+    steps_as_also: "0"
+  - name: "Disclosure"
+    messages_yaml: "MSG-14"
+    defined_at: "§1.1.2.2"
+    used_as: "message"
+    steps_as_message: "1"
+    steps_as_also: "2"
+  - name: "Key Binding JWT (KB-JWT)"
+    messages_yaml: "MSG-15"
+    defined_at: "§1.1.2.2"
+    used_as: "message"
+    steps_as_message: "2"
+    steps_as_also: "0"
+  - name: "SD-JWT JSON serialization (application/sd-jwt+json)"
+    messages_yaml: "MSG-16"
+    defined_at: "§3.2.2"
+    used_as: "also"
+    steps_as_message: "0"
+    steps_as_also: "2"
+  - name: "Encrypted SD-JWT (JWE per Section 11.2 of [SD-JWT])"
+    messages_yaml: "MSG-17"
+    defined_at: "§3.2.1"
+    used_as: "message"
+    steps_as_message: "2"
+    steps_as_also: "3"
+  - name: "COSE_Sign1 (application/vc+cose, application/vp+cose)"
+    messages_yaml: "MSG-18"
+    defined_at: "§3.3.1"
+    used_as: "message"
+    steps_as_message: "7"
+    steps_as_also: "3"
+  - name: "COSE header parameters (protected and unprotected buckets)"
+    messages_yaml: "MSG-19"
+    defined_at: "§3.3.1"
+    used_as: "message"
+    steps_as_message: "2"
+    steps_as_also: "6"
+  - name: "CWT Claims header parameter (label 15)"
+    messages_yaml: "MSG-20"
+    defined_at: "§3.3.3"
+    used_as: "also"
+    steps_as_message: "0"
+    steps_as_also: "10"
+  - name: "Encrypted COSE object nesting a vc+cose or vp+cose"
+    messages_yaml: "MSG-21"
+    defined_at: "§3.3.1"
+    used_as: "message"
+    steps_as_message: "2"
+    steps_as_also: "3"
+  - name: "Controlled identifier document"
+    messages_yaml: "MSG-22"
+    defined_at: "§4.2"
+    used_as: "message"
+    steps_as_message: "1"
+    steps_as_also: "0"
+  - name: "Verification method (JsonWebKey)"
+    messages_yaml: "MSG-23"
+    defined_at: "§4.2"
+    used_as: "message"
+    steps_as_message: "1"
+    steps_as_also: "0"
+  - name: "publicKeyJwk (JWK)"
+    messages_yaml: "MSG-24"
+    defined_at: "§4.2"
+    used_as: "message"
+    steps_as_message: "1"
+    steps_as_also: "0"
+  - name: "kid value as a reference to a verification method"
+    messages_yaml: "MSG-25"
+    defined_at: "§4.2"
+    used_as: "message"
+    steps_as_message: "3"
+    steps_as_also: "0"
+  - name: "Verification algorithm inputs and outputs"
+    messages_yaml: "MSG-26"
+    defined_at: "§5"
+    used_as: "message"
+    steps_as_message: "38"
+    steps_as_also: "0"
+  - name: "Media type registration application/vc+jwt"
+    messages_yaml: "MSG-27"
+    defined_at: "§6.1.1"
+    used_as: "message"
+    steps_as_message: "2"
+    steps_as_also: "1"
+  - name: "Media type registration application/vp+jwt"
+    messages_yaml: "MSG-28"
+    defined_at: "§6.1.2"
+    used_as: "also"
+    steps_as_message: "0"
+    steps_as_also: "3"
+  - name: "Media type registration application/vc+sd-jwt"
+    messages_yaml: "MSG-29"
+    defined_at: "§6.1.3"
+    used_as: "message"
+    steps_as_message: "1"
+    steps_as_also: "2"
+  - name: "Media type registration application/vp+sd-jwt"
+    messages_yaml: "MSG-30"
+    defined_at: "§6.1.4"
+    used_as: "also"
+    steps_as_message: "0"
+    steps_as_also: "3"
+  - name: "Media type registration application/vc+cose"
+    messages_yaml: "MSG-31"
+    defined_at: "§6.1.5"
+    used_as: "also"
+    steps_as_message: "0"
+    steps_as_also: "3"
+  - name: "Media type registration application/vp+cose"
+    messages_yaml: "MSG-32"
+    defined_at: "§6.1.6"
+    used_as: "also"
+    steps_as_message: "0"
+    steps_as_also: "3"
+flows:
+  - name: "media-type-labelling"
+    title: "Choosing the securing mechanism and the media type that labels the secured object"
+    locator: "§1.1.2, §3, §3.3"
+    kind: "local-decision"
+    participants:
+      - "issuer"
+      - "holder"
+    summary: >-
+      Run by whoever secures a credential (the issuer) or a presentation (the holder, by this model's
+      reading). The source states no rule for choosing among JOSE, SD-JWT and COSE: COSE is a MAY and
+      the other two have no keyword of their own. The media type rules are general and bind the label
+      wherever it is carried (typ, cty, a data URL, a transport header), which the source does not
+      enumerate. Steps name the issuer; a holder securing a presentation applies the same rules.
+    steps:
+      - n: "1"
+        from: "issuer"
+        to: "issuer"
+        message: "Unsecured verifiable credential (application/vc)"
+        message_id: "MSG-01"
+        also_messages:
+          - "MSG-02"
+        action: >-
+          Choose an enveloping mechanism: JWS (§3.1), SD-JWT (§3.2) or COSE_Sign1 (§3.3). No criterion is
+          given; COSE is permitted, the other two are simply described.
+        locator: "§1.1.2, §3.3"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source describes three mechanisms (§1.1.2) and permits COSE (MAY, §3.3); no sentence says
+          that a securer chooses among them, or how, so the choice is this model's step.
+        quotes:
+          - at: "§1.1.2"
+            text: |-
+              This specification defines how to secure different data structures using various enveloping proof mechanisms:
+          - at: "§3.3"
+            text: |-
+              Verifiable credentials MAY be secured using COSE [RFC9052] and SHOULD be identified through use of content types as outlined in this section.
+        normative:
+          - "N-014"
+          - "N-071"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0045"
+          - "w3c-vc-jose-cose#R-0046"
+        on_error: >-
+          unspecified by source (§1.1.2, §3.3: no rule for the choice, so no wrong choice is defined)
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "issuer"
+        to: "issuer"
+        message: "Media type registration application/vc+jwt"
+        message_id: "MSG-27"
+        also_messages:
+          - "MSG-28"
+          - "MSG-29"
+          - "MSG-30"
+          - "MSG-31"
+          - "MSG-32"
+        action: >-
+          Label the secured object with a media type that tells verifiable credentials and presentations
+          apart from other secured JSON or CBOR (RECOMMENDED).
+        locator: "§3"
+        kind: "stated"
+        quotes:
+          - at: "§3"
+            text: |-
+              It is RECOMMENDED that media types be used to distinguish verifiable credentials and verifiable presentations from other kinds of secured JSON or CBOR.
+        normative:
+          - "N-028"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0008"
+        on_error: "unspecified by source (§3, paragraph 4)"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "issuer"
+        to: "issuer"
+        message: "Media type registration application/vc+sd-jwt"
+        message_id: "MSG-29"
+        also_messages:
+          - "MSG-27"
+          - "MSG-28"
+          - "MSG-30"
+          - "MSG-31"
+          - "MSG-32"
+        action: >-
+          Use the most specific media type available (SHOULD): application/vc+sd-jwt rather than
+          application/sd-jwt, unless a still more specific type exists.
+        locator: "§3"
+        kind: "stated"
+        quotes:
+          - at: "§3"
+            text: |-
+              The most specific media type (or subtype) available SHOULD be used, instead of more generic media types (or supertypes).
+          - at: "§3"
+            text: |-
+              For example, rather than the general application/sd-jwt, application/vc+sd-jwt SHOULD be used, unless there is a more specific media type that would even better identify the secured envelope format.
+        normative:
+          - "N-029"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0009"
+          - "w3c-vc-jose-cose#R-0010"
+        on_error: "unspecified by source (§3, paragraph 5)"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "issuer"
+        to: "issuer"
+        message: "Media type registration application/vc+jwt"
+        message_id: "MSG-27"
+        also_messages:
+          - "MSG-28"
+          - "MSG-29"
+          - "MSG-30"
+          - "MSG-31"
+          - "MSG-32"
+        action: >-
+          If the implementation does not know which media type to use, it MUST use one of the six this
+          document defines.
+        locator: "§3"
+        kind: "stated"
+        quotes:
+          - at: "§3"
+            text: |-
+              If implementations do not know which media type to use, media types defined in this specification MUST be used.
+        normative:
+          - "N-030"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0011"
+        on_error: "unspecified by source (§3, paragraph 6)"
+        on_error_basis: "unspecified"
+        note: "The six are registered in §6, which the source marks non-normative (normative.md SD-16)."
+  - name: "jose-credential-securing"
+    title: "Securing a credential as a JWS (application/vc+jwt) and handing it to the holder"
+    locator: "§3.1.1, §3.1.2, §1.1.2.1, §4.1.1, §4.1.2, §4.2"
+    kind: "creation-and-delivery"
+    participants:
+      - "issuer"
+      - "insecure-channel"
+      - "holder"
+    summary: >-
+      The issuer signs the credential JSON, unencoded, as a JWS payload. typ and cty are SHOULDs; kid
+      is a MUST only in the DID URL case and the URL-issuer-without-iss case of §4.2, whose
+      requirements apply when controlled identifier documents are used. Encryption is a MAY. Delivery
+      is not specified. The holder may verify on receipt with §5.1.
+    steps:
+      - n: "1"
+        from: "issuer"
+        to: "issuer"
+        message: "Unsecured verifiable credential (application/vc)"
+        message_id: "MSG-01"
+        field: "issuer"
+        action: >-
+          Take the unsecured credential as the JWS payload, unencoded. It carries no vc or vp claim; a
+          present iss equals issuer, or issuer.id when issuer is an object.
+        locator: "§3.1.1, §1.1.2.1, §4.1.2"
+        kind: "stated"
+        quotes:
+          - at: "§3.1.1"
+            text: |-
+              The unsecured verifiable credential is the unencoded JWS payload.
+          - at: "§1.1.2.1"
+            text: |-
+              The JWT Claim Names vc and vp MUST NOT be present in any JWT Claims Set that comprises a verifiable credential or a verifiable presentation.
+          - at: "§4.1.2"
+            text: |-
+              When issuer value is a string, iss value, if present, MUST match issuer value.
+          - at: "§4.1.2"
+            text: |-
+              When issuer value is an object with an id value, iss value, if present, MUST match issuer.id value.
+        normative:
+          - "N-032"
+          - "N-021"
+          - "N-096"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0012"
+          - "w3c-vc-jose-cose#R-0006"
+          - "w3c-vc-jose-cose#R-0066"
+          - "w3c-vc-jose-cose#R-0067"
+        constrained_by_locators:
+          - "§3.1.3, line 366 of the .txt (non-normative): nbf NOT RECOMMENDED; iat and exp are the times of the signature"
+          - "§3.1.3, line 368 (non-normative): SHOULD avoid claim values that conflict with credential properties; SHOULD NOT set a conflicting iss"
+          - "§3.1.3, line 369 (non-normative): vc and vp MUST NOT be present (bound normatively by R-0006)"
+        on_error: >-
+          unspecified by source (§3.1.1, §4.1.2: no producer-side check is described; a violation is only
+          visible to a verifier that looks, and §5.1 names no such check)
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "issuer"
+        to: "issuer"
+        message: "JOSE Header of a vc+jwt or vp+jwt"
+        message_id: "MSG-07"
+        field: "typ"
+        action: >-
+          Build the JOSE Header: typ vc+jwt (SHOULD); cty vc when present (SHOULD); kid MUST be present
+          when the issuer key is a DID URL; where controlled identifier documents are used (§4.2), with no
+          iss and a URL issuer, kid MUST be an absolute URL to a verification method (and is RECOMMENDED to
+          embed a JWK Thumbprint URI); cnf for a holder key, see key-binding.
+        locator: "§3.1.1, §4.1.1, §4.2"
+        kind: "stated"
+        quotes:
+          - at: "§3.1.1"
+            text: |-
+              The typ header parameter SHOULD be vc+jwt.
+          - at: "§3.1.1"
+            text: |-
+              When present, the cty header parameter SHOULD be vc.
+          - at: "§4.1.1"
+            text: |-
+              kid MUST be present when the key of the issuer or subject is expressed as a DID URL.
+          - at: "§4.2"
+            text: |-
+              When iss is absent, and the issuer is identified as a [URL], the kid MUST be an absolute [URL] to a verification method listed in a controlled identifier documents or a DID Document.
+          - at: "§4.2"
+            text: |-
+              When using [URL] identifiers, the kid is RECOMMENDED to be an absolute [URL] that includes a JWK Thumbprint URI as defined in [RFC7638].
+        normative:
+          - "N-033"
+          - "N-094"
+          - "N-103"
+          - "N-104"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0013"
+          - "w3c-vc-jose-cose#R-0014"
+          - "w3c-vc-jose-cose#R-0065"
+          - "w3c-vc-jose-cose#R-0072"
+          - "w3c-vc-jose-cose#R-0073"
+        constrained_by_locators:
+          - "§3.1.3, line 364 of the .txt (non-normative): the unencoded JOSE Header is JSON, not JSON-LD"
+          - "§3.1.3, line 365 (non-normative): RECOMMENDED to use the IANA JWT Claims and JOSE Header Parameters registries"
+        invokes: "key-binding"
+        on_error: "unspecified by source (§3.1.1, §4.1.1, §4.2)"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "issuer"
+        to: "issuer"
+        message: "JWS Compact Serialization (application/vc+jwt, application/vp+jwt)"
+        message_id: "MSG-06"
+        also_messages:
+          - "MSG-09"
+        action: >-
+          Sign with RFC 7515 (MUST) and serialize compactly: implementations MUST support the compact
+          serialization; the JSON serialization is NOT RECOMMENDED.
+        locator: "§3.1.1, §3.1.2, §1.1.1"
+        kind: "stated"
+        conformance_class: "jws-issuer-implementation"
+        quotes:
+          - at: "§3.1.1"
+            text: |-
+              A conforming JWS issuer implementation MUST use [RFC7515] to secure this media type.
+          - at: "§3.1.2"
+            text: |-
+              Implementations MUST support the JWS compact serialization. Use of the JWS JSON serialization is NOT RECOMMENDED.
+        normative:
+          - "N-032"
+          - "N-044"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0012"
+          - "w3c-vc-jose-cose#R-0001"
+          - "w3c-vc-jose-cose#R-0025"
+          - "w3c-vc-jose-cose#R-0026"
+        on_error: "unspecified by source (§3.1.1: no signing failure is described)"
+        on_error_basis: "unspecified"
+        note: >-
+          The two serialization statements close §3.1.2, the presentation section; applying them to a
+          credential is this model's reading (normative.md SD-24).
+      - n: "4"
+        condition: >-
+          the secured credential will be transmitted over an insecure channel and the implementer chooses
+          to encrypt
+        from: "issuer"
+        to: "issuer"
+        message: "Nested JWE (encrypted vc+jwt or vp+jwt)"
+        message_id: "MSG-10"
+        action: >-
+          Optionally (MAY), when the JWS will cross an insecure channel, nest it as the plaintext of a JWE
+          per the Nested JWT description of RFC 7519.
+        locator: "§3.1.1"
+        kind: "stated"
+        quotes:
+          - at: "§3.1.1"
+            text: |-
+              To encrypt a secured verifiable credential when transmitting over an insecure channel, implementers MAY use JSON Web Encryption (JWE) [RFC7516] by nesting the secured verifiable credential as the plaintext payload of a JWE, per the description of Nested JWTs in [RFC7519].
+        normative:
+          - "N-035"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0016"
+        on_error: >-
+          unspecified by source (§3.1.1: no encryption failure is described, and no media type labels the
+          JWE (messages.yaml TEN-28))
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "issuer"
+        to: "holder"
+        via: "insecure-channel"
+        message: "JWS Compact Serialization (application/vc+jwt, application/vp+jwt)"
+        message_id: "MSG-06"
+        also_messages:
+          - "MSG-10"
+        action: "Deliver the secured credential (or its JWE) to the holder."
+        locator: "§3.1.1"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source mentions transmission only as the condition of the encryption MAY. It defines no
+          delivery, request, response or acknowledgement, and never says the issuer sends the credential
+          to the holder.
+        quotes:
+          - at: "§3.1.1"
+            text: |-
+              To encrypt a secured verifiable credential when transmitting over an insecure channel, implementers MAY use JSON Web Encryption (JWE) [RFC7516] by nesting the secured verifiable credential as the plaintext payload of a JWE, per the description of Nested JWTs in [RFC7519].
+        normative:
+          - "N-035"
+        on_error: "unspecified by source (§3.1.1: no delivery is defined)"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "holder"
+        to: "holder"
+        message: "JWS Compact Serialization (application/vc+jwt, application/vp+jwt)"
+        message_id: "MSG-06"
+        action: "On receipt the holder follows the §5.1 algorithm."
+        locator: "§5.1"
+        kind: "stated"
+        quotes:
+          - at: "§5.1"
+            text: |-
+              Upon receipt of the verifiable credential or presentation secured as a JWT [RFC7519], the holder or verifier follows this algorithm:
+        normative:
+          - "N-111"
+        invokes: "jose-verification"
+        on_error: "See jose-verification."
+        on_error_basis: "stated"
+  - name: "sd-jwt-credential-securing"
+    title: "Securing a credential as an SD-JWT (application/vc+sd-jwt) and handing it to the holder"
+    locator: "§3.2.1, §3.2.2, §1.1.2.2, §4.1.1, §4.2"
+    kind: "creation-and-delivery"
+    participants:
+      - "issuer"
+      - "insecure-channel"
+      - "holder"
+    summary: >-
+      Unlike the JWS and COSE routes, the payload is not the credential as it stands: the issuer
+      converts the credential (the input JWT Claims Set) into an SD-JWT payload with digests and
+      disclosures, per the SD-JWT draft. Properties needed for validation SHOULD stay disclosed.
+    steps:
+      - n: "1"
+        from: "issuer"
+        to: "issuer"
+        message: "Unsecured verifiable credential (application/vc)"
+        message_id: "MSG-01"
+        action: >-
+          Take the unsecured credential as the input JWT Claims Set; no vc or vp claim; a present iss
+          equals issuer, or issuer.id.
+        locator: "§3.2.1, §1.1.2.1, §4.1.2"
+        kind: "stated"
+        quotes:
+          - at: "§3.2.1"
+            text: |-
+              The unsecured verifiable credential is the input JWT Claims Set.
+          - at: "§1.1.2.1"
+            text: |-
+              The JWT Claim Names vc and vp MUST NOT be present in any JWT Claims Set that comprises a verifiable credential or a verifiable presentation.
+        normative:
+          - "N-056"
+          - "N-021"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0027"
+          - "w3c-vc-jose-cose#R-0006"
+          - "w3c-vc-jose-cose#R-0066"
+          - "w3c-vc-jose-cose#R-0067"
+        on_error: "unspecified by source (§3.2.1)"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "issuer"
+        to: "issuer"
+        message: "SD-JWT payload (the converted claims set)"
+        message_id: "MSG-13"
+        also_messages:
+          - "MSG-14"
+        action: >-
+          Convert the claims set into an SD-JWT payload per the SD-JWT issuance instructions: each
+          selectively disclosable claim is salted and replaced by a digest, its disclosure kept apart.
+          Properties necessary for validation and verification (for example @context, type,
+          credentialStatus, credentialSchema, relatedResource) SHOULD stay disclosed, not selectively
+          disclosable.
+        locator: "§3.2.1, §1.1.2.2"
+        kind: "stated"
+        quotes:
+          - at: "§3.2.1"
+            text: |-
+              The Issuer then converts the input JWT Claims Set (i.e., the unsecured verifiable credential) into an [SD-JWT] payload according to SD-JWT issuance instructions.
+          - at: "§3.2.1"
+            text: |-
+              When securing verifiable credentials with [SD-JWT], implementers SHOULD ensure that properties necessary for the validation and verification of a credential are NOT selectively disclosable (i.e., such properties SHOULD be disclosed).
+          - at: "§1.1.2.2"
+            text: |-
+              Each disclosable claim is combined with a salt value before hashing to prevent dictionary attacks.
+        normative:
+          - "N-056"
+          - "N-059"
+          - "N-023"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0031"
+        on_error: >-
+          unspecified by source (§3.2.1: the conversion is SD-JWT's, linked to an unversioned draft
+          (section 6.1))
+        on_error_basis: "unspecified"
+        note: >-
+          The source's own SD-JWT examples make type selectively disclosable (Example 4 lists a disclosure
+          for the claim type holding the credential's type array), against the SHOULD of this step.
+      - n: "3"
+        from: "issuer"
+        to: "issuer"
+        message: "Issuer-signed JWT header (SD-JWT)"
+        message_id: "MSG-12"
+        field: "typ"
+        action: >-
+          Set the issuer-signed JWT header: typ vc+sd-jwt (SHOULD), cty vc when present (SHOULD), kid as
+          in jose-credential-securing step 2.
+        locator: "§3.2.1, §4.1.1, §4.2"
+        kind: "stated"
+        quotes:
+          - at: "§3.2.1"
+            text: |-
+              The typ header parameter SHOULD be vc+sd-jwt.
+          - at: "§3.2.1"
+            text: |-
+              When present, the cty header parameter SHOULD be vc.
+        normative:
+          - "N-057"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0028"
+          - "w3c-vc-jose-cose#R-0029"
+          - "w3c-vc-jose-cose#R-0065"
+          - "w3c-vc-jose-cose#R-0072"
+          - "w3c-vc-jose-cose#R-0073"
+        on_error: "unspecified by source (§3.2.1)"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "issuer"
+        to: "issuer"
+        message: "SD-JWT compact (application/vc+sd-jwt, application/vp+sd-jwt)"
+        message_id: "MSG-11"
+        also_messages:
+          - "MSG-16"
+        action: >-
+          Sign per SD-JWT (MUST) and serialize: the compact serialization (application/sd-jwt) MUST be
+          supported, the JSON serialization MAY be, and a profile is RECOMMENDED if it is used. The parts
+          are separated by tildes; without a KB-JWT the string ends with a tilde (lowercase must, not BCP
+          14).
+        locator: "§3.2.1, §3.2.2, §1.1.2.2, §1.1.1"
+        kind: "stated"
+        conformance_class: "sd-jwt-issuer-implementation"
+        quotes:
+          - at: "§3.2.1"
+            text: |-
+              A conforming SD-JWT issuer implementation MUST use [SD-JWT] to secure this media type.
+          - at: "§3.2.2"
+            text: |-
+              Implementations MUST support the compact serialization (application/sd-jwt) and MAY support the JSON serialization (application/sd-jwt+json).
+          - at: "§3.2.2"
+            text: |-
+              If the JSON serialization is used, it is RECOMMENDED that a profile be defined to ensure any additional JSON members are understood consistently.
+          - at: "§1.1.2.2"
+            text: |-
+              An SD-JWT consists of three main parts: the SD-JWT itself, optional disclosures, and an optional KB-JWT (Key Binding JWT). These parts are separated by tilde (~) characters.
+          - at: "§1.1.2.2"
+            text: |-
+              If the KB-JWT is not present, the SD-JWT must end with a tilde (~) character.
+        normative:
+          - "N-056"
+          - "N-070"
+          - "N-023"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0027"
+          - "w3c-vc-jose-cose#R-0002"
+          - "w3c-vc-jose-cose#R-0042"
+          - "w3c-vc-jose-cose#R-0043"
+          - "w3c-vc-jose-cose#R-0044"
+        on_error: "unspecified by source (§3.2.1)"
+        on_error_basis: "unspecified"
+        note: >-
+          The serialization statements sit in §3.2.2, the presentation section (normative.md SD-24).
+      - n: "5"
+        condition: >-
+          the secured credential will be transmitted over an insecure channel and the implementer chooses
+          to encrypt
+        from: "issuer"
+        to: "issuer"
+        message: "Encrypted SD-JWT (JWE per Section 11.2 of [SD-JWT])"
+        message_id: "MSG-17"
+        action: >-
+          Optionally (MAY) nest the SD-JWT as the plaintext of a JWE per Section 11.2 of the SD-JWT draft.
+        locator: "§3.2.1"
+        kind: "stated"
+        quotes:
+          - at: "§3.2.1"
+            text: |-
+              To encrypt a secured verifiable credential when transmitting over an insecure channel, implementers MAY use JSON Web Encryption (JWE) [RFC7516] by nesting the secured verifiable credential as the plaintext payload of a JWE, per the instructions in Section 11.2 of [SD-JWT].
+        normative:
+          - "N-060"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0032"
+        on_error: "unspecified by source (§3.2.1)"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "issuer"
+        to: "holder"
+        via: "insecure-channel"
+        message: "SD-JWT compact (application/vc+sd-jwt, application/vp+sd-jwt)"
+        message_id: "MSG-11"
+        also_messages:
+          - "MSG-17"
+        action: "Deliver the SD-JWT with all its disclosures to the holder."
+        locator: "§3.2.1"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          As jose-credential-securing step 5. That the holder receives every disclosure is SD-JWT's model,
+          not stated here.
+        quotes:
+          - at: "§3.2.1"
+            text: |-
+              To encrypt a secured verifiable credential when transmitting over an insecure channel, implementers MAY use JSON Web Encryption (JWE) [RFC7516] by nesting the secured verifiable credential as the plaintext payload of a JWE, per the instructions in Section 11.2 of [SD-JWT].
+        normative:
+          - "N-060"
+        on_error: "unspecified by source (§3.2.1: no delivery is defined)"
+        on_error_basis: "unspecified"
+      - n: "7"
+        from: "holder"
+        to: "holder"
+        message: "SD-JWT compact (application/vc+sd-jwt, application/vp+sd-jwt)"
+        message_id: "MSG-11"
+        action: "On receipt the holder follows the §5.2 algorithm."
+        locator: "§5.2"
+        kind: "stated"
+        quotes:
+          - at: "§5.2"
+            text: |-
+              Upon receipt of the verifiable credential or presentation secured with [SD-JWT], the holder or verifier follows this algorithm:
+        normative:
+          - "N-113"
+        invokes: "sd-jwt-verification"
+        on_error: "See sd-jwt-verification."
+        on_error_basis: "stated"
+  - name: "cose-credential-securing"
+    title: "Securing a credential as a COSE_Sign1 (application/vc+cose) and handing it to the holder"
+    locator: "§3.3, §3.3.1, §3.3.3, §4.1.1, §4.2"
+    kind: "creation-and-delivery"
+    participants:
+      - "issuer"
+      - "insecure-channel"
+      - "holder"
+    summary: >-
+      COSE_Sign1 over the credential as it stands. typ (16) and content type (3) are SHOULDs; CWT
+      claims MAY ride in a header parameter. §1.1.2 says the credential is encoded as CBOR under COSE,
+      while §3.3.1 makes it the unencoded payload and every encoded example carries JSON text (tension
+      cose-payload-json-or-cbor).
+    steps:
+      - n: "1"
+        from: "issuer"
+        to: "issuer"
+        message: "Unsecured verifiable credential (application/vc)"
+        message_id: "MSG-01"
+        action: >-
+          Take the unsecured credential as the COSE_Sign1 payload, unencoded; a present iss (CWT claim)
+          equals issuer, or issuer.id.
+        locator: "§3.3.1, §3.3, §1.1.2, §4.1.2"
+        kind: "stated"
+        quotes:
+          - at: "§3.3.1"
+            text: |-
+              The unsecured verifiable credential is the unencoded COSE_Sign1 payload.
+          - at: "§1.1.2"
+            text: |-
+              When using COSE, the Verifiable Credential or Presentation is encoded as a CBOR data structure.
+        normative:
+          - "N-073"
+          - "N-015"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0045"
+          - "w3c-vc-jose-cose#R-0047"
+          - "w3c-vc-jose-cose#R-0066"
+          - "w3c-vc-jose-cose#R-0067"
+        on_error: "unspecified by source (§3.3.1)"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "issuer"
+        to: "issuer"
+        message: "COSE header parameters (protected and unprotected buckets)"
+        message_id: "MSG-19"
+        field: "typ"
+        also_messages:
+          - "MSG-20"
+        action: >-
+          Set the header parameters: typ (16) application/vc+cose (SHOULD); content type (3)
+          application/vc (SHOULD, and optional); CWT claims MAY be carried in a header parameter;
+          registered names RECOMMENDED for anything confusable with data model members; nbf NOT
+          RECOMMENDED; kid as in jose-credential-securing step 2.
+        locator: "§3.3.1, §3.3.3, §4.1.1, §4.2"
+        kind: "stated"
+        quotes:
+          - at: "§3.3.1"
+            text: |-
+              The typ (16) header parameter, as described in COSE "typ" (type) Header Parameter, SHOULD be application/vc+cose.
+          - at: "§3.3.1"
+            text: |-
+              The content type (3) header parameter SHOULD be application/vc.
+          - at: "§3.3.3"
+            text: |-
+              CBOR Web Token (CWT) [RFC8392] Claims MAY be included in a COSE header parameter, as specified in I-D.ietf-cose-cwt-claims-in-headers.
+          - at: "§3.3.3"
+            text: |-
+              Use of the nbf (Not Before) claim is NOT RECOMMENDED, as it makes little sense to attempt to assign a future date to a signature.
+        normative:
+          - "N-074"
+          - "N-086"
+          - "N-089"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0048"
+          - "w3c-vc-jose-cose#R-0049"
+          - "w3c-vc-jose-cose#R-0061"
+          - "w3c-vc-jose-cose#R-0062"
+          - "w3c-vc-jose-cose#R-0063"
+          - "w3c-vc-jose-cose#R-0065"
+          - "w3c-vc-jose-cose#R-0072"
+          - "w3c-vc-jose-cose#R-0073"
+        on_error: "unspecified by source (§3.3.1, §3.3.3)"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "issuer"
+        to: "issuer"
+        message: "COSE_Sign1 (application/vc+cose, application/vp+cose)"
+        message_id: "MSG-18"
+        action: "Sign with COSE_Sign1 per RFC 9052 (MUST)."
+        locator: "§3.3.1, §1.1.1"
+        kind: "stated"
+        conformance_class: "cose-issuer-implementation"
+        quotes:
+          - at: "§3.3.1"
+            text: |-
+              A conforming COSE issuer implementation MUST use COSE_Sign1 as specified in [RFC9052] to secure this media type.
+        normative:
+          - "N-073"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0047"
+          - "w3c-vc-jose-cose#R-0003"
+        on_error: "unspecified by source (§3.3.1)"
+        on_error_basis: "unspecified"
+      - n: "4"
+        condition: >-
+          the secured credential will be transmitted over an insecure channel and the implementer chooses
+          to encrypt
+        from: "issuer"
+        to: "issuer"
+        message: "Encrypted COSE object nesting a vc+cose or vp+cose"
+        message_id: "MSG-21"
+        action: >-
+          Optionally (MAY) nest the COSE_Sign1 as the plaintext of an encrypted COSE object (RFC 9052
+          Section 5).
+        locator: "§3.3.1"
+        kind: "stated"
+        quotes:
+          - at: "§3.3.1"
+            text: |-
+              To encrypt a secured verifiable credential when transmitting over an insecure channel, implementers MAY use COSE encryption, as defined in Section 5 of [RFC9052], by nesting the secured verifiable credential as the plaintext payload of an encrypted COSE object.
+        normative:
+          - "N-077"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0052"
+        on_error: "unspecified by source (§3.3.1)"
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "issuer"
+        to: "holder"
+        via: "insecure-channel"
+        message: "COSE_Sign1 (application/vc+cose, application/vp+cose)"
+        message_id: "MSG-18"
+        also_messages:
+          - "MSG-21"
+        action: "Deliver the COSE_Sign1 (or the encrypted object) to the holder."
+        locator: "§3.3.1"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: "As jose-credential-securing step 5."
+        quotes:
+          - at: "§3.3.1"
+            text: |-
+              To encrypt a secured verifiable credential when transmitting over an insecure channel, implementers MAY use COSE encryption, as defined in Section 5 of [RFC9052], by nesting the secured verifiable credential as the plaintext payload of an encrypted COSE object.
+        normative:
+          - "N-077"
+        on_error: "unspecified by source (§3.3.1: no delivery is defined)"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "holder"
+        to: "holder"
+        message: "COSE_Sign1 (application/vc+cose, application/vp+cose)"
+        message_id: "MSG-18"
+        action: "On receipt the holder follows the §5.3 algorithm."
+        locator: "§5.3"
+        kind: "stated"
+        quotes:
+          - at: "§5.3"
+            text: |-
+              Upon receipt of the verifiable credential or presentation secured with [RFC9052], the holder or verifier follows this algorithm:
+        normative:
+          - "N-115"
+        invokes: "cose-verification"
+        on_error: "See cose-verification."
+        on_error_basis: "stated"
+  - name: "key-binding"
+    title: "Binding a holder key into a credential and proving it in a presentation (cnf)"
+    locator: "§4.1.3, §1.1.2.2"
+    kind: "exchange"
+    participants:
+      - "holder"
+      - "issuer"
+      - "verifier"
+    summary: >-
+      The only dependency between parties the source states: a proof-of-possession key provided by the
+      holder to the issuer, bound into the credential, and verifiable by the verifier in the
+      presentation (RECOMMENDED). The source defines no message for providing the key, does not say in
+      this sentence that cnf carries it (the sentence sits under the cnf heading), and describes no
+      proof step for vp+jwt or vp+cose. For SD-JWT the KB-JWT is the part §1.1.2.2 names.
+    steps:
+      - n: "1"
+        from: "holder"
+        to: "issuer"
+        message: "Registered JWT claims in the claims set (JWS and SD-JWT)"
+        message_id: "MSG-08"
+        field: "cnf"
+        also_messages:
+          - "MSG-20"
+        action: "Provide a proof-of-possession key to the issuer."
+        locator: "§4.1.3"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source states that the key is provided by the holder to the issuer and defines no message,
+          request, format or channel for it. messages.yaml has no entry for a key in transit; the step
+          names the cnf field the key ends up in.
+        quotes:
+          - at: "§4.1.3"
+            text: |-
+              Use of a proof-of-possession key provided by the Holder to the Issuer to establish a cryptographic binding to the Holder in the Verifiable Credential that is verifiable by the Verifier in the Verifiable Presentation is RECOMMENDED.
+        normative:
+          - "N-099"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0069"
+        on_error: "unspecified by source (§4.1.3: no provision mechanism)"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "issuer"
+        to: "holder"
+        message: "Registered JWT claims in the claims set (JWS and SD-JWT)"
+        message_id: "MSG-08"
+        field: "cnf"
+        also_messages:
+          - "MSG-07"
+          - "MSG-19"
+          - "MSG-20"
+        action: >-
+          Bind the key into the credential, in cnf (JWT claims or JOSE Header) or in the COSE Header, and
+          secure it (jose-, sd-jwt- or cose-credential-securing).
+        locator: "§4.1.3"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          R-0069 does not name cnf; cnf is the parameter of the section that holds it, and the only place
+          the source puts a proof-of-possession key.
+        quotes:
+          - at: "§4.1.3"
+            text: |-
+              If cnf is present in the JOSE Header, the JWT Claims, or the COSE Header, a verifier MAY use this parameter to identify a proof-of-possession key in the manner described in [RFC7800] or [RFC8747] for use in the verification process.
+        normative:
+          - "N-098"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0069"
+        on_error: "unspecified by source (§4.1.3)"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "holder"
+        to: "verifier"
+        message: "Key Binding JWT (KB-JWT)"
+        message_id: "MSG-15"
+        also_messages:
+          - "MSG-06"
+          - "MSG-18"
+        action: >-
+          Present, proving possession of the bound key: for SD-JWT by a KB-JWT; for vp+jwt and vp+cose the
+          source names no proof structure.
+        locator: "§4.1.3, §1.1.2.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          R-0069 says the binding is verifiable by the verifier in the presentation and says nothing of
+          how. The KB-JWT is named in §1.1.2.2 but never tied to cnf or to R-0069.
+        quotes:
+          - at: "§1.1.2.2"
+            text: |-
+              An SD-JWT consists of three main parts: the SD-JWT itself, optional disclosures, and an optional KB-JWT (Key Binding JWT). These parts are separated by tilde (~) characters.
+        normative:
+          - "N-023"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0069"
+        on_error: >-
+          unspecified by source (§4.1.3: no outcome for a presentation that does not prove possession)
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "verifier"
+        to: "verifier"
+        message: "Registered JWT claims in the claims set (JWS and SD-JWT)"
+        message_id: "MSG-08"
+        field: "cnf"
+        also_messages:
+          - "MSG-07"
+          - "MSG-19"
+          - "MSG-20"
+        action: >-
+          MAY use cnf to identify the proof-of-possession key, in the manner of RFC 7800 (JWT) or RFC 8747
+          (CWT), for the verification process.
+        locator: "§4.1.3"
+        kind: "stated"
+        quotes:
+          - at: "§4.1.3"
+            text: |-
+              If cnf is present in the JOSE Header, the JWT Claims, or the COSE Header, a verifier MAY use this parameter to identify a proof-of-possession key in the manner described in [RFC7800] or [RFC8747] for use in the verification process.
+        normative:
+          - "N-098"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0068"
+        on_error: "unspecified by source (§4.1.3; none of the §5 algorithms has a step that uses the key)"
+        on_error_basis: "unspecified"
+  - name: "credential-enveloping"
+    title: "Putting secured credentials (and presentations) inside a presentation"
+    locator: "§3.1.2, §3.2.2, §3.3.1, §3.3.2, §8.4"
+    kind: "local-decision"
+    participants:
+      - "holder"
+    summary: >-
+      The three presentation sections state the same three MUSTs: a credential inside a presentation
+      is secured, it is an EnvelopedVerifiableCredential, and a presentation inside a presentation is
+      an EnvelopedVerifiablePresentation. Only the COSE section says how the secured bytes are carried
+      (base64 per RFC 2397, the data URL scheme); for JWS and SD-JWT only the examples show a data
+      URL. Whether the enveloped credential must use the same mechanism as the presentation is not
+      settled (tension mixed-mechanisms-in-presentation).
+    steps:
+      - n: "1"
+        from: "holder"
+        to: "holder"
+        message: "EnvelopedVerifiableCredential"
+        message_id: "MSG-03"
+        action: >-
+          Secure every credential that goes into the presentation (MUST); the presentation sections add
+          that the credentials are secured with the presentation's own mechanism, without a keyword.
+        locator: "§3.1.2, §3.2.2, §3.3.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source assigns securing a presentation to the conforming issuer implementation class and
+          never names the party; that the holder secures its presentation is this model's reading, from §4
+          (holders have verification keys), §4.1.3 (the binding is verified in the presentation) and §4.2
+          (the holder's kid). See tension issuer-class-secures-presentations.
+        quotes:
+          - at: "§3.1.2"
+            text: |-
+              Credentials in verifiable presentations MUST be secured. In this case, these credentials are secured using JWS.
+          - at: "§3.2.2"
+            text: |-
+              Credentials in verifiable presentations MUST be secured. These credentials are secured using SD-JWT in this case.
+          - at: "§3.3.2"
+            text: |-
+              Credentials in verifiable presentations MUST be secured. These credentials are secured using COSE in this case.
+        normative:
+          - "N-042"
+          - "N-067"
+          - "N-084"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0023"
+          - "w3c-vc-jose-cose#R-0039"
+          - "w3c-vc-jose-cose#R-0059"
+        on_error: >-
+          unspecified by source (§3.1.2, §3.2.2, §3.3.2: no outcome is given for an unsecured credential
+          found in a presentation)
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "holder"
+        to: "holder"
+        message: "EnvelopedVerifiableCredential"
+        message_id: "MSG-03"
+        field: "type"
+        action: "Represent each secured credential as an EnvelopedVerifiableCredential (MUST)."
+        locator: "§3.1.2, §3.2.2, §3.3.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source assigns securing a presentation to the conforming issuer implementation class and
+          never names the party; that the holder secures its presentation is this model's reading, from §4
+          (holders have verification keys), §4.1.3 (the binding is verified in the presentation) and §4.2
+          (the holder's kid). See tension issuer-class-secures-presentations.
+        quotes:
+          - at: "§3.1.2"
+            text: |-
+              Verifiable Credentials secured in verifiable presentations MUST use the Enveloped Verifiable Credential type defined by the [VC-DATA-MODEL-2.0].
+        normative:
+          - "N-040"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0021"
+          - "w3c-vc-jose-cose#R-0037"
+          - "w3c-vc-jose-cose#R-0057"
+        on_error: "unspecified by source (§3.1.2, §3.2.2, §3.3.2)"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "holder"
+        to: "holder"
+        message: "data: URL carrying a secured credential or presentation"
+        message_id: "MSG-05"
+        field: "data"
+        also_messages:
+          - "MSG-03"
+        action: >-
+          Carry the secured credential in the EnvelopedVerifiableCredential id as a data URL; a
+          COSE-secured credential MUST be base64-encoded per RFC 2397.
+        locator: "§3.3.1, §8.4"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          Only the COSE MUST names an encoding, and only by citing RFC 2397, the data URL scheme. That the
+          data URL is the value of id, and that JWS and SD-JWT credentials are carried the same way, comes
+          from the examples (non-normative) and the VC Data Model, not from a sentence of this document.
+        quotes:
+          - at: "§3.3.1"
+            text: |-
+              When including verifiable credentials secured with COSE in verifiable presentations as Enveloped Verifiable Credentials, the credentials MUST be encoded using base64 as specified in [RFC2397].
+          - at: "§8.4"
+            text: |-
+              Example 21: A simple URI-encoded SD-JWT Verifiable Credential
+        normative:
+          - "N-076"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0051"
+        on_error: >-
+          unspecified by source (§3.3.1: no outcome for an enveloped COSE credential that is not base64)
+        on_error_basis: "unspecified"
+      - n: "4"
+        condition: "the presentation contains another presentation"
+        from: "holder"
+        to: "holder"
+        message: "EnvelopedVerifiablePresentation"
+        message_id: "MSG-04"
+        field: "type"
+        action: >-
+          Represent a presentation inside a presentation as an EnvelopedVerifiablePresentation (MUST).
+        locator: "§3.1.2, §3.2.2, §3.3.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source assigns securing a presentation to the conforming issuer implementation class and
+          never names the party; that the holder secures its presentation is this model's reading, from §4
+          (holders have verification keys), §4.1.3 (the binding is verified in the presentation) and §4.2
+          (the holder's kid). See tension issuer-class-secures-presentations.
+        quotes:
+          - at: "§3.1.2"
+            text: |-
+              Verifiable Presentations in verifiable presentations MUST use the Enveloped Verifiable Presentation type defined by the [VC-DATA-MODEL-2.0].
+        normative:
+          - "N-041"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0022"
+          - "w3c-vc-jose-cose#R-0038"
+          - "w3c-vc-jose-cose#R-0058"
+        on_error: >-
+          unspecified by source (§3.1.2, §3.2.2, §3.3.2; the source never says when a presentation is
+          nested)
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "holder"
+        to: "holder"
+        message: "Unsecured verifiable presentation (application/vp)"
+        message_id: "MSG-02"
+        action: "Secure the presentation with jose-, sd-jwt- or cose-presentation-securing."
+        locator: "§3.1.2, §3.2.2, §3.3.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source assigns securing a presentation to the conforming issuer implementation class and
+          never names the party; that the holder secures its presentation is this model's reading, from §4
+          (holders have verification keys), §4.1.3 (the binding is verified in the presentation) and §4.2
+          (the holder's kid). See tension issuer-class-secures-presentations.
+        quotes:
+          - at: "§3.1.2"
+            text: |-
+              This section details how to use JOSE to secure verifiable presentations conforming to [VC-DATA-MODEL-2.0].
+        normative:
+          - "N-036"
+        invokes: "jose-presentation-securing, sd-jwt-presentation-securing, cose-presentation-securing"
+        on_error: >-
+          unspecified by source (§3.1.2, §3.2.2, §3.3.2: the invoked securing flows state no failure
+          outcome)
+        on_error_basis: "unspecified"
+  - name: "jose-presentation-securing"
+    title: "Securing a presentation as a JWS (application/vp+jwt) and handing it to the verifier"
+    locator: "§3.1.2, §1.1.2.1, §4.1.1, §4.2"
+    kind: "creation-and-delivery"
+    participants:
+      - "holder"
+      - "insecure-channel"
+      - "verifier"
+    summary: >-
+      The credential route of jose-credential-securing with vp values, the holder's kid rule of §4.2,
+      and delivery to a verifier.
+    steps:
+      - n: "1"
+        from: "holder"
+        to: "holder"
+        message: "Unsecured verifiable presentation (application/vp)"
+        message_id: "MSG-02"
+        action: >-
+          Take the unsecured presentation (with its enveloped content, credential-enveloping) as the JWS
+          payload, unencoded; no vc or vp claim.
+        locator: "§3.1.2, §1.1.2.1"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source assigns securing a presentation to the conforming issuer implementation class and
+          never names the party; that the holder secures its presentation is this model's reading, from §4
+          (holders have verification keys), §4.1.3 (the binding is verified in the presentation) and §4.2
+          (the holder's kid). See tension issuer-class-secures-presentations.
+        quotes:
+          - at: "§3.1.2"
+            text: |-
+              The unsecured verifiable presentation is the unencoded JWS payload.
+        normative:
+          - "N-037"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0017"
+          - "w3c-vc-jose-cose#R-0006"
+        on_error: "unspecified by source (§3.1.2)"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "holder"
+        to: "holder"
+        message: "JOSE Header of a vc+jwt or vp+jwt"
+        message_id: "MSG-07"
+        field: "typ"
+        action: >-
+          Build the JOSE Header: typ vp+jwt (SHOULD); cty vp when present (SHOULD); kid MUST be present
+          when the subject key is a DID URL; with no iss and a URL holder, kid MUST be an absolute URL to
+          a verification method in a controlled identifier document.
+        locator: "§3.1.2, §4.1.1, §4.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source assigns securing a presentation to the conforming issuer implementation class and
+          never names the party; that the holder secures its presentation is this model's reading, from §4
+          (holders have verification keys), §4.1.3 (the binding is verified in the presentation) and §4.2
+          (the holder's kid). See tension issuer-class-secures-presentations.
+        quotes:
+          - at: "§3.1.2"
+            text: |-
+              The typ header parameter SHOULD be vp+jwt.
+          - at: "§3.1.2"
+            text: |-
+              When present, the cty header parameter SHOULD be vp.
+          - at: "§4.2"
+            text: |-
+              When the holder is identified as a [URL], and iss is absent, the kid MUST be an absolute [URL] to a verification method listed in a controlled identifier document.
+        normative:
+          - "N-038"
+          - "N-105"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0018"
+          - "w3c-vc-jose-cose#R-0019"
+          - "w3c-vc-jose-cose#R-0065"
+          - "w3c-vc-jose-cose#R-0074"
+          - "w3c-vc-jose-cose#R-0073"
+        on_error: "unspecified by source (§3.1.2, §4.2)"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "holder"
+        to: "holder"
+        message: "JWS Compact Serialization (application/vc+jwt, application/vp+jwt)"
+        message_id: "MSG-06"
+        also_messages:
+          - "MSG-09"
+        action: >-
+          Sign with RFC 7515 (MUST); compact serialization MUST be supported, JSON serialization NOT
+          RECOMMENDED.
+        locator: "§3.1.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source assigns securing a presentation to the conforming issuer implementation class and
+          never names the party; that the holder secures its presentation is this model's reading, from §4
+          (holders have verification keys), §4.1.3 (the binding is verified in the presentation) and §4.2
+          (the holder's kid). See tension issuer-class-secures-presentations.
+        conformance_class: "jws-issuer-implementation"
+        quotes:
+          - at: "§3.1.2"
+            text: |-
+              A conforming JWS issuer implementation MUST use [RFC7515] to secure this media type.
+          - at: "§3.1.2"
+            text: |-
+              Implementations MUST support the JWS compact serialization. Use of the JWS JSON serialization is NOT RECOMMENDED.
+        normative:
+          - "N-037"
+          - "N-044"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0017"
+          - "w3c-vc-jose-cose#R-0025"
+          - "w3c-vc-jose-cose#R-0026"
+        on_error: "unspecified by source (§3.1.2)"
+        on_error_basis: "unspecified"
+      - n: "4"
+        condition: >-
+          the secured presentation will be transmitted over an insecure channel and the implementer
+          chooses to encrypt
+        from: "holder"
+        to: "holder"
+        message: "Nested JWE (encrypted vc+jwt or vp+jwt)"
+        message_id: "MSG-10"
+        action: "Optionally (MAY) nest the JWS as the plaintext of a JWE."
+        locator: "§3.1.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source assigns securing a presentation to the conforming issuer implementation class and
+          never names the party; that the holder secures its presentation is this model's reading, from §4
+          (holders have verification keys), §4.1.3 (the binding is verified in the presentation) and §4.2
+          (the holder's kid). See tension issuer-class-secures-presentations.
+        quotes:
+          - at: "§3.1.2"
+            text: |-
+              To encrypt a secured verifiable presentation when transmitting over an insecure channel, implementers MAY use JSON Web Encryption (JWE) [RFC7516] by nesting the secured verifiable presentation as the plaintext payload of a JWE, per the description of Nested JWTs in [RFC7519].
+        normative:
+          - "N-043"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0024"
+        on_error: "unspecified by source (§3.1.2)"
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "holder"
+        to: "verifier"
+        via: "insecure-channel"
+        message: "JWS Compact Serialization (application/vc+jwt, application/vp+jwt)"
+        message_id: "MSG-06"
+        also_messages:
+          - "MSG-10"
+        action: "Deliver the presentation to the verifier."
+        locator: "§3.1.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          As jose-credential-securing step 5; no request from the verifier and no response to the holder
+          are defined.
+        quotes:
+          - at: "§3.1.2"
+            text: |-
+              To encrypt a secured verifiable presentation when transmitting over an insecure channel, implementers MAY use JSON Web Encryption (JWE) [RFC7516] by nesting the secured verifiable presentation as the plaintext payload of a JWE, per the description of Nested JWTs in [RFC7519].
+        normative:
+          - "N-043"
+        on_error: "unspecified by source (§3.1.2: no delivery is defined)"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "verifier"
+        to: "verifier"
+        message: "JWS Compact Serialization (application/vc+jwt, application/vp+jwt)"
+        message_id: "MSG-06"
+        action: "The verifier processes it: verification-dispatch, then jose-verification (§5.1)."
+        locator: "§5.1"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          §5.1 takes vp+jwt as an input media type; that the verifier receiving this presentation runs
+          it, reached through verification-dispatch, whose dispatch (its step 3) is inferred, is this
+          model's step.
+        quotes:
+          - at: "§5.1"
+            text: |-
+              inputMediaType: vc+jwt or vp+jwt
+        normative:
+          - "N-110"
+        invokes: "verification-dispatch"
+        on_error: "See verification-dispatch and jose-verification."
+        on_error_basis: "stated"
+  - name: "sd-jwt-presentation-securing"
+    title: >-
+      Securing a presentation as an SD-JWT (application/vp+sd-jwt) and handing it to the verifier
+    locator: "§3.2.2, §1.1.2.1, §4.1.1, §4.2, §5.2"
+    kind: "creation-and-delivery"
+    participants:
+      - "holder"
+      - "insecure-channel"
+      - "verifier"
+    summary: >-
+      Here the presentation is the unencoded SD-JWT payload, with no conversion stated, where the
+      credential route converts (tension sd-jwt-presentation-conversion). No §5 algorithm takes
+      vp+sd-jwt, so the last step has no algorithm to invoke (defect
+      sd-jwt-presentation-no-algorithm).
+    steps:
+      - n: "1"
+        from: "holder"
+        to: "holder"
+        message: "Unsecured verifiable presentation (application/vp)"
+        message_id: "MSG-02"
+        action: "Take the unsecured presentation as the SD-JWT payload, unencoded; no vc or vp claim."
+        locator: "§3.2.2, §1.1.2.1"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source assigns securing a presentation to the conforming issuer implementation class and
+          never names the party; that the holder secures its presentation is this model's reading, from §4
+          (holders have verification keys), §4.1.3 (the binding is verified in the presentation) and §4.2
+          (the holder's kid). See tension issuer-class-secures-presentations.
+        quotes:
+          - at: "§3.2.2"
+            text: |-
+              The unsecured verifiable presentation is the unencoded [SD-JWT] payload.
+        normative:
+          - "N-062"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0033"
+          - "w3c-vc-jose-cose#R-0006"
+        on_error: "unspecified by source (§3.2.2)"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "holder"
+        to: "holder"
+        message: "SD-JWT payload (the converted claims set)"
+        message_id: "MSG-13"
+        also_messages:
+          - "MSG-14"
+        action: "Keep the properties necessary for validation and verification disclosed (SHOULD)."
+        locator: "§3.2.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source assigns securing a presentation to the conforming issuer implementation class and
+          never names the party; that the holder secures its presentation is this model's reading, from §4
+          (holders have verification keys), §4.1.3 (the binding is verified in the presentation) and §4.2
+          (the holder's kid). See tension issuer-class-secures-presentations.
+        quotes:
+          - at: "§3.2.2"
+            text: |-
+              When securing verifiable presentations with [SD-JWT] implementers SHOULD ensure that properties necessary for the validation and verification of a credential are NOT selectively disclosable (i.e., such properties SHOULD be disclosed).
+        normative:
+          - "N-068"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0040"
+        on_error: "unspecified by source (§3.2.2)"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "holder"
+        to: "holder"
+        message: "Issuer-signed JWT header (SD-JWT)"
+        message_id: "MSG-12"
+        field: "typ"
+        action: >-
+          Set the header: typ vp+sd-jwt (SHOULD), cty vp when present (SHOULD), kid per §4.1.1 and §4.2.
+        locator: "§3.2.2, §4.1.1, §4.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source assigns securing a presentation to the conforming issuer implementation class and
+          never names the party; that the holder secures its presentation is this model's reading, from §4
+          (holders have verification keys), §4.1.3 (the binding is verified in the presentation) and §4.2
+          (the holder's kid). See tension issuer-class-secures-presentations.
+        quotes:
+          - at: "§3.2.2"
+            text: |-
+              The typ header parameter SHOULD be vp+sd-jwt.
+          - at: "§3.2.2"
+            text: |-
+              When present, the cty header parameter SHOULD be vp.
+        normative:
+          - "N-063"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0034"
+          - "w3c-vc-jose-cose#R-0035"
+          - "w3c-vc-jose-cose#R-0065"
+          - "w3c-vc-jose-cose#R-0074"
+        on_error: "unspecified by source (§3.2.2)"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "holder"
+        to: "holder"
+        message: "SD-JWT compact (application/vc+sd-jwt, application/vp+sd-jwt)"
+        message_id: "MSG-11"
+        also_messages:
+          - "MSG-16"
+        action: >-
+          Sign per SD-JWT (MUST); compact serialization MUST be supported, JSON serialization MAY be, with
+          a profile RECOMMENDED.
+        locator: "§3.2.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source assigns securing a presentation to the conforming issuer implementation class and
+          never names the party; that the holder secures its presentation is this model's reading, from §4
+          (holders have verification keys), §4.1.3 (the binding is verified in the presentation) and §4.2
+          (the holder's kid). See tension issuer-class-secures-presentations.
+        conformance_class: "sd-jwt-issuer-implementation"
+        quotes:
+          - at: "§3.2.2"
+            text: |-
+              A conforming SD-JWT issuer implementation MUST use [SD-JWT] to secure this media type.
+          - at: "§3.2.2"
+            text: |-
+              Implementations MUST support the compact serialization (application/sd-jwt) and MAY support the JSON serialization (application/sd-jwt+json).
+        normative:
+          - "N-062"
+          - "N-070"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0033"
+          - "w3c-vc-jose-cose#R-0042"
+          - "w3c-vc-jose-cose#R-0043"
+          - "w3c-vc-jose-cose#R-0044"
+        on_error: "unspecified by source (§3.2.2)"
+        on_error_basis: "unspecified"
+      - n: "5"
+        condition: >-
+          the secured presentation will be transmitted over an insecure channel and the implementer
+          chooses to encrypt
+        from: "holder"
+        to: "holder"
+        message: "Encrypted SD-JWT (JWE per Section 11.2 of [SD-JWT])"
+        message_id: "MSG-17"
+        action: "Optionally (MAY) nest it as the plaintext of a JWE per Section 11.2 of the SD-JWT draft."
+        locator: "§3.2.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source assigns securing a presentation to the conforming issuer implementation class and
+          never names the party; that the holder secures its presentation is this model's reading, from §4
+          (holders have verification keys), §4.1.3 (the binding is verified in the presentation) and §4.2
+          (the holder's kid). See tension issuer-class-secures-presentations.
+        quotes:
+          - at: "§3.2.2"
+            text: |-
+              To encrypt a secured verifiable presentation when transmitting over an insecure channel, implementers MAY use JSON Web Encryption (JWE) [RFC7516] by nesting the secured verifiable presentation as the plaintext payload of a JWE, per the instructions in Section 11.2 of [SD-JWT].
+        normative:
+          - "N-069"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0041"
+        on_error: "unspecified by source (§3.2.2)"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "holder"
+        to: "verifier"
+        via: "insecure-channel"
+        message: "SD-JWT compact (application/vc+sd-jwt, application/vp+sd-jwt)"
+        message_id: "MSG-11"
+        also_messages:
+          - "MSG-17"
+        action: "Deliver the presentation to the verifier."
+        locator: "§3.2.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: "As jose-presentation-securing step 5."
+        quotes:
+          - at: "§3.2.2"
+            text: |-
+              To encrypt a secured verifiable presentation when transmitting over an insecure channel, implementers MAY use JSON Web Encryption (JWE) [RFC7516] by nesting the secured verifiable presentation as the plaintext payload of a JWE, per the instructions in Section 11.2 of [SD-JWT].
+        normative:
+          - "N-069"
+        on_error: "unspecified by source (§3.2.2: no delivery is defined)"
+        on_error_basis: "unspecified"
+      - n: "7"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "inputMediaType"
+        action: >-
+          Look for an algorithm whose input is vp+sd-jwt: §5.2 takes only vc+sd-jwt, so none applies.
+        locator: "§5.2, §3.2.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The input domain of §5.2 is stated; choosing an algorithm by it is this model's step, as in
+          verification-dispatch step 3. §5.2's heading and receipt sentence also cover a presentation
+          secured with SD-JWT, so that none applies is this model's reading of that conflict (defect
+          sd-jwt-presentation-no-algorithm).
+        quotes:
+          - at: "§5.2"
+            text: |-
+              inputMediaType: vc+sd-jwt
+        normative:
+          - "N-112"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0036"
+        on_error: >-
+          unspecified by source (§5.2 inputs: the source gives no algorithm and no outcome for vp+sd-jwt;
+          R-0036 still requires the SD-JWT verifier to use SD-JWT)
+        on_error_basis: "unspecified"
+  - name: "cose-presentation-securing"
+    title: >-
+      Securing a presentation as a COSE_Sign1 (application/vp+cose) and handing it to the verifier
+    locator: "§3.3.2, §3.3.3, §4.1.1, §4.2"
+    kind: "creation-and-delivery"
+    participants:
+      - "holder"
+      - "insecure-channel"
+      - "verifier"
+    summary: >-
+      The credential route of cose-credential-securing with vp values, the holder's kid rule, and
+      delivery to a verifier.
+    steps:
+      - n: "1"
+        from: "holder"
+        to: "holder"
+        message: "Unsecured verifiable presentation (application/vp)"
+        message_id: "MSG-02"
+        action: "Take the unsecured presentation as the COSE_Sign1 payload, unencoded."
+        locator: "§3.3.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source assigns securing a presentation to the conforming issuer implementation class and
+          never names the party; that the holder secures its presentation is this model's reading, from §4
+          (holders have verification keys), §4.1.3 (the binding is verified in the presentation) and §4.2
+          (the holder's kid). See tension issuer-class-secures-presentations.
+        quotes:
+          - at: "§3.3.2"
+            text: |-
+              The unsecured verifiable presentation is the unencoded COSE_Sign1 payload.
+        normative:
+          - "N-079"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0053"
+        on_error: "unspecified by source (§3.3.2)"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "holder"
+        to: "holder"
+        message: "COSE header parameters (protected and unprotected buckets)"
+        message_id: "MSG-19"
+        field: "typ"
+        also_messages:
+          - "MSG-20"
+        action: >-
+          Set the header parameters: typ (16) application/vp+cose (SHOULD), content type (3)
+          application/vp (SHOULD), CWT claims MAY be in a header parameter, nbf NOT RECOMMENDED, kid per
+          §4.1.1 and §4.2.
+        locator: "§3.3.2, §3.3.3, §4.1.1, §4.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source assigns securing a presentation to the conforming issuer implementation class and
+          never names the party; that the holder secures its presentation is this model's reading, from §4
+          (holders have verification keys), §4.1.3 (the binding is verified in the presentation) and §4.2
+          (the holder's kid). See tension issuer-class-secures-presentations.
+        quotes:
+          - at: "§3.3.2"
+            text: |-
+              The typ (16) header parameter, as described in COSE "typ" (type) Header Parameter, SHOULD be application/vp+cose.
+          - at: "§3.3.2"
+            text: |-
+              The content type (3) header parameter SHOULD be application/vp.
+        normative:
+          - "N-080"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0054"
+          - "w3c-vc-jose-cose#R-0055"
+          - "w3c-vc-jose-cose#R-0061"
+          - "w3c-vc-jose-cose#R-0062"
+          - "w3c-vc-jose-cose#R-0063"
+          - "w3c-vc-jose-cose#R-0065"
+          - "w3c-vc-jose-cose#R-0074"
+        on_error: "unspecified by source (§3.3.2, §3.3.3)"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "holder"
+        to: "holder"
+        message: "COSE_Sign1 (application/vc+cose, application/vp+cose)"
+        message_id: "MSG-18"
+        action: "Sign with COSE_Sign1 per RFC 9052 (MUST)."
+        locator: "§3.3.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source assigns securing a presentation to the conforming issuer implementation class and
+          never names the party; that the holder secures its presentation is this model's reading, from §4
+          (holders have verification keys), §4.1.3 (the binding is verified in the presentation) and §4.2
+          (the holder's kid). See tension issuer-class-secures-presentations.
+        conformance_class: "cose-issuer-implementation"
+        quotes:
+          - at: "§3.3.2"
+            text: |-
+              A conforming COSE issuer implementation MUST use COSE_Sign1 as specified in [RFC9052] to secure this media type.
+        normative:
+          - "N-079"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0053"
+        on_error: "unspecified by source (§3.3.2)"
+        on_error_basis: "unspecified"
+      - n: "4"
+        condition: >-
+          the secured presentation will be transmitted over an insecure channel and the implementer
+          chooses to encrypt
+        from: "holder"
+        to: "holder"
+        message: "Encrypted COSE object nesting a vc+cose or vp+cose"
+        message_id: "MSG-21"
+        action: "Optionally (MAY) nest it as the plaintext of an encrypted COSE object."
+        locator: "§3.3.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source assigns securing a presentation to the conforming issuer implementation class and
+          never names the party; that the holder secures its presentation is this model's reading, from §4
+          (holders have verification keys), §4.1.3 (the binding is verified in the presentation) and §4.2
+          (the holder's kid). See tension issuer-class-secures-presentations.
+        quotes:
+          - at: "§3.3.2"
+            text: |-
+              To encrypt a secured verifiable presentation when transmitting over an insecure channel, implementers MAY use COSE encryption, as defined in Section 5 of [RFC9052], by nesting the secured verifiable presentation as the plaintext payload of an encrypted COSE object.
+        normative:
+          - "N-085"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0060"
+        on_error: "unspecified by source (§3.3.2)"
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "holder"
+        to: "verifier"
+        via: "insecure-channel"
+        message: "COSE_Sign1 (application/vc+cose, application/vp+cose)"
+        message_id: "MSG-18"
+        also_messages:
+          - "MSG-21"
+        action: "Deliver the presentation to the verifier."
+        locator: "§3.3.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: "As jose-presentation-securing step 5."
+        quotes:
+          - at: "§3.3.2"
+            text: |-
+              To encrypt a secured verifiable presentation when transmitting over an insecure channel, implementers MAY use COSE encryption, as defined in Section 5 of [RFC9052], by nesting the secured verifiable presentation as the plaintext payload of an encrypted COSE object.
+        normative:
+          - "N-085"
+        on_error: "unspecified by source (§3.3.2: no delivery is defined)"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "verifier"
+        to: "verifier"
+        message: "COSE_Sign1 (application/vc+cose, application/vp+cose)"
+        message_id: "MSG-18"
+        action: "The verifier processes it: verification-dispatch, then cose-verification (§5.3)."
+        locator: "§5.3"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          §5.3 takes vp+cose as an input media type; that the verifier receiving this presentation runs
+          it, reached through verification-dispatch, whose dispatch (its step 3) is inferred, is this
+          model's step.
+        quotes:
+          - at: "§5.3"
+            text: |-
+              inputMediaType: vc+cose or vp+cose
+        normative:
+          - "N-114"
+        invokes: "verification-dispatch"
+        on_error: "See verification-dispatch and cose-verification."
+        on_error_basis: "stated"
+  - name: "sd-jwt-selective-disclosure"
+    title: "Presenting an SD-JWT credential with chosen disclosures and an optional KB-JWT"
+    locator: "§1.1.2, §1.1.2.2, §8.4"
+    kind: "out-of-scope"
+    participants:
+      - "holder"
+      - "verifier"
+    summary: >-
+      The capability that motivates SD-JWT, described in §1.1.2 and left to the SD-JWT draft. The
+      source never describes the holder choosing disclosures or adding a KB-JWT, and never says which
+      media type labels the result; its only instance, Example 22, labels a credential's SD-JWT with
+      four of six disclosures and a KB-JWT as application/vp+sd-jwt (tension
+      two-meanings-of-sd-jwt-presentation).
+    steps:
+      - n: "1"
+        from: "holder"
+        to: "holder"
+        message: "Disclosure"
+        message_id: "MSG-14"
+        action: "Choose which disclosures to reveal."
+        locator: "§1.1.2, §1.1.2.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source names the capability and defers the format and processing to the SD-JWT draft
+          (R-0007); it describes no holder step.
+        quotes:
+          - at: "§1.1.2"
+            text: |-
+              An SD-JWT secures a JWT Claims Set, similar to a JWT securing a JWT Claims Set, but with the added capabilities of selectively revealing or withholding parts of the JWT Claims Set.
+        normative:
+          - "N-014"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0007"
+        on_error: "unspecified by source (§1.1.2, §1.1.2.2)"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "holder"
+        to: "holder"
+        message: "Key Binding JWT (KB-JWT)"
+        message_id: "MSG-15"
+        also_messages:
+          - "MSG-11"
+        action: "Optionally append a KB-JWT; without one the string ends with a tilde (lowercase must)."
+        locator: "§1.1.2.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The parts are stated; that the holder adds the KB-JWT at presentation time is SD-JWT's, not this
+          document's.
+        quotes:
+          - at: "§1.1.2.2"
+            text: |-
+              An SD-JWT consists of three main parts: the SD-JWT itself, optional disclosures, and an optional KB-JWT (Key Binding JWT). These parts are separated by tilde (~) characters.
+          - at: "§1.1.2.2"
+            text: |-
+              If the KB-JWT is not present, the SD-JWT must end with a tilde (~) character. This is crucial for correct parsing and processing of the SD-JWT.
+        normative:
+          - "N-023"
+        on_error: >-
+          unspecified by source (§1.1.2.2: the lowercase must is not BCP 14 (§1.1), and Example 22 ends
+          with a tilde after its KB-JWT)
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "holder"
+        to: "verifier"
+        message: "SD-JWT compact (application/vc+sd-jwt, application/vp+sd-jwt)"
+        message_id: "MSG-11"
+        action: >-
+          Deliver the SD-JWT with the chosen disclosures; the media type it carries is not stated (Example
+          22 uses application/vp+sd-jwt).
+        locator: "§8.4"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: "No sentence of the source; the label comes from Example 22, which is non-normative."
+        quotes:
+          - at: "§8.4"
+            text: |-
+              Example 22: A simple URI-encoded SD-JWT Verifiable Presentation
+        on_error: >-
+          unspecified by source (§8.4; labelled vp+sd-jwt it has no algorithm
+          (sd-jwt-presentation-no-algorithm), labelled vc+sd-jwt it goes to §5.2)
+        on_error_basis: "unspecified"
+  - name: "key-discovery-header-hints"
+    title: "Finding the verification key from kid, iss and cnf"
+    locator: "§4, §4.1, §4.1.1, §4.1.2, §4.1.3, §5"
+    kind: "receive-processing"
+    participants:
+      - "verifier"
+    run_by:
+      - "holder"
+      - "verifier"
+    summary: >-
+      Runs before any §5 algorithm, which assumes it succeeded. kid is a hint, iss obtains a JSON Web
+      Key, cnf MAY identify a proof-of-possession key; every use is permissive (can, MAY) and none is
+      ordered. The discovered key is not an input of any §5 algorithm. The SHOULD to minimize
+      processing of untrusted data during key discovery sits against hints that live in the protected
+      header and the payload (tension key-discovery-reads-untrusted-data).
+    steps:
+      - n: "1"
+        from: "verifier"
+        to: "verifier"
+        message: "JWS Compact Serialization (application/vc+jwt, application/vp+jwt)"
+        message_id: "MSG-06"
+        also_messages:
+          - "MSG-11"
+          - "MSG-18"
+        action: >-
+          Before verification, obtain the key that secured the object, processing as little untrusted data
+          as possible (SHOULD).
+        locator: "§4, §5"
+        kind: "stated"
+        quotes:
+          - at: "§4"
+            text: |-
+              To complete the verification process, a verifier needs to obtain the cryptographic keys used to secure the credential.
+          - at: "§5"
+            text: |-
+              As a general rule, verifiers SHOULD strive to minimize the processing of untrusted data. This includes minimizing any processing of the protected header, unprotected header, or payload as part of the key discovery procedures.
+        normative:
+          - "N-091"
+          - "N-107"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0075"
+        on_error: >-
+          unspecified by source (§4, §5: no outcome is given when no key is found; §5 assumes discovery
+          succeeded)
+        on_error_basis: "unspecified"
+      - n: "2"
+        condition: "kid is present"
+        from: "verifier"
+        to: "verifier"
+        message: "JOSE Header of a vc+jwt or vp+jwt"
+        message_id: "MSG-07"
+        field: "kid"
+        also_messages:
+          - "MSG-19"
+          - "MSG-12"
+        action: >-
+          If kid is present (JOSE or COSE header), use it as a hint to which key was used. kid MUST be
+          present when the issuer or subject key is a DID URL.
+        locator: "§4.1.1"
+        kind: "stated"
+        quotes:
+          - at: "§4.1.1"
+            text: |-
+              If kid is present in the JOSE Header or the COSE Header, a verifier can use this parameter as a hint indicating which key was used to secure the verifiable credential, when performing a verification process as defined in RFC7515.
+          - at: "§4.1.1"
+            text: |-
+              kid MUST be present when the key of the issuer or subject is expressed as a DID URL.
+        normative:
+          - "N-093"
+          - "N-094"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0065"
+        on_error: >-
+          unspecified by source (§4.1.1: no outcome for an absent kid where a DID URL key required one, or
+          for a kid that resolves to nothing)
+        on_error_basis: "unspecified"
+      - n: "3"
+        condition: "iss is present"
+        from: "verifier"
+        to: "verifier"
+        message: "Registered JWT claims in the claims set (JWS and SD-JWT)"
+        message_id: "MSG-08"
+        field: "iss"
+        also_messages:
+          - "MSG-07"
+          - "MSG-19"
+          - "MSG-20"
+        action: >-
+          If iss is present (JOSE Header, JWT claims or COSE Header), use it to obtain a JSON Web Key; a
+          kid in the JOSE Header picks the specific key. A present iss MUST match issuer, or issuer.id.
+        locator: "§4.1.2"
+        kind: "stated"
+        quotes:
+          - at: "§4.1.2"
+            text: |-
+              If iss is present in the JOSE Header, the JWT Claims, or the COSE Header, a verifier can use this parameter to obtain a JSON Web Key to use in the verification process.
+          - at: "§4.1.2"
+            text: |-
+              If kid is also present in the JOSE Header, it is used to distinguish the specific key used.
+        normative:
+          - "N-095"
+          - "N-097"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0066"
+          - "w3c-vc-jose-cose#R-0067"
+        on_error: >-
+          unspecified by source (§4.1.2: the MUST binds the iss value, and no step says a verifier
+          compares iss with issuer or what follows a mismatch)
+        on_error_basis: "unspecified"
+      - n: "4"
+        condition: "cnf is present"
+        from: "verifier"
+        to: "verifier"
+        message: "Registered JWT claims in the claims set (JWS and SD-JWT)"
+        message_id: "MSG-08"
+        field: "cnf"
+        also_messages:
+          - "MSG-07"
+          - "MSG-19"
+          - "MSG-20"
+        action: >-
+          If cnf is present, MAY use it to identify a proof-of-possession key (RFC 7800, RFC 8747).
+        locator: "§4.1.3"
+        kind: "stated"
+        quotes:
+          - at: "§4.1.3"
+            text: |-
+              If cnf is present in the JOSE Header, the JWT Claims, or the COSE Header, a verifier MAY use this parameter to identify a proof-of-possession key in the manner described in [RFC7800] or [RFC8747] for use in the verification process.
+        normative:
+          - "N-098"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0068"
+        on_error: "unspecified by source (§4.1.3)"
+        on_error_basis: "unspecified"
+      - n: "5"
+        condition: "kid (or iss) identifies a verification method by URL"
+        from: "verifier"
+        to: "verifier"
+        message: "kid value as a reference to a verification method"
+        message_id: "MSG-25"
+        action: >-
+          Where the hint is a URL to a verification method, resolve it through a controlled identifier
+          document.
+        locator: "§4.2"
+        kind: "stated"
+        quotes:
+          - at: "§4.2"
+            text: |-
+              This key material is retrieved based on hints in the JOSE or COSE message envelopes, such as kid or iss.
+        normative:
+          - "N-102"
+        invokes: "key-discovery-controlled-identifier-document"
+        on_error: >-
+          unspecified by source (§4.2: see key-discovery-controlled-identifier-document, none of whose
+          steps has a stated failure outcome)
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        action: "Begin verification with the discovered key."
+        locator: "§5"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          §5 assumes discovery succeeded, but its algorithms take only inputMediaType and inputDocument:
+          the key reaches step 1 of §5.1 to §5.3 by no stated input.
+        quotes:
+          - at: "§5"
+            text: |-
+              This specification might be used with many different key discovery protocols. Therefore, discovery of verification keys is described in 4. Key Discovery, and is assumed to have succeeded prior to beginning the verification process.
+        normative:
+          - "N-106"
+        invokes: "verification-dispatch"
+        on_error: "unspecified by source (§5, paragraph 1)"
+        on_error_basis: "unspecified"
+  - name: "key-discovery-controlled-identifier-document"
+    title: "Obtaining the key from a verification method in a controlled identifier document"
+    locator: "§4.2"
+    kind: "receive-processing"
+    participants:
+      - "verifier"
+    run_by:
+      - "holder"
+      - "verifier"
+    summary: >-
+      The document constrains the shape of the verification method (JsonWebKey, publicKeyJwk) and the
+      kid that points at it, and states that there is no standard way to retrieve the key. Who
+      publishes the controlled identifier document and how it is fetched are not said. No step has a
+      stated failure outcome.
+    steps:
+      - n: "1"
+        from: "verifier"
+        to: "verifier"
+        message: "kid value as a reference to a verification method"
+        message_id: "MSG-25"
+        field: "absolute URL to a verification method"
+        action: >-
+          Take the kid: with iss absent and a URL issuer (or holder), it is an absolute URL to a
+          verification method in a controlled identifier document (MUST), RECOMMENDED to embed a JWK
+          Thumbprint URI.
+        locator: "§4.2"
+        kind: "stated"
+        quotes:
+          - at: "§4.2"
+            text: |-
+              When iss is absent, and the issuer is identified as a [URL], the kid MUST be an absolute [URL] to a verification method listed in a controlled identifier documents or a DID Document.
+          - at: "§4.2"
+            text: |-
+              When the holder is identified as a [URL], and iss is absent, the kid MUST be an absolute [URL] to a verification method listed in a controlled identifier document.
+        normative:
+          - "N-103"
+          - "N-105"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0072"
+          - "w3c-vc-jose-cose#R-0074"
+          - "w3c-vc-jose-cose#R-0073"
+        on_error: "unspecified by source (§4.2: no outcome for a kid that is not an absolute URL)"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "verifier"
+        to: "verifier"
+        message: "Controlled identifier document"
+        message_id: "MSG-22"
+        action: >-
+          Retrieve the controlled identifier document (or DID document) that lists the verification
+          method.
+        locator: "§4.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source says the key material is retrieved from hints and that no standard retrieval exists;
+          it describes no retrieval step, endpoint or resolver.
+        quotes:
+          - at: "§4.2"
+            text: |-
+              At the time of writing, there is no standard way to retrieve a public key in JWK format from a DID URL or controlled identifier documents.
+        normative:
+          - "N-102"
+        on_error: "unspecified by source (§4.2: retrieval is undefined by the source's own statement)"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification method (JsonWebKey)"
+        message_id: "MSG-23"
+        field: "type"
+        action: "Find the verification method; its type MUST be JsonWebKey."
+        locator: "§4.2"
+        kind: "stated"
+        quotes:
+          - at: "§4.2"
+            text: |-
+              The value of the type property of the verification method MUST be JsonWebKey.
+        normative:
+          - "N-101"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0070"
+        on_error: >-
+          unspecified by source (§4.2: the MUST binds the document; nothing says a verifier rejects
+          another type (Example 17 itself lists a JsonWebKey2020 method))
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "verifier"
+        to: "verifier"
+        message: "publicKeyJwk (JWK)"
+        message_id: "MSG-24"
+        action: "Take the key from publicKeyJwk (MUST)."
+        locator: "§4.2"
+        kind: "stated"
+        quotes:
+          - at: "§4.2"
+            text: |-
+              Verification material MUST be expressed in the publicKeyJwk property of a JsonWebKey.
+        normative:
+          - "N-102"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0071"
+        on_error: "unspecified by source (§4.2)"
+        on_error_basis: "unspecified"
+      - n: "5"
+        condition: "the kid includes a JWK Thumbprint URI"
+        from: "verifier"
+        to: "verifier"
+        message: "kid value as a reference to a verification method"
+        message_id: "MSG-25"
+        field: "absolute URL including a JWK Thumbprint URI"
+        action: >-
+          Where the kid embeds a JWK Thumbprint URI, the thumbprint can be compared with the key obtained.
+        locator: "§4.2"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source recommends that the kid include the thumbprint and never says anyone checks it.
+        quotes:
+          - at: "§4.2"
+            text: |-
+              When using [URL] identifiers, the kid is RECOMMENDED to be an absolute [URL] that includes a JWK Thumbprint URI as defined in [RFC7638].
+        normative:
+          - "N-104"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0073"
+        on_error: "unspecified by source (§4.2)"
+        on_error_basis: "unspecified"
+  - name: "verification-dispatch"
+    title: "Receiving a secured object, choosing the §5 algorithm, and what follows it"
+    locator: "§5, §5.1, §5.2, §5.3, §3.1.2, §3.2.2, §3.3.2"
+    kind: "receive-processing"
+    participants:
+      - "verifier"
+    run_by:
+      - "holder"
+      - "verifier"
+    summary: >-
+      The glue the source leaves out. Each algorithm declares its inputMediaType; nothing says how a
+      receiver learns the media type, decrypts a nested JWE or COSE encryption object first, chooses
+      the algorithm, or verifies the credentials enveloped in a verified presentation. Those steps are
+      here so the stated ones can be placed, and every one is marked inferred.
+    steps:
+      - n: "1"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "inputMediaType"
+        also_messages:
+          - "MSG-06"
+          - "MSG-11"
+          - "MSG-18"
+        action: "Receive a secured object and its media type."
+        locator: "§5.1, §5.2, §5.3"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          Receipt is stated; how the media type arrives (a transport header, typ, a data URL) is not.
+        quotes:
+          - at: "§5.1"
+            text: |-
+              Upon receipt of the verifiable credential or presentation secured as a JWT [RFC7519], the holder or verifier follows this algorithm:
+        normative:
+          - "N-111"
+        on_error: "unspecified by source (§5: no outcome for an object without a known media type)"
+        on_error_basis: "unspecified"
+      - n: "2"
+        condition: "the received object is encrypted"
+        from: "verifier"
+        to: "verifier"
+        message: "Nested JWE (encrypted vc+jwt or vp+jwt)"
+        message_id: "MSG-10"
+        also_messages:
+          - "MSG-17"
+          - "MSG-21"
+        action: >-
+          If the object is a JWE or an encrypted COSE object nesting a secured credential or presentation,
+          decrypt it first.
+        locator: "§3.1.1, §3.2.1, §3.3.1"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          Encryption is a MAY on the producing side; no step of §5.2 or §5.3 decrypts, and §5.1 delegates
+          to Validating a JWT, whose handling of nested JWTs is RFC 7519's and is not restated here. No
+          media type labels the encrypted object.
+        quotes:
+          - at: "§3.3.1"
+            text: |-
+              To encrypt a secured verifiable credential when transmitting over an insecure channel, implementers MAY use COSE encryption, as defined in Section 5 of [RFC9052], by nesting the secured verifiable credential as the plaintext payload of an encrypted COSE object.
+        normative:
+          - "N-077"
+        on_error: "unspecified by source (§3.1.1, §3.2.1, §3.3.1: decryption failure is not mentioned)"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "inputMediaType"
+        action: >-
+          Choose the algorithm whose inputMediaType admits the object: vc+jwt or vp+jwt to §5.1, vc+sd-jwt
+          to §5.2, vc+cose or vp+cose to §5.3.
+        locator: "§5.1, §5.2, §5.3"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: "The input domains are stated; the dispatch on them is not."
+        quotes:
+          - at: "§5.1"
+            text: |-
+              inputMediaType: vc+jwt or vp+jwt
+          - at: "§5.2"
+            text: |-
+              inputMediaType: vc+sd-jwt
+          - at: "§5.3"
+            text: |-
+              inputMediaType: vc+cose or vp+cose
+        normative:
+          - "N-110"
+          - "N-112"
+          - "N-114"
+        invokes: "jose-verification, sd-jwt-verification, cose-verification"
+        on_error: >-
+          unspecified by source (§5: vp+sd-jwt and every other media type match no algorithm, and no
+          outcome is given)
+        on_error_basis: "unspecified"
+      - n: "4"
+        condition: "status is true"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "status"
+        action: >-
+          After a successful verification (status true), perform the §5.4 validation checks (SHOULD).
+        locator: "§5"
+        kind: "stated"
+        quotes:
+          - at: "§5"
+            text: |-
+              After verification has succeeded, additional validation checks SHOULD be performed as described in Section 5.4 Validation
+        normative:
+          - "N-108"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0076"
+        invokes: "validation"
+        on_error: >-
+          See validation; a verifier that skips it (the SHOULD allows it) never meets the MUSTs of §5.4.
+        on_error_basis: "inferred"
+      - n: "5"
+        condition: "mediaType is vp"
+        from: "verifier"
+        to: "verifier"
+        message: "EnvelopedVerifiableCredential"
+        message_id: "MSG-03"
+        also_messages:
+          - "MSG-04"
+          - "MSG-05"
+        action: >-
+          If the verified document is a presentation, take each EnvelopedVerifiableCredential (and
+          EnvelopedVerifiablePresentation), decode the secured object from its data URL, and run it
+          through this flow again.
+        locator: "§3.1.2, §3.2.2, §3.3.2, §5.4"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source requires enveloped credentials to be secured and gives no step that verifies them: §5
+          verifies one inputDocument and returns it as document, and §5.4 mentions dependencies between
+          multiple credentials only as an example of a MAY.
+        quotes:
+          - at: "§3.1.2"
+            text: |-
+              Credentials in verifiable presentations MUST be secured. In this case, these credentials are secured using JWS.
+          - at: "§5.4"
+            text: |-
+              Based on the validation policy of the verifier, the type of credentials, and the type of securing mechanism, additional validation checks MAY be applied.
+        normative:
+          - "N-042"
+          - "N-120"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0023"
+          - "w3c-vc-jose-cose#R-0039"
+          - "w3c-vc-jose-cose#R-0059"
+          - "w3c-vc-jose-cose#R-0085"
+        on_error: >-
+          unspecified by source (§5: no outcome for an enveloped credential that fails, is unsecured or
+          cannot be decoded)
+        on_error_basis: "unspecified"
+  - name: "jose-verification"
+    title: "Verifying a credential or presentation secured with JOSE (§5.1)"
+    locator: "§5.1, §5, §3.1.1, §3.1.2, §1.1.2.1"
+    kind: "receive-processing"
+    participants:
+      - "verifier"
+    run_by:
+      - "holder"
+      - "verifier"
+    conformance_class: "jws-verifier-implementation"
+    summary: >-
+      Delegates everything to Validating a JWT and maps the outcome to status, mediaType and document.
+      The input document is called the verifiable credential although vp+jwt is an input. Step 2.2
+      gives no rule for vc against vp. Rejection of an alg none JWT is a separate MUST of §1.1.2.1.
+    inputs:
+      - at: "§5.1"
+        text: |-
+          inputMediaType: vc+jwt or vp+jwt
+      - at: "§5.1"
+        text: |-
+          inputDocument: the verifiable credential secured as a JWT [RFC7519]
+    receipt:
+      at: "§5.1"
+      text: |-
+        Upon receipt of the verifiable credential or presentation secured as a JWT [RFC7519], the holder or verifier follows this algorithm:
+    outputs:
+      - at: "§5"
+        text: |-
+          status: a boolean indicating the result of verification, true for success and false for failure.
+      - at: "§5"
+        text: |-
+          document: a document conforming to the [VC-DATA-MODEL-2.0]
+      - at: "§5"
+        text: |-
+          mediaType: vc or vp
+    steps:
+      - n: "1"
+        from: "verifier"
+        to: "verifier"
+        message: "JWS Compact Serialization (application/vc+jwt, application/vp+jwt)"
+        message_id: "MSG-06"
+        action: >-
+          Validate the JWT by the procedure of RFC 7519 Section 7.2, which the step names Validating a
+          JWT; the JWS inside is verified with RFC 7515 (R-0015, R-0020).
+        locator: "§5.1, step 1; §3.1.1, §3.1.2, §1.1.2.1"
+        kind: "stated"
+        quotes:
+          - at: "§5.1"
+            text: |-
+              Follow the algorithm defined in Validating a JWT [RFC7519].
+        normative:
+          - "N-111"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0015"
+          - "w3c-vc-jose-cose#R-0020"
+          - "w3c-vc-jose-cose#R-0025"
+          - "w3c-vc-jose-cose#R-0004"
+          - "w3c-vc-jose-cose#R-0005"
+        on_error: >-
+          Stated: the failure branch, step 3, is taken; its condition is quoted there (§5.1, step 3).
+        on_error_basis: "stated"
+        note: >-
+          Validating a JWT links RFC 7519 Section 7.2. A JWT with no integrity protection ("alg": "none")
+          MUST be ignored (R-0005); §5.1 does not say whether that is step 3 or something else.
+      - n: "2"
+        condition: "processing completes successfully"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        action: "branch: success"
+        locator: "§5.1, step 2"
+        kind: "stated"
+        quotes:
+          - at: "§5.1"
+            text: |-
+              If processing completes successfully:
+        normative:
+          - "N-111"
+        on_error: "Not an error path: taken only on success (§5.1, step 2)."
+        on_error_basis: "stated"
+      - n: "2.1"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "status"
+        action: "status := true"
+        locator: "§5.1, step 2.1"
+        kind: "stated"
+        quotes:
+          - at: "§5.1"
+            text: |-
+              Set status to true
+        normative:
+          - "N-111"
+        on_error: "unspecified by source (§5.1 step 2.1)"
+        on_error_basis: "unspecified"
+      - n: "2.2"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "mediaType"
+        action: "mediaType := vc or vp, by no stated rule"
+        locator: "§5.1, step 2.2"
+        kind: "stated"
+        quotes:
+          - at: "§5.1"
+            text: |-
+              Set mediaType to vc or vp
+        normative:
+          - "N-111"
+        on_error: >-
+          unspecified by source (§5.1 step 2.2: no rule chooses between vc and vp, so a wrong choice is
+          not detectable from the source)
+        on_error_basis: "unspecified"
+      - n: "2.3"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "document"
+        action: "document := the JWS payload, decoded"
+        locator: "§5.1, step 2.3"
+        kind: "stated"
+        quotes:
+          - at: "§5.1"
+            text: |-
+              Set document to the decoded JWS payload.
+        normative:
+          - "N-111"
+        on_error: "unspecified by source (§5.1 step 2.3)"
+        on_error_basis: "unspecified"
+        note: >-
+          §7.2, which the source marks non-normative, says JSON that does not conform to RFC 7159 is to be
+          rejected in its entirety by JSON parsers; nothing in §5 says a payload that fails to decode
+          leads to step 3.
+      - n: "2.4"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        action: "return status, document and mediaType"
+        locator: "§5.1, step 2.4"
+        kind: "stated"
+        quotes:
+          - at: "§5.1"
+            text: |-
+              Return
+        normative:
+          - "N-111"
+        on_error: "unspecified by source (§5.1 step 2.4)"
+        on_error_basis: "unspecified"
+      - n: "3"
+        condition: "processing aborts for any reason or the JWT is rejected"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        action: "branch: failure"
+        locator: "§5.1, step 3"
+        kind: "stated"
+        quotes:
+          - at: "§5.1"
+            text: |-
+              If processing aborts for any reason or the JWT is rejected:
+        normative:
+          - "N-111"
+        on_error: "This is the error path (§5.1, step 3)."
+        on_error_basis: "stated"
+      - n: "3.1"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "status"
+        action: "status := false"
+        locator: "§5.1, step 3.1"
+        kind: "stated"
+        quotes:
+          - at: "§5.1"
+            text: |-
+              Set status to false
+        normative:
+          - "N-111"
+        on_error: "unspecified by source (§5.1 step 3.1)"
+        on_error_basis: "unspecified"
+      - n: "3.2"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "document"
+        action: "document := null"
+        locator: "§5.1, step 3.2"
+        kind: "stated"
+        quotes:
+          - at: "§5.1"
+            text: |-
+              Set document to null
+        normative:
+          - "N-111"
+        on_error: "unspecified by source (§5.1 step 3.2)"
+        on_error_basis: "unspecified"
+      - n: "3.3"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "mediaType"
+        action: "mediaType := null"
+        locator: "§5.1, step 3.3"
+        kind: "stated"
+        quotes:
+          - at: "§5.1"
+            text: |-
+              Set mediaType to null
+        normative:
+          - "N-111"
+        on_error: "unspecified by source (§5.1 step 3.3)"
+        on_error_basis: "unspecified"
+      - n: "3.4"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        action: "return status, document and mediaType"
+        locator: "§5.1, step 3.4"
+        kind: "stated"
+        quotes:
+          - at: "§5.1"
+            text: |-
+              Return
+        normative:
+          - "N-111"
+        on_error: "unspecified by source (§5.1 step 3.4)"
+        on_error_basis: "unspecified"
+  - name: "sd-jwt-verification"
+    title: "Verifying a credential secured with SD-JWT (§5.2)"
+    locator: "§5.2, §5, §3.2.1, §3.2.2"
+    kind: "receive-processing"
+    participants:
+      - "verifier"
+    run_by:
+      - "holder"
+      - "verifier"
+    conformance_class: "sd-jwt-verifier-implementation"
+    summary: >-
+      Delegates to the SD-JWT draft, then converts the payload back into the JWT Claims Set. Admits
+      vc+sd-jwt only and sets mediaType to vc only, so a vp+sd-jwt has no algorithm. Unlike §5.1 and
+      §5.3, step 2.3 is a transformation that can itself fail, after status is already true.
+    inputs:
+      - at: "§5.2"
+        text: |-
+          inputMediaType: vc+sd-jwt
+      - at: "§5.2"
+        text: |-
+          inputDocument: the verifiable credential secured with [SD-JWT]
+    receipt:
+      at: "§5.2"
+      text: |-
+        Upon receipt of the verifiable credential or presentation secured with [SD-JWT], the holder or verifier follows this algorithm:
+    outputs:
+      - at: "§5"
+        text: |-
+          status: a boolean indicating the result of verification, true for success and false for failure.
+      - at: "§5"
+        text: |-
+          document: a document conforming to the [VC-DATA-MODEL-2.0]
+      - at: "§5"
+        text: |-
+          mediaType: vc or vp
+    steps:
+      - n: "1"
+        from: "verifier"
+        to: "verifier"
+        message: "SD-JWT compact (application/vc+sd-jwt, application/vp+sd-jwt)"
+        message_id: "MSG-11"
+        action: "Verify the SD-JWT by the algorithms of the SD-JWT draft that the step links (section 8)."
+        locator: "§5.2, step 1; §3.2.1, §3.2.2, §1.1.2.1"
+        kind: "stated"
+        quotes:
+          - at: "§5.2"
+            text: |-
+              Follow the algorithms defined in SD-JWT for verification of the SD-JWT.
+        normative:
+          - "N-113"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0030"
+          - "w3c-vc-jose-cose#R-0036"
+          - "w3c-vc-jose-cose#R-0042"
+          - "w3c-vc-jose-cose#R-0005"
+        on_error: >-
+          Stated: the failure branch, step 3, is taken; its condition is quoted there (§5.2, step 3).
+        on_error_basis: "stated"
+        note: "SD-JWT links section 8 of the SD-JWT Internet-Draft by an unversioned URL."
+      - n: "2"
+        condition: "processing completes successfully"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        action: "branch: success"
+        locator: "§5.2, step 2"
+        kind: "stated"
+        quotes:
+          - at: "§5.2"
+            text: |-
+              If processing completes successfully:
+        normative:
+          - "N-113"
+        on_error: "Not an error path: taken only on success (§5.2, step 2)."
+        on_error_basis: "stated"
+      - n: "2.1"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "status"
+        action: "status := true"
+        locator: "§5.2, step 2.1"
+        kind: "stated"
+        quotes:
+          - at: "§5.2"
+            text: |-
+              Set status to true
+        normative:
+          - "N-113"
+        on_error: "unspecified by source (§5.2 step 2.1)"
+        on_error_basis: "unspecified"
+      - n: "2.2"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "mediaType"
+        action: >-
+          mediaType := vc, the only value this algorithm sets, although its heading and receipt sentence
+          cover presentations
+        locator: "§5.2, step 2.2"
+        kind: "stated"
+        quotes:
+          - at: "§5.2"
+            text: |-
+              Set mediaType to vc
+        normative:
+          - "N-113"
+        on_error: "unspecified by source (§5.2 step 2.2)"
+        on_error_basis: "unspecified"
+      - n: "2.3"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "document"
+        action: >-
+          document := the JWT Claims Set recovered by reversing the SD-JWT conversion of the payload
+        locator: "§5.2, step 2.3"
+        kind: "stated"
+        quotes:
+          - at: "§5.2"
+            text: |-
+              Convert the SD-JWT payload back into the JWT Claims Set by reversing the process in [SD-JWT]. Set document to the JWT Claims Set. (For examples of the transition from JWT Claims Set to SD-JWT payload, please see SD-JWT examples).
+        normative:
+          - "N-113"
+        on_error: >-
+          unspecified by source (§5.2 step 2.3: a payload that cannot be converted back is not mentioned,
+          and step 2.1 has already set status to true)
+        on_error_basis: "unspecified"
+        note: >-
+          Which disclosures are applied (all received, or those the holder chose) is SD-JWT's; the step
+          says only "reversing the process".
+      - n: "2.4"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        action: "return status, document and mediaType"
+        locator: "§5.2, step 2.4"
+        kind: "stated"
+        quotes:
+          - at: "§5.2"
+            text: |-
+              Return
+        normative:
+          - "N-113"
+        on_error: "unspecified by source (§5.2 step 2.4)"
+        on_error_basis: "unspecified"
+      - n: "3"
+        condition: "processing aborts for any reason or the SD-JWT is rejected"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        action: "branch: failure"
+        locator: "§5.2, step 3"
+        kind: "stated"
+        quotes:
+          - at: "§5.2"
+            text: |-
+              If processing aborts for any reason or the SD-JWT is rejected:
+        normative:
+          - "N-113"
+        on_error: "This is the error path (§5.2, step 3)."
+        on_error_basis: "stated"
+      - n: "3.1"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "status"
+        action: "status := false"
+        locator: "§5.2, step 3.1"
+        kind: "stated"
+        quotes:
+          - at: "§5.2"
+            text: |-
+              Set status to false
+        normative:
+          - "N-113"
+        on_error: "unspecified by source (§5.2 step 3.1)"
+        on_error_basis: "unspecified"
+      - n: "3.2"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "document"
+        action: "document := null"
+        locator: "§5.2, step 3.2"
+        kind: "stated"
+        quotes:
+          - at: "§5.2"
+            text: |-
+              Set document to null
+        normative:
+          - "N-113"
+        on_error: "unspecified by source (§5.2 step 3.2)"
+        on_error_basis: "unspecified"
+      - n: "3.3"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "mediaType"
+        action: "mediaType := null"
+        locator: "§5.2, step 3.3"
+        kind: "stated"
+        quotes:
+          - at: "§5.2"
+            text: |-
+              Set mediaType to null
+        normative:
+          - "N-113"
+        on_error: "unspecified by source (§5.2 step 3.3)"
+        on_error_basis: "unspecified"
+      - n: "3.4"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        action: "return status, document and mediaType"
+        locator: "§5.2, step 3.4"
+        kind: "stated"
+        quotes:
+          - at: "§5.2"
+            text: |-
+              Return
+        normative:
+          - "N-113"
+        on_error: "unspecified by source (§5.2 step 3.4)"
+        on_error_basis: "unspecified"
+  - name: "cose-verification"
+    title: "Verifying a credential or presentation secured with COSE (§5.3)"
+    locator: "§5.3, §5, §3.3.1, §3.3.2, §3.3.3"
+    kind: "receive-processing"
+    participants:
+      - "verifier"
+    run_by:
+      - "holder"
+      - "verifier"
+    conformance_class: "cose-verifier-implementation"
+    summary: >-
+      Delegates to the COSE_Sign1 verification of RFC 9052. Its failure branch has no rejection clause
+      (only aborts for any reason), unlike §5.1 and §5.2.
+    inputs:
+      - at: "§5.3"
+        text: |-
+          inputMediaType: vc+cose or vp+cose
+      - at: "§5.3"
+        text: |-
+          inputDocument: the verifiable credential or verifiable presentation secured with CBOR Object Signing and Encryption (COSE): Structures and Process
+    receipt:
+      at: "§5.3"
+      text: |-
+        Upon receipt of the verifiable credential or presentation secured with [RFC9052], the holder or verifier follows this algorithm:
+    outputs:
+      - at: "§5"
+        text: |-
+          status: a boolean indicating the result of verification, true for success and false for failure.
+      - at: "§5"
+        text: |-
+          document: a document conforming to the [VC-DATA-MODEL-2.0]
+      - at: "§5"
+        text: |-
+          mediaType: vc or vp
+    steps:
+      - n: "1"
+        from: "verifier"
+        to: "verifier"
+        message: "COSE_Sign1 (application/vc+cose, application/vp+cose)"
+        message_id: "MSG-18"
+        action: >-
+          Verify the COSE_Sign1 by the signing and verification process of RFC 9052 (MUST use COSE_Sign1,
+          R-0050, R-0056).
+        locator: "§5.3, step 1; §3.3.1, §3.3.2, §3.3.3"
+        kind: "stated"
+        quotes:
+          - at: "§5.3"
+            text: |-
+              Follow the algorithm defined in CBOR Object Signing and Encryption (COSE): Structures and Process [RFC9052] under the Signing and Verification Process for COSE_Sign1.
+        normative:
+          - "N-115"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0050"
+          - "w3c-vc-jose-cose#R-0056"
+          - "w3c-vc-jose-cose#R-0064"
+        on_error: >-
+          Stated: the failure branch, step 3, is taken; its condition is quoted there (§5.3, step 3).
+        on_error_basis: "stated"
+        note: >-
+          The link goes to RFC 9052 as a whole; the process is named, not numbered. Header parameters and
+          claims not understood MUST be ignored (R-0064).
+      - n: "2"
+        condition: "processing completes successfully"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        action: "branch: success"
+        locator: "§5.3, step 2"
+        kind: "stated"
+        quotes:
+          - at: "§5.3"
+            text: |-
+              If processing completes successfully:
+        normative:
+          - "N-115"
+        on_error: "Not an error path: taken only on success (§5.3, step 2)."
+        on_error_basis: "stated"
+      - n: "2.1"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "status"
+        action: "status := true"
+        locator: "§5.3, step 2.1"
+        kind: "stated"
+        quotes:
+          - at: "§5.3"
+            text: |-
+              Set status to true
+        normative:
+          - "N-115"
+        on_error: "unspecified by source (§5.3 step 2.1)"
+        on_error_basis: "unspecified"
+      - n: "2.2"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "mediaType"
+        action: "mediaType := vc or vp, by no stated rule"
+        locator: "§5.3, step 2.2"
+        kind: "stated"
+        quotes:
+          - at: "§5.3"
+            text: |-
+              Set mediaType to vc or vp
+        normative:
+          - "N-115"
+        on_error: "unspecified by source (§5.3 step 2.2: no rule chooses between vc and vp)"
+        on_error_basis: "unspecified"
+      - n: "2.3"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "document"
+        action: "document := the COSE_Sign1 payload, decoded"
+        locator: "§5.3, step 2.3"
+        kind: "stated"
+        quotes:
+          - at: "§5.3"
+            text: |-
+              Set document to the decoded COSE_Sign1 payload.
+        normative:
+          - "N-115"
+        on_error: >-
+          unspecified by source (§5.3 step 2.3: which decoding (JSON text, as in every example, or CBOR,
+          as §1.1.2 says) is not stated)
+        on_error_basis: "unspecified"
+        note: >-
+          §7.2, which the source marks non-normative, says JSON that does not conform to RFC 7159 is to be
+          rejected in its entirety by JSON parsers; nothing in §5 says a payload that fails to decode
+          leads to step 3.
+      - n: "2.4"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        action: "return status, document and mediaType"
+        locator: "§5.3, step 2.4"
+        kind: "stated"
+        quotes:
+          - at: "§5.3"
+            text: |-
+              Return
+        normative:
+          - "N-115"
+        on_error: "unspecified by source (§5.3 step 2.4)"
+        on_error_basis: "unspecified"
+      - n: "3"
+        condition: "processing aborts for any reason"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        action: "branch: failure"
+        locator: "§5.3, step 3"
+        kind: "stated"
+        quotes:
+          - at: "§5.3"
+            text: |-
+              If processing aborts for any reason:
+        normative:
+          - "N-115"
+        on_error: "This is the error path (§5.3, step 3)."
+        on_error_basis: "stated"
+      - n: "3.1"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "status"
+        action: "status := false"
+        locator: "§5.3, step 3.1"
+        kind: "stated"
+        quotes:
+          - at: "§5.3"
+            text: |-
+              Set status to false
+        normative:
+          - "N-115"
+        on_error: "unspecified by source (§5.3 step 3.1)"
+        on_error_basis: "unspecified"
+      - n: "3.2"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "document"
+        action: "document := null"
+        locator: "§5.3, step 3.2"
+        kind: "stated"
+        quotes:
+          - at: "§5.3"
+            text: |-
+              Set document to null
+        normative:
+          - "N-115"
+        on_error: "unspecified by source (§5.3 step 3.2)"
+        on_error_basis: "unspecified"
+      - n: "3.3"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "mediaType"
+        action: "mediaType := null"
+        locator: "§5.3, step 3.3"
+        kind: "stated"
+        quotes:
+          - at: "§5.3"
+            text: |-
+              Set mediaType to null
+        normative:
+          - "N-115"
+        on_error: "unspecified by source (§5.3 step 3.3)"
+        on_error_basis: "unspecified"
+      - n: "3.4"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        action: "return status, document and mediaType"
+        locator: "§5.3, step 3.4"
+        kind: "stated"
+        quotes:
+          - at: "§5.3"
+            text: |-
+              Return
+        normative:
+          - "N-115"
+        on_error: "unspecified by source (§5.3 step 3.4)"
+        on_error_basis: "unspecified"
+  - name: "validation"
+    title: "Validation after a successful verification (§5.4)"
+    locator: "§5.4, §5, §3.3.3"
+    kind: "receive-processing"
+    participants:
+      - "verifier"
+    run_by:
+      - "holder"
+      - "verifier"
+    summary: >-
+      Five paragraphs, no numbered steps, no inputs or outputs of its own: n here is this model's
+      ordering by paragraph and sentence. Entered by a SHOULD (R-0076), it holds six MUSTs, two
+      SHOULDs and a MAY. None states what follows a failed check, and the §5 outputs are already set
+      when it runs, so a failed validation has no stated effect on status. The order of the checks is
+      the paragraph order; the source does not prescribe one.
+    steps:
+      - n: "1"
+        condition: "status is true"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "document"
+        action: "Enter validation once verification has succeeded (SHOULD)."
+        locator: "§5, paragraph 3"
+        kind: "stated"
+        quotes:
+          - at: "§5"
+            text: |-
+              After verification has succeeded, additional validation checks SHOULD be performed as described in Section 5.4 Validation
+        normative:
+          - "N-108"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0076"
+        on_error: >-
+          unspecified by source (§5, paragraph 3: skipping validation is permitted by the SHOULD and has
+          no stated consequence)
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "verifier"
+        to: "verifier"
+        message: "Registered JWT claims in the claims set (JWS and SD-JWT)"
+        message_id: "MSG-08"
+        also_messages:
+          - "MSG-20"
+        action: "Check that all claims expected for the typ are present (MUST)."
+        locator: "§5.4, paragraph 1, sentence 1"
+        kind: "stated"
+        quotes:
+          - at: "§5.4"
+            text: |-
+              All claims expected for the typ MUST be present.
+        normative:
+          - "N-116"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0077"
+        on_error: >-
+          unspecified by source (§5.4: no outcome for a missing claim; which claims a typ expects is
+          defined nowhere, and typ itself is only a SHOULD)
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "verifier"
+        to: "verifier"
+        message: "Registered JWT claims in the claims set (JWS and SD-JWT)"
+        message_id: "MSG-08"
+        also_messages:
+          - "MSG-20"
+        action: "Evaluate every understood claim under the verifier's validation policies (MUST)."
+        locator: "§5.4, paragraph 1, sentence 2"
+        kind: "stated"
+        quotes:
+          - at: "§5.4"
+            text: |-
+              All claims that are understood MUST be evaluated according the verifier's validation policies.
+        normative:
+          - "N-116"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0078"
+        on_error: >-
+          unspecified by source (§5.4: the policies, and therefore their failure, are the verifier's)
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "verifier"
+        to: "verifier"
+        message: "Registered JWT claims in the claims set (JWS and SD-JWT)"
+        message_id: "MSG-08"
+        field: "claims not understood"
+        also_messages:
+          - "MSG-19"
+          - "MSG-20"
+        action: >-
+          Ignore every claim not understood (MUST); for COSE the same holds for header parameters
+          (R-0064).
+        locator: "§5.4, paragraph 1, sentence 3; §3.3.3"
+        kind: "stated"
+        quotes:
+          - at: "§5.4"
+            text: |-
+              All claims that are not understood MUST be ignored.
+          - at: "§3.3.3"
+            text: |-
+              Additional members may be present as header parameters and claims. If they are not understood, they MUST be ignored.
+        normative:
+          - "N-116"
+          - "N-090"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0079"
+          - "w3c-vc-jose-cose#R-0064"
+        constrained_by_locators:
+          - "§3.1.3, line 370 of the .txt (non-normative): the JOSE twin of R-0064"
+        on_error: "Stated: ignore. No crit exception is made (tension ignore-versus-crit)."
+        on_error_basis: "stated"
+      - n: "5"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "document"
+        action: "Check that the verified document is a well-formed compact JSON-LD document (MUST)."
+        locator: "§5.4, paragraph 2"
+        kind: "stated"
+        quotes:
+          - at: "§5.4"
+            text: |-
+              The verified document returned from verification MUST be a well-formed compact JSON-LD document, as described in Verifiable Credentials Data Model v2.0.
+        normative:
+          - "N-117"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0080"
+        on_error: >-
+          unspecified by source (§5.4: no outcome for a document that is not well-formed compact JSON-LD;
+          §7.2 (non-normative) adds care around remote context retrieval)
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "verifier"
+        to: "verifier"
+        message: "Unsecured verifiable credential (application/vc)"
+        message_id: "MSG-01"
+        field: "credentialSchema"
+        action: "Check schema extension mechanisms such as credentialSchema (SHOULD)."
+        locator: "§5.4, paragraph 3, sentence 1"
+        kind: "stated"
+        quotes:
+          - at: "§5.4"
+            text: |-
+              Schema extension mechanisms such as credentialSchema SHOULD be checked.
+        normative:
+          - "N-118"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0081"
+        on_error: "unspecified by source (§5.4, paragraph 3: no outcome for a failed schema check)"
+        on_error_basis: "unspecified"
+      - n: "7"
+        condition: "the credentialSchema type is not understood"
+        from: "verifier"
+        to: "verifier"
+        message: "Unsecured verifiable credential (application/vc)"
+        message_id: "MSG-01"
+        field: "credentialSchema"
+        action: "Ignore a schema extension whose type is not understood (MUST)."
+        locator: "§5.4, paragraph 3, sentence 2"
+        kind: "stated"
+        quotes:
+          - at: "§5.4"
+            text: |-
+              If the extension mechanism type is not understood, this property MUST be ignored.
+        normative:
+          - "N-118"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0082"
+        on_error: "Stated: ignore the property."
+        on_error_basis: "stated"
+      - n: "8"
+        from: "verifier"
+        to: "verifier"
+        message: "Unsecured verifiable credential (application/vc)"
+        message_id: "MSG-01"
+        field: "credentialStatus"
+        action: "Check status extension mechanisms such as credentialStatus (SHOULD)."
+        locator: "§5.4, paragraph 4, sentence 1"
+        kind: "stated"
+        quotes:
+          - at: "§5.4"
+            text: |-
+              Status extension mechanisms such as credentialStatus SHOULD be checked.
+        normative:
+          - "N-119"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0083"
+        on_error: >-
+          unspecified by source (§5.4, paragraph 4: no outcome for a revoked or suspended status; the
+          status mechanism is not this document's)
+        on_error_basis: "unspecified"
+      - n: "9"
+        condition: "the credentialStatus type is not understood"
+        from: "verifier"
+        to: "verifier"
+        message: "Unsecured verifiable credential (application/vc)"
+        message_id: "MSG-01"
+        field: "credentialStatus"
+        action: "Ignore a status extension whose type is not understood (MUST)."
+        locator: "§5.4, paragraph 4, sentence 2"
+        kind: "stated"
+        quotes:
+          - at: "§5.4"
+            text: |-
+              If the extension mechanism type is not understood, this property MUST be ignored.
+        normative:
+          - "N-119"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0084"
+        on_error: "Stated: ignore the property."
+        on_error_basis: "stated"
+      - n: "10"
+        from: "verifier"
+        to: "verifier"
+        message: "Verification algorithm inputs and outputs"
+        message_id: "MSG-26"
+        field: "document"
+        action: >-
+          Apply further checks by policy, credential type and securing mechanism (MAY); they could make an
+          otherwise valid credential or presentation invalid.
+        locator: "§5.4, paragraph 5"
+        kind: "stated"
+        quotes:
+          - at: "§5.4"
+            text: |-
+              Based on the validation policy of the verifier, the type of credentials, and the type of securing mechanism, additional validation checks MAY be applied.
+          - at: "§5.4"
+            text: |-
+              For example, dependencies between multiple credentials, ordering or timing information associated with multiple credentials, and/or multiple presentations could cause an otherwise valid credential or presentation to be considered invalid.
+        normative:
+          - "N-120"
+        constrained_by:
+          - "w3c-vc-jose-cose#R-0085"
+        on_error: >-
+          Stated as a possibility: the credential or presentation could be considered invalid. How that is
+          signalled is not stated.
+        on_error_basis: "stated"
+error_paths:
+  - id: "jwt-processing-fails"
+    trigger: "Validating a JWT aborts for any reason, or the JWT is rejected."
+    detected_by: "verifier"
+    in:
+      - "jose-verification 1"
+      - "jose-verification 3"
+    outcome: "status false, document null, mediaType null, return (§5.1 step 3)."
+    basis: "stated"
+    locator: "§5.1, step 3; §3.1.1, §3.1.2"
+    constrained_by:
+      - "w3c-vc-jose-cose#R-0015"
+      - "w3c-vc-jose-cose#R-0020"
+    quotes:
+      - at: "§5.1"
+        text: |-
+          If processing aborts for any reason or the JWT is rejected:
+  - id: "sd-jwt-processing-fails"
+    trigger: "SD-JWT verification aborts for any reason, or the SD-JWT is rejected."
+    detected_by: "verifier"
+    in:
+      - "sd-jwt-verification 1"
+      - "sd-jwt-verification 3"
+    outcome: "status false, document null, mediaType null, return (§5.2 step 3)."
+    basis: "stated"
+    locator: "§5.2, step 3; §3.2.1, §3.2.2"
+    constrained_by:
+      - "w3c-vc-jose-cose#R-0030"
+      - "w3c-vc-jose-cose#R-0036"
+    quotes:
+      - at: "§5.2"
+        text: |-
+          If processing aborts for any reason or the SD-JWT is rejected:
+  - id: "cose-processing-fails"
+    trigger: "COSE_Sign1 verification aborts for any reason (no rejection clause)."
+    detected_by: "verifier"
+    in:
+      - "cose-verification 1"
+      - "cose-verification 3"
+    outcome: "status false, document null, mediaType null, return (§5.3 step 3)."
+    basis: "stated"
+    locator: "§5.3, step 3; §3.3.1, §3.3.2"
+    constrained_by:
+      - "w3c-vc-jose-cose#R-0050"
+      - "w3c-vc-jose-cose#R-0056"
+    quotes:
+      - at: "§5.3"
+        text: |-
+          If processing aborts for any reason:
+  - id: "unsecured-jwt"
+    trigger: 'A JWT Claims Set with no integrity protection ("alg": "none").'
+    detected_by: "issuer, holder, verifier"
+    in:
+      - "jose-verification 1"
+      - "sd-jwt-verification 1"
+    outcome: >-
+      MUST be ignored. Whether ignoring is §5.1 step 3 (status false) or happens before §5.1 is not
+      said.
+    basis: "stated"
+    locator: "§1.1.2.1"
+    constrained_by:
+      - "w3c-vc-jose-cose#R-0004"
+      - "w3c-vc-jose-cose#R-0005"
+    quotes:
+      - at: "§1.1.2.1"
+        text: |-
+          Issuers, Holders, and Verifiers MUST ignore all JWT Claims Sets that have no integrity protection.
+  - id: "no-algorithm-for-media-type"
+    trigger: "A secured object whose media type no §5 algorithm takes: vp+sd-jwt, or any other."
+    detected_by: "verifier"
+    in:
+      - "verification-dispatch 3"
+      - "sd-jwt-presentation-securing 7"
+      - "sd-jwt-selective-disclosure 3"
+    outcome: "Unspecified."
+    basis: "unspecified"
+    locator: "§5.1, §5.2, §5.3"
+    quotes:
+      - at: "§5.2"
+        text: |-
+          inputMediaType: vc+sd-jwt
+  - id: "key-not-found"
+    trigger: "No key is found from kid, iss, cnf or a controlled identifier document."
+    detected_by: "verifier"
+    in:
+      - "key-discovery-header-hints 1"
+      - "key-discovery-header-hints 6"
+      - "key-discovery-controlled-identifier-document 2"
+    outcome: "Unspecified; §5 assumes key discovery succeeded."
+    basis: "unspecified"
+    locator: "§4, §5"
+    quotes:
+      - at: "§5"
+        text: |-
+          This specification might be used with many different key discovery protocols. Therefore, discovery of verification keys is described in 4. Key Discovery, and is assumed to have succeeded prior to beginning the verification process.
+  - id: "iss-does-not-match-issuer"
+    trigger: "A present iss differs from issuer (or issuer.id)."
+    detected_by: "verifier"
+    in:
+      - "key-discovery-header-hints 3"
+      - "jose-credential-securing 1"
+    outcome: "Unspecified: the MUST binds the value; no check and no outcome are stated."
+    basis: "unspecified"
+    locator: "§4.1.2"
+    constrained_by:
+      - "w3c-vc-jose-cose#R-0066"
+      - "w3c-vc-jose-cose#R-0067"
+  - id: "kid-absent-or-not-url"
+    trigger: >-
+      kid absent although the key is a DID URL, or not an absolute URL where §4.2 requires one.
+    detected_by: "verifier"
+    in:
+      - "key-discovery-header-hints 2"
+      - "key-discovery-controlled-identifier-document 1"
+    outcome: "Unspecified."
+    basis: "unspecified"
+    locator: "§4.1.1, §4.2"
+    constrained_by:
+      - "w3c-vc-jose-cose#R-0065"
+      - "w3c-vc-jose-cose#R-0072"
+      - "w3c-vc-jose-cose#R-0074"
+  - id: "controlled-identifier-document-unretrievable"
+    trigger: "The controlled identifier document or DID document cannot be retrieved."
+    detected_by: "verifier"
+    in:
+      - "key-discovery-controlled-identifier-document 2"
+    outcome: "Unspecified; the source says there is no standard way to retrieve the key."
+    basis: "unspecified"
+    locator: "§4.2"
+    quotes:
+      - at: "§4.2"
+        text: |-
+          At the time of writing, there is no standard way to retrieve a public key in JWK format from a DID URL or controlled identifier documents.
+  - id: "verification-method-nonconforming"
+    trigger: "The verification method is not a JsonWebKey, or has no publicKeyJwk."
+    detected_by: "verifier"
+    in:
+      - "key-discovery-controlled-identifier-document 3"
+      - "key-discovery-controlled-identifier-document 4"
+    outcome: "Unspecified: the MUSTs bind the document, not the verifier."
+    basis: "unspecified"
+    locator: "§4.2"
+    constrained_by:
+      - "w3c-vc-jose-cose#R-0070"
+      - "w3c-vc-jose-cose#R-0071"
+  - id: "decryption-fails"
+    trigger: "A nested JWE or encrypted COSE object cannot be decrypted."
+    detected_by: "verifier"
+    in:
+      - "verification-dispatch 2"
+    outcome: "Unspecified."
+    basis: "unspecified"
+    locator: "§3.1.1, §3.2.1, §3.3.1"
+  - id: "payload-does-not-decode"
+    trigger: >-
+      The JWS or COSE_Sign1 payload does not decode, or the SD-JWT payload cannot be converted back.
+    detected_by: "verifier"
+    in:
+      - "jose-verification 2.3"
+      - "sd-jwt-verification 2.3"
+      - "cose-verification 2.3"
+    outcome: >-
+      Unspecified: these steps sit in the success branch, after status is set to true; §7.2
+      (non-normative) says malformed JSON is to be rejected in its entirety.
+    basis: "unspecified"
+    locator: "§5.1, §5.2, §5.3, §7.2"
+    quotes:
+      - at: "§7.2"
+        text: |-
+          It is essential that any JSON inputs that do not conform to the JSON-text syntax defined in [RFC7159] be rejected in their entirety by JSON parsers.
+  - id: "expected-claims-missing"
+    trigger: "A claim expected for the typ is absent."
+    detected_by: "verifier"
+    in:
+      - "validation 2"
+    outcome: "Unspecified; the expected claims are defined nowhere."
+    basis: "unspecified"
+    locator: "§5.4, paragraph 1"
+    constrained_by:
+      - "w3c-vc-jose-cose#R-0077"
+  - id: "document-not-compact-json-ld"
+    trigger: "The verified document is not well-formed compact JSON-LD."
+    detected_by: "verifier"
+    in:
+      - "validation 5"
+    outcome: "Unspecified."
+    basis: "unspecified"
+    locator: "§5.4, paragraph 2"
+    constrained_by:
+      - "w3c-vc-jose-cose#R-0080"
+  - id: "member-not-understood"
+    trigger: >-
+      A claim, a COSE header parameter or claim, or an extension type (credentialSchema,
+      credentialStatus) is not understood.
+    detected_by: "verifier"
+    in:
+      - "validation 4"
+      - "validation 7"
+      - "validation 9"
+    outcome: "Ignored (MUST). No crit exception is stated."
+    basis: "stated"
+    locator: "§5.4, §3.3.3"
+    constrained_by:
+      - "w3c-vc-jose-cose#R-0079"
+      - "w3c-vc-jose-cose#R-0064"
+      - "w3c-vc-jose-cose#R-0082"
+      - "w3c-vc-jose-cose#R-0084"
+  - id: "schema-or-status-check-fails"
+    trigger: "A credentialSchema or credentialStatus check fails."
+    detected_by: "verifier"
+    in:
+      - "validation 6"
+      - "validation 8"
+    outcome: "Unspecified."
+    basis: "unspecified"
+    locator: "§5.4, paragraphs 3 and 4"
+    constrained_by:
+      - "w3c-vc-jose-cose#R-0081"
+      - "w3c-vc-jose-cose#R-0083"
+  - id: "policy-check-fails"
+    trigger: "An understood claim fails the verifier's policies, or an additional check fails."
+    detected_by: "verifier"
+    in:
+      - "validation 3"
+      - "validation 10"
+    outcome: >-
+      The credential or presentation could be considered invalid; no signal or output is defined.
+      Stated for the additional checks of paragraph 5 only; for an understood claim that fails the
+      verifier's policies (paragraph 1, validation 3) the source states no outcome.
+    basis: "stated"
+    locator: "§5.4, paragraphs 1 and 5"
+    constrained_by:
+      - "w3c-vc-jose-cose#R-0078"
+      - "w3c-vc-jose-cose#R-0085"
+    quotes:
+      - at: "§5.4"
+        text: |-
+          For example, dependencies between multiple credentials, ordering or timing information associated with multiple credentials, and/or multiple presentations could cause an otherwise valid credential or presentation to be considered invalid.
+  - id: "enveloped-credential-fails"
+    trigger: >-
+      A credential enveloped in a verified presentation is unsecured, undecodable or fails its own
+      verification.
+    detected_by: "verifier"
+    in:
+      - "verification-dispatch 5"
+      - "credential-enveloping 1"
+    outcome: "Unspecified; no algorithm verifies enveloped credentials."
+    basis: "unspecified"
+    locator: "§3.1.2, §3.2.2, §3.3.2, §5"
+    constrained_by:
+      - "w3c-vc-jose-cose#R-0023"
+      - "w3c-vc-jose-cose#R-0039"
+      - "w3c-vc-jose-cose#R-0059"
+  - id: "vc-or-vp-claim-present"
+    trigger: "The claims set carries a vc or vp claim."
+    detected_by: "verifier"
+    in:
+      - "jose-credential-securing 1"
+      - "jose-presentation-securing 1"
+    outcome: "Unspecified for the receiver; the MUST NOT binds the producer."
+    basis: "unspecified"
+    locator: "§1.1.2.1"
+    constrained_by:
+      - "w3c-vc-jose-cose#R-0006"
+  - id: "possession-not-proven"
+    trigger: "A bound key is present (cnf) and the presentation does not prove possession of it."
+    detected_by: "verifier"
+    in:
+      - "key-binding 3"
+      - "key-binding 4"
+    outcome: "Unspecified; no §5 step uses the proof-of-possession key."
+    basis: "unspecified"
+    locator: "§4.1.3"
+    constrained_by:
+      - "w3c-vc-jose-cose#R-0068"
+      - "w3c-vc-jose-cose#R-0069"
+  - id: "validation-skipped"
+    trigger: "Verification succeeded and the verifier does not perform §5.4 (the SHOULD permits it)."
+    detected_by: "verifier"
+    in:
+      - "verification-dispatch 4"
+      - "validation 1"
+    outcome: "The §5.4 MUSTs are never evaluated and status stays true (this model's reading)."
+    basis: "inferred"
+    locator: "§5, paragraph 3"
+    constrained_by:
+      - "w3c-vc-jose-cose#R-0076"
+source_defects_and_tensions:
+  - id: "sd-jwt-presentation-no-algorithm"
+    kind: "defect"
+    locator: "§5.2, §3.2.2, §6.1.4"
+    text: >-
+      The heading and the receipt sentence of §5.2 cover a presentation, but its only input media type
+      is vc+sd-jwt, its input document is a credential, and step 2.2 sets mediaType to vc. §3.2.2
+      recommends vp+sd-jwt as the typ of an SD-JWT presentation and §6.1.4 registers
+      application/vp+sd-jwt. No algorithm verifies one.
+    quotes:
+      - at: "§5.2"
+        text: |-
+          inputMediaType: vc+sd-jwt
+      - at: "§5.2"
+        text: |-
+          Set mediaType to vc
+      - at: "§5.2"
+        text: |-
+          Upon receipt of the verifiable credential or presentation secured with [SD-JWT], the holder or verifier follows this algorithm:
+      - at: "§3.2.2"
+        text: |-
+          The typ header parameter SHOULD be vp+sd-jwt.
+    affects:
+      - "sd-jwt-presentation-securing 7"
+      - "verification-dispatch 3"
+      - "sd-jwt-verification"
+    see_also:
+      - "normative.md SD-17"
+      - "messages.yaml TEN-10"
+  - id: "credential-only-input-document"
+    kind: "defect"
+    locator: "§5.1, §5.2"
+    text: >-
+      §5.1 admits vp+jwt as inputMediaType but names only a credential as inputDocument; §5.2 names
+      only a credential. §5.3 names both.
+    quotes:
+      - at: "§5.1"
+        text: |-
+          inputDocument: the verifiable credential secured as a JWT [RFC7519]
+      - at: "§5.3"
+        text: |-
+          inputDocument: the verifiable credential or verifiable presentation secured with CBOR Object Signing and Encryption (COSE): Structures and Process
+    affects:
+      - "jose-verification"
+      - "sd-jwt-verification"
+    see_also:
+      - "normative.md SD-18"
+      - "messages.yaml TEN-11"
+  - id: "vc-or-vp-unchosen"
+    kind: "gap"
+    locator: "§5.1 step 2.2, §5.3 step 2.2"
+    text: >-
+      Step 2.2 sets mediaType to vc or vp with no rule: not from inputMediaType, not from typ, cty or
+      the document's type.
+    quotes:
+      - at: "§5.1"
+        text: |-
+          Set mediaType to vc or vp
+      - at: "§5.3"
+        text: |-
+          Set mediaType to vc or vp
+    affects:
+      - "jose-verification 2.2"
+      - "cose-verification 2.2"
+    see_also:
+      - "normative.md SD-19"
+      - "messages.yaml TEN-11"
+  - id: "output-domains-exclude-null"
+    kind: "defect"
+    locator: "§5, §5.1 to §5.3 step 3"
+    text: >-
+      The outputs are declared as a document conforming to the data model and vc or vp; every failure
+      branch sets both to null.
+    quotes:
+      - at: "§5"
+        text: |-
+          document: a document conforming to the [VC-DATA-MODEL-2.0]
+      - at: "§5"
+        text: |-
+          mediaType: vc or vp
+      - at: "§5.1"
+        text: |-
+          Set document to null
+    affects:
+      - "jose-verification 3.2"
+      - "sd-jwt-verification 3.2"
+      - "cose-verification 3.2"
+    see_also:
+      - "normative.md SD-20"
+  - id: "cose-failure-branch-asymmetric"
+    kind: "defect"
+    locator: "§5.3 step 3"
+    text: >-
+      The COSE failure branch is taken when processing aborts; §5.1 and §5.2 add an explicit
+      rejection. Whether a COSE_Sign1 that RFC 9052 processing rejects without aborting reaches step 3
+      is not said.
+    quotes:
+      - at: "§5.3"
+        text: |-
+          If processing aborts for any reason:
+      - at: "§5.1"
+        text: |-
+          If processing aborts for any reason or the JWT is rejected:
+    affects:
+      - "cose-verification 3"
+    see_also:
+      - "normative.md SD-21"
+  - id: "sd-jwt-status-before-conversion"
+    kind: "gap"
+    locator: "§5.2 steps 2.1 to 2.3"
+    text: >-
+      Step 2.1 sets status to true before step 2.3 converts the payload back into the JWT Claims Set.
+      A conversion that fails has no branch: the algorithm is already in the success branch.
+    quotes:
+      - at: "§5.2"
+        text: |-
+          Set status to true
+      - at: "§5.2"
+        text: |-
+          Convert the SD-JWT payload back into the JWT Claims Set by reversing the process in [SD-JWT]. Set document to the JWT Claims Set. (For examples of the transition from JWT Claims Set to SD-JWT payload, please see SD-JWT examples).
+    affects:
+      - "sd-jwt-verification 2.3"
+  - id: "key-not-an-input"
+    kind: "gap"
+    locator: "§5, §5.1 to §5.3"
+    text: >-
+      Key discovery is assumed to have succeeded, but the algorithms' inputs are inputMediaType and
+      inputDocument only: the key reaches step 1 by no stated input, and no algorithm has a branch for
+      a missing key.
+    quotes:
+      - at: "§5"
+        text: |-
+          This specification might be used with many different key discovery protocols. Therefore, discovery of verification keys is described in 4. Key Discovery, and is assumed to have succeeded prior to beginning the verification process.
+      - at: "§5.3"
+        text: |-
+          The inputs for this algorithm are:
+    affects:
+      - "key-discovery-header-hints 6"
+  - id: "key-discovery-reads-untrusted-data"
+    kind: "tension"
+    locator: "§5, §4.1.2, §4.1.3"
+    text: >-
+      Verifiers SHOULD minimize processing of the protected header, the unprotected header and the
+      payload during key discovery, yet every hint §4.1 offers lives there: kid in a header, iss and
+      cnf in a header or in the JWT claims, which are the payload.
+    quotes:
+      - at: "§5"
+        text: |-
+          As a general rule, verifiers SHOULD strive to minimize the processing of untrusted data. This includes minimizing any processing of the protected header, unprotected header, or payload as part of the key discovery procedures.
+      - at: "§4.1.2"
+        text: |-
+          If iss is present in the JOSE Header, the JWT Claims, or the COSE Header, a verifier can use this parameter to obtain a JSON Web Key to use in the verification process.
+    affects:
+      - "key-discovery-header-hints 1"
+      - "key-discovery-header-hints 3"
+  - id: "validation-entered-by-should"
+    kind: "tension"
+    locator: "§5, §5.4"
+    text: >-
+      Validation is a SHOULD, yet it holds six MUSTs that bind the receiver (claims expected for the
+      typ, evaluation of understood claims, ignoring claims and extension types not understood,
+      compact JSON-LD). A verifier that skips it, as the SHOULD permits, never meets them.
+    quotes:
+      - at: "§5"
+        text: |-
+          After verification has succeeded, additional validation checks SHOULD be performed as described in Section 5.4 Validation
+      - at: "§5.4"
+        text: |-
+          The verified document returned from verification MUST be a well-formed compact JSON-LD document, as described in Verifiable Credentials Data Model v2.0.
+    affects:
+      - "verification-dispatch 4"
+      - "validation 1"
+  - id: "validation-has-no-output"
+    kind: "gap"
+    locator: "§5, §5.4"
+    text: >-
+      The §5 outputs are set by §5.1 to §5.3 before validation starts, and §5.4 sets nothing. A failed
+      validation cannot change status, and nothing else carries it; §5.4 itself only says a credential
+      could be considered invalid.
+    quotes:
+      - at: "§5"
+        text: |-
+          The outputs for the following algorithms are:
+      - at: "§5.4"
+        text: |-
+          For example, dependencies between multiple credentials, ordering or timing information associated with multiple credentials, and/or multiple presentations could cause an otherwise valid credential or presentation to be considered invalid.
+    affects:
+      - "validation"
+  - id: "typ-expected-claims-undefined"
+    kind: "gap"
+    locator: "§5.4, §3.1.1, §3.2.1, §3.3.1"
+    text: >-
+      The presence check is keyed on typ, but no section says which claims a typ value expects, typ is
+      itself only a SHOULD, and no step of §5.1 to §5.3 reads typ or cty. In the source's examples it
+      is never the registered value: of the 18 compact JWS and SD-JWT objects printed in the 26
+      example blocks (KB-JWT excluded), 16 have a protected header of alg and kid only and 2 carry typ
+      vp+ld+json+sd-jwt or vc+ld+json+sd-jwt, the form Appendix A reports was changed; all 7
+      COSE_Sign1 protected headers are the map with label 1 alone.
+    quotes:
+      - at: "§5.4"
+        text: |-
+          All claims expected for the typ MUST be present.
+      - at: "§3.1.1"
+        text: |-
+          The typ header parameter SHOULD be vc+jwt.
+    affects:
+      - "validation 2"
+      - "verification-dispatch 3"
+    see_also:
+      - "normative.md SD-23"
+      - "messages.yaml TEN-12"
+      - "messages.yaml TEN-13"
+    inferred: true
+    inferred_reason: >-
+      The example census was decoded by script from the HTML example blocks (not the .txt) in this
+      pass: headers of every compact JWS printed there, deduplicated, and the protected header of
+      every COSE_Sign1 hex string and base64 data URL.
+  - id: "alg-none-outside-algorithm"
+    kind: "gap"
+    locator: "§1.1.2.1, §5.1"
+    text: >-
+      Every party MUST ignore a JWT Claims Set with no integrity protection, and the alg none setting
+      communicates exactly that. §5.1 delegates to Validating a JWT and never mentions it, so whether
+      an unsecured JWT ends in step 3 or is ignored before §5.1 runs is not said.
+    quotes:
+      - at: "§1.1.2.1"
+        text: |-
+          Issuers, Holders, and Verifiers MUST ignore all JWT Claims Sets that have no integrity protection.
+    affects:
+      - "jose-verification 1"
+  - id: "sd-jwt-presentation-conversion"
+    kind: "tension"
+    locator: "§3.2.1, §3.2.2, §5.2"
+    text: >-
+      A credential is converted into an SD-JWT payload; a presentation is the SD-JWT payload as it
+      stands. §5.2 converts back in both cases (if it took presentations at all).
+    quotes:
+      - at: "§3.2.1"
+        text: |-
+          The unsecured verifiable credential is the input JWT Claims Set.
+      - at: "§3.2.2"
+        text: |-
+          The unsecured verifiable presentation is the unencoded [SD-JWT] payload.
+    affects:
+      - "sd-jwt-presentation-securing 1"
+      - "sd-jwt-verification 2.3"
+    see_also:
+      - "messages.yaml TEN-08"
+  - id: "no-mapping-versus-sd-jwt-conversion"
+    kind: "tension"
+    locator: "§3, §3.2.1, §5.2"
+    text: >-
+      The benefit claimed for the approach is payloads conforming to the data model without any
+      mapping or transformation; the SD-JWT route transforms the credential on securing and transforms
+      it back on verification.
+    quotes:
+      - at: "§3"
+        text: |-
+          A benefit to this approach is that payloads can be made to conform directly to [VC-DATA-MODEL-2.0] without any mappings or transformation, while at the same time supporting registered header parameters and claims that are understood in the context of JOSE, SD-JWT, and COSE.
+    affects:
+      - "sd-jwt-credential-securing 2"
+      - "sd-jwt-verification 2.3"
+  - id: "cose-payload-json-or-cbor"
+    kind: "tension"
+    locator: "§1.1.2, §3.3.1, §5.3, §5.4"
+    text: >-
+      §1.1.2 says that under COSE the credential is encoded as a CBOR data structure; §3.3.1 makes it
+      the unencoded payload; every COSE_Sign1 example carries JSON text as the payload (7 of 7 decoded
+      payloads begin with the octet 7b); §5.3 step 2.3 decodes the payload without saying how; §5.4
+      requires compact JSON-LD.
+    quotes:
+      - at: "§1.1.2"
+        text: |-
+          When using COSE, the Verifiable Credential or Presentation is encoded as a CBOR data structure.
+      - at: "§3.3.1"
+        text: |-
+          The unsecured verifiable credential is the unencoded COSE_Sign1 payload.
+      - at: "§5.3"
+        text: |-
+          Set document to the decoded COSE_Sign1 payload.
+    affects:
+      - "cose-credential-securing 1"
+      - "cose-verification 2.3"
+      - "validation 5"
+    see_also:
+      - "messages.yaml TEN-09"
+    inferred: true
+    inferred_reason: >-
+      The payload census was decoded by script from the HTML in this pass: 7 COSE_Sign1 objects
+      (Examples 7, 8, 9, 18, 19, 20 and the base64 data URL of Example 23), each tag 18 with payload
+      first octet 7b.
+  - id: "issuer-class-secures-presentations"
+    kind: "tension"
+    locator: "§1.1.1, §3.1.2, §3.2.2, §3.3.2, §4, §4.2, §5"
+    text: >-
+      Securing a presentation is assigned to the conforming issuer implementation of each mechanism;
+      there is no holder conformance class. Yet holders have verification keys (§4), the holder's kid
+      is constrained (§4.2), and the holder runs the verification algorithms. This model has the
+      holder secure presentations as the issuer-implementation class, marked inferred.
+    quotes:
+      - at: "§3.1.2"
+        text: |-
+          A conforming JWS issuer implementation MUST use [RFC7515] to secure this media type.
+      - at: "§4"
+        text: |-
+          There are several different ways to discover the verification keys of the issuers and holders.
+    affects:
+      - "jose-presentation-securing"
+      - "sd-jwt-presentation-securing"
+      - "cose-presentation-securing"
+      - "credential-enveloping"
+  - id: "verifier-classes-point-at-section-3"
+    kind: "tension"
+    locator: "§1.1.1, §3.1.1, §5.1"
+    text: >-
+      Each verifier conformance class verifies as described in Section 3.x, whose verifier statements
+      are to use RFC 7515, SD-JWT or COSE_Sign1 (and, for JWS and SD-JWT, to support the compact
+      serialization); no conformance class mentions the §5 algorithms. §5.1 then follows Validating a
+      JWT (RFC 7519) where §3.1.1 requires RFC 7515.
+    quotes:
+      - at: "§1.1.1"
+        text: |-
+          A conforming JWS verifier implementation verifies conforming JWS documents as described in Section 3.1 With JOSE.
+      - at: "§3.1.1"
+        text: |-
+          A conforming JWS verifier implementation MUST use [RFC7515] to verify conforming JWS documents that use this media type.
+      - at: "§5.1"
+        text: |-
+          Follow the algorithm defined in Validating a JWT [RFC7519].
+    affects:
+      - "jose-verification"
+      - "sd-jwt-verification"
+      - "cose-verification"
+  - id: "sd-jwt-verifier-verifies-jws-documents"
+    kind: "defect"
+    locator: "§3.2.1, §3.2.2, §1.1.1"
+    text: >-
+      The SD-JWT verifier MUSTs speak of conforming JWS documents; §1.1.1 has the SD-JWT verifier
+      verify conforming SD-JWT documents.
+    quotes:
+      - at: "§3.2.1"
+        text: |-
+          A conforming SD-JWT verifier implementation MUST use [SD-JWT] to verify conforming JWS documents that use this media type.
+    affects:
+      - "sd-jwt-verification 1"
+    see_also:
+      - "normative.md SD-1"
+      - "messages.yaml TEN-07"
+  - id: "mixed-mechanisms-in-presentation"
+    kind: "tension"
+    locator: "§3.1.2, §3.2.2, §3.3.2, Examples 8, 9, 20, 23"
+    text: >-
+      Each presentation section follows its MUST with a sentence, without a keyword, saying the
+      enclosed credentials are secured with the presentation's own mechanism. The source's COSE
+      presentations envelope SD-JWT instead: Example 8 one credential whose id holds
+      data:application/vc+sd-jwt URLs (two, joined by a semicolon), Example 9 a
+      data:application/vp+sd-jwt presentation, Example 23 one credential whose id holds
+      data:application/vc-ld+sd-jwt URLs (a media type this document does not register); and Example
+      20's COSE presentation envelopes three credentials, secured as vc+cose, vc+jwt and vc+sd-jwt. A
+      verifier cannot tell from the source whether to reject a presentation that mixes mechanisms.
+    quotes:
+      - at: "§3.3.2"
+        text: |-
+          Credentials in verifiable presentations MUST be secured. These credentials are secured using COSE in this case.
+    affects:
+      - "credential-enveloping 1"
+      - "verification-dispatch 5"
+    see_also:
+      - "normative.md SD-25"
+      - "normative.md SD-33"
+      - "messages.yaml TEN-18"
+    inferred: true
+    inferred_reason: >-
+      The id of every Enveloped type in each decoded COSE_Sign1 payload of Examples 8, 9, 20 and 23,
+      split into its data URLs and their media types by script from the HTML in this pass.
+  - id: "enveloped-credentials-not-verified"
+    kind: "gap"
+    locator: "§3.1.2, §3.2.2, §3.3.2, §5"
+    text: >-
+      Credentials in presentations MUST be secured, but §5 verifies one inputDocument and returns it
+      whole; no step extracts, decodes or verifies an enveloped credential, and no output reports on
+      one.
+    quotes:
+      - at: "§3.2.2"
+        text: |-
+          Credentials in verifiable presentations MUST be secured. These credentials are secured using SD-JWT in this case.
+      - at: "§5.1"
+        text: |-
+          Set document to the decoded JWS payload.
+    affects:
+      - "verification-dispatch 5"
+  - id: "enveloping-encoding-only-for-cose"
+    kind: "gap"
+    locator: "§3.3.1, §3.1.2, §3.2.2, §3.3.2"
+    text: >-
+      Only a COSE-secured credential has a stated encoding inside a presentation (base64 per RFC
+      2397). For JWS and SD-JWT credentials, and for every EnvelopedVerifiablePresentation, the
+      carriage is shown only by examples.
+    quotes:
+      - at: "§3.3.1"
+        text: |-
+          When including verifiable credentials secured with COSE in verifiable presentations as Enveloped Verifiable Credentials, the credentials MUST be encoded using base64 as specified in [RFC2397].
+    affects:
+      - "credential-enveloping 3"
+    see_also:
+      - "normative.md SD-26"
+  - id: "two-meanings-of-sd-jwt-presentation"
+    kind: "tension"
+    locator: "§3.2.2, §8.4"
+    text: >-
+      In §3.2.2 an SD-JWT presentation is a presentation document secured as an SD-JWT (Examples 5 and
+      6). Example 22, titled an SD-JWT Verifiable Presentation and carried as
+      data:application/vp+sd-jwt, is instead a credential's SD-JWT presented with a KB-JWT: its
+      issuer-signed JWT is byte-identical to Example 21's (header typ vc+ld+json+sd-jwt), with 4 of
+      Example 21's 6 disclosures. The same media type names two different objects.
+    quotes:
+      - at: "§8.4"
+        text: |-
+          Example 22: A simple URI-encoded SD-JWT Verifiable Presentation
+      - at: "§3.2.2"
+        text: |-
+          The unsecured verifiable presentation is the unencoded [SD-JWT] payload.
+    affects:
+      - "sd-jwt-selective-disclosure 3"
+      - "sd-jwt-presentation-securing"
+    see_also:
+      - "messages.yaml TEN-14"
+      - "normative.md SD-33"
+    inferred: true
+    inferred_reason: "Examples 21 and 22 split on tilde and compared by script from the HTML in this pass."
+  - id: "trailing-tilde"
+    kind: "ambiguity"
+    locator: "§1.1.2.2, §8.4"
+    text: >-
+      The trailing-tilde rule is a lowercase must, so not BCP 14, and is stated only for the case
+      without a KB-JWT. Example 22 has a KB-JWT and still ends with a tilde (seven tilde-separated
+      parts, the last empty), so a parser that keys on the trailing tilde reads its KB-JWT as a
+      disclosure.
+    quotes:
+      - at: "§1.1.2.2"
+        text: |-
+          If the KB-JWT is not present, the SD-JWT must end with a tilde (~) character. This is crucial for correct parsing and processing of the SD-JWT.
+    affects:
+      - "sd-jwt-selective-disclosure 2"
+      - "sd-jwt-verification 1"
+    see_also:
+      - "messages.yaml TEN-03"
+    inferred: true
+    inferred_reason: "Example 22 split on tilde by script from the HTML in this pass."
+  - id: "kid-hint-cites-rfc7515-for-cose"
+    kind: "defect"
+    locator: "§4.1.1"
+    text: >-
+      A kid in the COSE Header is a hint for a verification process as defined in RFC7515, linked to
+      RFC 7515 Section 4.1.4. COSE_Sign1 verification is RFC 9052's.
+    quotes:
+      - at: "§4.1.1"
+        text: |-
+          If kid is present in the JOSE Header or the COSE Header, a verifier can use this parameter as a hint indicating which key was used to secure the verifiable credential, when performing a verification process as defined in RFC7515.
+    affects:
+      - "key-discovery-header-hints 2"
+    see_also:
+      - "messages.yaml TEN-27"
+  - id: "jose-only-wording-in-key-discovery"
+    kind: "defect"
+    locator: "§4.1, §4.1.2"
+    text: >-
+      §4.1 introduces JOSE header parameters and JWT claims only, though §4.1.1 to §4.1.3 each also
+      cover the COSE Header; and only a kid in the JOSE Header is said to distinguish the key that iss
+      obtains.
+    quotes:
+      - at: "§4.1"
+        text: |-
+          These JOSE header parameters and JWT claims can be used by verifiers to discover verification keys.
+      - at: "§4.1.2"
+        text: |-
+          If kid is also present in the JOSE Header, it is used to distinguish the specific key used.
+    affects:
+      - "key-discovery-header-hints 2"
+      - "key-discovery-header-hints 3"
+    see_also:
+      - "normative.md SD-29"
+      - "messages.yaml TEN-27"
+  - id: "cid-retrieval-undefined"
+    kind: "gap"
+    locator: "§4.2"
+    text: >-
+      The source states that no standard way exists to retrieve a JWK from a DID URL or a controlled
+      identifier document, and names no other.
+    quotes:
+      - at: "§4.2"
+        text: |-
+          At the time of writing, there is no standard way to retrieve a public key in JWK format from a DID URL or controlled identifier documents.
+    affects:
+      - "key-discovery-controlled-identifier-document 2"
+  - id: "key-discovery-examples"
+    kind: "defect"
+    locator: "§4.2, §8.1"
+    text: >-
+      Examples 11 and 13 are identical and leave the kid string unterminated, so neither is JSON.
+      Example 12, the holder, has the id https://university.example/issuers/565049, the issuer id of
+      Example 10, so Example 13's holder kid points into the issuer's document. Example 17 lists a
+      verification method of type JsonWebKey2020 where R-0070 requires JsonWebKey.
+    quotes:
+      - at: "§4.2"
+        text: |-
+          Example 13: A kid as a controlled identifier document verification method identifier
+      - at: "§8.1"
+        text: |-
+          Example 17: A verifiable credential controlled identifier document
+    affects:
+      - "key-discovery-controlled-identifier-document 1"
+      - "key-discovery-controlled-identifier-document 3"
+    see_also:
+      - "messages.yaml TEN-23"
+      - "messages.yaml TEN-24"
+      - "normative.md SD-14"
+    inferred: true
+    inferred_reason: >-
+      Pre text of Examples 10 to 13 and 17 compared and parsed by script from the HTML in this pass.
+  - id: "ignore-versus-crit"
+    kind: "tension"
+    locator: "§3.3.3, §3.1.3, §5.4"
+    text: >-
+      Header parameters and claims that are not understood MUST be ignored, with no exception for a
+      parameter listed as critical. For JWS, RFC 7515 makes such a JWS invalid. §3.1.3, which carries
+      the JOSE twin of the rule, is non-normative, so for JOSE header parameters the conflict is with
+      advice; for COSE (§3.3.3, normative) the same question arises under RFC 9052's crit parameter,
+      which this pass did not check (no cached copy).
+    quotes:
+      - at: "§3.3.3"
+        text: |-
+          Additional members may be present as header parameters and claims. If they are not understood, they MUST be ignored.
+      - at: "§3.1.3"
+        text: |-
+          This section is non-normative.
+    foreign_quotes:
+      - doc: "rfc-7515"
+        at: "§4.1.11"
+        text: |-
+          If any of the listed extension Header Parameters are not understood and supported by the recipient, then the JWS is invalid.
+    affects:
+      - "validation 4"
+    see_also:
+      - "requirements.yaml reconciliation (b)"
+  - id: "jose-header-section-non-normative"
+    kind: "tension"
+    locator: "§3.1.3, §3.3.3"
+    text: >-
+      §3.1.3 is marked non-normative yet carries six keywords; §3.3.3, its COSE twin, is normative.
+      For JOSE the registry advice, the nbf advice and the ignore rule for header parameters therefore
+      bind nothing, while for COSE they bind.
+    quotes:
+      - at: "§3.1.3"
+        text: |-
+          This section is non-normative.
+      - at: "§3.1.3"
+        text: |-
+          Additional members may be present as header parameters and claims. If they are not understood, they MUST be ignored.
+    affects:
+      - "jose-credential-securing 1"
+      - "jose-credential-securing 2"
+      - "validation 4"
+    see_also:
+      - "normative.md SD-15"
+      - "messages.yaml TEN-05"
+  - id: "encryption-without-receive-step"
+    kind: "gap"
+    locator: "§3.1.1, §3.2.1, §3.3.1, §5, §6.1"
+    text: >-
+      Encryption by nesting is a MAY on the producing side in all six securing sections, but no
+      sentence says which media type labels the encrypted object, and no step of §5.2 or §5.3
+      decrypts; §5.1 reaches nested JWTs only through Validating a JWT.
+    quotes:
+      - at: "§3.2.1"
+        text: |-
+          To encrypt a secured verifiable credential when transmitting over an insecure channel, implementers MAY use JSON Web Encryption (JWE) [RFC7516] by nesting the secured verifiable credential as the plaintext payload of a JWE, per the instructions in Section 11.2 of [SD-JWT].
+    affects:
+      - "verification-dispatch 2"
+    see_also:
+      - "messages.yaml TEN-28"
+  - id: "unpinned-delegations"
+    kind: "defect"
+    locator: "§5.2, §5.3, §3.2.1, §3.3.3, Appendix C.1"
+    text: >-
+      The algorithms delegate to texts that are not pinned: §5.2 step 1 links section 8 of the SD-JWT
+      Internet-Draft at an unversioned URL, and §3.2.1 its section 6.1; §5.3 step 1 names the
+      COSE_Sign1 process without a section and links RFC 9052 as a whole; §3.3.3 relies on
+      I-D.ietf-cose-cwt-claims-in-headers, linked at draft -10 and absent from both reference lists.
+    quotes:
+      - at: "§5.2"
+        text: |-
+          Follow the algorithms defined in SD-JWT for verification of the SD-JWT.
+      - at: "§3.3.3"
+        text: |-
+          CBOR Web Token (CWT) [RFC8392] Claims MAY be included in a COSE header parameter, as specified in I-D.ietf-cose-cwt-claims-in-headers.
+    affects:
+      - "sd-jwt-verification 1"
+      - "cose-verification 1"
+      - "sd-jwt-credential-securing 2"
+    see_also:
+      - "normative.md SD-30"
+      - "messages.yaml TEN-29"
+  - id: "serialization-rules-in-presentation-sections"
+    kind: "ambiguity"
+    locator: "§3.1.2, §3.2.2"
+    text: >-
+      The JWS and SD-JWT serialization rules close the presentation sections; whether they govern
+      credentials too is not said. This model applies them to both.
+    quotes:
+      - at: "§3.1.2"
+        text: |-
+          Implementations MUST support the JWS compact serialization. Use of the JWS JSON serialization is NOT RECOMMENDED.
+    affects:
+      - "jose-credential-securing 3"
+      - "sd-jwt-credential-securing 4"
+    see_also:
+      - "normative.md SD-24"
+  - id: "possession-proof-undefined"
+    kind: "gap"
+    locator: "§4.1.3, §1.1.2.2"
+    text: >-
+      The holder binding is RECOMMENDED and verifiable by the verifier in the presentation, but the
+      source says neither how the key is provided nor how possession is shown. For SD-JWT a KB-JWT is
+      named as an optional part and never tied to cnf; for vp+jwt and vp+cose nothing is named.
+    quotes:
+      - at: "§4.1.3"
+        text: |-
+          Use of a proof-of-possession key provided by the Holder to the Issuer to establish a cryptographic binding to the Holder in the Verifiable Credential that is verifiable by the Verifier in the Verifiable Presentation is RECOMMENDED.
+    affects:
+      - "key-binding"
+not_defined:
+  - "Any exchange between issuer, holder and verifier: request, response, session, acknowledgement, error message or delivery of a credential or presentation."
+  - "How a receiver learns the media type of a secured object, and how it chooses among §5.1, §5.2 and §5.3."
+  - "A verification algorithm for application/vp+sd-jwt."
+  - "How the key found by §4 reaches the §5 algorithms, and what happens when no key is found."
+  - "A standard way to retrieve a JWK from a DID URL or a controlled identifier document (stated as absent by §4.2), and who publishes the document."
+  - "Decryption of a nested JWE or encrypted COSE object on receipt, and a media type for one."
+  - "Verification of credentials and presentations enveloped in a verified presentation."
+  - "How a holder provides a proof-of-possession key to an issuer, and how possession is shown in vp+jwt or vp+cose."
+  - "Which claims a typ value expects (R-0077)."
+  - "Any output, status or error signal of the §5.4 validation."
+  - "What a receiver does with a document that breaks a producer-side rule: vc or vp claims present, iss not matching issuer, a missing or non-URL kid, a verification method that is not a JsonWebKey."
+  - "The status (revocation, suspension) and schema mechanisms behind credentialStatus and credentialSchema, beyond SHOULD be checked."
+  - "How a holder chooses disclosures and creates a KB-JWT (the SD-JWT draft)."
+  - "Any key lifecycle: rotation, expiry or revocation of issuer or holder keys."
+coverage: >-
+  14 roles (3 parties, 6 conformance classes, 5 other). 17 flows (6 creation-and-delivery, 1
+  exchange, 2 local-decision, 1 out-of-scope, 7 receive-processing) with 113 steps, 41 of them
+  inferred; on_error_basis stated 18, unspecified 94, inferred 1. 32 messages.yaml entries used.
+  21 error paths. 33 source defects and tensions (2 ambiguity, 9 defect, 11 gap, 11 tension). 14
+  not_defined items. 85 of the 85 requirement ids are cited under constrained_by (steps and error
+  paths); not cited: none. 275 verbatim quote items (excluding the one foreign quotation), each
+  checked by script as described under conventions.quoting. Counted by script from the objects
+  written, pass 1, 2026-11-03; any later edit owes a recount. Recounted by script after the verify
+  pass's edits, 2026-11-05, and again after the cross-check pass's, 2026-11-05.

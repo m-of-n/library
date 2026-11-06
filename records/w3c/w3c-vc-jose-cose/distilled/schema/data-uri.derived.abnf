@@ -1,0 +1,140 @@
+; DERIVED, not verbatim. Written by this library: the W3C Recommendation
+; Securing Verifiable Credentials using JOSE and COSE
+; (REC-vc-jose-cose-20250515) prints no ABNF. Source
+; .cache/w3c-vc-jose-cose.bin, sha256
+; 6c70cf8d7de9d8a3ff28a743fea9d569a67a402111c3245fdafbaa2ad6709af9;
+; quotations of it are checked against .cache/w3c-vc-jose-cose.txt, sha256
+; f02bd4966800863d533746c6c39ad267ada1b8bfcbb92186c204b617bb46c126, and
+; quotations of other documents against the copies README.md lists.
+; Notation: ABNF, RFC 5234. Quoted literals are case-insensitive (RFC 5234
+; section 2.3), which is intended: the URI scheme and media type names
+; compare case-insensitively (RFC 6838 section 4.2 for media types; inferred
+; for the scheme). Core rules ALPHA, DIGIT and HEXDIG are RFC 5234 Appendix
+; B.1's. This file is ASCII, as RFC 5234 comments must be, so section signs
+; are spelled out and quotation marks are straight. Lines end in LF, not the
+; CRLF of RFC 5234's own grammar.
+;
+; WHAT IT IS. The data: URL that is the id of an
+; EnvelopedVerifiableCredential or EnvelopedVerifiablePresentation, for the
+; six media types this specification registers. VC-DATA-MODEL-2.0 says "The
+; id value of the object MUST be a data: URL [RFC2397]" (VC-DATA-MODEL-2.0
+; section 4.13), imported because the source requires the type defined
+; there: "Verifiable Credentials secured in verifiable presentations MUST
+; use the Enveloped Verifiable Credential type defined by the
+; [VC-DATA-MODEL-2.0]." (w3c-vc-jose-cose#R-0021) and its twins. Section
+; 8.4, Data URIs, prints three such URLs as Examples 21 to 23 and states no
+; rule.
+;
+; TOP RULES: vc-jwt-data-uri, vp-jwt-data-uri, vc-sd-jwt-data-uri,
+; vp-sd-jwt-data-uri, vc-cose-data-uri, vp-cose-data-uri; and dataurl, RFC
+; 2397 section 3, for any media type. A data: URL with another media type is
+; not excluded by any MUST of the source (w3c-vc-jose-cose#R-0011 concerns
+; an implementation that does not know which to use); ABNF cannot say any
+; media type except these six, so that case is
+; enveloped.derived.schema.json's #data-url. The six rules admit media
+; type parameters (attribute=value), as RFC 2397's mediatype does. Each
+; section 6.1 template lists none (Required parameters: N/A and Optional
+; parameters: N/A, inline.verbatim.txt I-01 to I-06), but section 6 is
+; marked non-normative, so it grounds no rule here.
+;
+; Meant to agree with enveloped.derived.schema.json #data-uri-vc and
+; #data-uri-vp, which add one rule ABNF cannot state (a credential's URL may
+; not carry a presentation media type, and the reverse): README.md, Checks,
+; runs both on every data: URL the examples contain and on the reject list,
+; and reports every disagreement.
+
+; application/vc+jwt, application/vp+jwt: a JWT in the JWS Compact
+; Serialization, three non-empty base64url segments, or the base64 encoding
+; of one (RFC 2397 permits it; the source neither shows nor forbids it).
+; Inferred from section 5.1, which is normative and takes vc+jwt and vp+jwt
+; as an input document secured as a JWT [RFC7519] (inline.verbatim.txt I-08;
+; the section 6.1.1 and 6.1.2 registrations of a JSON Web Token say the same,
+; in a section marked non-normative, and ground nothing), from RFC 7519
+; section 1, "JWTs are always represented using the JWS
+; Compact Serialization or the JWE Compact Serialization." (RFC 7519 section
+; 1) from w3c-vc-jose-cose#R-0012, which makes the JWT a JWS, and from
+; w3c-vc-jose-cose#R-0025. Every segment is non-empty: an empty signature is
+; the unsecured form, which w3c-vc-jose-cose#R-0005 and
+; w3c-vc-jose-cose#R-0023 exclude ("is used to communicate that a Verifiable
+; Credential or Verifiable Presentation encoded as a JWT Claims Set has no
+; integrity protection." (section 1.1.2.1)). A JWE (five segments) matches
+; nothing here.
+vc-jwt-data-uri    = "data:application/vc+jwt" *( ";" parameter ) ( "," jws-compact / ";base64," base64-data )
+vp-jwt-data-uri    = "data:application/vp+jwt" *( ";" parameter ) ( "," jws-compact / ";base64," base64-data )
+
+; application/vc+sd-jwt, application/vp+sd-jwt: an SD-JWT or SD-JWT+KB in
+; the compact serialization (w3c-vc-jose-cose#R-0042, imported through
+; w3c-vc-jose-cose#R-0027 and its twins), or its base64 encoding. The
+; source's own words: "If the KB-JWT is not present, the SD-JWT must end
+; with a tilde (~) character." (section 1.1.2.2)
+vc-sd-jwt-data-uri = "data:application/vc+sd-jwt" *( ";" parameter ) ( "," sd-jwt-compact / ";base64," base64-data )
+vp-sd-jwt-data-uri = "data:application/vp+sd-jwt" *( ";" parameter ) ( "," sd-jwt-compact / ";base64," base64-data )
+
+; "When including verifiable credentials secured with COSE in verifiable
+; presentations as Enveloped Verifiable Credentials, the credentials MUST be
+; encoded using base64 as specified in [RFC2397]." (w3c-vc-jose-cose#R-0051)
+; Stated for credentials only (section 3.3.1): for application/vp+cose the
+; source states no encoding, so both RFC 2397 forms are admitted; Example 23
+; uses ;base64.
+vc-cose-data-uri   = "data:application/vc+cose" *( ";" parameter ) ";base64," base64-data
+vp-cose-data-uri   = "data:application/vp+cose" *( ";" parameter ) ( ";base64," base64-data / "," *uric )
+
+; RFC 7515 section 7.1 compact serialization, written as RFC 9901's JWT
+; rule. SD-JWT-KB is listed first; under RFC 5234 an alternation is
+; unordered, and the two cannot both match one whole string, because a
+; KB-JWT contains periods and a disclosure does not.
+jws-compact    = BASE64URL "." BASE64URL "." BASE64URL
+sd-jwt-compact = SD-JWT-KB / SD-JWT
+
+; RFC 9901 section 4 (SD-JWT, November 2025), the six rules after its ALPHA
+; and DIGIT, restated unchanged in rule names and definitions, for example
+; "SD-JWT-KB = SD-JWT KB-JWT" (RFC 9901 section 4); comments and spacing are
+; this file's. The source cites [SD-JWT] as an Internet-Draft with no
+; revision (C.1); RFC 9901 is its published form. An SD-JWT+KB followed by a
+; further tilde, as Example 22 prints, matches neither SD-JWT nor SD-JWT-KB.
+BASE64URL  = 1*(ALPHA / DIGIT / "-" / "_")
+JWT        = BASE64URL "." BASE64URL "." BASE64URL
+DISCLOSURE = BASE64URL
+SD-JWT     = JWT "~" *(DISCLOSURE "~")
+KB-JWT     = JWT
+SD-JWT-KB  = SD-JWT KB-JWT
+
+; base64, RFC 2045 section 6.8 alphabet, padded to a multiple of four
+; characters, no line breaks (a URL carries none). RFC 2397 says only that
+; ;base64 means the data is encoded as base64; strict padding is inferred.
+; base64url (- and _) is not this alphabet.
+base64-data = *(4base64-char) [ 2base64-char "==" / 3base64-char "=" ]
+base64-char = ALPHA / DIGIT / "+" / "/"
+
+; RFC 2397 section 3 (August 1998), restated in ABNF from its BNF, rule
+; names kept: for example 'parameter := attribute "=" value' (RFC 2397
+; section 3). A parameter needs an =, which is how ;base64 is told apart, so
+; ;base64url, which has none, is neither: Example 20's
+; data:application/vc+cose;base64url,... matches no rule here.
+dataurl    = "data:" [ mediatype ] [ ";base64" ] "," data
+mediatype  = [ type "/" subtype ] *( ";" parameter )
+data       = *urlchar
+parameter  = attribute "=" value
+type       = token
+subtype    = token
+attribute  = token
+value      = token
+
+; RFC 2397 takes type, subtype, attribute and value from RFC 2045 (token),
+; "represented using URL escaped encoding of [RFC2396] as necessary." (RFC
+; 2397 section 3): the RFC 2045 token characters that are also RFC 2396 uric
+; characters, or an escape (inferred: neither RFC writes this intersection).
+token      = 1*( ALPHA / DIGIT / "!" / "$" / "&" / "'" / "*" / "+" / "-" / "." / "_" / "~" / escaped )
+
+; 'where "urlchar" is imported from [RFC2396]' (RFC 2397 section 3), and RFC
+; 2396 defines no rule of that name; its uric (section 2), "uric = reserved
+; | unreserved | escaped" (RFC 2396 section 2), is read for it (inferred). A
+; space is not a uric, so a data: URL with a space in it matches nothing
+; here; README.md, Findings, lists the examples that carry one.
+urlchar    = uric
+uric       = reserved / unreserved / escaped
+reserved   = ";" / "/" / "?" / ":" / "@" / "&" / "=" / "+" / "$" / ","
+unreserved = alphanum / mark
+alphanum   = ALPHA / DIGIT
+mark       = "-" / "_" / "." / "!" / "~" / "*" / "'" / "(" / ")"
+escaped    = "%" HEXDIG HEXDIG
