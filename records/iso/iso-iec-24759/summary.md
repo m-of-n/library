@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: iso-iec-24759
 record: iso-iec-24759
 type: summary
-updated: "2026-11-03"
+updated: "2026-11-05"
 ---
 
 # ISO/IEC 24759:2017, Test requirements for cryptographic modules
@@ -12,24 +12,24 @@ updated: "2026-11-03"
 |---|---|
 | **Type** | spec |
 | **Maturity** | historic: the ISO catalogue shows the 2017 edition Withdrawn, stage 95.99 (2025-02-26), with ISO/IEC 24759:2025 as the new version |
-| **Authors** | ISO/IEC JTC 1/SC 27 (catalogue) |
+| **Committee** | ISO/IEC JTC 1/SC 27 (catalogue) |
 | **Published** | 2017-03, Edition 3, 135 pages (catalogue) |
 | **Identifier** | ISO/IEC 24759:2017 |
 | **Source** | https://www.iso.org/standard/72515.html (2025 edition: https://www.iso.org/standard/82424.html) |
-| **Digest** | none. **Not fetched**: see `content.note` |
+| **Digest** | none. **Not fetched** (2026-11-05): ISO's free channel served no file to our client, and ISO's licence forbids AI processing (see Overview) |
 
 ## Overview
 
-**This record has not been read.** Neither the 2017 nor the 2025 edition was obtained, and the normative text of neither was read, so per `docs/scope.md` §1 the record stays unread (`status: queued`, because the 2025 edition is listed at CHF 0 and a person could obtain it). Everything below comes from the ISO catalogue page for the 2017 edition, seen through Internet Archive captures, and is labelled as such.
+**This record has not been read, and it must not be read by an AI agent.** On 2026-11-05 the user accepted ISO's free-download licence on their behalf for the 2025 edition. That licence forbids AI processing. The CHF 0 download goes through the ISO End Customer Licence Agreement, and its clause 7(b) says the Licensee *"is not permitted to access, use, or process the ISO Publication for or related to any machine learning, artificial intelligence (AI), or analogous computational purposes"* without a separate licence (iso.org licence page, section B, clause 7(b), Internet Archive capture 20261023130946). It also names *"summarize"* among the barred uses. No bytes were obtained either: the Publicly Available Standards site says it is closed and returns only its licence page, also after "I accept", and the ISO webstore returned 403 to our client.
 
-Per that catalogue abstract, the 2017 edition *"specifies the methods to be used by testing laboratories to test whether the cryptographic module conforms to the requirements specified in ISO/IEC 19790:2012"*. It also specifies what information vendors provide to laboratories as evidence of conformity, and vendors can use it to check a module before applying for testing. It is the test-method companion of `iso-iec-19790`, and FIPS 140-3 adopts it as its test requirements (`fips-140-3`, which cites it).
+Only bibliographic facts are kept, from ISO catalogue pages seen through Internet Archive captures: the 2017 edition is Edition 3, 2017-03, 135 pages, ISO/IEC JTC 1/SC 27, Withdrawn 2025-02-26, revised by ISO/IEC 24759:2025, Edition 4, 2025-02, 182 pages, Published, price CHF 0 (captures 20260519135315 and 20261001130019). The record is held because `fips-140-3` cites it; read that record for content. The abstract text from the catalogue page was removed on 2026-11-05: the iso.org footer says no ISO content may be used for machine learning or AI.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | `adjacent` | Conformance-test methods, not security requirements, per the abstract |
-| Cryptography | `adjacent` | Same: testing of modules, not algorithms |
+| Security | `adjacent` | From the title only: test requirements for cryptographic modules. Text unread |
+| Cryptography | `adjacent` | Same basis |
 | This project | `none` | mofn tests no cryptographic module for validation; no requirement says it will |
 
 **Bears on none.** ARCH-0001 §5 has no module-validation requirement. Earlier `bears_on: DEC-009` came from Threat-Radar's numbering and was removed (see `content.note`).
@@ -45,15 +45,15 @@ Not searched: the users of this standard are accredited testing laboratories, no
 
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata, with what was and was not seen in `content.note` |
+| `record.yaml` | bibliographic facts; `content.note` quotes the licence clause and its locator |
 | `summary.md` | this document |
 
-**Relations.** `see_also: iso-iec-19790`, because the abstract defines this standard's test methods against ISO/IEC 19790:2012's requirements. A more precise typed relation does not fit: the abstract describes a companion, not a part or an update. The edges from `fips-140-3`, `nist-sp-800-140` and `nist-sp-800-140a` to `-140f` are authored on those records.
+**Relations.** `see_also: iso-iec-19790`: the titles name the test requirements and the security requirements for cryptographic modules, and `fips-140-3` adopts both, 19790 as security requirements and 24759 as test requirements (per that record). The edges from `fips-140-3`, `nist-sp-800-140` and `nist-sp-800-140a` to `-140f` are authored on those records.
 
-**No digest and no `distilled/`.** No bytes were obtained. Obtaining the 2025 edition is a human decision (licence terms); a 2025 edition read in full would be a new record linked by `supersedes`, and as a `spec` it would owe FX-1.
+**No digest and no `distilled/`.** No bytes were obtained, and the licence bars an AI reading or extraction. A 2025 edition record would be a new record linked by `supersedes`; as a `spec` it would owe FX-1, which an agent cannot do under this licence.
 
 ## Limits
 
-- **Unread.** Only the 2017 catalogue abstract was seen; the normative text of neither edition was read. What the 2025 edition changed is unknown.
+- **Unread, by licence.** Clause 7(b) of ISO's licence bars AI access and summarising. Nothing here describes the content of either edition.
+- **Catalogue prose cut.** The iso.org footer forbids ML use of ISO content, so only bibliographic facts from the catalogue are kept.
 - **Id and title stay on 2017.** `fips-140-3` refers to this record, and ids are stable. The current edition is 2025, which this record does not describe.
-- **Licence not checked.** Whether the 2025 edition's CHF 0 download carries the same AI-use clause that stopped `iso-iec-5962-2021` was not checked.
