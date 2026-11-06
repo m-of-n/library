@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: w3c-vc-jose-cose
 record: w3c-vc-jose-cose
 type: summary
-updated: "2026-10-23"
+updated: "2026-11-05"
 ---
 
 # Securing Verifiable Credentials using JOSE and COSE
@@ -118,10 +118,11 @@ verifier cells ∅. For **this** route (not Data Integrity) the source answers:
   does not say from what `mediaType` is set. No example carries a registered
   value: every JWS example header decodes to `{kid, alg}` only, every hex
   COSE_Sign1 example's protected header is `{1: -35}` only, Example 24's
-  diagnostic header has content type, `kid` and CWT claims but no `typ`, and the
-  SD-JWT examples carry the **withdrawn** `vc+ld+json+sd-jwt` /
-  `vp+ld+json+sd-jwt` (decoded by us from the example headers; Appendix A
-  records the change away from `+ld+json`). A verifier conforming to this spec
+  diagnostic header has content type, `kid` and CWT claims but no `typ`, and the six
+  tabbed SD-JWT examples carry no `typ`; only Examples 21/22 and the
+  presentations nested in Examples 6/9 carry the earlier `+ld+json` values
+  (decoded by us from the example headers; Appendix A records them as
+  changed — see `distilled/examples/README.md`). A verifier conforming to this spec
   can accept a VC that carries no type indicator at all.
 
 ## Implementations
@@ -148,22 +149,14 @@ spec-specific layer is small. Searched 2026-10-23.
 
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, implementations survey, `distillation` |
 | `summary.md` | this document |
+| `distilled/` | the FX-1 artifact set: normative, requirements, schema, messages, protocol, state machine, examples, design notes — start at `distilled/README.md` |
 
-**No `distilled/`.** This pass (library#87) claims the **summary bar**: the
-record is `summarized`, declares no `distillation` block and adds nothing to
-`distilled/`, so FX-1 does not fire. FX-1 extraction is owed eventually — this
-is a `spec` that R-I-06 would cite normatively — and is owned by library#89. **What would make it urgent** is R-I-06 moving from
-*Could* to being built: §5's algorithms and §4's key-discovery MUSTs would then
-be text we implement and test, owing `requirements.yaml` (keyword counts
-across §1.1–§5.4, including those inside non-normative §3.1.3) and `examples/`
-(the inputs at https://github.com/w3c/vc-jose-cose-test-suite are ready-made
-fixtures).
-
-**No verbatim normative text here.** Under FX-1 it belongs in
-`distilled/normative.md` with locators; the fragments quoted above are short
-and section-cited by design.
+**The FX-1 artifacts under `distilled/` have landed** — extract, verify and
+cross-check complete, `record.yaml` declares `distillation.standard: FX-1`,
+`profile: full` — and they, not this summary, are the citable detail. Where
+the two differ, the artifacts win. Extraction was owned by library#89.
 
 **Library gaps this record exposes.** §5.1 is entirely RFC 7519 (JWT), §5.2 is
 entirely SD-JWT (cited as an undated Internet-Draft; published since as RFC
