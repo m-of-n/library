@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: pics-1-1-services
 record: pics-1-1-services
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # PICS 1.1 Rating Services and Rating Systems and Their Machine Readable Descriptions
@@ -30,8 +30,13 @@ PICS separates a rating system (dimensions, scales, criteria) from a rating serv
 | Cryptography | `none` | None; signing is `pics-dsig-1-0` |
 | This project | `core` | The separation mofn's DEC-007 proposes to generalise |
 
-- **DEC-007**: this is the mechanism option 2 cites, and it checks out against the text: categories, permitted values, scales and per-value words are all declared outside the label. Two details matter. The stated purpose is to generate a *configuration* UI for selection software, not to render a statement to a reader. And the document says an incompatible change should be made by creating a new service URL (*What is a rating service?*), a versioning rule DEC-007 could reuse. **DEC-007** is proposed, not accepted: it exists only in ARCH-0001-PROPOSAL v0.2.0 §5, and mofn's DECISIONS-0001 item 5d asks whether it survives at all.
+- **DEC-007**: this is the mechanism DEC-007's gap statement credits to PICS (ARCH-0001-PROPOSAL v0.2.0 §5.1), and it checks out against the text: categories, permitted values, scales and per-value words are all declared outside the label. Two details matter. The stated purpose is to generate a *configuration* UI for selection software, not to render a statement to a reader. And the document says an incompatible change should be made by creating a new service URL (*What is a rating service?*), a versioning rule DEC-007 could reuse. **DEC-007** is proposed, not accepted: it exists only in ARCH-0001-PROPOSAL v0.2.0 §5, and mofn's DECISIONS-0001 item 5d asks whether it survives at all.
 - **R-M-12** (proposed text; relocated to ARCH-0002 P1 and accepted by ADR-0001): identity is a URL. Uniqueness comes from URL validity and meaning from whatever that URL serves, so there is no signature or digest in the description. That is exactly what a key-relative form replaces.
+
+## Relations
+
+- `see_also: c2pa-2-4`: the comparison DEC-007 rests on. Here categories, values and their words are declared in a separate machine-readable document; in C2PA 2.4 label meaning is prose in the specification (§6.2.2 there). Authored only here; `c2pa-2-4` no longer repeats it.
+- `pics-1-1-labels`, `pics-dsig-1-0` and `pics-censorship-faq` author their edges to this record. `w3-org-pics` (which links this specification) and `powder-description-resources` (its named successor) author theirs. None is repeated here.
 
 ## Implementations
 
@@ -55,6 +60,6 @@ PICS separates a rating system (dimensions, scales, criteria) from a rating serv
 - **Nothing binds a label to the description it was read against.** A label names a service URL; the description is fetched and cached, and no digest ties them. A changed description silently changes what old labels mean, which the new-URL rule only asks authors to avoid.
 - **Discovery is unspecified.** The document says it does not state how a description is first located.
 - **Ordinal scales are numeric.** Meaning sits on a number line, and fractions are the stated fix for inserting a value. DEC-007 need not inherit that.
-- **One language per file.** Multiple languages are left to separate documents and negotiation; transmission names stay fixed.
+- **One language per description.** The grammar gives each item one name and one description, so a second language needs another description; transmission names must stay the same across languages. Multiple languages are recommended only for the human-readable document at the service URL (*What is a rating service?*).
 - **The examples rate adult and violent content,** which is the domain that drew the censorship objections. This document does not discuss them; `pics-censorship-faq` is the record for that.
 - **Read scope.** The whole document, including all three appendices, as extracted text.

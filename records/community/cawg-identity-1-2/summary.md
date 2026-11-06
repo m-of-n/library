@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: cawg-identity-1-2
 record: cawg-identity-1-2
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # CAWG Identity Assertion 1.2
@@ -33,6 +33,12 @@ C2PA's claim signature identifies the tool that generated the claim, not the per
 - **DEC-007**: §5.1.2 asks any UX to be prepared to describe roles in the surrounding language, and gives a one-line English meaning for each value in a table. That is a small vocabulary with renderings, specified in prose. The client ships the words, and §5.3 concedes that external labels may not be widely understood. **DEC-007** is proposed, not accepted: it exists only in ARCH-0001-PROPOSAL v0.2.0 §5, and mofn's DECISIONS-0001 item 5d asks whether it survives at all.
 - **R-M-12** (proposed text; relocated to ARCH-0002 P1 and accepted by ADR-0001): §5.3 uses the same DNS-based labels as C2PA, so the same gap applies. The identity assertion itself is closer to the idea of a principal standing behind specific statements.
 
+## Relations
+
+- `see_also: c2pa-2-4`: this specification defines an assertion for C2PA Manifests and references C2PA 2.2 (§1.1, §2); the library holds 2.4. The 2.4 text does not mention CAWG (Limits). Authored only here; `c2pa-2-4` no longer repeats it.
+- `see_also: w3c-vc-data-model-2-0`: §2 lists VC Data Model 1.1 and 2.0 as normative references, and §8.1.2 requires an identity claims aggregation to be a verifiable credential under either. Authored only here.
+- `c2pa-ux-2-2` and `nsa-2025-content-credentials` author their edges to this record, so they are not repeated here.
+
 ## Implementations
 
 No search was run for this record. Whether the contentauth SDKs implement this version was not established.
@@ -50,6 +56,6 @@ No search was run for this record. Whether the contentauth SDKs implement this v
 
 - **1.3 is current.** This is the previous ratified version. Differences from 1.3 were not examined.
 - **Built against C2PA 2.2** (§1.1), not `c2pa-2-4`. The 2.4 text does not mention CAWG in a full-text search, so the relation is one-way at spec level, while `c2pa-ux-2-2` does name CAWG.
-- **No UX in this version.** §10 says guidance is forthcoming. Whether it now exists was not checked.
+- **No UX in this version.** §10.1 says guidance will come in a forthcoming document. It now exists: CAWG User Experience Guidance 1.0, a DIF Ratified Specification dated 2026-02-05 (https://cawg.io/ux-guidance/1.0/, checked 2026-11-05). It was not read and is not held.
 - **Other CAWG specs not held.** The Metadata Assertion specification listed on the site is where vocabulary work would sit.
 - **Read scope.** By section: header, §1.1, part of §1.2, §3.3.12 and §3.3.13, §5.1, §5.1.2, §5.3, the start of §9.1, and §10, plus the section headings. §1.3, §6, §7, §8 and most of §9 were not read, so nothing here covers validation or the threat analysis.

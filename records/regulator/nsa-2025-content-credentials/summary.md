@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: nsa-2025-content-credentials
 record: nsa-2025-content-credentials
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Content Credentials: Strengthening Multimedia Integrity in the Generative AI Era
@@ -30,7 +30,14 @@ Joint guidance from four national cyber agencies, urging early adoption of Conte
 | Cryptography | `none` | Signing is described in one sentence; no algorithms |
 | This project | `adjacent` | Sets a government baseline for what a provenance display may imply |
 
-- **DEC-007**: pp. 4-5 and p. 6 state, in effect, requirements for any renderer: words must not imply truth, and absence must not imply doubt. p. 15 notes that credentials only store information, which has to be presented to have an impact, but then discusses only a logo, SDKs and browser plug-ins. It says nothing on what the words should be. **DEC-007** is proposed, not accepted: it exists only in ARCH-0001-PROPOSAL v0.2.0 §5, and mofn's DECISIONS-0001 item 5d asks whether it survives at all.
+- **DEC-007**: pp. 4-5 and p. 6 state, in effect, requirements for any renderer: words must not imply truth, and absence must not imply doubt. p. 15 notes that credentials only store information, which has to be presented to have an impact, but then discusses only display tooling: the JavaScript SDK showing the Content Credentials logo, Chrome plug-ins, Drupal, and the verify site (pp. 15-16). It says nothing on what the words should be. **DEC-007** is proposed, not accepted: it exists only in ARCH-0001-PROPOSAL v0.2.0 §5, and mofn's DECISIONS-0001 item 5d asks whether it survives at all.
+
+## Relations
+
+- `see_also: c2pa-2-4`: the document uses "Content Credentials" to mean the C2PA technical specification (p. 3), citing 2.1 as ref. [27]. Authored only here.
+- `see_also: c2pa-ux-2-2`: p. 6 cites C2PA's UX guidance (ref. [15], version 1.0, its levels of information disclosure) for the point that credentials are opt-in; 2.2 is the version held. Authored only here.
+- `see_also: cawg-identity-1-2`: p. 14's second preparatory step is to engage with C2PA and the Creator Assertions Working Group. Authored only here.
+- `c2pa-conformance-program` and `eu-code-of-practice-marking` author their edges to this record.
 
 ## Implementations
 

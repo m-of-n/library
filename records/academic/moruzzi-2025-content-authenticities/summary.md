@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: moruzzi-2025-content-authenticities
 record: moruzzi-2025-content-authenticities
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Content Authenticities: A Discussion on the Values of Provenance Data for Creatives and Their Audiences
@@ -20,7 +20,7 @@ updated: "2026-11-01"
 
 ## Overview
 
-An online workshop with 34 experts across the creative media chain, analysed by reflexive thematic analysis of 275 sticky notes and 221 minutes of transcript (§3). It argues that the need for provenance depends on context (§4.1), that a binary human-or-AI label is not meaningful and whether AI changed the semantics matters more (§4.2), and that provenance signals can raise suspicion and be mistaken for signals of truth (§4.3, §4.6). Participants asked above all about the creator's intent, which the paper treats as an original insight (§4.5, §5.3). It offers a lens of multiple "authenticities", drawn from Dutton, Newman and Smith and others, as a tool for designing flexible systems (§3.5, §5).
+An online workshop with 34 experts across the creative media chain, analysed by reflexive thematic analysis of 275 sticky notes and 221 minutes of transcript (§3). It argues that the need for provenance depends on context (§4.1), that a binary human-or-AI label is not meaningful and whether AI changed the semantics matters more (§4.2), and that provenance signals can raise suspicion and be mistaken for signals of truth (§4.3, §4.6). The creator's intent was a central theme of the discussion (§4.5), which the paper calls an original insight (§5.3). It offers a lens of multiple "authenticities", drawn from Dutton, Newman and Smith and others, as a tool for designing flexible systems (§3.5, §5).
 
 ## Applicability
 
@@ -31,6 +31,12 @@ An online workshop with 34 experts across the creative media chain, analysed by 
 | This project | `adjacent` | Argues a single fixed rendering cannot fit every reader, which is a constraint on any answer to DEC-007 |
 
 - **DEC-007**: DEC-007 asks how a value becomes words. This paper asks whose words, and for which reader. A vocabulary with one rendering per value would match the binary labels participants rejected, and §5.4 suggests tiered information. Intent (§4.5) is a claim only the issuer can make, so a vocabulary would need a category for it rather than a rendering. **DEC-007** is proposed, not accepted: it exists only in ARCH-0001-PROPOSAL v0.2.0 §5, and mofn's DECISIONS-0001 item 5d asks whether it survives at all.
+
+## Relations
+
+- `see_also: cscw-2023-provenance-trust`: the paper cites it as [23] (§2.2), and both find provenance signals read as signals of truth (§4.6 here, §5.1 there). Authored only here; `cscw-2023-provenance-trust` no longer repeats it.
+- `see_also: c2pa-ux-2-2`: §5.4 names the C2PA UX specification [11] as a resource for the tiered information it suggests. It cites version 2.0; 2.2 is the version held. Authored only here.
+- `see_also: c2pa-2-4`: Figure 1 describes the C2PA manifest, and Limits records where its caption differs from the format. Authored only here.
 
 ## Implementations
 

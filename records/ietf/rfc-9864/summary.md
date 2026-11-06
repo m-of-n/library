@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-9864
 record: rfc-9864
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Fully-Specified Algorithms for JSON Object Signing and Encryption (JOSE) and CBOR Object Signing and Encryption (COSE)
@@ -57,7 +57,7 @@ RFC 9864 separates algorithm identifiers that fully determine the operation from
 
 ## Limits
 
-- **Deprecated does not mean forbidden.** Under §4.4 a deprecated identifier is to be avoided in new deployments, with exceptions for documented requirements. Existing -7 and -8 messages remain verifiable.
+- **Deprecated does not mean forbidden.** Under §4.4 the replacement SHOULD be used in new deployments, unless documented operational or regulatory requirements prevent migration. Existing -7 and -8 messages remain verifiable.
 - **Polymorphism remains.** ECDH (§6.2) and HSS-LMS (§6.3) are not updated, the latter affecting `rfc-8778`. RSA is left unresolved (§6.1).
 - **Encryption identifiers are not deprecated** (§3).
 - **Adoption was not measured.** §1 shows that negotiation in WebAuthn relied on -8, and how far it has moved is not known here.

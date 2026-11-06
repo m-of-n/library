@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: c2pa-conformance-program
 record: c2pa-conformance-program
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # C2PA Conformance Program and Trust List
@@ -34,6 +34,12 @@ The specification alone cannot make a signed claim trustworthy, so C2PA runs a g
 - **R-I-02**: `c2pa-2-4` §14.4.1 requires this list as an anchor set for validators. Importing C2PA must not make it a native trust anchor, so a mapping has to treat it as foreign evidence.
 - **R-I-05**: C2PA identity is X.509 throughout, so an imported signer is a foreign identity assertion about a key.
 
+## Relations
+
+- `see_also: c2pa-2-4`: that spec's §14.4.1 requires validators to include the C2PA Trust List this program governs, and Program v0.2 accepts spec v2.2 and v2.4 (§6.7.5). Authored only here; `c2pa-2-4` no longer repeats it.
+- `see_also: c2pa-ux-2-2`: that guidance defines Trusted as the signer being "found on a supported Trust List" (§4.5), which is this program's list. Authored only here.
+- `see_also: nsa-2025-content-credentials`: its p. 17 reports the early flaw of self-signed certificates shown as trusted, fixed by checking against a list of known certificates. Authored only here.
+
 ## Implementations
 
 The list itself is the implementation record. At the pinned commit, `conforming-products-list.json` has 290 entries: 258 generator products and 32 validator products, all `conformant`. Of the 258 generators, 247 have Max Assurance Level 1 and 11 have level 2. Google LLC has the most entries at 50. These are our counts from one snapshot, and they will drift. Who the products are was not reviewed further.
@@ -51,6 +57,6 @@ The list itself is the implementation record. At the pinned commit, `conforming-
 
 - **The trust lists themselves were not read.** `C2PA-TRUST-LIST.json` and the TSA list were seen in the repository tree only. The record title promises more than this record covers on that point.
 - **Early program.** It is version 0.2. §6.1.1 says complete conformance to the 300+ generator and 150+ validator requirements is something applicants will be held to eventually.
-- **Moving target.** The landing page links spec 2.3 and `docs/current` paths that do not resolve, and its minimum spec level is v2.2 (§6.1.1). Table 1 gives v0.1 a sunset of 2026-10-09 and says v0.2 supports spec v2.2 and v2.4, so 2.5 is not covered by this version.
+- **Moving target.** The landing page links spec 2.3. The first read (2026-11-01) recorded `docs/current` links that did not resolve; the 2026-10-19 Internet Archive capture and the 2026-11-05 refetch both link `docs/v0.2` instead, and the page's digest changed between reads (`content.note`). The Program's minimum spec level is v2.2 (§6.1.1). Table 1 gives v0.1 a sunset of 2026-10-09 and says v0.2 supports spec v2.2 and v2.4, so 2.5 is not covered by this version.
 - **No claim of truth.** Conformance covers how a product behaves, not whether its assertions are accurate.
 - **Read scope.** The landing page; Program v0.2 §1, part of the §2 glossary, §3 to §6.2, and headings to §6.7; Governance Framework section headings only; the Companion Guide's `disallowedSignals` definition; and scripted counts over the products list. Certificate Policy and Generator Product Security Requirements were not read. The Program was read as extracted text.

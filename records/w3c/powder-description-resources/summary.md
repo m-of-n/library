@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: powder-description-resources
 record: powder-description-resources
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # POWDER: Description Resources
@@ -20,7 +20,7 @@ updated: "2026-11-01"
 
 ## Overview
 
-POWDER lets anyone publish machine-readable claims about a group of web resources. A Description Resource (DR) has attribution, a scope, and descriptors. Every valid document must say who issued it (§2.1, §5), and that one requirement is presented as the inherent trust model: it is always clear whom to ask. It resolves the human-versus-machine tension with an operational XML dialect and formal semantics reached through a GRDDL transform to RDF/OWL (§1.1). Descriptors come from RDF vocabularies, and §2.6 advises using those rather than defining meaning in POWDER. `displaytext` and `displayicon` carry a summary for end users (§2.1). Trust is a human judgment, so §5 offers discoverable mechanisms, third-party certification and supporting evidence, and prescribes none.
+POWDER lets anyone publish machine-readable claims about a group of web resources. A Description Resource (DR) has attribution, a scope, and descriptors. Every valid document must say who issued it (§2.1, §5), and that one requirement is presented as the inherent trust model: it is always clear whom to ask. It resolves the human-versus-machine tension with an operational XML dialect and formal semantics reached through a GRDDL transform to RDF/OWL (§1.1). Descriptors come from RDF vocabularies, and §2.6 strongly advises RDF vocabularies or OWL ontologies in preference to POWDER descriptor sets with no restriction on where they apply. `displaytext` and `displayicon` carry a summary for end users (§2.1). Trust is a human judgment, so §5 offers discoverable mechanisms, third-party certification and supporting evidence, and prescribes none.
 
 ## Applicability
 
@@ -32,6 +32,13 @@ POWDER lets anyone publish machine-readable claims about a group of web resource
 
 - **DEC-007**: this is option 4 tried in standards form. Meaning is pushed out to dereferenceable RDF terms, so a renderer needs an RDF stack, and a vocabulary's words are not fixed by the issuer. §5.5 relies on terms being defined by IRI. Publishers are strongly advised to use one `displaytext` per DR, apart from `xml:lang` variants (§2.1, §2.8.4), so the human rendering is attached to the description and not to each value. That is close to option 3. **DEC-007** is proposed, not accepted: it exists only in ARCH-0001-PROPOSAL v0.2.0 §5, and mofn's DECISIONS-0001 item 5d asks whether it survives at all.
 - **R-M-12** (proposed text; relocated to ARCH-0002 P1 and accepted by ADR-0001): attribution via `issuedby` names an IRI describing an entity, not a key. §5.4 goes further: trust can equal the trustworthiness of the host. That is the model R-M-12 rejects.
+
+## Relations
+
+- `see_also: pics-1-1-services`: W3C retired PICS as superseded by POWDER (`w3-org-pics`); this is the PICS successor for describing content. Authored only here; `pics-1-1-services` no longer repeats it.
+- `see_also: w3c-tag-obsolete-powder`: the TAG proposal to obsolete this Recommendation (w3c/transitions issue 86, in `content.note`). That record does not author an edge back, so it is authored here.
+- `see_also: c2pa-2-4`: both attach attributed, machine-readable claims to content. POWDER pushes meaning out to RDF vocabularies (§2.6, §5.5); C2PA keeps label meaning in its specification (§6.2.2 there). Those are the two ends DEC-007 weighs. Authored only here; `c2pa-2-4` no longer repeats it.
+- `pics-1-1-labels`, `pics-dsig-1-0` and `w3-org-pics` author their edges to this record, so they are not repeated here.
 
 ## Implementations
 

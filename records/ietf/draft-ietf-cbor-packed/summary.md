@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: draft-ietf-cbor-packed
 record: draft-ietf-cbor-packed
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Packed CBOR
@@ -32,17 +32,18 @@ Packed CBOR replaces repeated substructure with references into a shared-item ta
 
 - **DEC-002**: closed by `ADR-0004`, whose profile forbids tags and simple values, so tag 6, tags 113 and 1113, and `simple(0..15)` are all rejected by a conforming KSA-CBOR decoder. The record's value is the argument against: §9 allows packed forms as signing inputs when deterministically encoded, but concedes that external dictionaries need more consideration. Our reading: the meaning of signed bytes would then depend on a table outside them.
 - It bears on no `R-*` directly. `ARCH-0002` P1 would apply only if tags were native, and they are not.
+- **`see_also` `rfc-8746`**: §7 quotes RFC 8746's footnote to Table 3 as its precedent for a tag standing in for an array, and argues that RFC 8746's top-down exception does not extend to new tags. `rfc-8746` records the same note as disagreeing with its own §3.1.1.
 
 ## Implementations
 
-**Searched 2026-11-01.** GitHub code search for `Packed CBOR tag 113` returned nothing. cbor-x comes from mofn's 2026-09-22 survey, not from this search.
+**Searched 2026-11-01.** GitHub code search for `Packed CBOR tag 113` returned nothing. cbor-x comes from mofn's 2026-09-22 survey, not from this search. Its README, re-read 2026-11-05, claims decoding of Packed CBOR and an optional `pack` encoder mode, without naming a draft revision. The same README says cbor-x uses tag 105 for its own records extension, the number §8.1 requests for `ijoin`.
 
 | Name | Kind | License | URL |
 |---|---|---|---|
 | cbor-x | open source, JS | MIT | https://github.com/kriszyp/cbor-x |
 | cbor-wg/cbor-packed | specification repository, not a library | not identified by GitHub | https://github.com/cbor-wg/cbor-packed |
 
-- **cbor-x**: Named as the one real implementation by mofn research/0001-cbor/report.md; not re-checked here.
+- **cbor-x**: Named as the one real implementation by mofn research/0001-cbor/report.md. README re-read 2026-11-05: decode and optional pack claimed, revision not stated, not tested.
 - **cbor-wg/cbor-packed**: Source and issue tracker named by the draft.
 
 ## Artifacts in this record
