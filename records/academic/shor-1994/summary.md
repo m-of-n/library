@@ -48,7 +48,7 @@ Searched 2026-11-03. Implementations of Shor's algorithm (e.g. in Cirq and Qiski
 
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata: bibliographic facts from Crossref, with the paywall and the nearest open text noted in `content.note` |
+| `record.yaml` | metadata: bibliographic facts from Crossref and the `shor-1997` first-page footnote, with the paywall and the nearest open text noted in `content.note` |
 | `summary.md` | this document |
 
 **No digest and no `distilled/`.** No bytes of the proceedings paper were obtained, so nothing could be digested. A digest needs a legitimate copy of the proceedings text, which would also move this record past `stub`. The DIMACS technical report TR 94-37 named in `content.note` has a similar title but is a different document; its digest is not this record's. A `paper` record owes no FX-1 extraction.

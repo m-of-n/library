@@ -12,7 +12,7 @@ updated: "2026-11-03"
 |---|---|
 | **Type** | spec |
 | **Maturity** | `standard` — published ISO/IEC international standard |
-| **Authors** | ISO/IEC JTC 1/SC 7 |
+| **Authors** | ISO/IEC JTC 1 (catalogue, capture of 2026-10-23); prepared by the Joint Development Foundation (SPDX Foreword) |
 | **Published** | 2021-08 |
 | **Identifier** | ISO/IEC 5962:2021 (carries SPDX 2.2.1) |
 | **Source** | https://www.iso.org/standard/81870.html |
@@ -23,7 +23,7 @@ updated: "2026-11-03"
 
 **The ISO text was not read.** The note at the end says why: the blocker is ISO's licence, not the price. What follows comes from the SPDX 2.2.1 source that the SPDX project tagged `v2.2.1-ISO-final` and publishes under CC-BY-3.0. Clause numbers below are that text's; that they match the ISO PDF is likely but not verified.
 
-SPDX 2.2.1 defines *"a standard data format for communicating the component and metadata information associated with software packages"* (Clause 1). A document describes packages, files and snippets in sections for creation information, packages, files, snippets, other licensing information, relationships and annotations (Clauses 6–12). It can be serialised as tag:value, RDF/XML, JSON, YAML or spreadsheet, and Clause 4.4 says SPDX defines how to translate a valid document *"without loss to each other supported format"*. The Foreword says the Joint Development Foundation prepared it and JTC 1 adopted it under the PAS procedure; the differences annex (headed I.1 in the source) says V2.2.1 has *"no technical differences"* from V2.2 and is V2.2 reformatted for ISO. It is the only SBOM format with ISO ratification, and `spdx-3-0-1` supersedes it as the current SPDX line.
+SPDX 2.2.1 defines *"a standard data format for communicating the component and metadata information associated with software packages"* (Clause 1). A document describes packages, files and snippets in sections for creation information, packages, files, snippets, other licensing information, relationships and annotations (Clauses 6–12). It can be serialised as tag:value, RDF/XML, JSON, YAML or spreadsheet, and Clause 4.4 says SPDX defines how to translate a valid document *"without loss to each other supported format"*. The Foreword says the Joint Development Foundation prepared it and JTC 1 adopted it under the PAS procedure; subclause I.1 of the differences annex says V2.2.1 has *"no technical differences"* from V2.2 and is V2.2 reformatted for ISO. It is the only SBOM format with ISO ratification, and `spdx-3-0-1` supersedes it as the current SPDX line.
 
 ## Applicability
 
@@ -36,7 +36,7 @@ SPDX 2.2.1 defines *"a standard data format for communicating the component and 
 **Bears on:**
 
 - **R-I-07** (C): *"Emit SPDX or CycloneDX inside an `ArtifactStatement` predicate"*. This is the ISO edition of SPDX, so it is one of the formats that requirement names.
-- **R-M-07** (M): artifact statements bind at least one content digest. SPDX 2.2.1 carries its own digests, but the one it requires per file is SHA-1 (8.4) and the package verification code is a 160-bit value (7.9). An SPDX 2.2.1 predicate's checksums therefore cannot be what satisfies R-M-07 for us; the statement must bind its own digest.
+- **R-M-07** (M): *"Artifact statements SHALL bind at least one content digest."* SPDX 2.2.1 carries its own digests, but the one it requires per file is SHA-1 (8.4) and the package verification code is a 160-bit value (7.9). An SPDX 2.2.1 predicate's checksums therefore cannot be what satisfies R-M-07 for us; the statement must bind its own digest.
 
 `R-M-11` was removed from `bears_on`: it is proposed in ARCH-0001-PROPOSAL-v0.2.0 and is not in ARCH-0001 §5.
 

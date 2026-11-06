@@ -20,9 +20,9 @@ updated: "2026-11-03"
 
 ## Overview
 
-**This record has not been read.** The standard is sold by ISO and was not obtained. Per `docs/scope.md` §1 it stays a `stub`. Everything below comes from the ISO catalogue page, seen through an Internet Archive capture dated 2026-07-14, and is labelled as such.
+**This record has not been read.** The standard is sold by ISO and was not obtained, and its normative text was not read. Per `docs/scope.md` §1 it stays a `stub`. Everything below comes from the ISO catalogue page, seen through an Internet Archive capture dated 2026-07-14, and is labelled as such.
 
-Per the catalogue abstract, Part 3 of ISO 26262 *"specifies the requirements for the concept phase for automotive applications"*, naming item definition, hazard analysis and risk assessment, and the functional safety concept. The series applies to safety-related electrical and/or electronic (E/E) systems in series production road vehicles, excluding mopeds, and addresses hazards caused by malfunctioning behaviour of those systems. It is held here because `iso-sae-21434-2021` lists it among its normative references (that record's `cites`, Clause 2).
+Per the catalogue abstract, Part 3 of ISO 26262 *"specifies the requirements for the concept phase for automotive applications"*, naming item definition, hazard analysis and risk assessment, and the functional safety concept. The abstract says the document applies to safety-related systems that include one or more electrical and/or electronic (E/E) systems installed in series production road vehicles, excluding mopeds, and addresses hazards caused by malfunctioning behaviour of safety-related E/E systems. It is held here because `iso-sae-21434-2021` cites it; that record's `cites` entry marks it as a Clause 2 normative reference.
 
 ## Applicability
 
@@ -52,5 +52,5 @@ Not searched: this is a process standard for an engineering organisation, not so
 
 ## Limits
 
-- **Unread.** Only the catalogue abstract was seen. How the concept-phase work products relate to ISO/SAE 21434's TARA was not checked.
-- **Status may move.** The capture shows stage 90.92 (to be revised); a third edition would be a new record linked by `supersedes`.
+- **Unread.** Only the catalogue abstract was seen; the normative text was not read. How the concept-phase work products relate to ISO/SAE 21434's TARA was not checked.
+- **Status may move.** The capture shows stage 90.92 (to be revised) and ISO/WD 26262-3.2 under development; a third edition would be a new record linked by `supersedes`.

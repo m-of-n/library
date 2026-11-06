@@ -11,7 +11,7 @@ updated: "2026-11-03"
 |  |  |
 |---|---|
 | **Type** | spec |
-| **Maturity** | historic: the ISO catalogue shows the 2017 edition Withdrawn, stage 95.99, with ISO/IEC 24759:2025 as the new version |
+| **Maturity** | historic: the ISO catalogue shows the 2017 edition Withdrawn, stage 95.99 (2025-02-26), with ISO/IEC 24759:2025 as the new version |
 | **Authors** | ISO/IEC JTC 1/SC 27 (catalogue) |
 | **Published** | 2017-03, Edition 3, 135 pages (catalogue) |
 | **Identifier** | ISO/IEC 24759:2017 |
@@ -20,7 +20,7 @@ updated: "2026-11-03"
 
 ## Overview
 
-**This record has not been read.** Neither the 2017 nor the 2025 edition was obtained, so per `docs/scope.md` §1 the record stays unread (`status: queued`, because the 2025 edition is listed at CHF 0 and a person could obtain it). Everything below comes from the ISO catalogue page for the 2017 edition, seen through Internet Archive captures, and is labelled as such.
+**This record has not been read.** Neither the 2017 nor the 2025 edition was obtained, and the normative text of neither was read, so per `docs/scope.md` §1 the record stays unread (`status: queued`, because the 2025 edition is listed at CHF 0 and a person could obtain it). Everything below comes from the ISO catalogue page for the 2017 edition, seen through Internet Archive captures, and is labelled as such.
 
 Per that catalogue abstract, the 2017 edition *"specifies the methods to be used by testing laboratories to test whether the cryptographic module conforms to the requirements specified in ISO/IEC 19790:2012"*. It also specifies what information vendors provide to laboratories as evidence of conformity, and vendors can use it to check a module before applying for testing. It is the test-method companion of `iso-iec-19790`, and FIPS 140-3 adopts it as its test requirements (`fips-140-3`, which cites it).
 
@@ -48,12 +48,12 @@ Not searched: the users of this standard are accredited testing laboratories, no
 | `record.yaml` | metadata, with what was and was not seen in `content.note` |
 | `summary.md` | this document |
 
-**Relations.** `see_also: iso-iec-19790`, because the abstract defines this standard's test methods against ISO/IEC 19790:2012's requirements. A more precise typed relation does not fit: the abstract describes a companion, not a part or an update. The edges from `fips-140-3` and `nist-sp-800-140` are authored on those records.
+**Relations.** `see_also: iso-iec-19790`, because the abstract defines this standard's test methods against ISO/IEC 19790:2012's requirements. A more precise typed relation does not fit: the abstract describes a companion, not a part or an update. The edges from `fips-140-3`, `nist-sp-800-140` and `nist-sp-800-140a` to `-140f` are authored on those records.
 
 **No digest and no `distilled/`.** No bytes were obtained. Obtaining the 2025 edition is a human decision (licence terms); a 2025 edition read in full would be a new record linked by `supersedes`, and as a `spec` it would owe FX-1.
 
 ## Limits
 
-- **Unread.** Only the 2017 catalogue abstract was seen. What the 2025 edition changed is unknown.
+- **Unread.** Only the 2017 catalogue abstract was seen; the normative text of neither edition was read. What the 2025 edition changed is unknown.
 - **Id and title stay on 2017.** `fips-140-3` refers to this record, and ids are stable. The current edition is 2025, which this record does not describe.
 - **Licence not checked.** Whether the 2025 edition's CHF 0 download carries the same AI-use clause that stopped `iso-iec-5962-2021` was not checked.

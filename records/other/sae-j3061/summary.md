@@ -20,9 +20,9 @@ updated: "2026-11-03"
 
 ## Overview
 
-**This record has not been read.** The document is sold by SAE and was not obtained. Per `docs/scope.md` §1 it stays a `stub`. Everything below comes from SAE catalogue pages seen through Internet Archive captures dated 2021-10-28 and 2022-01-21, and is labelled as such.
+**This record has not been read.** The document is sold by SAE and was not obtained, and its normative text was not read. Per `docs/scope.md` §1 it stays a `stub`. Everything below comes from SAE catalogue pages seen through Internet Archive captures dated 2021-10-28 and 2022-01-21 (the latter redirected to the J3061_202112 page), and is labelled as such.
 
-Per the catalogue abstract, J3061 is a recommended practice that provides a lifecycle process framework for building cybersecurity into cyber-physical vehicle systems *"from concept phase through production, operation, service, and decommissioning"*, plus guiding principles and an overview of existing tools and methods. The abstract lists appendices on threat analysis and risk assessment, threat modelling and attack trees (A–C), sample controls derived from NIST SP 800-53 (D), and vulnerability databases, vehicle-level design practice, related standards, research projects and test tools (E–I). The 2022 capture gives the rationale for stabilisation: *"SAE J3061 is being superseded by ISO/SAE 21434."* `iso-sae-21434-2021` carries the matching `supersedes: sae-j3061` edge.
+Per the catalogue abstract, J3061 is a recommended practice that provides a lifecycle process framework for building cybersecurity into cyber-physical vehicle systems *"from concept phase through production, operation, service, and decommissioning"*, plus guiding principles and an overview of existing tools and methods. The abstract lists appendices on threat analysis and risk assessment, threat modelling and vulnerability analysis, such as attack trees (A–C), sample controls derived from NIST SP 800-53 (D), and vulnerability databases, vehicle-level design practice, related standards, research projects and test tools (E–I). The 2022 capture gives the rationale for stabilisation: *"SAE J3061 is being superseded by ISO/SAE 21434."* `iso-sae-21434-2021` carries the matching `supersedes: sae-j3061` edge.
 
 ## Applicability
 
@@ -52,5 +52,5 @@ Not searched: a superseded process guidebook.
 
 ## Limits
 
-- **Unread.** Only catalogue abstracts were seen. What changed between J3061_201601 and the stabilized J3061_202112, if anything, is unknown. A stabilized J3061_202112 would be a new record linked by `supersedes`, not this one.
+- **Unread.** Only catalogue abstracts were seen; the normative text was not read. What changed between J3061_201601 and the stabilized J3061_202112, if anything, is unknown. A stabilized J3061_202112 would be a new record linked by `supersedes`, not this one.
 - **Conflicting catalogue states.** The 2021-10-28 capture described the document as being cancelled with a J3061A shown as work in progress; the 2022-01-21 capture shows it stabilized instead. The live sae.org page returned only an application shell, so the current state was not seen.
