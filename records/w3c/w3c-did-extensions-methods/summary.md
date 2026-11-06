@@ -3,54 +3,53 @@ schema: "library-summary/v1"
 id: w3c-did-extensions-methods
 record: w3c-did-extensions-methods
 type: summary
-updated: "2026-09-26"
+updated: "2026-11-01"
 ---
 
 # DID Extensions: Methods registry
 
 |  |  |
 |---|---|
-| **Type** | spec |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | https://www.w3.org/TR/did-extensions-methods/ |
-| **Source** | https://www.w3.org/TR/did-extensions-methods/ |
-| **Digest** | `not fetched` |
+| **Type** | spec (W3C Group Note) |
+| **Maturity** | `informational`: W3C Group Note, which the Note says is not endorsed by W3C itself |
+| **Authors** | Manu Sporny, Markus Sabadello |
+| **Published** | 2026-10-01 |
+| **Identifier** | W3C NOTE-did-extensions-methods-20261001 |
+| **Source** | https://www.w3.org/TR/2026/NOTE-did-extensions-methods-20261001/ (latest: https://www.w3.org/TR/did-extensions-methods/) |
+| **Digest** | `sha256:300cb710…` (full value in `record.yaml`), fetched 2026-11-01 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+This W3C Group Note lists known DID methods, with 274 rows in the 2026-10-01 version, each naming a method, its registry and a contact. Its existence answers part of this topic's question. DIDs were designed to avoid central registries, yet method names are short global strings that someone must keep from colliding. So allocation moved from identifiers to method names, and to whoever accepts entries.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `adjacent` | no direct bearing |
+| Cryptography | `none` | no direct bearing |
+| This project | `core` | direct evidence on who allocates identifiers |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+- **R-M-12** (extension points are key-relative; accepted by ADR-0001 and relocated to ARCH-0002 P1): the registry shows the global-name pattern re-forming one level up, which is the argument of ARCH-0002 P1.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
-
-| Name | Kind | License | URL |
-|---|---|---|---|
+274 methods are listed; none was evaluated.
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+`distilled/` and a `distillation` block are absent on purpose: this is the summary bar. No open issue owns FX-1 extraction of this record yet; that would be triggered by a decision that builds on it.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+**Read:** header, status section, the description of the registration process, and a row count of the table (274, from the HTML). The entries themselves were not read, and the process it points to was not followed.
+
+- Whether method names are enforced as unique was not established. A registry is social; the URI scheme does not stop two parties using one name. That reading is ours.
+- A newer Note (2026-11-03) was published after this was read; its changes were not examined.
+- `see_also`: `w3c-did-1-1` defines the `did:<method>:` syntax whose method names this registry lists. The `did-key-method` and `w3c-did-core` edges are authored on those records.
+- Listing is not review, so the count says nothing about quality or use.

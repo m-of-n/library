@@ -3,54 +3,56 @@ schema: "library-summary/v1"
 id: larisch-2017-crlite
 record: larisch-2017-crlite
 type: summary
-updated: "2026-09-26"
+updated: "2026-11-04"
 ---
 
 # CRLite: A Scalable System for Pushing All TLS Revocations to All Browsers
 
 |  |  |
 |---|---|
-| **Type** | paper |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | https://doi.org/10.1109/SP.2017.17 |
-| **Source** | https://doi.org/10.1109/SP.2017.17 |
-| **Digest** | `not fetched` |
+| **Type** | paper (peer-reviewed, IEEE S&P 2017) |
+| **Maturity** | unset: a conference paper; no body assigns it a standing |
+| **Authors** | James Larisch, David Choffnes, Dave Levin, Bruce M. Maggs, Alan Mislove, Christo Wilson |
+| **Published** | 2017 |
+| **Identifier** | DOI 10.1109/SP.2017.17 |
+| **Source** | UMD-hosted PDF |
+| **Digest** | `sha256:1630ad4e…` (full value in `record.yaml`), fetched 2026-11-01, unchanged 2026-11-04 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+No major browser fully checks revocation, because each deployed mechanism is incomplete, insecure, inefficient, slow to update or not private. CRLite has an aggregator collect the status of every known certificate from scans and CT, and pushes it to clients as a filter cascade: Bloom filters arranged to have neither false positives nor false negatives over that set. The paper reports 10 MB to represent over 30M certificates and daily deltas of about 580 KB (§I). Because it holds all revocations, a client can adopt a fail-closed posture, and it reveals no browsing to third parties.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `core` | removes the soft-fail failure mode |
+| Cryptography | `adjacent` | a data-structure construction |
+| This project | `adjacent` | an alternative to online status, evidence for R-O-02 |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+- **R-O-02** (short-lived validity preferred; revocation still representable): shows revocation can stay representable without an online check, at the cost of a global aggregator.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
+The paper describes a prototype: Spark on the server side and a Firefox extension on the client (§I), and says its code is at https://www.securepki.org (§IX); that release was not checked. R-001 §4.6 says CRLite shipped in Firefox 142; this paper cannot and does not support that, and it was not verified here.
 
-| Name | Kind | License | URL |
-|---|---|---|---|
+## Relations
+
+No `see_also` edges. Every library record this paper relates to is one it cites, so the edges are under `cites` in `record.yaml`, with reference numbers: `rfc-5280`, `rfc-7633`, `langley-2014-revchecking`, `rfc-6962`, `liu-2015-revocation`, `zhang-2014-heartbleed`. Only references the library holds are listed.
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, `cites`, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+`distilled/` and a `distillation` block are absent on purpose: this is the summary bar. This is not a specification, so FX-1 does not apply to it.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+**Read:** abstract, introduction with the six design challenges (§I), the conclusion (§IX), and the reference list. §III's proofs and the evaluation were not read through. Figures re-checked against the PDF 2026-11-04.
+
+- The paper's figures are from a January 2017 corpus and predate today's issuance volume and shorter lifetimes.
+- Its coverage rests on knowing all certificates, so it depends on CT and scans. Clients are protected only for certificates the aggregator saw; that is our reading of the design.
+- It centralises aggregation. The paper offers signed logs for auditing, which is not the same as removing the role. That matters for a design whose premise avoids global parties.

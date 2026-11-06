@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: freund-2024-xz
 record: freund-2024-xz
 type: summary
-updated: "2026-09-26"
+updated: "2026-11-04"
 ---
 
 # backdoor in upstream xz/liblzma leading to ssh server compromise
@@ -11,46 +11,45 @@ updated: "2026-09-26"
 |  |  |
 |---|---|
 | **Type** | web |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | https://www.openwall.com/lists/oss-security/2024/03/29/4 |
+| **Maturity** | unset: the source states no standing |
+| **Authors** | Andres Freund |
+| **Published** | 2024-03-29, oss-security mailing list (Openwall) |
+| **Identifier** | `20240329155126.kjjfduxw2yrlxgzm@awork3.anarazel.de` |
 | **Source** | https://www.openwall.com/lists/oss-security/2024/03/29/4 |
-| **Digest** | `not fetched` |
+| **Digest** | `sha256:1a117fd0…` (full value in `record.yaml`), fetched 2026-11-01, re-verified 2026-11-04 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+The disclosure itself, sent by a developer who noticed slow SSH logins and valgrind errors on Debian sid. One part of the backdoor existed *solely in the distributed tarballs*: a modified `build-to-host.m4` absent from the git tree. The rest sat in the repository as binary test files. A build-time script injected code into liblzma only under narrow conditions: x86-64 Linux, gcc with the GNU linker, and a Debian or RPM package build. At runtime it installed an audit hook in the dynamic linker, waited for sshd's `RSA_public_decrypt` symbol, and repointed that PLT entry at its own code, which Freund notes it did outside the audit mechanism. Freund concludes the committer was either directly involved or badly compromised, and thinks the former likelier.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `core` | A pre-authentication backdoor in sshd by way of a compression library, with the mechanism traced |
+| Cryptography | `adjacent` | It hooks RSA verification. The cryptography is the target, not the method |
+| This project | `adjacent` | The bytes shipped were not the bytes in the repository. `tukaani-xz-backdoor` says those tarballs were created and signed by Jia Tan |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+- **R-M-07**: binding a digest binds the tarball, not the repository it claims to come from. The tarball half of the attack lived in that gap. R-M-07 is necessary and not sufficient.
+- The conditional trigger also matters: the script injected only in Debian or RPM package builds, so another build of the same tarball would not have shown the change. Bears on no `DEC-*`.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
-
-| Name | Kind | License | URL |
-|---|---|---|---|
+None applicable: this source describes an incident, not something to build on. No search was run.
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+**No `distilled/`.** This is the summary bar. A web source has no FX-1 obligation, and nothing here needed a further artifact.
+
+**Relations.** One `see_also`: `crowdstrike-sunspot`. Both put code into distributed bytes that the reviewed repository did not contain, here by a tarball-only file and there by a build-server swap, so a digest of the output binds the attack. The xz records are linked from the other side: `tukaani-xz-backdoor` cites this message, and `cve-2024-3094` and `cox-2024-xz-timeline` author their own edges to it.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+- **The author says the analysis is partial.** The message states they are not a security researcher or reverse engineer, and that most of it comes from observation.
+- **Early claims have aged.** The message guesses at the payload. `cox-2024-xz-timeline` gives the later understanding: unauthenticated, targeted remote code execution.
+- **Read scope.** The whole message was read through Openwall's rendering, except that long shell lines were truncated on screen. The attachments were not fetched or read.

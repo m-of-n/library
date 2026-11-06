@@ -3,54 +3,78 @@ schema: "library-summary/v1"
 id: rfc-7516
 record: rfc-7516
 type: summary
-updated: "2026-09-22"
+updated: "2026-11-04"
 ---
 
-# JWE
+# JSON Web Encryption (JWE)
 
 |  |  |
 |---|---|
 | **Type** | rfc |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | rfc: 7516 |
-| **Source** | https://www.rfc-editor.org/rfc/rfc7516.html |
-| **Digest** | `not fetched` |
+| **Maturity** | `standard`: Proposed Standard, confirmed in `rfc7516.json` 2026-11-01 |
+| **Authors** | M. Jones, J. Hildebrand |
+| **Published** | 2015-05 |
+| **Identifier** | RFC 7516 · DOI 10.17487/RFC7516 |
+| **Source** | https://www.rfc-editor.org/rfc/rfc7516.txt |
+| **Digest** | `sha256:722cfcdd…` (full value in `record.yaml`), fetched 2026-11-01, rechecked 2026-11-04 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+RFC 7516 encrypts and integrity-protects an arbitrary octet sequence, with JSON structures for the metadata and the option of encrypting one content to many parties (§1). All recipients share one ciphertext, IV and tag, and differ only in a per-recipient wrapped key, so anything governing the plaintext must be the same for all (§7.2.1). Header parameters come from three places whose names must be disjoint, and of them only the protected header is authenticated; an `aad` value, if present, is authenticated with it (§5.1 step 14, §7.2.1). JWE is therefore all-or-nothing per object: it gives each recipient the whole plaintext. It takes its security considerations from `rfc-7515` (§11) and registers its header parameters in the registry that RFC established (§10.1).
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `core` | vCon's confidentiality form. §11.4 and §11.5 name oracle and timing attacks |
+| Cryptography | `core` | Defines the authenticated data and the per-recipient key structure (§5.1, §7.2.1) |
+| This project | `adjacent` | Bears on no `DEC-*` or `R-*`. The only outside check on vCon §5.3 |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+**This RFC is the other half of the outside check on vCon's §5.** Appendix C's CDDL renders the encrypted form again, but with the same omissions as §5.3, so it is no independent check (see `rfc-7515`). Read against §7.2.1:
+
+| vCon §5.3 says | This RFC | Result |
+|---|---|---|
+| `unprotected`, `recipients`, `iv`, `ciphertext`, `tag` | §7.2.1 defines all five | Names corroborated |
+| (no mention of `protected` or `aad`) | §7.2.1 defines both | vCon's list is incomplete, as library#9 settled (D3) |
+| Recipient `header`, `encrypted_key` | §7.2.1 defines both | Corroborated |
+| `enc`, `cty`, `uuid` in the Unprotected Object | Allowed. `enc` must be present (§4.1.2) | Legal, but **see below** |
+| `cty` of `application/vcon+gzip` | §4.1.3 has `zip`, whose defined value is DEFLATE, and which must be in the protected header | vCon does not use `zip`. Compression is a media-type convention, in an unauthenticated location |
+
+**The consequence for integrity.** §5.1 step 14 makes the authenticated data the encoded protected header, which is the empty string if there is none, plus `aad` if present. vCon's Unprotected Object carries `enc`, `cty` and `uuid`, and its list names neither `protected` nor `aad`. A vCon that follows that list leaves those three values outside the authentication tag. The draft's own appendix A.7 example does carry `protected`, so the list and the example differ, as library#9 recorded. Since the plaintext is a signed vCon, the content stays protected by the inner JWS. The labels do not, and §5.3.1 acknowledges this for `uuid` with only a SHOULD to verify it after decryption.
+
+**Selective disclosure.** §7.2.1 gives all recipients one ciphertext. So the charter's aim that some parts may be disclosed to different parties (`ietf-vcon-wg`) cannot be met by one JWE over the whole vCon, which is what §5.3 specifies.
+
+**Bears on no `DEC-*` or `R-*`.** The 2026-10-15 comment on #45 linked this RFC to DEC-002 and DEC-005, and earlier versions of this record carried both. Neither holds on reading. DEC-005 chooses a signing envelope for ArtifactStatement among DSSE and COSE_Sign1 (`ARCH-0001` §7), and JWE signs nothing. DEC-002 chose the native encoding (accepted 2026-10-25, `ADR-0004`), and JWE's only link to it is the JOSE header rules already carried by `rfc-7515`. No `R-*` in `ARCH-0001` asks for confidentiality. Its use to us is as the outside check on vCon above.
+
+## Relations
+
+- `see_also: rfc-7515`: §11 imports all of JWS's security considerations, and JWS and JWE share one header parameter registry (§10.1). Authored here; `rfc-7515` does not repeat it.
+- `see_also: draft-ietf-vcon-vcon-core-04`: that draft's encrypted form is a General JWE JSON Serialization of this RFC (§5.3), checked in the table above. The draft also authors this edge, without a stated reason; it is kept here because the reason is here.
+- `rfc-7518` authors its edge to this record, so it is not repeated here.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
+**Searched 2026-11-01.** Only these two projects were checked, and only for existence and their stated scope. This was not a survey, and conformance was not tested.
 
 | Name | Kind | License | URL |
 |---|---|---|---|
+| jose | open source, JavaScript | MIT | https://github.com/panva/jose |
+| jwcrypto | open source, Python | LGPL-3.0 | https://github.com/latchset/jwcrypto |
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+**No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. A `rfc` record owes FX-1 when someone extracts it, and no issue owns that for this record yet: the 2026-10-25 decision on #45 moved extraction to per-set issues, and neither #69 nor #89 covers it. No keyword count is given because none has been reconciled.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+- **It does not define the algorithms.** `rfc-7518` does, including vCon's SHOULD values `RSA-OAEP` and `A256CBC-HS512`.
+- **Key distribution is out of scope**, and vCon's charter also excludes key management (`ietf-vcon-wg`).
+- **§11.4's advice has force on `alg`.** A mutable `alg` is the attack it describes, and vCon's per-recipient `alg` sits in an unprotected header. Whether the mitigation of restricting a key to one algorithm is required is left to the implementer.
+- **Key commitment.** Reported erratum 7719 questions whether changing key-identifying parameters must cause failure for encryption, unless the algorithm is key-committing. It is unverified, and it was read but not assessed.
+- **Errata.** `errata.json` retrieved 2026-11-01, recounted 2026-11-04, lists 3 reported, none verified. All three notes were read at least in part.
+- **Read scope.** §1, §4.1.2, §4.1.3, §5.1 steps 13 and 14, §7.2.1, §9 in part, the opening of §10.1 (added 2026-11-04) and §11, from the RFC Editor `.txt`. §2, §3, the remaining §4 and §5, §7.1, §7.2.2, §8, the rest of §10 and the appendices were not read. **vCon was checked against -04.** Revision -05 appeared on 2026-10-31 and was not compared.

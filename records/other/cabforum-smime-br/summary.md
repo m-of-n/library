@@ -3,54 +3,57 @@ schema: "library-summary/v1"
 id: cabforum-smime-br
 record: cabforum-smime-br
 type: summary
-updated: "2026-09-26"
+updated: "2026-11-04"
 ---
 
-# CA/Browser Forum Baseline Requirements for S/MIME Certificates
+# Baseline Requirements for the Issuance and Management of Publicly-Trusted S/MIME Certificates
 
 |  |  |
 |---|---|
 | **Type** | spec |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | https://github.com/cabforum/smime/blob/main/SBR.md |
-| **Source** | https://github.com/cabforum/smime/blob/main/SBR.md |
-| **Digest** | `not fetched` |
+| **Maturity** | `standard`: adopted CA/Browser Forum requirements, not an IETF or ISO standard |
+| **Authors** | CA/Browser Forum |
+| **Published** | 2026-09-28 (v1.0.16, SMC018) |
+| **Identifier** | S/MIME BR v1.0.16 |
+| **Source** | https://github.com/cabforum/smime/blob/main/SBR.md (raw) |
+| **Licence** | CC BY 4.0 (front matter) |
+| **Digest** | `sha256:fa30ec6c…` (full value in `record.yaml`), fetched 2026-11-01, re-checked 2026-11-04 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+These requirements govern publicly trusted S/MIME certificates. The clause that matters here is the footnote to `nameConstraints` in the Subordinate CA profile (§7.1.2.2 item f): the extension SHOULD be critical, and non-critical constraints, "an exception to RFC 5280 (4.2.1.10)", MAY be used "until the `nameConstraints` extension is supported by Application Software Suppliers whose software is used by a substantial portion of Relying Parties worldwide". A Subordinate CA with `id-kp-emailProtection` is technically constrained only if it carries `nameConstraints` (§7.1.5). So the mechanism is required for the status and admitted to be incompletely supported.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `core` | rules for a real email-identity PKI |
+| Cryptography | `none` | no direct bearing |
+| This project | `adjacent` | what an S/MIME import inherits |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+- **R-I-05**: a certificate imported under these rules may carry a constraint some clients do not enforce, so an importer must not treat constraint presence as proof of scope.
+
+## Relations
+
+- `contradicts: rfc-5280`: the footnote itself calls non-critical Name Constraints an exception to RFC 5280 §4.2.1.10, which requires the extension be critical.
+- No `see_also` here: the edges to `cabforum-tls-br` and `rfc-9598` are authored on those records.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
-
-| Name | Kind | License | URL |
-|---|---|---|---|
+Not searched: this batch is the summary bar and ran no implementation survey.
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+`distilled/` and a `distillation` block are absent on purpose: this is the summary bar. No open issue owns FX-1 extraction of this record yet; that would be triggered by a decision that builds on it.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+**Read:** front matter, revision table lines, and name-constraint passages by keyword. This long document was not read through; identity validation and audit clauses were not read.
+
+- The footnote's condition has no measurable test.
+- R-001 §4.4 calls this "a 2023 standards document". Checked 2026-11-04: the same footnote is in v1.0.0 (tag `SMC01`, dated January 01, 2023, effective September 1, 2023), so the dating holds.

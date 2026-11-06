@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: itu-x509-1988
 record: itu-x509-1988
 type: summary
-updated: "2026-09-26"
+updated: "2026-11-01"
 ---
 
 # ITU-T X.509 (1988): The Directory - Authentication framework
@@ -11,46 +11,44 @@ updated: "2026-09-26"
 |  |  |
 |---|---|
 | **Type** | spec |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | https://www.itu.int/rec/T-REC-X.509-198811-S |
-| **Source** | https://www.itu.int/rec/T-REC-X.509-198811-S |
-| **Digest** | `not fetched` |
+| **Maturity** | `historic`: Superseded per ITU, 1988 edition |
+| **Authors** | CCITT |
+| **Published** | 1988-11-25 |
+| **Identifier** | CCITT Rec. X.509 (11/1988) |
+| **Source** | ITU free PDF (2008 reedition) |
+| **Digest** | `sha256:13e7ced4…` (full value in `record.yaml`), fetched 2026-11-01 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+The first X.509 is an authentication framework for the X.500 Directory, not an Internet PKI. Certificates carry directory distinguished names, and users rely on "an unbroken chain of trusted points in the Directory" (§6.5). §6.3 states the naming premise plainly: authentication relies on each user having a unique distinguished name, allocation is the Naming Authorities' job, and each user must trust them not to issue duplicates. Global naming is therefore a stated trust assumption from the start.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `adjacent` | historic |
+| Cryptography | `adjacent` | Annex C uses RSA as its example |
+| This project | `adjacent` | names the assumption R-M-03 removes |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+- **R-M-03** (names relative to an issuing principal): §6.3 is the position R-M-03 reverses.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
-
-| Name | Kind | License | URL |
-|---|---|---|---|
+Not applicable: superseded.
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+`distilled/` and a `distillation` block are absent on purpose: this is the summary bar. No open issue owns FX-1 extraction of this record yet; that would be triggered by a decision that builds on it.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+**Read:** contents, definitions in part, §6 clause by clause, from ITU's 2008 reedition. §§7 to 10 and the annexes were not read.
+
+- It says nothing about how Naming Authorities would be organised, and it assumes a directory that was never deployed globally, as `rfc-1422` §1 expected.
+- The reedition's front matter is from 2008. Its Note 1 says the contents are identical to the Blue Book version; that was taken on trust, not compared.
+- No `see_also` edges authored here: `itu-x509` and `rfc-1422` already carry them to this record.

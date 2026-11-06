@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: yaml-1-2-2
 record: yaml-1-2-2
 type: summary
-updated: "2026-10-05"
+updated: "2026-11-05"
 ---
 
 # YAML Ain't Markup Language (YAML) version 1.2.2
@@ -11,46 +11,58 @@ updated: "2026-10-05"
 |  |  |
 |---|---|
 | **Type** | spec |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | https://yaml.org/spec/1.2.2/ |
+| **Maturity** | `unofficial`: a community specification, not ratified by a standards body |
+| **Authors** | Copyright 2001-2009 Oren Ben-Kiki, Clark Evans, Ingy döt Net; present copyright YAML Language Development Team |
+| **Published** | Revision 1.2.2, 2021-10-01 |
+| **Identifier** | YAML 1.2, revision 1.2.2 |
 | **Source** | https://yaml.org/spec/1.2.2/ |
-| **Digest** | `2fe1bf40792df22ef8b8a5972a34c48e639969222e0bbae605aa9bb2ca85e9ab` |
+| **Digest** | `2fe1bf40792df22ef8b8a5972a34c48e639969222e0bbae605aa9bb2ca85e9ab`, re-fetched 2026-11-01 and 2026-11-05 unchanged |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+YAML 1.2.2 defines a data serialization language in two parts: a class of data objects (representations) and a character syntax for them (§3). It separates a representation graph, a serialization tree and a presentation stream, and comments, key order, styles and indentation belong to the last two, so application data may not depend on them (§3.1 to §3.2). This revision makes no normative change from 1.2 and exists to correct errors and add clarity (*Status of this Document*). Plain scalars get their types from a schema, not the grammar: tag resolution is left to the application (§3.3.2), and chapter 10 recommends the Failsafe, JSON and Core schemas, with Core as the default. So the same text can load as different values under different schemas, which is the fact the rest of this record turns on.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `adjacent` | Parsing and type confusion hazards, with no security analysis of its own |
+| Cryptography | `none` | Scalar canonical forms exist only for equality testing (§3.2.1.3) |
+| This project | `core` | The library's records and mofn's human-review form are written in it |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+- **DEC-002.** Decided by `ADR-0004` for KSA-CBOR, and YAML was never a candidate encoding. It bears on the human side of that decision: `SPEC-0002` §11 makes YAML the human-review form of a statement, converted one-to-one with the signed bytes. **This supersedes the topic's earlier note that the link was only an analogy**, which predates §11. YAML is not signed, but a wrong type on load changes the bytes a tool would encode.
+- **`SPEC-0002` §11.3 tightens this spec.** It rejects forms §10.3.2 accepts, such as hexadecimal and octal integers, `null` and floats, and forbids timestamp resolution. Since mofn#125 (2026-11-03) it also names the version, "YAML 1.2, core schema, restricted to what a YAML 1.1 parser reads the same way", and requires quoting text that either version resolves differently, which answers `design-log/0016-wallet-engine-v0/review.md` item 5. The version matters: see the implementations note below.
+- **The library's own reader differs too.** `bin/_yaml.py` keeps every plain scalar as a string, which is closer to Failsafe than to Core and is not a recommended schema. Tested 2026-11-01 and again 2026-11-05: `NO`, `9.3`, `Null`, `012` and `true` all stay strings. It also takes the last of a duplicate key silently, where §3.2.1.1 requires keys to be unique and §3.3 lists that as a load failure.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
+**Searched 2026-11-01.** Confirmed on GitHub or PyPI. PyYAML and ruamel.yaml were tested on the inputs below, and the run was repeated on 2026-11-05 with the same results. ruamel.yaml's licence was read from PyPI on 2026-11-05.
 
 | Name | Kind | License | URL |
 |---|---|---|---|
+| yaml-test-suite | test suite | MIT | https://github.com/yaml/yaml-test-suite |
+| libyaml | open source, C | MIT | https://github.com/yaml/libyaml |
+| PyYAML 6.0.3 | open source, Python | MIT | https://github.com/yaml/pyyaml |
+| ruamel.yaml 0.19.1 | open source, Python | MIT (PyPI, 2026-11-05) | https://pypi.org/project/ruamel.yaml/ |
+| yaml | open source, TypeScript | ISC | https://github.com/eemeli/yaml |
+
+**Implementations do not agree on the version.** On `NO`, `on`, `010` and a duplicate key, PyYAML 6.0.3 gave `False`, `True`, `8` and last-wins, while ruamel.yaml 0.19.1 (safe loader) gave `"NO"`, `"on"`, `10` and an error. Only the second matches §10.3.2 and §3.3. A library is not "YAML 1.2" because it says YAML.
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+**No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. A `spec` record owes FX-1 when someone extracts it, and no issue owns that yet. No keyword count is given because none has been reconciled. No copy of the spec is committed.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+- **No determinism.** The spec leaves key order and anchor names to the processor (§3.1.1), so it gives no canonical text form. §3.2.1.3 canonical forms are per-scalar, for equality. `SPEC-0002` §11 has to supply its own rules, and does.
+- **Recommended, not required.** Chapter 10 schemas are recommendations and §3.3.2 leaves resolution to the application, so the Core default does not bind an implementation in the way the test above assumes.
+- **A known defect is left open.** The note in §10.2.2 says the float regular expression does not exactly match JSON's, and that this could not be addressed in 1.2.2.
+- **Mostly a superset of 1.1, not wholly.** §6.8.1 says so and tells a 1.2 processor to treat 1.1 documents as 1.2 with warnings. A `%YAML 1.1` directive therefore does not ask for 1.1 typing.
+- **Contradicted by `strictyaml-why`.** That record authors the `contradicts` edge and gives the reason. On the Norway problem and duplicate keys, the critique describes implementations, and this spec says otherwise.
+- **`see_also: rfc-8259`.** §1.2 says 1.2's primary focus was making YAML a strict superset of JSON, and the JSON schema of §10.2 is the base of Core. The spec's own JSON reference is ECMA-404, not RFC 8259, so this is our edge and not a citation.
+- **Read scope.** The front matter, chapter 1, chapter 3, chapter 10 and §6.8.1 were read whole, as text extracted from the HTML page. Chapter 2 was seen only by its headings. Chapters 4 to 9, the grammar, were not read beyond §6.8.1, so nothing here speaks to individual productions. The figures were not seen. Companion documents the spec points to were not read.

@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: slsa-2026-mini-shai-hulud
 record: slsa-2026-mini-shai-hulud
 type: summary
-updated: "2026-09-26"
+updated: "2026-11-04"
 ---
 
 # Mini Shai-Hulud: Where SLSA's Boundaries Fall
@@ -11,46 +11,47 @@ updated: "2026-09-26"
 |  |  |
 |---|---|
 | **Type** | web |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
+| **Maturity** | unset: the source states no standing |
+| **Authors** | Andrew McNamara |
+| **Published** | 2026-05-15, SLSA project blog |
 | **Identifier** | https://slsa.dev/blog/2026/05/mini-shai-hulud-what-slsa-can-and-cannot-do |
 | **Source** | https://slsa.dev/blog/2026/05/mini-shai-hulud-what-slsa-can-and-cannot-do |
-| **Digest** | `not fetched` |
+| **Digest** | `sha256:7bc3af34…` (full value in `record.yaml`), fetched 2026-11-01, re-verified 2026-11-04 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+A SLSA post on the May 2026 npm attack, in which 84 artifacts across 42 `@tanstack` packages were published through legitimate CI. An attacker chained a `pull_request_target` workflow, cache poisoning and extraction of an OIDC token from runner memory. The resulting attestations were cryptographically valid and named the correct repository and workflow, so an expected-builder check would have passed. The post argues that the attestation is accurate and the build was compromised, and that SLSA Build L3 isolation would have blocked this vector. It distinguishes evidence (*what happened?*) from policy (*was that good enough?*).
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `core` | A live attack that defeated provenance verification without forging anything |
+| Cryptography | `adjacent` | Signatures and Sigstore worked as designed |
+| This project | `core` | Direct evidence that strong evidence does not imply entitlement |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+- **R-M-07**: digest and provenance were correct and useless. This is the sharpest available argument that binding is necessary and not sufficient.
+- **R-O-02**: a short-lived OIDC token was stolen from process memory and used inside its window. Short lifetime narrows exposure, it does not stop use.
+- **Topic**: the post says SLSA records evidence and policy decides what is acceptable, which is the topic's own distinction, in the project's words.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
-
-| Name | Kind | License | URL |
-|---|---|---|---|
+None applicable: this source describes an incident, not something to build on. No search was run.
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+**No `distilled/`.** This is the summary bar. A web source has no FX-1 obligation, and nothing here needed a further artifact.
+
+**Relations.** `cites`: the post links pages of `slsa-1-2` (levels, threats, build and source requirements, verifying artifacts). `see_also`, each with its reason: `slsa-provenance-1-2`, the attestation format that was valid here; `slsa-vsa-1-2`, which the post proposes as the way to make layered verification tractable; `sigstore-threat-model`, whose statement that a signature proves only authentication this incident illustrates; `crowdstrike-sunspot`, an earlier compromise inside a legitimate build, which that record's summary already compares to this one. The edge to `pypi-trusted-publishers` is authored on that record.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+- **The counterfactual is the author's.** The claim that an L3 builder would have stopped this is an argument from requirements, not a test.
+- **A tension in the argument.** The post says an attacker who fully controls code inside a trusted builder can still produce conforming provenance, and also that L3 addresses this class of attack. The second claim depends on L3 keeping that code out, and the post names no platform where this was tested.
+- **Secondary source.** Attack details come from TanStack's postmortem and GHSA-g7cv-rxg3-hmpx, which were not read here.
+- **Read scope.** The whole post was read. No package from the incident was fetched.

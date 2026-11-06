@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rabin-1979-tr212
 record: rabin-1979-tr212
 type: summary
-updated: "2026-09-26"
+updated: "2026-11-05"
 ---
 
 # Digitalized Signatures and Public-Key Functions as Intractable as Factorization
@@ -11,46 +11,45 @@ updated: "2026-09-26"
 |  |  |
 |---|---|
 | **Type** | paper |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | https://dspace.mit.edu/handle/1721.1/149499 |
-| **Source** | https://dspace.mit.edu/handle/1721.1/149499 |
-| **Digest** | `not fetched` |
+| **Maturity** | unset: the enum has no value for a peer-reviewed paper or a technical report |
+| **Authors** | Michael O. Rabin |
+| **Published** | 1979-01, MIT/LCS/TR-212 |
+| **Identifier** | MIT/LCS/TR-212 |
+| **Source** | https://publications.csail.mit.edu/lcs/pubs/pdf/MIT-LCS-TR-212.pdf |
+| **Digest** | `sha256:e8b37a44…` of the PDF (full value in `record.yaml`), fetched 2026-11-01 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+Rabin gives a public-key function E(x) = x(x+b) mod n, with n = pq, and proves that inverting it for even a small fraction of values lets one factor n (Theorems 1 and 2, §4). His claim is that this makes forgery hard almost everywhere, not just in the worst case, which he calls the first proved result of its kind (Abstract). RSA, by contrast, is at most as hard as factoring (Introduction). To sign, the signer hashes the message with a random suffix U and retries until the result is invertible, expecting four tries (§3). Computing E takes one addition, one multiplication and one division (§1), which the Abstract puts at several hundred times faster than RSA. §5 sketches cube roots and judges the quadratic scheme best for signatures, since a random value is a cubic residue only 1/9 of the time.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `core` | Founds the hard-problem reduction for signatures |
+| Cryptography | `core` | First signature scheme tied to factoring by proof |
+| This project | `none` | Historical. Not a scheme we would deploy |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+It bears on no open `DEC-*` or `R-*`. `bears_on` is empty on purpose.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
-
-| Name | Kind | License | URL |
-|---|---|---|---|
+Not applicable and not searched: this is a scheme report, not software we would build on.
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+**No `distilled/`.** `paper` is outside FX-1's type scope, and nothing here calls for extraction. The PDF stays in `.cache/` and is not committed.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+- **The theorem is about inversion, the claim is about forgery.** Theorems 1 and 2 reduce inverting E to factoring. The step to forging signatures goes through a hash C and a random suffix, and no theorem covers that step. The text treats C as harmless.
+- **Disagreement recorded.** The Introduction says the ability to forge is equivalent to the ability to factor. `gmr-1988-adaptive` §§3 to 4 say this holds only under a known-message attack, and that padding breaks the proof. On chosen messages Rabin writes *"Actually, this does not seem a serious threat"* because of the hashing (§3). GMR's total break is of an unhashed form, so the two are not arguing about the same algorithm, but the claim of equivalence for the scheme as signed does not stand as proved.
+- **This is the TR, not the 1978 chapter.** `lamport-1979-one-way` improves on Rabin's earlier one-time scheme, a different construction we do not hold.
+- **C is not specified.** §3 refers to Rabin's 1978 chapter for the hash.
+- **Performance figures are 1979 comparisons** with RSA.
+- **Read whole**, all 20 PDF pages, through local OCR, which misses some formulas. The 2026-11-05 verify pass then re-read every text page as a page image and checked each claim and locator above, and the quoted §3 sentence, against them.

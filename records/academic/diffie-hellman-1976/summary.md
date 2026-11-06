@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: diffie-hellman-1976
 record: diffie-hellman-1976
 type: summary
-updated: "2026-09-26"
+updated: "2026-11-05"
 ---
 
 # New Directions in Cryptography
@@ -11,46 +11,46 @@ updated: "2026-09-26"
 |  |  |
 |---|---|
 | **Type** | paper |
-| **Maturity** | _unset — do not guess_ |
-| **Authors** | |
-| **Published** | |
-| **Identifier** | https://doi.org/10.1109/TIT.1976.1055638 |
-| **Source** | https://doi.org/10.1109/TIT.1976.1055638 |
-| **Digest** | `not fetched` |
+| **Maturity** | unset: the enum has no value for a peer-reviewed paper or a technical report |
+| **Authors** | Whitfield Diffie, Martin E. Hellman |
+| **Published** | 1976-11, IEEE Transactions on Information Theory IT-22(6), pp. 644-654 |
+| **Identifier** | DOI 10.1109/TIT.1976.1055638 |
+| **Source** | https://www-ee.stanford.edu/~hellman/publications/24.pdf |
+| **Digest** | `sha256:03fa2f49…` of the PDF (full value in `record.yaml`), fetched 2026-11-01 |
 
 ## Overview
 
-_Two to five sentences. What this document is and what it claims — the
-argument, not the table of contents._
+Diffie and Hellman argue that two problems block the move to teleprocessing: key distribution needs a secure channel, and conventional authentication cannot settle a dispute between sender and receiver (§I, §II). They propose public key cryptosystems, in which computing the deciphering key from the enciphering key is infeasible, and a public key distribution system based on exponentiation modulo a prime (§III). They then state the requirement that all later signature work inherits: a message anyone can check and nobody else, including the recipient, could have produced (§I, §IV). §IV shows that any public key cryptosystem yields signatures by "deciphering" the message, and gives Lamport's one-time scheme as a partial solution that needs only a one-way function. §V orders the problems by difficulty and introduces trap doors, and §VI asks whether complexity theory can replace certification by cryptanalytic attack.
 
 ## Applicability
 
 | Axis | Rating | Why |
 |---|---|---|
-| Security | | |
-| Cryptography | | |
-| This project | | |
+| Security | `core` | Defines dispute as a threat, alongside eavesdropping and injection (§II) |
+| Cryptography | `core` | Origin of public key cryptosystems and of the discrete-exponentiation key exchange |
+| This project | `adjacent` | Background to every signature suite we might choose |
 
-_Name the `DEC-*` or `R-*` it bears on, or say plainly that it bears on none
-yet and this is a stub._
+It bears on no open `DEC-*` or `R-*`, so `bears_on` is empty on purpose. §III's warning that the public file must be protected, *"It is crucial that the public file of enciphering keys be protected from unauthorized modification."*, is the problem R-M-02 sidesteps by naming a principal by its key, but this paper does not reach that design and we do not claim it as support.
 
 ## Implementations
 
-_What exists that we could build on. Open source and commercial. Record
-"searched: none found on YYYY-MM-DD" — that is a result too._
-
-| Name | Kind | License | URL |
-|---|---|---|---|
+Not applicable and not searched: this is a theory paper, not software we would build on. Concrete signature schemes are in `rfc-8032` and `fips-186-5`.
 
 ## Artifacts in this record
 
-_Everything else in this directory and what it is for._
-
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
+| `summary.md` | this document |
+
+**No `see_also`.** `lamport-1979-one-way`, `rsa-1978`, `merkle-1980-protocols` and `merkle-1989-certified` all cite this paper, and those `cites` entries carry the link, so a judged edge would only duplicate them.
+
+**No `distilled/`.** `paper` is outside FX-1's type scope, and nothing here calls for extraction. The PDF stays in `.cache/` and is not committed.
 
 ## Limits
 
-_What this document does not settle. If there is nothing here, it has not been
-read critically._
+- **Read whole**, from the author-hosted scan of the IEEE print. The text layer is OCR, so equations were read for sense and are not quoted here.
+- **No public key cryptosystem is given.** §I says the problem is still largely open, and §III calls its matrix example useless. RSA came later (`rsa-1978`).
+- **The signature is not defined against an attacker.** The paper states a goal, not a security model. Signing by inverting a trap-door function directly is the construction `gmr-1988-adaptive` §3 shows is existentially forgeable with a key-only attack.
+- **Security of the key exchange is conjectural.** §III has no proof that the system is secure when logs are hard. The q^(1/2) estimate for logs is the 1976 best known, and `elgamal-1985` §V already reports subexponential algorithms.
+- **Identity is assumed.** The public file is presumed to authenticate users. How it does so is not settled here; see `merkle-1980-protocols` for certificates and tree authentication.
