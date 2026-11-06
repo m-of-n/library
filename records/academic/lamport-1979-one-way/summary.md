@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: lamport-1979-one-way
 record: lamport-1979-one-way
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Constructing Digital Signatures from a One Way Function
@@ -31,6 +31,8 @@ Lamport signs with nothing but a one-way function. The signer publishes the imag
 | This project | `adjacent` | Ancestor of the hash-based schemes in `rfc-8391` and `rfc-8554` |
 
 It bears on no open `DEC-*` or `R-*`. `bears_on` is empty on purpose.
+
+`see_also: rfc-8554` because LMS is a deployed descendant of the one-way-function signature this report starts. RFC 8554 does not cite the report; its abstract names Lamport only as lineage, so the edge is our judgement rather than a `cites`. The links to `diffie-hellman-1976`, which reference [1] cites, and to `merkle-1989-certified`, which cites this report, are carried by `cites` and not repeated as `see_also`.
 
 ## Implementations
 

@@ -50,6 +50,8 @@ RFC 9529 is test material for `rfc-9528`: two complete annotated sessions (§2, 
 
 **No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. An `rfc` record owes FX-1 when someone extracts it, and no issue owns that yet. No keyword count is given because none has been reconciled. §4 is fixture-shaped, so FX-1 would have `examples/` to fill. The bytes are not lifted here.
 
+**No `see_also`.** This RFC and `rfc-9528` cite each other. No reason was found for an edge to `rfc-9668` beyond both being EDHOC companions, so none is authored.
+
 ## Limits
 
 - **The positive traces were not recomputed.** §2 and §3 were not re-derived, so the claim of two verifying implementations is §1's.

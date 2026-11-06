@@ -44,7 +44,7 @@ Kept off **DEC-002** deliberately: `ADR-0004` is decided and this RFC offers no 
 | Name | Kind | License | URL |
 |---|---|---|---|
 | pycoreconf | open source, Python, CORECONF | GPL-3.0 | https://github.com/alex-fddz/pycoreconf |
-| ccoreconf | open source, C, CORECONF | not stated by GitHub | https://github.com/manojgudi/ccoreconf |
+| ccoreconf | open source, C, CORECONF | MIT (LICENSE file; GitHub detects Other) | https://github.com/manojgudi/ccoreconf |
 | rustconf | open source, Rust, CORECONF | Apache-2.0 | https://github.com/samsirohi11/rustconf |
 
 ## Artifacts in this record
@@ -55,6 +55,8 @@ Kept off **DEC-002** deliberately: `ADR-0004` is decided and this RFC offers no 
 | `summary.md` | this document |
 
 **No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. An `rfc` record owes FX-1 when someone extracts it, and no issue owns that yet. No keyword count is given because none has been reconciled.
+
+**No `see_also`.** `rfc-9997` cites this RFC, so that record's `cites` already links the two.
 
 ## Limits
 

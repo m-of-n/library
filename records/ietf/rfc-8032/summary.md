@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-8032
 record: rfc-8032
 type: summary
-updated: "2026-11-01"
+updated: "2026-11-05"
 ---
 
 # Edwards-Curve Digital Signature Algorithm (EdDSA)
@@ -30,17 +30,17 @@ RFC 8032 specifies EdDSA, a variant of Schnorr's system on Edwards curves, for e
 | Cryptography | `core` | Normative for EdDSA as used by COSE (`rfc-9053`) |
 | This project | `adjacent` | A likely suite, not a decided one. NG3 keeps algorithms unfrozen |
 
-`bears_on: R-M-02`: a public key is a fixed 32 or 57 octet string with a defined encoding (§1, §5), so it can stand as a principal's identifier. `bears_on: R-O-05`: §8.7 sets a conditional MUST on buffering the whole message and explains that it is unsafe to process unverified data, which supports verifying the signed bytes before using them. Neither is a decision for a suite.
+`bears_on: R-M-02`: a public key is a fixed 32 or 57 octet string with a defined encoding (§1, §5), so it can stand as a principal's identifier. `bears_on: R-O-05` (proposed in `ARCH-0001-PROPOSAL-v0.2.0`, not yet accepted into ARCH-0001 §5.3): §8.7 sets a conditional MUST on buffering the whole message and explains that it is unsafe to process unverified data, which supports verifying the signed bytes before using them. Neither is a decision for a suite.
 
 ## Implementations
 
-Searched **2026-11-01** for implementations. This covers open source only and is not exhaustive. Commercial HSM support was not searched. OpenSSL and libsodium are listed in `fips-186-5` from its 2026-09-22 search and were not re-checked here.
+Searched **2026-11-01**, licences re-checked **2026-11-04** against the Go repository LICENSE and the crates.io API. This covers open source only and is not exhaustive. Commercial HSM support was not searched. OpenSSL and libsodium are listed in `fips-186-5` from its 2026-09-22 search and were not re-checked here.
 
 | Name | Kind | License | URL |
 |---|---|---|---|
-| Go `x/crypto` ed25519 | open source | not confirmed in this search | https://go.googlesource.com/crypto |
-| RustCrypto `ed25519` | open source | Apache-2.0 OR MIT (licenses.dev) | https://licenses.dev/cargo/ed25519/1.5.3 |
-| `ed25519-dalek` | open source | Apache-2.0 OR MIT for 1.0.1 (licenses.dev dependency view) | https://licenses.dev/cargo/ed25519-dalek-bip32/0.1.1 |
+| Go `x/crypto` ed25519 | open source | BSD-3-Clause (repository LICENSE) | https://go.googlesource.com/crypto |
+| RustCrypto `ed25519` (signature types, not an implementation of the arithmetic) | open source | Apache-2.0 OR MIT (crates.io) | https://crates.io/crates/ed25519 |
+| `ed25519-dalek` | open source | BSD-3-Clause (crates.io, current versions) | https://crates.io/crates/ed25519-dalek |
 
 ## Artifacts in this record
 
@@ -53,10 +53,12 @@ Searched **2026-11-01** for implementations. This covers open source only and is
 
 ## Limits
 
+- **`see_also: schnorr-1991-jcryptology`**, because §1 calls EdDSA *"a variant of Schnorr's signature system"* and §9 does not cite Schnorr, so the lineage is otherwise invisible. The edges to `rfc-9053` and `sp-800-186` are authored on those records and are not repeated here.
 - **Informational, from the IRTF.** The Status of This Memo says it is not an Internet Standards Track specification and that it is a CFRG product. Standing comes from use, such as `rfc-9053` and `fips-186-5`, not from this RFC. It is filed under `body: ietf`, and `publisher` was corrected from IETF to IRTF.
 - **The Python in §6 and Appendix A is not side-channel silent**, says §8.1. Do not ship it.
 - **Deterministic means no fresh nonce, not no entropy.** §8.2 still needs randomness for key generation.
 - **Verification agreement is not complete.** §8.8 explains why the formulas multiply by the cofactor. It describes the disagreement risk rather than ruling on it for all implementations, so byte-identical verdicts across libraries are not promised.
 - **§8.5 carries a SHOULD NOT on the prehashed variants**, Ed25519ph and Ed448ph, and a RECOMMENDED on Ed25519 or Ed448.
 - **A sufficiently large quantum computer breaks both curves** (§1, §8.5).
-- **Read by section, not whole.** Read closely: §1, §3.3, §3.4, §4, §8. Read in part: §2, §3 opening, §5 section structure. §5's arithmetic, §6, §7 and the appendices were not read. Test vectors were not run. Errata were not checked: the errata page gave our client nothing usable.
+- **Read by section, not whole.** Read closely: §1, §3.3, §3.4, §4, §8. Read in part: §2, §3 opening, §5 section structure. §5's arithmetic, §6, §7 and the appendices were not read. Test vectors were not run.
+- **Errata.** The RFC Editor errata page, fetched 2026-11-05, lists 6 verified (4 technical, 2 editorial), 4 held for document update and 1 rejected. The verified technical ones touch passages this summary leans on: EID 5968 corrects §3.1's scalar range to 0 <= S <= L - 1, matching §5.1.7, and EID 6348 corrects §3.4's notation. EID 6851, on §8.7, is an editorial acronym fix (IFU to IUF) and leaves the conditional MUST unchanged. The others are EID 5930 (§6 code), EID 8197 (§5.1.4 reference) and EID 5519 (§5.1.7, editorial). The held ones (EIDs 5758, 5759, 6306, 7031) were not assessed.

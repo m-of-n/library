@@ -20,7 +20,7 @@ updated: "2026-11-01"
 
 ## Overview
 
-FIPS 186 is the first Digital Signature Standard, and prescribes one algorithm: the Digital Signature Algorithm, with SHA as its hash (§1, §3). DSA works in a 160-bit subgroup of a prime field of 512 to 1024 bits (§4). A signature is the pair r = (g^k mod p) mod q and s = k^-1(SHA(M) + xr) mod q (§5), a form descended from ElGamal's with a shorter result (our reading; the standard does not say so). The per-message k must be secret and regenerated for each signature (§4). The appendices give prime generation (2), random number generation (3) and a worked example (5). Change Notice 1 replaces the example for SHA-1 and adds a patent note to the precomputation method.
+FIPS 186 is the first Digital Signature Standard, and prescribes one algorithm: the Digital Signature Algorithm, with SHA as its hash (§1, §3). DSA works in a 160-bit subgroup of a prime field of 512 to 1024 bits (§4). A signature is the pair r = (g^k mod p) mod q and s = k^-1(SHA(M) + xr) mod q (§5), a form descended from ElGamal's with a shorter result (our reading; the standard does not say so). That descent is the reason for the `see_also` edge to `elgamal-1985`. The per-message k must be secret and regenerated for each signature (§4). The appendices give prime generation (2), random number generation (3) and a worked example (5). Change Notice 1 replaces the example for SHA-1 and adds a patent note to the precomputation method.
 
 ## Applicability
 

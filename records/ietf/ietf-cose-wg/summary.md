@@ -23,7 +23,7 @@ updated: "2026-11-01"
 
 The COSE charter narrows the group to four kinds of Standards Track document: algorithm use, additional attributes, header parameters, and key representations, plus a CBOR encoding of the RFC 5280 certificate profile that is required to be invertible. The two exclusions matter more to us than the list. *"Key management and binding of keys to identities are out of scope"*, and *"The COSE WG will not innovate in terms of cryptography"*: algorithms must come from RFCs, active IRTF CFRG or IETF WG documents, or positive CFRG review.
 
-So COSE is an envelope and registry maintainer. It does not compete with anything m-of-n says about who a key is. The documents page shows the live output: RFC 9942 (receipts), RFC 9995 (hash envelope) and RFC 9921 (timestamps) have all shipped against their milestones, and post-quantum algorithm work is in progress.
+So COSE is an envelope and registry maintainer. It does not compete with anything m-of-n says about who a key is. The documents page shows the live output: RFC 9942 (receipts), RFC 9995 (hash envelope) and RFC 9921 (timestamps) have all shipped against their milestones. Post-quantum algorithm work is partly shipped, RFC 9964 (ML-DSA), and partly in progress (SPHINCS+, Falcon).
 
 ## Applicability
 
@@ -54,5 +54,5 @@ So COSE is an envelope and registry maintainer. It does not compete with anythin
 
 - **It does not specify anything.** The format is in `rfc-9052` and `rfc-9053`, the algorithms in their own records.
 - **The charter names no IANA policy**, though the group's work fills IANA registries. Registry policy is in the RFCs.
-- **Membership is not exact.** The documents page lists 16 RFCs. Records marked `part_of` this group do not all appear there: `rfc-8230` was a non-WG document, `rfc-8392` and `rfc-8747` came from ACE, and `rfc-9021` was an Independent Stream submission. All four are reported in the PR, not changed.
+- **Membership is not exact.** The documents page lists 16 RFCs. Records marked `part_of` this group include two that do not appear there, `rfc-8392` and `rfc-8747`, which came from ACE (checked 2026-11-05). `rfc-8230` (non-WG) and `rfc-9021` (Independent Stream) no longer carry the edge.
 - **Read scope.** The whole charter text. The about page and the documents page, as text. The history page was checked only for milestone events. Mailing list, wiki and issue tracker not read.

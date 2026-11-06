@@ -20,7 +20,7 @@ updated: "2026-11-01"
 
 ## Overview
 
-FIPS 186-3 rewrites the standard around what a verifier can conclude. §3 separates *verification*, the mathematics, from *validation*, which also needs assurance of domain parameters, public key validity, possession of the private key, and the claimed signatory's identity, and explains what goes wrong without each. Without identity assurance, it says, a verifier has integrity but not source authentication. Algorithmically it raises DSA to pairs (L, N) up to (3072, 256) with SHA-2 (§4.2), admits RSA through both X9.31 and PKCS #1 with added requirements (§5), and approves ECDSA under X9.62-2005 with key-use limits (§6). Key pairs for signatures shall not be used for any other purpose (§3).
+FIPS 186-3 rewrites the standard around what a verifier can conclude. §3 separates *verification*, the mathematics, from *validation*, which also needs assurance of domain parameter validity (§3.1, §3.3), public key validity, possession of the private key, and the claimed signatory's identity. §3 gives a numbered reason for each of the last three. Without identity assurance, it says, a verifier has integrity but not source authentication. Algorithmically it raises DSA to pairs (L, N) up to (3072, 256) with any approved FIPS 180-3 hash (§4.2), admits RSA through both X9.31 and PKCS #1 with added requirements (§5), and approves ECDSA under X9.62-2005 with key-use limits (§6). Key pairs for signatures shall not be used for any other purpose (§3).
 
 ## Applicability
 
@@ -50,5 +50,5 @@ Not searched: this standard is withdrawn. See `fips-186-5`.
 - **Softer than its predecessors, and on purpose or not, it does not say.** `fips-186` says signatures cannot be forged and the signatory cannot repudiate. Here §3 says *"signatures are designed so that they cannot be forged"* and the Abstract says *"the signatory cannot easily repudiate the signature at a later time"*. The document gives no reason for the change.
 - **Assurances are delegated.** Methods live in SP 800-89, timeliness in SP 800-102, and neither is held in the library.
 - **RSA and ECDSA still lean on external standards.** X9.31, X9.62-2005 and PKCS #1 were not read.
-- **No `supersedes` from `fips-186-4` is assumed here.** That edge belongs on `fips-186-4`, and it is being added by another PR. This record authors only its own edge to `fips-186-2`; `superseded_by` is derived.
+- **No `supersedes` from `fips-186-4` is authored here.** That edge is authored on `fips-186-4`. This record authors only its own edge to `fips-186-2`; `superseded_by` is derived.
 - **Read by section.** Read: front matter, §1, §3, §4.1, §4.2, §4.4.2, §5 and §6 openings, the Appendix E opening. The glossary was sampled. The appendices on generation, primality and curves (A to D, F) were not read beyond their contents and one page, and no example was run.

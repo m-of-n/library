@@ -47,7 +47,7 @@ Not searched: this standard is superseded. See `fips-186-5`.
 
 ## Limits
 
-- **RSA and ECDSA are by reference.** §§7 and 8 are two sentences each. X9.31 and X9.62 are not held and were not read.
+- **RSA and ECDSA are by reference.** §7 is two sentences and §8 four. X9.31 and X9.62 are not held and were not read.
 - **Its own text disagrees about the count.** §1 prescribes three algorithms, and §2 still says two: a leftover from `fips-186-1`, not a change of scope.
 - **The attack is known here only as the notice reports it.** The notice spells the name Bliechenbacher and cites a press article. The attack itself was not read.
 - **Dates need care.** CSRC gives 2001-10-05 for the first edition, when the change-notice edition replaced it. The change-notice edition's cover gives 2009-06-09. The first edition's cover says superseded on October 5, 2001 and points to 186-3, which skips a step.
