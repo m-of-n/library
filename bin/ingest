@@ -61,7 +61,11 @@ def enrich_ietf(src, meta, _type=None):
             id=meta.get("id") or f"rfc-{n}",
             identifiers={"rfc": int(n), "doi": f"10.17487/RFC{n}",
                          "url": f"https://www.rfc-editor.org/rfc/rfc{n}.html"},
-            url=f"https://www.rfc-editor.org/rfc/rfc{n}.html",
+            # content.url is the PLAIN TEXT: it is what bin/fetch-source caches
+            # as .cache/<id>.txt and what bcp14-count, check-locators and
+            # fx1-skeleton read by line number. The .html rendering cached as
+            # .bin and left every line-based tool without a source (library#86).
+            url=f"https://www.rfc-editor.org/rfc/rfc{n}.txt",
             type="rfc")
         return meta
     # A datatracker URL ends in "/", so the last path segment is empty: that bug
@@ -189,7 +193,8 @@ def main():
 
     if a.fetch and meta.get("url", "").startswith("http"):
         try:
-            h, n = fetch(meta["url"], CACHE / f"{rid}.bin")
+            ext = ".txt" if meta["url"].endswith((".txt", ".md", ".json", ".xml", ".cddl", ".abnf")) else ".bin"
+            h, n = fetch(meta["url"], CACHE / f"{rid}{ext}")
             meta["sha256"] = h
             print(f"  fetched {n} bytes  sha256:{h[:16]}…")
         except Exception as e:

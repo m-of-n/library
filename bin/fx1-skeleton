@@ -1,0 +1,341 @@
+#!/usr/bin/env python3
+"""fx1-skeleton — build the verbatim layer of an FX-1 extraction by script, so
+no agent ever types a quotation, a locator or a line range (library#86).
+
+    bin/fx1-skeleton records/ietf/<id> [--xml PATH] [--txt PATH] [--out DIR] [--force]
+
+Reads `.cache/<id>.txt` (the digest-verified source; refuses if the digest
+differs from `content.sha256`) and, when present, `.cache/<id>.xml`, the RFC
+XML v3 rendering (`bin/fetch-source --xml`), for `<sourcecode>` blocks and a
+per-section `<bcp14>` cross-count. RFCs before ~8650 have no v3 XML; the .txt
+alone still yields every requirement and candidate.
+
+Writes, under distilled/:
+
+  requirements.yaml       one entry per BCP 14-bearing sentence: id, locator,
+                          source_lines, text, and verb when the sentence holds
+                          one keyword. `text`, `locator` and `source_lines` are
+                          OWNED BY THIS SCRIPT. Pass 1 fills actor, object,
+                          field, testable (and verb where it is TODO, by
+                          splitting); it never retypes a quotation.
+  inferred-candidates.yaml every keyword-less sentence that may bind: a cue
+                          word, a procedure step, a list item, anything in an
+                          IANA section. Pass 1 gives each a verdict.
+  normative.md            the keyword sentences by section, plus an index of
+                          every code block and figure.
+  schema/*.verbatim.<ext> every grammar <sourcecode> (cddl, abnf, asn.1).
+  examples/ex-NN.verbatim.<ext>, examples/fig-NN.verbatim.txt
+                          every other <sourcecode>, and every <artwork>. Pass 1
+                          deletes figures that are not examples.
+  skeleton-report.txt     txt keyword count vs XML <bcp14>, per section, so the
+                          reconciliation is computed, not written.
+
+What the script cannot see, and pass 1 must still hunt: binding statements
+with no cue (two RFC 9679 rules a key id depends on — the excluded parameters
+and the map-key order — are stated nowhere outright), and examples printed as
+plain paragraphs rather than <sourcecode>.
+
+Measured (library#86): over 29 RFCs already at profile: full, the keyword
+layer recovered 1482 of 1484 source keywords and missed 7 of 1319 keyword
+requirements (3 a gold inconsistency, 2 ASN.1 comments, 1 table cell, 1 list
+lead-in).
+"""
+import argparse, hashlib, pathlib, re, sys
+import xml.etree.ElementTree as ET
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "bin"))
+import _bcp14  # noqa: E402
+import _source_text as st  # noqa: E402
+from _record_yaml import load_yaml  # noqa: E402
+
+BULLET = re.compile(r"^\s*(?:\*|-|o|\d+\.|\([a-z0-9]+\)|[a-z]\))\s+")
+STEP = re.compile(r"^\s*(?:\d+\.|\([a-z0-9]+\)|[a-z]\))\s+")
+# Cues for a statement that may bind without a BCP 14 keyword. Measured on
+# RFC 9202 (recovers 30 of the 44 inferred entries a max-effort pass found) and
+# widened after RFC 9679's verify pass found five binding sentences none of
+# the first set matched ("needs to", "more appropriate", "declares", ...), and
+# again against RFC 9679's max-effort extraction ("is used", "contains", ...).
+CAND = re.compile(
+    r"\b(must|shall|should|may|required|requires?|recommended|optional|"
+    r"needs? to|has to|have to|out of scope|not part of|is (?:set|subject|associated)|"
+    r"only|cannot|can be|can not|never|always|assumes?|application[- ]specific|"
+    r"registration|registered|implies|declares?|defines?|ensures?|"
+    r"(?:more|not) (?:appropriate|reliable|suitable)|is (?:not )?(?:valid|invalid)|"
+    r"is (?:computed|encoded|ordered|excluded|included)|ignored?|reject(?:ed|s)?|"
+    r"error|in order|contains?|does not|do not|therefore|"
+    r"(?:is|are) (?:not )?(?:used|identified|expressed|followed|represented|carried|"
+    r"conveyed|a digest))\b", re.I)
+ABBR = re.compile(r"(?:e\.g|i\.e|etc|cf|vs|Sec|Fig|al)\.$", re.I)
+NO_CANDIDATES = re.compile(r"references|acknowledg|contributors|authors?'? address|"
+                           r"changes? (?:from|since)|change ?log|document history",
+                           re.I)
+IANA = re.compile(r"iana", re.I)
+
+
+def q(s):
+    return "'" + str(s).replace("'", "''") + "'"
+
+
+def lines_field(a, b):
+    return f"'{a}-{b}'" if a != b else f"'{a}'"
+
+
+def blocks(cleaned, heads):
+    """Paragraph and list-item blocks, each a [(lineno, text)]."""
+    cur, res = [], []
+    for ln, l in cleaned:
+        if l is None:
+            continue
+        if not l.strip() or ln in heads:
+            if cur:
+                res.append(cur)
+            cur = []
+            continue
+        if cur and BULLET.match(l):
+            res.append(cur)
+            cur = []
+        cur.append((ln, l))
+    if cur:
+        res.append(cur)
+    return res
+
+
+def sentences(block):
+    """[(text, first_line, last_line)] for each sentence of a block."""
+    toks = [(t, ln) for ln, l in block for t in l.split()]
+    sents, cur = [], []
+    for j, (t, ln) in enumerate(toks):
+        cur.append((t, ln))
+        nxt = toks[j + 1][0] if j + 1 < len(toks) else None
+        if (re.search(r"[.!?][\"')\]]*$", t) and not ABBR.search(t)
+                and (nxt is None or re.match(r"[A-Z\"(\[*]", nxt))
+                and not re.fullmatch(r"\d+(\.\d+)*\.", t)):
+            sents.append(cur)
+            cur = []
+    if cur:
+        sents.append(cur)
+    return [(st.join(s), s[0][1], s[-1][1]) for s in sents]
+
+
+def pn_key(pn):
+    m = re.match(r"section-([0-9.]+|[a-z](?:\.[0-9]+)*)", pn or "")
+    if not m:
+        return None
+    s = m.group(1).rstrip(".")
+    return ("§" + s) if s[0].isdigit() else "Appendix " + s.upper()
+
+
+def read_xml(xmlp):
+    """([(section, tag, type, content)], {section: <bcp14> count})."""
+    tree = ET.parse(xmlp)
+    code, kw = [], {}
+    for el in tree.iter():
+        if el.tag in ("sourcecode", "artwork") and (el.text or "").strip():
+            code.append((pn_key(el.get("pn")) or "?", el.tag, el.get("type") or "", el.text))
+    for sec in tree.iter("section"):
+        pn = sec.get("pn") or ""
+        if not re.fullmatch(r"section-([0-9.]+|[a-z](?:\.[0-9]+)*)", pn):
+            continue
+        kw[pn_key(pn)] = sum(1 for c in sec if c.tag != "section" for _ in c.iter("bcp14"))
+    return code, kw
+
+
+def locate(src, body, after=0):
+    """First source line range holding `body` line by line, or None."""
+    want = [l.strip() for l in body.strip("\n").split("\n")]
+    want = [w for w in want if w]
+    if not want:
+        return None
+    for i in range(after, len(src)):
+        if src[i].strip() != want[0]:
+            continue
+        j, k = i, 0
+        while j < len(src) and k < len(want):
+            s = src[j].strip()
+            if s == want[k]:
+                k += 1
+            elif s and not (st.FOOTER.match(s) or st.HEADER.match(s)):
+                break
+            j += 1
+        if k == len(want):
+            return i + 1, j
+    return None
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("rec")
+    ap.add_argument("--xml")
+    ap.add_argument("--txt")
+    ap.add_argument("--out", help="write here instead of <rec>/distilled")
+    ap.add_argument("--force", action="store_true")
+    a = ap.parse_args()
+    rec = pathlib.Path(a.rec).resolve()
+    meta = load_yaml(rec / "record.yaml") if (rec / "record.yaml").exists() else {}
+    rid = str(meta.get("id") or rec.name)
+    txtp = pathlib.Path(a.txt) if a.txt else ROOT / ".cache" / f"{rid}.txt"
+    xmlp = pathlib.Path(a.xml) if a.xml else ROOT / ".cache" / f"{rid}.xml"
+    if not txtp.exists():
+        sys.exit(f"fx1-skeleton: no {txtp} — bin/fetch-source {rid} --xml")
+    data = txtp.read_bytes()
+    want = str((meta.get("content") or {}).get("sha256") or "")
+    got = hashlib.sha256(data).hexdigest()
+    if want and got != want and not a.txt:
+        sys.exit(f"fx1-skeleton: {txtp.name} is sha256:{got[:16]}…, record cites "
+                 f"{want[:16]}… — not the source of record")
+    src = data.decode(errors="replace").split("\n")
+    if not st.looks_like_text(src):
+        sys.exit(f"fx1-skeleton: {txtp.name} is HTML, not the RFC .txt — point "
+                 f"content.url at rfcNNNN.txt (library#86)")
+    cleaned = st.clean(src)
+    sec = st.section_of_line(src)
+    letters = st.appendix_letters(src)
+    heads, titles = set(), {}
+    for i, l in enumerate(src, 1):
+        k = st.heading_key(l.replace("\f", ""), letters)
+        if k:
+            heads.add(i)
+            titles[k] = l.split(None, 1)[1] if " " in l else ""
+
+    def title_chain(key):
+        """Titles of `key` and its ancestors: §6.1's References parent counts."""
+        parts, k = [], key or ""
+        while k:
+            parts.append(titles.get(k, ""))
+            k = k.rsplit(".", 1)[0] if "." in k else ""
+        return " ".join(parts)
+
+    full = "\n".join(l for _, l in cleaned if l is not None)
+    bp = _bcp14._BOILERPLATE.search(full)
+    bp_text = re.sub(r"\s+", " ", bp.group(0)) if bp else None
+    code, xkw = read_xml(xmlp) if xmlp.exists() else ([], {})
+
+    reqs, cands, per_sec = [], [], {}
+    for b in blocks(cleaned, heads):
+        is_item = bool(BULLET.match(b[0][1]))
+        is_step = bool(STEP.match(b[0][1]))
+        for text, l1, l2 in sentences(b):
+            if bp_text and text in bp_text:
+                continue
+            s = sec[l1 - 1]
+            k = [re.sub(r"\s+", " ", x) for x in _bcp14._RX.findall(text)]
+            if k:
+                per_sec[s or "front"] = per_sec.get(s or "front", 0) + len(k)
+                reqs.append(dict(locator=s or "front matter", l1=l1, l2=l2, text=text, kw=k))
+                continue
+            if not s or NO_CANDIDATES.search(title_chain(s)):
+                continue
+            m = CAND.search(text)
+            cue = (m.group(0) if m else "procedure step" if is_step else
+                   "list item" if is_item else
+                   "IANA section" if IANA.search(title_chain(s)) else None)
+            if cue:
+                cands.append(dict(locator=s, l1=l1, l2=l2, text=text, cue=cue))
+
+    d = pathlib.Path(a.out) if a.out else rec / "distilled"
+    if (d / "requirements.yaml").exists() and not a.force:
+        sys.exit("fx1-skeleton: requirements.yaml exists; --force to overwrite")
+    (d / "schema").mkdir(parents=True, exist_ok=True)
+    (d / "examples").mkdir(parents=True, exist_ok=True)
+
+    src_count = _bcp14.count("\n".join(src))
+    ext_count = sum(len(r["kw"]) for r in reqs)
+    recon = ('""' if src_count == ext_count else
+             q(f"TODO: the skeleton carries {ext_count} of {src_count}; "
+               f"see skeleton-report.txt and account for each"))
+    out = ['schema: "library-requirements/v1"', f"record: {rid}",
+           "generated_by: bin/fx1-skeleton",
+           f"source_version: {q(meta.get('title') or 'TODO')}",
+           f"source_digest: {q(got)}",
+           f"source_keyword_count: {src_count}        # bin/bcp14-count",
+           f"extracted_keyword_count: {ext_count}",
+           f"reconciliation: {recon}",
+           'reviewed_by: ""',
+           "# text, locator and source_lines are script-owned: bin/check-quotes",
+           "# verifies each against the source. Pass 1 fills the TODO fields.",
+           "requirements:"]
+    for i, r in enumerate(reqs, 1):
+        kinds = sorted(set(r["kw"]))
+        out += [f"  - id: '{rid}#R-{i:04d}'",
+                f"    locator: {q(r['locator'])}",
+                f"    source_lines: {lines_field(r['l1'], r['l2'])}",
+                f"    text: {q(r['text'])}",
+                f"    verb: {q(kinds[0]) if len(kinds) == 1 else q('TODO: ' + ', '.join(r['kw']) + ' — split')}",
+                "    kind: stated",
+                "    actor: 'TODO'", "    object: 'TODO'", "    field: 'TODO'",
+                "    testable: 'TODO'"]
+    (d / "requirements.yaml").write_text("\n".join(out) + "\n")
+
+    cy = ["# GENERATED by bin/fx1-skeleton. Statements WITHOUT a BCP 14 keyword that",
+          "# may still bind. Pass 1 gives EVERY one a verdict:",
+          "#   stated   — binding, verbatim: add to requirements.yaml with kind: stated,",
+          "#              verb: none, this text and source_lines, candidate: <C-id>",
+          "#   inferred — the obligation is implied, not said: kind: inferred, own words",
+          "#   reject   — not binding; say why in reason",
+          "# bin/validate checks every verdict and every candidate: back-link.",
+          f"record: {rid}", "generated_by: bin/fx1-skeleton", "candidates:"]
+    for i, c in enumerate(cands, 1):
+        cy += [f"  - id: 'C-{i:04d}'", f"    locator: {q(c['locator'])}",
+               f"    source_lines: {lines_field(c['l1'], c['l2'])}",
+               f"    cue: {q(c['cue'])}", f"    text: {q(c['text'])}",
+               "    verdict: TODO", "    reason: ''"]
+    (d / "inferred-candidates.yaml").write_text("\n".join(cy) + "\n")
+
+    nm = ["---", f"record: {rid}", "kind: normative", f'title: "{rid} — normative text"',
+          "generated_by: bin/fx1-skeleton", 'reviewed_by: ""', "---", "",
+          "# Normative text", "",
+          "Generated verbatim by `bin/fx1-skeleton`; each quotation carries its",
+          "source lines and `bin/check-quotes` verifies it. Pass 1 adds the",
+          "keyword-less binding text (tables, IANA rules, lists) as",
+          '`<!-- q Lx-y -->` markers and lets `bin/check-quotes --render` write the words.', ""]
+    bysec = {}
+    for i, r in enumerate(reqs, 1):
+        bysec.setdefault(r["locator"], []).append((i, r))
+    for s, items in bysec.items():
+        nm += [f"## {s}", ""]
+        for i, r in items:
+            nm += [f"<!-- q L{r['l1']}-{r['l2']} -->", f"> {r['text']}", "",
+                   f"R-{i:04d}", ""]
+    n_s = n_e = n_f = 0
+    pos = 0
+    listing = []
+    for s, tag, typ, body in code:
+        at = locate(src, body, pos)
+        if at:
+            pos = at[0]
+        where = f"{s}, L{at[0]}-{at[1]}" if at else f"{s} (not located in the .txt)"
+        if tag == "artwork":
+            n_f += 1
+            name, cmt = f"examples/fig-{n_f:02d}.verbatim.txt", "#"
+        elif typ in ("cddl", "abnf", "asn.1"):
+            n_s += 1
+            ext = {"cddl": "cddl", "abnf": "abnf", "asn.1": "asn1"}[typ]
+            name, cmt = f"schema/{rid}-{n_s:02d}.verbatim.{ext}", ";" if ext != "asn1" else "--"
+        else:
+            n_e += 1
+            ext = {"cbor-diag": "diag", "json": "json", "xml": "xml"}.get(typ, "txt")
+            name, cmt = f"examples/ex-{n_e:02d}.verbatim.{ext}", "#"
+        hdr = (f"{cmt} VERBATIM from {rid} {where} (RFC XML <{tag}"
+               f"{' type=' + chr(34) + typ + chr(34) if typ else ''}>)\n")
+        (d / name).write_text((hdr if not name.endswith(".json") else "") + body.strip("\n") + "\n")
+        listing.append(f"- {where} `{typ or tag}` → `{name}`")
+    if listing:
+        nm += ["## Code blocks and figures (verbatim from the RFC XML)", ""] + listing + [""]
+    (d / "normative.md").write_text("\n".join(nm) + "\n")
+
+    rep = [f"txt keyword count (bcp14-count): {src_count}",
+           f"skeleton sentences: {len(reqs)}  keywords in them: {ext_count}",
+           f"XML <bcp14> total: {sum(xkw.values()) if xkw else 'no XML'}",
+           f"candidates (no keyword): {len(cands)}",
+           f"code blocks: {n_s} schema, {n_e} examples, {n_f} figures", "",
+           "per section: skeleton / xml"]
+    for s in sorted(set(per_sec) | set(xkw), key=lambda x: (x.startswith("A"), x)):
+        flag = "" if not xkw or per_sec.get(s, 0) == xkw.get(s, 0) else "   <-- differs"
+        rep.append(f"  {s:14} {per_sec.get(s, 0):3} / {xkw.get(s, '-') if xkw else '-':>3}{flag}")
+    (d / "skeleton-report.txt").write_text("\n".join(rep) + "\n")
+    print("\n".join(rep))
+
+
+if __name__ == "__main__":
+    main()

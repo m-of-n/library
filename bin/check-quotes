@@ -1,0 +1,165 @@
+#!/usr/bin/env python3
+"""check-quotes — quote-by-reference: every quotation of the source names the
+lines it comes from, and this checks the words against those lines
+(library#86).
+
+    bin/check-quotes records/<body>/<id> [--render] [--only FILE ...] [--txt PATH]
+
+  YAML      in requirements.yaml and inferred-candidates.yaml, every entry with
+            `source_lines` and `text`; in any other distilled/**/*.yaml, every
+            mapping with `source_lines` and `quote` (a `text` there is often a
+            note ABOUT those lines, which the first version of this tool
+            reported as 13 false mismatches over two records). The words must
+            lie inside the span those lines name AND the range must be tight:
+            dropping either end line loses it. A requirement with `split_of`
+            must also be a substring of its parent's text.
+  Markdown  in distilled/**/*.md and summary.md a quotation is written
+                <!-- q L120-123 -->
+                > ...verbatim...
+            and the blockquote must lie inside lines 120-123. An anchored
+            marker `<!-- q L120-123 "starts with" .. "ends with" -->` selects
+            the sub-span between the two anchors. With --render the blockquote
+            is (re)written from the source, so an agent writes the marker and
+            never the words. --only limits --render to the named files, so
+            parallel agents each render their own.
+
+"The source" is the .txt as bin/_source_text reads it: page breaks, aside
+bars and line-end hyphen breaks undone, nothing else. A quotation of anything
+else (a foreign document, an unmarked blockquote) is invisible to this check;
+hazards.md says how to audit those.
+
+Exit 1 on any mismatch. Always reports how many quotations it EXAMINED, so a
+clean result is distinguishable from not looking.
+"""
+import argparse, pathlib, re, sys
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "bin"))
+import _source_text as st  # noqa: E402
+from _yaml import parse as miniyaml  # noqa: E402
+
+MARK = re.compile(r'<!--\s*q\s+L(\d+)(?:-(\d+))?(?:\s+"([^"]*)"\s*\.\.\s*"([^"]*)")?\s*-->')
+WS = re.compile(r"\s+")
+QUOTING = {"requirements.yaml", "inferred-candidates.yaml"}
+
+
+def lines_of(v):
+    a, _, b = str(v).strip().strip("'\"").lstrip("L").partition("-")
+    return int(a), int(b.lstrip("L") or a)
+
+
+def walk(node, path=""):
+    """Every mapping in a parsed YAML tree, with a readable path."""
+    if isinstance(node, dict):
+        yield path, node
+        for k, v in node.items():
+            yield from walk(v, f"{path}.{k}" if path else str(k))
+    elif isinstance(node, list):
+        for i, v in enumerate(node):
+            yield from walk(v, f"{path}[{i}]")
+
+
+def check_yaml(f, cleaned, rel, bad):
+    try:
+        tree = miniyaml(f.read_text())
+    except Exception as e:  # a file the reader cannot parse is a finding
+        bad.append(f"{rel}: unreadable ({e})")
+        return 0
+    seen = 0
+    texts = {m.get("id"): WS.sub(" ", str(m.get("text", ""))).strip()
+             for _, m in walk(tree) if "id" in m and "text" in m}
+    n = len(cleaned)
+    field = "text" if f.name in QUOTING else "quote"
+    for path, m in walk(tree):
+        if "source_lines" not in m or field not in m:
+            continue
+        seen += 1
+        where = m.get("id") or path
+        try:
+            a, b = lines_of(m["source_lines"])
+        except ValueError:
+            bad.append(f"{rel}: {where}: source_lines {m['source_lines']!r} is not L or L-L")
+            continue
+        if not (1 <= a <= b <= n):
+            bad.append(f"{rel}: {where}: source_lines {a}-{b} outside the source (1-{n})")
+            continue
+        t = WS.sub(" ", str(m[field])).strip()
+        want = st.span(cleaned, a, b)
+        if not t or t not in want:
+            bad.append(f"{rel}: {where}: text is not in L{a}-{b}\n"
+                       f"      have: {t[:110]}\n      src : {want[:110]}")
+            continue
+        if m.get("split_of"):
+            parent = texts.get(m["split_of"])
+            if parent is None or t not in parent:
+                bad.append(f"{rel}: {where}: split_of {m['split_of']} — not a substring of the parent")
+        elif a != b and (t in st.span(cleaned, a + 1, b) or t in st.span(cleaned, a, b - 1)):
+            bad.append(f"{rel}: {where}: L{a}-{b} is wider than the text; tighten it")
+    return seen
+
+
+def check_md(f, cleaned, rel, bad, render):
+    lines = f.read_text().split("\n")
+    out, i, seen = [], 0, 0
+    while i < len(lines):
+        m = MARK.search(lines[i])
+        out.append(lines[i])
+        if not m:
+            i += 1
+            continue
+        seen += 1
+        a, b = int(m.group(1)), int(m.group(2) or m.group(1))
+        s = st.span(cleaned, a, b) if 1 <= a <= b <= len(cleaned) else None
+        if s is not None and m.group(3) is not None:
+            x = s.find(m.group(3))
+            y = s.find(m.group(4), max(x, 0))
+            s = s[x:y + len(m.group(4))] if x >= 0 and y >= 0 else None
+        j = i + 1
+        quote = []
+        while j < len(lines) and lines[j].startswith(">"):
+            quote.append(lines[j][1:].strip())
+            j += 1
+        q = " ".join(x for x in quote if x)
+        if render and s is not None:
+            out.append("> " + s)
+        else:
+            if s is None:
+                bad.append(f"{rel}:{i + 1}: marker L{a}-{b} — lines or anchors not found")
+            elif not q or q not in s:
+                bad.append(f"{rel}:{i + 1}: quote is not in L{a}-{b}\n      have: {q[:110]}")
+            out.extend(lines[i + 1:j])
+        i = j
+    if render:
+        f.write_text("\n".join(out))
+    return seen
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("rec")
+    ap.add_argument("--render", action="store_true")
+    ap.add_argument("--only", action="append", default=[])
+    ap.add_argument("--txt")
+    a = ap.parse_args()
+    rec = pathlib.Path(a.rec).resolve()
+    txt = pathlib.Path(a.txt) if a.txt else ROOT / ".cache" / f"{rec.name}.txt"
+    if not txt.exists():
+        sys.exit(f"check-quotes: no {txt} — bin/fetch-source {rec.name}")
+    cleaned = st.clean(st.read_lines(txt))
+    only = {pathlib.Path(o).resolve() for o in a.only}
+    bad, seen = [], 0
+    dist = rec / "distilled"
+    for f in sorted(dist.rglob("*.yaml")):
+        if not only or f.resolve() in only:
+            seen += check_yaml(f, cleaned, f.relative_to(rec), bad)
+    for f in sorted(dist.rglob("*.md")) + [rec / "summary.md"]:
+        if f.exists() and (not only or f.resolve() in only):
+            seen += check_md(f, cleaned, f.relative_to(rec), bad, a.render)
+    print(f"check-quotes: examined {seen} quotations, {len(bad)} mismatched")
+    for b in bad:
+        print("  " + b)
+    return 1 if bad else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

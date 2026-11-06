@@ -17,7 +17,8 @@ checklist is so you are not surprised by it.
 - [ ] `examples/` — every example as a fixture with expected result
 - [ ] `design-notes.md` — adopt / adapt / reject, mapped to our decisions (COSE/CBOR: MD-3, **and where the source cuts against it** — `docs/extraction.md`)
 - [ ] anything not applicable is in `not_applicable` **with a reason**
-- [ ] passes recorded: extract, verify, cross-check — all at effort `max`
+- [ ] passes recorded: extract, verify, cross-check — each at effort `max`, or `tiered` with its `agents` listed (judgement and verify always `max`; `docs/extraction.md`)
+- [ ] tokens recorded per agent where the harness reports them
 
 Stubs (`status: stub` or `queued`) are exempt: ingesting a reference is fine;
 calling it finished is not.
