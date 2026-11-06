@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: iso-iec-5962-2021
 record: iso-iec-5962-2021
 type: summary
-updated: "2026-11-03"
+updated: "2026-11-05"
 ---
 
 # Information technology — SPDX Specification V2.2.1
@@ -77,9 +77,15 @@ site is closed and points to the ISO and IEC webstores, at no charge. Its old `.
 path only returns a licence page, and returned the same page for a made-up filename,
 so that page proves nothing about this document.
 
-The blocker is the licence, not the price. The download requires accepting the ISO
-Customer Licence Agreement. In the capture of 2026-10-23, clause 7(b) bars access or
-processing "for or related to any machine learning, artificial intelligence (AI), or
-analogous computational purposes" without a separate licence, and names summarising.
-The licence was not accepted and the text was not fetched. Whether to obtain it is a
-human decision, as is how to read it if so.
+The blocker is the licence, not the price. On 2026-11-05 the user accepted ISO's
+free-download licence on their behalf. The Publicly Available Standards licence page
+incorporates the ISO End Customer Licence Agreement, whose clause 7(b) reads: *"The
+Licensee is not permitted to access, use, or process the ISO Publication for or related
+to any machine learning, artificial intelligence (AI), or analogous computational
+purposes, unless such use is expressly authorized under a separate licence agreement
+issued by ISO, an ISO Member Body, or an authorized distributor."* (iso.org licence
+page, section B, clause 7(b); Internet Archive capture 20261023130946). It names
+*"summarize"* among the barred uses. So the ISO text must not be read by an agent, and
+no file was served anyway: the PAS site returns its licence page even after "I accept",
+and www.iso.org returned 403. No digest. The SPDX-sourced sections above are unaffected:
+they come from the CC-BY-3.0 SPDX text, not from ISO.
