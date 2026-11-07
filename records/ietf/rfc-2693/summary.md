@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-2693
 record: rfc-2693
 type: summary
-updated: "2026-10-08"
+updated: "2026-11-06"
 ---
 
 # SPKI Certificate Theory
@@ -121,6 +121,17 @@ trusted to issue level n-1 — which is precisely the option this working group
 considered and rejected. Two prior-art sources, same design question, opposite
 answers; the `contradicts` edge is authored on `rfc-9580` and the argument is
 recorded in both summaries.
+
+**Note, 2026-11-06: mofn took the integer side.** DL-0025 (mofn#136, merged in
+mofn#141) keeps delegation depth an integer, as SPEC-0002 §8.6 and SPEC-0004
+§6.3 already have it (`may-delegate { depth: uint, … }`, absent meaning one
+hop), with RFC 9580's trust-signature level as the deployed precedent. This
+document's §4.1.4 argument is not discarded: it is to be carried into ARCH-0001
+R-M-10 as a stated limit (depth is not a security bound; `ranges` and the key
+lists are the width control) when R-M-10 is rewritten under mofn#134. Where
+this summary says R-M-10 "chose a boolean" above, read it as what RFC 2693
+chose and what R-M-10's current wording still says, not as mofn's decision.
+`distilled/design-notes.md` carries the dated detail.
 
 ## Why `contradicts rfc-5280` and `contradicts rfc-8551`
 

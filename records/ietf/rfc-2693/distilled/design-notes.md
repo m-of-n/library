@@ -15,6 +15,14 @@ like an evaluation of a candidate and more like an audit of an inheritance: what
 we took, what we took and must finish, and what the working group left us that
 we should refuse.
 
+> **Note, 2026-11-06.** The delegation bit is no longer one of the things we
+> took. On that date mofn decided T-012c (mofn#136; design log
+> `design-log/0025-delegation-depth/`, DL-0025, merged in mofn#141): delegation
+> depth stays an **integer**, and RFC 2693's argument against it is kept as a
+> stated limit. Adopt item 7, reject item 2, reject item 3, the R-M-10 mapping
+> row and open questions 9 and 13 carry dated notes saying what changed. The
+> text written on 2026-10-12 is left in place as history.
+
 **Three things to hold while reading.**
 
 1. **The source binds nothing in BCP 14 terms.** `requirements.yaml` records a
@@ -41,6 +49,13 @@ Requirement ids are `rfc-2693#R-NNNN`, written R-NNNN below. Vector ids are from
 
 **Nothing here decides DEC-004 or R-M-10.** Both are cited as evidence. A DEC
 is accepted only in an ADR.
+
+> **Note, 2026-11-06.** R-M-10's question was decided by mofn, not here, and
+> not in a new ADR: DL-0025 (mofn#136, merged in mofn#141) keeps the integer
+> depth of SPEC-0002 §8.6 and SPEC-0004 §6.3. The boolean was rejected because
+> it would have superseded the accepted ADR-0003, so ADR-0003 stands and no
+> R-M-10 ADR will be written. This file still decides
+> nothing.
 
 ---
 
@@ -123,6 +138,25 @@ is accepted only in an ADR.
    in the rfc-9580 summary). §4.2's corollary comes with it. A delegator can
    always mint a key and delegate to itself (R-0065), so separating delegators
    from exercisers buys nothing.
+
+   > **Note, 2026-11-06: the boolean was not adopted.** The sentence *"This is
+   > R-M-10 as it currently stands"* is stale. mofn decided (DL-0025, mofn#136,
+   > merged in mofn#141) that delegation depth stays an **integer**, as in
+   > SPEC-0002 §8.6 and SPEC-0004 §6.3:
+   > `may-delegate { depth: uint, ranges, allow-keys, exclude-keys, not-on-or-after }`,
+   > where absent means one hop. The delegation predicate is
+   > `trust … about … may-delegate`, and `may-speak` is retired. The boolean
+   > option was rejected because it would supersede the accepted ADR-0003 and
+   > change the wire format. ARCH-0001 R-M-10, still quoted above in its
+   > current wording, is to be rewritten to match under mofn#134. That rewrite
+   > is owed, not done.
+   >
+   > What survives from this item is the **reasoning**, not the decision.
+   > R-0064's two arguments (depth is unpredictable, and depth does not bound
+   > width) are to be carried into the rewritten R-M-10 as a **stated limit**:
+   > depth is not a security bound, and `ranges` and the key lists are the
+   > width control. R-0060 to R-0065 above are quoted verbatim so that R-M-10
+   > can cite them. §4.2's corollary (R-0065) is unaffected by the choice.
 
 8. **Names are relative to the key that defines them.** *"If a (local) SDSI
    name occurs within a certificate, then the public key of the issuer is the
@@ -342,6 +376,18 @@ contradicts the source. Each fills something the source left open.
    proliferation control. The evidence on the other side should be weighed in
    R-M-10's ADR, not dismissed. See open question 9.
 
+   > **Note, 2026-11-06: mofn did not side with RFC 2693.** The "we" of the
+   > paragraph above no longer holds, and there will be no R-M-10 ADR in which
+   > to weigh the evidence. mofn chose integer depth (DL-0025, mofn#136, merged
+   > in mofn#141), keeping SPEC-0002 §8.6 and SPEC-0004 §6.3 and leaving the
+   > accepted ADR-0003 in force. OpenPGP's trust-signature level (RFC 9580
+   > §5.2.3.21) is the deployed precedent for that choice. RFC 2693's objection
+   > is not dismissed: R-0064 is retained as a **stated limit** to be written
+   > into R-M-10 under mofn#134, saying that depth is not a security bound and
+   > that `ranges` and the key lists are the width control. So this item is no
+   > longer a rejection of integer depth by us. It records the working group's
+   > rejection, and the limit we carry from it.
+
 3. **The "no control" conclusion. Its premise stays, as a stated limit.** The
    argument that a holder can *"loan out the empowered private key or ... set up
    a proxy service"* (§4.1.1) is correct, and the source does not refute it.
@@ -351,6 +397,11 @@ contradicts the source. Each fills something the source left open.
    that **no delegation control stops a delegate from proxying**. RFC 2692 calls
    this a *"potential flaw in any system providing authorization"* (summary,
    Limits). It belongs in our threat model as an accepted residual risk.
+
+   > **Note, 2026-11-06.** Read "boolean delegation" above as "the delegation
+   > control": under DL-0025 (mofn#136) that control is an integer depth, not
+   > a boolean. The point is unchanged. Depth, like the bit, states the
+   > issuer's intent and cannot stop a delegate from proxying.
 
 4. **Application-specific intersection code.** *"Special semantics would
    require special reduction software."* (R-0146). Reject for the native model.
@@ -412,7 +463,7 @@ contradicts the source. Each fills something the source left open.
 | **R-M-06** (threshold subjects) | §6.3.3 (R-0165 to R-0170), §7.7 (R-0240, R-0243): K of N, mixed algorithms, a separate `(acl-edit)` quorum. | **Adopted** in principle. The reduction is underspecified: §2 item 3 gives five rules the source lacks. |
 | **R-M-08** (intersection semantics per profile) | §6.3.1 AIntersect is the algebra. R-0141 and R-0145 put the vocabulary in the application's hands. | **Adapted** (§2 item 1, §3 item 4). The semantics are declared, never coded. |
 | **R-M-09** (validity intersection) | §6.3.2 VIntersect (R-0157 to R-0163), online-test intervals intersected in (R-0115, R-0162), 4-tuple validity intersected during name reduction (R-0190). | **Adapted**: half-open intervals, monotonic time, a profile decision on infinite defaults (§2 item 2). |
-| **R-M-10** (*"Delegation SHALL be an explicit boolean (or equivalent)"*) | §4.1.4 is the decision and its reasons (R-0060 to R-0064). §4.2 (R-0065). | **Adopted**, against rfc-9580's integer control (§3 item 2, open question 9). The oracle limit is recorded as residual risk (§3 item 3). |
+| **R-M-10** (*"Delegation SHALL be an explicit boolean (or equivalent)"*) | §4.1.4 is the decision and its reasons (R-0060 to R-0064). §4.2 (R-0065). | *As written 2026-10-12:* **Adopted**, against rfc-9580's integer control (§3 item 2, open question 9). The oracle limit is recorded as residual risk (§3 item 3). **2026-11-06:** not adopted. mofn chose integer depth (DL-0025, mofn#136), with rfc-9580's trust-signature level as the deployed precedent. §4.1.4's argument (R-0064) is **retained as a stated limit**: depth is not a security bound, and `ranges` and the key lists are the width control. The R-M-10 text quoted here is owed a rewrite under mofn#134. |
 | **R-O-02** (CRLs vs positive on-line validation) | §5.2 timed CRLs and §5.3 revalidations under the determinism rule. §5.5 one-time revalidation. §5.6 short-lived certificates. §5.1 rules out the anti-matter CRL. §5.7.2's *"the whole validity condition model is flawed"*, conceded *"not reflected"* (R-0104). | **Evidence for short-lived certificates as the default** (adopt 12), with timed revalidation as the fallback. The anti-matter design is excluded (§3 item 1). The verifier-decides question is open (open question 7). |
 | **DEC-004** (tag language) | **Option 1 is §6.3.1.** | Evidence only. Option 1 is not implementable from RFC 2693 alone. §2 item 1 lists the six things a profile must add before it is. |
 | **DEC-002** (native encoding) | None. The document defines no encoding (§3 item 8). | Not affected. The semantics adopted here are encoding-neutral. |
@@ -493,6 +544,12 @@ authorization list maps to an array. Neither needs a tag.
    candidate)? R-M-10's *"(or equivalent)"* leaves room. Does anything need
    it?
 
+   > **Note, 2026-11-06: answered for mofn.** DL-0025 (mofn#136) chose integer
+   > depth, citing RFC 9580's trust-signature level as the deployed precedent,
+   > so R-M-10 no longer needs *"(or equivalent)"* to make room for it. A
+   > deployment study would still be useful evidence for the stated limit, but
+   > it no longer gates a decision.
+
 10. **Is delegation intersection really AND?** §2 item 3 proposes AND for the K
     branches (schema D-08). It is the only monotone choice, but the source
     gives no rule at all, and the rfc-2692 and SDSI records might. Check them
@@ -530,6 +587,12 @@ authorization list maps to an array. Neither needs a tag.
     *"explicit boolean"* points the other way: require the field on every
     certificate and ACL entry, so that no default is ever applied. Decide in
     R-M-10's ADR.
+
+    > **Note, 2026-11-06.** There is no R-M-10 ADR. For mofn the question is
+    > settled by DL-0025 (mofn#136), which keeps SPEC-0002 §8.6 and SPEC-0004
+    > §6.3: in `may-delegate`, absent `depth` means one hop. The source defect
+    > (schema gap G-01) is still RFC 2693's, and `messages.yaml`'s reading of
+    > absence as FALSE still describes the RFC, not us.
 
 14. **Can a name denote anything but a key?** The Abstract says the structures
     *"bind either names or explicit authorizations to keys or other
