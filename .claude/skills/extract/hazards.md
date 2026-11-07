@@ -61,6 +61,16 @@ Zero relaxations needed is the result you want. Four separate lanes each found
 ellipsis splice, a terminal colon turned into a full stop, and five nested
 quotation marks silently re-punctuated.
 
+**Since library#86 the first line of defence is not typing quotations at
+all.** `bin/fx1-skeleton` writes requirement texts, Markdown quotations are
+`<!-- q Lx-y -->` markers rendered by `bin/check-quotes --render`, and
+`bin/check-quotes` verifies every referenced quotation, whole span, against
+its own lines. That closes splice and heal for everything that is
+referenced. It does **not** see a quotation nobody marked — a phrase in
+double quotes inside a note, an unmarked blockquote, a YAML `text:` outside
+requirements — so the audit above still runs over those, and a line-end
+hyphen is a rendering artefact (`bin/_source_text`, rule 3), not a heal.
+
 ### Grade WHOLE SPANS, longest first — a fragment audit reports a false clean
 
 The CWT envelope lane's passes 1 and 2 each ran the audit above and each
@@ -486,6 +496,40 @@ Two consequences to apply either way:
   locator appearing in two records was recognised as a copied error rather than
   a typo, and how the `option 5` gloss was found to have split into two
   incompatible wordings across the library.
+
+## Smaller-model lanes, measured
+
+One tiered run (library#86, RFC 9679): the requirements, schema, examples and
+messages lanes on a smaller model at medium effort, everything else at max.
+Verify attacked 59 claims and falsified 15; **13 of the 15 were in the
+smaller-model lanes**, which is why verify is never tiered and requirements
+was moved back to max. What they got wrong, so the next verifier can go
+straight to it:
+
+- **Duplicate mapping keys.** 17 duplicate `promoted_as:` keys in one
+  mapping; both readers keep the last, so 5 promotions pointed one id off.
+  The dual-reader check compares values, so it was blind. Candidates now link
+  from the requirement side (`candidate: C-NNNN`, one key per entry) and
+  `bin/validate` checks every link.
+- **`constrained_by` wired only to keyword ids.** Every lowercase obligation
+  — a prefix, a registration value — was left unwired, and a comment said it
+  was complete.
+- **A schema and its prose disagreeing silently.** A JSON Schema rejected an
+  empty bstr its CDDL accepted while the README called them equal; the
+  in-tree validator accepted `kty: true`. Parse the CDDL with a real tool.
+- **Free-text `verb`.** "implied MUST", "guidance", "registration" — 18
+  vocabularies in 51 entries. A skeleton-generated file now takes one BCP 14
+  keyword or `none`, and verbatim lowercase text is `kind: stated, verb:
+  none`, never `inferred`.
+- **A pass recorded at the wrong effort.** The run wrote `effort: max` for an
+  extract pass whose lanes ran at medium, because validate accepted nothing
+  else. Record `tiered` and the agents; validate now accepts it.
+
+The max-effort lanes in the same run held 2 false claims, both minor, and
+found ~8 source defects the earlier all-max extraction had missed. Losing two
+inferred rules (the excluded parameters, the map-key order) was the real
+quality cost: neither has a cue word, and only judgement finds what a document
+never says outright.
 
 ## What a verify pass should actually attack
 

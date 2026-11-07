@@ -47,6 +47,14 @@ FX1_FILES = {"normative": "distilled/normative.md", "requirements": "distilled/r
              "state-machine": "distilled/state-machine.yaml", "examples": "distilled/examples"}
 FX1_PASSES = ["extract", "verify", "cross-check"]
 FX1_TYPES = {"rfc", "draft", "spec", "ietf"}
+# Model tiering (library#86, docs/extraction.md "Who runs what"). Judgement
+# runs at max always; the mechanical lanes, whose output a script or the
+# verify pass re-derives, may run lower. verify is never tiered: in the one
+# measured tiered run it falsified 13 claims in the lower-effort lanes.
+FX1_JUDGEMENT = {"requirements", "protocol", "state-machine", "design-notes", "verify"}
+FX1_TIERABLE_PASSES = {"extract", "cross-check"}
+BCP14_VERBS = set(_bcp14.KEYWORDS) | {"none"}
+CANDIDATE_VERDICTS = {"stated", "inferred", "reject"}
 
 # The summary template's own prompt text. A summary still carrying it was never
 # written (library#45: 261 of 293 records sat like this under a green check).
@@ -222,6 +230,79 @@ def check_id_collisions(recdir, rid, where, warns):
                          f"({rel}) — a bare '{i}' in prose resolves two ways")
 
 
+def check_pass(x, where, errs):
+    """One distillation.passes entry. `effort: max` as before, or `effort:
+    tiered` with the `agents` that ran it, each judgement role at max."""
+    ps, eff = x.get("pass"), str(x.get("effort", "")).lower()
+    agents = [a for a in (x.get("agents") or []) if isinstance(a, dict)]
+    for a in agents:
+        role, aeff = str(a.get("role", "")), str(a.get("effort", "")).lower()
+        if not role or not a.get("model") or not aeff:
+            errs.append(f"{where}: FX-1 — pass '{ps}' agent {a} needs role, model and effort")
+        elif (role in FX1_JUDGEMENT or ps == "verify") and aeff != "max":
+            errs.append(f"{where}: FX-1 — pass '{ps}' ran judgement role '{role}' at effort "
+                        f"'{aeff}'; judgement runs at max (docs/extraction.md)")
+        if "tokens" in a and not str(a["tokens"]).strip().isdigit():
+            errs.append(f"{where}: FX-1 — pass '{ps}' agent '{role}' tokens must be an integer")
+    if eff == "max":
+        return
+    if eff == "tiered" and ps in FX1_TIERABLE_PASSES:
+        if not agents:
+            errs.append(f"{where}: FX-1 — pass '{ps}' is tiered but lists no agents "
+                        f"(role, model, effort for each)")
+        return
+    errs.append(f"{where}: FX-1 — pass '{ps}' ran at effort '{x.get('effort')}'; "
+                + ("verify runs at max" if ps == "verify" else
+                   "a pass runs at max, or is `tiered` with its agents listed"))
+
+
+def check_skeleton_requirements(recdir, entries, where, errs):
+    """A requirements.yaml bin/fx1-skeleton generated carries the stricter
+    contract it was generated under (library#86). Older files keep their own
+    vocabulary: `verb` is free text across 76 records, and FX-1 is not
+    retroactive."""
+    for e in entries:
+        rid, kind = e.get("id", "?"), str(e.get("kind", ""))
+        verb, text = str(e.get("verb", "")), str(e.get("text", ""))
+        if kind not in ("stated", "inferred"):
+            errs.append(f"{where}: FX-1 — {rid} kind '{kind}'; stated (verbatim) or inferred")
+        if verb.startswith("TODO"):
+            continue  # the TODO scan reports it
+        if verb not in BCP14_VERBS:
+            errs.append(f"{where}: FX-1 — {rid} verb '{verb}'; one BCP 14 keyword or none")
+        elif kind == "stated" and verb != "none" and verb not in re.sub(r"\s+", " ", text):
+            errs.append(f"{where}: FX-1 — {rid} verb {verb} is not in its text")
+        if kind == "stated" and not e.get("source_lines"):
+            errs.append(f"{where}: FX-1 — {rid} is stated but has no source_lines "
+                        f"(bin/check-quotes verifies the text by them)")
+    cf = recdir / "distilled/inferred-candidates.yaml"
+    if not cf.exists():
+        return
+    cands = [c for c in (miniyaml(cf.read_text()).get("candidates") or []) if isinstance(c, dict)]
+    linked = {}
+    for e in entries:
+        for c in re.split(r"[,\s]+", str(e.get("candidate") or "").strip()):
+            if c:
+                linked.setdefault(c, []).append(e.get("id"))
+    ids = {str(c.get("id")) for c in cands}
+    for c in cands:
+        cid, v = str(c.get("id")), str(c.get("verdict", "")).split("#")[0].strip()
+        if v not in CANDIDATE_VERDICTS:
+            errs.append(f"{where}: FX-1 — inferred-candidates {cid} verdict '{v}'; "
+                        f"stated, inferred or reject")
+        elif v == "reject" and not str(c.get("reason", "")).strip():
+            errs.append(f"{where}: FX-1 — inferred-candidates {cid} rejected with no reason")
+        elif v != "reject" and cid not in linked:
+            errs.append(f"{where}: FX-1 — inferred-candidates {cid} is '{v}' but no "
+                        f"requirement carries candidate: {cid}")
+        elif v == "reject" and cid in linked:
+            errs.append(f"{where}: FX-1 — inferred-candidates {cid} is rejected but "
+                        f"{linked[cid][0]} cites it")
+    for c, by in linked.items():
+        if c not in ids:
+            errs.append(f"{where}: FX-1 — {by[0]} cites candidate {c}, which does not exist")
+
+
 def check_full(recdir, d, where, errs):
     """Enforce FX-1 on a record that declares distillation.profile: full."""
     dist = d.get("distillation") or {}
@@ -254,14 +335,17 @@ def check_full(recdir, d, where, errs):
         if ps not in done:
             errs.append(f"{where}: FX-1 — pass '{ps}' not recorded in distillation.passes")
     for x in (dist.get("passes") or []):
-        if isinstance(x, dict) and str(x.get("effort", "")).lower() != "max":
-            errs.append(f"{where}: FX-1 — pass '{x.get('pass')}' ran at effort "
-                        f"'{x.get('effort')}'; extraction passes run at max")
+        if isinstance(x, dict):
+            check_pass(x, where, errs)
     rq = recdir / "distilled/requirements.yaml"
     if rq.exists():
         r = miniyaml(rq.read_text())
-        texts = " ".join(str(x.get("text", "")) for x in (r.get("requirements") or [])
-                         if isinstance(x, dict))
+        entries = [x for x in (r.get("requirements") or []) if isinstance(x, dict)]
+        # A `split_of` child quotes part of its parent, whose text already
+        # carries the keyword; counting both counted it twice (library#86).
+        texts = " ".join(str(x.get("text", "")) for x in entries if not x.get("split_of"))
+        if str(r.get("generated_by", "")).strip() == "bin/fx1-skeleton":
+            check_skeleton_requirements(recdir, entries, where, errs)
         got = _bcp14.count(texts, boilerplate=False)
         def num(v, dflt):
             try:

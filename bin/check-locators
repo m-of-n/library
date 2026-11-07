@@ -32,6 +32,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from _record_yaml import load_yaml
+import _source_text as st
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CACHE = ROOT / ".cache"
@@ -131,7 +132,15 @@ def check_record(recdir):
 
     raw = cache.read_text(errors="ignore")
     src_lines = raw.split("\n")          # never splitlines(): it splits on \f
-    norm_src, line_of = norm_with_lines(raw)
+    # The source is read the way bin/check-quotes and bin/fx1-skeleton read it
+    # (bin/_source_text: page breaks, aside bars and line-end hyphen breaks
+    # undone), so the three tools agree on what a span says. Both hyphen
+    # readings are tried: records written before library#86 rejoined a broken
+    # hyphenated word with a space, and their texts must keep resolving.
+    cleaned = st.clean(src_lines)
+    readings = [st.with_lines(cleaned, hyphen=True),
+                st.with_lines(cleaned, hyphen=False),
+                norm_with_lines(raw)]
     spans = section_spans(src_lines)
 
     reqs = (load_yaml(rq) or {}).get("requirements") or []
@@ -160,10 +169,13 @@ def check_record(recdir):
         # prose — and `find` returning the earliest made this tool report 36
         # misfilings in that record alone, all of them its own fault. The
         # locator is a true claim if ANY occurrence falls inside its section.
-        hits, at = [], norm_src.find(norm_text)
-        while at >= 0:
-            hits.append((line_of[at], line_of[at + len(norm_text) - 1]))
-            at = norm_src.find(norm_text, at + 1)
+        hits = []
+        for norm_src, line_of in readings:
+            at = norm_src.find(norm_text)
+            while at >= 0:
+                hits.append((line_of[at], line_of[at + len(norm_text) - 1]))
+                at = norm_src.find(norm_text, at + 1)
+        hits = sorted(set(hits))
         if not hits:
             # Not this tool's job: the verbatim checks own that. Reported so a
             # non-verbatim text is never silently counted as a locator pass.

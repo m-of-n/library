@@ -27,7 +27,10 @@ Every `rfc` / `draft` / `spec` / `ietf` record a PR **extracts** must reach
 `distillation.profile: full`: normative text, **all** requirements with keyword
 counts reconciled, schemas, message formats, protocol model, state machines,
 test vectors, and design notes mapped to our decisions. Multi-agent passes
-(extract → verify → cross-check), **every pass at maximum effort**. A summary
+(extract → verify → cross-check). **Judgement runs at maximum effort; mechanics
+run by script** (amended 2026-11-06, library#86): `bin/fx1-skeleton` writes
+every quotation, `bin/check-quotes` verifies them, the mechanical lanes may run
+on a smaller model, and verify is always max. A summary
 is a started record, not a finished one. `docs/extraction.md` is normative;
 `.claude/skills/extract` is the procedure; CI enforces it.
 
