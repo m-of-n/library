@@ -113,12 +113,25 @@ def appendix_letters(src):
 
 
 def section_of_line(src):
-    """out[i-1] = the section key line i sits in (None in front matter)."""
+    """out[i-1] = the section key line i sits in (None in front matter).
+
+    A heading counts only after a blank line (or at the top). Every RFC and
+    rendered-W3C heading stands alone; a table of contents is a run of
+    consecutive lines, and the W3C rendering puts it at column 0 with the
+    same `1. Introduction` shape, so without this its entries were read as
+    headings and the front matter was filed under §1 onward (library#89).
+    Measured over the 18 cached sources: only the 3 W3C renderings change,
+    and only in their table of contents. Requiring a blank line after the
+    heading as well breaks wrapped RFC headings; see bin/test_render_w3c.py.
+    """
     letters = appendix_letters(src)
-    cur, out = None, []
+    cur, out, prev = None, [], ""
     for l in src:
-        cur = heading_key(l.replace("\f", ""), letters) or cur
+        line = l.replace("\f", "")
+        if not prev.strip():
+            cur = heading_key(line, letters) or cur
         out.append(cur)
+        prev = line
     return out
 
 

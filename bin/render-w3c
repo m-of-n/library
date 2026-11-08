@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+"""render-w3c — render a W3C respec TR page to plain text for FX-1.
+
+    bin/render-w3c .cache/<id>.bin .cache/<id>.txt
+
+The W3C analogue of an RFC .txt: what bin/fx1-skeleton, bin/check-quotes,
+bin/check-locators and bin/bcp14-count read for a W3C Recommendation
+(library#89). Line numbers in an extraction's quotations count in this
+rendering, so record its sha256 in distilled/README.md; the output is a pure
+function of the input bytes and this script.
+
+- Numbered section headings -> "3.1.1.  Title" at column 0, each between
+  blank lines; lettered appendices -> "Appendix A.  Title" and "C.1.  Title".
+- Headings inside examples ("Claim: id") are rendered as indented plain text.
+- <pre> content keeps its line breaks byte-for-byte (entities decoded).
+- Elsewhere whitespace is collapsed; each block element is one line.
+- <script>/<style> dropped.
+
+Known artefacts: an inline-span boundary can insert a space (a compact JWS
+reads `eyJ… .eyJ…`), so example fixtures are taken from the HTML, never from
+this rendering. The table of contents comes out as consecutive column-0
+lines shaped like headings; bin/_source_text.section_of_line accepts a
+heading only after a blank line, which is what keeps it out of §1.
+"""
+import html, re, sys
+from html.parser import HTMLParser
+
+BLOCK = {"p", "div", "section", "li", "dt", "dd", "tr", "table", "ul", "ol",
+         "dl", "figure", "figcaption", "blockquote", "aside", "details",
+         "summary", "br", "hr", "thead", "tbody", "caption", "nav", "header",
+         "footer", "main", "body"}
+CELL = {"td", "th"}
+HEAD = {"h1", "h2", "h3", "h4", "h5", "h6"}
+
+
+class R(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.out, self.buf = [], []
+        self.pre = 0
+        self.skip = 0
+        self.head = None
+
+    def flush(self):
+        s = "".join(self.buf)
+        self.buf = []
+        if self.pre:
+            return
+        s = re.sub(r"\s+", " ", s).strip()
+        if s:
+            self.out.append(s)
+
+    def handle_starttag(self, tag, attrs):
+        if tag in ("script", "style"):
+            self.skip += 1
+            return
+        if self.skip:
+            return
+        if tag == "pre":
+            self.flush()
+            self.pre += 1
+            self.buf = []
+            return
+        if self.pre:
+            return
+        if tag in HEAD:
+            self.flush()
+            self.head = []
+            return
+        if tag in BLOCK:
+            self.flush()
+        elif tag in CELL:
+            self.buf.append(" | ")
+
+    def handle_endtag(self, tag):
+        if tag in ("script", "style"):
+            self.skip = max(0, self.skip - 1)
+            return
+        if self.skip:
+            return
+        if tag == "pre" and self.pre:
+            self.pre -= 1
+            body = "".join(self.buf)
+            self.buf = []
+            self.out.append("\n" + body.strip("\n") + "\n")
+            return
+        if self.pre:
+            return
+        if tag in HEAD and self.head is not None:
+            s = re.sub(r"\s+", " ", "".join(self.head)).strip()
+            self.head = None
+            m = re.match(r"^(\d+(?:\.\d+)*)\.? (.*)$", s)
+            a = re.match(r"^([A-Z])\. (.*)$", s)
+            sa = re.match(r"^([A-Z](?:\.\d+)+) (.*)$", s)
+            if m:
+                self.out.append(f"\n{m.group(1)}.  {m.group(2)}\n")
+            elif a:
+                self.out.append(f"\nAppendix {a.group(1)}.  {a.group(2)}\n")
+            elif sa:
+                self.out.append(f"\n{sa.group(1)}.  {sa.group(2)}\n")
+            else:
+                self.out.append(f"\n   {s}\n" if s else "")
+            return
+        if tag in BLOCK:
+            self.flush()
+
+    def handle_data(self, data):
+        if self.skip:
+            return
+        if self.head is not None and not self.pre:
+            self.head.append(data)
+        else:
+            self.buf.append(data)
+
+
+if len(sys.argv) != 3:
+    print(__doc__); sys.exit(2)
+src, dst = sys.argv[1], sys.argv[2]
+r = R()
+r.feed(open(src, encoding="utf-8", errors="replace").read())
+r.flush()
+text = "\n".join(r.out)
+text = re.sub(r"\n{3,}", "\n\n", text) + "\n"
+open(dst, "w", encoding="utf-8").write(text)

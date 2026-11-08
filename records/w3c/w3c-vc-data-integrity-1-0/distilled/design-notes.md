@@ -68,7 +68,7 @@ lists their titles only).
    `<!-- q Lx-y -->` marker rendered by `bin/check-quotes --render` from
    `.cache/w3c-vc-data-integrity-1-0.txt` (1243 lines, sha256
    `2b7725f80e138ef943eff25050eee6a62f8887762ca9e1e03867c55ea5647beb`,
-   rendered by the lane's `render_w3c.py`, one line per HTML block). A
+   rendered by `bin/render-w3c`, one line per HTML block). A
    quotation of one of our documents is a `<!-- qm PATH Lx-y -->` marker:
    `PATH` is a file of the m-of-n repository at commit **`a56a3c0`**
    (2026-11-06), and the words are lines x to y of `git show a56a3c0:PATH`,

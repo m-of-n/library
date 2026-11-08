@@ -28,7 +28,7 @@ content.sha256 in record.yaml (retrieved 2026-10-23) and recomputed from
 line-numbered against, its plain-text rendering .cache/w3c-vc-jose-cose.txt:
 1980 lines, 172097 bytes, sha256
 f02bd4966800863d533746c6c39ad267ada1b8bfcbb92186c204b617bb46c126, produced by
-the lead's render_w3c.py and reproduced byte-identically by re-running it on
+bin/render-w3c (then a scratch render_w3c.py) and reproduced byte-identically by re-running it on
 the HTML in this pass. Neither file is committed.
 
 ## How to read this file
@@ -2166,7 +2166,7 @@ BCP 14 keyword occurs in any excluded block.
 each states what it examined beside what it found, and each was shown to
 catch a planted defect before its result was trusted.
 
-- Rendering. render_w3c.py run again on the HTML gives the .txt byte for
+- Rendering. bin/render-w3c run again on the HTML gives the .txt byte for
   byte; an instrumented copy that records the HTML element stack of every
   line gives it too, with 0 unbalanced elements.
 - Containers. 353 container lines compared with their .txt lines after the

@@ -53,6 +53,22 @@ CASES = [
     ("literal block scalar as a first key",
      "gaps:\n  - note: |-\n      line one\n      line two\n",
      {"gaps": [{"note": "line one\nline two"}]}),
+    # library#89: the library#39 fix measured that scalar from the DASH, so
+    # the item's sibling keys (at the key's column) were read as continuation
+    # lines and folded into the text — silently, every test above has the
+    # scalar as the item's only key.
+    ("first-key folded scalar keeps its sibling keys",
+     "items:\n  - what: >-\n      folded text\n      continues\n    why: second key\n    n: 3\n  - what: plain\n",
+     {"items": [{"what": "folded text continues", "why": "second key", "n": 3}, {"what": "plain"}]}),
+    ("first-key literal scalar keeps its sibling keys",
+     "items:\n  - k: |\n      l1\n      l2\n    w: 3\n",
+     {"items": [{"k": "l1\nl2", "w": 3}]}),
+    ("empty first key followed by a sibling is null, not a map",
+     "items:\n  - k:\n    other: 1\n",
+     {"items": [{"k": None, "other": 1}]}),
+    ("empty first key may hold a sequence at its own column",
+     "items:\n  - k:\n    - x\n    - y\n    z: 2\n",
+     {"items": [{"k": ["x", "y"], "z": 2}]}),
     ("a plain value that merely starts with > is not a block scalar",
      "gaps:\n  - note: >text\n",
      {"gaps": [{"note": ">text"}]}),

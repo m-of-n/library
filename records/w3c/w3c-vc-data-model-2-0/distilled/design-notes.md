@@ -71,7 +71,7 @@ exchange protocol.
    `<!-- q Lx-y -->` marker rendered by `bin/check-quotes --render` from
    `.cache/w3c-vc-data-model-2-0.txt` (5009 lines, sha256
    `73d91cc0b6a7d582512eb06d45a5fcfa8c696ab094b3db44f7a1495e9d3da548`, rendered
-   by the lane's `render_w3c.py`, one line per HTML block). A quotation of one of
+   by `bin/render-w3c`, one line per HTML block). A quotation of one of
    our documents is a `<!-- qm PATH Lx-y -->` marker: `PATH` is a file of the
    m-of-n repository at commit **`a56a3c0`** (2026-11-06), the words are lines x
    to y of `git show a56a3c0:PATH`, whitespace collapsed, a blockquote margin
