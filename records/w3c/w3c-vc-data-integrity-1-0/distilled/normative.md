@@ -1140,7 +1140,7 @@ R-0287 (none)
 
 ## Source defects
 
-Defects and tensions in the source, recorded rather than healed. Each names the entries it bears on. Quotations are
+Defects and tensions in the source, recorded rather than healed. Each names the entries it bears on. protocol.yaml `source_defects` (D-01 to D-21) records the algorithms' defects from the flows' side, with its own numbering; SD-30 to SD-33 were found there and added here by the verify pass. Quotations are
 markers like everything else in this file. SD-E collects the editorial ones, quoted where they sit.
 
 ### SD-1: §1.3 and §1.4 sit inside a section marked non-normative
@@ -1297,6 +1297,31 @@ The lexical and value spaces of cryptosuiteString are the union over all Data In
 ### SD-29: context validation order: MUST after, MAY reorder
 
 Context validation MUST run after Verify Proof or Verify Proof Sets and Chains (R-0030); R-0031 lets implementers use alternative approaches or a different ordering of the steps that provide the same protections. Whether that ordering reaches R-0030's is unsettled; §4.6 ¶1 adds that validation precedes business rules (R-0263).
+
+### SD-30: §4.4 step 9 returns the input mediaType even when verified is false
+
+The verification result's mediaType is null when verified is false (R-0216); step 9 sets it to the mediaType input unconditionally (R-0236). Found by the protocol lane (protocol.yaml D-06); added here by the verify pass.
+
+<!-- q L594 -->
+> Null, if verified is false; otherwise, a media type, which MAY include parameters
+
+<!-- q L613-614 -->
+> mediaType mediaType
+
+### SD-31: §4.6 step 1 initialises a variable no step uses
+
+compactionContext is set and never read; step 3.1 compacts with knownContext (R-0269). protocol.yaml D-08; added by the verify pass.
+
+<!-- q L650 "compactionContext" .. "an empty list" -->
+> compactionContext to an empty list
+
+### SD-32: §4.4 step 1 has no failure path, and PARSING_ERROR links outside the document
+
+Step 1 parses JSON bytes (R-0219) and no step says what follows bytes that are not JSON; step 2 tests only the parsed value (R-0220). The PARSING_ERROR that step 2 conveys (R-0221) is linked in the HTML to https://www.w3.org/TR/VC-DATA-MODEL-2.0#PARSING_ERROR, the VC Data Model's list, not to §4.7 (SD-6). protocol.yaml D-18 and D-09; added by the verify pass.
+
+### SD-33: §4.5 over an empty proof list reports status true
+
+With no proof in allProofs the loop of step 6 never runs, so the combined result keeps the status true and the null document of step 5 (R-0256, R-0257): the case SD-7 leaves out. Inferred R-0262 reads the combined result as false only when a proof fails, so it does not cover this either. protocol.yaml D-21; added by the verify pass.
 
 ### SD-E: editorial defects, quoted where they sit (never healed)
 

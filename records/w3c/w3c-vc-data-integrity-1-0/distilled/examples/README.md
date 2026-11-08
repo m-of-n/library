@@ -23,12 +23,14 @@ fixture makes it exit 1 (tested).
 `vectors.yaml` lists every fixture and **26 vectors**: 14 example vectors (`EX-NN`), 6 prose
 vectors (`EX-P-nn`: the id, the domain and challenge values, the proof purposes,
 the error codes, the cryptosuite names) and 6 digest vectors (`EX-CTX-n`: the three
-pinned contexts and the three vocabulary documents of §2.4), wired to R-ids by script.
+pinned contexts and the three vocabulary documents of §2.4), wired to R-ids by script. Pass 2 re-pointed every
+`constrained_by` and `rule` list: pass 1 had cited the skeleton's welded parent sentences (148 of 241 citations) and left
+four vectors unwired (EX-01, EX-03, EX-P-04, EX-P-06); each now names the split child or keyword-less entry it means.
 
 Checks: **174** in all: 121 pass, 47 fail, 6 unverifiable; 140 meet their stated expectation and
 34 differ from it. Vector outcomes: 9 pass, 17 fail, 0 unverifiable (fail if any check
 fails). A fail on a source example is a finding about the source, recorded below and
-not repaired. Both YAML readers of `bin/` read `vectors.yaml` (1401 leaf paths) with 0 differences.
+not repaired. Both YAML readers of `bin/` read `vectors.yaml` (1497 scalar leaves after pass 2's re-wiring, 1401 before) with 0 differences.
 
 ## Fixtures (26: 14 verbatim, 12 derived)
 
@@ -72,6 +74,7 @@ the computed evidence below.
 - **D-08** None of the 7 proofs verifies under its printed key (0 verified): 2 fail on signature length (Example 2, Example 7 proof 0), 2 on the key prefix (Examples 6 and 7, second proof), 3 fail the signature check itself (Examples 4 and 5, Example 6 proof 0). D-05 to D-07 explain the first four; Examples 4 and 5 (ECDSA P-256 over RDFC) and Example 6 proof 0 fail for no reason found in the examples themselves, other than D-06.
 - **D-09** §2.4's three vocabulary digests (`application/ld+json`, `text/turtle`, `text/html`) equal none of the documents served on 2026-11-07, by every route tried (`https://w3id.org/security` with the `Accept` header; the `www.w3.org/2025/credentials/vcdi/vocab/v2/` location it now redirects to; the `w3c.github.io` URLs in the HTML). The three context digests equal the fetched files exactly. The REC is frozen and the vocabulary is a living document, so this is drift, not necessarily an error at publication; the text tells a reader to compare against the live URL.
 - **D-10** Example 3 differs from Example 4 minus its proof in `@context` only: Example 4 adds the Data Integrity v2 context (§2.4.2 context injection). Example 1 equals Example 2 minus its proof.
+- **D-11** (pass 2) The `verificationMethod` key of Examples 4 and 5, `zDnaepBuvsQ8…`, is the P-256 test-vector key of vc-di-ecdsa A.1, whose secret key that document publishes (`z42twTcN…`; its public key recomputes to the fragment). The examples could have carried genuine signatures; neither verifies.
 
 ## Signature attempts
 
@@ -79,8 +82,13 @@ Each proof is verified with the key in its own `verificationMethod` fragment, by
 (`eddsa-jcs-2022`, `eddsa-rdfc-2022`, `ecdsa-rdfc-2019`): `hashData` = SHA-256 of the canonical proof configuration followed by SHA-256 of the
 canonical document; JCS is sorted keys and no whitespace; RDFC is URDNA2015 by pyld with the Data Integrity v2
 context from the file whose digest the source prints; Ed25519, or ECDSA P-256 with SHA-256, over `hashData`. For a chain, a proof
-with `previousProof` is verified over the document carrying the proof it names. **The recipe is not this source's** and was not checked
-against any test vector of the cryptosuite documents, so a fail is evidence against the example, not proof. The harness is self-consistent: for each of the three suites
+with `previousProof` is verified over the document carrying the proof it names. **The recipe is not this source's.** Pass 1 wrote it from memory; pass 2 read it in the cryptosuite Recommendations
+(`vc-di-eddsa` and `vc-di-ecdsa`, W3C Recommendation 15 May 2025, fetched 2026-11-07, sha256 `d404f372…` and `790f86ce…`)
+and `verify-signatures.derived.py` reproduces their own test vectors with it: 11 checks examined, 0 failing
+(eddsa-jcs-2022 B.3: both hashes, `hashData`, verification, and a re-signature equal to Example 37 byte for byte;
+eddsa-rdfc-2022 B.1: verification; ecdsa-rdfc-2019 A.1: both canonical N-Quads forms, both hashes, verification).
+So a fail below is a property of the example, not of the harness. The same script re-runs the seven proofs
+(7 examined, 0 verify, 0 differing from the table). The harness is self-consistent: for each of the three suites
 a fresh signature made by the same code verifies, fails with one bit of the signature flipped, and fails when the document is altered
 (eddsa-jcs-2022, eddsa-rdfc-2022, ecdsa-rdfc-2019: [('pass', 'fail', 'fail'), ('pass', 'fail', 'fail'), ('pass', 'fail', 'fail')]).
 
@@ -96,4 +104,7 @@ a fresh signature made by the same code verifies, fails with one bit of the sign
 
 ## Not done
 
-No signature could be shown to verify. The ECDSA and RDFC paths rest on pyld's URDNA2015, not on a W3C RDFC test vector. Examples 9–14 have no values to verify.
+No example signature verifies. The RDFC path is pyld's URDNA2015, which reproduced vc-di-ecdsa A.1's canonical
+N-Quads exactly (pass 2); it was not run against the RDF Dataset Canonicalization test suite. Examples 9–14 have no values to verify.
+`verify-signatures.derived.py` needs the two cryptosuite HTML files and the three context files (paths as arguments,
+none in the repository) and PyLD and cryptography.

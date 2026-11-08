@@ -101,16 +101,12 @@ MAY is never a constraint: the leniency it grants has an anchor named for it
 (`#lenient-time`). OUTSIDE-SOURCE anchors bind nothing in this source.
 `rules.derived.yaml` gives every rule's level and the requirement ids behind it.
 
-52 of the 78 requirement ids are cited by the files here (counted by
-script over this directory, `w3c-vc-data-integrity-1-0#R-NNNN` occurrences). The
-26 not cited, by group: conformance, R-0001; context validation and
-network loading, behaviour and no shape, R-0029, R-0030, R-0031, R-0027, R-0028;
-what a cryptosuite specification must contain, authoring rules with no wire
-structure, R-0037 to R-0044, R-0046 to R-0050; the input document may carry a proof
-and implementers may add safeguards, R-0055, R-0056; the algorithms' UTF-8 and
-error-propagation rules and the optional extra return values, R-0057, R-0058,
-R-0062, R-0071, R-0074. The set is asserted equal to the uncited list by the
-script that wrote this file. messages.yaml wires 67 ids to a message or field and lists the other 11 with reasons.
+**Re-wired in pass 2 (verify, 2026-11-07).** Pass 1 wired this directory against the skeleton's 78 ids, citing
+welded parent sentences (R-0003, R-0004, R-0051, R-0052, R-0065 …) where a split child or a keyword-less entry is meant,
+and one retired id (R-0054). Every citation now names the leaf entry whose words its quotation carries; 85 distinct
+requirement ids of the 289 are cited by the files here (README excluded; bare and `w3c-vc-data-integrity-1-0#R-NNNN`
+forms, counted by script), none a split parent, none retired. Pass 1's sentence, kept as its measurement: "52 of the 78
+requirement ids are cited". messages.yaml wires 210 of the 289 ids and lists the other 79 under `not_wired` with reasons.
 
 ## Source tensions (full text and quotations in `messages.yaml`, `source_tensions`)
 
@@ -129,11 +125,11 @@ script that wrote this file. messages.yaml wires 67 ids to a message or field an
 All run by `check-schemas.derived.py` (`python3 -I`, `jsonschema` 4.26.0, `referencing`).
 
 - **Metaschema**: 7 schemas examined, 0 invalid against JSON Schema 2020-12.
-- **Cases**: 298 examined, 298 cases giving 322 verdicts (an example case with several proofs gives one verdict per proof), 0 differing from the expectation. 129 jsonschema accept, 139 jsonschema reject, 17 cross-field accept, 13 cross-field reject; 76 of the cases use an example.
-- **Instances each schema must REJECT** (the hazard of a schema that parses and binds nothing): every property of `proof.derived` has at least one rejecting instance (wrong type, absent, malformed time, duplicate set member); `type: DataIntegrityProof` without `cryptosuite`; a `challenge`-less proof with a `domain` under `#proof-should`; a relative `id`; a ProblemDetails with a `#`-less, `http`, lower-case, prefixed or suffixed type URL; a verified-false result that carries a document or media type; a chain with a dangling `previousProof`.
-- **Mutation test** (the cases must be able to fail): five mutations of `proof.derived` were run against the unchanged cases, in a scratch copy: dropping the `then` of the cryptosuite rule (1 case failed), loosening `created` to any string (6), loosening `domain` (4), making `proofPurpose` optional (3), and removing the `required: [type]` guard from the `if` of the cryptosuite rule (0 failed). The fifth is equivalent, not a gap: the root already requires `type`, so the guard cannot change a verdict; it is kept so the rule stays correct if `type` is ever made optional.
+- **Cases**: 302 examined, giving 326 verdicts (an example case with several proofs gives one verdict per proof), 0 differing from the expectation. 129 jsonschema accept, 143 jsonschema reject, 17 cross-field accept, 13 cross-field reject; 76 of the cases use an example. Pass 1 had 298 cases; pass 2 added the four rejects below marked (pass 2).
+- **Instances each schema must REJECT** (the hazard of a schema that parses and binds nothing): every property of `proof.derived` has at least one rejecting instance (wrong type, absent, malformed time, duplicate set member); `type: DataIntegrityProof` without `cryptosuite`; a `challenge`-less proof with a `domain` under `#proof-should`; a relative `id`; a ProblemDetails with a `#`-less, `http`, lower-case, prefixed or suffixed type URL; a verified-false result that carries a document or media type; a chain with a dangling `previousProof`. (pass 2) Four instances the source's statements reject and the pass-1 schemas accepted, each now rejected: an empty `domain` array (R-0103, L219: one or more domains), a verified-true result with a null `verifiedDocument` or a null `mediaType` (R-0215, R-0216, L592, L594; V-07), and a validated-true context validation result with a null `validatedDocument` (R-0265, L644).
+- **Mutation test** (the cases must be able to fail): five mutations of `proof.derived` were run against the unchanged cases, in a scratch copy (replayed in pass 2 on the pass-1 files and on the current ones: the same cases fail, by id): dropping the `then` of the cryptosuite rule (1 case failed), loosening `created` to any string (6), loosening `domain` (4; 5 with pass 2's `P-rej-domain-empty`), making `proofPurpose` optional (3), and removing the `required: [type]` guard from the `if` of the cryptosuite rule (0 failed). The fifth is equivalent, not a gap: the root already requires `type`, so the guard cannot change a verdict; it is kept so the rule stays correct if `type` is ever made optional.
 - **Limitation cases**: 1 (`P-lim-created-feb30`): the lexical pattern accepts a day the calendar lacks; the case records that it does.
-- **Cross-check of ids**: `bin/check-id-joins --quote-join` examined 37 quotation/citation pairs, 37 carried by their cited id, 0 to read; `--surface` lists two duplicate-text groups (R-0010/R-0013, R-0057/R-0062) and every citation of those ids was read.
+- **Cross-check of ids**: pass 1: `bin/check-id-joins --quote-join` examined 37 quotation/citation pairs, 37 carried, 0 to read, and `--surface` listed two duplicate-text groups, measured against the 78-entry skeleton file. Pass 2, record-wide against the 289-entry file: 41 pairs examined, 41 carried, 0 to read; `--surface` lists five groups (R-0010/R-0013, R-0057/R-0062, R-0099/R-0101, the five PROOF_GENERATION_ERROR SHOULDs, the four PROOF_VERIFICATION_ERROR SHOULDs), and every citation of a member was checked to sit beside a quotation of its own line or to list every member on purpose (the error-code entries).
 
 ## Foreign documents used
 
@@ -141,4 +137,4 @@ Controlled Identifiers v1.0, fetched 2026-11-07 from `https://www.w3.org/TR/cid-
 
 ## Not done
 
-No cryptosuite document (vc-di-eddsa, vc-di-ecdsa) was read; the signature recipes in `../examples/signatures.derived.json` are from memory of those documents and are not validated against their test vectors.
+Pass 1 read no cryptosuite document and wrote the signature recipe from memory. Pass 2 read vc-di-eddsa and vc-di-ecdsa (W3C Recommendation 15 May 2025) and validated the recipe against their test vectors (`../examples/verify-signatures.derived.py`, 11 checks, 0 failing). No schema here depends on it.

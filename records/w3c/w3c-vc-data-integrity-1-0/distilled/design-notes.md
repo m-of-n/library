@@ -46,6 +46,8 @@ lists their titles only).
 <!-- q L165 -->
 > As well as sections marked as non-normative, all authoring guidelines, diagrams, examples, and notes in this specification are non-normative. Everything else in this specification is normative.
 
+→ no requirement or candidate carries these words
+
    The HTML was measured over its 63 `section` elements: §1, §1.1, §1.2 and
    Appendices A, B and C carry class `informative`; §4.1, §4.2, §4.6 and §4.7
    carry class `normative`; the rest carry neither and are normative by the
@@ -54,9 +56,14 @@ lists their titles only).
    and advise rather than require. Notes and examples are non-normative
    wherever they sit.
    `bin/bcp14-count` finds 106 keywords in the `.txt`. The requirements are
-   `requirements.yaml`'s, which this file did not read: **it cites no
-   `w3c-vc-data-integrity-1-0#R-NNNN` id.** Every source citation is a line,
-   and the cross-check pass joins lines to ids.
+   `requirements.yaml`'s, which pass 1 of this file did not read. **The verify
+   pass joined every source quotation to the ids that carry its words**, by
+   script against `requirements.yaml` (289 entries): the `→` line under each
+   quotation names them; where no requirement exists it names the rejected
+   candidate or the non-normative status, or says that nothing carries the
+   words (39 joined, 11 candidates only, 4 non-normative, 12 carried by
+   nothing, of 66). A bare `R-0006` here is mofn report
+   R-0006, written `mofn R-0006`; this record's own ids are written in full.
 2. **Quotations are by reference, never typed.** A quotation of the source is a
    `<!-- q Lx-y -->` marker rendered by `bin/check-quotes --render` from
    `.cache/w3c-vc-data-integrity-1-0.txt` (1243 lines, sha256
@@ -138,13 +145,19 @@ fail on an undefined term (§2.4.3, L450):
 <!-- q L451 "This specification requires" .. "expectations of developers." -->
 > This specification requires that any recoverable loss of data when performing JSON-LD transformations result in an error, to avoid a mismatch in the security expectations of developers.
 
+→ `w3c-vc-data-integrity-1-0#R-0140`
+
 <!-- q L452 -->
 > Implementations that use JSON-LD processing, such as RDF Dataset Canonicalization [RDF-CANON], MUST throw an error, which SHOULD be DATA_LOSS_DETECTION_ERROR, when data is dropped by a JSON-LD processor, such as when an undefined term is detected in an input document.
+
+→ `w3c-vc-data-integrity-1-0#R-0141`, `w3c-vc-data-integrity-1-0#R-0142`
 
 and at the conformance level:
 
 <!-- q L169 "Conforming processors MUST" .. "consumed." -->
 > Conforming processors MUST produce errors when non-conforming documents are consumed.
+
+→ `w3c-vc-data-integrity-1-0#R-0001`
 
 Ours, P5 (accepted):
 
@@ -168,10 +181,14 @@ it. Two places the source departs from P5 are rejected in §3 (R2, R3).
 <!-- q L734 -->
 > Implementers and developers are urged to not trust information that contains a data integrity proof unless the proof has been verified and the verified data is provided in a return value from a software library that has confirmed that all data returned has been successfully protected.
 
+→ no requirement: candidate C-0144 (reject)
+
 The cryptosuite's result carries that document (§3, L506):
 
 <!-- q L506 -->
 > A map that represents the secured data document with the verified proofs removed if verified is true, or null otherwise.
+
+→ `w3c-vc-data-integrity-1-0#R-0158`
 
 Ours: SPEC-0002 decodes only after the signature verifies, and its human form
 is a view of the bytes, never itself signed:
@@ -186,6 +203,8 @@ spelling) are not what was signed:
 <!-- q L731 "The data that is protected" .. "the transformed data." -->
 > The data that is protected by any data integrity proof is the transformed data.
 
+→ `w3c-vc-data-integrity-1-0#R-0281`
+
 So an import (open question 4) reads a credential's claims from the verifier's
 returned document **after** context validation (§2.4.1), never from the
 received bytes, and never from JSON details the transformation discards.
@@ -195,11 +214,17 @@ received bytes, and never from JSON details the transformation discards.
 <!-- q L406 -->
 > Implementations that perform JSON-LD processing MUST treat the following JSON-LD context URLs as already resolved, where the resolved document matches the corresponding hash values below:
 
+→ `w3c-vc-data-integrity-1-0#R-0124`
+
 <!-- q L429 -->
 > Implementations MAY load application-specific JSON-LD context files from the network during development, but SHOULD permanently cache JSON-LD context files used by conforming secured documents in production settings, to increase their security and privacy characteristics. Goals of processing speed MAY be achieved through caching approaches such as those described above or functionally equivalent mechanisms.
 
+→ `w3c-vc-data-integrity-1-0#R-0137`, `w3c-vc-data-integrity-1-0#R-0138`, `w3c-vc-data-integrity-1-0#R-0028`
+
 <!-- q L435 "Applications MUST use the algorithm" .. "Verify Proof Sets and Chains." -->
 > Applications MUST use the algorithm in Section 4.6 Context Validation, or one that achieves equivalent protections, to validate contexts in a conforming secured document. Context validation MUST be run after running the applicable algorithm in either Section 4.4 Verify Proof or Section 4.5 Verify Proof Sets and Chains.
+
+→ `w3c-vc-data-integrity-1-0#R-0029`, `w3c-vc-data-integrity-1-0#R-0030`
 
 Ours, ARCH-0001 §6's W3C VC row and R-I-06:
 
@@ -226,6 +251,8 @@ which §2.4.2 allows:
 <!-- q L445 -->
 > When an application is securing a document, if an @context property is not provided in the document or the Data Integrity terms used in the document are not mapped by existing values in the @context property, implementations SHOULD inject or append an @context property with a value of https://w3id.org/security/data-integrity/v2 or one or more contexts with at least the same declarations, such as the Verifiable Credential Data Model v2.0 context (https://www.w3.org/ns/credentials/v2).
 
+→ `w3c-vc-data-integrity-1-0#R-0032`
+
 The vocabulary trust model behind A3 is **not** adopted; see R4.
 
 ### A4. A set of proofs is not a threshold
@@ -233,10 +260,14 @@ The vocabulary trust model behind A3 is **not** adopted; see R4.
 <!-- q L871 "A holder or any other intermediary" .. "will still verify." -->
 > A holder or any other intermediary receiving a secured data document containing a proof set is able to remove any of the proof values within the set prior to passing it on to another entity and the secured data document will still verify.
 
+→ non-normative text (no requirement): Appendix A
+
 That is Appendix A, non-normative. The normative §4.5 permits the same:
 
 <!-- q L618 "Other approaches are possible" .. "also considered verified." -->
 > Other approaches are possible, particularly if it is only desired to verify a subset of the proofs contained in allProofs. If another approach is taken to verify only a subset of the proofs, then it is important to note that any proof in that subset with a previousProof can only be considered verified if the proofs it references are also considered verified.
+
+→ `w3c-vc-data-integrity-1-0#R-0239`, `w3c-vc-data-integrity-1-0#R-0240`
 
 Ours, mofn report R-0006 §5.1, reasoning from DSSE:
 
@@ -255,8 +286,12 @@ interchange story is unchanged by this source.
 <!-- q L372 "Proof purposes are expressions" .. "does not." -->
 > Proof purposes are expressions on why a proof was created and its intended domain of usage whereas the other mechanisms mentioned are intended to limit what a private key can be used to do. A proof purpose "travels" with the proof while a key restriction does not.
 
+→ no requirement: candidate C-0039 (reject), candidate C-0040 (reject)
+
 <!-- q L181 "The protected declaration" .. "intended for." -->
 > The protected declaration acts as a safeguard to prevent the proof from being misused for a purpose other than the one it was intended for.
+
+→ no requirement: candidate C-0013 (reject)
 
 §4.4 steps 5 to 7 (L604 to L606) reject a proof whose purpose, `domain` or
 `challenge` differs from what the verifier expected. Ours: a DS label in every
@@ -280,6 +315,8 @@ input itself. An export sets `proofPurpose` to `assertionMethod` and emits no
 <!-- q L485 "Document authors and implementers" .. "validUntil properties." -->
 > Document authors and implementers are advised to understand the difference between the validity period of a proof, which is expressed using the created and expires properties, and the validity period of a credential, which is expressed using the validFrom and validUntil properties.
 
+→ no requirement: candidate C-0067 (reject)
+
 Ours, SPEC-0002 §7.3:
 
 <!-- qm spec/SPEC-0002-ksa-core.md L434 "`issued` is the speaker's statement" .. "when it signed." -->
@@ -296,8 +333,12 @@ time and is not carried (§6.2 below).
 <!-- q L494 -->
 > The specification MUST detail the transformation algorithms (if any), parameters, and other necessary details, used to modify input data into the data to be protected.
 
+→ `w3c-vc-data-integrity-1-0#R-0039`
+
 <!-- q L774 "Proper vetting includes" .. "is preferred." -->
 > Proper vetting includes, at a minimum, association with a peer reviewed mathematical proof of algorithm correctness; multiple implementations and vetting by experts in a standards setting organization is preferred.
+
+→ no requirement or candidate carries these words
 
 Ours, R-O-03:
 
@@ -318,13 +359,15 @@ that range:
 
 so a JSON document translated from a KSA statement carries only integers that
 every IEEE 754 double represents exactly, none of them negative zero, and no
-JCS number hazard R-0006 lists can arise in it. Times go out as
+JCS number hazard mofn R-0006 lists can arise in it. Times go out as
 `dateTimeStamp` strings in any case (§2.1).
 
 ### A8. A suite fixes the parameters; developers pick a suite
 
 <!-- q L697 "Cryptographic library implementers are advised" .. "these pre-sets." -->
 > Cryptographic library implementers are advised to, if possible, provide known good combinations of options and parameters to application developers. There would ideally be two pre-set default configurations for any algorithmic class, such as Elliptic Curve Digital Signatures, with no ability to fine tune parameters and options when using these pre-sets.
+
+→ no requirement or candidate carries these words
 
 §3's list of what every suite specification MUST detail (L492 to L511), and
 §5.5's single opaque `proofValue` (L719, L720), are SPEC-0002 §6.1's table in
@@ -342,8 +385,12 @@ The source makes the binding a use case, not a rule:
 <!-- q L483 "Implementers that are addressing" .. "those types of documents." -->
 > Implementers that are addressing those use cases are cautioned that additional checks might be appropriate when processing those types of documents.
 
+→ no requirement or candidate carries these words
+
 <!-- q L484 "One way to check" .. "given the proof's purpose." -->
 > One way to check for such an association is to ensure that the value of the controller property of a proof's verification method matches the URL value used to identify the issuer or holder, respectively, and that the verification method is expressed under a verification relationship that is acceptable given the proof's purpose.
+
+→ no requirement: candidate C-0066 (reject)
 
 Ours, P2 (accepted):
 
@@ -362,11 +409,17 @@ That narrows what the source leaves open, so the verdict is **constrains**.
 <!-- q L211 "Note that when verificationMethod" .. "the verification method." -->
 > Note that when verificationMethod is expressed in a data integrity proof, the value points to the actual location of the data; that is, the verificationMethod references, via a URL, the location of the public key that can be used to verify the proof. This public key data is stored in a controlled identifier document, which contains a full description of the verification method.
 
+→ `w3c-vc-data-integrity-1-0#R-0091`, `w3c-vc-data-integrity-1-0#R-0092`
+
 <!-- q L778 "This specification is designed in such a way" .. "conforming secured document." -->
 > This specification is designed in such a way that no network requests are required when verifying a proof on a conforming secured document.
 
+→ no requirement: candidate C-0163 (reject)
+
 <!-- q L780 -->
 > When it is not possible to use cached information, such as when a specific HTTP URL-based instance of a verification method is encountered for the first time, implementers are cautioned to use defensive measures to mitigate denial-of-service attacks during any process that might fetch a resource from the network.
+
+→ no requirement or candidate carries these words
 
 Ours, SPEC-0002 §10:
 
@@ -385,6 +438,8 @@ The source's receiving order (§4.1, steps 1 to 4):
 <!-- q L542-545 -->
 > The software transforms the incoming data into a document that can be understood by the applicable algorithm provided in Section 4.4 Verify Proof or Section 4.5 Verify Proof Sets and Chains. The software uses JSON Schema or an equivalent mechanism to validate that the incoming document follows an expected schema used by the application. The software uses the applicable algorithm(s) provided in Section 4.4 Verify Proof or Section 4.5 Verify Proof Sets and Chains to verify the integrity of the incoming document. If the document is a JSON-LD document, the software uses the algorithm provided in Section 4.6 Context Validation, or one providing equivalent protections, to validate all JSON-LD Context values used in the document.
 
+→ `w3c-vc-data-integrity-1-0#R-0174`, `w3c-vc-data-integrity-1-0#R-0175`, `w3c-vc-data-integrity-1-0#R-0176`, `w3c-vc-data-integrity-1-0#R-0177`
+
 Ours, SPEC-0002 §9.2's order (V4 signature before V5 decoding and V7
 structure) and §13.6:
 
@@ -392,7 +447,12 @@ structure) and §13.6:
 > It MUST bound the work it performs on any input before V4 succeeds.
 
 **Adaptation (ours):** run §4.1's receiving steps as 1, 3, 2, 4. Step 2 before
-step 3 carries no keyword, so the reordering conforms (inferred). Context
+step 3 carries no keyword, so the reordering conforms (inferred). The
+requirements file records the §4.1 steps as binding text all the same
+(`w3c-vc-data-integrity-1-0#R-0174` to `#R-0177`, `verb: none`, made binding
+by §4 ¶2, `w3c-vc-data-integrity-1-0#R-0169`), and §4.1 is one of the four
+sections the HTML marks `normative`; whether their order binds neither
+settles, so the reordering is a reading, recorded as one. Context
 validation stays after verification, where L435 requires it. **What cannot be
 reordered** is inside step 3: §4.4 parses before it verifies, and a suite that
 canonicalises to N-Quads expands the document under its contexts before the
@@ -403,8 +463,12 @@ signature is checked. That is §5 below.
 <!-- q L599 -->
 > When a step says "an error MUST be raised", it means that a verification result MUST be returned with a verified value of false and a non-empty errors list.
 
+→ `w3c-vc-data-integrity-1-0#R-0218`
+
 <!-- q L507 "If an error is produced" .. "would fail." -->
 > If an error is produced, the verification process failed to complete. An error, such as a network error, does not mean that a future attempt at verification would fail.
+
+→ `w3c-vc-data-integrity-1-0#R-0159`, `w3c-vc-data-integrity-1-0#R-0160`
 
 Ours, SPEC-0002 §9.1:
 
@@ -425,6 +489,8 @@ The source's own guidance on choosing a transformation:
 
 <!-- q L765-766 -->
 > If an application only uses JSON and does not depend on any form of RDF semantics, then using a cryptography suite that uses JSON Canonicalization Scheme [RFC8785] is an attractive approach. If an application uses JSON-LD and needs to secure the semantics of the document, then using a cryptography suite that uses RDF Dataset Canonicalization [RDF-CANON] is an attractive approach.
+
+→ no requirement: candidate C-0158 (reject), candidate C-0159 (reject)
 
 Ours, ADR-0003 D1, and P1:
 
@@ -471,8 +537,12 @@ The source's verification, non-normatively:
 <!-- q L140 -->
 > To verify a cryptographic proof, the following steps are performed: 1) Transformation, 2) Hashing, and 3) Proof Verification.
 
+→ non-normative text (no requirement): §1.1–§1.2
+
 <!-- q L142 -->
 > During verification, the transformation and hashing steps are conceptually the same as described above.
+
+→ non-normative text (no requirement): §1.1–§1.2
 
 Ours, ADR-0003's rejected alternative and SPEC-0002 §5 and §13.1:
 
@@ -492,6 +562,8 @@ and verified where, is open question 4; §5 below is the analysis.
 <!-- q L215 "A conforming processor MAY chose" .. "interpreted as UTC." -->
 > A conforming processor MAY chose to consume time values that were incorrectly serialized without an offset. Incorrectly serialized time values without an offset are to be interpreted as UTC.
 
+→ `w3c-vc-data-integrity-1-0#R-0010`, `w3c-vc-data-integrity-1-0#R-0099`
+
 §2.1 `expires` (L217) repeats it. Ours:
 
 <!-- qm spec/SPEC-0002-ksa-core.md L243 "Any other spelling" .. "not normalised." -->
@@ -505,6 +577,8 @@ source permits the repair and does not require it.
 
 <!-- q L653 -->
 > If recompact is true, set result.validatedDocument to the result of running the JSON-LD Compaction Algorithm with the inputDocument and knownContext as inputs. If the compaction fails, add at least one error to result.errors.
+
+→ `w3c-vc-data-integrity-1-0#R-0269`
 
 **Rejected:** our importer runs §4.6 with `recompact` false, so an unknown
 context is an error (step 3.2, L654). Turning unknown terms into full IRIs
@@ -530,6 +604,8 @@ and trust evaluation.
 <!-- q L707 "it has only two cryptosuite names" .. "used in validation." -->
 > it has only two cryptosuite names: ecdsa-rdfc-2019 and ecdsa-jcs-2019. The security level and corresponding curves and hashes are determined from the multi-key format of the public key used in validation.
 
+→ no requirement: candidate C-0124 (reject)
+
 Ours, SPEC-0002 §6.1:
 
 <!-- qm spec/SPEC-0002-ksa-core.md L311 -->
@@ -552,6 +628,8 @@ once SPEC-0002 leaves `0.x` (SPEC-0002 §6.1, §6.2).
 <!-- q L601 -->
 > If either securedDocument is not a map or securedDocument.proof is not a map, an error MUST be raised and SHOULD convey an error type of PARSING_ERROR.
 
+→ `w3c-vc-data-integrity-1-0#R-0220`, `w3c-vc-data-integrity-1-0#R-0221`
+
 The set and chain algorithms of §4.3 and §4.5 are defective as printed (§9
 below, D1 to D4). **Rejected for now:** our import profile accepts a `proof`
 that is one map, as §4.4 does. KSA's own chains are separate statements: a
@@ -562,6 +640,8 @@ nothing here is lost natively.
 
 <!-- q L820 -->
 > If an application uses JSON-LD and might require selective disclosure of information in a secured document, then using a cryptography suite that uses RDF Dataset Canonicalization [RDF-CANON] is an attractive approach.
+
+→ no requirement: candidate C-0191 (reject)
 
 Ours:
 
@@ -633,11 +713,17 @@ The verifier parses the bytes, then hands the cryptosuite a map:
 <!-- q L600 -->
 > Let securedDocument be the result of running parse JSON bytes to an Infra value on documentBytes.
 
+→ `w3c-vc-data-integrity-1-0#R-0219`
+
 <!-- q L607 -->
 > Let cryptosuiteVerificationResult be the result of running the cryptosuite.verifyProof algorithm with securedDocument provided as input.
 
+→ `w3c-vc-data-integrity-1-0#R-0234`
+
 <!-- q L502 "An algorithm that takes a secured data document (map securedDocument) as input" .. "or an error." -->
 > An algorithm that takes a secured data document (map securedDocument) as input, and produces a cryptosuite verification result or an error.
+
+→ `w3c-vc-data-integrity-1-0#R-0156`
 
 **So whatever is hashed at verification is produced from the parsed map, that
 is, re-encoded (inferred).** The received bytes are gone by step 8. §3 allows a
@@ -656,7 +742,7 @@ route that option 3 would not pay. Option 3 is withdrawn:
 > Withdrawn on the four grounds of `DECISIONS-0001` item 2; the strongest is that RFC 8785 §3.2.3 prohibits the array reordering we need, so we would ship a modified JCS — a partly invented algorithm under R-O-03.
 
 and this source corroborates the second of the four grounds rather than
-answering it. R-0006 §3.4 described RFC 8785's verification order:
+answering it. mofn R-0006 §3.4 described RFC 8785's verification order:
 
 <!-- qm research/0006-mechanism/report.md L462-466 "Applications MUST parse and" .. "then compare." -->
 > Applications MUST parse and check I-JSON, verify correctness and locate the signature property, and only then verify the signature. Appendix F spells out the same scheme: parse, save the signature value, **remove** the signature property, re-serialise, re-canonicalise, then compare.
@@ -669,11 +755,17 @@ L732). **A cost, not a reason to reopen.**
 <!-- q L159 "This specification enables" .. "regenerate the cryptographic proof." -->
 > This specification enables one to create cryptographic proofs that are not bound to the original document syntax, which enables more advanced use cases such as being able to use a single digital signature across a variety of serialization syntaxes such as JSON and CBOR without the need to regenerate the cryptographic proof.
 
+→ non-normative text (no requirement): §1.1–§1.2
+
 <!-- q L724 "This enables the same digital signature" .. "for every syntax." -->
 > This enables the same digital signature over the information to be expressed in JSON, CBOR, YAML, and other compatible syntaxes without having to create a cryptographic proof for every syntax.
 
+→ no requirement or candidate carries these words
+
 <!-- q L725 "This leads to double-storing data" .. "database drift over time." -->
 > This leads to double-storing data and can lead to increased security attack surface if the unsigned representation stored in databases accidentally deviates from the signed representation. By using transformations, the digital proof can live in the native data format to help prevent otherwise undetectable database drift over time.
+
+→ no requirement or candidate carries these words
 
 Ours, ADR-0004's rejection of option 4:
 
@@ -742,6 +834,8 @@ the JOSE registries. Open question 10.
 <!-- q L732 "One benefit of this approach is that adding or removing formatting characters" .. "does not invalidate the digital signature." -->
 > One benefit of this approach is that adding or removing formatting characters that do not impact the meaning of the information being signed, such as spaces, tabs, and newlines, does not invalidate the digital signature.
 
+→ no requirement: candidate C-0141 (reject)
+
 Under option 5 a divergence in order alone fails at V5. Here two byte
 strings that differ in order or whitespace carry one proof and both verify.
 Ours:
@@ -769,6 +863,8 @@ rejection at V5.
 
 <!-- q L742 "While a digital signature needs to always be checked" .. "obviously bad requests." -->
 > While a digital signature needs to always be checked before taking substantive action, other upstream checks can be performed on transparent payloads — such as identifier-based rate limiting, signature expiration checking, or nonce/challenge checking — to reject obviously bad requests.
+
+→ `w3c-vc-data-integrity-1-0#R-0282`
 
 Ours:
 
@@ -869,8 +965,12 @@ the source states the trade-off and names the alternative it declines:
 <!-- q L767 -->
 > Implementers are also advised that other mechanisms that perform no transformations are available, that secure the data by wrapping it in a cryptographic envelope instead of embedding the proof in the data, such as JWTs [RFC7519] and CWTs [RFC8392]. These approaches have simplicity advantages in some use cases, at the expense of some of the benefits provided by the approach detailed in this specification.
 
+→ no requirement or candidate carries these words
+
 <!-- q L821 "Implementers are also advised" .. "detailed in this specification." -->
 > Implementers are also advised that other selective disclosure mechanisms that perform no transformations are available, that secure the data by wrapping it in a cryptographic envelope instead of embedding the proof in the data, such as SD-JWTs [SD-JWT]. This approach has simplicity advantages in some use cases, at the expense of some of the benefits provided by the approach detailed in this specification.
+
+→ no requirement or candidate carries these words
 
 ### 5.2 The DSSE critique, scored against the source's mitigations
 
@@ -883,17 +983,21 @@ R-O-05's ancestor is the proposal's §3.4:
 |---|---|---|
 | **parse untrusted input before verifying** | parses (L600), and an RDFC suite expands under contexts first; mitigated by pinned contexts (L406, L429), dataset-poisoning detection (L727), resource-starvation mitigations every suite MUST state (L508), data-loss errors (L452) and a null base URL (L453) | **mitigated, not avoided** |
 | **canonicalisation schemes have been broken** | vetting with a peer-reviewed proof of correctness (L772, L774); both named transformations are cited documents (A7) | **mitigated** by R-O-03's discipline |
-| **no authenticated type indicator** | `cryptosuite` names the transformation; whether it is signed is each suite's (L494 to L497). One key type has two incompatible suites (L706): the case R-0006 §3.3 raises when it reads condition (1) over a profile and its bytes together | **underdetermined here**; open question 3 |
+| **no authenticated type indicator** | `cryptosuite` names the transformation; whether it is signed is each suite's (L494 to L497). One key type has two incompatible suites (L706): the case mofn R-0006 §3.3 raises when it reads condition (1) over a profile and its bytes together | **underdetermined here**; open question 3 |
 
 The two mitigations worth stating once more: L727's dataset poisoning,
 
 <!-- q L727 "This class of attack is called dataset poisoning" .. "halt processing." -->
 > This class of attack is called dataset poisoning, and all modern RDF Dataset canonicalizers are required to detect these sorts of bad inputs and halt processing.
 
+→ `w3c-vc-data-integrity-1-0#R-0279`
+
 and L508's obligation on every suite:
 
 <!-- q L508 -->
 > The specification MUST detail any known resource starvation attack that can occur in an algorithm and provide testable mitigations against each attack.
+
+→ `w3c-vc-data-integrity-1-0#R-0046`
 
 **For the ADR that will decide R-O-05 (DECISIONS-0001 item 4):** this is the
 one Recommendation in the library that takes the other side, with its price
@@ -911,19 +1015,19 @@ tested (open question 9). Ours, for comparison, on what rejection buys:
 **Answered: yes, structurally (inferred from L502, L600, L607, L731 to L733).**
 Every suite that canonicalises to N-Quads runs RDF Dataset Canonicalization
 over the received document during verification, and every JCS suite runs JCS
-over it. Against R-0006's condition (3):
+over it. Against mofn R-0006's condition (3):
 
 <!-- qm research/0006-mechanism/report.md L389-390 "Canonicalisation runs" .. "part of verification." -->
 > Canonicalisation runs **once, at authoring**, on trusted input, and never as part of verification.
 
 **Condition (3) fails by construction on this route**, where it holds by
-construction for vc+jwt and vc+cose (the sibling's adopt 1). For R-0006 §2.2's
+construction for vc+jwt and vc+cose (the sibling's adopt 1). For mofn R-0006 §2.2's
 VC row this record supplies: canonicalised at authoring **and** at
 verification, by JCS or RDFC 1.0 (L732, L733); signed, the transformed data
 (L731) plus whatever the suite adds [outside this source]; carried, the
 document with an embedded `proof` (L203) whose `proofValue` is Multibase
 (L223); the verifier runs §4.4, then context validation (L435); the binding of
-proof to issuer is left open (L484, B1). R-0006 is not edited here.
+proof to issuer is left open (L484, B1). mofn R-0006 is not edited here.
 
 ---
 
@@ -948,7 +1052,7 @@ ADR-0004 lists `trust` as the kind that carries the `AuthzCert` role (TV-5).
    gives are `eddsa-rdfc-2022` and `eddsa-jcs-2022` (L706); their algorithms
    are outside this source. The source's own guidance is L765 to L766 (B5) and
    L819 to L820. **A lean, not a decision (inferred):** JCS. It puts no
-   JSON-LD processing inside the proof, it is the canonicaliser R-0006 already
+   JSON-LD processing inside the proof, it is the canonicaliser mofn R-0006 already
    analysed, and KSA's integers cannot meet its number hazards (A7). Its price
    is that the meaning of compacted terms is protected only by context pinning,
    which B5 closes. Open question 3.
@@ -957,6 +1061,8 @@ ADR-0004 lists `trust` as the kind that carries the `AuthzCert` role (TV-5).
 
 <!-- q L453 "When deserializing to RDF" .. "set to null." -->
 > When deserializing to RDF, implementations MUST ensure that the base URL is set to null.
+
+→ `w3c-vc-data-integrity-1-0#R-0036`
 
 5. **A separate export key and a usage code for it** (B6; open question 7).
 
@@ -1025,7 +1131,7 @@ as printed. Every locator of ours is at `a56a3c0`.
 | 5 | §6 W3C VC row, its loss note (ARCH-0001 §6, L356) | §2.4 L406, L429; §2.4.1 L435 | **adopt** | A3 |
 | 6 | §6 W3C VC row, import column `I` (ARCH-0001 §6, L356) | verification canonicalises (L502, L600, L607) | **constrains**: an import is possible only as open question 4 allows | §5, R1 |
 | 7 | R-M-02 (ARCH-0001 §5.1, L299) | `verificationMethod` is a URL (L211) | **constrains**: a key-only principal survives only through a URL spelling | §6.1 item 2 |
-| 8 | R-0006 §5.1 and SPEC-0002 §8.6 (threshold inside the signed payload) | Appendix A L871; §4.5 L618 | **adopt** | A4 |
+| 8 | mofn R-0006 §5.1 and SPEC-0002 §8.6 (threshold inside the signed payload) | Appendix A L871; §4.5 L618 | **adopt** | A4 |
 | 9 | R-M-07 (ARCH-0001 §5.1, L304) | `digestMultibase` MAY, on an object with an `id` (L388) | **constrains**: an artifact export needs an `id` for the digest's object | §4.1 |
 | 10 | R-O-01 (ARCH-0001 §5.3, L325) | `verificationMethod` OPTIONAL (L211), yet required by §4.2 step 2 (L551) and §4.4 step 4 (L603) | **constrains**: always set; `KeyId` computed from the resolved key | §9 D6 |
 | 11 | R-O-02 (ARCH-0001 §5.3, L326) | no status mechanism here (L486) | **adopt**: exports stay short-lived | §6.2 |
@@ -1061,7 +1167,7 @@ as printed. Every locator of ours is at `a56a3c0`.
 | 41 | SPEC-0001 §5.3, the external statement (L229 to L232) | the protected data is not the received bytes (L731) | **constrains**: keeping the bytes does not keep what was signed | open questions 4, 6 |
 | 42 | SPEC-0002 §5, verify before decoding (L274), and §11.1's view (L680, L681) | §5.8's transparent payloads (L742, L745) | **silent**: each governs its own objects; different answers to one problem | §4.2 item 6 |
 | 43 | ARCH-0003 §12 item 4; SPEC-0001 §1.3 (L783, L784; L90 to L93) | the selective-disclosure suites (L801, L820) | **reject** this semester | R7 |
-| 44 | R-0006 §3.4, option 3's second ground (L462 to L466) | a JCS suite verifies in exactly that order | **adopt**: corroborates the withdrawal | §4.2 item 1 |
+| 44 | mofn R-0006 §3.4, option 3's second ground (L462 to L466) | a JCS suite verifies in exactly that order | **adopt**: corroborates the withdrawal | §4.2 item 1 |
 | 45 | SPEC-0002 §6.2, hybrid suites reserved (L324) | §5.4's layering by parallel proofs (L713, L714) | **silent** | open question 8 |
 | 46 | SPEC-0002 §6.1, what a suite defines | §3's suite requirements (L492 to L511); §5.2 L697; §5.5 L719, L720 | **adopt** | A8 |
 | 47 | ADR-0004's scoring, order-only divergence (L71) | a JCS suite absorbs reordering (L732) | **adopt**: corroborates option 3's cell, and option 5's | §4.2 item 5 |
@@ -1091,9 +1197,16 @@ requirement it imposes on us.
 3. **Which suite, and does it sign its own name and options?** JCS or RDFC
    (§6.1 item 3), and whether each suite covers `cryptosuite`, `proofPurpose`
    and the other proof options in what it signs [outside this source]. Two
-   incompatible suites exist per key type (L706), the case R-0006 §3.3 raises
+   incompatible suites exist per key type (L706), the case mofn R-0006 §3.3 raises
    when it reads condition (1) over a profile and its bytes together. Settle it after
-   the EdDSA and ECDSA suite documents are held (question 11).
+   the EdDSA and ECDSA suite documents are held (question 11). **Partly answered
+   by the verify pass [outside this source]:** read on 2026-11-07, the Proof
+   Configuration algorithms of `eddsa-rdfc-2022`, `eddsa-jcs-2022` and
+   `ecdsa-rdfc-2019` canonicalise and hash a clone of the proof options, every
+   member but `proofValue` (inferred requirement
+   `w3c-vc-data-integrity-1-0#R-0288`), so those three suites sign their own
+   name, `type`, `proofPurpose`, `created`, `domain` and `challenge`. The choice
+   of suite stays open.
 4. **May a Data Integrity credential be imported, and where is it verified?**
    (a) not at all, under P5.1; (b) JCS only, with the received bytes required
    to equal their own JCS form, which keeps to P5.1's letter (inferred) and not
@@ -1118,7 +1231,7 @@ requirement it imposes on us.
    Settle it there; P5.2 is accepted, so a change is a superseding ADR.
 6. **What is an imported credential's identity?** The digest of the received
    bytes is not stable (§4.2 item 5); the digest of the canonical form
-   canonicalises for identity, which R-0006's Group B allows; the `proofValue`
+   canonicalises for identity, which mofn R-0006's Group B allows; the `proofValue`
    keys on a signature, as SPEC-0002 §13.3 notes some systems do. Settle it in
    the import profile.
 7. **Which key signs an export, and how is it linked to the persona?**
@@ -1129,6 +1242,8 @@ requirement it imposes on us.
 
 <!-- q L714 "It also provides for cryptographic layering" .. "easy to use for developers." -->
 > It also provides for cryptographic layering, which allows one to simultaneously use multiple cryptographic algorithms, typically in parallel, such that any of those used to protect information can be used without reliance on or requirement of the others, while still keeping the digital proof format easy to use for developers.
+
+→ no requirement: candidate C-0128 (reject)
 
    and its own Appendix A shows any of them can be stripped (A4). A layered
    proof protects only a verifier whose policy demands the surviving
@@ -1151,6 +1266,10 @@ requirement it imposes on us.
     relationships, the §5.10 check at L754), the EdDSA, ECDSA and BBS suites,
     and VC Extensions have no record. Ingest them before §6 is built on; the
     `artifact-statements` topic, which owns this record, is the natural owner.
+    (The verify pass fetched vc-di-eddsa, vc-di-ecdsa and Controlled
+    Identifiers 1.0 to check the examples' signatures and Multibase; their
+    digests are in `examples/signatures.derived.json` and `schema/README.md`.
+    That is evidence for this record, not a record of them.)
 
 ---
 
@@ -1169,6 +1288,8 @@ from the HTML.
 <!-- q L634 -->
 > If combinedVerificationResult.status is false, set combinedVerificationResult.document to null and combinedVerificationResult.mediaType to null.
 
+→ `w3c-vc-data-integrity-1-0#R-0260`
+
 - **D2. §4.5 never hands the cryptosuite the proof it is verifying.** Step 3.3
   builds the input document with `proof` set to the *previous* proofs (L625),
   and step 3.4 runs §4.4's steps 4 to 8 on it (L628), whose step 8 passes that
@@ -1179,8 +1300,12 @@ from the HTML.
 <!-- q L625 -->
 > Let inputDocument be a copy of securedDocument with the proof value removed and then set inputDocument.proof to matchingProofs.
 
+→ `w3c-vc-data-integrity-1-0#R-0252`
+
 <!-- q L628 -->
 > Run steps 4 through 8 of the algorithm in section 4.4 Verify Proof on inputDocument; if no exceptions are raised, append cryptosuiteVerificationResult to verificationResults.
+
+→ `w3c-vc-data-integrity-1-0#R-0253`
 
 - **D3. Names drift between the result structures.** §4.4's result has
   `verifiedDocument` (L591); §4.5 writes `document` (L630, L633); §4.6 step 4
@@ -1194,6 +1319,8 @@ from the HTML.
 <!-- q L565 "If any element of previousProof list" .. "any element of allProofs" -->
 > If any element of previousProof list has an id attribute that does not match the id attribute of any element of allProofs
 
+→ `w3c-vc-data-integrity-1-0#R-0202`
+
 - **D5. Two raised error types are not defined in §4.7.** `PARSING_ERROR`
   (L601) and `DATA_LOSS_DETECTION_ERROR` (L452) are raised; §4.7 defines five
   others (L666 to L675).
@@ -1203,8 +1330,12 @@ from the HTML.
 <!-- q L211 "Inclusion of verificationMethod is OPTIONAL" .. "verify the proof." -->
 > Inclusion of verificationMethod is OPTIONAL, but if it is not included, other properties such as cryptosuite might provide a mechanism by which to obtain the information necessary to verify the proof.
 
+→ `w3c-vc-data-integrity-1-0#R-0007`
+
 <!-- q L551 -->
 > If one or more of the proof.type, proof.verificationMethod, and proof.proofPurpose values is not set, an error MUST be raised and SHOULD convey an error type of PROOF_GENERATION_ERROR.
+
+→ `w3c-vc-data-integrity-1-0#R-0182`, `w3c-vc-data-integrity-1-0#R-0183`
 
 - **D7. One signature across syntaxes, one syntax in the algorithm.** §1.2,
   §5.6 and §5.7 claim JSON, CBOR and YAML (L159, L724, L733); §4.4 step 1
@@ -1224,7 +1355,12 @@ from the HTML.
   fixture as printed: Examples 1 and 3 carry no proof; 2 and 7 have the wrong
   signature length; 4 and 5 are P-256, not a suite of ours; 6's second key
   opens `ec ff`; 8 is a fragment; 9 to 14 are symbolic. Example 6's first proof
-  was not run through RDFC here.
+  was not run through RDFC by this file; the examples lane ran it, and the
+  verify pass re-ran all seven proofs with a recipe that reproduces the
+  cryptosuite Recommendations' own test vectors
+  (`examples/verify-signatures.derived.py`): none verifies. Examples 4 and 5
+  name, as their `verificationMethod`, the P-256 test-vector key of vc-di-ecdsa
+  A.1, whose secret key that document publishes [outside this source].
 - **D10. Text**, each as printed: a doubled article (L195), a doubled
   preposition (L379), two wrong articles (L388, L531), three misspellings
   (L485, L517, L833), a past tense where an infinitive belongs (L215, L217),
@@ -1234,35 +1370,57 @@ from the HTML.
 <!-- q L195 "is the The" .. "Vocabulary." -->
 > is the The Security Vocabulary.
 
+→ `w3c-vc-data-integrity-1-0#R-0082`
+
 <!-- q L379 "used for for" .. "protocols" -->
 > used for for key agreement protocols
+
+→ `w3c-vc-data-integrity-1-0#R-0119`
 
 <!-- q L388 "or an list" .. "values" -->
 > or an list of string values
 
+→ `w3c-vc-data-integrity-1-0#R-0023`
+
 <!-- q L531 "An input document is an map" .. "an map" -->
 > An input document is an map
+
+→ `w3c-vc-data-integrity-1-0#R-0055`
 
 <!-- q L485 "betweeen" .. "validUntil)" -->
 > betweeen validFrom and validUntil)
 
+→ `w3c-vc-data-integrity-1-0#R-0153`
+
 <!-- q L517 "When specifing" .. "design pattern" -->
 > When specifing a cryptographic suite that utilizes this design pattern
+
+→ `w3c-vc-data-integrity-1-0#R-0051`
 
 <!-- q L833 "cultural normas" .. "normas" -->
 > cultural normas
 
+→ no requirement or candidate carries these words
+
 <!-- q L215 "MAY chose" .. "chose" -->
 > MAY chose
+
+→ `w3c-vc-data-integrity-1-0#R-0010`
 
 <!-- q L367 "as without these, is not possible" .. "possible" -->
 > as without these, is not possible
 
+→ `w3c-vc-data-integrity-1-0#R-0116`
+
 <!-- q L713 "the failure or one or more" .. "primitives" -->
 > the failure or one or more cryptographic algorithms or primitives
 
+→ no requirement or candidate carries these words
+
 <!-- q L440 "(e.g., `https://ontology.example/v1)" .. "v1)" -->
 > (e.g., `https://ontology.example/v1)
+
+→ no requirement or candidate carries these words
 
 ---
 
