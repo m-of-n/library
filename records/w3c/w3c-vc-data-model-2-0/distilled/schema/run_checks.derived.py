@@ -98,6 +98,11 @@ def x05(vp):
     vcs = vcs if isinstance(vcs, list) else [vcs]
     holder = vp.get("holder")
     hid = holder.get("id") if isinstance(holder, dict) else holder
+    if hid is None:
+        # Pass 2 (verify): this branch used to report pass. With no holder, L2545's test (issuer value
+        # identical to the holder value) marks no credential self-asserted, so the rule cannot apply,
+        # and L2541's test (the issuer is the holder entity) cannot be decided from the document.
+        return "na", "%d embedded credentials; no holder, so none is self-asserted by L2545 and L2541 is undecidable from the document" % len(vcs)
     selfa = []
     for c in vcs:
         if isinstance(c, dict) and "issuer" in c:

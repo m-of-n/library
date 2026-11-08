@@ -293,7 +293,7 @@ _Inferred, not verbatim: **R-0142** (§4.3 ¶5 (@context)); its words are this e
 <!-- q L421-421 "The id prope" .. "ntation." -->
 > The id property allows for expressing statements about specific things in the verifiable credential and is set by an issuer when expressing objects in a verifiable credential or a holder when expressing objects in a verifiable presentation.
 
-_R-0012: the skeleton's sentence (lines 423-425, OPTIONAL first) is split into R-0146, R-0147, R-0148; its text is in requirements.yaml._
+_R-0012: the skeleton's sentence (line 425 since pass 2 cut it from 423-425, which opened inside a note; OPTIONAL first) is split into R-0146, R-0147, R-0148; its text is in requirements.yaml._
 
 **R-0146** · §4.4 ¶4 (id) · OPTIONAL · split of R-0012
 <!-- q L425-425 "The id prope" .. "PTIONAL." -->
@@ -327,7 +327,7 @@ _R-0014: the skeleton's sentence (lines 660-662, MUST first) is split into R-014
 <!-- q L662-662 "If more than" .. " matter." -->
 > If more than one value is provided, the order does not matter.
 
-_R-0015: the skeleton's sentence (lines 883-892, MUST first) is split into R-0152, R-0153; its text is in requirements.yaml._
+_R-0015: the skeleton's sentence (lines 890-892 since pass 2 cut it from 883-892, which opened inside Example 4; MUST first) is split into R-0152, R-0153; its text is in requirements.yaml._
 
 **R-0152** · §4.5 ¶6 · MUST · split of R-0015
 <!-- q L890-890 -->
@@ -1652,7 +1652,7 @@ digestSRI and digestMultibase each hold one or more digests (R-0227, R-0228) and
 <!-- q L2545-2545 -->
 > A verifiable credential in a verifiable presentation is considered self-asserted when the value of the issuer property of the verifiable credential is identical to the value of the holder property of the verifiable presentation.
 
-R-0214 defines self-asserted by entity (the issuer is the holder), R-0218 by value (the issuer value is identical to the holder value). They part when one entity uses two identifiers, and identical leaves open whether an issuer object and a holder URL naming the same id are the same value. R-0054 depends on the definition.
+R-0214 defines self-asserted by entity (the issuer is the holder), R-0218 by value (the issuer value is identical to the holder value). They part when one entity uses two identifiers, and identical leaves open whether an issuer object and a holder URL naming the same id are the same value. R-0054 depends on the definition. Pass 2 (verify): under R-0218 the rule R-0054 can never be broken by a document. A credential is self-asserted by value only when its issuer value equals the presentation's holder value, so a presentation that lacks the holder R-0054 demands holds no self-asserted credential by that test; only R-0214's entity test, which no document shows, can find the case R-0054 forbids (schema/cross-field-rules.derived.yaml X-05).
 
 ### SD-21 (tension) — CRYPTOGRAPHIC_SECURITY_ERROR means a modification; step 1.3 raises it for any failure
 
@@ -1701,6 +1701,17 @@ Read literally, the conjunction asks every type value to be both a term and an a
 
 §1.3 makes the two media types part of what a conforming document is (R-0003) and §6.2 lists them, but their registration templates in Appendix C, including the encoding considerations that tie application/vc to the application/ld+json requirements, sit in an appendix marked non-normative.
 
+
+### SD-26 (tension) — B.2 pins the security vocabulary to a digest no served document has, and VC Data Integrity pins it to another
+
+<!-- q L4120-4122 -->
+> | URL: https://w3id.org/security# Resolved Document: https://w3c.github.io/vc-data-integrity/vocab/security/vocabulary.jsonld SHA2-256 Digest: 689af6f393b55c9b35c37cfad59d13cc421e0c89ce97cf0e8234f9b4a3074104
+
+<!-- q L4115-4115 "Implementati" .. "normative." -->
+> Implementations that depend on RDF vocabulary processing MUST ensure that the following vocabulary URLs used in the base context ultimately resolve to the following files when loading the JSON-LD serializations, which are normative.
+
+Found by pass 2 (verify), 2026-11-07. The digest B.2 prints for the JSON-LD serialization of https://w3id.org/security# equals neither the Resolved Document it names (fetched: 35407 octets, sha256 8a16b6b5…) nor what the vocabulary URL now redirects to (https://www.w3.org/2025/credentials/vcdi/vocab/v2/vocabulary.jsonld, 48622 octets, sha256 02c4b488…), nor any of the five versions of that file committed upstream; schema/contexts.yaml has the measurements. VC Data Integrity 1.0 (w3c-vc-data-integrity-1-0), a Recommendation of the same date, pins the JSON-LD serialization of the same vocabulary URL to a different value, 082434d5…, in its §2.4, so no one document satisfies both pins, and R-0126 makes this one a MUST for implementations that depend on RDF vocabulary processing. The vocabulary is a living document and the Recommendation is frozen, so drift since publication may explain the mismatch with today's files; it does not explain two Recommendations disagreeing on the day they were published. Recorded, not repaired; the base context and the 2018 vocabulary digests (B.1, B.2) equal the fetched files.
+
 ## Coverage
 
-366 markers, counted by the script that wrote this file: 250 entries of requirements.yaml (every stated entry except the split parents, whose texts are in requirements.yaml), 64 definition, scope and recital blocks, and 52 quotations in the source-defect list. Inferred entries are named where they belong and quoted nowhere: their words are this extraction's.
+368 markers: 250 entries of requirements.yaml (every stated entry except the split parents, whose texts are in requirements.yaml), 64 definition, scope and recital blocks, and 54 quotations in the source-defect list (counted by the script that wrote this file as 366 and 52; pass 2, verify, added SD-26 with its 2 markers and recounted). Inferred entries are named where they belong and quoted nowhere: their words are this extraction's.

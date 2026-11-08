@@ -41,7 +41,8 @@ values sit inside a `vc-hash` span; the text is what the span holds.
 
 ## Checks and verdicts
 
-175 fixtures, 831 checks: 551 pass, 21 fail, 12 deviation (a SHOULD-profile miss), 55 unverifiable, 192 na.
+175 fixtures, 831 checks: 550 pass, 21 fail, 12 deviation (a SHOULD-profile miss), 55 unverifiable, 193 na. (Pass 2, verify: one X-05
+check on Example 18 had reported pass for a presentation with no holder, where the rule cannot apply; it is na now, 551 and 192 before.)
 Counted over `results.derived.json` by `run_checks.derived.py examples`.
 
 * Each displayed data-model object was run against the MUST profile and the SHOULD profile of the

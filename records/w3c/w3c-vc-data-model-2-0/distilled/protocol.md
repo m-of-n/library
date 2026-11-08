@@ -178,7 +178,7 @@ Step 2 (§4.1, non-normative (section)):
 <!-- q L338 "Once a d" .. "per." -->
 > Once a developer has added a number of these property-value combinations, the modified object can be sent to a conforming issuer implementation, and a verifiable credential will be created for the developer.
 
-Step 3 (§1.3, unmarked subsection of a non-normative section):
+Step 3 (§1.3, normative):
 
 <!-- q L229 "A confor" .. "t produces" -->
 > A conforming issuer implementation produces conforming documents, MUST include all required properties in the conforming documents it produces
@@ -213,7 +213,7 @@ Step 9 (§5.2, normative):
 <!-- q L2839 "After th" .. "ial." -->
 > After this JSON-LD context is created, the developer publishes it somewhere so it is accessible to verifiers who will be processing the verifiable credential.
 
-Step 10 (§1.3, unmarked subsection of a non-normative section):
+Step 10 (§1.3, normative):
 
 <!-- q L229 "and MUST" .. "sms." -->
 > and MUST secure the conforming documents it produces using a securing mechanism described in Section 4.12 Securing Mechanisms.
@@ -487,7 +487,7 @@ Step 7 (§4.13, normative):
 <!-- q L2467 "Verifiab" .. "ier." -->
 > Verifiable presentations SHOULD be extremely short-lived and bound to a challenge provided by a verifier.
 
-Step 8 (§1.3, unmarked subsection of a non-normative section):
+Step 8 (§1.3, normative):
 
 <!-- q L228 "A conforming document MUST be s" .. "sms." -->
 > A conforming document MUST be secured by at least one securing mechanism as described in Section 4.12 Securing Mechanisms.
@@ -723,7 +723,7 @@ Step X1 (§7.1, normative):
 <!-- q L3373 "The step" .. "uts." -->
 > The steps for verifying the state of the securing mechanism and verifying that the input document is a conforming document MAY be performed in a different order than that provided above as long as the implementation returns errors for the same invalid inputs.
 
-Step X2 (§1.3, unmarked subsection of a non-normative section):
+Step X2 (§1.3, normative):
 
 <!-- q L230 "MUST che" .. "ted." -->
 > MUST check that each required property satisfies the normative requirements for that property, and MUST produce errors when non-conforming documents are detected.
@@ -1373,7 +1373,7 @@ Step 4 (§8.16, non-normative (section)):
 <!-- q L3360 -->
 > a conforming document (map document)
 
-**T-11 (ambiguity, §1.3, §9.5.1-§9.5.3, §9.9.1-§9.9.2, §11.1-§11.2, Appendix C.1-C.2).** Normative status of unmarked subsections inside non-normative sections. The HTML marks §1, §9, §9.5, §9.9, §11 and Appendix C informative but not these subsections, and the conformance statement makes non-normative only the sections marked so (with guidelines, diagrams, examples and notes). Read literally, §1.3 (the conformance classes every flow here depends on) is normative, and so are §11.1's MUSTs inside a non-normative §11; read by nesting, neither is. Measured from the HTML by script (class of the innermost enclosing section); the quotes' status field carries the literal reading.
+**T-11 (ambiguity, §1.3, §9.5.1-§9.5.3, §9.9.1-§9.9.2, §11.1-§11.2, Appendix C.1-C.2).** Normative status of subsections of sections marked non-normative. Pass 1 read the class of the innermost enclosing section and found §1.3 unmarked. It is not: its tag is `<section id="conformance" class="normative">`, one of the four section tags in the HTML whose id attribute precedes its class (the others are the abstract, the status section and the references, none of them normative or informative), and the pass-1 script did not read it (pass 2, verify, re-measured all 125 section tags of the HTML). What remains is the subsections with no normative or informative class of their own inside sections marked informative: §9.5.1 to §9.5.3, §9.9.1 and §9.9.2, §11.1 and Appendix C.1 and C.2 (no class), and §11.2 (class `substantive`, a change marker). §1.3 ¶1 (L226) makes the sections marked as non-normative non-normative and everything else normative. This record reads a section as marked by its nearest enclosing section that carries either class, as the HTML nests them and as ReSpec prints "This section is non-normative." once, under the marked section's heading (§11 at L3924, not under §11.1 or §11.2). So those subsections are non-normative, which is what requirements.yaml does (R-0118 to R-0123 withdrawn) and what every step label here says. The literal reading, under which §11.1's MUST statements would bind, is not taken.
 
 <!-- q L226 -->
 > As well as sections marked as non-normative, all authoring guidelines, diagrams, examples, and notes in this specification are non-normative. Everything else in this specification is normative.
@@ -1561,6 +1561,6 @@ Evidence: credentials_v2.jsonld fetched 2026-11-07 from https://www.w3.org/ns/cr
 
 ## Coverage
 
-13 roles. 19 flows (5 creation-and-delivery, 6 exchange, 2 hand-off, 2 local-decision, 1 local-processing, 3 receive-processing; source status 14 mixed, 3 non-normative, 2 normative) with 109 steps, 13 of them inferred; on_error_basis inferred 5, stated 14, unspecified 90. 26 message-vocabulary entries, 26 used by steps. 20 error paths (inferred 5, stated 11, unspecified 4). 31 source defects and tensions (1 ambiguity, 9 defect, 13 gap, 8 tension). 14 not_defined items. 400 quote items in this file, every one cut by script and checked by bin/check-quotes. 263 selector matches and 173 quote joins resolve to 244 distinct requirement ids of requirements.yaml (sha256 c74ae28dbde0e32766f1f688206dd3904227de75a782d2cf0ac67324570a7f41 when wired, 298 entries, 201 stated keyword entries of which 155 are cited here); 0 selectors unresolved. With state-machine.yaml: 251 of the 298 requirements.yaml entries cited by one or both files, 34 more covered through a split parent or child that is cited; the 13 not cited are listed under requirements_not_cited with the reason. Counted by script from the objects written, pass 1, 2026-11-07; any later edit owes a recount.
+13 roles. 19 flows (5 creation-and-delivery, 6 exchange, 2 hand-off, 2 local-decision, 1 local-processing, 3 receive-processing; source status 14 mixed, 3 non-normative, 2 normative) with 109 steps, 13 of them inferred; on_error_basis inferred 5, stated 14, unspecified 90. 26 message-vocabulary entries, 26 used by steps. 20 error paths (inferred 5, stated 11, unspecified 4). 31 source defects and tensions (1 ambiguity, 9 defect, 13 gap, 8 tension). 14 not_defined items. 400 quote items in this file, every one cut by script and checked by bin/check-quotes. Pass 1 counted 263 selector matches and 173 quote joins resolving to 244 distinct requirement ids (155 of the 201 stated keyword entries); pass 2 (verify) removed the 4 selectors that had matched the withdrawn R-0118 to R-0121 from F01 step 4 and recounted from the objects: 259 selector matches, 56 further ids added by quote joins, 240 distinct ids, 151 of the 201 stated keyword entries, 0 selectors unresolved. With state-machine.yaml: 247 of the 298 requirements.yaml entries cited by one or both files, 34 more covered through a split parent or child that is cited; the 17 not cited are listed under requirements_not_cited with the reason (pass 2 added the four withdrawn entries). Wired against requirements.yaml sha256 c74ae28dbde0e32766f1f688206dd3904227de75a782d2cf0ac67324570a7f41; pass 2 changed the text of R-0012 and R-0015 and one testable_reason (sha256 fa47abc43358b1c89597d0c2b8fd9b54df6a609133478a3104e274a6472de505), no id, and no join here resolved to either text. 25 quote labels relabelled by pass 2 (T-11). Counted by script, 2026-11-07; any later edit owes a recount.
 
 protocol.md carries quotation markers only; 1 YAML quotes whose boundary falls next to a double quote mark cannot be selected by a marker and appear in protocol.yaml only.

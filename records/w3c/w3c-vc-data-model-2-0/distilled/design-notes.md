@@ -890,8 +890,14 @@ against option 5.**
 > Implementations that depend on RDF vocabulary processing MUST ensure that the following vocabulary URLs used in the base context ultimately resolve to the following files when loading the JSON-LD serializations, which are normative. Other semantically equivalent serializations of the vocabulary files MAY be used by implementations.
 
 Measured: both printed digests this pass could check match the files fetched
-(the base context against L4103, the credentials vocabulary against L4119); the
-security vocabulary of L4121 and L4122 was not fetched. A semantically
+(the base context against L4103, the credentials vocabulary against L4119). The
+security vocabulary of L4121 and L4122, fetched by pass 2 (verify), matches by no
+route: the Resolved Document L4121 names hashes to `8a16b6b5…`, what
+`https://w3id.org/security` now redirects to hashes to `02c4b488…`, and VC Data
+Integrity 1.0, published the same day, pins the JSON-LD serialization of the same
+vocabulary URL to `082434d5…` against this source's `689af6f3…` (`normative.md`
+SD-26, `schema/contexts.yaml`). Two Recommendations pinning one vocabulary URL to
+two digests is the point of this item made by the W3C itself. A semantically
 equivalent re-serialization, which the second sentence permits, would fail the
 printed digest. Under one canonical encoding a meaning has one byte string and
 one digest; option 4's two canonical forms would have two, which is B.2's MAY in
@@ -1001,8 +1007,10 @@ again.
 
 ### 5.1 What was fetched and checked
 
-Fetched 2026-11-07 into the lane's scratch, outside the repository, and never
-committed. Octets and SHA-256 recomputed in this pass.
+Fetched 2026-11-07 into the lane's scratch, outside the repository; this lane
+committed nothing, but the schema lane copied the first four files byte-exact into
+`schema/` (`*.verbatim.jsonld`, digests in `schema/contexts.yaml`; pass 2, verify,
+checked them identical). Octets and SHA-256 recomputed in this pass.
 
 | file | URL | octets | sha256 | the source's digest |
 |---|---|---|---|---|
@@ -1010,7 +1018,7 @@ committed. Octets and SHA-256 recomputed in this pass.
 | credentials vocabulary | `https://www.w3.org/2018/credentials/index.jsonld` | 21677 | `9db03c54d69a8ec3944f10770e342b33e58a79045c957c35d51285976fc467c4` | L4119: **equal** |
 | undefined-terms context | `https://www.w3.org/ns/credentials/undefined-terms/v2` | 90 | `82dab514ba44eb18f5d1b0f638c5e140c6a556fbfb5089601bdc0fa5eb8b2581` | none printed |
 | examples context | `https://www.w3.org/ns/credentials/examples/v2` | 84 | `57393fbc69d6efb9b9b5dc9cb6b9880b0944360abfe2eaf459c9e58cf2279d7c` | none printed |
-| security vocabulary | `https://w3c.github.io/vc-data-integrity/vocab/security/vocabulary.jsonld` | — | not fetched | L4122 prints one |
+| security vocabulary | `https://w3c.github.io/vc-data-integrity/vocab/security/vocabulary.jsonld` | 35407 (pass 2) | `8a16b6b592eb99e7e266afd0f01c50b0c33826f7a45a737e8f3c8c0e90ceec8c` (pass 2; not committed) | L4122: **differs** (`689af6f3…`; VC Data Integrity §2.4 prints `082434d5…` for the same URL) |
 
 ### 5.2 The base context, measured
 
