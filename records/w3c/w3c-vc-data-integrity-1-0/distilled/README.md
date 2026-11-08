@@ -86,3 +86,5 @@ examples/vectors.yaml named the vocabulary-digest finding, which is `EXD-09`, an
 | Examples 4 and 5 use the vc-di-ecdsa test-vector key | | | | D9 | EXD-11 |
 
 Every id defined in the five schemes is in this table (85 ids, none defined twice; `crosscheck.derived.py` checks both).
+
+Known gap, cross-record: §2.4 pins the security vocabulary URL to a JSON-LD digest `082434d5…`; the sibling w3c-vc-data-model-2-0 pins the same URL in its Appendix B.2 to `689af6f3…`, and neither digest matches a file served; see that record's SD-26 (normative.md) and F-05 (schema/README.md).

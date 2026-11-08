@@ -1372,6 +1372,33 @@ carries IANA registries ADR-0004's list does not name (row 20).
     Extensions have no record under `records/w3c/` (listed in this pass). Ingest
     them before §5 and §6 are built on; the `artifact-statements` topic, which
     owns this record, is the natural owner.
+12. **Eight of the 26 messages the protocol model names have no structure in
+    the source.** Pass 3 joined every message of `protocol.yaml` to
+    `messages.yaml` (`crosscheck.yaml`): 16 resolve to a structure and 2 to a
+    member of one (the proof property; the controlled identifier document that
+    §7.1 returns). Eight resolve to none, because the source defines none:
+    status information (§4.10 leaves it to the status type), the refresh
+    request (§5.4 shows Example 27 and says no more), the presentation request
+    (Appendix A.1 and §9.5.2 mention one), the derived credential and its proof
+    (§4.13 and §5.7 delegate them to the securing mechanism), the transformation
+    input document (§5.11 asks only for a registered media type), the verifiable
+    data registry entry (Appendix A.4, non-normative), the HTTP response for a
+    related resource (HTTP's), and the enveloping serialization (VC-JOSE-COSE's).
+    These are gaps in the source, not in the join. An export route that relies on
+    one must take it from the specification that owns it. Settle it in the
+    R-I-01 VC table, per route. (A ninth, the verification algorithm's input, was
+    a gap of this record's pass 1 and is now the structure `VerificationInput`.)
+13. **Does a `credentialSubject` object holding only `id` conform?** §4.8 says
+    each object MUST be the subject of one or more claims, MUST be serialized
+    inside the property (L1774), and MAY carry an `id`. An object with only an
+    `id` identifies a subject and asserts nothing inside itself. The derived
+    schema rejects it (`subjectObject`), on that reading of R-0173 and R-0174;
+    the inferred R-0175 names only the empty object, and its note says the
+    id-only case fails on the same reading. The source prints no such object (76
+    fixture subject objects checked, none holds only `id`), so no example settles
+    it. A foreign verifier may take the other reading. Settle it in the import
+    profile (question 8): accept an id-only subject on import, or refuse it as
+    the schema does.
 
 ---
 

@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: w3c-vc-data-model-2-0
 record: w3c-vc-data-model-2-0
 type: summary
-updated: "2026-10-23"
+updated: "2026-11-07"
 ---
 
 # Verifiable Credentials Data Model v2.0
@@ -175,27 +175,22 @@ under the sibling records. Searched 2026-10-23.
 
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata, relations, `distillation` |
 | `summary.md` | this document |
+| `distilled/` | the FX-1 artifact set: normative, requirements, schema (with the four JSON-LD files the source pins, hashed), messages, protocol, state machine, examples, design notes — start at `distilled/README.md` |
 
-**No `distilled/`, and none owed by this pass.** library#87 claims the
-**summary bar**: the record is `summarized`, declares no `distillation` block,
-and adds nothing to `distilled/`, so FX-1 does not fire. This is a `spec`, so
-it remains a candidate for FX-1 extraction; that extraction is owned by the
-library#89. **What makes it worth doing** is R-I-06
-moving from *Could* to scheduled: the export would then have to meet §1.3,
-§4.3, §4.5, §4.7, §5.11 and §7.1 as text someone implements, and would owe
-`requirements.yaml` with keyword counts and the interoperability test suite as
-`examples/`.
+**The FX-1 artifacts under `distilled/` have landed** — extract, verify and
+cross-check complete, `record.yaml` declares `distillation.standard: FX-1`,
+`profile: full` — and they, not this summary, are the citable detail. Where
+the two differ, the artifacts win. Extraction was owned by library#89. The
+base context's digest matches the one §B.1 prints; the security vocabulary
+digest §B.2 prints matches no file retrievable on 2026-11-07, and VC Data
+Integrity pins the same URL to a different one (`distilled/normative.md` SD-26).
 
 **No `supersedes` edge.** DM 2.0 succeeds the VC Data Model v1.1
 Recommendation (Appendix E, "Changes since the v1.1 Recommendation"), but the
 library holds no v1.1 record, so `supersedes` is empty rather than pointing at
 nothing.
-
-**No verbatim normative text here.** Quoted fragments above are short and
-locator-bearing; under FX-1 the normative text belongs in
-`distilled/normative.md`.
 
 ## Limits
 
