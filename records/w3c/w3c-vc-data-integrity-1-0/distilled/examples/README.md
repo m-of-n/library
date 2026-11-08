@@ -64,17 +64,17 @@ the computed evidence below.
 
 ## Findings on the examples (not repaired)
 
-- **D-01** Examples 1 and 3 end with `};`: not JSON.
-- **D-02** Examples 5, 6, 7, 10–14 carry `//` comment lines: not JSON. Example 7's `@context` closing bracket is at column 0.
-- **D-03** Example 8 elides with `...`: a fragment, not JSON.
-- **D-04** Examples 9–14 are symbolic: `type`, `cryptosuite`, `created` and `proofPurpose` are omitted by the source's own statement (§A), `verificationMethod` and `proofValue` are placeholders. They fail `proof.derived` for that reason and carry no signature.
-- **D-05** The `proofValue` of Example 2 and of both proofs of Example 7 decodes (base58btc after `z`) to **65 octets**; an Ed25519 signature is 64. Examples 4, 5 and 6's decode to 64.
-- **D-06** Several `proofValue`s are rearrangements of one another's characters, not independent values: Ex2[0] = Ex6[0], Ex2[0] = Ex7[0], Ex4[0] = Ex5[0], Ex6[0] = Ex7[0], Ex6[1] = Ex7[1]. Example 5's is a rearrangement of Example 4's although its proof differs only by `expires`.
-- **D-07** The second verification-method key of Examples 6 and 7 (`z6MkGskx…`) is a rearrangement of the characters of the first (`z6MkjLrk…`) and decodes to multicodec prefix `ecff`, not `ed01` (Ed25519 public key).
-- **D-08** None of the 7 proofs verifies under its printed key (0 verified): 2 fail on signature length (Example 2, Example 7 proof 0), 2 on the key prefix (Examples 6 and 7, second proof), 3 fail the signature check itself (Examples 4 and 5, Example 6 proof 0). D-05 to D-07 explain the first four; Examples 4 and 5 (ECDSA P-256 over RDFC) and Example 6 proof 0 fail for no reason found in the examples themselves, other than D-06.
-- **D-09** §2.4's three vocabulary digests (`application/ld+json`, `text/turtle`, `text/html`) equal none of the documents served on 2026-11-07, by every route tried (`https://w3id.org/security` with the `Accept` header; the `www.w3.org/2025/credentials/vcdi/vocab/v2/` location it now redirects to; the `w3c.github.io` URLs in the HTML). The three context digests equal the fetched files exactly. The REC is frozen and the vocabulary is a living document, so this is drift, not necessarily an error at publication; the text tells a reader to compare against the live URL.
-- **D-10** Example 3 differs from Example 4 minus its proof in `@context` only: Example 4 adds the Data Integrity v2 context (§2.4.2 context injection). Example 1 equals Example 2 minus its proof.
-- **D-11** (pass 2) The `verificationMethod` key of Examples 4 and 5, `zDnaepBuvsQ8…`, is the P-256 test-vector key of vc-di-ecdsa A.1, whose secret key that document publishes (`z42twTcN…`; its public key recomputes to the fragment). The examples could have carried genuine signatures; neither verifies.
+- **EXD-01** Examples 1 and 3 end with `};`: not JSON.
+- **EXD-02** Examples 5, 6, 7, 10–14 carry `//` comment lines: not JSON. Example 7's `@context` closing bracket is at column 0.
+- **EXD-03** Example 8 elides with `...`: a fragment, not JSON.
+- **EXD-04** Examples 9–14 are symbolic: `type`, `cryptosuite`, `created` and `proofPurpose` are omitted by the source's own statement (§A), `verificationMethod` and `proofValue` are placeholders. They fail `proof.derived` for that reason and carry no signature.
+- **EXD-05** The `proofValue` of Example 2 and of both proofs of Example 7 decodes (base58btc after `z`) to **65 octets**; an Ed25519 signature is 64. Examples 4, 5 and 6's decode to 64.
+- **EXD-06** Several `proofValue`s are rearrangements of one another's characters, not independent values: Ex2[0] = Ex6[0], Ex2[0] = Ex7[0], Ex4[0] = Ex5[0], Ex6[0] = Ex7[0], Ex6[1] = Ex7[1]. Example 5's is a rearrangement of Example 4's although its proof differs only by `expires`.
+- **EXD-07** The second verification-method key of Examples 6 and 7 (`z6MkGskx…`) is a rearrangement of the characters of the first (`z6MkjLrk…`) and decodes to multicodec prefix `ecff`, not `ed01` (Ed25519 public key).
+- **EXD-08** None of the 7 proofs verifies under its printed key (0 verified): 2 fail on signature length (Example 2, Example 7 proof 0), 2 on the key prefix (Examples 6 and 7, second proof), 3 fail the signature check itself (Examples 4 and 5, Example 6 proof 0). D-05 to D-07 explain the first four; Examples 4 and 5 (ECDSA P-256 over RDFC) and Example 6 proof 0 fail for no reason found in the examples themselves, other than D-06.
+- **EXD-09** §2.4's three vocabulary digests (`application/ld+json`, `text/turtle`, `text/html`) equal none of the documents served on 2026-11-07, by every route tried (`https://w3id.org/security` with the `Accept` header; the `www.w3.org/2025/credentials/vcdi/vocab/v2/` location it now redirects to; the `w3c.github.io` URLs in the HTML). The three context digests equal the fetched files exactly. The REC is frozen and the vocabulary is a living document, so this is drift, not necessarily an error at publication; the text tells a reader to compare against the live URL.
+- **EXD-10** Example 3 differs from Example 4 minus its proof in `@context` only: Example 4 adds the Data Integrity v2 context (§2.4.2 context injection). Example 1 equals Example 2 minus its proof.
+- **EXD-11** (pass 2) The `verificationMethod` key of Examples 4 and 5, `zDnaepBuvsQ8…`, is the P-256 test-vector key of vc-di-ecdsa A.1, whose secret key that document publishes (`z42twTcN…`; its public key recomputes to the fragment). The examples could have carried genuine signatures; neither verifies.
 
 ## Signature attempts
 

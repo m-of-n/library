@@ -58,7 +58,7 @@ lists their titles only).
    `bin/bcp14-count` finds 106 keywords in the `.txt`. The requirements are
    `requirements.yaml`'s, which pass 1 of this file did not read. **The verify
    pass joined every source quotation to the ids that carry its words**, by
-   script against `requirements.yaml` (289 entries): the `→` line under each
+   script against `requirements.yaml` (289 entries at that pass; pass 3 restored the withdrawn R-0054, which none of this file's quotations maps to, so 290): the `→` line under each
    quotation names them; where no requirement exists it names the rejected
    candidate or the non-normative status, or says that nothing carries the
    words (39 joined, 11 candidates only, 4 non-normative, 12 carried by
@@ -1270,6 +1270,18 @@ requirement it imposes on us.
     Identifiers 1.0 to check the examples' signatures and Multibase; their
     digests are in `examples/signatures.derived.json` and `schema/README.md`.
     That is evidence for this record, not a record of them.)
+12. **Two steps of the protocol model name a message the source never
+    defines.** Pass 3 joined all 33 message and returns items of
+    `protocol.yaml` to `messages.yaml` (`crosscheck.yaml`): 31 resolve to a
+    structure, two do not. F11 step 3 is an HTTP GET with an `Accept` header
+    (§2.4); the source shows only a `curl` command for it (L414) and
+    `messages.yaml` carries the response side (MSG-07, ENC-05) but no request.
+    F17 step 1 is a request naming the expected context; §2.4.1 mentions a
+    presentation request as an example and defines none (the step is
+    inferred). Both are gaps in the source, not in the join. An export route
+    that relies on either must define it. Settle it in the R-I-01 table for a
+    `trust` statement, or in whichever record owns the exchange (VC
+    Extensions or a presentation protocol).
 
 ---
 

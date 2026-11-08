@@ -33,10 +33,12 @@ sections, though almost all of their text is advisory and is not quoted here (se
 
 ### The one keyword in non-normative text
 
-Inside the Note of §3.1; it was the skeleton's R-0054, retired (SD-2):
+Inside the Note of §3.1; the skeleton's R-0054, kept in requirements.yaml with status withdrawn so its id resolves and binds nothing (SD-2):
 
 <!-- q L527 "To improve" .. "within proofValue." -->
 > To improve the developer experience, authors creating new Data Integrity cryptographic suite specifications SHOULD use the modern pattern — where the type is set to DataIntegrityProof; the cryptosuite property carries the identifier for the cryptosuite; and any cryptosuite-specific cryptographic data is encapsulated (i.e., not directly exposed as application layer data) within proofValue.
+
+R-0054 (SHOULD, withdrawn)
 
 
 ## §1.3 Conformance
@@ -1155,7 +1157,7 @@ The §1 section element is informative and §1 opens with the non-normative mark
 
 ### SD-2: a BCP 14 keyword inside a Note
 
-The SHOULD of the modern-pattern sentence of §3.1 sits inside the Note on legacy cryptographic suite design patterns (HTML div class note; the sentence shares the note's p element, after a line break). §1.3 ¶1 makes notes non-normative, so the keyword binds nothing; the skeleton's R-0054 is retired and the keyword is accounted for in the reconciliation. Whether a new suite uses the DataIntegrityProof pattern at all is therefore left free; §3.1's MUSTs bind only suites that use it (R-0051, R-0052, R-0053).
+The SHOULD of the modern-pattern sentence of §3.1 sits inside the Note on legacy cryptographic suite design patterns (HTML div class note; the sentence shares the note's p element, after a line break). §1.3 ¶1 makes notes non-normative, so the keyword binds nothing; the skeleton's R-0054 is kept, withdrawn (pass 1 had deleted it; docs/requirements.md §3b says ids are stable, so pass 3 restored it), and the keyword is counted in the reconciliation. Whether a new suite uses the DataIntegrityProof pattern at all is therefore left free; §3.1's MUSTs bind only suites that use it (R-0051, R-0052, R-0053).
 
 <!-- q L525 -->
 > Note: Design Patterns of Legacy Cryptographic Suites

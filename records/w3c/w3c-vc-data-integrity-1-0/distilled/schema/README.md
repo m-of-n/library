@@ -103,10 +103,10 @@ MAY is never a constraint: the leniency it grants has an anchor named for it
 
 **Re-wired in pass 2 (verify, 2026-11-07).** Pass 1 wired this directory against the skeleton's 78 ids, citing
 welded parent sentences (R-0003, R-0004, R-0051, R-0052, R-0065 …) where a split child or a keyword-less entry is meant,
-and one retired id (R-0054). Every citation now names the leaf entry whose words its quotation carries; 85 distinct
-requirement ids of the 289 are cited by the files here (README excluded; bare and `w3c-vc-data-integrity-1-0#R-NNNN`
-forms, counted by script), none a split parent, none retired. Pass 1's sentence, kept as its measurement: "52 of the 78
-requirement ids are cited". messages.yaml wires 210 of the 289 ids and lists the other 79 under `not_wired` with reasons.
+and one withdrawn id (R-0054, which pass 1 had deleted and pass 3 restored). Every citation now names the leaf entry whose words its quotation carries; 85 distinct
+requirement ids of the 290 are cited by the files here (README excluded; bare and `w3c-vc-data-integrity-1-0#R-NNNN`
+forms, counted by script), none a split parent, none withdrawn. Pass 1's sentence, kept as its measurement: "52 of the 78
+requirement ids are cited". messages.yaml wires 211 of the 290 ids (R-0054 added by pass 3 at message level, beside the L527 quotation) and lists the other 79 under `not_wired` with reasons.
 
 ## Source tensions (full text and quotations in `messages.yaml`, `source_tensions`)
 

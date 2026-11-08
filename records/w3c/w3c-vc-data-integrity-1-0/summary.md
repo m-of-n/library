@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: w3c-vc-data-integrity-1-0
 record: w3c-vc-data-integrity-1-0
 type: summary
-updated: "2026-10-23"
+updated: "2026-11-07"
 ---
 
 # Verifiable Credential Data Integrity 1.0
@@ -180,25 +180,19 @@ roughly a dozen.
 
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata, `cites` (the document's own references we hold, plus four gaps) and our relations |
+| `record.yaml` | metadata, `cites` (the document's own references we hold, plus four gaps), our relations, `distillation` |
 | `summary.md` | this document |
+| `distilled/` | the FX-1 artifact set: normative, requirements, schema, messages, protocol, state machine, examples, design notes — start at `distilled/README.md` |
 
-**No `distilled/`, and none is owed by this pass.** This is library#87's pass,
-and it claims the **summary bar**: the record is `summarized`, declares no
-`distillation` block and adds nothing to `distilled/`, so FX-1 does not fire.
-That is a scope judgement, not a verdict that the document is unimportant. As a
-`spec` it will owe FX-1 when extracted, and that extraction is **owned by the
-library#89**. **What would make it urgent** is a decision
-that R-I-06 exports through Data Integrity rather than VC-JOSE-COSE. §4.2–§4.6
-would then become code we implement and test, and would need
-`requirements.yaml`, a `protocol` artifact for the verifier procedure, and the
-W3C cryptosuite test suites as `examples/` fixtures. The extraction would also
-have to pull in at least one cryptosuite spec and Controlled Identifiers v1.0,
-because the algorithms that touch bytes are not in this document.
-
-**No verbatim normative text here.** Under FX-1 it belongs in
-`distilled/normative.md` with its locator. The quoted fragments above are short
-and carry their locators by design.
+**The FX-1 artifacts under `distilled/` have landed** — extract, verify and
+cross-check complete, `record.yaml` declares `distillation.standard: FX-1`,
+`profile: full` — and they, not this summary, are the citable detail. Where
+the two differ, the artifacts win. Extraction was owned by library#89. The
+verifier procedure of §4.2–§4.6 is in `protocol.yaml` and
+`state-machine.yaml`, the signature recipe is checked against the vc-di-eddsa
+and vc-di-ecdsa Recommendations' own vectors in `examples/`, and Controlled
+Identifiers v1.0 still has no record: members this source does not define are
+marked outside it.
 
 ## Limits
 
