@@ -106,6 +106,3 @@ rewrite the same sorted bibliography. See `docs/generated-views.md`.
 CI generates them and gates against the fresh output, including the check that
 every record produces a bibliography entry. Reviewers can download the built
 views from the `library-views` artifact on any PR.
-
-**Shelfmark:** no merger of record data. Convergence of *requirements* first,
-then *schema*. Backlog T-023.
