@@ -250,6 +250,17 @@ class YamlParser:
             return _scalar(content)
         return self.parse_map(ind)
 
+    def _nested_in_item(self, key_col: int):
+        """Value of an empty `- key:`. A sequence may sit at the key's own
+        column (`- key:` / `  - a`); a map may not: a key at that column is
+        the item's next sibling, and the value is null."""
+        nxt = self.peek()
+        if nxt is not None and nxt.strip() and nxt.strip() != "---" \
+                and self._indent(nxt) == key_col \
+                and not _strip_comment(nxt).strip().startswith("- "):
+            return None
+        return self._nested(key_col - 2)
+
     def parse_list(self, indent: int) -> list:
         items = []
         while True:
@@ -277,9 +288,16 @@ class YamlParser:
                     # `- name: a` + `note: >` parsed while `- note: >` raised
                     # "unexpected indent". bin/_yaml.py got it right; this
                     # branch is the one that was missing.
-                    item = {key.strip(): self._block_scalar(ind, val)}
+                    #
+                    # The scalar's parent is the KEY, at column ind + 2, not
+                    # the dash at column ind: measured from the dash, the
+                    # item's sibling keys (also at ind + 2) were read as
+                    # continuation lines and swallowed into the text.
+                    item = {key.strip(): self._block_scalar(ind + 2, val)}
+                elif val:
+                    item = {key.strip(): _scalar(val)}
                 else:
-                    item = {key.strip(): _scalar(val) if val else self._nested(ind)}
+                    item = {key.strip(): self._nested_in_item(ind + 2)}
                 self._map_into(item, ind + 1)
                 items.append(item)
             else:
