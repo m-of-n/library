@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: rfc-9162
 record: rfc-9162
 type: summary
-updated: "2026-10-23"
+updated: "2026-11-08"
 ---
 
 # Certificate Transparency Version 2.0
@@ -105,8 +105,13 @@ None of these is set as `contradicts`. 9942 and 9162 do not assert incompatible 
 |---|---|
 | `record.yaml` | metadata |
 | `summary.md` | this document |
+| `distilled/` | the FX-1 extraction at `profile: full`; index in `distilled/README.md` |
 
-**No `distilled/`.** This record is at the summary bar, written for library#87. RFC 9162 is an `rfc` record, so the FX-1 extraction (normative text, BCP 14 keywords reconciled, the TLS-presentation structs and the Appendix B ASN.1 module as schema, the §5 API as messages and protocol, the §2.1.5 trees as test vectors) is **owned by library#89**. That extraction should settle three items left open here: whether the untagged STH signature input (§4.10) matters; a precise statement of 9942 §5.3.1 against §2.1.4.2; and fixtures from the §2.1.5 example. No keyword count is given here: a raw `grep -w` over the source finds 136 uppercase keyword tokens, including §1.1's own list, and that number is not a reconciled count.
+**FX-1, `profile: full`** (library#89, PR 3 of 5). `distilled/` holds the normative text, 491 requirements with all 138 BCP 14 keywords reconciled (`bin/bcp14-count`; the XML's 149 adds the 11 in §1.1's recital), the TLS-presentation structs and both ASN.1 fragments verbatim as schema, the §5 API as messages and protocol, 12 state machines, the §2.1.5 trees as derived fixtures with `reproduce.py`, and design notes against m-of-n. Of the three items this summary left open for the extraction:
+
+- **The untagged STH signature input (§4.10)** is analysed from the byte layouts in `distilled/design-notes.md` §6.
+- **Fixtures from §2.1.5** are in `distilled/examples/`. RFC 9162 prints node names, not hash values, so the values derive from inputs chosen there.
+- **9942 §5.3.1 against §2.1.4.2** is not settled here. The extraction read RFC 9162 only; whether RFC 9942 binds tree size and leaf index is design-notes open question 2, for the `rfc-9942` record.
 
 ## Limits
 
