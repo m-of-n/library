@@ -4,8 +4,8 @@ id: gaps
 title: "What is left to make this library best in class"
 type: assessment
 status: draft
-version: "0.2.0"
-updated: "2026-10-11"
+version: "0.2.1"
+updated: "2026-11-07"
 needs_review: true
 reviewed: false
 ---
@@ -100,8 +100,7 @@ insufficient for anyone else:
 
 `MANIFEST.yaml` carries a `federation.peers` list that is **still empty.**
 Cross-library references resolve as `(library-id, record-id, content-hash)` —
-**untested**, because there has only ever been one library. The Shelfmark
-convergence (T-023) is the obvious first peer and has not started.
+**untested**, because there has only ever been one library.
 
 ## 6. Integrity — the library does not eat its own cooking
 
@@ -157,7 +156,6 @@ redirect note in `GLOSSARY-0001` keeps older citations resolving.
 6. **Attest `MANIFEST.yaml`.** Small, removes the sharpest criticism, and the
    mofn wallet engine (W-1) makes it a demo rather than a chore.
 7. **A reading path**, for a person who has not read any of it.
-8. Federate with Shelfmark.
 
-**1 through 5 are days. 6 through 8 are the difference between a working tool
+**1 through 5 are days. 6 and 7 are the difference between a working tool
 and something a stranger would adopt.**
