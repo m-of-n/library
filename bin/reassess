@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+"""reassess — flag every record whose verdict rests on a reopened decision.
+
+    bin/reassess <DEC-id> [--date YYYY-MM-DD] [--dry-run]
+
+docs/scope.md §7.2 (settled 2026-11-09): a `usefulness` verdict is
+re-assessed when a decision it bears on is reopened. The decisions live in
+mofn, so the library cannot see a reopen happen. Whoever reopens one runs
+this, and it writes
+
+    usefulness:
+      reassess: "DEC-005 reopened 2026-11-09"
+
+into every record whose `bears_on` names the id. `bin/validate` warns on
+each flagged record until someone re-judges it, updates `assessed`, and
+deletes the `reassess` line. The verdict itself is left alone: a flag says
+"look again", not "this is now wrong".
+
+Idempotent: a record already flagged for the same id is skipped. A second
+reopened decision is appended to the same line, separated by "; ".
+"""
+import argparse, datetime, pathlib, re, sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import _record_yaml
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+ID = re.compile(r"(DEC-\d+|R-[A-Z]-\d+)")
+
+
+def flag(text, marker, dec):
+    """Return `text` with `marker` recorded under usefulness, or None if it
+    already carries `dec`. Line-level, so the rest of the file is untouched."""
+    lines = text.split("\n")
+    try:
+        u = next(i for i, l in enumerate(lines) if re.match(r"usefulness:\s*$", l))
+    except StopIteration:
+        # bin/validate requires usefulness on every written record; a scaffold
+        # has none to re-assess, so it gets the block with the flag alone.
+        at =len(lines) - (1 if lines[-1] == "" else 0)
+        lines[at:at] = ["usefulness:", f'  reassess: "{marker}"']
+        return "\n".join(lines)
+    end = u + 1
+    while end < len(lines) and (lines[end].startswith("  ") or not lines[end].strip()):
+        end += 1
+    while end > u + 1 and not lines[end - 1].strip():
+        end -= 1
+    for i in range(u + 1, end):
+        m = re.match(r'  reassess:\s*"?(.*?)"?\s*$', lines[i])
+        if m:
+            if re.search(rf"(?<![\w-]){re.escape(dec)}(?![\w-])", m.group(1)):
+                return None
+            joined = f"{m.group(1)}; {marker}" if m.group(1) else marker
+            lines[i] = f'  reassess: "{joined}"'
+            return "\n".join(lines)
+    lines[end:end] = [f'  reassess: "{marker}"']
+    return "\n".join(lines)
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("decision", help="the reopened DEC-* (or R-*) id, exactly as bears_on names it")
+    ap.add_argument("--date", default=datetime.date.today().isoformat())
+    ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--root", default=str(ROOT), help=argparse.SUPPRESS)
+    a = ap.parse_args(argv)
+    if not ID.fullmatch(a.decision):
+        sys.exit(f"reassess: '{a.decision}' is not a DEC-* or R-* id")
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", a.date):
+        sys.exit(f"reassess: --date '{a.date}' is not YYYY-MM-DD")
+    marker = f"{a.decision} reopened {a.date}"
+    hit = skipped = 0
+    for rec in sorted(pathlib.Path(a.root).glob("records/*/*/record.yaml")):
+        bears = _record_yaml.load_yaml(rec).get("bears_on") or []
+        if a.decision not in [str(b).strip() for b in bears]:
+            continue
+        new = flag(rec.read_text(), marker, a.decision)
+        where = rec.parent.relative_to(a.root)
+        if new is None:
+            skipped += 1
+            print(f"already  {where}")
+            continue
+        hit += 1
+        print(f"flagged  {where}")
+        if not a.dry_run:
+            rec.write_text(new)
+    print(f"\n{a.decision}: {hit} flagged, {skipped} already flagged"
+          f"{' (dry run, nothing written)' if a.dry_run else ''}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

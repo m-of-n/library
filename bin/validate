@@ -65,6 +65,49 @@ REL = {"supersedes", "superseded_by", "updates", "updated_by", "cited_by",
 
 
 
+# Applicability and usefulness on every written record (library#92, L-017).
+# The pass was done once by hand over 446 records; before it, 11 had no
+# `applicability` and 27 no reasoned `usefulness` under a green check. These
+# are errors, not warnings, so the gaps cannot come back. A scaffold is exempt:
+# it is already reported as unwritten, and rating it would be guesswork.
+APPLICABILITY = {"security": {"core", "adjacent", "none"},
+                 "cryptography": {"core", "adjacent", "none"},
+                 "this_project": {"core", "adjacent", "none", "unknown"}}
+DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+def check_assessment(d, where, errs, warns):
+    a = d.get("applicability")
+    if not isinstance(a, dict) or not a:
+        errs.append(f"{where}: no `applicability` — rate security, cryptography and "
+                    f"this_project (docs/scope.md §6)")
+    else:
+        for axis, legal in APPLICABILITY.items():
+            if a.get(axis) not in legal:
+                errs.append(f"{where}: applicability.{axis} '{a.get(axis, '')}' not in {sorted(legal)}")
+    u = d.get("usefulness")
+    u = u if isinstance(u, dict) else {}
+    vd = u.get("verdict")
+    if vd in (None, "", "unassessed"):
+        errs.append(f"{where}: usefulness.verdict is {vd or 'missing'} — a written record "
+                    f"carries useful, marginal or not-useful (docs/scope.md §6)")
+    elif not str(u.get("reason") or "").strip():
+        # Ruling (b), library#92: useful or marginal with an empty bears_on is
+        # allowed, and the reason is what makes it allowed. bears_on stays
+        # decision ids only; never invent one to satisfy this check.
+        why = (" — with an empty bears_on the reason is the only record of why it is held"
+               if not d.get("bears_on") else "")
+        errs.append(f"{where}: usefulness.verdict={vd} has no reason{why}")
+    if vd not in (None, "", "unassessed") and not DATE.fullmatch(str(u.get("assessed") or "")):
+        errs.append(f"{where}: usefulness.assessed must be YYYY-MM-DD")
+    # §7.2: a verdict is re-assessed when a decision it bears on is reopened.
+    # bin/reassess sets the marker; re-assessing clears it. Pending work, so a
+    # warning: a reopen in mofn must not turn every unrelated PR red.
+    if str(u.get("reassess") or "").strip():
+        warns.append(f"{where}: usefulness flagged for re-assessment ({u['reassess']}) — "
+                     f"re-judge it, update `assessed`, delete `reassess`")
+
+
 
 # Derived-vs-verbatim naming (#44, docs/extraction.md). `.derived.` is
 # mandatory on anything the library wrote; `.verbatim.` is optional; an
@@ -391,8 +434,11 @@ def main():
         if d.get("id") and d["id"] != rid:
             errs.append(f"{where}: id '{d['id']}' != directory name '{rid}'")
         s_md = rec.parent / "summary.md"
-        if not s_md.exists() or any(m in s_md.read_text() for m in SCAFFOLD):
+        scaffold = not s_md.exists() or any(m in s_md.read_text() for m in SCAFFOLD)
+        if scaffold:
             scaffolds.append(where)
+        else:
+            check_assessment(d, where, errs, warns)
         _dd = d.get("distillation")
         if isinstance(_dd, dict) and _dd.get("profile") == "full" and _dd.get("standard") == FX1:
             extracted += 1          # full against the standard in force, not against an older one

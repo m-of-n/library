@@ -20,7 +20,11 @@ Sections, all of them:
    architecture."
 3. **Applicability** — rate security, cryptography, and this project as
    `core` / `adjacent` / `none`, each with a one-line why. Name the `DEC-*` or
-   `R-*`, or say plainly it bears on none yet.
+   `R-*`, or say plainly it bears on none yet. Copy the three ratings into
+   `record.yaml` `applicability`, and record `usefulness` — verdict, a
+   one-line reason, `assessed` date. `bin/validate` errors on a written
+   record without them. Empty `bears_on` is fine when the reason says why
+   the record is held; never add an id to fill it (`docs/scope.md` §6).
 4. **Implementations** — open source and commercial, what we could build on.
    *"Searched, none found on YYYY-MM-DD"* is a result; an empty section with no
    date is not.
