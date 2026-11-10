@@ -223,6 +223,14 @@ it informs a report (RPT-*), a code point, an argument. That is library#92
 ruling (b). `bears_on` stays decision ids (DEC-*, R-*) only — a report id
 there would make *"everything bearing on DEC-002"* return things that do not.
 
+**Two registers** (library#133). The library serves mofn and tmodel
+(Threat-Radar/tmodel), and both number their decisions `DEC-001`…, with
+different meanings: mofn's DEC-003 is identifiers on the wire, tmodel's is
+the risk-metric scheme. A bare id is mofn's. A tmodel id is written
+`"tmodel:DEC-003"` / `"tmodel:R-044"`, quoted. Never "fix" a tmodel id by
+deleting it as stale: tmodel's register is live. `bin/validate` rejects any
+other shape.
+
 Two rules survive the removal of caps:
 
 - **Never invent relevance.** A fabricated `bears_on` corrupts the one query
@@ -241,8 +249,10 @@ Two rules survive the removal of caps:
    **Settled 2026-11-09: re-assess when a decision it bears on is reopened** —
    a trigger, not a fixed expiry (library#92). A verdict does not go stale
    with time; it goes stale when the decision it was judged against moves.
-   The decisions live in mofn, so the library cannot see a reopen itself.
-   Whoever reopens one runs `bin/reassess <DEC-id>`, which writes
+   The decisions live in mofn and tmodel, so the library cannot see a reopen
+   itself.
+   Whoever reopens one runs `bin/reassess <id>` — `DEC-005` for mofn,
+   `tmodel:DEC-003` for tmodel, exactly as `bears_on` writes it — which writes
    `usefulness.reassess: "<DEC-id> reopened <date>"` into every record whose
    `bears_on` names it and leaves the verdict alone. `bin/validate` **warns**
    on each flagged record — a warning, so a reopen in mofn cannot turn

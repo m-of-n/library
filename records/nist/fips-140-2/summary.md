@@ -30,7 +30,7 @@ FIPS 140-2 sets security requirements for a cryptographic module, across 11 requ
 | Cryptography | `core` | Key management, approved functions and self-tests are its subject |
 | This project | `none` | ARCH-0001 specifies objects and verification, not modules holding keys |
 
-`bears_on` is empty. The scaffold carried `DEC-009`, which come from the numbering of the Threat-Radar library folded in by #62, not from mofn. On mofn `origin/main` (`bec50fd`), `DEC-009` asks what the contract form is, and this document has nothing to say on that. Those ids are removed rather than kept as a false edge.
+`bears_on` is empty. The scaffold carried `DEC-009`, which come from the numbering of the Threat-Radar library folded in by #62, not from mofn. On mofn `origin/main` (`bec50fd`), `DEC-009` asks what the contract form is, and this document has nothing to say on that. Those ids are removed rather than kept as a false edge. **Restored 2026-11-09 as `tmodel:DEC-009` (library#133).** The removal misread a register collision as a stale id: these are tmodel's live ids (Threat-Radar `project/DECISIONS-0001.md` and `spec/ARCH-0001-threat-model-architecture.md`), where DEC-009 is generic-threat-to-product mapping and the mitigation lifecycle. They still bear on no mofn decision.
 
 **Near miss.** §4.7.4's split knowledge rules for key entry and output require at least two components, and documentation that any n-1 of n reveal nothing beyond key length. That is n-of-n custody of a key inside one module. It is not a threshold principal in the sense of R-M-06 or G4, so no edge is set.
 

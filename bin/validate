@@ -75,6 +75,34 @@ APPLICABILITY = {"security": {"core", "adjacent", "none"},
                  "this_project": {"core", "adjacent", "none", "unknown"}}
 DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
+# Two decision registers share `bears_on` (library#133). A bare id is mofn's
+# (MANIFEST id: mofn; spec/ARCH-0001-authorization-attestation.md, plus an
+# ARCH-0002 principle). tmodel's (Threat-Radar/tmodel project/DECISIONS-0001.md,
+# spec/ARCH-0001-threat-model-architecture.md) carries the `tmodel:` prefix:
+# the DEC-* numbers collide, and DEC-003 is identifiers in one and the risk
+# metric in the other. A shape check cannot tell a bare tmodel DEC from a mofn
+# one; it catches every other way an unqualified or foreign id gets in.
+BEARS_MOFN = re.compile(r"DEC-\d{3}|R-[A-Z]-\d{2}|ARCH-\d{4} P\d+(?:\.\d+)?")
+BEARS_TMODEL = re.compile(r"tmodel:(?:DEC-\d{3}[a-z]?|R-\d{3})")
+
+
+# A topic may also name the work it unblocks (schema/topic.schema.yaml).
+BEARS_TOPIC_EXTRA = re.compile(r"T-\d{3}|WP\S*")
+
+
+def check_bears_on(ids, where, errs, topic=False):
+    for b in ids or []:
+        b = str(b).strip()
+        if BEARS_MOFN.fullmatch(b) or BEARS_TMODEL.fullmatch(b):
+            continue
+        if topic and BEARS_TOPIC_EXTRA.fullmatch(b):
+            continue
+        if re.fullmatch(r"R-\d{3}", b):
+            errs.append(f"{where}: bears_on '{b}' is a tmodel requirement id — write it 'tmodel:{b}' (library#133)")
+        else:
+            errs.append(f"{where}: bears_on '{b}' names no register's id — mofn DEC-NNN / R-X-NN, "
+                        f"or tmodel:DEC-NNN / tmodel:R-NNN (docs/scope.md §6)")
+
 
 def check_assessment(d, where, errs, warns):
     a = d.get("applicability")
@@ -433,6 +461,7 @@ def main():
                 errs.append(f"{where}: missing required field '{k}'")
         if d.get("id") and d["id"] != rid:
             errs.append(f"{where}: id '{d['id']}' != directory name '{rid}'")
+        check_bears_on(_record_yaml.load_yaml(rec).get("bears_on"), where, errs)
         s_md = rec.parent / "summary.md"
         scaffold = not s_md.exists() or any(m in s_md.read_text() for m in SCAFFOLD)
         if scaffold:
@@ -589,6 +618,7 @@ def main():
         for k in ("id", "question", "owner", "status"):
             if k not in d:
                 errs.append(f"topics/{top.name}: missing '{k}'")
+        check_bears_on(_record_yaml.load_yaml(top).get("bears_on"), f"topics/{top.name}", errs, topic=True)
 
     for rid, dup in dup_of.items():
         if dup not in all_ids:

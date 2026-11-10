@@ -32,7 +32,7 @@ Only bibliographic facts are kept, from the ISO catalogue page seen through an I
 | Cryptography | `none` | From the title only: functional safety, not cryptography |
 | This project | `none` | No mofn requirement touches vehicle functional safety |
 
-**Bears on none.** ARCH-0001 §5 and the design log have no automotive or functional-safety requirement. Earlier `bears_on: DEC-003` came from Threat-Radar's numbering and was removed (see `content.note`).
+**Bears on none.** ARCH-0001 §5 and the design log have no automotive or functional-safety requirement. Earlier `bears_on: DEC-003` came from Threat-Radar's numbering and was removed (see `content.note`). **Restored 2026-11-09 as `tmodel:DEC-003` (library#133).** The removal misread a register collision as a stale id: these are tmodel's live ids (Threat-Radar `project/DECISIONS-0001.md` and `spec/ARCH-0001-threat-model-architecture.md`), where DEC-003 is the risk-metric scheme. They still bear on no mofn decision.
 
 ## Implementations
 

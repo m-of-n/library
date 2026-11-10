@@ -30,7 +30,7 @@ TVRA holds that countermeasures cannot be chosen well without understanding the 
 | Cryptography | `adjacent` | §5a.1 warns that key-length reasoning can understate long-term cryptographic risk |
 | This project | `none` | ARCH-0001 requires no risk analysis method |
 
-`bears_on` is empty. The scaffold carried `DEC-003` and `DEC-005`, which come from the numbering of the Threat-Radar library folded in by #62, not from mofn. On mofn `origin/main` (`bec50fd`), those are issuer and subject identifiers on the wire, and the envelope for `ArtifactStatement`. This document addresses neither. Those ids are removed rather than kept as a false edge.
+`bears_on` is empty. The scaffold carried `DEC-003` and `DEC-005`, which come from the numbering of the Threat-Radar library folded in by #62, not from mofn. On mofn `origin/main` (`bec50fd`), those are issuer and subject identifiers on the wire, and the envelope for `ArtifactStatement`. This document addresses neither. Those ids are removed rather than kept as a false edge. **Restored 2026-11-09 as `tmodel:DEC-003`, `tmodel:DEC-005` (library#133).** The removal misread a register collision as a stale id: these are tmodel's live ids (Threat-Radar `project/DECISIONS-0001.md` and `spec/ARCH-0001-threat-model-architecture.md`), where DEC-003 is the risk-metric scheme; DEC-005 is MVP scope. They still bear on no mofn decision.
 
 **A caveat on its own inputs.** §5a.1 and §6.8.0 warn that the CEM metrics this method depends on can mis-identify long-term risks, and give quantum transition as the case. So the method flags a limit of its own scoring. `iso-iec-18045` reports the matching comparison of tables.
 

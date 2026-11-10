@@ -85,6 +85,28 @@ def main():
          in (reassess.flag(once or "", "DEC-002 reopened 2026-11-10", "DEC-002") or "")),
         ("DEC-00 does not match DEC-005", reassess.flag(once or "", "DEC-00 reopened 2026-11-10", "DEC-00") is not None),
     ]
+    for ids, ne, label in [
+        (["DEC-002", "R-M-07", "ARCH-0002 P1"], 0, "mofn ids pass bare"),
+        (["tmodel:DEC-003", "tmodel:DEC-001a", "tmodel:R-044"], 0, "tmodel ids pass prefixed"),
+        (["R-044"], 1, "a bare tmodel R-NNN is an error"),
+        (["RPT-0006"], 1, "a report id is not a decision"),
+        (["tmodel:R-M-07"], 1, "a mofn-shaped id under the tmodel prefix is an error"),
+    ]:
+        errs = []
+        validate.check_bears_on(ids, "records/t/x", errs)
+        checks.append((f"bears_on: {label}", len(errs) == ne))
+    errs = []
+    validate.check_bears_on(["T-023", "WP-1"], "topics/x.yaml", errs, topic=True)
+    checks.append(("a topic may name T-*/WP* work", not errs))
+    tm = REC.replace("  - DEC-005\n", '  - "tmodel:DEC-005"\n')
+    checks.append(("flag works on a tmodel id",
+                   reassess.flag(tm, "tmodel:DEC-005 reopened 2026-11-09", "tmodel:DEC-005") is not None))
+    checks.append(("register ids are what reassess accepts",
+                   all(reassess.ID.fullmatch(x) for x in ["DEC-005", "R-M-07", "tmodel:DEC-003", "tmodel:R-044"])
+                   and not any(reassess.ID.fullmatch(x) for x in ["R-044", "DEC-5", "RPT-0006"])))
+    both = reassess.flag(tm, "tmodel:DEC-005 reopened 2026-11-09", "tmodel:DEC-005") or ""
+    checks.append(("a tmodel flag does not count as the mofn id's",
+                   reassess.flag(both, "DEC-005 reopened 2026-11-10", "DEC-005") is not None))
     for name, good in checks:
         print(f"{'ok  ' if good else 'FAIL'} {name}")
         fail |= not good

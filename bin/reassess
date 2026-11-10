@@ -3,9 +3,14 @@
 
     bin/reassess <DEC-id> [--date YYYY-MM-DD] [--dry-run]
 
+The id is written exactly as bears_on writes it: bare for mofn (DEC-005),
+prefixed for tmodel (tmodel:DEC-003). The DEC numbers of the two registers
+collide, so the prefix is what keeps a mofn reopen off tmodel's records
+(library#133).
+
 docs/scope.md §7.2 (settled 2026-11-09): a `usefulness` verdict is
 re-assessed when a decision it bears on is reopened. The decisions live in
-mofn, so the library cannot see a reopen happen. Whoever reopens one runs
+mofn and tmodel, so the library cannot see a reopen happen. Whoever reopens one runs
 this, and it writes
 
     usefulness:
@@ -25,7 +30,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import _record_yaml
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-ID = re.compile(r"(DEC-\d+|R-[A-Z]-\d+)")
+ID = re.compile(r"(?:tmodel:)?DEC-\d{3}[a-z]?|R-[A-Z]-\d{2}|tmodel:R-\d{3}")
 
 
 def flag(text, marker, dec):
@@ -48,7 +53,7 @@ def flag(text, marker, dec):
     for i in range(u + 1, end):
         m = re.match(r'  reassess:\s*"?(.*?)"?\s*$', lines[i])
         if m:
-            if re.search(rf"(?<![\w-]){re.escape(dec)}(?![\w-])", m.group(1)):
+            if re.search(rf"(?<![\w:-]){re.escape(dec)}(?![\w-])", m.group(1)):
                 return None
             joined = f"{m.group(1)}; {marker}" if m.group(1) else marker
             lines[i] = f'  reassess: "{joined}"'
@@ -59,13 +64,13 @@ def flag(text, marker, dec):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("decision", help="the reopened DEC-* (or R-*) id, exactly as bears_on names it")
+    ap.add_argument("decision", help="the reopened id exactly as bears_on names it: DEC-005, or tmodel:DEC-003")
     ap.add_argument("--date", default=datetime.date.today().isoformat())
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--root", default=str(ROOT), help=argparse.SUPPRESS)
     a = ap.parse_args(argv)
     if not ID.fullmatch(a.decision):
-        sys.exit(f"reassess: '{a.decision}' is not a DEC-* or R-* id")
+        sys.exit(f"reassess: '{a.decision}' is not a register id (DEC-005, R-M-07, tmodel:DEC-003, tmodel:R-044)")
     if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", a.date):
         sys.exit(f"reassess: --date '{a.date}' is not YYYY-MM-DD")
     marker = f"{a.decision} reopened {a.date}"
