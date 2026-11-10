@@ -30,7 +30,7 @@ A Publicly Available Specification from the committee behind ISO/SAE 21434, on c
 | Cryptography | `none` | From the title only |
 | This project | `none` | An automotive companion of ISO/SAE 21434 held for tmodel RPT-0007; no mofn requirement is automotive |
 
-**Bears on none.** An earlier `bears_on: DEC-003` ("risk-metric scheme") came from Threat-Radar's numbering, not mofn's: on mofn `origin/main` DEC-003 is issuer and subject identifiers on the wire (`ADR-0005`), which this document does not discuss. Removed 2026-11-09 (#92).
+Bears on tmodel's DEC-003 (risk-metric scheme; Threat-Radar `project/DECISIONS-0001.md`), because it covers attack feasibility and assurance levels. Not mofn's DEC-003, which is issuer and subject identifiers on the wire.
 
 ## Implementations
 

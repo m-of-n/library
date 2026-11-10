@@ -30,7 +30,7 @@ The second edition of the ISO/IEC privacy framework. ISO Open Data says it repla
 | Cryptography | `none` | From the title only |
 | This project | `none` | Held for tmodel RPT-0007's privacy impact criteria; no mofn requirement concerns privacy impact rating |
 
-**Bears on none.** An earlier `bears_on: DEC-003` ("risk-metric scheme") came from Threat-Radar's numbering, not mofn's: on mofn `origin/main` DEC-003 is issuer and subject identifiers on the wire (`ADR-0005`), which this document does not discuss. Removed 2026-11-09 (#92).
+Bears on tmodel's DEC-003 (risk-metric scheme; Threat-Radar `project/DECISIONS-0001.md`), through the privacy impact rating. Not mofn's DEC-003, which is issuer and subject identifiers on the wire.
 
 ## Implementations
 

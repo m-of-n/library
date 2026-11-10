@@ -30,7 +30,7 @@ A deliverable of the EVITA (e-safety vehicle intrusion protected applications) p
 | Cryptography | `none` | From the title only |
 | This project | `none` | Held for tmodel RPT-0007's impact rating; no mofn requirement is automotive |
 
-**Bears on none.** An earlier `bears_on: DEC-003` ("risk-metric scheme") came from Threat-Radar's numbering, not mofn's: on mofn `origin/main` DEC-003 is issuer and subject identifiers on the wire (`ADR-0005`), which this document does not discuss. Removed 2026-11-09 (#92).
+Bears on tmodel's DEC-003 (risk-metric scheme; Threat-Radar `project/DECISIONS-0001.md`), through impact rating. Not mofn's DEC-003, which is issuer and subject identifiers on the wire.
 
 ## Implementations
 
