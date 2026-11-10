@@ -390,10 +390,16 @@ inclusion-proof-content = [
 > The term leaf-index is used for alignment with the use established in
 > Section 2.1.3.2 of [RFC9162].
 
-**Imported constraint (§5.2, L472–L477)** — verification failure condition,
-quoted by RFC 9942 from RFC 9162. The source sets it as a block quotation
-(leading `|`), so it is a normative requirement of this document by reference,
-carrying lowercase imperative rather than a BCP 14 keyword:
+**Quoted condition (§5.2, L472–L477)** — a verification failure condition,
+quoted by RFC 9942 from RFC 9162 as a block quotation (leading `|`). The
+quotation is accurate, but **neither RFC makes it a requirement.** In RFC 9162
+it is step 1 of the §2.1.3.2 inclusion-proof algorithm, which RFC 9162
+introduces permissively, as an algorithm that may be used (lowercase, not
+BCP 14; RFC 9162 L436–L444). RFC 9942 adds no BCP 14 keyword around it. It
+is recorded here as a quoted algorithm step, not as an imported normative
+requirement; an earlier version of this entry overstated it as one. It also
+carries only step 1: the §2.1.3.2 step 4.a (L452) and step 5 (L468, `sn` must be 0) checks
+that reject a path of the wrong length are not quoted by RFC 9942.
 
 > Note that [RFC9162] defines inclusion proofs only for leaf nodes, and
 > that:

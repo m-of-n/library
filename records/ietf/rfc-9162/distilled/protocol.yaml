@@ -1,0 +1,4046 @@
+# rfc-9162 protocol model, FX-1 pass 1 (extract), protocol and state-machine agent. Prose and one sequence diagram per flow in protocol.md.
+record: "rfc-9162"
+reviewed_by: ""
+extracted: "2026-11-08"
+extracted_by: >-
+  FX-1 pass 1 (extract), protocol and state-machine agent, effort max, from the source only
+  (blind: no summary, no other agent's prose; messages.yaml read for entry names only)
+source:
+  file: ".cache/rfc-9162.txt"
+  sha256: "a0e432ce7580c99fcc8faf0cf3f6191f9ce6b4864f949158e020d4ecb295081f"
+  lines: "2961"
+  version: "RFC 9162, Certificate Transparency Version 2.0, December 2021, Category Experimental, Obsoletes 6962"
+  errata: >-
+    record.yaml notes one erratum, 8670 (editorial, Held for Document Update), on the loop wording of
+    2.1.3.2 step 4.b.ii and 2.1.4.2 step 6.b.iii. Its text is not in the cache; both algorithms are
+    modelled as printed (state-machine.yaml M01, M02).
+applicability: >-
+  RFC 9162 defines a real exchange: a JSON-over-HTTPS client API to a log (§5.1 to §5.7, with error
+  types), the log's own obligations between requests (merge within the MMD, periodic signed tree
+  heads, shutdown), three delivery channels from TLS server to TLS client (a TLS extension, a stapled
+  OCSP response, a certificate extension; §6, §7.1), and the receiving roles' processing (TLS client
+  §8.1, monitor §8.2, auditing §8.3). The Merkle algorithms of §2.1 are local computations of one
+  role and are modelled as single-role flows. Delivery of log parameters, gossip between clients,
+  and what a monitor or auditor does on finding misbehaviour are outside the source and appear here
+  only where a step must name them, marked inferred.
+conventions:
+  quoting: >-
+    Every quotation is a quotes item {source_lines, quote}; the words were written from
+    .cache/rfc-9162.txt by script (bin/_source_text reading: page breaks, aside bars and line-end
+    hyphen breaks undone, whitespace collapsed), never typed, and the range is the tightest that holds
+    them. bin/check-quotes verifies every one. Text in action, guard, condition, note and on_error is
+    this file's wording; where it repeats source words, the step's quotes carry them.
+  step_kind: >-
+    kind is stated (the source says this step happens) or inferred (this model's step, with
+    inferred_reason saying what the source does and does not say). An ordering the source does not
+    fix is called out in the flow's order_note.
+  on_error_basis: >-
+    stated: the source says what follows. unspecified: the source names the operation and says
+    nothing about its failure; on_error then reads unspecified by source. inferred: this file's
+    reading, and on_error says so.
+  constrained_by: >-
+    rfc-9162#R-NNNN ids of requirements.yaml whose text the step obeys or that bind what it emits,
+    each emitted by script from a locator and a phrase of the requirement text, refusing zero or
+    several matches; every resolved pair was then read. Pass 1 cited only ids R-0001 to R-0125.
+    Pass 2 (2026-11-08) added the stated keyword-less ids (verb none, not split children) whose
+    source_lines lie inside a quotation the step itself carries, joined by line containment by
+    script, every pair read.
+  messages: >-
+    message is the exact name of a messages.yaml entry and message_id its id. An error step names
+    Error response (problem details) with error_type set to the token of the Error Types registry.
+    A local computation names the structure it reads or produces.
+  roles: "from and to name roles of the roles list; from equal to to marks a local step."
+roles:
+  - name: "submitter"
+    locator: "§3, §3.1"
+    definition: >-
+      Any entity that sends a certificate or precertificate to a log with submit-entry: CAs,
+      certificate subjects, third parties.
+    kind: "stated"
+    quotes:
+      - source_lines: "656-658"
+        quote: |-
+          Submitters submit certificates or preannouncements of certificates prior to issuance (precertificates) to logs for public auditing, as described below.
+      - source_lines: "675"
+        quote: |-
+          Any entity can submit a certificate (Section 5.1) to a log.
+  - name: "ca"
+    locator: "§3.2, §7.1.1, §7.1.2, §7.2"
+    definition: >-
+      Certification authority. Builds and submits precertificates, issues certificates, may embed
+      transparency information in certificates and OCSP responses. A CA submitting is also a
+      submitter.
+    kind: "stated"
+    quotes:
+      - source_lines: "682-684"
+        quote: |-
+          CAs may preannounce a certificate prior to issuance by submitting a precertificate (Section 5.1) that the log can use to create an entry that will be valid against the issued certificate.
+  - name: "log"
+    locator: "§4"
+    definition: >-
+      The append-only Merkle Tree service: evaluates submissions, issues SCTs, merges entries within
+      the MMD, signs tree heads. Holds the private key.
+    kind: "stated"
+    quotes:
+      - source_lines: "777-778"
+        quote: |-
+          A log is a single, append-only Merkle Tree of submitted certificate and precertificate entries.
+  - name: "log-front-end"
+    locator: "§5"
+    definition: >-
+      The HTTPS endpoint that answers a client message. There may be several, out of sync with each
+      other; skew decides several responses (§5.3, §5.4, §5.5, §5.6).
+    kind: "stated"
+    quotes:
+      - source_lines: "1283-1285"
+        quote: |-
+          In practice, log servers may include multiple front-end machines. Since it is impractical to keep these machines in perfect sync, errors that are caused by skew between the machines may occur.
+  - name: "log-operator"
+    locator: "§4.1, §4.4, §4.13, §9"
+    definition: >-
+      Establishes the log's parameters, obtains its Log ID, decides to freeze or shut it down.
+    kind: "stated"
+    quotes:
+      - source_lines: "1234-1235"
+        quote: |-
+          Log operators may decide to shut down a log for various reasons, such as deprecation of the signature algorithm.
+  - name: "iana"
+    locator: "§10.2.5"
+    definition: "Keeper of the Log IDs registry, from which an operator may request a Log ID."
+    kind: "stated"
+    quotes:
+      - source_lines: "2403"
+        quote: |-
+          The registry's registration procedure is First Come First Served.
+  - name: "log-client"
+    locator: "§5, §8"
+    definition: >-
+      Any party sending a §5 message: a submitter, a TLS client, a monitor or an auditor. Holds the
+      log's parameters, obtained in a way the source leaves to implementations.
+    kind: "stated"
+    quotes:
+      - source_lines: "1271-1272"
+        quote: |-
+          Clients are configured with a log's base URL, which is one of the log's parameters.
+      - source_lines: "1899-1903"
+        quote: |-
+          All clients need various parameters in order to communicate with logs and verify their responses. These parameters are described in Section 4.1, but note that this document does not describe how the parameters are obtained, which is implementation dependent (for example, see [Chromium.Policy]).
+  - name: "tls-server"
+    locator: "§6"
+    definition: "A CT-using TLS server presenting SCTs, and optionally inclusion proofs and STHs, to TLS clients."
+    kind: "stated"
+    quotes:
+      - source_lines: "1716-1717"
+        quote: |-
+          A server can provide SCTs using a TLS 1.3 extension (Section 4.2 of [RFC8446]) with type transparency_info (see Section 6.5).
+  - name: "tls-client"
+    locator: "§8.1"
+    definition: >-
+      A CT-using TLS client: receives transparency information in the handshake, validates SCTs and
+      inclusion proofs, evaluates compliance by local policy.
+    kind: "stated"
+    quotes:
+      - source_lines: "1909-1910"
+        quote: |-
+          TLS clients receive SCTs and inclusion proofs alongside or in certificates.
+  - name: "monitor"
+    locator: "§8.2"
+    definition: "Watches logs for correct behaviour, for certificates of interest, or both."
+    kind: "stated"
+    quotes:
+      - source_lines: "2009-2010"
+        quote: |-
+          Monitors watch logs to check for correct behavior, for certificates of interest, or for both.
+  - name: "auditor"
+    locator: "§8.3"
+    definition: >-
+      Not a separate party: the auditing function, run by a monitor or a TLS client. Flows name the
+      role that runs it.
+    kind: "stated"
+    quotes:
+      - source_lines: "2072"
+        quote: |-
+          Audits are performed by monitors or TLS clients.
+flows:
+  - id: "F01"
+    name: "log-establishment"
+    title: "Establishing a log's immutable parameters and Log ID"
+    locator: "§2.1.1, §2.2, §4.1, §4.4, §10.2.5, §8"
+    kind_of_flow: "setup"
+    participants:
+      - "log-operator"
+      - "iana"
+      - "log-client"
+    summary: >-
+      Before operating, the operator fixes every parameter except the Final STH. The Log ID is an OID
+      the operator allocates or requests from IANA's First Come First Served registry. How clients
+      obtain the parameters is not described by the source.
+    order_note: "The source orders nothing here except that all of it precedes operation (step 6)."
+    steps:
+      - n: "1"
+        from: "log-operator"
+        to: "log-operator"
+        message: "Log parameters"
+        message_id: "MSG-18"
+        action: >-
+          Choose the hash algorithm (a Hash Algorithms registry entry; it fixes HASH and HASH_SIZE)
+          and the signature algorithm (a Signature Algorithms registry entry). Neither can change for
+          the log's lifetime (§9).
+        locator: "§2.1.1, §2.2, §4.1, §9"
+        kind: "stated"
+        quotes:
+          - source_lines: "320-323"
+            quote: |-
+              The hash algorithm used is one of the log's parameters (see Section 4.1). This document establishes a registry of acceptable hash algorithms (see Section 10.2.1).
+          - source_lines: "2115-2116"
+            quote: |-
+              It is not possible for a log to change either of its algorithms part way through its lifetime:
+        constrained_by:
+          - "rfc-9162#R-0001"
+          - "rfc-9162#R-0419"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "log-operator"
+        to: "log-operator"
+        message: "Log parameters"
+        message_id: "MSG-18"
+        field: "Public Key"
+        action: "Generate the log's keypair; it must not be any other log's keypair."
+        locator: "§4.1"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0028"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "log-operator"
+        to: "iana"
+        message: "LogID"
+        message_id: "MSG-01"
+        action: >-
+          Obtain the Log ID: allocate an OID from an arc the operator holds, or apply to the Log IDs
+          registry with the base URL and the operator's contact details. The DER value, without tag
+          and length, is at most 127 octets; the OID identifies no other log.
+        locator: "§4.4, §10.2.5"
+        kind: "stated"
+        quotes:
+          - source_lines: "943-946"
+            quote: |-
+              One way to get an OID arc, from which OIDs can be allocated, is to request a Private Enterprise Number from IANA by completing the registration form (https://pen.iana.org/pen/ PenApplication.page).
+          - source_lines: "2439-2441"
+            quote: |-
+              IANA is asked to reject any request to update a Log ID or Log Base URL in this registry because these fields are immutable (see Section 4.1).
+        constrained_by:
+          - "rfc-9162#R-0042"
+          - "rfc-9162#R-0041"
+          - "rfc-9162#R-0043"
+          - "rfc-9162#R-0124"
+          - "rfc-9162#R-0452"
+        on_error: "unspecified by source (no outcome of a refused application is described)"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "log-operator"
+        to: "log-operator"
+        message: "Log parameters"
+        message_id: "MSG-18"
+        field: "Base URL"
+        action: "Fix the base URL: https, optional port and path, no query, fragment or trailing slash."
+        locator: "§4.1"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0027"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "log-operator"
+        to: "log-operator"
+        message: "Log parameters"
+        message_id: "MSG-18"
+        action: >-
+          Fix the Maximum Merge Delay (no limits given), the version, the Maximum Chain Length (if
+          any; a log should impose one, §4.2.2) and the STH Frequency Count.
+        locator: "§4.1, §4.2.2"
+        kind: "stated"
+        quotes:
+          - source_lines: "834-836"
+            quote: |-
+              Maximum Merge Delay: The MMD the log has committed to. This document deliberately does not specify any limits on the value to allow for experimentation.
+          - source_lines: "841-845"
+            quote: |-
+              Maximum Chain Length: The longest certificate chain submission the log is willing to accept, if the log imposes any limit. STH Frequency Count: The maximum number of STHs the log may produce in any period equal to the Maximum Merge Delay (see Section 4.10).
+        constrained_by:
+          - "rfc-9162#R-0037"
+          - "rfc-9162#R-0222"
+          - "rfc-9162#R-0224"
+          - "rfc-9162#R-0225"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "log-operator"
+        to: "log-operator"
+        message: "Log parameters"
+        message_id: "MSG-18"
+        action: "All parameters except the Final STH are established before the log begins to operate; they are immutable."
+        locator: "§4.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "813-815"
+            quote: |-
+              A log is defined by a collection of immutable parameters, which are used by clients to communicate with the log and to verify log artifacts.
+        constrained_by:
+          - "rfc-9162#R-0026"
+          - "rfc-9162#R-0212"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "7"
+        from: "log-operator"
+        to: "log-client"
+        message: "Log parameters"
+        message_id: "MSG-18"
+        action: >-
+          Make the parameters known to clients by some out-of-band means (for example a log list in
+          the JSON.Metadata format).
+        locator: "§4.1, §4.4, §8"
+        kind: "inferred"
+        inferred_reason: >-
+          The source requires clients to hold the parameters and says it does not describe how they
+          are obtained; it names out-of-band self-advertisement and one example format. The delivery
+          step itself is this model's.
+        quotes:
+          - source_lines: "948-950"
+            quote: |-
+              although logs will most likely want to make themselves known to potential clients through out-of-band means.)
+          - source_lines: "855-856"
+            quote: |-
+              [JSON.Metadata] is an example of a metadata format that includes the above elements.
+        on_error: "unspecified by source; a client without a log's parameters cannot validate its SCTs (F16 step 4)"
+        on_error_basis: "unspecified"
+  - id: "F02"
+    name: "submit-entry"
+    title: "Submitting a certificate or precertificate and receiving an SCT"
+    locator: "§3, §4, §4.2, §4.2.1, §4.2.2, §4.3, §5, §5.1, §11.3"
+    kind_of_flow: "exchange"
+    participants:
+      - "submitter"
+      - "log-front-end"
+      - "log"
+    summary: >-
+      One POST. The log evaluates the submission against the minimum and discretionary acceptance
+      criteria, answers with an error type from Table 2 (or malformed), or accepts, stores the
+      chain, issues an SCT and thereby promises to merge the entry within the MMD (F04).
+    order_note: >-
+      The source gives the checks but no evaluation order; steps 3 to 12 follow the order of
+      Table 2 and §4.2. Where several checks fail, which error is returned is unspecified.
+    steps:
+      - n: "1"
+        from: "submitter"
+        to: "submitter"
+        message: "submit-entry request"
+        message_id: "MSG-19"
+        action: >-
+          Assemble the inputs: submission (base64 DER certificate, or the CMS precertificate of F03),
+          type (1 or 2), chain (base64 CA certificates, first certifies the submission, each next
+          certifies the previous, the last certified by an accepted trust anchor, which may itself be
+          omitted).
+        locator: "§3, §5.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "1359-1370"
+            quote: |-
+              submission: The base64-encoded certificate or precertificate. type: The VersionedTransType integer value that indicates the type of the submission: 1 for x509_entry_v2 or 2 for precert_entry_v2. chain: An array of zero or more JSON strings, each of which is a base64-encoded CA certificate. The first element is the certifier of the submission, the second certifies the first, etc. The last element of chain (or, if chain is an empty array, the submission) is certified by an accepted trust anchor.
+        constrained_by:
+          - "rfc-9162#R-0002"
+          - "rfc-9162#R-0003"
+          - "rfc-9162#R-0033"
+          - "rfc-9162#R-0229"
+          - "rfc-9162#R-0302"
+          - "rfc-9162#R-0303"
+          - "rfc-9162#R-0304"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "submitter"
+        to: "log-front-end"
+        message: "submit-entry request"
+        message_id: "MSG-19"
+        action: "POST the inputs as a JSON object to the base URL plus /ct/v2/submit-entry over HTTPS."
+        locator: "§5, §5.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "1356"
+            quote: |-
+              POST <Base URL>/ct/v2/submit-entry
+          - source_lines: "1263-1265"
+            quote: |-
+              Messages are sent as HTTPS GET or POST requests. Parameters for POSTs and all responses are encoded as JavaScript Object Notation (JSON) objects [RFC8259].
+        constrained_by:
+          - "rfc-9162#R-0301"
+          - "rfc-9162#R-0286"
+          - "rfc-9162#R-0287"
+        on_error: "transport failure unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "log-front-end"
+        to: "submitter"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "shutdown"
+        action: "A frozen or shut-down log no longer accepts submissions and answers with the shutdown error type."
+        guard: "log has stopped accepting new submissions (F22 step 2)"
+        locator: "§4.13, §5.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "1245-1246"
+            quote: |-
+              * Stop accepting new submissions (the error code "shutdown" should be returned for such requests).
+        constrained_by:
+          - "rfc-9162#R-0060"
+          - "rfc-9162#R-0282"
+        on_error: "this step is itself the error path; HTTP status unspecified beyond 4xx/5xx (§5)"
+        on_error_basis: "stated"
+      - n: "4"
+        from: "log-front-end"
+        to: "submitter"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "malformed"
+        action: "A request the log cannot parse is answered with the malformed error type."
+        guard: "request does not comply with this document"
+        locator: "§5"
+        kind: "stated"
+        quotes:
+          - source_lines: "1326-1329"
+            quote: |-
+              The one exception is the "malformed" error type, which indicates that the log server could not parse the client's request because it did not comply with this document:
+        constrained_by:
+          - "rfc-9162#R-0063"
+          - "rfc-9162#R-0297"
+        on_error: "this step is itself the error path"
+        on_error_basis: "stated"
+      - n: "5"
+        from: "log-front-end"
+        to: "submitter"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "badType"
+        action: "Reject a type other than 1 or 2."
+        guard: "type not in {1, 2}"
+        locator: "§5.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "1361-1363"
+            quote: |-
+              type: The VersionedTransType integer value that indicates the type of the submission: 1 for x509_entry_v2 or 2 for precert_entry_v2.
+        constrained_by:
+          - "rfc-9162#R-0303"
+        on_error: "this step is itself the error path"
+        on_error_basis: "stated"
+      - n: "6"
+        from: "log-front-end"
+        to: "submitter"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "badSubmission"
+        action: >-
+          Reject a submission that is neither a valid certificate nor a valid precertificate. Whether
+          it must also match type (a precertificate sent with type 1) is not said.
+        guard: "submission parses as neither certificate nor precertificate"
+        locator: "§5.1"
+        kind: "stated"
+        on_error: "this step is itself the error path"
+        on_error_basis: "stated"
+      - n: "7"
+        from: "log-front-end"
+        to: "submitter"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "badCertificate"
+        action: >-
+          Reject when one or more chain certificates are not valid. Exception: an encoding defect
+          in a chain that still verifies lets the log choose either to log the certificate
+          (and then issue an SCT) or to return badCertificate.
+        guard: "a chain certificate is invalid, e.g. not properly encoded"
+        locator: "§5.1"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0070"
+          - "rfc-9162#R-0071"
+        on_error: "this step is itself the error path"
+        on_error_basis: "stated"
+      - n: "8"
+        from: "log-front-end"
+        to: "submitter"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "badChain"
+        action: >-
+          Reject a chain out of order. The log must not reorder misordered CA certificates or fetch
+          intermediates from any other source to build a path.
+        guard: "chain[0] does not certify submission, or chain[i+1] does not certify chain[i]"
+        locator: "§4.2.1, §5.1"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0033"
+        on_error: "this step is itself the error path"
+        on_error_basis: "stated"
+      - n: "9"
+        from: "log-front-end"
+        to: "submitter"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "unknownAnchor"
+        action: >-
+          Reject when the last chain element (or the submission, chain empty) neither is nor is
+          certified by an accepted trust anchor; also when the submission is itself an accepted
+          anchor whose issuer is neither another accepted anchor nor chain[0], since without the
+          issuer's key no SCT can be made.
+        guard: "no accepted trust anchor terminates the chain"
+        locator: "§5.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "1427-1429"
+            quote: |-
+              A log is not able to generate an SCT for a submission if it does not have access to the issuer's public key.
+        constrained_by:
+          - "rfc-9162#R-0072"
+        on_error: "this step is itself the error path"
+        on_error_basis: "stated"
+      - n: "10"
+        from: "log"
+        to: "submitter"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "unspecified"
+        action: >-
+          Minimum acceptance criteria: every intermediate has cA asserted in Basic Constraints or
+          keyCertSign in Key Usage; every certificate is within the pathLenConstraint limits above
+          it; a precertificate conforms to all of §3.2. The log rejects a submission failing any.
+        guard: "any minimum acceptance criterion not met"
+        locator: "§4.2.1"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0032"
+          - "rfc-9162#R-0034"
+          - "rfc-9162#R-0035"
+          - "rfc-9162#R-0036"
+          - "rfc-9162#R-0478"
+        on_error: >-
+          reject; the source names no error type for an intermediate without cA or keyCertSign, a
+          pathLenConstraint violation or a non-conforming precertificate (open issue OI-01)
+        on_error_basis: "unspecified"
+      - n: "11"
+        from: "log"
+        to: "submitter"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "unspecified"
+        action: >-
+          Discretionary criteria: chain length against the Maximum Chain Length, RFC 5280 validity
+          beyond the minimum (expired, not yet valid, revoked, DER errors the log can still parse).
+          Acceptance is the log's discretion; a log may also temporarily refuse acceptable
+          submissions against denial of service.
+        guard: "minimum criteria met; the log declines on discretionary grounds"
+        locator: "§4.2, §4.2.2"
+        kind: "stated"
+        quotes:
+          - source_lines: "904-909"
+            quote: |-
+              If the minimum acceptance criteria are met but the submission is not fully valid according to [RFC5280] verification rules (e.g., the certificate or precertificate has expired, is not yet valid, has been revoked, exhibits ASN.1 DER encoding errors but the log can still parse it, etc.), then the acceptability of the submission is left to the log's discretion.
+          - source_lines: "866-868"
+            quote: |-
+              (A log may decide, for example, to temporarily reject acceptable submissions to protect itself against denial-of-service attacks.)
+        constrained_by:
+          - "rfc-9162#R-0030"
+          - "rfc-9162#R-0037"
+          - "rfc-9162#R-0233"
+          - "rfc-9162#R-0228"
+        on_error: >-
+          reject; no error type is named for an over-long chain or a discretionary refusal, and the
+          503 with Retry-After of §5 is the only stated shape for a temporary refusal (OI-01)
+        on_error_basis: "unspecified"
+      - n: "12"
+        from: "log"
+        to: "log"
+        message: "SignedCertificateTimestampDataV2"
+        message_id: "MSG-08"
+        action: >-
+          Seen before: return the SCT returned before rather than a new one (a new SCT means a new
+          leaf, since the timestamp is in the leaf). A certificate previously logged only as a
+          precertificate gets a fresh x509_sct_v2, not the precert_sct_v2.
+        guard: "this valid submission was accepted before"
+        locator: "§4, §11.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "787-790"
+            quote: |-
+              Note that if a certificate was previously logged as a precertificate, then the precertificate's SCT of type precert_sct_v2 would not be appropriate; instead, a fresh SCT of type x509_sct_v2 should be generated.
+          - source_lines: "2617"
+            quote: |-
+              producing no more than one SCT for each distinct submission
+        constrained_by:
+          - "rfc-9162#R-0023"
+          - "rfc-9162#R-0204"
+          - "rfc-9162#R-0125"
+          - "rfc-9162#R-0206"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "13"
+        from: "log"
+        to: "log"
+        message: "SignedCertificateTimestampDataV2"
+        message_id: "MSG-08"
+        also_messages:
+          - "MSG-07"
+          - "MSG-03"
+        action: >-
+          Accept and issue the SCT: TransItem x509_sct_v2 or precert_sct_v2 carrying log_id,
+          timestamp (acceptance time), sct_extensions (no duplicate type, ascending), and a
+          signature over the TransItem x509_entry_v2 or precert_entry_v2 that is the future leaf.
+        locator: "§4, §4.7, §4.8, §2.2"
+        kind: "stated"
+        quotes:
+          - source_lines: "1112-1115"
+            quote: |-
+              signature is computed over a TransItem structure of type x509_entry_v2 or precert_entry_v2 (see Section 4.7) using the signature algorithm declared in the log's parameters (see Section 4.1).
+        constrained_by:
+          - "rfc-9162#R-0022"
+          - "rfc-9162#R-0001"
+          - "rfc-9162#R-0044"
+          - "rfc-9162#R-0045"
+          - "rfc-9162#R-0046"
+          - "rfc-9162#R-0259"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "14"
+        from: "log"
+        to: "log"
+        message: "TransItem"
+        message_id: "MSG-03"
+        also_messages:
+          - "MSG-07"
+        action: >-
+          Store the entire chain used for verification, trust anchor included even if omitted from
+          the submission; the entry is a TransItem x509_entry_v2 or precert_entry_v2, or at least its
+          timestamp and sct_extensions from which it can be rebuilt with the chain.
+        locator: "§4.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "930-935"
+            quote: |-
+              However, a log may store its entries in any format. If a log does not store this TransItem in full, it must store the timestamp and sct_extensions of the corresponding TimestampedCertificateEntryDataV2 structure. The TransItem can be reconstructed from these fields and the entire chain that the log used to verify the submission.
+        constrained_by:
+          - "rfc-9162#R-0038"
+          - "rfc-9162#R-0039"
+          - "rfc-9162#R-0235"
+          - "rfc-9162#R-0236"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "15"
+        from: "log"
+        to: "log"
+        message: "TransItem"
+        message_id: "MSG-03"
+        action: "The SCT is a promise: the entry is merged and a tree head covering it signed within the MMD (F04)."
+        locator: "§4"
+        kind: "stated"
+        quotes:
+          - source_lines: "792-793"
+            quote: |-
+              An SCT is the log's promise to append to its Merkle Tree an entry for the accepted submission.
+        constrained_by:
+          - "rfc-9162#R-0024"
+          - "rfc-9162#R-0207"
+        on_error: "a missed MMD is log misbehaviour, detected by auditing (F21)"
+        on_error_basis: "stated"
+      - n: "16"
+        from: "log-front-end"
+        to: "submitter"
+        message: "submit-entry response"
+        message_id: "MSG-20"
+        action: >-
+          Return sct; if the entry was appended at once or already exists in the tree, also sth and
+          an inclusion proof of the submission in that sth.
+        locator: "§5.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "1372-1375"
+            quote: |-
+              Outputs: sct: A base64-encoded TransItem of type x509_sct_v2 or precert_sct_v2, signed by this log, that corresponds to the submission.
+        constrained_by:
+          - "rfc-9162#R-0068"
+          - "rfc-9162#R-0305"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "17"
+        from: "submitter"
+        to: "submitter"
+        message: "submit-entry response"
+        message_id: "MSG-20"
+        field: "sct"
+        action: "An sct whose version is not v2 is not an error to a v2 client, which may be unable to verify it."
+        locator: "§5.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "1413-1414"
+            quote: |-
+              If the version of sct is not v2, then a v2 client may be unable to verify the signature.
+        constrained_by:
+          - "rfc-9162#R-0069"
+        on_error: "none; the SCT is kept unverified"
+        on_error_basis: "stated"
+      - n: "18"
+        from: "submitter"
+        to: "submitter"
+        message: "submit-entry response"
+        message_id: "MSG-20"
+        field: "sct"
+        action: >-
+          Validate the SCT as a TLS client would (F16) when the submitter understands its format and
+          will use it in a handshake or a certificate; otherwise validation is optional.
+        locator: "§3"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0004"
+          - "rfc-9162#R-0005"
+        on_error: "unspecified by source (what a submitter does with an SCT that fails validation)"
+        on_error_basis: "unspecified"
+      - n: "19"
+        from: "submitter"
+        to: "tls-server"
+        message: "TransItemList"
+        message_id: "MSG-15"
+        action: >-
+          When the sct is for TLS clients, pass sth and inclusion (if returned) along with it: into a
+          certificate (F03), an OCSP response (F14) or the TLS extension (F13).
+        locator: "§5.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "1433-1434"
+            quote: |-
+              For example, if type was 2 (indicating precert_sct_v2), then all three TransItems could be embedded in the certificate.
+        constrained_by:
+          - "rfc-9162#R-0073"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "20"
+        from: "submitter"
+        to: "submitter"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        action: "Handle an error response by the general rules of F12 (4xx: change the request; 500, 503: transient, may retry)."
+        locator: "§5"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0066"
+          - "rfc-9162#R-0064"
+        on_error: "see F12"
+        on_error_basis: "stated"
+  - id: "F03"
+    name: "precertificate-and-certificate-issuance"
+    title: "Preannouncing with a precertificate, then issuing the certificate with embedded transparency information"
+    locator: "§3.2, §3.2.1, §5.1, §7.1, §7.1.2, §7.2, Appendix A"
+    kind_of_flow: "exchange"
+    participants:
+      - "ca"
+      - "log-front-end"
+    summary: >-
+      The CA signs a CMS precertificate carrying the future TBSCertificate, submits it (F02, type 2)
+      to one or more logs, and may embed the returned SCTs, with sth and inclusion proofs, in the
+      certificate it then issues. The precertificate's signature binds the CA as if the certificate
+      had been issued. Appendix A (informative) adds the v1-and-v2 variant.
+    order_note: "Steps 1 to 6 are in the order the source's own dependencies force; step 8 is an alternative to 5 to 7."
+    steps:
+      - n: "1"
+        from: "ca"
+        to: "ca"
+        message: "Precertificate (CMS SignedData profile)"
+        message_id: "MSG-17"
+        action: >-
+          Build the precertificate: DER CMS SignedData v3, eContentType 1.3.101.78, eContent the
+          TBSCertificate the certificate will have minus the Transparency Information extension, no
+          certificates or crls, one SignerInfo v3 with a subjectKeyIdentifier sid, a registry hash
+          digestAlgorithm also listed in digestAlgorithms, signedAttrs with exactly content-type and
+          message-digest, signatureAlgorithm equal to TBSCertificate.signature, signed by the CA that
+          will issue the certificate, no unsignedAttrs.
+        locator: "§3.2"
+        kind: "stated"
+        quotes:
+          - source_lines: "740-745"
+            quote: |-
+              SignerInfo.signedAttrs is included in the message digest calculation process (see Section 5.4 of [RFC5652]), which ensures that the SignerInfo.signature value will not be a valid X.509v3 signature that could be used in conjunction with the TBSCertificate (from SignedData.encapContentInfo.eContent) to construct a valid certificate.
+        constrained_by:
+          - "rfc-9162#R-0007"
+          - "rfc-9162#R-0008"
+          - "rfc-9162#R-0009"
+          - "rfc-9162#R-0010"
+          - "rfc-9162#R-0011"
+          - "rfc-9162#R-0012"
+          - "rfc-9162#R-0013"
+          - "rfc-9162#R-0014"
+          - "rfc-9162#R-0015"
+          - "rfc-9162#R-0016"
+          - "rfc-9162#R-0017"
+          - "rfc-9162#R-0018"
+          - "rfc-9162#R-0019"
+          - "rfc-9162#R-0020"
+          - "rfc-9162#R-0021"
+          - "rfc-9162#R-0478"
+        on_error: >-
+          a precertificate breaking the profile fails the log's minimum acceptance criteria (F02
+          step 10)
+        on_error_basis: "stated"
+      - n: "2"
+        from: "ca"
+        to: "log-front-end"
+        message: "submit-entry request"
+        message_id: "MSG-19"
+        action: "Submit the precertificate with type 2 to one or more logs (F02). Nothing in the source sets how many."
+        locator: "§3.2, §5.1, §6.2"
+        kind: "stated"
+        quotes:
+          - source_lines: "685-688"
+            quote: |-
+              One example of where the returned SCT is not incorporated in the issued certificate is when a CA sends the precertificate to multiple logs but only incorporates the SCTs that are returned first.
+        on_error: "F02 error paths"
+        on_error_basis: "stated"
+      - n: "3"
+        from: "log-front-end"
+        to: "ca"
+        message: "submit-entry response"
+        message_id: "MSG-20"
+        action: "Each accepting log returns a precert_sct_v2, and possibly sth and an inclusion proof (F02 step 16)."
+        locator: "§5.1"
+        kind: "stated"
+        on_error: "F02 error paths"
+        on_error_basis: "stated"
+      - n: "4"
+        from: "ca"
+        to: "ca"
+        message: "Precertificate (CMS SignedData profile)"
+        message_id: "MSG-17"
+        action: >-
+          From the precertificate's signature on, the CA is bound: misissuing the precertificate
+          counts as misissuing the certificate, and clients may presume the certificate exists even
+          if issuance is delayed or never happens.
+        locator: "§3.2.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "749-753"
+            quote: |-
+              Under normal circumstances, there will be a short delay between precertificate submission and issuance of the corresponding certificate. Longer delays are to be expected occasionally (e.g., due to log server downtime); in some cases, the CA might not actually issue the corresponding certificate.
+          - source_lines: "753-755"
+            quote: |-
+              Nevertheless, a precertificate's signature indicates the CA's binding intent to issue the corresponding certificate, which means that:
+          - source_lines: "757-760"
+            quote: |-
+              Misissuance of a precertificate is considered equivalent to misissuance of the corresponding certificate. The CA should expect to be held accountable, even if the corresponding certificate has not actually been issued.
+        constrained_by:
+          - "rfc-9162#R-0200"
+          - "rfc-9162#R-0201"
+        on_error: "none; this is a commitment, not a check"
+        on_error_basis: "stated"
+      - n: "5"
+        from: "ca"
+        to: "ca"
+        message: "Certificate extension"
+        message_id: "MSG-36"
+        also_messages:
+          - "MSG-34"
+          - "MSG-15"
+        action: >-
+          Optionally embed: a Transparency Information extension (OID 1.3.101.75, noncritical by
+          recommendation) whose extnValue is an OCTET STRING wrapping a TransItemList of the SCTs (and
+          sth, inclusion proofs) obtained for the precertificate of this certificate. The SCTs a CA
+          embeds may be a subset, e.g. the first returned.
+        locator: "§3.2, §7.1, §7.1.2"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0006"
+          - "rfc-9162#R-0107"
+          - "rfc-9162#R-0108"
+          - "rfc-9162#R-0101"
+          - "rfc-9162#R-0103"
+          - "rfc-9162#R-0104"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "ca"
+        to: "ca"
+        message: "TLS Feature extension (not defined here)"
+        message_id: "MSG-37"
+        action: "Do not name transparency_info in a TLS feature extension of the certificate."
+        locator: "§7.2"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0109"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "7"
+        from: "ca"
+        to: "ca"
+        message: "TBSCertificate"
+        message_id: "MSG-06"
+        action: >-
+          Issue the certificate: its TBSCertificate equals the precertificate's eContent except for
+          the Transparency Information extension added in step 5. Signing is ordinary RFC 5280
+          issuance.
+        locator: "§3.2, Appendix A"
+        kind: "inferred"
+        inferred_reason: >-
+          The source names the issued certificate and constrains its TBSCertificate (via the
+          precertificate's eContent) but defines no issuance step outside the informative
+          Appendix A; the signing act is RFC 5280's.
+        constrained_by:
+          - "rfc-9162#R-0011"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "8"
+        from: "ca"
+        to: "ca"
+        message: "TBSCertificate"
+        message_id: "MSG-06"
+        action: >-
+          Informative variant for v1 and v2 together: submit the CMS precertificate to v2 logs, embed
+          the v2 SCTs in the TBSCertificate, make an RFC 6962 v1 precertificate of that
+          TBSCertificate and submit it to v1 logs, embed the v1 SCTs, sign.
+        locator: "Appendix A"
+        kind: "stated"
+        informative: "Appendix A is marked Informative"
+        quotes:
+          - source_lines: "2832-2845"
+            quote: |-
+              Create a CMS precertificate, as described in Section 3.2, and submit it to v2 logs. * Embed the obtained v2 SCTs in the TBSCertificate, as described in Section 7.1.2. * Use that TBSCertificate to create a v1 precertificate, as described in Section 3.1 of [RFC6962], and submit it to v1 logs. * Embed the v1 SCTs in the TBSCertificate, as described in Section 3.3 of [RFC6962]. * Sign that TBSCertificate (which now contains v1 and v2 SCTs) to issue the final X.509 certificate.
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "9"
+        from: "ca"
+        to: "log-front-end"
+        message: "submit-entry request"
+        message_id: "MSG-19"
+        action: >-
+          Optionally the issued certificate is itself submitted (type 1, by the CA or anyone); a log
+          that logged the precertificate then issues a fresh x509_sct_v2 (F02 step 12).
+        locator: "§3.1, §4"
+        kind: "stated"
+        quotes:
+          - source_lines: "675-678"
+            quote: |-
+              Since it is anticipated that TLS clients will reject certificates that are not logged, it is expected that certificate issuers and subjects will be strongly motivated to submit them.
+        constrained_by:
+          - "rfc-9162#R-0192"
+        on_error: "F02 error paths"
+        on_error_basis: "stated"
+  - id: "F04"
+    name: "incorporation-within-mmd"
+    title: "Merging an accepted entry into the tree within the Maximum Merge Delay"
+    locator: "§4, §4.7, §4.9, §4.10, §5, §11.3"
+    kind_of_flow: "local"
+    participants:
+      - "log"
+      - "log-front-end"
+    summary: >-
+      Issuing an SCT starts a clock. Before timestamp plus MMD the log allocates the entry a tree
+      index, computes the new root, and signs it in an STH; several entries may share one signing.
+      A front end serves the result only once it holds every entry under it.
+    order_note: "The three actions are listed in the order the source prints them; the source does not say they must run in that order, but each needs the previous one's output."
+    steps:
+      - n: "1"
+        from: "log"
+        to: "log"
+        message: "TimestampedCertificateEntryDataV2"
+        message_id: "MSG-07"
+        also_messages:
+          - "MSG-16"
+        action: >-
+          Allocate a tree index to the entry. The leaf is HASH(0x00 || TransItem) of the entry's
+          x509_entry_v2 or precert_entry_v2 TransItem; leaves need not be in timestamp order.
+        locator: "§4, §4.7"
+        kind: "stated"
+        quotes:
+          - source_lines: "798-803"
+            quote: |-
+              Allocate a tree index to the entry representing the accepted submission. * Calculate the root of the tree. * Sign the root of the tree (see Section 4.10).
+          - source_lines: "1044-1046"
+            quote: |-
+              Note that leaf hashes are calculated as HASH(0x00 || TransItem), where the hash algorithm is one of the log's parameters.
+          - source_lines: "1061-1062"
+            quote: |-
+              Note that the leaves of a log's Merkle Tree are not required to be in strict chronological order.
+        constrained_by:
+          - "rfc-9162#R-0024"
+          - "rfc-9162#R-0208"
+          - "rfc-9162#R-0209"
+          - "rfc-9162#R-0210"
+          - "rfc-9162#R-0247"
+          - "rfc-9162#R-0250"
+        on_error: "an index never allocated is an MMD violation (F21)"
+        on_error_basis: "stated"
+      - n: "2"
+        from: "log"
+        to: "log"
+        message: "TreeHeadDataV2"
+        message_id: "MSG-10"
+        also_messages:
+          - "MSG-09"
+        action: "Calculate the root (MTH over all leaves, F23); NodeHash is HASH_SIZE long."
+        locator: "§4, §2.1.1, §4.9"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0049"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "log"
+        to: "log"
+        message: "SignedTreeHeadDataV2"
+        message_id: "MSG-11"
+        action: >-
+          Sign the root in an STH (F05). Several entries may be appended before one signing. The
+          deadline for all three steps is the SCT timestamp plus the MMD.
+        guard: "now <= sct.timestamp + MMD"
+        locator: "§4, §4.10"
+        kind: "stated"
+        quotes:
+          - source_lines: "805-806"
+            quote: |-
+              The log may append multiple entries before signing the root of the tree.
+        constrained_by:
+          - "rfc-9162#R-0024"
+          - "rfc-9162#R-0058"
+          - "rfc-9162#R-0211"
+        on_error: >-
+          an STH covering the entry missing after the MMD is log misbehaviour, detectable by an
+          inclusion-proof request for the SCT (F21)
+        on_error_basis: "stated"
+      - n: "4"
+        from: "log"
+        to: "log-front-end"
+        message: "SignedTreeHeadDataV2"
+        message_id: "MSG-11"
+        action: >-
+          A front end serves the new STH only when it can prove consistency for every entry the STH
+          covers (no gaps); until then it keeps serving an older one.
+        locator: "§5"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0062"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+  - id: "F05"
+    name: "sth-issuance"
+    title: "Producing signed tree heads: cadence, timestamps, rate limit"
+    locator: "§4.9, §4.10, §11.1, §11.3"
+    kind_of_flow: "local"
+    participants:
+      - "log"
+    summary: >-
+      Periodic signing of the current tree head, bounded above by the STH Frequency Count and below
+      by the rule that every MMD period sees at least one fresh signature. Timestamps never go
+      backwards past an SCT already in the tree, and strictly increase.
+    order_note: "The source orders none of these; they are constraints every STH meets."
+    steps:
+      - n: "1"
+        from: "log"
+        to: "log"
+        message: "TreeHeadDataV2"
+        message_id: "MSG-10"
+        action: >-
+          Assemble the tree head: timestamp now, tree_size the number of entries, root_hash the MTH,
+          sth_extensions (no duplicate type, ascending).
+        locator: "§4.9"
+        kind: "stated"
+        quotes:
+          - source_lines: "1132-1138"
+            quote: |-
+              timestamp is the current date and time, using the format defined in Section 4.7. tree_size is the number of entries currently in the log's Merkle Tree. root_hash is the root of the Merkle Tree.
+        constrained_by:
+          - "rfc-9162#R-0049"
+          - "rfc-9162#R-0050"
+          - "rfc-9162#R-0051"
+          - "rfc-9162#R-0261"
+          - "rfc-9162#R-0262"
+          - "rfc-9162#R-0263"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "log"
+        to: "log"
+        message: "SignedTreeHeadDataV2"
+        message_id: "MSG-11"
+        also_messages:
+          - "MSG-03"
+        action: "Sign tree_head with the log's signature algorithm; wrap as TransItem signed_tree_head_v2."
+        guard: "STHs produced in the current MMD-long period < STH Frequency Count"
+        locator: "§4.10, §2.2"
+        kind: "stated"
+        quotes:
+          - source_lines: "1180-1181"
+            quote: |-
+              signature is computed over the tree_head field using the signature algorithm declared in the log's parameters (see Section 4.1).
+        constrained_by:
+          - "rfc-9162#R-0054"
+          - "rfc-9162#R-0056"
+          - "rfc-9162#R-0001"
+          - "rfc-9162#R-0268"
+        on_error: "a series of STHs too close together is proof of a rate-limit violation (F21)"
+        on_error_basis: "stated"
+      - n: "3"
+        from: "log"
+        to: "log"
+        message: "SignedTreeHeadDataV2"
+        message_id: "MSG-11"
+        field: "tree_head.timestamp"
+        action: >-
+          Timestamp rules: at least as recent as the newest SCT timestamp in the tree, and later than
+          the previous STH's.
+        guard: "timestamp >= max SCT timestamp in tree AND timestamp > previous STH timestamp"
+        locator: "§4.10"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0058"
+          - "rfc-9162#R-0059"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "log"
+        to: "log"
+        message: "SignedTreeHeadDataV2"
+        message_id: "MSG-11"
+        action: "An MMD period with no accepted submission still ends with a fresh signature over the same root."
+        guard: "no submission accepted during the MMD period"
+        locator: "§4.10"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0057"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "log"
+        to: "log"
+        message: "SignedTreeHeadDataV2"
+        message_id: "MSG-11"
+        action: >-
+          Against client tracking: use a deterministic signature scheme, or keep at most one STH per
+          tree_size (and one SCT per submission) and serve the stored one.
+        locator: "§11.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "2615-2618"
+            quote: |-
+              using deterministic signature schemes or * producing no more than one SCT for each distinct submission and no more than one STH for each distinct tree_size.
+        constrained_by:
+          - "rfc-9162#R-0125"
+          - "rfc-9162#R-0459"
+          - "rfc-9162#R-0460"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "log"
+        to: "log-front-end"
+        message: "SignedTreeHeadDataV2"
+        message_id: "MSG-11"
+        action: >-
+          The latest STH is what get-sth serves (F06): never older than the MMD. Serving an STH up to
+          MMD old is why a misissued certificate can go unaudited for up to twice the MMD.
+        locator: "§4.10, §11.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "2575-2578"
+            quote: |-
+              Since a log is allowed to serve an STH of any age up to the MMD, the maximum period of time during which a misissued certificate can be used without being available for audit is twice the MMD.
+        constrained_by:
+          - "rfc-9162#R-0055"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+  - id: "F06"
+    name: "get-sth"
+    title: "Retrieving the latest signed tree head"
+    locator: "§5.2, §4.10, §5, §8.2"
+    kind_of_flow: "exchange"
+    participants:
+      - "log-client"
+      - "log-front-end"
+    summary: "A GET with no inputs; the answer is an STH no older than the MMD, which the client verifies."
+    steps:
+      - n: "1"
+        from: "log-client"
+        to: "log-front-end"
+        message: "get-sth request and response"
+        message_id: "MSG-21"
+        action: "GET the base URL plus /ct/v2/get-sth, no parameters."
+        locator: "§5.2"
+        kind: "stated"
+        quotes:
+          - source_lines: "1438"
+            quote: |-
+              GET <Base URL>/ct/v2/get-sth
+          - source_lines: "1440"
+            quote: |-
+              No inputs.
+        constrained_by:
+          - "rfc-9162#R-0025"
+          - "rfc-9162#R-0309"
+          - "rfc-9162#R-0310"
+        on_error: "transport failure unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "log-front-end"
+        to: "log-client"
+        message: "get-sth request and response"
+        message_id: "MSG-21"
+        field: "sth"
+        action: >-
+          Return sth, a TransItem signed_tree_head_v2 no older than the MMD, from a front end that
+          can prove consistency for every entry under it.
+        locator: "§5.2, §4.10, §5"
+        kind: "stated"
+        quotes:
+          - source_lines: "1443-1444"
+            quote: |-
+              sth: A base64-encoded TransItem of type signed_tree_head_v2 signed by this log that is no older than the log's MMD.
+        constrained_by:
+          - "rfc-9162#R-0055"
+          - "rfc-9162#R-0062"
+          - "rfc-9162#R-0311"
+        on_error: "malformed or another 4xx/5xx problem response (F12)"
+        on_error_basis: "stated"
+      - n: "3"
+        from: "log-client"
+        to: "log-client"
+        message: "SignedTreeHeadDataV2"
+        message_id: "MSG-11"
+        action: >-
+          Verify the STH signature over tree_head with the public key of the log named by log_id;
+          ignore sth_extensions not understood. A client may also check the timestamp against the
+          MMD.
+        locator: "§8.2, §4.9, §4.10"
+        kind: "inferred"
+        inferred_reason: >-
+          The source states signature verification as a monitor step (§8.2 step 2) and relies on
+          signed STHs throughout (§5.3, §5.4, §8); it does not state it for every client of get-sth,
+          nor any client-side freshness check.
+        quotes:
+          - source_lines: "2022"
+            quote: |-
+              Verify the STH signature.
+        constrained_by:
+          - "rfc-9162#R-0052"
+          - "rfc-9162#R-0053"
+          - "rfc-9162#R-0396"
+        on_error: >-
+          a bad signature or an STH older than the MMD is evidence that the log has not behaved
+          correctly; the response to it is unspecified by source (§8, §8.3)
+        on_error_basis: "inferred"
+  - id: "F07"
+    name: "get-sth-consistency"
+    title: "Retrieving a consistency proof between two tree sizes"
+    locator: "§5.3, §5, §2.1.4, §10.2.6"
+    kind_of_flow: "exchange"
+    participants:
+      - "log-client"
+      - "log-front-end"
+    summary: >-
+      The client names two tree sizes (the second optional). What comes back depends on which of the
+      two STHs the reached front end knows: both, the proof alone; the first only, the latest STH
+      and a proof to it; neither, the latest STH alone. Three error types; equal sizes give an empty
+      proof that §2.1.4.2 then rejects (SD-01).
+    order_note: "The error checks (steps 3 to 6) have no stated order."
+    steps:
+      - n: "1"
+        from: "log-client"
+        to: "log-front-end"
+        message: "get-sth-consistency request"
+        message_id: "MSG-22"
+        action: "GET /ct/v2/get-sth-consistency with first and optionally second, decimal tree sizes of existing v2 STHs."
+        locator: "§5.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "1448"
+            quote: |-
+              GET <Base URL>/ct/v2/get-sth-consistency
+          - source_lines: "1451-1453"
+            quote: |-
+              first: The tree_size of the older tree, in decimal. second: The tree_size of the newer tree, in decimal (optional).
+          - source_lines: "1455"
+            quote: |-
+              Both tree sizes must be from existing v2 STHs.
+        constrained_by:
+          - "rfc-9162#R-0312"
+          - "rfc-9162#R-0313"
+          - "rfc-9162#R-0314"
+          - "rfc-9162#R-0315"
+        on_error: "transport failure unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "log-front-end"
+        to: "log-client"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "malformed"
+        action: "Unparseable request (e.g. a non-decimal size)."
+        guard: "request does not parse"
+        locator: "§5"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0063"
+        on_error: "this step is itself the error path"
+        on_error_basis: "stated"
+      - n: "3"
+        from: "log-front-end"
+        to: "log-client"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "secondBeforeFirst"
+        action: "Reject second smaller than first."
+        guard: "second present AND second < first"
+        locator: "§5.3 Table 3"
+        kind: "stated"
+        on_error: "this step is itself the error path"
+        on_error_basis: "stated"
+      - n: "4"
+        from: "log-front-end"
+        to: "log-client"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "firstUnknown"
+        action: "Reject a first that is below the latest known STH's tree size but is no STH's tree size."
+        guard: "first < latest_known.tree_size AND no STH has tree_size first"
+        locator: "§5.3 Table 3"
+        kind: "stated"
+        on_error: "this step is itself the error path"
+        on_error_basis: "stated"
+      - n: "5"
+        from: "log-front-end"
+        to: "log-client"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "secondUnknown"
+        action: "Reject a second that is below the latest known STH's tree size but is no STH's tree size."
+        guard: "second present AND second < latest_known.tree_size AND no STH has tree_size second"
+        locator: "§5.3 Table 3"
+        kind: "stated"
+        on_error: "this step is itself the error path"
+        on_error_basis: "stated"
+      - n: "6"
+        from: "log-front-end"
+        to: "log-client"
+        message: "get-sth-consistency response"
+        message_id: "MSG-23"
+        field: "consistency"
+        action: >-
+          Both STHs known: return consistency only, tree_size_1 = first, tree_size_2 = second; for
+          first equal to second, an empty consistency_path. The consistency output is unsigned; it
+          is checked against the two signed STHs.
+        guard: "front end knows STHs of sizes first and second"
+        locator: "§5.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "1457-1458"
+            quote: |-
+              If both are known, then only the consistency output is returned.
+          - source_lines: "1475-1476"
+            quote: |-
+              Note that no signature is required for the consistency output, as it is used to verify the consistency between two signed STHs.
+        constrained_by:
+          - "rfc-9162#R-0074"
+          - "rfc-9162#R-0075"
+          - "rfc-9162#R-0076"
+          - "rfc-9162#R-0316"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "7"
+        from: "log-front-end"
+        to: "log-client"
+        message: "get-sth-consistency response"
+        message_id: "MSG-23"
+        field: "sth"
+        action: >-
+          First known, second unknown (beyond this front end's view, by skew) or omitted: return the
+          latest known STH and a proof from first to it (tree_size_2 is then the returned STH's
+          size).
+        guard: "front end knows first; second omitted or second > latest_known.tree_size"
+        locator: "§5.3, §5"
+        kind: "stated"
+        quotes:
+          - source_lines: "1458-1461"
+            quote: |-
+              If the first is known but the second is not (or has been omitted), then the latest known STH is returned, along with a consistency proof between the first STH and the latest.
+        constrained_by:
+          - "rfc-9162#R-0074"
+          - "rfc-9162#R-0317"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "8"
+        from: "log-front-end"
+        to: "log-client"
+        message: "get-sth-consistency response"
+        message_id: "MSG-23"
+        field: "sth"
+        action: "Neither known (both beyond this front end's view): return the latest known STH, no proof."
+        guard: "first > latest_known.tree_size"
+        locator: "§5.3, §5"
+        kind: "stated"
+        quotes:
+          - source_lines: "1461-1462"
+            quote: |-
+              If neither are known, then the latest known STH is returned without a consistency proof.
+        constrained_by:
+          - "rfc-9162#R-0318"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "9"
+        from: "log-front-end"
+        to: "log-front-end"
+        message: "get-sth-consistency request"
+        message_id: "MSG-22"
+        action: "Second known but first unknown cannot arise at a gap-free front end."
+        guard: "front end knows second but not first"
+        locator: "§5"
+        kind: "stated"
+        quotes:
+          - source_lines: "1298-1300"
+            quote: |-
+              The case where it knows the second but not the first should not arise (see the "no gaps" requirement above).
+        constrained_by:
+          - "rfc-9162#R-0062"
+        on_error: "no response is defined; reaching this state is a front-end defect"
+        on_error_basis: "inferred"
+      - n: "10"
+        from: "log-client"
+        to: "log-client"
+        message: "ConsistencyProofDataV2"
+        message_id: "MSG-12"
+        action: >-
+          Verify the proof between the client's STH of size first and the STH of size second (or the
+          returned sth, after verifying its signature) with §2.1.4.2 (F28, state machine M02).
+        locator: "§5.3, §2.1.4.2"
+        kind: "stated"
+        quotes:
+          - source_lines: "1494-1495"
+            quote: |-
+              See Section 2.1.4.2 for an outline of how to use the consistency output.
+        on_error: >-
+          a failing proof is evidence of log misbehaviour, signed by the log through the two STHs
+          (§8, §8.3); an empty proof for equal sizes fails §2.1.4.2 step 1 although the log was
+          required to send it (SD-01)
+        on_error_basis: "stated"
+  - id: "F08"
+    name: "get-proof-by-hash"
+    title: "Retrieving an inclusion proof by leaf hash"
+    locator: "§5.4, §4.7, §2.1.3"
+    kind_of_flow: "exchange"
+    participants:
+      - "log-client"
+      - "log-front-end"
+    summary: >-
+      The client sends a leaf hash and the tree size of an STH it holds. A front end that knows that
+      tree head returns the inclusion proof; one that does not (skew) returns its latest STH and a
+      proof to that. Two error types.
+    order_note: "The error checks have no stated order."
+    steps:
+      - n: "1"
+        from: "log-client"
+        to: "log-client"
+        message: "Merkle hash inputs"
+        message_id: "MSG-16"
+        also_messages:
+          - "MSG-07"
+        action: >-
+          Compute the v2 leaf hash HASH(0x00 || TransItem) of the entry: the x509_entry_v2 or
+          precert_entry_v2 TransItem built as the SCT signature input of §8.1.3.
+        locator: "§5.4, §4.7, §8.1.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "1507"
+            quote: |-
+              The hash must be calculated as defined in Section 4.7.
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "log-client"
+        to: "log-front-end"
+        message: "get-proof-by-hash request"
+        message_id: "MSG-24"
+        action: "GET /ct/v2/get-proof-by-hash with hash (base64) and tree_size (decimal) of an existing v2 STH."
+        locator: "§5.4"
+        kind: "stated"
+        quotes:
+          - source_lines: "1499"
+            quote: |-
+              GET <Base URL>/ct/v2/get-proof-by-hash
+          - source_lines: "1507-1508"
+            quote: |-
+              A v2 STH must exist for the tree_size.
+        constrained_by:
+          - "rfc-9162#R-0321"
+          - "rfc-9162#R-0325"
+        on_error: "transport failure unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "log-front-end"
+        to: "log-client"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "malformed"
+        action: "Unparseable request."
+        guard: "request does not parse"
+        locator: "§5"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0063"
+        on_error: "this step is itself the error path"
+        on_error_basis: "stated"
+      - n: "4"
+        from: "log-front-end"
+        to: "log-client"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "hashUnknown"
+        action: "The hash is no known leaf's hash: skew, a known certificate not yet merged, or never logged."
+        guard: "hash not a leaf hash in this front end's view"
+        locator: "§5.4 Table 4"
+        kind: "stated"
+        on_error: "this step is itself the error path; a client may retry later (OI-05)"
+        on_error_basis: "stated"
+      - n: "5"
+        from: "log-front-end"
+        to: "log-client"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "treeSizeUnknown"
+        action: >-
+          The tree_size is below the latest known STH but is no STH's size. (The table's detail
+          says hash where tree_size is meant: SD-03.)
+        guard: "tree_size < latest_known.tree_size AND no STH has tree_size tree_size"
+        locator: "§5.4 Table 4"
+        kind: "stated"
+        on_error: "this step is itself the error path"
+        on_error_basis: "stated"
+      - n: "6"
+        from: "log-front-end"
+        to: "log-client"
+        message: "get-proof-by-hash response"
+        message_id: "MSG-25"
+        field: "inclusion"
+        action: "Requested tree head known: return inclusion only, an unsigned proof against the signed STH."
+        guard: "front end knows the STH of size tree_size"
+        locator: "§5.4"
+        kind: "stated"
+        quotes:
+          - source_lines: "1511-1512"
+            quote: |-
+              If the front end knows the requested tree head, then only inclusion is returned.
+          - source_lines: "1523-1524"
+            quote: |-
+              Note that no signature is required for the inclusion output, as it is used to verify inclusion in the selected STH, which is signed.
+        constrained_by:
+          - "rfc-9162#R-0328"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "7"
+        from: "log-front-end"
+        to: "log-client"
+        message: "get-proof-by-hash response"
+        message_id: "MSG-25"
+        field: "sth"
+        action: "Requested tree head unknown (skew): return the latest STH known and an inclusion proof to it."
+        guard: "tree_size > latest_known.tree_size"
+        locator: "§5.4"
+        kind: "stated"
+        quotes:
+          - source_lines: "1508-1511"
+            quote: |-
+              Because of skew, the front end may not know the requested tree head. In that case, it will return the latest STH it knows, along with an inclusion proof to that STH.
+        constrained_by:
+          - "rfc-9162#R-0327"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "8"
+        from: "log-client"
+        to: "log-client"
+        message: "InclusionProofDataV2"
+        message_id: "MSG-13"
+        action: >-
+          Verify the proof with §2.1.3.2 (F26, M01) against the root_hash of the STH it names: the
+          client's own STH of tree_size, or the returned sth after its signature is verified.
+        locator: "§5.4, §2.1.3.2"
+        kind: "stated"
+        quotes:
+          - source_lines: "1541-1542"
+            quote: |-
+              See Section 2.1.3.2 for an outline of how to use the inclusion output.
+        on_error: "a failing proof is evidence of log misbehaviour (§8); the response is unspecified by source"
+        on_error_basis: "stated"
+  - id: "F09"
+    name: "get-all-by-hash"
+    title: "Retrieving inclusion proof, STH and consistency proof together"
+    locator: "§5.5, §1.3"
+    kind_of_flow: "exchange"
+    participants:
+      - "log-client"
+      - "log-front-end"
+    summary: >-
+      As F08, but the front end answers with the union of three skew cases (Table 5), possibly
+      nothing at all. Errors as F08.
+    order_note: "The three cases are evaluated independently and their outputs united; the errors have no stated order relative to them."
+    steps:
+      - n: "1"
+        from: "log-client"
+        to: "log-front-end"
+        message: "get-all-by-hash request"
+        message_id: "MSG-26"
+        action: "GET /ct/v2/get-all-by-hash with hash (computed as F08 step 1) and tree_size of an existing v2 STH."
+        locator: "§5.5"
+        kind: "stated"
+        quotes:
+          - source_lines: "1547"
+            quote: |-
+              GET <Base URL>/ct/v2/get-all-by-hash
+          - source_lines: "1555-1556"
+            quote: |-
+              The hash must be calculated as defined in Section 4.7. A v2 STH must exist for the tree_size.
+        constrained_by:
+          - "rfc-9162#R-0332"
+          - "rfc-9162#R-0336"
+        on_error: "transport failure unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "log-front-end"
+        to: "log-client"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "hashUnknown"
+        also_error_types:
+          - "treeSizeUnknown"
+          - "malformed"
+        action: "Same errors as get-proof-by-hash (F08 steps 3 to 5)."
+        locator: "§5.5"
+        kind: "stated"
+        quotes:
+          - source_lines: "1598"
+            quote: |-
+              Errors are the same as in Section 5.4.
+        constrained_by:
+          - "rfc-9162#R-0343"
+        on_error: "this step is itself the error path; how it combines with step 6's empty response is open (SD-04)"
+        on_error_basis: "stated"
+      - n: "3"
+        from: "log-front-end"
+        to: "log-client"
+        message: "get-all-by-hash response"
+        message_id: "MSG-27"
+        field: "sth"
+        action: "Case: latest STH smaller than the requested tree head; include the latest STH."
+        guard: "latest_known.tree_size < tree_size"
+        locator: "§5.5 Table 5"
+        kind: "stated"
+        quotes:
+          - source_lines: "1558-1559"
+            quote: |-
+              Because of skew, the front end may not know the requested tree head or the requested hash, which leads to a number of cases:
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "log-front-end"
+        to: "log-client"
+        message: "get-all-by-hash response"
+        message_id: "MSG-27"
+        field: "consistency"
+        action: "Case: latest STH larger than the requested tree head; include the latest STH and a consistency proof from the requested tree head to it."
+        guard: "latest_known.tree_size > tree_size"
+        locator: "§5.5 Table 5"
+        kind: "stated"
+        quotes:
+          - source_lines: "1590-1592"
+            quote: |-
+              consistency: A base64-encoded TransItem of type consistency_proof_v2 that proves the consistency of the requested tree head and the returned STH.
+        constrained_by:
+          - "rfc-9162#R-0342"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "log-front-end"
+        to: "log-client"
+        message: "get-all-by-hash response"
+        message_id: "MSG-27"
+        field: "inclusion"
+        action: >-
+          Case: the hash's leaf index is below the latest STH's size; include the inclusion proof in
+          the selected STH (which STH is not defined when the latest differs from the requested one:
+          OI-03).
+        guard: "leaf_index(hash) < latest_known.tree_size"
+        locator: "§5.5 Table 5"
+        kind: "stated"
+        quotes:
+          - source_lines: "1582-1585"
+            quote: |-
+              inclusion: A base64-encoded TransItem of type inclusion_proof_v2 whose inclusion_path array of Merkle Tree nodes proves the inclusion of the certificate (as specified by the hash parameter) in the selected STH.
+        constrained_by:
+          - "rfc-9162#R-0340"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "log-front-end"
+        to: "log-client"
+        message: "get-all-by-hash response"
+        message_id: "MSG-27"
+        action: "Return the union of the true cases; none true, an empty response. All three outputs are unsigned."
+        locator: "§5.5"
+        kind: "stated"
+        quotes:
+          - source_lines: "1577-1578"
+            quote: |-
+              Note that more than one case can be true; in which case, the returned data is their union.
+          - source_lines: "1594-1596"
+            quote: |-
+              Note that no signature is required for the inclusion or consistency outputs, as they are used to verify inclusion in and consistency of signed STHs.
+        constrained_by:
+          - "rfc-9162#R-0077"
+          - "rfc-9162#R-0339"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "7"
+        from: "log-client"
+        to: "log-client"
+        message: "InclusionProofDataV2"
+        message_id: "MSG-13"
+        also_messages:
+          - "MSG-12"
+        action: >-
+          Verify inclusion (F26, M01) and, when present, consistency from the requested tree head to
+          the returned STH (F28, M02); the latter makes a separate get-sth plus
+          get-sth-consistency unnecessary (§8.1.5).
+        locator: "§5.5, §8.1.5"
+        kind: "stated"
+        quotes:
+          - source_lines: "1600-1602"
+            quote: |-
+              See Section 2.1.3.2 for an outline of how to use the inclusion output, and see Section 2.1.4.2 for an outline of how to use the consistency output.
+          - source_lines: "1990-1992"
+            quote: |-
+              Note that if the TLS client uses get-all-by-hash, then it will already have the new STH.
+        on_error: "failing proofs are evidence of log misbehaviour (§8); the response is unspecified by source"
+        on_error_basis: "stated"
+  - id: "F10"
+    name: "get-entries"
+    title: "Retrieving a range of entries with the latest STH"
+    locator: "§5.6, §5, §4.3, §2.1.2"
+    kind_of_flow: "exchange"
+    participants:
+      - "log-client"
+      - "log-front-end"
+    summary: >-
+      The client asks for entries start to end inclusive. The log may cut the range (a per-request
+      limit, or the end of its tree), may have nothing (skew), and always returns its latest STH.
+      The entries are unsigned; the client checks them by rebuilding the tree.
+    order_note: "The error checks and the truncation rules have no stated order; steps 5 to 7 can all apply to one request."
+    steps:
+      - n: "1"
+        from: "log-client"
+        to: "log-front-end"
+        message: "get-entries request"
+        message_id: "MSG-28"
+        action: "GET /ct/v2/get-entries with start and end, 0-based decimal indexes, start <= end, ideally both below the get-sth tree_size."
+        locator: "§5.6"
+        kind: "stated"
+        quotes:
+          - source_lines: "1606"
+            quote: |-
+              GET <Base URL>/ct/v2/get-entries
+        constrained_by:
+          - "rfc-9162#R-0081"
+          - "rfc-9162#R-0080"
+          - "rfc-9162#R-0344"
+        on_error: "transport failure unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "log-front-end"
+        to: "log-client"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "malformed"
+        action: "Unparseable request."
+        guard: "request does not parse"
+        locator: "§5"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0063"
+        on_error: "this step is itself the error path"
+        on_error_basis: "stated"
+      - n: "3"
+        from: "log-front-end"
+        to: "log-client"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "endBeforeStart"
+        action: "Reject start greater than end; the source's worked example answers 400 Bad Request."
+        guard: "start > end"
+        locator: "§5, §5.6 Table 6"
+        kind: "stated"
+        quotes:
+          - source_lines: "1316-1318"
+            quote: |-
+              For example, in response to a request of <Base URL>/ct/v2/get-entries?start=100&end=99, the log would return a 400 Bad Request response code with a body similar to the following:
+        on_error: "this step is itself the error path"
+        on_error_basis: "stated"
+      - n: "4"
+        from: "log-front-end"
+        to: "log-client"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "startUnknown"
+        action: "Reject start greater than the number of entries in the tree. start equal to it is not covered (SD-05)."
+        guard: "start > tree_size"
+        locator: "§5.6 Table 6"
+        kind: "stated"
+        on_error: "this step is itself the error path; overlaps step 7 under skew (SD-05)"
+        on_error_basis: "stated"
+      - n: "5"
+        from: "log-front-end"
+        to: "log-front-end"
+        message: "get-entries response"
+        message_id: "MSG-29"
+        field: "entries"
+        action: "end at or beyond tree_size with a valid start: honour it with the valid part of the range (end beyond the tree can be skew)."
+        guard: "0 <= start < tree_size AND end >= tree_size"
+        locator: "§5.6"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0084"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "log-front-end"
+        to: "log-front-end"
+        message: "get-entries response"
+        message_id: "MSG-29"
+        field: "entries"
+        action: >-
+          A per-request limit may apply: more than permitted gets the maximum permitted, sequential
+          from start. The limit is not a log parameter and may change at any time.
+        guard: "end - start + 1 > current per-request limit"
+        locator: "§5.6"
+        kind: "stated"
+        quotes:
+          - source_lines: "1659-1662"
+            quote: |-
+              Note that a limit on the number of entries is not immutable, and therefore the restriction may be changed or lifted at any time and is not listed with the other Log Parameters in Section 4.1.
+        constrained_by:
+          - "rfc-9162#R-0085"
+          - "rfc-9162#R-0086"
+          - "rfc-9162#R-0087"
+          - "rfc-9162#R-0355"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "7"
+        from: "log-front-end"
+        to: "log-front-end"
+        message: "get-entries response"
+        message_id: "MSG-29"
+        field: "entries"
+        action: "Skew: no entries between start and end at this front end gives an empty entries array."
+        guard: "this front end holds no entry in [start, end]"
+        locator: "§5.6"
+        kind: "stated"
+        quotes:
+          - source_lines: "1664-1665"
+            quote: |-
+              Because of skew, it is possible the log server will not have any entries between start and end.
+        constrained_by:
+          - "rfc-9162#R-0088"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "8"
+        from: "log-front-end"
+        to: "log-client"
+        message: "get-entries response"
+        message_id: "MSG-29"
+        action: >-
+          Return entries, each with log_entry (v2 TransItem x509_entry_v2 or precert_entry_v2),
+          submitted_entry (the submit-entry inputs, trust anchor added to chain if it was omitted;
+          chain[0] certifies the submission unless it certifies itself), sct, and sth; the latest
+          known STH is returned in every case. The response is unsigned.
+        locator: "§5.6, §4.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "1630-1632"
+            quote: |-
+              Note that this message is not signed -- the entries data can be verified by constructing the Merkle Tree Hash corresponding to a retrieved STH.
+        constrained_by:
+          - "rfc-9162#R-0078"
+          - "rfc-9162#R-0082"
+          - "rfc-9162#R-0083"
+          - "rfc-9162#R-0089"
+          - "rfc-9162#R-0040"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "9"
+        from: "log-client"
+        to: "log-client"
+        message: "TransItem"
+        message_id: "MSG-03"
+        action: >-
+          Parse what it recognises; an unrecognised TransItem type is not an error, and its leaf is
+          hashed as opaque input. JSON members not understood are ignored.
+        locator: "§5.6, §5"
+        kind: "stated"
+        quotes:
+          - source_lines: "1634-1637"
+            quote: |-
+              This means it may be unable to parse some entries, but note that each client can inspect the entries it does recognize as well as verify the integrity of the data by treating unrecognized leaves as opaque input to the tree.
+        constrained_by:
+          - "rfc-9162#R-0079"
+          - "rfc-9162#R-0061"
+          - "rfc-9162#R-0352"
+        on_error: "none for an unrecognised type; the leaf still counts"
+        on_error_basis: "stated"
+      - n: "10"
+        from: "log-client"
+        to: "log-front-end"
+        message: "get-entries request"
+        message_id: "MSG-28"
+        action: "Fewer entries than asked (limit, tree end, skew): request again from the first index not yet received."
+        guard: "received count < end - start + 1 AND end < sth.tree_size"
+        locator: "§5.6"
+        kind: "inferred"
+        inferred_reason: "The source lets the log shorten the answer but says nothing of how a client continues; the loop is this model's."
+        on_error: "entries that stay unavailable for an extended period are log misbehaviour (§8.2, F20 step 3)"
+        on_error_basis: "stated"
+      - n: "11"
+        from: "log-client"
+        to: "log-client"
+        message: "Merkle hash inputs"
+        message_id: "MSG-16"
+        action: "With every entry from 0 to tree_size - 1, rebuild the root by §2.1.2 (F24, M03) and compare it with the STH's root_hash."
+        locator: "§5.6, §2.1.2"
+        kind: "stated"
+        quotes:
+          - source_lines: "1671-1672"
+            quote: |-
+              See Section 2.1.2 for an outline of how to use a complete list of log_entry entries to verify the root_hash.
+        on_error: "a mismatch is evidence of log misbehaviour (§8, §11.3)"
+        on_error_basis: "stated"
+  - id: "F11"
+    name: "get-anchors"
+    title: "Retrieving the accepted trust anchors and chain-length limit"
+    locator: "§5.7, §4.2"
+    kind_of_flow: "exchange"
+    participants:
+      - "log-client"
+      - "log-front-end"
+    summary: "A GET with no inputs, returning the anchor certificates and any chain-length limit, unsigned."
+    steps:
+      - n: "1"
+        from: "log-client"
+        to: "log-front-end"
+        message: "get-anchors request and response"
+        message_id: "MSG-30"
+        action: "GET /ct/v2/get-anchors, no parameters."
+        locator: "§5.7"
+        kind: "stated"
+        quotes:
+          - source_lines: "1690"
+            quote: |-
+              GET <Base URL>/ct/v2/get-anchors
+        constrained_by:
+          - "rfc-9162#R-0031"
+          - "rfc-9162#R-0357"
+        on_error: "transport failure unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "log-front-end"
+        to: "log-client"
+        message: "get-anchors request and response"
+        message_id: "MSG-30"
+        action: "Return certificates (base64 CA certificates the log accepts as anchors) and max_chain_length when the log limits chains, omitted otherwise."
+        locator: "§5.7, §4.2"
+        kind: "stated"
+        quotes:
+          - source_lines: "1695-1701"
+            quote: |-
+              certificates: An array of JSON strings, each of which is a base64-encoded CA certificate that is acceptable to the log. max_chain_length: If the server has chosen to limit the length of chains it accepts, this is the maximum number of certificates in the chain, in decimal. If there is no limit, this is omitted.
+          - source_lines: "872-873"
+            quote: |-
+              This list might usefully be the union of root certificates trusted by major browser vendors.
+        constrained_by:
+          - "rfc-9162#R-0359"
+          - "rfc-9162#R-0360"
+        on_error: "malformed or another 4xx/5xx problem response (F12); no endpoint-specific error type"
+        on_error_basis: "stated"
+      - n: "3"
+        from: "log-client"
+        to: "log-client"
+        message: "get-anchors request and response"
+        message_id: "MSG-30"
+        action: "Use the list to build submissions (F02 step 1); its integrity rests on TLS alone."
+        locator: "§5.7"
+        kind: "stated"
+        quotes:
+          - source_lines: "1703-1704"
+            quote: |-
+              This data is not signed, and the protocol depends on the security guarantees of TLS to ensure correctness.
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+  - id: "F12"
+    name: "api-error-handling"
+    title: "Problem responses and client retry rules, common to every §5 message"
+    locator: "§5, §10.2.6"
+    kind_of_flow: "exchange"
+    participants:
+      - "log-client"
+      - "log-front-end"
+    summary: >-
+      A log that cannot process a request answers 4xx or 5xx, with a problem details body naming an
+      error type in the urn:ietf:params:trans:error: namespace. Clients retry 500 and 503 unchanged
+      and change a request after 4xx.
+    steps:
+      - n: "1"
+        from: "log-front-end"
+        to: "log-client"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        action: >-
+          Answer an unprocessable request with HTTP 4xx or 5xx; the body, in place of the normal
+          output, a problem details object with type (urn:ietf:params:trans:error: plus a token) and
+          detail. Only malformed is common to all messages; the others belong to their endpoint.
+        locator: "§5"
+        kind: "stated"
+        quotes:
+          - source_lines: "1307-1314"
+            quote: |-
+              type: A URN reference identifying the problem. To facilitate automated response to errors, this document defines a set of standard tokens for use in the type field within the URN namespace of: "urn:ietf:params:trans:error:". detail: A human-readable string describing the error that prevented the log from processing the request, ideally with sufficient detail to enable the error to be rectified.
+        constrained_by:
+          - "rfc-9162#R-0063"
+          - "rfc-9162#R-0294"
+          - "rfc-9162#R-0295"
+          - "rfc-9162#R-0296"
+        on_error: "this step is itself the error path"
+        on_error_basis: "stated"
+      - n: "2"
+        from: "log-front-end"
+        to: "log-client"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        action: "A 503 may carry Retry-After as the minimum wait; without it no minimum is set. No other status-code guidance is given."
+        locator: "§5"
+        kind: "stated"
+        quotes:
+          - source_lines: "1344-1345"
+            quote: |-
+              In the absence of this header field, this document does not specify a minimum.
+          - source_lines: "1351-1352"
+            quote: |-
+              This document deliberately does not provide more specific guidance on the use of HTTP status codes.
+        constrained_by:
+          - "rfc-9162#R-0065"
+        on_error: "not applicable"
+        on_error_basis: "stated"
+      - n: "3"
+        from: "log-client"
+        to: "log-front-end"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        action: "500 or 503: a transient failure; the same request may be retried unchanged later (after Retry-After, if given)."
+        guard: "status in {500, 503}"
+        locator: "§5"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0064"
+        on_error: "unspecified by source (no retry limit)"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "log-client"
+        to: "log-client"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        action: "Any 4xx: a problem with the request; resubmit only after modifying it. The full status code may say more."
+        guard: "status is 4xx"
+        locator: "§5"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0066"
+          - "rfc-9162#R-0067"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "log-client"
+        to: "log-client"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        action: "Other 5xx statuses: no rule. A body that is not problem details (the SHOULD allows it) leaves only the status."
+        guard: "status is 5xx other than 500 and 503, or body is not problem details"
+        locator: "§5"
+        kind: "inferred"
+        inferred_reason: "The source covers 500, 503 and 4xx only, and makes the problem details body a SHOULD; the remaining cases are this model's enumeration."
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+  - id: "F13"
+    name: "tls-transparency-info-extension"
+    title: "Delivering transparency information in the transparency_info TLS extension"
+    locator: "§6, §6.2, §6.3, §6.4, §6.5, §8.1.1, §10.1.1"
+    kind_of_flow: "exchange"
+    participants:
+      - "tls-client"
+      - "tls-server"
+    summary: >-
+      The client offers the extension empty in ClientHello; a supporting server checks it is empty,
+      builds a TransItemList (at least one SCT; proofs and STHs when it has them; minus what the
+      certificate or stapled OCSP response already carries) and returns it in ServerHello (TLS 1.2
+      or earlier) or Certificate / CertificateRequest (TLS 1.3). Never on resumption.
+    order_note: "Steps follow handshake order; step 3 is checked before step 4 by necessity."
+    steps:
+      - n: "1"
+        from: "tls-client"
+        to: "tls-server"
+        message: "transparency_info TLS extension (ClientHello)"
+        message_id: "MSG-32"
+        action: >-
+          Include transparency_info (type 52) with empty extension_data in ClientHello. To keep the
+          right to evaluate compliance, also include status_request (F18).
+        locator: "§8.1.1, §8.1.6, §10.1.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "1711-1713"
+            quote: |-
+              (Of course, a server can only send a TLS extension if the client has specified it first.)
+        constrained_by:
+          - "rfc-9162#R-0111"
+          - "rfc-9162#R-0118"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "tls-server"
+        to: "tls-server"
+        message: "transparency_info TLS extension (ClientHello)"
+        message_id: "MSG-32"
+        action: "A server supporting the extension verifies the client's extension_data is empty."
+        guard: "client offered transparency_info AND server supports it"
+        locator: "§6.5"
+        kind: "stated"
+        quotes:
+          - source_lines: "1823-1825"
+            quote: |-
+              Provided that a TLS client includes the transparency_info extension type in the ClientHello and the TLS server supports the transparency_info extension:
+        constrained_by:
+          - "rfc-9162#R-0095"
+          - "rfc-9162#R-0369"
+        on_error: "unspecified by source: no alert or fallback is named for non-empty extension_data (OI-06)"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "tls-server"
+        to: "tls-server"
+        message: "transparency_info TLS extension (server)"
+        message_id: "MSG-33"
+        action: "On a resumed session, neither process nor send the extension; the original session's information stands."
+        guard: "session is being resumed"
+        locator: "§6.5"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0100"
+        on_error: "a server that sends it anyway makes the client abort (step 7)"
+        on_error_basis: "stated"
+      - n: "4"
+        from: "tls-server"
+        to: "tls-server"
+        message: "TransItemList"
+        message_id: "MSG-15"
+        also_messages:
+          - "MSG-14"
+        action: >-
+          Build the TransItemList: at least one x509_sct_v2 or precert_sct_v2 for the server
+          certificate, preferably from several logs; inclusion_proof_v2 and signed_tree_head_v2
+          items when the server can obtain them; omitting items already in the certificate or the
+          stapled OCSP response. How the server obtains proofs and STHs is not described (inferred:
+          its own get-proof-by-hash / get-all-by-hash calls, F08, F09).
+        locator: "§6, §6.2, §6.4, §6.5"
+        kind: "stated"
+        quotes:
+          - source_lines: "1787-1789"
+            quote: |-
+              To select the logs from which to obtain SCTs, a TLS server can, for example, examine the set of logs popular TLS clients accept and recognize.
+        constrained_by:
+          - "rfc-9162#R-0090"
+          - "rfc-9162#R-0091"
+          - "rfc-9162#R-0092"
+          - "rfc-9162#R-0093"
+          - "rfc-9162#R-0094"
+          - "rfc-9162#R-0096"
+        on_error: "the omission rule can leave a list without an SCT, against §6.4 (SD-06)"
+        on_error_basis: "inferred"
+      - n: "5"
+        from: "tls-server"
+        to: "tls-client"
+        message: "transparency_info TLS extension (server)"
+        message_id: "MSG-33"
+        action: >-
+          Non-empty list: send transparency_info with the list as extension_data, in ServerHello
+          (TLS 1.2 or earlier) or in Certificate or CertificateRequest (TLS 1.3), nowhere else.
+        guard: "TransItemList not empty AND not resuming"
+        locator: "§6.5, §10.1.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "1842-1844"
+            quote: |-
+              the ServerHello message (for TLS 1.2 or earlier) * the Certificate or CertificateRequest message (for TLS 1.3)
+        constrained_by:
+          - "rfc-9162#R-0097"
+          - "rfc-9162#R-0099"
+          - "rfc-9162#R-0374"
+          - "rfc-9162#R-0375"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "tls-server"
+        to: "tls-client"
+        message: "transparency_info TLS extension (server)"
+        message_id: "MSG-33"
+        action: >-
+          Empty list: omit extension_data, or send an empty array. (A zero-item TransItemList is not
+          encodable under its <1..2^16-1> bound: SD-07.)
+        guard: "TransItemList empty AND not resuming"
+        locator: "§6.5"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0098"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "7"
+        from: "tls-client"
+        to: "tls-server"
+        message: "transparency_info TLS extension (server)"
+        message_id: "MSG-33"
+        action: "A server that includes transparency_info while resuming a session makes the client abort the handshake."
+        guard: "session resumed AND server sent transparency_info"
+        locator: "§8.1.1"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0112"
+        on_error: "this step is itself the error path (the TLS alert is not named)"
+        on_error_basis: "stated"
+      - n: "8"
+        from: "tls-client"
+        to: "tls-client"
+        message: "SerializedTransItem"
+        message_id: "MSG-14"
+        action: >-
+          Decode each SerializedTransItem on its own, skipping items whose versioned_type it does
+          not understand, and pass SCTs to validation (F16).
+        locator: "§6.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "1802-1807"
+            quote: |-
+              Here, SerializedTransItem is an opaque byte string that contains the serialized TransItem structure. This encoding ensures that TLS clients can decode each TransItem individually (so, for example, if there is a version upgrade, out-of-date clients can still parse old TransItem structures while skipping over new TransItem structures whose versions they don't understand).
+        constrained_by:
+          - "rfc-9162#R-0368"
+        on_error: "an item of unknown type is skipped, not an error"
+        on_error_basis: "stated"
+  - id: "F14"
+    name: "ocsp-stapling-delivery"
+    title: "Delivering transparency information in a stapled OCSP response"
+    locator: "§6, §7.1, §7.1.1"
+    kind_of_flow: "exchange"
+    participants:
+      - "ca"
+      - "tls-server"
+      - "tls-client"
+    summary: >-
+      The CA puts a Transparency Information extension in a SingleResponse; the server staples the
+      OCSP response (TLS 1.3: in the status_request extension data; TLS 1.2: in CertificateStatus).
+      Updatable on the fly, like F13.
+    steps:
+      - n: "1"
+        from: "ca"
+        to: "ca"
+        message: "OCSP response extension"
+        message_id: "MSG-35"
+        also_messages:
+          - "MSG-34"
+          - "MSG-15"
+        action: >-
+          Optionally add the Transparency Information extension (OCTET STRING wrapping a
+          TransItemList) to the singleExtensions of a SingleResponse; every SCT and inclusion proof
+          in it is for the certificate of that certID or for its precertificate.
+        locator: "§7.1, §7.1.1"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0102"
+          - "rfc-9162#R-0105"
+          - "rfc-9162#R-0106"
+          - "rfc-9162#R-0101"
+          - "rfc-9162#R-0103"
+          - "rfc-9162#R-0104"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "tls-server"
+        to: "ca"
+        message: "OCSP response extension"
+        message_id: "MSG-35"
+        action: "Obtain the OCSP response to staple."
+        locator: "§6"
+        kind: "inferred"
+        inferred_reason: "Fetching an OCSP response is RFC 6960 and stapling practice; the source only names stapling."
+        on_error: "unspecified by source; F13 or F15 remain available"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "tls-client"
+        to: "tls-server"
+        message: "OCSP response extension"
+        message_id: "MSG-35"
+        action: "Request stapling with the status_request extension in ClientHello (defined by RFC 6066, RFC 8446, not here)."
+        locator: "§6, §8.1.6"
+        kind: "inferred"
+        inferred_reason: "§8.1.6 names status_request in ClientHello; the request mechanics are the referenced RFCs', not this source's."
+        constrained_by:
+          - "rfc-9162#R-0118"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "tls-server"
+        to: "tls-client"
+        message: "OCSP response extension"
+        message_id: "MSG-35"
+        action: "Staple the OCSP response: TLS 1.3 in the status_request extension data, TLS 1.2 in the CertificateStatus message."
+        locator: "§6"
+        kind: "stated"
+        quotes:
+          - source_lines: "1722-1724"
+            quote: |-
+              The server may also use an Online Certificate Status Protocol (OCSP) [RFC6960] response extension (see Section 7.1.1), providing the OCSP response as part of the TLS handshake.
+          - source_lines: "1725-1729"
+            quote: |-
+              For TLS 1.3, the information is encoded as an extension in the status_request extension data; see Section 4.4.2.1 of [RFC8446]. For TLS 1.2 [RFC5246], the information is encoded in the CertificateStatus message; see Section 8 of [RFC6066].
+        constrained_by:
+          - "rfc-9162#R-0090"
+          - "rfc-9162#R-0362"
+          - "rfc-9162#R-0363"
+          - "rfc-9162#R-0364"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "tls-client"
+        to: "tls-client"
+        message: "TransItemList"
+        message_id: "MSG-15"
+        action: "Unwrap the TransItemList from the SingleResponse's extension and validate its SCTs (F16)."
+        locator: "§8.1.1, §8.1.3"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0110"
+        on_error: "see F16"
+        on_error_basis: "stated"
+  - id: "F15"
+    name: "certificate-embedded-delivery"
+    title: "Delivering transparency information embedded in the certificate"
+    locator: "§6, §7.1.2"
+    kind_of_flow: "exchange"
+    participants:
+      - "ca"
+      - "tls-server"
+      - "tls-client"
+    summary: >-
+      Works with an unmodified TLS server, but the embedded items are frozen at issuance: if clients
+      later stop accepting the logs, the other two channels or reissuance are the remedy.
+    steps:
+      - n: "1"
+        from: "ca"
+        to: "tls-server"
+        message: "Certificate extension"
+        message_id: "MSG-36"
+        action: "The certificate carries the Transparency Information extension (F03 step 5)."
+        locator: "§7.1.2"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0107"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "tls-server"
+        to: "tls-client"
+        message: "Certificate extension"
+        message_id: "MSG-36"
+        action: "Send the certificate in the handshake as usual; nothing CT-specific happens on the server."
+        locator: "§6"
+        kind: "stated"
+        quotes:
+          - source_lines: "1732-1735"
+            quote: |-
+              CT information can also be encoded as an extension in the X.509v3 certificate (see Section 7.1.2). This mechanism allows the use of unmodified TLS servers, but the SCTs and inclusion proofs cannot be updated on the fly.
+        constrained_by:
+          - "rfc-9162#R-0090"
+          - "rfc-9162#R-0365"
+        on_error: >-
+          the embedded logs may later be distrusted by clients; then another channel or a reissued
+          certificate is needed
+        on_error_basis: "stated"
+      - n: "3"
+        from: "tls-client"
+        to: "tls-client"
+        message: "TransItemList"
+        message_id: "MSG-15"
+        action: "Unwrap the TransItemList from the certificate extension; its SCTs are precert_sct_v2 and are validated with the reconstructed TBSCertificate (F16)."
+        locator: "§7.1.2, §8.1.2"
+        kind: "stated"
+        quotes:
+          - source_lines: "1739-1741"
+            quote: |-
+              In such an event, one of the other two mechanisms will need to be used to deliver CT information, or, if this is not possible, the certificate will need to be reissued.
+        constrained_by:
+          - "rfc-9162#R-0110"
+        on_error: "see F16"
+        on_error_basis: "stated"
+  - id: "F16"
+    name: "tls-client-sct-validation"
+    title: "Validating a received SCT"
+    locator: "§8.1.2, §8.1.3, §4.7, §4.8"
+    kind_of_flow: "receive-processing"
+    participants:
+      - "tls-client"
+    summary: >-
+      For each SCT: rebuild the TBSCertificate (precertificate case), rebuild the entry TransItem the
+      log signed, verify the log's signature. Only validated SCTs count toward compliance. State
+      machine M05.
+    steps:
+      - n: "1"
+        from: "tls-client"
+        to: "tls-client"
+        message: "SignedCertificateTimestampDataV2"
+        message_id: "MSG-08"
+        action: "Take an SCT TransItem; its type (x509_sct_v2 or precert_sct_v2) selects the path."
+        locator: "§8.1.2, §8.1.3"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0113"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "tls-client"
+        to: "tls-client"
+        message: "TBSCertificate"
+        message_id: "MSG-06"
+        action: "x509_sct_v2: use the server certificate's TBSCertificate unmodified."
+        guard: "versioned_type == x509_sct_v2"
+        locator: "§8.1.2"
+        kind: "stated"
+        quotes:
+          - source_lines: "1921-1923"
+            quote: |-
+              Validation of an SCT for a certificate (where the type of the TransItem is x509_sct_v2) uses the unmodified TBSCertificate component of the certificate.
+        constrained_by:
+          - "rfc-9162#R-0378"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "tls-client"
+        to: "tls-client"
+        message: "TBSCertificate"
+        message_id: "MSG-06"
+        action: >-
+          precert_sct_v2: reconstruct the precertificate's TBSCertificate by removing the
+          Transparency Information extension and any embedded v1 SCT extension.
+        guard: "versioned_type == precert_sct_v2"
+        locator: "§8.1.2"
+        kind: "stated"
+        quotes:
+          - source_lines: "1930-1933"
+            quote: |-
+              Remove the Transparency Information extension (see Section 7.1). * Remove embedded v1 SCTs, identified by OID 1.3.6.1.4.1.11129.2.4.2 (see Section 3.3 of [RFC6962]).
+        constrained_by:
+          - "rfc-9162#R-0380"
+          - "rfc-9162#R-0381"
+          - "rfc-9162#R-0379"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "tls-client"
+        to: "tls-client"
+        message: "Log parameters"
+        message_id: "MSG-18"
+        action: "Find the log by log_id; without its parameters the SCT cannot be validated and is left out of compliance."
+        guard: "client holds parameters of the log named by log_id"
+        locator: "§8.1.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "1960-1963"
+            quote: |-
+              If the TLS client does not have the corresponding log's parameters, it cannot attempt to validate the SCT. When evaluating compliance (see Section 8.1.6), the TLS client will consider only those SCTs that it was able to validate.
+        constrained_by:
+          - "rfc-9162#R-0390"
+          - "rfc-9162#R-0391"
+        on_error: "SCT not validated; ignored for compliance"
+        on_error_basis: "stated"
+      - n: "5"
+        from: "tls-client"
+        to: "tls-client"
+        message: "TimestampedCertificateEntryDataV2"
+        message_id: "MSG-07"
+        also_messages:
+          - "MSG-03"
+        action: >-
+          Build the signature input: TransItem x509_entry_v2 or precert_entry_v2 (by the SCT's type)
+          with timestamp and sct_extensions copied from the SCT, tbs_certificate from step 2 or 3,
+          issuer_key_hash the HASH of the issuing CA's DER SubjectPublicKeyInfo (taken from the
+          presented chain: inferred).
+        locator: "§8.1.3, §4.7"
+        kind: "stated"
+        quotes:
+          - source_lines: "1941-1953"
+            quote: |-
+              Compute the signature input by constructing a TransItem of type x509_entry_v2 or precert_entry_v2, depending on the SCT's TransItem type. The TimestampedCertificateEntryDataV2 structure is constructed in the following manner: - timestamp is copied from the SCT. - tbs_certificate is the reconstructed TBSCertificate portion of the server certificate, as described in Section 8.1.2. - issuer_key_hash is computed as described in Section 4.7. - sct_extensions is copied from the SCT.
+        constrained_by:
+          - "rfc-9162#R-0044"
+          - "rfc-9162#R-0382"
+          - "rfc-9162#R-0383"
+          - "rfc-9162#R-0384"
+          - "rfc-9162#R-0385"
+          - "rfc-9162#R-0386"
+          - "rfc-9162#R-0387"
+          - "rfc-9162#R-0468"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "tls-client"
+        to: "tls-client"
+        message: "SignedCertificateTimestampDataV2"
+        message_id: "MSG-08"
+        field: "signature"
+        action: "Verify the SCT signature over the signature input with the log's public key and signature algorithm. SCT extensions not understood are ignored."
+        locator: "§8.1.3, §4.8"
+        kind: "stated"
+        quotes:
+          - source_lines: "1955-1958"
+            quote: |-
+              Verify the SCT's signature against the computed signature input using the public key of the corresponding log, which is identified by the log_id. The required signature algorithm is one of the log's parameters.
+        constrained_by:
+          - "rfc-9162#R-0047"
+          - "rfc-9162#R-0048"
+          - "rfc-9162#R-0388"
+          - "rfc-9162#R-0389"
+        on_error: >-
+          a failed signature leaves the SCT unvalidated and outside compliance (inferred from step
+          4's rule for SCTs the client cannot validate)
+        on_error_basis: "inferred"
+      - n: "7"
+        from: "tls-client"
+        to: "tls-client"
+        message: "TBSCertificate"
+        message_id: "MSG-06"
+        action: "Validate the certificate and chain as normal, independently of CT."
+        locator: "§8.1.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "1965-1966"
+            quote: |-
+              Note that SCT validation is not a substitute for the normal validation of the server certificate and its chain.
+        constrained_by:
+          - "rfc-9162#R-0392"
+        on_error: "ordinary certificate validation failure, outside this source"
+        on_error_basis: "stated"
+  - id: "F17"
+    name: "tls-client-inclusion-and-consistency"
+    title: "Obtaining and checking inclusion and consistency for a validated SCT"
+    locator: "§8.1.4, §8.1.5, §8.3, §11.3"
+    kind_of_flow: "receive-processing"
+    participants:
+      - "tls-client"
+      - "log-front-end"
+    summary: >-
+      A validated SCT without a proof may be followed up at the log (a privacy cost); a proof with
+      its STH should be verified, and the STH tied by consistency to one the client already trusts.
+    steps:
+      - n: "1"
+        from: "tls-client"
+        to: "log-front-end"
+        message: "get-proof-by-hash request"
+        message_id: "MSG-24"
+        also_messages:
+          - "MSG-26"
+        action: >-
+          No inclusion proof received: optionally fetch one with get-proof-by-hash (F08) or
+          get-all-by-hash (F09), revealing to the log which server the client visited. The check
+          may run asynchronously, once per certificate.
+        guard: "SCT validated AND no inclusion proof held"
+        locator: "§8.1.4, §11.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "1975-1979"
+            quote: |-
+              Note that fetching inclusion proofs directly from a log will disclose to the log which TLS server the client has been communicating with. This may be regarded as a significant privacy concern, and so it is preferable for the TLS server to send the inclusion proofs (see Section 6.4).
+          - source_lines: "2597-2600"
+            quote: |-
+              These checks can be asynchronous and need only be done once per certificate. However, note that there may be privacy concerns (see Section 8.1.4).
+        constrained_by:
+          - "rfc-9162#R-0114"
+          - "rfc-9162#R-0458"
+        on_error: "F08 and F09 error paths"
+        on_error_basis: "stated"
+      - n: "2"
+        from: "tls-client"
+        to: "tls-client"
+        message: "InclusionProofDataV2"
+        message_id: "MSG-13"
+        also_messages:
+          - "MSG-11"
+        action: >-
+          With a proof and an STH: verify the STH's signature, then the proof (§2.1.3.2, M01) of the
+          SCT's leaf hash against the STH's tree_size and root_hash.
+        locator: "§8.1.5"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0115"
+          - "rfc-9162#R-0476"
+        on_error: "a failing proof is evidence of log misbehaviour (§8); the client's reaction is local policy"
+        on_error_basis: "stated"
+      - n: "3"
+        from: "tls-client"
+        to: "log-front-end"
+        message: "get-sth-consistency request"
+        message_id: "MSG-22"
+        action: "Verify that the provided STH is consistent with one the client already knows (F07, M02)."
+        locator: "§8.1.5"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0116"
+        on_error: "a failing proof is evidence of log misbehaviour (§8)"
+        on_error_basis: "stated"
+      - n: "4"
+        from: "tls-client"
+        to: "log-front-end"
+        message: "get-sth request and response"
+        message_id: "MSG-21"
+        also_messages:
+          - "MSG-22"
+        action: >-
+          Known STH older than the SCT: optionally fetch a new STH (F06) and a consistency proof to
+          it (F07). get-all-by-hash already returned the new STH.
+        guard: "held STH timestamp < SCT timestamp"
+        locator: "§8.1.5"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0117"
+        on_error: "F06 and F07 error paths"
+        on_error_basis: "stated"
+  - id: "F18"
+    name: "tls-client-compliance"
+    title: "Evaluating compliance"
+    locator: "§8.1.6, §8.1.3, §11.1"
+    kind_of_flow: "local-decision"
+    participants:
+      - "tls-client"
+    summary: >-
+      Local policy decides what evidence suffices and what noncompliance costs; the source fixes
+      only that compliance is not evaluated unless ClientHello offered both transparency_info and
+      status_request, and that only validated SCTs count.
+    steps:
+      - n: "1"
+        from: "tls-client"
+        to: "tls-client"
+        message: "transparency_info TLS extension (ClientHello)"
+        message_id: "MSG-32"
+        action: "Evaluate only if ClientHello carried both transparency_info and status_request; otherwise do not evaluate."
+        guard: "ClientHello offered transparency_info AND status_request"
+        locator: "§8.1.6"
+        kind: "stated"
+        quotes:
+          - source_lines: "2000-2003"
+            quote: |-
+              A TLS client can only evaluate compliance if it has given the TLS server the opportunity to send SCTs and inclusion proofs by any of the three mechanisms that are mandatory to implement for CT-using TLS clients (see Section 8.1.1).
+        constrained_by:
+          - "rfc-9162#R-0118"
+        on_error: "no evaluation; what the client then does is unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "tls-client"
+        to: "tls-client"
+        message: "TransItemList"
+        message_id: "MSG-15"
+        action: >-
+          Apply local policy to the validated SCTs and verified proofs; certificates with no valid
+          SCT are not compliant. Handling of noncompliance is local.
+        locator: "§8.1.6, §8.1.3, §11.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "1996-1998"
+            quote: |-
+              It is up to a client's local policy to specify the quantity and form of evidence (SCTs, inclusion proofs, or a combination) needed to achieve compliance and how to handle noncompliance.
+          - source_lines: "2571-2572"
+            quote: |-
+              Misissued certificates that have not been publicly logged, and thus do not have a valid SCT, are not considered compliant.
+        on_error: "noncompliant: handling is local policy"
+        on_error_basis: "stated"
+  - id: "F19"
+    name: "monitor-inspect-existing"
+    title: "A monitor's first pass over a log"
+    locator: "§8.2"
+    kind_of_flow: "receive-processing"
+    participants:
+      - "monitor"
+      - "log-front-end"
+    summary: "Once per log: current STH, its signature, every entry, the certificates of interest, and the rebuilt root against the STH."
+    order_note: "Numbered by the source (§8.2, first list)."
+    steps:
+      - n: "1"
+        from: "monitor"
+        to: "log-front-end"
+        message: "get-sth request and response"
+        message_id: "MSG-21"
+        action: "Fetch the current STH (F06)."
+        locator: "§8.2 step 1"
+        kind: "stated"
+        quotes:
+          - source_lines: "2020"
+            quote: |-
+              Fetch the current STH (Section 5.2).
+        constrained_by:
+          - "rfc-9162#R-0120"
+          - "rfc-9162#R-0119"
+          - "rfc-9162#R-0395"
+        on_error: "F06 and F12 error paths"
+        on_error_basis: "stated"
+      - n: "2"
+        from: "monitor"
+        to: "monitor"
+        message: "SignedTreeHeadDataV2"
+        message_id: "MSG-11"
+        action: "Verify the STH signature."
+        locator: "§8.2 step 2"
+        kind: "stated"
+        quotes:
+          - source_lines: "2022"
+            quote: |-
+              Verify the STH signature.
+        constrained_by:
+          - "rfc-9162#R-0396"
+        on_error: "evidence of log misbehaviour (§8); reaction unspecified by source"
+        on_error_basis: "stated"
+      - n: "3"
+        from: "monitor"
+        to: "log-front-end"
+        message: "get-entries request"
+        message_id: "MSG-28"
+        also_messages:
+          - "MSG-29"
+        action: "Fetch every entry 0 to tree_size - 1 (F10, repeated while responses are shortened)."
+        locator: "§8.2 step 3"
+        kind: "stated"
+        quotes:
+          - source_lines: "2024-2025"
+            quote: |-
+              Fetch all the entries in the tree corresponding to the STH (Section 5.6).
+        constrained_by:
+          - "rfc-9162#R-0397"
+        on_error: "F10 error paths"
+        on_error_basis: "stated"
+      - n: "4"
+        from: "monitor"
+        to: "monitor"
+        message: "TransItem"
+        message_id: "MSG-03"
+        action: "Where the monitor has certificates of interest (e.g. a domain), check each entry against them."
+        locator: "§8.2 step 4"
+        kind: "stated"
+        quotes:
+          - source_lines: "2027-2028"
+            quote: |-
+              If applicable, check each entry to see if it's a certificate of interest.
+          - source_lines: "2010-2012"
+            quote: |-
+              For example, a monitor may be configured to report on all certificates that apply to a specific domain name when fetching new entries for consistency validation.
+        constrained_by:
+          - "rfc-9162#R-0398"
+        on_error: "what a monitor does on finding a certificate of interest is out of scope (§1)"
+        on_error_basis: "stated"
+      - n: "5"
+        from: "monitor"
+        to: "monitor"
+        message: "Merkle hash inputs"
+        message_id: "MSG-16"
+        action: "Rebuild the tree from the fetched entries (§2.1.2, M03) and confirm its hash equals the STH's root_hash."
+        locator: "§8.2 step 5"
+        kind: "stated"
+        quotes:
+          - source_lines: "2030-2031"
+            quote: |-
+              Confirm that the tree made from the fetched entries produces the same hash as that in the STH.
+        constrained_by:
+          - "rfc-9162#R-0399"
+        on_error: "a mismatch proves an append-only violation against a copy of the log (§11.3)"
+        on_error_basis: "stated"
+  - id: "F20"
+    name: "monitor-inspect-new"
+    title: "A monitor's continuing watch for new entries"
+    locator: "§8.2"
+    kind_of_flow: "receive-processing"
+    participants:
+      - "monitor"
+      - "log-front-end"
+    summary: >-
+      Repeated per log: poll get-sth until the STH changes, verify it, fetch the new entries, check
+      them, then either rebuild the whole tree (a monitor keeping every entry) or check a
+      consistency proof from the previous STH and that the new entries produce its nodes.
+    order_note: "Numbered by the source (§8.2, second list); step 5 has two alternatives, both lettered a."
+    steps:
+      - n: "1"
+        from: "monitor"
+        to: "log-front-end"
+        message: "get-sth request and response"
+        message_id: "MSG-21"
+        action: "Poll the current STH until it differs from the last one; the polling frequency is not specified."
+        guard: "new STH differs from previous STH"
+        locator: "§8.2 step 1"
+        kind: "stated"
+        quotes:
+          - source_lines: "2036-2038"
+            quote: |-
+              Fetch the current STH (Section 5.2). Repeat until the STH changes. To allow for experimentation, this document does not specify the polling frequency.
+        constrained_by:
+          - "rfc-9162#R-0121"
+          - "rfc-9162#R-0119"
+          - "rfc-9162#R-0393"
+          - "rfc-9162#R-0400"
+          - "rfc-9162#R-0401"
+        on_error: "F06 and F12 error paths; an STH unchanged past the MMD with pending SCTs is an audit matter (F21)"
+        on_error_basis: "inferred"
+      - n: "2"
+        from: "monitor"
+        to: "monitor"
+        message: "SignedTreeHeadDataV2"
+        message_id: "MSG-11"
+        action: "Verify the STH signature."
+        locator: "§8.2 step 2"
+        kind: "stated"
+        quotes:
+          - source_lines: "2040"
+            quote: |-
+              Verify the STH signature.
+        constrained_by:
+          - "rfc-9162#R-0402"
+        on_error: "evidence of log misbehaviour (§8); reaction unspecified by source"
+        on_error_basis: "stated"
+      - n: "3"
+        from: "monitor"
+        to: "log-front-end"
+        message: "get-entries request"
+        message_id: "MSG-28"
+        also_messages:
+          - "MSG-29"
+        action: "Fetch the new entries, old tree_size to new tree_size - 1 (F10); entries unavailable for an extended period are log misbehaviour."
+        locator: "§8.2 step 3"
+        kind: "stated"
+        quotes:
+          - source_lines: "2042-2045"
+            quote: |-
+              Fetch all the new entries in the tree corresponding to the STH (Section 5.6). If they remain unavailable for an extended period, then this should be viewed as misbehavior on the part of the log.
+        constrained_by:
+          - "rfc-9162#R-0403"
+          - "rfc-9162#R-0404"
+        on_error: "unavailability for an extended period counts as misbehaviour; the period is not defined"
+        on_error_basis: "stated"
+      - n: "4"
+        from: "monitor"
+        to: "monitor"
+        message: "TransItem"
+        message_id: "MSG-03"
+        action: "Check the new entries against the certificates of interest."
+        locator: "§8.2 step 4"
+        kind: "stated"
+        quotes:
+          - source_lines: "2047-2048"
+            quote: |-
+              If applicable, check each entry to see if it's a certificate of interest.
+        constrained_by:
+          - "rfc-9162#R-0405"
+        on_error: "out of scope (§1)"
+        on_error_basis: "stated"
+      - n: "5a"
+        from: "monitor"
+        to: "monitor"
+        message: "Merkle hash inputs"
+        message_id: "MSG-16"
+        action: "Keeping all entries: rebuild the tree over the updated list (M03) and compare with the new STH's root_hash."
+        guard: "monitor keeps every entry of the log"
+        locator: "§8.2 step 5"
+        kind: "stated"
+        quotes:
+          - source_lines: "2052-2053"
+            quote: |-
+              Verify that the updated list of all entries generates a tree with the same hash as the new STH.
+        constrained_by:
+          - "rfc-9162#R-0119"
+          - "rfc-9162#R-0394"
+          - "rfc-9162#R-0407"
+          - "rfc-9162#R-0406"
+        on_error: "a mismatch proves an append-only violation (§11.3)"
+        on_error_basis: "stated"
+      - n: "5b"
+        from: "monitor"
+        to: "log-front-end"
+        message: "get-sth-consistency request"
+        message_id: "MSG-22"
+        also_messages:
+          - "MSG-23"
+        action: >-
+          Not keeping all entries: fetch a consistency proof from the previous STH to the new one
+          (F07), verify it (M02), and check the new entries against the proof's nodes (no procedure
+          is given for this last check: OI-04).
+        guard: "monitor does not keep every entry"
+        locator: "§8.2 step 5"
+        kind: "stated"
+        quotes:
+          - source_lines: "2055-2063"
+            quote: |-
+              Or, if it is not keeping all log entries: a. Fetch a consistency proof for the new STH with the previous STH (Section 5.3). b. Verify the consistency proof. c. Verify that the new entries generate the corresponding elements in the consistency proof.
+        constrained_by:
+          - "rfc-9162#R-0408"
+          - "rfc-9162#R-0409"
+          - "rfc-9162#R-0410"
+          - "rfc-9162#R-0411"
+          - "rfc-9162#R-0406"
+        on_error: "a failing proof is evidence of misbehaviour, signed through the two STHs (§8.3)"
+        on_error_basis: "stated"
+      - n: "6"
+        from: "monitor"
+        to: "monitor"
+        message: "get-sth request and response"
+        message_id: "MSG-21"
+        action: "Repeat from step 1."
+        locator: "§8.2 step 6"
+        kind: "stated"
+        quotes:
+          - source_lines: "2065"
+            quote: |-
+              Repeat from Step 1.
+        constrained_by:
+          - "rfc-9162#R-0412"
+        on_error: "not applicable"
+        on_error_basis: "stated"
+  - id: "F21"
+    name: "auditing"
+    title: "Auditing the four properties of log behaviour"
+    locator: "§8.3, §11.3, §4.10"
+    kind_of_flow: "receive-processing"
+    participants:
+      - "auditor"
+      - "monitor"
+      - "tls-client"
+      - "log-front-end"
+    summary: >-
+      Auditing checks the MMD, the STH Frequency Count, append-only, and a consistent view to all.
+      A monitor audits through consistency and complete fetches; a TLS client audits an SCT through
+      an inclusion proof in an STH at least an MMD younger than it. A consistent view needs shared
+      observations (gossip), which the source leaves undefined. On failure the auditor holds signed
+      proof; what it does next is unspecified.
+    order_note: "The checks are independent; none is ordered by the source."
+    steps:
+      - n: "1"
+        from: "monitor"
+        to: "log-front-end"
+        message: "get-sth-consistency request"
+        message_id: "MSG-22"
+        also_messages:
+          - "MSG-28"
+        action: "Monitor as auditor: verify consistency between the STHs it receives (F07), fetch every entry (F10), rebuild each STH from them (M03)."
+        locator: "§8.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "2096-2099"
+            quote: |-
+              A monitor (Section 8.2) can audit by verifying the consistency of STHs it receives, ensuring that each entry can be fetched and that the STH is indeed the result of making a tree from all fetched entries.
+        constrained_by:
+          - "rfc-9162#R-0413"
+          - "rfc-9162#R-0416"
+          - "rfc-9162#R-0475"
+        on_error: "signed proof of misbehaviour (§8.3); action unspecified"
+        on_error_basis: "stated"
+      - n: "2"
+        from: "tls-client"
+        to: "log-front-end"
+        message: "get-proof-by-hash request"
+        message_id: "MSG-24"
+        action: >-
+          TLS client as auditor (MMD check): take an STH whose timestamp is at least the SCT's
+          timestamp plus the MMD, request the SCT's inclusion proof in it (F08) and verify (M01);
+          also check the SCT's entry is the certificate it arrived with or that certificate's
+          precertificate.
+        guard: "sth.timestamp >= sct.timestamp + MMD"
+        locator: "§8.3, §11.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "2101-2106"
+            quote: |-
+              A TLS client (Section 8.1) can audit by verifying an SCT against any STH dated after the SCT timestamp + the Maximum Merge Delay by requesting a Merkle inclusion proof (Section 5.4). It can also verify that the SCT corresponds to the server certificate it arrived with (i.e., the log entry is that certificate or is a precertificate corresponding to that certificate).
+          - source_lines: "2596-2597"
+            quote: |-
+              Violation of the MMD contract is detected by log clients requesting a Merkle inclusion proof (Section 5.4) for each observed SCT.
+        constrained_by:
+          - "rfc-9162#R-0418"
+          - "rfc-9162#R-0414"
+          - "rfc-9162#R-0474"
+          - "rfc-9162#R-0491"
+        on_error: >-
+          no valid inclusion proof in such an STH is a violation of the MMD promise; a hashUnknown
+          from a skewed front end is not yet one (OI-05)
+        on_error_basis: "inferred"
+      - n: "3"
+        from: "auditor"
+        to: "auditor"
+        message: "SignedTreeHeadDataV2"
+        message_id: "MSG-11"
+        action: >-
+          STH Frequency Count: STHs whose timestamps put more of them in an MMD-long period than the
+          parameter allows prove a rate-limit violation; so does an STH root that does not match a
+          copy of the log for append-only.
+        locator: "§8.3, §11.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "2602-2609"
+            quote: |-
+              Violation of the append-only property or the STH issuance rate limit can be detected by multiple clients comparing their instances of the STHs. This technique, known as "gossip", is an active area of research and not defined here. Proof of misbehavior in such cases would be either a series of STHs that were issued too closely together, proving violation of the STH issuance rate limit, or an STH with a root hash that does not match the one calculated from a copy of the log, proving violation of the append-only property.
+        constrained_by:
+          - "rfc-9162#R-0056"
+          - "rfc-9162#R-0415"
+        on_error: "signed proof of misbehaviour; action unspecified"
+        on_error_basis: "stated"
+      - n: "4"
+        from: "auditor"
+        to: "auditor"
+        message: "SignedTreeHeadDataV2"
+        message_id: "MSG-11"
+        action: "Consistent view: compare log responses with other parties; the sharing mechanism (gossip) is not defined."
+        locator: "§8.3, §11.3, §1"
+        kind: "stated"
+        quotes:
+          - source_lines: "2108-2111"
+            quote: |-
+              Checking of the consistency of the log view presented to all entities is more difficult to perform because it requires a way to share log responses among a set of CT-using entities and is discussed in Section 11.3.
+        constrained_by:
+          - "rfc-9162#R-0417"
+        on_error: "not defined by the source"
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "auditor"
+        to: "auditor"
+        message: "TransItem"
+        message_id: "MSG-03"
+        action: >-
+          Other misbehaviour the source lists: a mutated signature of a logged certificate, a chain
+          not containing the certifier of a logged certificate (checkable on submitted_entry, F10).
+        locator: "§11.3, §5.6"
+        kind: "stated"
+        quotes:
+          - source_lines: "2588-2594"
+            quote: |-
+              A log can misbehave in several ways. Examples include the following: failing to incorporate a certificate with an SCT in the Merkle Tree within the MMD; presenting different, conflicting views of the Merkle Tree at different times and/or to different parties; issuing STHs too frequently; mutating the signature of a logged certificate; and failing to present a chain containing the certifier of a logged certificate.
+        constrained_by:
+          - "rfc-9162#R-0083"
+        on_error: "signed proof of misbehaviour; action unspecified"
+        on_error_basis: "stated"
+      - n: "6"
+        from: "auditor"
+        to: "auditor"
+        message: "SignedTreeHeadDataV2"
+        message_id: "MSG-11"
+        action: "On a failed audit the auditor holds signed proof of misbehaviour; the action taken is not specified."
+        locator: "§8.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "2092-2094"
+            quote: |-
+              The action taken by the auditor, if an audit fails, is not specified, but note that in general, if an audit fails, the auditor is in possession of signed proof of the log's misbehavior.
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+  - id: "F22"
+    name: "log-shutdown"
+    title: "Freezing and shutting down a log"
+    locator: "§4.13, §4.1, §9"
+    kind_of_flow: "lifecycle"
+    participants:
+      - "log-operator"
+      - "log"
+      - "log-front-end"
+      - "log-client"
+    summary: >-
+      Announce out of band, refuse submissions with shutdown, wait out the MMD and the pending
+      merges, publish a Final STH as a parameter, optionally destroy the key, keep serving reads
+      until every logged certificate has expired or is logged elsewhere. Deprecating an algorithm
+      forces this path and a new log. State machine M04.
+    order_note: "The bullets of §4.13 are listed in an order that steps 3 and 5 depend on; the source does not number them."
+    steps:
+      - n: "1"
+        from: "log-operator"
+        to: "log-client"
+        message: "Log parameters"
+        message_id: "MSG-18"
+        action: "Announce to clients and monitors, out of band, that the log will be frozen."
+        locator: "§4.13"
+        kind: "stated"
+        quotes:
+          - source_lines: "1241-1243"
+            quote: |-
+              Make it known to clients and monitors that the log will be frozen. This is not part of the API, so it will have to be done via a relevant out-of-band mechanism.
+        constrained_by:
+          - "rfc-9162#R-0060"
+          - "rfc-9162#R-0281"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "log-front-end"
+        to: "log-client"
+        message: "Error response (problem details)"
+        message_id: "MSG-31"
+        error_type: "shutdown"
+        action: "Stop accepting submissions; submit-entry answers shutdown (F02 step 3). Read endpoints keep working."
+        locator: "§4.13, §5.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "1245-1246"
+            quote: |-
+              Stop accepting new submissions (the error code "shutdown" should be returned for such requests).
+        constrained_by:
+          - "rfc-9162#R-0060"
+          - "rfc-9162#R-0282"
+        on_error: "this step is itself an error path for submitters"
+        on_error_basis: "stated"
+      - n: "3"
+        from: "log"
+        to: "log-operator"
+        message: "SignedTreeHeadDataV2"
+        message_id: "MSG-11"
+        action: >-
+          Once the MMD has elapsed since the last accepted submission and every pending submission is
+          merged, issue a final STH (timestamp later than last SCT issuance plus MMD) and publish it
+          as the Final STH parameter, a TransItem signed_tree_head_v2.
+        guard: "now >= last_sct.timestamp + MMD AND no pending submissions"
+        locator: "§4.13, §4.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "1248-1253"
+            quote: |-
+              Once MMD from the last accepted submission has passed and all pending submissions are incorporated, issue a final STH and publish it as one of the log's parameters. Having an STH with a timestamp that is after the MMD has passed from the last SCT issuance allows clients to audit this log regularly without special handling for the final STH.
+          - source_lines: "847-850"
+            quote: |-
+              Final STH: If a log has been closed down (i.e., no longer accepts new entries), existing entries may still be valid. In this case, the client should know the final valid STH in the log to ensure no new entries can be added without detection.
+        constrained_by:
+          - "rfc-9162#R-0029"
+          - "rfc-9162#R-0060"
+          - "rfc-9162#R-0283"
+          - "rfc-9162#R-0226"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "log-operator"
+        to: "log-operator"
+        message: "Log parameters"
+        message_id: "MSG-18"
+        field: "Public Key"
+        action: "The private key is no longer needed and may be destroyed (no further STH can then be signed: SD-08)."
+        locator: "§4.13"
+        kind: "stated"
+        quotes:
+          - source_lines: "1253-1254"
+            quote: |-
+              At this point, the log's private key is no longer needed and can be destroyed.
+        constrained_by:
+          - "rfc-9162#R-0284"
+        on_error: "not applicable"
+        on_error_basis: "stated"
+      - n: "5"
+        from: "log-front-end"
+        to: "log-client"
+        message: "get-entries response"
+        message_id: "MSG-29"
+        action: >-
+          Keep serving the log until every certificate in it has expired or is present in another
+          log (found by scanning other logs or the SCTs domains serve).
+        guard: "some logged certificate unexpired and not logged elsewhere"
+        locator: "§4.13"
+        kind: "stated"
+        quotes:
+          - source_lines: "1256-1259"
+            quote: |-
+              Keep the log running until the certificates in all of its entries have expired or exist in other logs (this can be determined by scanning other logs or connecting to domains mentioned in the certificates and inspecting the SCTs served).
+        constrained_by:
+          - "rfc-9162#R-0285"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "log-operator"
+        to: "log-operator"
+        message: "Log parameters"
+        message_id: "MSG-18"
+        action: >-
+          Algorithm deprecation: a live log whose algorithm must go is frozen by this flow and a new
+          log started; unexpired certificates needing new SCTs go to the new log.
+        guard: "an algorithm used by the live log is to be deprecated"
+        locator: "§9"
+        kind: "stated"
+        constrained_by:
+          - "rfc-9162#R-0122"
+          - "rfc-9162#R-0123"
+          - "rfc-9162#R-0421"
+          - "rfc-9162#R-0422"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+  - id: "F23"
+    name: "merkle-tree-hash"
+    title: "Computing the Merkle Tree Hash"
+    locator: "§2.1.1"
+    kind_of_flow: "local-computation"
+    participants:
+      - "log"
+      - "log-client"
+    summary: >-
+      MTH over an ordered list: empty list hashes to HASH(); one entry to HASH(0x00 || d); more than
+      one splits at k, the largest power of two below n, and hashes HASH(0x01 || left || right). Run
+      by the log to build roots and by any client rebuilding one.
+    steps:
+      - n: "1"
+        from: "log"
+        to: "log"
+        message: "Merkle hash inputs"
+        message_id: "MSG-16"
+        action: "n = 0: MTH = HASH() of the empty string."
+        guard: "n == 0"
+        locator: "§2.1.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "331-333"
+            quote: |-
+              The hash of an empty list is the hash of an empty string: MTH({}) = HASH().
+        constrained_by:
+          - "rfc-9162#R-0130"
+        on_error: "not applicable"
+        on_error_basis: "stated"
+      - n: "2"
+        from: "log"
+        to: "log"
+        message: "Merkle hash inputs"
+        message_id: "MSG-16"
+        action: "n = 1: the leaf hash HASH(0x00 || d[0])."
+        guard: "n == 1"
+        locator: "§2.1.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "335-337"
+            quote: |-
+              The hash of a list with one entry (also known as a leaf hash) is: MTH({d[0]}) = HASH(0x00 || d[0]).
+        constrained_by:
+          - "rfc-9162#R-0131"
+        on_error: "not applicable"
+        on_error_basis: "stated"
+      - n: "3"
+        from: "log"
+        to: "log"
+        message: "NodeHash"
+        message_id: "MSG-09"
+        also_messages:
+          - "MSG-16"
+        action: "n > 1: k the largest power of two below n; MTH = HASH(0x01 || MTH(D[0:k]) || MTH(D[k:n])), recursively."
+        guard: "n > 1"
+        locator: "§2.1.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "339-343"
+            quote: |-
+              For n > 1, let k be the largest power of two smaller than n (i.e., k < n <= 2k). The Merkle Tree Hash of an n-element list D_n is then defined recursively as: MTH(D_n) = HASH(0x01 || MTH(D[0:k]) || MTH(D[k:n]))
+          - source_lines: "354-355"
+            quote: |-
+              Note that the hash calculations for leaves and nodes differ; this domain separation is required to give second preimage resistance.
+        constrained_by:
+          - "rfc-9162#R-0132"
+        on_error: "not applicable"
+        on_error_basis: "stated"
+  - id: "F24"
+    name: "verify-tree-head"
+    title: "Verifying a tree head given every entry (§2.1.2)"
+    locator: "§2.1.2"
+    kind_of_flow: "local-computation"
+    participants:
+      - "log-client"
+    summary: >-
+      A stack-based rebuild of MTH from entries 0 to tree_size - 1, compared with root_hash. Modelled
+      exactly in state-machine.yaml M03.
+    steps:
+      - n: "1"
+        from: "log-client"
+        to: "log-client"
+        message: "Merkle hash inputs"
+        message_id: "MSG-16"
+        also_messages:
+          - "MSG-10"
+        action: >-
+          Inputs: the complete entries list 0 to tree_size - 1 (each the TransItem bytes of a
+          log_entry, F10) and the STH's tree_size and root_hash. Run M03.
+        locator: "§2.1.2"
+        kind: "stated"
+        quotes:
+          - source_lines: "366-369"
+            quote: |-
+              When a client has a complete list of entries from 0 up to tree_size - 1 and wishes to verify this list against a tree head root_hash returned by the log for the same tree_size, the following algorithm may be used:
+        constrained_by:
+          - "rfc-9162#R-0136"
+        on_error: "M03 error states"
+        on_error_basis: "stated"
+      - n: "2"
+        from: "log-client"
+        to: "log-client"
+        message: "TreeHeadDataV2"
+        message_id: "MSG-10"
+        field: "root_hash"
+        action: "Compare the single remaining stack element with root_hash; equal verifies the list."
+        locator: "§2.1.2 step 4"
+        kind: "stated"
+        quotes:
+          - source_lines: "395-397"
+            quote: |-
+              The remaining element in stack is the Merkle Tree Hash for the given tree_size and should be compared by equality against the supplied root_hash.
+        constrained_by:
+          - "rfc-9162#R-0146"
+        on_error: "unequal: the list and the tree head disagree, evidence against the log (§8)"
+        on_error_basis: "stated"
+  - id: "F25"
+    name: "generate-inclusion-proof"
+    title: "Generating an inclusion proof PATH(m, D_n) (§2.1.3.1)"
+    locator: "§2.1.3.1, §4.12"
+    kind_of_flow: "local-computation"
+    participants:
+      - "log"
+    summary: "The log's side of F08 and F09: the recursive audit path for leaf m, wrapped in InclusionProofDataV2."
+    steps:
+      - n: "1"
+        from: "log"
+        to: "log"
+        message: "InclusionProofDataV2"
+        message_id: "MSG-13"
+        action: "Defined for 0 <= m < n; a one-leaf tree has the empty proof."
+        guard: "0 <= m < n"
+        locator: "§2.1.3.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "415-422"
+            quote: |-
+              Given an ordered list of n inputs to the tree, D_n = {d[0], d[1], ..., d[n-1]}, the Merkle inclusion proof PATH(m, D_n) for the (m+1)th input d[m], 0 <= m < n, is defined as follows: The proof for the single leaf in a tree with a one-element input list D[1] = {d[0]} is empty: PATH(0, {d[0]}) = {}
+        constrained_by:
+          - "rfc-9162#R-0147"
+          - "rfc-9162#R-0148"
+        on_error: "m >= n has no proof; F08 answers hashUnknown"
+        on_error_basis: "inferred"
+      - n: "2"
+        from: "log"
+        to: "log"
+        message: "InclusionProofDataV2"
+        message_id: "MSG-13"
+        field: "inclusion_path"
+        action: >-
+          n > 1, k the largest power of two below n: for m < k the path into the left subtree then
+          MTH of the right; for m >= k the path into the right subtree (index m - k) then MTH of the
+          left. Nodes are appended leaf-side first.
+        guard: "n > 1"
+        locator: "§2.1.3.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "424-430"
+            quote: |-
+              For n > 1, let k be the largest power of two smaller than n. The proof for the (m+1)th element d[m] in a list of n > m elements is then defined recursively as: PATH(m, D_n) = PATH(m, D[0:k]) : MTH(D[k:n]) for m < k; and PATH(m, D_n) = PATH(m - k, D[k:n]) : MTH(D[0:k]) for m >= k,
+        constrained_by:
+          - "rfc-9162#R-0149"
+          - "rfc-9162#R-0150"
+          - "rfc-9162#R-0151"
+        on_error: "not applicable"
+        on_error_basis: "stated"
+      - n: "3"
+        from: "log"
+        to: "log"
+        message: "InclusionProofDataV2"
+        message_id: "MSG-13"
+        action: "Wrap as TransItem inclusion_proof_v2 with log_id, tree_size, the 0-based leaf_index and inclusion_path; unsigned."
+        locator: "§4.12"
+        kind: "stated"
+        quotes:
+          - source_lines: "1208-1210"
+            quote: |-
+              To prepare a Merkle inclusion proof for distribution to clients, the log produces a TransItem structure of type inclusion_proof_v2, which encapsulates an InclusionProofDataV2 structure:
+        constrained_by:
+          - "rfc-9162#R-0275"
+        on_error: "not applicable"
+        on_error_basis: "stated"
+  - id: "F26"
+    name: "verify-inclusion-proof"
+    title: "Verifying an inclusion proof (§2.1.3.2)"
+    locator: "§2.1.3.2"
+    kind_of_flow: "local-computation"
+    participants:
+      - "log-client"
+    summary: >-
+      Fold the audit path into the leaf hash, steering by the bits of the leaf index and the last
+      index; succeed when the walk ends at the root (sn = 0) with r equal to root_hash. Modelled
+      exactly in M01.
+    steps:
+      - n: "1"
+        from: "log-client"
+        to: "log-client"
+        message: "InclusionProofDataV2"
+        message_id: "MSG-13"
+        also_messages:
+          - "MSG-11"
+        action: >-
+          Inputs: hash (the leaf hash), leaf_index and inclusion_path from the proof, tree_size and
+          root_hash from the STH the proof is for. Run M01.
+        locator: "§2.1.3.2"
+        kind: "stated"
+        quotes:
+          - source_lines: "436-440"
+            quote: |-
+              When a client has received an inclusion proof (e.g., in a TransItem of type inclusion_proof_v2) and wishes to verify inclusion of an input hash for a given tree_size and root_hash, the following algorithm may be used to prove the hash was included in the root_hash:
+        constrained_by:
+          - "rfc-9162#R-0152"
+          - "rfc-9162#R-0461"
+        on_error: "M01 error states"
+        on_error_basis: "stated"
+      - n: "2"
+        from: "log-client"
+        to: "log-client"
+        message: "InclusionProofDataV2"
+        message_id: "MSG-13"
+        action: >-
+          The source matches the proof to the STH only through the algorithm's inputs; that the
+          proof's tree_size and log_id equal the STH's is this model's precondition.
+        locator: "§2.1.3.2, §4.12"
+        kind: "inferred"
+        inferred_reason: "§2.1.3.2 takes tree_size as an input and never compares it with the InclusionProofDataV2 field of the same name."
+        on_error: "mismatch: the proof is for another tree; reject (inferred)"
+        on_error_basis: "inferred"
+  - id: "F27"
+    name: "generate-consistency-proof"
+    title: "Generating a consistency proof PROOF(m, D_n) (§2.1.4.1)"
+    locator: "§2.1.4.1, §4.11"
+    kind_of_flow: "local-computation"
+    participants:
+      - "log"
+    summary: "The log's side of F07 and F09: SUBPROOF recursion with a flag recording whether MTH(D[0:m]) is known to the verifier."
+    steps:
+      - n: "1"
+        from: "log"
+        to: "log"
+        message: "ConsistencyProofDataV2"
+        message_id: "MSG-12"
+        action: "Defined only for 0 < m < n; start SUBPROOF(m, D_n, true). §5.3's equal-size case (m = n) falls outside it (SD-01)."
+        guard: "0 < m < n"
+        locator: "§2.1.4.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "487-491"
+            quote: |-
+              Given an ordered list of n inputs to the tree, D_n = {d[0], d[1], ..., d[n-1]}, the Merkle consistency proof PROOF(m, D_n) for a previous Merkle Tree Hash MTH(D[0:m]), 0 < m < n, is defined as: PROOF(m, D_n) = SUBPROOF(m, D_n, true)
+        constrained_by:
+          - "rfc-9162#R-0167"
+          - "rfc-9162#R-0168"
+        on_error: "m = 0 has no definition and no error type (OI-02); m = n is answered empty by §5.3"
+        on_error_basis: "inferred"
+      - n: "2"
+        from: "log"
+        to: "log"
+        message: "ConsistencyProofDataV2"
+        message_id: "MSG-12"
+        field: "consistency_path"
+        action: "m = n: empty when the flag is true (the verifier knows this subtree's hash), else the single node MTH(D_m)."
+        guard: "m == n"
+        locator: "§2.1.4.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "499-505"
+            quote: |-
+              The subproof for m = n is empty if m is the value for which PROOF was originally requested (meaning that the subtree created from D[0:m] is a complete subtree of the Merkle Tree created from the original D_n for which PROOF was requested and the subtree Merkle Tree Hash MTH(D[0:m]) is known): SUBPROOF(m, D_m, true) = {}
+          - source_lines: "507-510"
+            quote: |-
+              Otherwise, the subproof for m = n is the Merkle Tree Hash committing inputs D[0:m]: SUBPROOF(m, D_m, false) = {MTH(D_m)}
+        constrained_by:
+          - "rfc-9162#R-0169"
+          - "rfc-9162#R-0170"
+        on_error: "not applicable"
+        on_error_basis: "stated"
+      - n: "3"
+        from: "log"
+        to: "log"
+        message: "ConsistencyProofDataV2"
+        message_id: "MSG-12"
+        field: "consistency_path"
+        action: >-
+          m < n, k the largest power of two below n: m <= k recurses left with the same flag and
+          appends MTH(D[k:n]); m > k recurses right with m - k and flag false and appends MTH(D[0:k]).
+          At most ceil(log2(n)) + 1 nodes.
+        guard: "m < n"
+        locator: "§2.1.4.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "512-526"
+            quote: |-
+              For m < n, let k be the largest power of two smaller than n. The subproof is then defined recursively, using the appropriate step below: If m <= k, the right subtree entries D[k:n] only exist in the current tree. We prove that the left subtree entries D[0:k] are consistent and add a commitment to D[k:n]: SUBPROOF(m, D_n, b) = SUBPROOF(m, D[0:k], b) : MTH(D[k:n]) If m > k, the left subtree entries D[0:k] are identical in both trees. We prove that the right subtree entries D[k:n] are consistent and add a commitment to D[0:k]: SUBPROOF(m, D_n, b) = SUBPROOF(m - k, D[k:n], false) : MTH(D[0:k])
+          - source_lines: "528-529"
+            quote: |-
+              The number of nodes in the resulting proof is bounded above by ceil(log2(n)) + 1.
+        constrained_by:
+          - "rfc-9162#R-0171"
+          - "rfc-9162#R-0172"
+          - "rfc-9162#R-0173"
+          - "rfc-9162#R-0174"
+          - "rfc-9162#R-0175"
+          - "rfc-9162#R-0176"
+        on_error: "not applicable"
+        on_error_basis: "stated"
+      - n: "4"
+        from: "log"
+        to: "log"
+        message: "ConsistencyProofDataV2"
+        message_id: "MSG-12"
+        action: "Wrap as TransItem consistency_proof_v2 with log_id, tree_size_1 = m, tree_size_2 = n and consistency_path; unsigned."
+        locator: "§4.11"
+        kind: "stated"
+        quotes:
+          - source_lines: "1185-1187"
+            quote: |-
+              To prepare a Merkle consistency proof for distribution to clients, the log produces a TransItem structure of type consistency_proof_v2, which encapsulates a ConsistencyProofDataV2 structure:
+        constrained_by:
+          - "rfc-9162#R-0269"
+        on_error: "not applicable"
+        on_error_basis: "stated"
+  - id: "F28"
+    name: "verify-consistency-proof"
+    title: "Verifying consistency between two tree heads (§2.1.4.2)"
+    locator: "§2.1.4.2"
+    kind_of_flow: "local-computation"
+    participants:
+      - "log-client"
+    summary: >-
+      Rebuild both roots from one path: fr for the old tree, sr for the new. Modelled exactly in
+      M02. Preconditions 0 < first < second; an empty path fails at step 1.
+    steps:
+      - n: "1"
+        from: "log-client"
+        to: "log-client"
+        message: "ConsistencyProofDataV2"
+        message_id: "MSG-12"
+        also_messages:
+          - "MSG-11"
+        action: >-
+          Inputs: first and first_hash (old STH), second and second_hash (new STH), consistency_path.
+          Run M02.
+        guard: "0 < first < second"
+        locator: "§2.1.4.2"
+        kind: "stated"
+        quotes:
+          - source_lines: "535-539"
+            quote: |-
+              When a client has a tree head first_hash for tree size first, has a tree head second_hash for tree size second where 0 < first < second, and has received a consistency proof between the two (e.g., in a TransItem of type consistency_proof_v2), the following algorithm may be used to verify the consistency proof:
+        constrained_by:
+          - "rfc-9162#R-0177"
+          - "rfc-9162#R-0462"
+          - "rfc-9162#R-0464"
+        on_error: "M02 error states; first equal to second, or first = 0, is outside the algorithm (SD-01, OI-02)"
+        on_error_basis: "stated"
+      - n: "2"
+        from: "log-client"
+        to: "log-client"
+        message: "ConsistencyProofDataV2"
+        message_id: "MSG-12"
+        action: "That tree_size_1, tree_size_2 and log_id of the proof equal first, second and the STHs' log is this model's precondition."
+        locator: "§2.1.4.2, §4.11"
+        kind: "inferred"
+        inferred_reason: "§2.1.4.2 takes first and second as inputs and never compares them with the proof's own size fields."
+        on_error: "mismatch: reject (inferred)"
+        on_error_basis: "inferred"
+error_paths:
+  - error_type: "malformed"
+    raised_by: "log-front-end"
+    where: "every §5 message"
+    steps:
+      - "F02.4"
+      - "F07.2"
+      - "F08.3"
+      - "F09.2"
+      - "F10.2"
+      - "F12.1"
+    note: "The only type not tied to one endpoint (§5 Table 1); get-sth and get-anchors have no other."
+  - error_type: "badSubmission"
+    raised_by: "log-front-end"
+    where: "submit-entry"
+    steps:
+      - "F02.6"
+  - error_type: "badType"
+    raised_by: "log-front-end"
+    where: "submit-entry"
+    steps:
+      - "F02.5"
+    note: "Defined against the values 1 and 2, which are not VersionedTransType values (SD-02)."
+  - error_type: "badChain"
+    raised_by: "log-front-end"
+    where: "submit-entry"
+    steps:
+      - "F02.8"
+  - error_type: "badCertificate"
+    raised_by: "log-front-end"
+    where: "submit-entry"
+    steps:
+      - "F02.7"
+    note: "Optional when only the encoding is bad and the chain verifies: the log may log instead."
+  - error_type: "unknownAnchor"
+    raised_by: "log-front-end"
+    where: "submit-entry"
+    steps:
+      - "F02.9"
+  - error_type: "shutdown"
+    raised_by: "log-front-end"
+    where: "submit-entry, after the log is frozen"
+    steps:
+      - "F02.3"
+      - "F22.2"
+  - error_type: "firstUnknown"
+    raised_by: "log-front-end"
+    where: "get-sth-consistency"
+    steps:
+      - "F07.4"
+  - error_type: "secondUnknown"
+    raised_by: "log-front-end"
+    where: "get-sth-consistency"
+    steps:
+      - "F07.5"
+  - error_type: "secondBeforeFirst"
+    raised_by: "log-front-end"
+    where: "get-sth-consistency"
+    steps:
+      - "F07.3"
+  - error_type: "hashUnknown"
+    raised_by: "log-front-end"
+    where: "get-proof-by-hash, get-all-by-hash"
+    steps:
+      - "F08.4"
+      - "F09.2"
+    note: "Overlaps get-all-by-hash's mandatory empty response (SD-04)."
+  - error_type: "treeSizeUnknown"
+    raised_by: "log-front-end"
+    where: "get-proof-by-hash, get-all-by-hash"
+    steps:
+      - "F08.5"
+      - "F09.2"
+    note: "Its registered detail names hash, not tree_size (SD-03)."
+  - error_type: "startUnknown"
+    raised_by: "log-front-end"
+    where: "get-entries"
+    steps:
+      - "F10.4"
+    note: "Overlaps the empty-entries rule under skew (SD-05)."
+  - error_type: "endBeforeStart"
+    raised_by: "log-front-end"
+    where: "get-entries"
+    steps:
+      - "F10.3"
+  - error_type: "none (HTTP status only)"
+    raised_by: "log-front-end"
+    where: "any request: 500, 503 (transient, retry), 4xx (change the request), other 5xx (no rule)"
+    steps:
+      - "F12.3"
+      - "F12.4"
+      - "F12.5"
+  - error_type: "none (no token named)"
+    raised_by: "log"
+    where: "submit-entry rejections the source gives no type for: minimum criteria, chain length, discretion"
+    steps:
+      - "F02.10"
+      - "F02.11"
+    note: "OI-01."
+  - error_type: "verification failure (local)"
+    raised_by: "log-client"
+    where: "STH signature, inclusion, consistency, tree rebuild, SCT signature"
+    steps:
+      - "F06.3"
+      - "F07.10"
+      - "F08.8"
+      - "F09.7"
+      - "F10.11"
+      - "F16.4"
+      - "F16.6"
+      - "F17.2"
+      - "F17.3"
+      - "F19.2"
+      - "F19.5"
+      - "F20.2"
+      - "F20.5a"
+      - "F20.5b"
+    note: >-
+      The source defines no message reporting a failure. A failure signed by the log (an STH, an SCT) is evidence of
+      misbehaviour (§8, §8.3); the reaction is unspecified. Machines M01, M02, M03, M05.
+  - error_type: "handshake abort (TLS)"
+    raised_by: "tls-client"
+    where: "transparency_info received on a resumed session"
+    steps:
+      - "F13.7"
+    note: "No alert is named."
+  - error_type: "none (unspecified)"
+    raised_by: "tls-server"
+    where: "non-empty transparency_info extension_data in ClientHello"
+    steps:
+      - "F13.2"
+    note: "OI-06."
+  - error_type: "log misbehaviour (audit finding)"
+    raised_by: "auditor"
+    where: "MMD missed, STHs too frequent, append-only broken, split view, entries withheld"
+    steps:
+      - "F04.3"
+      - "F05.2"
+      - "F20.3"
+      - "F21.2"
+      - "F21.3"
+      - "F21.4"
+      - "F21.5"
+    note: "Detected by clients; action unspecified (§8.3)."
+source_defects:
+  - id: "SD-01"
+    title: "The empty proof §5.3 requires for equal sizes is rejected by the algorithm §5.3 points to"
+    locators:
+      - "§5.3 (L1468-1470, L1458-1461, L1494-1495)"
+      - "§2.1.4.1 (L487-489)"
+      - "§2.1.4.2 (L535-536, L541-542)"
+    quotes:
+      - source_lines: "1468-1470"
+        quote: |-
+          If first and second are equal and correspond to a known STH, the returned consistency proof MUST be empty (a consistency_path array with zero elements).
+      - source_lines: "1494-1495"
+        quote: |-
+          See Section 2.1.4.2 for an outline of how to use the consistency output.
+      - source_lines: "535-536"
+        quote: |-
+          When a client has a tree head first_hash for tree size first, has a tree head second_hash for tree size second where 0 < first < second,
+      - source_lines: "541-542"
+        quote: |-
+          If consistency_path is an empty array, stop and fail the proof verification.
+      - source_lines: "488-489"
+        quote: |-
+          the Merkle consistency proof PROOF(m, D_n) for a previous Merkle Tree Hash MTH(D[0:m]), 0 < m < n,
+    description: >-
+      get-sth-consistency must return an empty consistency_path when first equals second (and, by
+      the same logic, when first is the latest known size and second is omitted). §2.1.4.1 defines
+      no proof for m = n, §2.1.4.2 is stated only for first < second, and its step 1 fails any empty
+      path. Executed as printed (scratch simulation, SHA-256, sizes 1 to 64) the empty proof is
+      rejected 64 times of 64.
+    consequence: "A client that verifies every response with §2.1.4.2 reports the mandated answer as a verification failure."
+    modelled_as: "F07.6 emits the empty proof; M02 rejects it in state failed-empty-path; a client must special-case first == second (trivially consistent when the two root hashes are equal; inferred)."
+  - id: "SD-02"
+    title: "submit-entry type values 1 and 2 are not VersionedTransType values, and 2 is named two ways"
+    locators:
+      - "§5.1 (L1361-1363, L1395, L1433)"
+      - "§4.5 (L971-981)"
+      - "§10.2.3 Table 13"
+    quotes:
+      - source_lines: "1361-1363"
+        quote: |-
+          type: The VersionedTransType integer value that indicates the type of the submission: 1 for x509_entry_v2 or 2 for precert_entry_v2.
+      - source_lines: "972"
+        quote: |-
+          x509_entry_v2(0x0100), precert_entry_v2(0x0101),
+      - source_lines: "978"
+        quote: |-
+          reserved_rfc6962(0x0000..0x00FF),
+      - source_lines: "1433"
+        quote: |-
+          if type was 2 (indicating precert_sct_v2)
+    description: >-
+      type is called the VersionedTransType integer value, yet its values 1 and 2 lie in the range
+      reserved for RFC 6962 (0x0000 to 0x00FF); x509_entry_v2 is 0x0100 and precert_entry_v2 is
+      0x0101. badType is defined against 1 and 2. §5.1 then says type 2 indicates precert_sct_v2,
+      where its own input definition says precert_entry_v2.
+    consequence: "An implementation sending 256 or 257 (the actual VersionedTransType values) gets badType from a log following Table 2."
+    modelled_as: "F02 uses 1 and 2 as Table 2 does."
+  - id: "SD-03"
+    title: "treeSizeUnknown's detail names hash where tree_size is meant"
+    locators:
+      - "§5.4 Table 4 (L1535-1536)"
+      - "§10.2.6 Table 18 (L2522-2524)"
+    quotes:
+      - source_lines: "1535"
+        quote: |-
+          hash is before the latest known STH
+    description: >-
+      Both tables read hash is before the latest known STH but is not from an existing STH; a hash
+      is not before or after an STH. The parallel firstUnknown and secondUnknown (§5.3) put the size
+      parameter there.
+    consequence: "Cosmetic for the token; the condition must be read as tree_size."
+    modelled_as: "F08.5 guard uses tree_size."
+  - id: "SD-04"
+    title: "get-all-by-hash: a mandatory empty response and the hashUnknown error cover the same request"
+    locators:
+      - "§5.5 (L1561-1579, L1598)"
+    quotes:
+      - source_lines: "1578-1579"
+        quote: |-
+          It is also possible for none to be true; in which case, the front end MUST return an empty response.
+      - source_lines: "1598"
+        quote: |-
+          Errors are the same as in Section 5.4.
+    description: >-
+      With the latest STH equal to the requested tree head and an unknown hash, no Table 5 case is
+      true, so the front end must return an empty response, while the errors of §5.4 include
+      hashUnknown for exactly that hash. Table 5's third case also compares an index with an STH
+      (its tree_size, presumably).
+    consequence: "Two conforming logs can answer the same request with 200 and an empty body, or with a 4xx hashUnknown."
+    modelled_as: "F09.2 and F09.6 both shown; which wins is open."
+  - id: "SD-05"
+    title: "get-entries: startUnknown overlaps the empty-array rule, and start = tree_size falls between them"
+    locators:
+      - "§5.6 Table 6 (L1679-1680)"
+      - "§5.6 (L1650-1652, L1664-1666)"
+    quotes:
+      - source_lines: "1664-1666"
+        quote: |-
+          Because of skew, it is possible the log server will not have any entries between start and end. In this case, it MUST return an empty entries array.
+      - source_lines: "1650-1652"
+        quote: |-
+          Log servers MUST honor requests where 0 <= start < tree_size and end >= tree_size by returning a partial response covering only the valid entries in the specified range.
+    description: >-
+      start greater than the entries this front end holds is both startUnknown (Table 6) and, when
+      caused by skew, the empty-entries case; the front end cannot tell skew from a bad request.
+      start equal to tree_size is outside the honoured range and not greater than the number of
+      entries, so only the empty-array rule reaches it.
+    consequence: "Clients must handle both an error and an empty 200 for the same condition."
+    modelled_as: "F10.4 and F10.7 both shown."
+  - id: "SD-06"
+    title: "A TransItemList must hold an SCT, but the omission rule can remove every SCT"
+    locators:
+      - "§6.4 (L1811-1813)"
+      - "§6.5 (L1830-1833)"
+    quotes:
+      - source_lines: "1831-1833"
+        quote: |-
+          which SHOULD omit any TransItems that are already embedded in the server certificate or the stapled OCSP response (see Section 7.1).
+    description: >-
+      When every SCT is already embedded in the certificate or the stapled OCSP response, the
+      recommended omission leaves only inclusion proofs and STHs (if any), and a non-empty list
+      without an SCT breaks the MUST of §6.4; keeping one breaks the SHOULD.
+    consequence: "A server with fresh proofs for embedded SCTs has no conforming way to send only the proofs."
+    modelled_as: "F13.4 on_error."
+  - id: "SD-07"
+    title: "An empty TransItemList is not encodable, yet may be sent"
+    locators:
+      - "§6.3 (L1796-1800)"
+      - "§6.5 (L1836-1837)"
+    quotes:
+      - source_lines: "1796-1800"
+        quote: |-
+          opaque SerializedTransItem<1..2^16-1>; struct { SerializedTransItem trans_item_list<1..2^16-1>; } TransItemList;
+      - source_lines: "1836-1837"
+        quote: |-
+          If the list is empty, then the server SHOULD omit the extension_data element but MAY send it with an empty array.
+    description: >-
+      trans_item_list has a lower bound of one item, so an empty array is not a TransItemList; and
+      omitting the extension_data element does not say whether the extension itself is still sent
+      (TLS has no extension without extension_data, only an empty one).
+    consequence: "Two readings of the empty case on the wire: no extension, or the extension with zero-length data."
+    modelled_as: "F13.6, with both readings left open."
+  - id: "SD-08"
+    title: "A frozen log may destroy its key, but must keep serving fresh STHs"
+    locators:
+      - "§4.13 (L1248-1259)"
+      - "§4.10 (L1151-1153, L1156-1159)"
+    quotes:
+      - source_lines: "1253-1254"
+        quote: |-
+          At this point, the log's private key is no longer needed and can be destroyed.
+      - source_lines: "1157-1159"
+        quote: |-
+          in the event that a log does not accept any submissions during an MMD period, the log MUST sign the same Merkle Tree Hash with a fresh timestamp.
+    description: >-
+      After the final STH the key may be destroyed while the log keeps running; §4.10 still requires
+      a get-sth answer no older than the MMD and a fresh signature over the same root in every MMD
+      period without submissions. Neither is possible without the key, and §4.13 says the final STH
+      needs no special handling by clients.
+    consequence: "A frozen log is either non-conforming to §4.10 or must keep its key; the source does not say which rule yields."
+    modelled_as: "M04 state frozen-key-destroyed is an error-prone terminal for §4.10; F22.4."
+  - id: "SD-09"
+    title: "get-entries puts sth inside each entry, but must return the STH when entries is empty"
+    locators:
+      - "§5.6 (L1613-1628, L1664-1669)"
+    quotes:
+      - source_lines: "1614"
+        quote: |-
+          entries: An array of objects, each consisting of:
+      - source_lines: "1668-1669"
+        quote: |-
+          In any case, the log server MUST return the latest STH it knows about.
+    description: >-
+      The output list nests sth among log_entry, submitted_entry and sct, as a member of every entry
+      object (the XML's definition list nests it the same way); an empty entries array then carries
+      no STH although one must be returned in any case.
+    consequence: "Implementations must invent a top-level sth member or drop the MUST for empty answers."
+    modelled_as: "F10.8; the messages artifact owns the field layout."
+  - id: "SD-10"
+    title: "The §2.1.5 example calls leaf hashes non-leaf nodes"
+    locators:
+      - "§2.1.5 (L594-598, L636-646)"
+    quotes:
+      - source_lines: "637-639"
+        quote: |-
+          Non-leaf nodes c, g are used to verify hash0, and non-leaf nodes d, l are additionally used to show hash is consistent with hash0.
+      - source_lines: "645-646"
+        quote: |-
+          Non-leaf nodes k, i are used to verify hash2, and non-leaf node j is additionally used to show hash is consistent with hash2.
+    description: >-
+      In the figure c and d sit directly over d2 and d3 and j over d6: they are leaf hashes.
+      The prose calls c, d and j non-leaf nodes. The proofs themselves ([c, d, g, l], [l], [i, j, k])
+      agree with §2.1.4.1 (recomputed in the scratch simulation).
+    consequence: "Editorial; a reader may wrongly expect only interior nodes in a proof."
+    modelled_as: "not modelled; the examples artifact owns the fixtures."
+  - id: "SD-11"
+    title: "The or-fn-is-0 exits of the two verification loops are unreachable"
+    locators:
+      - "§2.1.3.2 step 4.b.ii (L459-460), step 4.a (L452-453)"
+      - "§2.1.4.2 step 6.b.iii (L566-567), step 6.a (L557-558)"
+    quotes:
+      - source_lines: "459-460"
+        quote: |-
+          If LSB(fn) is not set, then right-shift both fn and sn equally until either LSB(fn) is set or fn is 0.
+      - source_lines: "566-567"
+        quote: |-
+          If LSB(fn) is not set, then right-shift both fn and sn equally until either LSB(fn) is set or fn is 0.
+    description: >-
+      The shifting loop runs only when fn equals sn with LSB(fn) clear; step 4.a (6.a) has already
+      failed sn = 0, so fn is non-zero and shifting stops at a set bit before reaching 0. The exit
+      is dead. record.yaml lists erratum 8670 (editorial, Held for Document Update) on the loop
+      wording of exactly these two steps; its text is not in the cache. Executed as printed for all
+      proofs up to 64 leaves, the exit was taken 0 times.
+    consequence: "None for correctness; a test cannot cover the branch."
+    modelled_as: "M01 and M02 keep the exit as printed, with the guard marked unreachable."
+  - id: "SD-12"
+    title: "§2.1.2 has no result for tree_size 0"
+    locators:
+      - "§2.1.2 (L366-397)"
+      - "§2.1.1 (L331-333)"
+      - "§4.10 (L1156-1159)"
+    quotes:
+      - source_lines: "395-397"
+        quote: |-
+          The remaining element in stack is the Merkle Tree Hash for the given tree_size and should be compared by equality against the supplied root_hash.
+      - source_lines: "331-333"
+        quote: |-
+          The hash of an empty list is the hash of an empty string: MTH({}) = HASH().
+    description: >-
+      With no entries the stack is empty at step 4, so there is no remaining element to compare,
+      though MTH({}) is defined and an empty log signs STHs (it must re-sign each MMD period).
+    consequence: "A monitor verifying a new, empty log with §2.1.2 hits an undefined step."
+    modelled_as: "M03 guard on tree_size == 0 to state undefined-empty-tree."
+  - id: "SD-13"
+    title: "The chain input omits the case where the last element is the trust anchor"
+    locators:
+      - "§5.1 (L1365-1370, L1404-1407)"
+      - "§3 (L661-663)"
+    quotes:
+      - source_lines: "1368-1370"
+        quote: |-
+          The last element of chain (or, if chain is an empty array, the submission) is certified by an accepted trust anchor.
+    description: >-
+      The input says the last element is certified by an accepted trust anchor; §3 lets the anchor
+      itself be included, and unknownAnchor's detail allows is, nor is it certified by. An included
+      intermediate anchor is not certified by an accepted anchor, so the input sentence alone would
+      forbid it.
+    consequence: "Minor; Table 2 gives the operative rule."
+    modelled_as: "F02.9 follows Table 2."
+open_issues:
+  - id: "OI-01"
+    text: >-
+      No error type for submissions failing §4.2.1 checks Table 2 does not name (intermediate
+      without cA or keyCertSign, pathLenConstraint, precertificate profile), for an over-long chain,
+      or for a discretionary refusal; nor for type 1 with a precertificate (or type 2 with a
+      certificate).
+    locator: "§4.2.1, §4.2.2, §5.1"
+  - id: "OI-02"
+    text: >-
+      first = 0 in get-sth-consistency: §2.1.4.1 and §2.1.4.2 exclude it and no error type covers
+      it, though an empty log's STH has tree_size 0.
+    locator: "§5.3, §2.1.4"
+  - id: "OI-03"
+    text: >-
+      get-all-by-hash returns inclusion in the selected STH, never defined; with the latest STH
+      larger than the requested one it is unclear which tree the inclusion path is computed for.
+    locator: "§5.5"
+  - id: "OI-04"
+    text: >-
+      §8.2 step 5.c (checking the new entries against the nodes of the consistency proof) gives
+      no procedure: which proof nodes the new entries determine, and how.
+    locator: "§8.2"
+  - id: "OI-05"
+    text: >-
+      hashUnknown may mean skew, not yet merged, or never logged; the source gives no retry rule or
+      point at which it becomes evidence of an MMD violation.
+    locator: "§5.4, §8.3, §11.3"
+  - id: "OI-06"
+    text: "The TLS server's action when the ClientHello transparency_info extension_data is not empty is not stated."
+    locator: "§6.5"
+  - id: "OI-07"
+    text: >-
+      transparency_info may appear in a TLS 1.3 CertificateRequest (and is registered CH, CR, CT),
+      while §6.1 says CT for client certificates is not described; what a server signals there is
+      undefined.
+    locator: "§6.1, §6.5, §10.1.1"
+  - id: "OI-08"
+    text: >-
+      What counts as the same submission for returning the same SCT (same certificate with another
+      chain, another type) is not defined.
+    locator: "§4, §11.3"
+  - id: "OI-09"
+    text: >-
+      The CMS precertificate must carry a TBSCertificate identical to the issued one except for the
+      Transparency Information extension (F03 step 3), yet the v1-and-v2 variant of Appendix A embeds
+      v1 SCTs in the final TBSCertificate after the precertificate exists, and §8.1.2 strips them
+      before validating (F16 step 3). A certificate built that way differs from its precertificate by
+      the v1 SCT extension. Validation works; the CA-side rule as printed does not allow it. Recorded
+      as normative.md SD-11.
+    locator: "§3.2, §8.1.2, Appendix A"
+  - id: "OI-10"
+    text: >-
+      F05 step 4 re-signs the same tree head with a fresh timestamp for every idle MMD period
+      (a second STH for one tree_size), while the second mitigation of §11.3 (F05 step 5) allows
+      no more than one STH per distinct tree_size. A quiet log can keep the second mitigation only by breaking the
+      re-signing rule; only deterministic signatures satisfy both. Recorded as normative.md SD-12;
+      the model keeps both and does not pick.
+    locator: "§4.10, §11.3"
+  - id: "OI-11"
+    text: >-
+      §9 makes freezing a MUST "as specified in Section 4.13", whose four actions are all SHOULD
+      (F22). Which of them becomes mandatory when an algorithm is deprecated is not determinable.
+      Recorded as normative.md SD-14.
+    locator: "§9, §4.13"
+  - id: "OI-12"
+    text: >-
+      What the chain length counts is not said: the Maximum Chain Length parameter and the
+      max_chain_length output bound it, but the chain input holds CA certificates only and may omit
+      the trust anchor (F02 step 9, discretionary criteria). A client and a log can disagree at the
+      limit. Recorded as normative.md SD-17 and messages.yaml SD-11.
+    locator: "§4.1, §5.1, §5.7"
+not_defined:
+  - text: "How clients learn, trust and distrust logs and their parameters."
+    locator: "§6.2, §8"
+  - text: "Gossip: sharing log responses to detect a split view."
+    locator: "§8.3, §11.3"
+  - text: "What a monitor or auditor does on finding misissuance or misbehaviour."
+    locator: "§1, §8.3"
+  - text: "Using CT for client certificates in TLS."
+    locator: "§6.1"
+  - text: "The TLS alert for an aborted handshake; OCSP fetching and stapling mechanics; certificate status checking."
+    locator: "§6, §8.1.1, §3.2.1"
+  - text: "The JSON.Metadata log-list format (cited only as an example)."
+    locator: "§4.1"
+coverage: >-
+  11 roles, 28 flows, 162 steps (9 kind inferred: F01.7, F03.7, F06.3, F10.10, F12.5, F14.2, F14.3,
+  F26.2, F28.2), counted by script over this file with bin/_yaml.py. Every §5 endpoint (§5.1 to
+  §5.7) is a flow, and every one of the 14 Error Types (§10.2.6 Table 18) is raised by a named step
+  (error_paths). constrained_by held 162 links to 125 distinct ids at pass 1: every requirement
+  R-0001 to R-0125 of requirements.yaml as it then stood is cited at least once. Pass 2 added 138
+  links to 135 keyword-less stated ids by quotation containment: 300 links to 260 distinct ids.
+  Pass 3 (cross-check) added 25 more, wiring ids cited by none of messages.yaml, protocol.yaml and
+  state-machine.yaml (the §2.1 inferred outcomes, the §8.2 and §8.3 audit statements, the §9
+  freeze, the resubmission SHOULD, the SUBPROOF flag): 325 links to 283 distinct ids, counted by
+  script with bin/_yaml.py. Every message and
+  message_id pair was joined by script against messages.yaml (162 steps, 0 mismatches), and every
+  from, to and participant against roles. 189 quotations, all checked by bin/check-quotes. Not
+  modelled as flows: the IANA registrations of §10 other than Log IDs, the ASN.1 module (Appendix
+  B), and §11's discussion that names no step.

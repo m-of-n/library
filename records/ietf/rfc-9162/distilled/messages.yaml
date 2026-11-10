@@ -1,0 +1,2463 @@
+record: "rfc-9162"
+reviewed_by: ""
+source_digest: "a0e432ce7580c99fcc8faf0cf3f6191f9ce6b4864f949158e020d4ecb295081f"
+source: ".cache/rfc-9162.txt (RFC 9162, Certificate Transparency Version 2.0, December 2021). Line numbers count in that file; quotations are checked against it with bin/check-quotes."
+extracted: "2026-11-07"
+extracted_by: "FX-1 pass 1 (extract), schema+examples+messages agent, from the source only"
+applicability: "RFC 9162 defines wire structures in the TLS presentation language (Sections 4.4-4.12, 6.3), a JSON-over-HTTPS API (Section 5), two TLS-extension carriers (Section 6), X.509v3 and OCSP extension carriers (Section 7.1), a CMS precertificate profile (Section 3.2), and registries (Section 10). It also uses structures it does not define: TLS 1.2/1.3 messages (RFC 5246, RFC 8446), OCSP (RFC 6960), CMS (RFC 5652), the problem details object (RFC 7807), TBSCertificate and SubjectPublicKeyInfo (RFC 5280). Out of scope as not defined here: the TLS record and handshake framing around the extension, the OCSP SingleResponse, and the JSON.Metadata log list format."
+note: "Conventions. (1) declared and described are {source_lines, quote} pairs written by script from the cached source (lib join of lines to text), never typed; a quote is the whole of its lines. (2) constrained_by lists rfc-9162#R-NNNN ids resolved by script from distilled/requirements.yaml: an id is selected by section locator plus a distinctive phrase of the requirement text, and the build raises when a selector matches zero or several requirements; every resolved pair was then read. Where constrained_by is empty the entry says why in constrained_by_note. (3) A field marked inferred states its reason. (4) Widths of length prefixes and enumerations are RFC 8446 Section 3 applied to the declarations (ENC-02 to ENC-04), not statements of RFC 9162, and are marked inferred there. (5) SD-nn marks a defect or tension in the source, copied as printed and never repaired; they are collected in source_defects and joined to the other artifacts' ids by the table at the end of the Source defects section of normative.md. (6) required is a boolean for structure fields; for JSON members required_when says what makes an optional member appear. (7) Error detail cells are assembled from wrapped table rows by script (a table cell is not contiguous in the .txt, so it is not a quote: item). (8) Hex serializations of every structure are in examples/wire-vectors.derived.json; reproduce them with examples/reproduce.py. (9) Pass 3 joined every field name a requirement's field: value uses against this file and schema/ (349 identifier tokens over 491 requirements, 560 clause-leading words): all are found except the algorithm variables of Section 2.1 (D_m, SUBPROOF, first_hash, second_hash, fn, sn, fr, sr, merge_count, stack, m), which are inputs and registers of the algorithms modelled in state-machine.yaml and examples/reproduce.py and not message members, and basicConstraints.cA, basicConstraints.pathLenConstraint, keyUsage.keyCertSign (R-0034, R-0035, R-0231, R-0232), which are RFC 5280 extensions of the certificates in the submit-entry chain, wired under the chain input here and not defined by this document; CertificateEntry (R-0486, a TLS 1.3 structure of RFC 8446) and context (R-0245, what a registration document must specify, not a wire member)."
+encoding_rules:
+  - id: "ENC-01"
+    rule: "Data structures follow the TLS presentation language of RFC 8446 Section 3"
+    locator: "§1.2"
+    quote_of_source:
+      source_lines: "231-232"
+      quote: "Data structures are defined and encoded according to the conventions laid out in Section 3 of [RFC8446]."
+    constrained_by:
+      - "rfc-9162#R-0126"
+    detail: "This document does not restate the language. The width rules in ENC-02 to ENC-05 are RFC 8446 Section 3 applied to the declarations here; they are not stated in RFC 9162 and are marked inferred where used."
+    inferred: true
+    inferred_reason: "RFC 8446 Section 3 is outside this document; the widths are derived from it"
+  - id: "ENC-02"
+    rule: "A vector <lo..hi> is a length prefix then that many OCTETS; the prefix is the fewest octets that hold hi"
+    locator: "§4.4-§4.12, §6.3"
+    table:
+      - declaration: "LogID<2..127>"
+        prefix_octets: 1
+      - declaration: "NodeHash<32..2^8-1>"
+        prefix_octets: 1
+      - declaration: "issuer_key_hash<32..2^8-1>"
+        prefix_octets: 1
+      - declaration: "sct_extensions / sth_extensions<0..2^16-1>"
+        prefix_octets: 2
+      - declaration: "extension_data<0..2^16-1>"
+        prefix_octets: 2
+      - declaration: "signature<1..2^16-1>"
+        prefix_octets: 2
+      - declaration: "consistency_path / inclusion_path<0..2^16-1>"
+        prefix_octets: 2
+      - declaration: "SerializedTransItem<1..2^16-1>"
+        prefix_octets: 2
+      - declaration: "trans_item_list<1..2^16-1>"
+        prefix_octets: 2
+      - declaration: "TBSCertificate<1..2^24-1>"
+        prefix_octets: 3
+    detail: "The prefix counts octets, never elements. A vector of structures (Extension, NodeHash, SerializedTransItem) carries the total octet length of all its elements. The length must lie in the declared range, so an empty vector is legal only where lo is 0."
+    quote_of_source:
+      source_lines: "955-959"
+      quote: "Note that the ASN.1 length and the opaque vector length are identical in size (1 byte) and value, so the full DER encoding (including the tag and length) of the OID can be reproduced simply by prepending an OBJECT IDENTIFIER tag (0x06) to the opaque vector length and contents."
+    inferred: true
+    inferred_reason: "prefix widths derive from the declared maxima under RFC 8446 Section 3.4; the source states the 1-octet width only for LogID (Section 4.4)"
+  - id: "ENC-03"
+    rule: "NodeHash is itself a vector: every hash in a path or in root_hash carries its own 1-octet length prefix"
+    locator: "§4.9, §4.11, §4.12"
+    detail: "consistency_path and inclusion_path are vectors of NodeHash, and NodeHash is opaque NodeHash<32..2^8-1>, so each element is length octet + HASH_SIZE octets (33 octets for SHA-256) inside the 2-octet outer length. root_hash is one NodeHash: 0x20 then 32 octets. The source never shows a serialization; examples/wire-vectors.derived.json does."
+    inferred: true
+    inferred_reason: "literal reading of the declarations; the source prints no serialized example"
+  - id: "ENC-04"
+    rule: "Enumerations are 2 octets; a TransItem body follows its type with no length prefix"
+    locator: "§4.5, §4.6"
+    detail: "VersionedTransType has maximum (0xFFFF) and ExtensionType reserved(65535), so each is 2 octets, big-endian. A TransItem is versioned_type (2) then the selected structure with no length: only TransItemList framing (SerializedTransItem) makes items skippable (Section 6.3)."
+    inferred: true
+    inferred_reason: "enum width follows from the maximum value under RFC 8446 Section 3.5"
+  - id: "ENC-05"
+    rule: "uint64 timestamp: milliseconds since the Unix Epoch, ignoring leap seconds, network byte order"
+    locator: "§4.7"
+    quote_of_source:
+      source_lines: "1057-1062"
+      quote: "timestamp is the date and time at which the certificate or precertificate was accepted by the log, in the form of a 64-bit unsigned number of milliseconds elapsed since the Unix Epoch (1 January 1970 00:00:00 UTC -- see [UNIXTIME]), ignoring leap seconds, in network byte order. Note that the leaves of a log's Merkle Tree are not required to be in strict chronological order."
+  - id: "ENC-06"
+    rule: "HTTPS GET/POST; POST body and every response body are JSON; GET parameters are order-independent application/x-www-form-urlencoded key/value pairs; binary data is base64 (RFC 4648 Section 4)"
+    locator: "§5"
+    quote_of_source:
+      source_lines: "1263-1269"
+      quote: "Messages are sent as HTTPS GET or POST requests. Parameters for POSTs and all responses are encoded as JavaScript Object Notation (JSON) objects [RFC8259]. Parameters for GETs are encoded as order-independent key/value URL parameters, using the \"application/x-www-form-urlencoded\" format described in the \"HTML 4.01 Specification\" [HTML401]. Binary data is base64 encoded according to Section 4 of [RFC4648], as specified in the individual messages."
+    constrained_by:
+      - "rfc-9162#R-0288"
+      - "rfc-9162#R-0289"
+      - "rfc-9162#R-0291"
+      - "rfc-9162#R-0471"
+  - id: "ENC-07"
+    rule: "A LogID is the DER content octets of the log OID, without the ASN.1 tag and length"
+    locator: "§4.4"
+    quote_of_source:
+      source_lines: "950-953"
+      quote: "means.) Various data structures include the DER encoding of this OID, excluding the ASN.1 tag and length bytes, in an opaque vector: opaque LogID<2..127>;"
+    detail: "OID 1.3.101.80.0 encodes as 2b655000; LogID = 04 2b655000; prepending 0x06 gives the DER OBJECT IDENTIFIER 06 04 2b655000 (Section 4.4)."
+source_defects:
+  - id: "SD-01"
+    locator: "§5.1 vs §4.5"
+    summary: "submit-entry type is the \"VersionedTransType integer value\" 1 or 2, but VersionedTransType gives x509_entry_v2 0x0100 and precert_entry_v2 0x0101; badType says neither 1 nor 2"
+    quote_a:
+      source_lines: "1361-1363"
+      quote: "type: The VersionedTransType integer value that indicates the type of the submission: 1 for x509_entry_v2 or 2 for precert_entry_v2."
+    quote_b:
+      source_lines: "972"
+      quote: "x509_entry_v2(0x0100), precert_entry_v2(0x0101),"
+  - id: "SD-02"
+    locator: "§5.3 vs §2.1.4.2"
+    summary: "an empty consistency proof is required when first and second are equal, but the verification algorithm fails on an empty path and is stated for 0 < first < second"
+    quote_a:
+      source_lines: "1468-1470"
+      quote: "match the second input. If first and second are equal and correspond to a known STH, the returned consistency proof MUST be empty (a consistency_path array with zero elements)."
+    quote_b:
+      source_lines: "541"
+      quote: "1. If consistency_path is an empty array, stop and fail the proof"
+  - id: "SD-03"
+    locator: "§6.3 vs §6.5"
+    summary: "TransItemList cannot be empty (vector minimum 1) but the server MAY send an empty array"
+    quote_a:
+      source_lines: "1799"
+      quote: "SerializedTransItem trans_item_list<1..2^16-1>;"
+    quote_b:
+      source_lines: "1837"
+      quote: "the extension_data element but MAY send it with an empty array."
+  - id: "SD-04"
+    locator: "§5.6"
+    summary: "sth is listed inside the entries objects but the log must return the latest STH in any case, including for an empty entries array"
+    quote_a:
+      source_lines: "1627"
+      quote: "sth: A base64-encoded TransItem of type signed_tree_head_v2,"
+    quote_b:
+      source_lines: "1668"
+      quote: "In any case, the log server MUST return the latest STH it knows"
+  - id: "SD-05"
+    locator: "§5.7"
+    summary: "max_chain_length is \"in decimal\"; a JSON number or a string is not said"
+    quote_a:
+      source_lines: "1698"
+      quote: "max_chain_length: If the server has chosen to limit the length of"
+  - id: "SD-06"
+    locator: "§5.4, §10.2.6"
+    summary: "treeSizeUnknown detail speaks of hash where the unknown parameter is tree_size (identical in Table 4 and Table 18)"
+    quote_a:
+      source_lines: "1535-1537"
+      quote: "| treeSizeUnknown | hash is before the latest known STH | | but is not from an existing STH. | +-----------------+-------------------------------------+"
+  - id: "SD-07"
+    locator: "§7.1 vs Appendix B"
+    summary: "the text says the extension SHOULD be noncritical, the ASN.1 module fixes CRITICALITY { FALSE }"
+    quote_a:
+      source_lines: "1856"
+      quote: "structures in a TransItemList. This extension MAY be included in"
+    quote_b:
+      source_lines: "2896"
+      quote: "CRITICALITY { FALSE } }"
+  - id: "SD-08"
+    locator: "Appendix B (skeleton)"
+    summary: "Not a source defect (the source is right): bin/fx1-skeleton headed the ASN.1 module fixture \"Appendix A\"; the module is Appendix B (Appendix A is the v1/v2 coexistence text). Listed here because this lane found it. Corrected in the schema fixture header and in the code-block list of normative.md (pass 1); the tool itself is not fixed."
+  - id: "SD-09"
+    locator: "§4.6 vs §10.2.4"
+    summary: "ExtensionType 65535 is named reserved in the enum, while Table 14 assigns 0xF000-0xFFFF (65535 included) to Private Use; the enum value may only fix the two-octet width"
+    quote_a:
+      source_lines: "1019-1021"
+      quote: "enum { reserved(65535) } ExtensionType;"
+    quote_b:
+      source_lines: "2365-2365"
+      quote: "| 0xF000-0xFFFF | Private Use |"
+  - id: "SD-10"
+    locator: "Appendix B vs §10.3"
+    summary: "the ASN.1 module header carries a comment asking for the id-mod-public-notary-v2 OID to be filled in from above instead of the OID, although §10.3 assigns 102"
+    quote_a:
+      source_lines: "2852-2855"
+      quote: "CertificateTransparencyV2Module-2021 -- { id-mod-public-notary-v2 from above, in iso(1) identified-organization(3) ... form }"
+    quote_b:
+      source_lines: "2545-2545"
+      quote: "| 102 | id-mod-public-notary-v2 | RFC 9162 |"
+  - id: "SD-11"
+    locator: "§4.1, §5.1, §5.7"
+    summary: "what a chain length counts (the submission, the trust anchor, CA certificates only) is not said, though the Maximum Chain Length parameter and max_chain_length bound it while the chain input holds CA certificates only"
+    quote_a:
+      source_lines: "841-842"
+      quote: "Maximum Chain Length: The longest certificate chain submission the log is willing to accept, if the log imposes any limit."
+    quote_b:
+      source_lines: "1365-1366"
+      quote: "chain: An array of zero or more JSON strings, each of which is a base64-encoded CA certificate."
+messages:
+  - id: "MSG-01"
+    name: "LogID"
+    locator: "§4.4"
+    kind: "tls-vector"
+    encoding: "TLS opaque vector <2..127>, 1-octet length prefix"
+    summary: "Identifies a log by its OID: the DER content octets of the OID, no tag, no length."
+    declared:
+      source_lines: "953"
+      quote: "opaque LogID<2..127>;"
+    layout: "[len:1][oid-content:len]; len in 2..127. Full DER OID = 0x06 || vector (the ASN.1 length equals the vector length, one octet)."
+    constrained_by:
+      - "rfc-9162#R-0041"
+      - "rfc-9162#R-0042"
+      - "rfc-9162#R-0043"
+      - "rfc-9162#R-0237"
+      - "rfc-9162#R-0238"
+    notes:
+      - "Registered OIDs: 1.3.101.8192-1.3.101.16383 and 1.3.101.80.* (Section 10.2.5, registry Log IDs); a log may use any OID."
+      - "The upper bound 127 in the declaration and the sentence limiting the DER content to 127 octets state the same bound twice (R-0043)."
+  - id: "MSG-02"
+    name: "VersionedTransType"
+    locator: "§4.5"
+    kind: "tls-enum"
+    encoding: "TLS enum, 2 octets big-endian (maximum 0xFFFF)"
+    summary: "Type and earliest conforming protocol version of a TransItem. Combines the v1 Version, LogEntryType, SignatureType and MerkleLeafType."
+    declared:
+      source_lines: "971-982"
+      quote: "enum { x509_entry_v2(0x0100), precert_entry_v2(0x0101), x509_sct_v2(0x0102), precert_sct_v2(0x0103), signed_tree_head_v2(0x0104), consistency_proof_v2(0x0105), inclusion_proof_v2(0x0106), /* Reserved Code Points */ reserved_rfc6962(0x0000..0x00FF), reserved_experimentaluse(0xE000..0xEFFF), reserved_privateuse(0xF000..0xFFFF), (0xFFFF) } VersionedTransType;"
+    layout: "uint16. Assigned 0x0100-0x0106; reserved 0x0000-0x00FF (RFC 6962), 0xE000-0xEFFF experimental use, 0xF000-0xFFFF private use."
+    fields:
+      - name: "x509_entry_v2"
+        value: "0x0100"
+        value_decimal: 256
+        data_structure: "TimestampedCertificateEntryDataV2"
+        defined_in: "§4.7"
+      - name: "precert_entry_v2"
+        value: "0x0101"
+        value_decimal: 257
+        data_structure: "TimestampedCertificateEntryDataV2"
+        defined_in: "§4.7"
+      - name: "x509_sct_v2"
+        value: "0x0102"
+        value_decimal: 258
+        data_structure: "SignedCertificateTimestampDataV2"
+        defined_in: "§4.8"
+      - name: "precert_sct_v2"
+        value: "0x0103"
+        value_decimal: 259
+        data_structure: "SignedCertificateTimestampDataV2"
+        defined_in: "§4.8"
+      - name: "signed_tree_head_v2"
+        value: "0x0104"
+        value_decimal: 260
+        data_structure: "SignedTreeHeadDataV2"
+        defined_in: "§4.10"
+      - name: "consistency_proof_v2"
+        value: "0x0105"
+        value_decimal: 261
+        data_structure: "ConsistencyProofDataV2"
+        defined_in: "§4.11"
+      - name: "inclusion_proof_v2"
+        value: "0x0106"
+        value_decimal: 262
+        data_structure: "InclusionProofDataV2"
+        defined_in: "§4.12"
+      - name: "reserved_rfc6962"
+        range: "0x0000..0x00FF"
+      - name: "reserved_experimentaluse"
+        range: "0xE000..0xEFFF"
+      - name: "reserved_privateuse"
+        range: "0xF000..0xFFFF"
+    constrained_by:
+      - "rfc-9162#R-0239"
+      - "rfc-9162#R-0242"
+      - "rfc-9162#R-0433"
+      - "rfc-9162#R-0435"
+    constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    notes:
+      - "No requirement with a BCP 14 keyword binds the enum itself. The registry (Section 10.2.3, Specification Required for 0x0100-0xDFFF) is in registries below."
+      - "SOURCE DEFECT SD-01: Section 5.1 calls the submit-entry type input the \"VersionedTransType integer value ... 1 for x509_entry_v2 or 2 for precert_entry_v2\", but this enum gives them 0x0100 (256) and 0x0101 (257). The badType error detail also says \"neither 1 nor 2\". The two sections cannot both be literal; the wire (HTTP) value is 1 or 2 and the TransItem value is 0x0100 or 0x0101 (Section 4.7 says the TransItem type corresponds to the type parameter)."
+  - id: "MSG-03"
+    name: "TransItem"
+    locator: "§4.5"
+    kind: "tls-struct"
+    encoding: "TLS struct with a select; no length prefix on data"
+    summary: "Common envelope for every CT artifact: a 2-octet type then the structure it selects."
+    variants:
+      - versioned_type: "x509_entry_v2"
+        value: "0x0100"
+        data: "TimestampedCertificateEntryDataV2"
+      - versioned_type: "precert_entry_v2"
+        value: "0x0101"
+        data: "TimestampedCertificateEntryDataV2"
+      - versioned_type: "x509_sct_v2"
+        value: "0x0102"
+        data: "SignedCertificateTimestampDataV2"
+      - versioned_type: "precert_sct_v2"
+        value: "0x0103"
+        data: "SignedCertificateTimestampDataV2"
+      - versioned_type: "signed_tree_head_v2"
+        value: "0x0104"
+        data: "SignedTreeHeadDataV2"
+      - versioned_type: "consistency_proof_v2"
+        value: "0x0105"
+        data: "ConsistencyProofDataV2"
+      - versioned_type: "inclusion_proof_v2"
+        value: "0x0106"
+        data: "InclusionProofDataV2"
+    declared:
+      source_lines: "984-995"
+      quote: "struct { VersionedTransType versioned_type; select (versioned_type) { case x509_entry_v2: TimestampedCertificateEntryDataV2; case precert_entry_v2: TimestampedCertificateEntryDataV2; case x509_sct_v2: SignedCertificateTimestampDataV2; case precert_sct_v2: SignedCertificateTimestampDataV2; case signed_tree_head_v2: SignedTreeHeadDataV2; case consistency_proof_v2: ConsistencyProofDataV2; case inclusion_proof_v2: InclusionProofDataV2; } data; } TransItem;"
+    layout: "[versioned_type:2][data: exactly the structure selected by versioned_type, no length]. A reader must know every selectable structure to find the end of an item; hence TransItemList wraps each item in a SerializedTransItem (Section 6.3)."
+    fields:
+      - name: "versioned_type"
+        type: "VersionedTransType"
+        required: true
+        encoding: "uint16, big-endian"
+        declared:
+          source_lines: "985"
+          quote: "VersionedTransType versioned_type;"
+        described:
+          source_lines: "997-1000"
+          quote: "versioned_type is a value from the IANA registry in Section 10.2.3 that identifies the type of the encapsulated data structure and the earliest version of this protocol to which it conforms. This document is v2."
+        constrained_by:
+          - "rfc-9162#R-0240"
+          - "rfc-9162#R-0433"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+      - name: "data"
+        type: "select(versioned_type)"
+        required: true
+        encoding: "the structure of the selected case, no length prefix"
+        declared:
+          source_lines: "986-994"
+          quote: "select (versioned_type) { case x509_entry_v2: TimestampedCertificateEntryDataV2; case precert_entry_v2: TimestampedCertificateEntryDataV2; case x509_sct_v2: SignedCertificateTimestampDataV2; case precert_sct_v2: SignedCertificateTimestampDataV2; case signed_tree_head_v2: SignedTreeHeadDataV2; case consistency_proof_v2: ConsistencyProofDataV2; case inclusion_proof_v2: InclusionProofDataV2; } data;"
+        described:
+          source_lines: "1002-1004"
+          quote: "data is the encapsulated data structure. The various structures named with the DataV2 suffix are defined in later sections of this document."
+        constrained_by:
+          - "rfc-9162#R-0241"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    constrained_by:
+      - "rfc-9162#R-0239"
+    constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    notes:
+      - "An implementation that does not recognise a versioned_type cannot parse past it; Section 5.6 therefore says a v2 client MUST NOT construe an unrecognised TransItem type as an error (R-0079)."
+      - "Future versions may reuse VersionedTransType values only if the data structures are unchanged (Section 4.5, last paragraph)."
+  - id: "MSG-04"
+    name: "ExtensionType"
+    locator: "§4.6"
+    kind: "tls-enum"
+    encoding: "TLS enum, 2 octets (maximum 65535)"
+    summary: "Type of a log artifact extension. This document defines no extension; the one declared value is reserved(65535)."
+    declared:
+      source_lines: "1019-1021"
+      quote: "enum { reserved(65535) } ExtensionType;"
+    layout: "uint16, big-endian. Registry \"Log Artifact Extensions\" (Section 10.2.4): 0x0000-0xDFFF Specification Required, 0xE000-0xEFFF experimental, 0xF000-0xFFFF private."
+    constrained_by:
+      - "rfc-9162#R-0243"
+      - "rfc-9162#R-0245"
+      - "rfc-9162#R-0438"
+    constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    notes:
+      - "\"This document does not define any extensions\" (Section 4.6); a registration must say whether the extension is for SCT, STH or both (registry Use column)."
+  - id: "MSG-05"
+    name: "Extension"
+    locator: "§4.6"
+    kind: "tls-struct"
+    encoding: "TLS struct"
+    summary: "Generic extension carried in sct_extensions and sth_extensions. Interpretation of extension_data is determined solely by extension_type."
+    declared:
+      source_lines: "1023-1026"
+      quote: "struct { ExtensionType extension_type; opaque extension_data<0..2^16-1>; } Extension;"
+    layout: "[extension_type:2][extension_data_len:2][extension_data:len]; len in 0..65535. In a vector the elements are concatenated and the vector carries the total octet length (2 octets)."
+    fields:
+      - name: "extension_type"
+        type: "ExtensionType"
+        required: true
+        encoding: "uint16"
+        declared:
+          source_lines: "1024"
+          quote: "ExtensionType extension_type;"
+        described:
+          source_lines: "1028-1031"
+          quote: "The Extension structure provides a generic extensibility for log artifacts, including SCTs (Section 4.8) and STHs (Section 4.10). The interpretation of the extension_data field is determined solely by the value of the extension_type field."
+        constrained_by: []
+        constrained_by_note: "no requirement with a BCP 14 keyword names this field"
+      - name: "extension_data"
+        type: "opaque<0..2^16-1>"
+        required: true
+        encoding: "2-octet length prefix then octets"
+        declared:
+          source_lines: "1025"
+          quote: "opaque extension_data<0..2^16-1>;"
+        constrained_by:
+          - "rfc-9162#R-0244"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    constrained_by:
+      - "rfc-9162#R-0243"
+    constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    notes:
+      - "Ordering and uniqueness of extensions inside a vector are required by Section 4.8 (SCT) and Section 4.9 (STH): see sct_extensions and sth_extensions."
+  - id: "MSG-06"
+    name: "TBSCertificate"
+    locator: "§4.7"
+    kind: "tls-vector"
+    encoding: "TLS opaque vector <1..2^24-1>, 3-octet length prefix"
+    summary: "The DER-encoded TBSCertificate from the submission, carried as opaque octets."
+    declared:
+      source_lines: "1048"
+      quote: "opaque TBSCertificate<1..2^24-1>;"
+    layout: "[len:3][DER TBSCertificate:len]; len in 1..16777215."
+    constrained_by:
+      - "rfc-9162#R-0248"
+    constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    notes:
+      - "For a precertificate the TBSCertificate is the one in the CMS eContent (Section 3.2); a verifier reconstructs it from the certificate (Section 8.1.2)."
+  - id: "MSG-07"
+    name: "TimestampedCertificateEntryDataV2"
+    locator: "§4.7"
+    kind: "tls-struct"
+    encoding: "TLS struct; body of a TransItem of type x509_entry_v2 or precert_entry_v2"
+    summary: "The log entry: what is hashed into the Merkle Tree (as part of a TransItem) and what an SCT signature covers."
+    declared:
+      source_lines: "1050-1055"
+      quote: "struct { uint64 timestamp; opaque issuer_key_hash<32..2^8-1>; TBSCertificate tbs_certificate; Extension sct_extensions<0..2^16-1>; } TimestampedCertificateEntryDataV2;"
+    layout: "[timestamp:8][issuer_key_hash_len:1][issuer_key_hash:len][tbs_len:3][tbs_certificate:len][sct_extensions_len:2][sct_extensions:len]. The enclosing TransItem adds [versioned_type:2] in front; that whole TransItem is the Merkle leaf input."
+    fields:
+      - name: "timestamp"
+        type: "uint64"
+        required: true
+        encoding: "8 octets, network byte order, milliseconds since the Unix Epoch ignoring leap seconds"
+        declared:
+          source_lines: "1051"
+          quote: "uint64 timestamp;"
+        described:
+          source_lines: "1057-1062"
+          quote: "timestamp is the date and time at which the certificate or precertificate was accepted by the log, in the form of a 64-bit unsigned number of milliseconds elapsed since the Unix Epoch (1 January 1970 00:00:00 UTC -- see [UNIXTIME]), ignoring leap seconds, in network byte order. Note that the leaves of a log's Merkle Tree are not required to be in strict chronological order."
+        constrained_by:
+          - "rfc-9162#R-0249"
+          - "rfc-9162#R-0250"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+      - name: "issuer_key_hash"
+        type: "opaque<32..2^8-1>"
+        required: true
+        encoding: "1-octet length prefix; length MUST equal HASH_SIZE"
+        declared:
+          source_lines: "1052"
+          quote: "opaque issuer_key_hash<32..2^8-1>;"
+        described:
+          source_lines: "1064-1071"
+          quote: "issuer_key_hash is the HASH of the public key of the CA that issued the certificate or precertificate, calculated over the DER encoding of the key represented as SubjectPublicKeyInfo [RFC5280]. This is needed to bind the CA to the certificate or precertificate, making it impossible for the corresponding SCT to be valid for any other certificate or precertificate whose TBSCertificate matches tbs_certificate. The length of the issuer_key_hash MUST match HASH_SIZE."
+        constrained_by:
+          - "rfc-9162#R-0044"
+          - "rfc-9162#R-0251"
+          - "rfc-9162#R-0477"
+        note: "HASH of the DER SubjectPublicKeyInfo of the issuing CA key (RFC 5280). The declared minimum 32 is below HASH_SIZE for none of the registered algorithms (SHA-256 only)."
+      - name: "tbs_certificate"
+        type: "TBSCertificate"
+        required: true
+        encoding: "3-octet length prefix, DER"
+        declared:
+          source_lines: "1053"
+          quote: "TBSCertificate tbs_certificate;"
+        described:
+          source_lines: "1073-1076"
+          quote: "tbs_certificate is the DER-encoded TBSCertificate from the submission. (Note that a precertificate's TBSCertificate can be reconstructed from the corresponding certificate, as described in Section 8.1.2)."
+        constrained_by:
+          - "rfc-9162#R-0252"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+      - name: "sct_extensions"
+        type: "Extension<0..2^16-1>"
+        required: true
+        encoding: "2-octet total length, then Extension elements"
+        declared:
+          source_lines: "1054"
+          quote: "Extension sct_extensions<0..2^16-1>;"
+        described:
+          source_lines: "1078-1079"
+          quote: "sct_extensions is byte-for-byte identical to the SCT extensions of the corresponding SCT."
+        constrained_by:
+          - "rfc-9162#R-0253"
+        constrained_by_note: "Must be byte-for-byte the SCT extensions (Section 4.7, lowercase \"is\": no BCP 14 keyword, but a stated requirement with verb none, R-0253, wired above by pass 2). The order and uniqueness rules of Section 4.8 (R-0045, R-0046) bind the SCT copy and so, by identity, this one."
+        inferred: true
+        inferred_reason: "the extension order rule is stated for the SCT vector; applying it here follows from the byte-for-byte identity sentence"
+    constrained_by:
+      - "rfc-9162#R-0022"
+      - "rfc-9162#R-0023"
+      - "rfc-9162#R-0038"
+      - "rfc-9162#R-0039"
+      - "rfc-9162#R-0246"
+      - "rfc-9162#R-0247"
+      - "rfc-9162#R-0248"
+      - "rfc-9162#R-0254"
+      - "rfc-9162#R-0234"
+      - "rfc-9162#R-0236"
+      - "rfc-9162#R-0205"
+    notes:
+      - "R-0038 and R-0039: the log stores the entire verification chain (the entry, intermediates and the trust anchor used) even though the TransItem does not carry it; a log may store entries in any format but must keep timestamp and sct_extensions (Section 4.3)."
+      - "Leaf hash = HASH(0x00 || TransItem), HASH the log hash algorithm (Section 4.7). The type of the TransItem corresponds to the type input of submit-entry (Section 4.7, last sentence)."
+  - id: "MSG-08"
+    name: "SignedCertificateTimestampDataV2"
+    locator: "§4.8"
+    kind: "tls-struct"
+    encoding: "TLS struct; body of a TransItem of type x509_sct_v2 or precert_sct_v2"
+    summary: "The SCT: the log promise to merge a submission within the MMD."
+    declared:
+      source_lines: "1090-1095"
+      quote: "struct { LogID log_id; uint64 timestamp; Extension sct_extensions<0..2^16-1>; opaque signature<1..2^16-1>; } SignedCertificateTimestampDataV2;"
+    layout: "[log_id_len:1][log_id:len][timestamp:8][sct_extensions_len:2][sct_extensions:len][signature_len:2][signature:len]. Complete SCT = [versioned_type:2] + this."
+    fields:
+      - name: "log_id"
+        type: "LogID"
+        required: true
+        encoding: "1-octet length prefix"
+        declared:
+          source_lines: "1091"
+          quote: "LogID log_id;"
+        described:
+          source_lines: "1097-1098"
+          quote: "log_id is this log's unique ID, encoded in an opaque vector, as described in Section 4.4."
+        constrained_by:
+          - "rfc-9162#R-0257"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+      - name: "timestamp"
+        type: "uint64"
+        required: true
+        encoding: "8 octets, network byte order"
+        declared:
+          source_lines: "1092"
+          quote: "uint64 timestamp;"
+        described:
+          source_lines: "1100-1101"
+          quote: "timestamp is equal to the timestamp from the corresponding TimestampedCertificateEntryDataV2 structure."
+        constrained_by:
+          - "rfc-9162#R-0258"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+      - name: "sct_extensions"
+        type: "Extension<0..2^16-1>"
+        required: true
+        encoding: "2-octet total length then Extension elements; unique, ascending by extension_type"
+        declared:
+          source_lines: "1093"
+          quote: "Extension sct_extensions<0..2^16-1>;"
+        described:
+          source_lines: "1103-1110"
+          quote: "sct_extensions is a vector of 0 or more SCT extensions. This vector MUST NOT include more than one extension with the same extension_type. The extensions in the vector MUST be ordered by the value of the extension_type field, smallest value first. All SCT extensions are similar to noncritical X.509v3 extensions (i.e., the mustUnderstand field is not set), and a recipient SHOULD ignore any extension it does not understand. Furthermore, an implementation MAY choose to ignore any extension(s) that it does understand."
+        constrained_by:
+          - "rfc-9162#R-0045"
+          - "rfc-9162#R-0046"
+          - "rfc-9162#R-0047"
+          - "rfc-9162#R-0048"
+          - "rfc-9162#R-0489"
+        note: "R-0047 and R-0048 are about a recipient, not about the vector content"
+      - name: "signature"
+        type: "opaque<1..2^16-1>"
+        required: true
+        encoding: "2-octet length prefix; raw signature octets with no algorithm identifier"
+        declared:
+          source_lines: "1094"
+          quote: "opaque signature<1..2^16-1>;"
+        described:
+          source_lines: "1112-1115"
+          quote: "signature is computed over a TransItem structure of type x509_entry_v2 or precert_entry_v2 (see Section 4.7) using the signature algorithm declared in the log's parameters (see Section 4.1)."
+        constrained_by:
+          - "rfc-9162#R-0113"
+          - "rfc-9162#R-0259"
+        note: "R-0113 is the client-side validation of the SCT. The signature is over a whole TransItem of type x509_entry_v2 or precert_entry_v2 (including its 2-octet type), using the signature algorithm in the log parameters. The structure carries no algorithm field, unlike RFC 6962 DigitallySigned: the verifier takes the algorithm from the log parameters (Section 8.1.3)."
+    constrained_by:
+      - "rfc-9162#R-0022"
+      - "rfc-9162#R-0023"
+      - "rfc-9162#R-0024"
+      - "rfc-9162#R-0004"
+      - "rfc-9162#R-0005"
+      - "rfc-9162#R-0255"
+      - "rfc-9162#R-0256"
+      - "rfc-9162#R-0206"
+      - "rfc-9162#R-0207"
+      - "rfc-9162#R-0468"
+    notes:
+      - "A verifier builds the signature input per Section 8.1.3 (R-0113): timestamp and sct_extensions copied from the SCT, tbs_certificate reconstructed per Section 8.1.2, issuer_key_hash computed per Section 4.7."
+  - id: "MSG-09"
+    name: "NodeHash"
+    locator: "§4.9"
+    kind: "tls-vector"
+    encoding: "TLS opaque vector <32..2^8-1>, 1-octet length prefix"
+    summary: "A Merkle Tree node hash. Its length must equal HASH_SIZE of the log."
+    declared:
+      source_lines: "1121"
+      quote: "opaque NodeHash<32..2^8-1>;"
+    layout: "[len:1][hash:len]; len == HASH_SIZE (32 for SHA-256, the only registered hash algorithm, Section 10.2.1)."
+    constrained_by:
+      - "rfc-9162#R-0049"
+      - "rfc-9162#R-0260"
+      - "rfc-9162#R-0469"
+      - "rfc-9162#R-0470"
+  - id: "MSG-10"
+    name: "TreeHeadDataV2"
+    locator: "§4.9"
+    kind: "tls-struct"
+    encoding: "TLS struct; the signed content of an STH"
+    summary: "Tree head: time, size, root and extensions."
+    declared:
+      source_lines: "1123-1128"
+      quote: "struct { uint64 timestamp; uint64 tree_size; NodeHash root_hash; Extension sth_extensions<0..2^16-1>; } TreeHeadDataV2;"
+    layout: "[timestamp:8][tree_size:8][root_hash_len:1][root_hash:len][sth_extensions_len:2][sth_extensions:len]. The STH signature is computed over exactly this serialization (Section 4.10: \"signature is computed over the tree_head field\")."
+    fields:
+      - name: "timestamp"
+        type: "uint64"
+        required: true
+        encoding: "8 octets, network byte order; format of Section 4.7"
+        declared:
+          source_lines: "1124"
+          quote: "uint64 timestamp;"
+        described:
+          source_lines: "1132-1133"
+          quote: "timestamp is the current date and time, using the format defined in Section 4.7."
+        constrained_by:
+          - "rfc-9162#R-0058"
+          - "rfc-9162#R-0059"
+          - "rfc-9162#R-0261"
+        note: "the two recency rules are stated in Section 4.10 about the timestamp in tree_head"
+      - name: "tree_size"
+        type: "uint64"
+        required: true
+        encoding: "8 octets, network byte order"
+        declared:
+          source_lines: "1125"
+          quote: "uint64 tree_size;"
+        described:
+          source_lines: "1135-1136"
+          quote: "tree_size is the number of entries currently in the log's Merkle Tree."
+        constrained_by:
+          - "rfc-9162#R-0262"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+      - name: "root_hash"
+        type: "NodeHash"
+        required: true
+        encoding: "1-octet length prefix then HASH_SIZE octets"
+        declared:
+          source_lines: "1126"
+          quote: "NodeHash root_hash;"
+        described:
+          source_lines: "1138"
+          quote: "root_hash is the root of the Merkle Tree."
+        constrained_by:
+          - "rfc-9162#R-0049"
+          - "rfc-9162#R-0263"
+      - name: "sth_extensions"
+        type: "Extension<0..2^16-1>"
+        required: true
+        encoding: "2-octet total length then Extension elements; unique, ascending by extension_type"
+        declared:
+          source_lines: "1127"
+          quote: "Extension sth_extensions<0..2^16-1>;"
+        described:
+          source_lines: "1140-1146"
+          quote: "sth_extensions is a vector of 0 or more STH extensions. This vector MUST NOT include more than one extension with the same extension_type. The extensions in the vector MUST be ordered by the value of the extension_type field, smallest value first. If an implementation sees an extension that it does not understand, it SHOULD ignore that extension. Furthermore, an implementation MAY choose to ignore any extension(s) that it does understand."
+        constrained_by:
+          - "rfc-9162#R-0050"
+          - "rfc-9162#R-0051"
+          - "rfc-9162#R-0052"
+          - "rfc-9162#R-0053"
+          - "rfc-9162#R-0490"
+    constrained_by:
+      - "rfc-9162#R-0260"
+    constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    notes:
+      - "tree_size 0 (an empty log): root_hash is then MTH({}) = HASH() of the empty string (Section 2.1.1); the source does not say whether a log signs an STH at size 0."
+  - id: "MSG-11"
+    name: "SignedTreeHeadDataV2"
+    locator: "§4.10"
+    kind: "tls-struct"
+    encoding: "TLS struct; body of a TransItem of type signed_tree_head_v2"
+    summary: "The STH: a tree head signed by the log."
+    declared:
+      source_lines: "1164-1168"
+      quote: "struct { LogID log_id; TreeHeadDataV2 tree_head; opaque signature<1..2^16-1>; } SignedTreeHeadDataV2;"
+    layout: "[log_id_len:1][log_id:len][tree_head: TreeHeadDataV2 as above][signature_len:2][signature:len]. Complete STH = [versioned_type:2] + this."
+    fields:
+      - name: "log_id"
+        type: "LogID"
+        required: true
+        encoding: "1-octet length prefix"
+        declared:
+          source_lines: "1165"
+          quote: "LogID log_id;"
+        described:
+          source_lines: "1170-1171"
+          quote: "log_id is this log's unique ID encoded in an opaque vector, as described in Section 4.4."
+        constrained_by:
+          - "rfc-9162#R-0266"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+      - name: "tree_head"
+        type: "TreeHeadDataV2"
+        required: true
+        encoding: "inline struct, no length prefix"
+        declared:
+          source_lines: "1166"
+          quote: "TreeHeadDataV2 tree_head;"
+        described:
+          source_lines: "1177-1178"
+          quote: "tree_head contains the latest tree head information (see Section 4.9)."
+        constrained_by:
+          - "rfc-9162#R-0058"
+          - "rfc-9162#R-0059"
+          - "rfc-9162#R-0267"
+      - name: "signature"
+        type: "opaque<1..2^16-1>"
+        required: true
+        encoding: "2-octet length prefix; raw signature octets"
+        declared:
+          source_lines: "1167"
+          quote: "opaque signature<1..2^16-1>;"
+        described:
+          source_lines: "1180-1181"
+          quote: "signature is computed over the tree_head field using the signature algorithm declared in the log's parameters (see Section 4.1)."
+        constrained_by:
+          - "rfc-9162#R-0268"
+        constrained_by_note: "over the serialization of tree_head only, not over log_id or the TransItem type"
+    constrained_by:
+      - "rfc-9162#R-0054"
+      - "rfc-9162#R-0055"
+      - "rfc-9162#R-0056"
+      - "rfc-9162#R-0057"
+      - "rfc-9162#R-0264"
+      - "rfc-9162#R-0265"
+  - id: "MSG-12"
+    name: "ConsistencyProofDataV2"
+    locator: "§4.11"
+    kind: "tls-struct"
+    encoding: "TLS struct; body of a TransItem of type consistency_proof_v2"
+    summary: "Proof that the tree of tree_size_2 extends the tree of tree_size_1 (Section 2.1.4)."
+    declared:
+      source_lines: "1189-1194"
+      quote: "struct { LogID log_id; uint64 tree_size_1; uint64 tree_size_2; NodeHash consistency_path<0..2^16-1>; } ConsistencyProofDataV2;"
+    layout: "[log_id_len:1][log_id:len][tree_size_1:8][tree_size_2:8][path_len:2]{[hash_len:1][hash:len]}*. path_len is the octet length of all NodeHashes, not their count. An unsigned item: the two STHs it links are signed (Section 5.3)."
+    fields:
+      - name: "log_id"
+        type: "LogID"
+        required: true
+        encoding: "1-octet length prefix"
+        declared:
+          source_lines: "1190"
+          quote: "LogID log_id;"
+        described:
+          source_lines: "1196-1197"
+          quote: "log_id is this log's unique ID encoded in an opaque vector, as described in Section 4.4."
+        constrained_by:
+          - "rfc-9162#R-0271"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+      - name: "tree_size_1"
+        type: "uint64"
+        required: true
+        encoding: "8 octets"
+        declared:
+          source_lines: "1191"
+          quote: "uint64 tree_size_1;"
+        described:
+          source_lines: "1199"
+          quote: "tree_size_1 is the size of the older tree."
+        constrained_by:
+          - "rfc-9162#R-0074"
+          - "rfc-9162#R-0272"
+      - name: "tree_size_2"
+        type: "uint64"
+        required: true
+        encoding: "8 octets"
+        declared:
+          source_lines: "1192"
+          quote: "uint64 tree_size_2;"
+        described:
+          source_lines: "1201"
+          quote: "tree_size_2 is the size of the newer tree."
+        constrained_by:
+          - "rfc-9162#R-0075"
+          - "rfc-9162#R-0273"
+        note: "the match is required only \"If the sth output is omitted\" (Section 5.3)"
+      - name: "consistency_path"
+        type: "NodeHash<0..2^16-1>"
+        required: true
+        encoding: "2-octet total octet length then NodeHash elements, each with its own 1-octet prefix"
+        declared:
+          source_lines: "1193"
+          quote: "NodeHash consistency_path<0..2^16-1>;"
+        described:
+          source_lines: "1203-1204"
+          quote: "consistency_path is a vector of Merkle Tree nodes proving the consistency of two STHs, as described in Section 2.1.4."
+        constrained_by:
+          - "rfc-9162#R-0076"
+          - "rfc-9162#R-0274"
+          - "rfc-9162#R-0466"
+        note: "empty (length 0000) when first and second are equal and correspond to a known STH. Section 2.1.4.2 step 1 fails the verification of an empty path and is stated for 0 < first < second: a client handles the equal case by comparing the two STH root hashes (SD-02)."
+    constrained_by:
+      - "rfc-9162#R-0269"
+      - "rfc-9162#R-0270"
+    constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    notes:
+      - "SOURCE TENSION SD-02: Section 5.3 requires an empty consistency proof when first == second, Section 2.1.4.2 requires 0 < first < second and fails on an empty path. examples/consistency-proofs.derived.json records what the printed steps do outside that domain."
+  - id: "MSG-13"
+    name: "InclusionProofDataV2"
+    locator: "§4.12"
+    kind: "tls-struct"
+    encoding: "TLS struct; body of a TransItem of type inclusion_proof_v2"
+    summary: "Proof that the entry at leaf_index is in the tree of tree_size (Section 2.1.3)."
+    declared:
+      source_lines: "1212-1217"
+      quote: "struct { LogID log_id; uint64 tree_size; uint64 leaf_index; NodeHash inclusion_path<0..2^16-1>; } InclusionProofDataV2;"
+    layout: "[log_id_len:1][log_id:len][tree_size:8][leaf_index:8][path_len:2]{[hash_len:1][hash:len]}*. Unsigned; verified against a signed STH (Section 5.4)."
+    fields:
+      - name: "log_id"
+        type: "LogID"
+        required: true
+        encoding: "1-octet length prefix"
+        declared:
+          source_lines: "1213"
+          quote: "LogID log_id;"
+        described:
+          source_lines: "1219-1220"
+          quote: "log_id is this log's unique ID encoded in an opaque vector, as described in Section 4.4."
+        constrained_by:
+          - "rfc-9162#R-0277"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+      - name: "tree_size"
+        type: "uint64"
+        required: true
+        encoding: "8 octets"
+        declared:
+          source_lines: "1214"
+          quote: "uint64 tree_size;"
+        described:
+          source_lines: "1222-1223"
+          quote: "tree_size is the size of the tree on which this inclusion proof is based."
+        constrained_by:
+          - "rfc-9162#R-0278"
+        constrained_by_note: "the algorithm of Section 2.1.3.2 uses tree_size only through sn; the root hash does not commit to it (examples/inclusion-proofs.derived.json, observations): take tree_size and root_hash from one signed STH"
+      - name: "leaf_index"
+        type: "uint64"
+        required: true
+        encoding: "8 octets, 0-based"
+        declared:
+          source_lines: "1215"
+          quote: "uint64 leaf_index;"
+        described:
+          source_lines: "1225-1226"
+          quote: "leaf_index is the 0-based index of the log entry corresponding to this inclusion proof."
+        constrained_by:
+          - "rfc-9162#R-0279"
+          - "rfc-9162#R-0154"
+        constrained_by_note: "Section 2.1.3.2 step 1: fail if leaf_index >= tree_size. The procedure is introduced with \"may\" and carries no BCP 14 keyword, but its steps are stated requirements with verb none (R-0153, R-0154); pass 2 wired R-0154"
+      - name: "inclusion_path"
+        type: "NodeHash<0..2^16-1>"
+        required: true
+        encoding: "2-octet total octet length then NodeHash elements, each with its own 1-octet prefix"
+        declared:
+          source_lines: "1216"
+          quote: "NodeHash inclusion_path<0..2^16-1>;"
+        described:
+          source_lines: "1228-1230"
+          quote: "inclusion_path is a vector of Merkle Tree nodes proving the inclusion of the chosen certificate or precertificate, as described in Section 2.1.3."
+        constrained_by:
+          - "rfc-9162#R-0280"
+          - "rfc-9162#R-0465"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    constrained_by:
+      - "rfc-9162#R-0275"
+      - "rfc-9162#R-0276"
+    constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    notes:
+      - "No requirement with a BCP 14 keyword is in Section 4.12 or Section 2.1.3. The verification algorithm is introduced with \"may be used\" (Section 2.1.3.2), so its steps are in protocol.yaml and examples/reproduce.py, not requirements.yaml."
+  - id: "MSG-14"
+    name: "SerializedTransItem"
+    locator: "§6.3"
+    kind: "tls-vector"
+    encoding: "TLS opaque vector <1..2^16-1>, 2-octet length prefix"
+    summary: "A serialized TransItem as an opaque byte string, so a reader can skip an item whose type it does not know."
+    described:
+      source_lines: "1802-1807"
+      quote: "Here, SerializedTransItem is an opaque byte string that contains the serialized TransItem structure. This encoding ensures that TLS clients can decode each TransItem individually (so, for example, if there is a version upgrade, out-of-date clients can still parse old TransItem structures while skipping over new TransItem structures whose versions they don't understand)."
+    declared:
+      source_lines: "1796"
+      quote: "opaque SerializedTransItem<1..2^16-1>;"
+    layout: "[len:2][TransItem octets:len]; len in 1..65535, so one item is at most 65535 octets."
+    constrained_by:
+      - "rfc-9162#R-0367"
+      - "rfc-9162#R-0368"
+    constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+  - id: "MSG-15"
+    name: "TransItemList"
+    locator: "§6.3"
+    kind: "tls-struct"
+    encoding: "TLS struct"
+    summary: "List of TransItems of any type: used as extension_data of transparency_info and inside the Transparency Information X.509v3 extension."
+    declared:
+      source_lines: "1798-1800"
+      quote: "struct { SerializedTransItem trans_item_list<1..2^16-1>; } TransItemList;"
+    layout: "[list_len:2]{[item_len:2][TransItem:item_len]}+. list_len is the total octets of all SerializedTransItems. The declared minimum 1 means a TransItemList cannot be empty on the wire."
+    fields:
+      - name: "trans_item_list"
+        type: "SerializedTransItem<1..2^16-1>"
+        required: true
+        encoding: "2-octet total octet length then SerializedTransItem elements"
+        declared:
+          source_lines: "1799"
+          quote: "SerializedTransItem trans_item_list<1..2^16-1>;"
+        constrained_by:
+          - "rfc-9162#R-0093"
+          - "rfc-9162#R-0094"
+        note: "the first requirement applies to each TransItemList sent in a TLS handshake, not to one in an X.509 extension"
+    constrained_by:
+      - "rfc-9162#R-0366"
+      - "rfc-9162#R-0367"
+      - "rfc-9162#R-0487"
+    constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    notes:
+      - "SOURCE TENSION SD-03: trans_item_list is declared <1..2^16-1> (at least one octet) yet Section 6.5 says that if the list is empty the server \"MAY send it with an empty array\" (R-0098). An empty list cannot be encoded as TransItemList; the only legal empty form is an extension_data of zero length, i.e. omitting the structure."
+  - id: "MSG-16"
+    name: "Merkle hash inputs"
+    locator: "§2.1.1, §4.7"
+    kind: "hash-input"
+    encoding: "byte string fed to HASH"
+    summary: "What is hashed to build the tree. HASH is the log hash algorithm (registry value 0x00 = SHA-256)."
+    fields:
+      - name: "leaf hash"
+        type: "HASH_SIZE octets"
+        required: true
+        encoding: "HASH(0x00 || TransItem)"
+        described:
+          source_lines: "337"
+          quote: "MTH({d[0]}) = HASH(0x00 || d[0])."
+        constrained_by:
+          - "rfc-9162#R-0131"
+          - "rfc-9162#R-0247"
+        constrained_by_note: "in a CT log d[i] is the serialized TransItem of type x509_entry_v2 or precert_entry_v2, including its 2-octet versioned_type (Section 4.7); see examples/wire-vectors.derived.json"
+        inferred: true
+        inferred_reason: "Section 4.7 says leaf hashes are HASH(0x00 || TransItem); the TransItem octets are its serialization under MSG-03"
+      - name: "node hash"
+        type: "HASH_SIZE octets"
+        required: true
+        encoding: "HASH(0x01 || left || right)"
+        described:
+          source_lines: "343"
+          quote: "MTH(D_n) = HASH(0x01 || MTH(D[0:k]) || MTH(D[k:n])),"
+        constrained_by:
+          - "rfc-9162#R-0132"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+      - name: "empty tree hash"
+        type: "HASH_SIZE octets"
+        required: true
+        encoding: "HASH() of the empty string"
+        described:
+          source_lines: "333"
+          quote: "MTH({}) = HASH()."
+        constrained_by:
+          - "rfc-9162#R-0130"
+          - "rfc-9162#R-0488"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    constrained_by:
+      - "rfc-9162#R-0127"
+      - "rfc-9162#R-0128"
+      - "rfc-9162#R-0129"
+    constrained_by_note: "no requirement with a BCP 14 keyword binds this structure as a whole; the notation and definition statements (verb none: HASH and HASH_SIZE, the list input and single-hash output, the MTH definition) are wired above (pass 3, 2026-11-08)"
+    notes:
+      - "Domain separation by the 0x00/0x01 prefix is required \"to give second preimage resistance\" (Section 2.1.1, lowercase \"required\": not a requirement id)."
+  - id: "MSG-17"
+    name: "Precertificate (CMS SignedData profile)"
+    locator: "§3.2"
+    kind: "cms-profile"
+    encoding: "DER, CMS SignedData (RFC 5652) constrained as listed"
+    summary: "A precertificate submitted to a log: a CMS signed-data object whose eContent is the TBSCertificate to be issued."
+    declared:
+      source_lines: "690-738"
+      quote: "A precertificate is a CMS [RFC5652] signed-data object that conforms to the following profile: * It MUST be DER encoded, as described in [X690]. * SignedData.version MUST be v3(3). * SignedData.digestAlgorithms MUST be the same as the SignerInfo.digestAlgorithm OID value (see below). * SignedData.encapContentInfo: - eContentType MUST be the OID 1.3.101.78. - eContent MUST contain a TBSCertificate [RFC5280] that will be identical to the TBSCertificate in the issued certificate, except that the Transparency Information (Section 7.1) extension MUST be omitted. * SignedData.certificates MUST be omitted. * SignedData.crls MUST be omitted. * SignedData.signerInfos MUST contain one SignerInfo: - version MUST be v3(3). - sid MUST use the subjectKeyIdentifier option. - digestAlgorithm MUST be one of the hash algorithm OIDs listed in the IANA \"Hash Algorithms\" registry, described in Section 10.2.1. - signedAttrs MUST be present and MUST contain two attributes: o a content-type attribute whose value is the same as SignedData.encapContentInfo.eContentType and o a message-digest attribute whose value is the message digest of SignedData.encapContentInfo.eContent. - signatureAlgorithm MUST be the same OID as TBSCertificate.signature. - signature MUST be from the same (root or intermediate) CA that intends to issue the corresponding certificate (see Section 3.2.1). - unsignedAttrs MUST be omitted."
+    layout: "ContentInfo{SignedData{version=3, digestAlgorithms={X}, encapContentInfo{eContentType=1.3.101.78, eContent=DER TBSCertificate without the Transparency Information extension}, certificates and crls absent, signerInfos={SignerInfo{version=3, sid=subjectKeyIdentifier, digestAlgorithm=X, signedAttrs{content-type, message-digest}, signatureAlgorithm, signature, unsignedAttrs absent}}}}"
+    fields:
+      - name: "encoding"
+        type: "DER"
+        required: true
+        encoding: "DER (X.690)"
+        constrained_by:
+          - "rfc-9162#R-0007"
+      - name: "SignedData.version"
+        type: "CMSVersion"
+        required: true
+        encoding: "v3(3)"
+        constrained_by:
+          - "rfc-9162#R-0008"
+      - name: "SignedData.digestAlgorithms"
+        type: "DigestAlgorithmIdentifiers"
+        required: true
+        encoding: "same as SignerInfo.digestAlgorithm"
+        constrained_by:
+          - "rfc-9162#R-0009"
+      - name: "SignedData.encapContentInfo.eContentType"
+        type: "OBJECT IDENTIFIER"
+        required: true
+        encoding: "1.3.101.78 (id-ct-tbsCertificate, Appendix B)"
+        constrained_by:
+          - "rfc-9162#R-0010"
+      - name: "SignedData.encapContentInfo.eContent"
+        type: "TBSCertificate"
+        required: true
+        encoding: "DER; identical to the TBSCertificate in the issued certificate except the Transparency Information extension (Section 7.1) is omitted"
+        constrained_by:
+          - "rfc-9162#R-0011"
+          - "rfc-9162#R-0194"
+          - "rfc-9162#R-0195"
+      - name: "SignedData.certificates"
+        type: "CertificateSet"
+        required: false
+        encoding: "absent"
+        constrained_by:
+          - "rfc-9162#R-0012"
+      - name: "SignedData.crls"
+        type: "RevocationInfoChoices"
+        required: false
+        encoding: "absent"
+        constrained_by:
+          - "rfc-9162#R-0013"
+      - name: "SignedData.signerInfos"
+        type: "SignerInfos"
+        required: true
+        encoding: "exactly one SignerInfo"
+        constrained_by:
+          - "rfc-9162#R-0014"
+      - name: "SignerInfo.version"
+        type: "CMSVersion"
+        required: true
+        encoding: "v3(3)"
+        constrained_by:
+          - "rfc-9162#R-0015"
+      - name: "SignerInfo.sid"
+        type: "SignerIdentifier"
+        required: true
+        encoding: "subjectKeyIdentifier choice"
+        constrained_by:
+          - "rfc-9162#R-0016"
+      - name: "SignerInfo.digestAlgorithm"
+        type: "DigestAlgorithmIdentifier"
+        required: true
+        encoding: "one of the OIDs in the IANA Hash Algorithms registry (Section 10.2.1)"
+        constrained_by:
+          - "rfc-9162#R-0017"
+      - name: "SignerInfo.signedAttrs"
+        type: "SignedAttributes"
+        required: true
+        encoding: "present; two attributes: content-type equal to eContentType, message-digest of eContent"
+        constrained_by:
+          - "rfc-9162#R-0018"
+          - "rfc-9162#R-0196"
+          - "rfc-9162#R-0197"
+          - "rfc-9162#R-0198"
+          - "rfc-9162#R-0199"
+        note: "the two attribute bullets of Section 3.2 carry no keyword of their own; the MUST contain two attributes is R-0018"
+      - name: "SignerInfo.signatureAlgorithm"
+        type: "SignatureAlgorithmIdentifier"
+        required: true
+        encoding: "same OID as TBSCertificate.signature"
+        constrained_by:
+          - "rfc-9162#R-0019"
+      - name: "SignerInfo.signature"
+        type: "SignatureValue"
+        required: true
+        encoding: "by the same CA that intends to issue the certificate"
+        constrained_by:
+          - "rfc-9162#R-0020"
+      - name: "SignerInfo.unsignedAttrs"
+        type: "UnsignedAttributes"
+        required: false
+        encoding: "absent"
+        constrained_by:
+          - "rfc-9162#R-0021"
+    constrained_by:
+      - "rfc-9162#R-0006"
+      - "rfc-9162#R-0193"
+      - "rfc-9162#R-0479"
+    notes:
+      - "signedAttrs is inside the message digest (RFC 5652 Section 5.4), so SignerInfo.signature is never a valid X.509 signature over the TBSCertificate (Section 3.2)."
+  - id: "MSG-18"
+    name: "Log parameters"
+    locator: "§4.1"
+    kind: "parameter-set"
+    encoding: "no wire format; JSON.Metadata (Chromium) is an informative example"
+    summary: "The immutable parameters that define a log; clients need them to talk to it and verify its artifacts."
+    fields:
+      - name: "Base URL"
+        type: "URL string"
+        required: true
+        encoding: "https URL, optional port, optional path, no query, fragment or trailing \"/\""
+        declared:
+          source_lines: "818"
+          quote: "Base URL: The prefix used to construct URLs [RFC3986] for client"
+        constrained_by:
+          - "rfc-9162#R-0027"
+          - "rfc-9162#R-0026"
+          - "rfc-9162#R-0213"
+          - "rfc-9162#R-0214"
+          - "rfc-9162#R-0215"
+          - "rfc-9162#R-0216"
+          - "rfc-9162#R-0217"
+          - "rfc-9162#R-0290"
+          - "rfc-9162#R-0473"
+      - name: "Hash Algorithm"
+        type: "registry value"
+        required: true
+        encoding: "Hash Algorithms registry (Section 10.2.1)"
+        declared:
+          source_lines: "824"
+          quote: "Hash Algorithm: The hash algorithm used for the Merkle Tree (see"
+        constrained_by:
+          - "rfc-9162#R-0026"
+          - "rfc-9162#R-0122"
+          - "rfc-9162#R-0123"
+          - "rfc-9162#R-0218"
+          - "rfc-9162#R-0420"
+          - "rfc-9162#R-0421"
+          - "rfc-9162#R-0422"
+        note: "R-0122 and R-0123: a live log cannot change its hash algorithm; deprecating one means freezing the log (Section 4.13) and starting a new log (R-0421 MUST freeze, R-0422 SHOULD start a new log); one hash and one signature algorithm per log, multiple not supported (R-0420)"
+      - name: "Signature Algorithm"
+        type: "registry value"
+        required: true
+        encoding: "Signature Algorithms registry (Section 10.2.2)"
+        declared:
+          source_lines: "827"
+          quote: "Signature Algorithm: The signature algorithm used (see Section 2.2)."
+        constrained_by:
+          - "rfc-9162#R-0026"
+          - "rfc-9162#R-0001"
+          - "rfc-9162#R-0122"
+          - "rfc-9162#R-0123"
+          - "rfc-9162#R-0219"
+          - "rfc-9162#R-0420"
+          - "rfc-9162#R-0421"
+          - "rfc-9162#R-0422"
+      - name: "Public Key"
+        type: "public key"
+        required: true
+        encoding: "verification key; never shared with another log"
+        declared:
+          source_lines: "829"
+          quote: "Public Key: The public key used to verify signatures generated by"
+        constrained_by:
+          - "rfc-9162#R-0026"
+          - "rfc-9162#R-0028"
+          - "rfc-9162#R-0220"
+      - name: "Log ID"
+        type: "OID"
+        required: true
+        encoding: "LogID (MSG-01)"
+        declared:
+          source_lines: "832"
+          quote: "Log ID: The OID that uniquely identifies the log."
+        constrained_by:
+          - "rfc-9162#R-0026"
+          - "rfc-9162#R-0221"
+      - name: "Maximum Merge Delay"
+        type: "duration"
+        required: true
+        encoding: "no limit specified"
+        declared:
+          source_lines: "834"
+          quote: "Maximum Merge Delay: The MMD the log has committed to. This"
+        constrained_by:
+          - "rfc-9162#R-0026"
+          - "rfc-9162#R-0222"
+      - name: "Version"
+        type: "integer"
+        required: true
+        encoding: "1 or 2"
+        declared:
+          source_lines: "838"
+          quote: "Version: The version of the protocol supported by the log (currently"
+        constrained_by:
+          - "rfc-9162#R-0026"
+          - "rfc-9162#R-0223"
+      - name: "Maximum Chain Length"
+        type: "integer"
+        required: false
+        encoding: "only if the log imposes a limit"
+        declared:
+          source_lines: "841"
+          quote: "Maximum Chain Length: The longest certificate chain submission the"
+        constrained_by:
+          - "rfc-9162#R-0026"
+          - "rfc-9162#R-0037"
+          - "rfc-9162#R-0224"
+      - name: "STH Frequency Count"
+        type: "integer"
+        required: true
+        encoding: "STHs per MMD period"
+        declared:
+          source_lines: "844"
+          quote: "STH Frequency Count: The maximum number of STHs the log may produce"
+        constrained_by:
+          - "rfc-9162#R-0026"
+          - "rfc-9162#R-0225"
+      - name: "Final STH"
+        type: "TransItem signed_tree_head_v2"
+        required: false
+        encoding: "present only once the log is closed; the one parameter exempt from being fixed in advance"
+        declared:
+          source_lines: "847"
+          quote: "Final STH: If a log has been closed down (i.e., no longer accepts"
+        constrained_by:
+          - "rfc-9162#R-0029"
+          - "rfc-9162#R-0226"
+          - "rfc-9162#R-0227"
+          - "rfc-9162#R-0283"
+        note: "R-0026 does not bind this parameter: it begins \"Except for the Final STH\""
+    constrained_by:
+      - "rfc-9162#R-0212"
+    constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    notes:
+      - "Section 4.1 ends: \"[JSON.Metadata] is an example of a metadata format that includes the above elements.\" The source does not define a serialization. How clients obtain parameters is implementation dependent (Section 8)."
+      - "R-0026 binds every parameter except Final STH: each MUST be established before the log operator begins to operate the log."
+  - id: "MSG-19"
+    name: "submit-entry request"
+    locator: "§5.1"
+    kind: "http-request"
+    encoding: "POST, JSON body"
+    summary: "Submit a certificate or precertificate with its chain."
+    http:
+      method: "POST"
+      path: "<Base URL>/ct/v2/submit-entry"
+    schema: "schema/submit-entry-request.derived.schema.json"
+    errors:
+      - type: "urn:ietf:params:trans:error:badSubmission"
+        token: "badSubmission"
+        detail_cell: "submission is neither a valid certificate nor a valid precertificate."
+        constrained_by:
+          - "rfc-9162#R-0032"
+          - "rfc-9162#R-0033"
+        constrained_by_note: "Section 4.2.1 says the log MUST reject a submission that fails its conditions but does not map a condition to an error token"
+        source_lines: "1392-1393"
+        detail_cell_note: "cell text joined from the wrapped table rows by script"
+      - type: "urn:ietf:params:trans:error:badType"
+        token: "badType"
+        detail_cell: "type is neither 1 nor 2."
+        constrained_by:
+          - "rfc-9162#R-0033"
+        source_lines: "1395-1395"
+        detail_cell_note: "cell text joined from the wrapped table rows by script"
+      - type: "urn:ietf:params:trans:error:badChain"
+        token: "badChain"
+        detail_cell: "The first element of chain is not the certifier of the submission, or the second element does not certify the first, etc."
+        constrained_by:
+          - "rfc-9162#R-0033"
+        source_lines: "1397-1399"
+        detail_cell_note: "cell text joined from the wrapped table rows by script"
+      - type: "urn:ietf:params:trans:error:badCertificate"
+        token: "badCertificate"
+        detail_cell: "One or more certificates in chain are not valid (e.g., not properly encoded)."
+        constrained_by:
+          - "rfc-9162#R-0070"
+          - "rfc-9162#R-0071"
+        source_lines: "1401-1402"
+        detail_cell_note: "cell text joined from the wrapped table rows by script"
+      - type: "urn:ietf:params:trans:error:unknownAnchor"
+        token: "unknownAnchor"
+        detail_cell: "The last element of chain (or, if chain is an empty array, the submission) is not, nor is it certified by, an accepted trust anchor."
+        constrained_by:
+          - "rfc-9162#R-0072"
+        source_lines: "1404-1406"
+        detail_cell_note: "cell text joined from the wrapped table rows by script"
+      - type: "urn:ietf:params:trans:error:shutdown"
+        token: "shutdown"
+        detail_cell: "The log is no longer accepting submissions."
+        constrained_by:
+          - "rfc-9162#R-0060"
+        constrained_by_note: "R-0060 is the lead-in of the Section 4.13 shutdown list (SHOULD); its second bullet says the code shutdown should be returned"
+        source_lines: "1408-1408"
+        detail_cell_note: "cell text joined from the wrapped table rows by script"
+      - type: "urn:ietf:params:trans:error:malformed"
+        token: "malformed"
+        detail_cell: "The request could not be parsed."
+        source_lines: "1334-1334"
+        endpoints: "all"
+    declared:
+      source_lines: "1356"
+      quote: "POST <Base URL>/ct/v2/submit-entry"
+    fields:
+      - name: "submission"
+        type: "string (base64)"
+        required: true
+        encoding: "JSON string, RFC 4648 Section 4"
+        declared:
+          source_lines: "1359"
+          quote: "submission: The base64-encoded certificate or precertificate."
+        constrained_by:
+          - "rfc-9162#R-0033"
+          - "rfc-9162#R-0229"
+          - "rfc-9162#R-0032"
+          - "rfc-9162#R-0036"
+          - "rfc-9162#R-0302"
+        note: "R-0036: a precertificate submission MUST conform to Section 3.2 (MSG-17)"
+      - name: "type"
+        type: "integer"
+        required: true
+        encoding: "JSON number: 1 for x509_entry_v2, 2 for precert_entry_v2"
+        declared:
+          source_lines: "1361-1363"
+          quote: "type: The VersionedTransType integer value that indicates the type of the submission: 1 for x509_entry_v2 or 2 for precert_entry_v2."
+        constrained_by:
+          - "rfc-9162#R-0033"
+          - "rfc-9162#R-0229"
+          - "rfc-9162#R-0303"
+        note: "SD-01: the TransItem enum value is 0x0100/0x0101; this input is 1/2"
+      - name: "chain"
+        type: "array of string (base64)"
+        required: true
+        encoding: "JSON array of zero or more base64 CA certificates; element 0 certifies the submission, element n+1 certifies element n; the last element (or the submission) is certified by an accepted trust anchor"
+        declared:
+          source_lines: "1365-1370"
+          quote: "chain: An array of zero or more JSON strings, each of which is a base64-encoded CA certificate. The first element is the certifier of the submission, the second certifies the first, etc. The last element of chain (or, if chain is an empty array, the submission) is certified by an accepted trust anchor."
+        constrained_by:
+          - "rfc-9162#R-0033"
+          - "rfc-9162#R-0229"
+          - "rfc-9162#R-0002"
+          - "rfc-9162#R-0034"
+          - "rfc-9162#R-0035"
+          - "rfc-9162#R-0003"
+          - "rfc-9162#R-0304"
+          - "rfc-9162#R-0230"
+          - "rfc-9162#R-0231"
+          - "rfc-9162#R-0232"
+        note: "the trust anchor MAY be omitted (R-0003); R-0002 requires all certificates needed to verify the chain up to an accepted trust anchor; R-0034 and R-0035 are the Section 4.2.1 acceptance conditions on each chain certificate (CA flag or keyCertSign, pathLenConstraint)"
+    constrained_by:
+      - "rfc-9162#R-0061"
+      - "rfc-9162#R-0062"
+      - "rfc-9162#R-0030"
+      - "rfc-9162#R-0032"
+      - "rfc-9162#R-0301"
+      - "rfc-9162#R-0192"
+      - "rfc-9162#R-0286"
+      - "rfc-9162#R-0287"
+      - "rfc-9162#R-0308"
+    notes:
+      - "A log that detects bad encoding in an otherwise valid chain MUST either log the certificate (and then issue an SCT) or return badCertificate (R-0070, R-0071). If submission is an accepted trust anchor whose certifier is neither an accepted anchor nor chain[0], the log MUST return unknownAnchor (R-0072)."
+  - id: "MSG-20"
+    name: "submit-entry response"
+    locator: "§5.1"
+    kind: "http-response"
+    encoding: "JSON body"
+    summary: "The SCT and, when the entry is already in the tree, the STH and inclusion proof."
+    schema: "schema/submit-entry-response.derived.schema.json"
+    declared:
+      source_lines: "1372"
+      quote: "Outputs:"
+    fields:
+      - name: "sct"
+        type: "string (base64 TransItem)"
+        required: true
+        encoding: "base64 of a TransItem of type x509_sct_v2 or precert_sct_v2"
+        declared:
+          source_lines: "1373-1375"
+          quote: "sct: A base64-encoded TransItem of type x509_sct_v2 or precert_sct_v2, signed by this log, that corresponds to the submission."
+        constrained_by:
+          - "rfc-9162#R-0069"
+          - "rfc-9162#R-0071"
+          - "rfc-9162#R-0204"
+          - "rfc-9162#R-0305"
+        note: "a v2 client MUST NOT treat an SCT whose version is not v2 as an error (R-0069); a log that logs a certificate despite bad encoding MUST issue an SCT (R-0071); a resubmission of a valid submission SHOULD get the same SCT as before (R-0204)"
+      - name: "sth"
+        type: "string (base64 TransItem)"
+        required: false
+        encoding: "base64 of a TransItem of type signed_tree_head_v2"
+        required_when: "the entry is immediately appended to (or already exists in) the tree: the log SHOULD output it"
+        declared:
+          source_lines: "1380-1381"
+          quote: "sth: A base64-encoded TransItem of type signed_tree_head_v2 signed by this log."
+        constrained_by:
+          - "rfc-9162#R-0068"
+          - "rfc-9162#R-0306"
+      - name: "inclusion"
+        type: "string (base64 TransItem)"
+        required: false
+        encoding: "base64 of a TransItem of type inclusion_proof_v2 proving inclusion in the returned sth"
+        required_when: "as sth"
+        declared:
+          source_lines: "1383-1385"
+          quote: "inclusion: A base64-encoded TransItem of type inclusion_proof_v2 whose inclusion_path array of Merkle Tree nodes proves the inclusion of the submission in the returned sth."
+        constrained_by:
+          - "rfc-9162#R-0068"
+          - "rfc-9162#R-0307"
+    constrained_by:
+      - "rfc-9162#R-0073"
+    notes:
+      - "If sct is intended for TLS clients, sth and inclusion (if returned) SHOULD also be provided to them (R-0073); all three can be embedded in a certificate when type is 2."
+  - id: "MSG-21"
+    name: "get-sth request and response"
+    locator: "§5.2"
+    kind: "http-exchange"
+    encoding: "GET, no inputs; JSON response"
+    summary: "Retrieve the latest STH."
+    http:
+      method: "GET"
+      path: "<Base URL>/ct/v2/get-sth"
+    schema: "schema/get-sth-response.derived.schema.json"
+    errors:
+      - type: "urn:ietf:params:trans:error:malformed"
+        token: "malformed"
+        detail_cell: "The request could not be parsed."
+        source_lines: "1334-1334"
+        endpoints: "all"
+    declared:
+      source_lines: "1438"
+      quote: "GET <Base URL>/ct/v2/get-sth"
+    fields:
+      - name: "sth"
+        type: "string (base64 TransItem)"
+        required: true
+        encoding: "base64 of a TransItem of type signed_tree_head_v2, signed by the log, no older than the log MMD"
+        declared:
+          source_lines: "1443-1444"
+          quote: "sth: A base64-encoded TransItem of type signed_tree_head_v2 signed by this log that is no older than the log's MMD."
+        constrained_by:
+          - "rfc-9162#R-0055"
+          - "rfc-9162#R-0311"
+    constrained_by:
+      - "rfc-9162#R-0061"
+      - "rfc-9162#R-0062"
+      - "rfc-9162#R-0309"
+      - "rfc-9162#R-0310"
+  - id: "MSG-22"
+    name: "get-sth-consistency request"
+    locator: "§5.3"
+    kind: "http-request"
+    encoding: "GET, URL parameters"
+    summary: "Request a consistency proof between two tree sizes."
+    http:
+      method: "GET"
+      path: "<Base URL>/ct/v2/get-sth-consistency"
+    schema: "schema/get-sth-consistency-query.derived.schema.json"
+    errors:
+      - type: "urn:ietf:params:trans:error:firstUnknown"
+        token: "firstUnknown"
+        detail_cell: "first is before the latest known STH but is not from an existing STH."
+        source_lines: "1483-1484"
+        detail_cell_note: "cell text joined from the wrapped table rows by script"
+      - type: "urn:ietf:params:trans:error:secondUnknown"
+        token: "secondUnknown"
+        detail_cell: "second is before the latest known STH but is not from an existing STH."
+        source_lines: "1486-1487"
+        detail_cell_note: "cell text joined from the wrapped table rows by script"
+      - type: "urn:ietf:params:trans:error:secondBeforeFirst"
+        token: "secondBeforeFirst"
+        detail_cell: "second is smaller than first."
+        source_lines: "1489-1489"
+        detail_cell_note: "cell text joined from the wrapped table rows by script"
+      - type: "urn:ietf:params:trans:error:malformed"
+        token: "malformed"
+        detail_cell: "The request could not be parsed."
+        source_lines: "1334-1334"
+        endpoints: "all"
+    declared:
+      source_lines: "1448"
+      quote: "GET <Base URL>/ct/v2/get-sth-consistency"
+    fields:
+      - name: "first"
+        type: "decimal string"
+        required: true
+        encoding: "URL parameter, decimal"
+        declared:
+          source_lines: "1451"
+          quote: "first: The tree_size of the older tree, in decimal."
+        constrained_by:
+          - "rfc-9162#R-0313"
+        constrained_by_note: "must be from an existing v2 STH (Section 5.3)"
+      - name: "second"
+        type: "decimal string"
+        required: false
+        encoding: "URL parameter, decimal"
+        declared:
+          source_lines: "1453"
+          quote: "second: The tree_size of the newer tree, in decimal (optional)."
+        constrained_by:
+          - "rfc-9162#R-0314"
+        constrained_by_note: "optional; when omitted the latest known STH is used"
+    constrained_by:
+      - "rfc-9162#R-0061"
+      - "rfc-9162#R-0062"
+      - "rfc-9162#R-0312"
+      - "rfc-9162#R-0315"
+      - "rfc-9162#R-0320"
+    notes:
+      - "Case analysis (Section 5.3): both sizes known: consistency only. first known, second unknown or omitted: latest STH and a consistency proof from first. Neither known: latest STH, no proof."
+  - id: "MSG-23"
+    name: "get-sth-consistency response"
+    locator: "§5.3"
+    kind: "http-response"
+    encoding: "JSON body"
+    summary: "The consistency proof and/or the latest STH."
+    schema: "schema/get-sth-consistency-response.derived.schema.json"
+    fields:
+      - name: "consistency"
+        type: "string (base64 TransItem)"
+        required: false
+        encoding: "base64 of a TransItem of type consistency_proof_v2 (unsigned)"
+        required_when: "at least one of consistency and sth is returned; absent when neither size is known"
+        declared:
+          source_lines: "1465-1470"
+          quote: "consistency: A base64-encoded TransItem of type consistency_proof_v2 whose tree_size_1 MUST match the first input. If the sth output is omitted, then tree_size_2 MUST match the second input. If first and second are equal and correspond to a known STH, the returned consistency proof MUST be empty (a consistency_path array with zero elements)."
+        constrained_by:
+          - "rfc-9162#R-0074"
+          - "rfc-9162#R-0075"
+          - "rfc-9162#R-0076"
+          - "rfc-9162#R-0484"
+          - "rfc-9162#R-0463"
+        note: "no signature is required for the consistency output because it links two signed STHs (Section 5.3)"
+      - name: "sth"
+        type: "string (base64 TransItem)"
+        required: false
+        encoding: "base64 of a TransItem of type signed_tree_head_v2"
+        required_when: "first known and second unknown/omitted, or neither known; omitted when both are known"
+        declared:
+          source_lines: "1472"
+          quote: "sth: A base64-encoded TransItem of type signed_tree_head_v2,"
+        constrained_by:
+          - "rfc-9162#R-0319"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    constrained_by:
+      - "rfc-9162#R-0061"
+      - "rfc-9162#R-0062"
+      - "rfc-9162#R-0316"
+      - "rfc-9162#R-0317"
+      - "rfc-9162#R-0318"
+  - id: "MSG-24"
+    name: "get-proof-by-hash request"
+    locator: "§5.4"
+    kind: "http-request"
+    encoding: "GET, URL parameters"
+    summary: "Request an inclusion proof for a leaf hash against a tree size."
+    http:
+      method: "GET"
+      path: "<Base URL>/ct/v2/get-proof-by-hash"
+    schema: "schema/get-proof-by-hash-query.derived.schema.json"
+    errors:
+      - type: "urn:ietf:params:trans:error:hashUnknown"
+        token: "hashUnknown"
+        detail_cell: "hash is not the hash of a known leaf (may be caused by skew or by a known certificate not yet merged)."
+        source_lines: "1531-1533"
+        detail_cell_note: "cell text joined from the wrapped table rows by script"
+      - type: "urn:ietf:params:trans:error:treeSizeUnknown"
+        token: "treeSizeUnknown"
+        detail_cell: "hash is before the latest known STH but is not from an existing STH."
+        source_lines: "1535-1536"
+        detail_cell_note: "cell text joined from the wrapped table rows by script"
+      - type: "urn:ietf:params:trans:error:malformed"
+        token: "malformed"
+        detail_cell: "The request could not be parsed."
+        source_lines: "1334-1334"
+        endpoints: "all"
+    declared:
+      source_lines: "1499"
+      quote: "GET <Base URL>/ct/v2/get-proof-by-hash"
+    fields:
+      - name: "hash"
+        type: "string (base64)"
+        required: true
+        encoding: "URL parameter, base64 of the v2 leaf hash (Section 4.7)"
+        declared:
+          source_lines: "1502"
+          quote: "hash: A base64-encoded v2 leaf hash."
+        constrained_by:
+          - "rfc-9162#R-0322"
+          - "rfc-9162#R-0324"
+          - "rfc-9162#R-0467"
+          - "rfc-9162#R-0472"
+        constrained_by_note: "HASH(0x00 || TransItem); base64 text in a URL must be percent-encoded for + / ="
+      - name: "tree_size"
+        type: "decimal string"
+        required: true
+        encoding: "URL parameter, decimal"
+        declared:
+          source_lines: "1504"
+          quote: "tree_size: The tree_size of the tree on which to base the proof,"
+        constrained_by:
+          - "rfc-9162#R-0323"
+          - "rfc-9162#R-0326"
+        constrained_by_note: "a v2 STH must exist for the tree_size (Section 5.4)"
+    constrained_by:
+      - "rfc-9162#R-0061"
+      - "rfc-9162#R-0062"
+      - "rfc-9162#R-0114"
+      - "rfc-9162#R-0321"
+      - "rfc-9162#R-0331"
+    notes:
+      - "The percent-encoding note is this extraction's: base64 uses + / = which are significant in application/x-www-form-urlencoded; the source says only that parameters use that format (Section 5)."
+  - id: "MSG-25"
+    name: "get-proof-by-hash response"
+    locator: "§5.4"
+    kind: "http-response"
+    encoding: "JSON body"
+    summary: "The inclusion proof and, if the tree head was unknown to the front end, the latest STH."
+    schema: "schema/get-proof-by-hash-response.derived.schema.json"
+    fields:
+      - name: "inclusion"
+        type: "string (base64 TransItem)"
+        required: true
+        encoding: "base64 of a TransItem of type inclusion_proof_v2 (unsigned)"
+        declared:
+          source_lines: "1515-1518"
+          quote: "inclusion: A base64-encoded TransItem of type inclusion_proof_v2 whose inclusion_path array of Merkle Tree nodes proves the inclusion of the certificate (as specified by the hash parameter) in the selected STH."
+        constrained_by:
+          - "rfc-9162#R-0329"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+      - name: "sth"
+        type: "string (base64 TransItem)"
+        required: false
+        encoding: "base64 of a TransItem of type signed_tree_head_v2"
+        required_when: "the front end does not know the requested tree head: it returns the latest STH it knows with a proof to it"
+        declared:
+          source_lines: "1520"
+          quote: "sth: A base64-encoded TransItem of type signed_tree_head_v2,"
+        constrained_by:
+          - "rfc-9162#R-0330"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    constrained_by:
+      - "rfc-9162#R-0061"
+      - "rfc-9162#R-0062"
+      - "rfc-9162#R-0327"
+      - "rfc-9162#R-0328"
+      - "rfc-9162#R-0485"
+  - id: "MSG-26"
+    name: "get-all-by-hash request"
+    locator: "§5.5"
+    kind: "http-request"
+    encoding: "GET, URL parameters"
+    summary: "Request inclusion proof, STH and consistency proof for a leaf hash in one call."
+    http:
+      method: "GET"
+      path: "<Base URL>/ct/v2/get-all-by-hash"
+    schema: "schema/get-all-by-hash-query.derived.schema.json"
+    errors:
+      - type: "urn:ietf:params:trans:error:hashUnknown"
+        token: "hashUnknown"
+        detail_cell: "hash is not the hash of a known leaf (may be caused by skew or by a known certificate not yet merged)."
+        source_lines: "1531-1533"
+        detail_cell_note: "cell text joined from the wrapped table rows by script"
+      - type: "urn:ietf:params:trans:error:treeSizeUnknown"
+        token: "treeSizeUnknown"
+        detail_cell: "hash is before the latest known STH but is not from an existing STH."
+        source_lines: "1535-1536"
+        detail_cell_note: "cell text joined from the wrapped table rows by script"
+      - type: "urn:ietf:params:trans:error:malformed"
+        token: "malformed"
+        detail_cell: "The request could not be parsed."
+        source_lines: "1334-1334"
+        endpoints: "all"
+    declared:
+      source_lines: "1547"
+      quote: "GET <Base URL>/ct/v2/get-all-by-hash"
+    fields:
+      - name: "hash"
+        type: "string (base64)"
+        required: true
+        encoding: "URL parameter, base64 of the v2 leaf hash"
+        declared:
+          source_lines: "1550"
+          quote: "hash: A base64-encoded v2 leaf hash."
+        constrained_by:
+          - "rfc-9162#R-0333"
+          - "rfc-9162#R-0335"
+          - "rfc-9162#R-0467"
+          - "rfc-9162#R-0472"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+      - name: "tree_size"
+        type: "decimal string"
+        required: true
+        encoding: "URL parameter, decimal"
+        declared:
+          source_lines: "1552"
+          quote: "tree_size: The tree_size of the tree on which to base the proofs,"
+        constrained_by:
+          - "rfc-9162#R-0334"
+          - "rfc-9162#R-0337"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    constrained_by:
+      - "rfc-9162#R-0061"
+      - "rfc-9162#R-0062"
+      - "rfc-9162#R-0114"
+      - "rfc-9162#R-0332"
+      - "rfc-9162#R-0343"
+    notes:
+      - "\"Errors are the same as in Section 5.4\" (Section 5.5): hashUnknown and treeSizeUnknown."
+  - id: "MSG-27"
+    name: "get-all-by-hash response"
+    locator: "§5.5"
+    kind: "http-response"
+    encoding: "JSON body"
+    summary: "Union of the cases of Table 5."
+    schema: "schema/get-all-by-hash-response.derived.schema.json"
+    table:
+      - case: "latest STH < requested tree head"
+        response: "Return latest STH."
+        source_lines: "1564-1565"
+      - case: "latest STH > requested tree head"
+        response: "Return latest STH and a consistency proof between it and the requested tree head (see Section 5.3)."
+        source_lines: "1567-1569"
+      - case: "index of requested hash < latest STH"
+        response: "Return inclusion."
+        source_lines: "1571-1572"
+    fields:
+      - name: "inclusion"
+        type: "string (base64 TransItem)"
+        required: false
+        encoding: "base64 of inclusion_proof_v2"
+        required_when: "index of requested hash < latest STH (Table 5 row 3)"
+        declared:
+          source_lines: "1582-1585"
+          quote: "inclusion: A base64-encoded TransItem of type inclusion_proof_v2 whose inclusion_path array of Merkle Tree nodes proves the inclusion of the certificate (as specified by the hash parameter) in the selected STH."
+        constrained_by:
+          - "rfc-9162#R-0340"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+      - name: "sth"
+        type: "string (base64 TransItem)"
+        required: false
+        encoding: "base64 of signed_tree_head_v2"
+        required_when: "latest STH differs from the requested tree head (Table 5 rows 1 and 2)"
+        declared:
+          source_lines: "1587"
+          quote: "sth: A base64-encoded TransItem of type signed_tree_head_v2,"
+        constrained_by:
+          - "rfc-9162#R-0341"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+      - name: "consistency"
+        type: "string (base64 TransItem)"
+        required: false
+        encoding: "base64 of consistency_proof_v2"
+        required_when: "latest STH > requested tree head (Table 5 row 2)"
+        declared:
+          source_lines: "1590-1592"
+          quote: "consistency: A base64-encoded TransItem of type consistency_proof_v2 that proves the consistency of the requested tree head and the returned STH."
+        constrained_by:
+          - "rfc-9162#R-0342"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    constrained_by:
+      - "rfc-9162#R-0077"
+      - "rfc-9162#R-0061"
+      - "rfc-9162#R-0062"
+      - "rfc-9162#R-0338"
+      - "rfc-9162#R-0339"
+    notes:
+      - "More than one case can be true; the response is their union. If none is true the front end MUST return an empty response (R-0077); the source does not say whether that is an empty body or {} (the derived schema accepts {})."
+  - id: "MSG-28"
+    name: "get-entries request"
+    locator: "§5.6"
+    kind: "http-request"
+    encoding: "GET, URL parameters"
+    summary: "Request a range of log entries."
+    http:
+      method: "GET"
+      path: "<Base URL>/ct/v2/get-entries"
+    schema: "schema/get-entries-query.derived.schema.json"
+    errors:
+      - type: "urn:ietf:params:trans:error:startUnknown"
+        token: "startUnknown"
+        detail_cell: "start is greater than the number of entries in the Merkle Tree."
+        source_lines: "1679-1680"
+        detail_cell_note: "cell text joined from the wrapped table rows by script"
+      - type: "urn:ietf:params:trans:error:endBeforeStart"
+        token: "endBeforeStart"
+        detail_cell: "start cannot be greater than end."
+        source_lines: "1682-1683"
+        detail_cell_note: "cell text joined from the wrapped table rows by script"
+      - type: "urn:ietf:params:trans:error:malformed"
+        token: "malformed"
+        detail_cell: "The request could not be parsed."
+        source_lines: "1334-1334"
+        endpoints: "all"
+    declared:
+      source_lines: "1606"
+      quote: "GET <Base URL>/ct/v2/get-entries"
+    fields:
+      - name: "start"
+        type: "decimal string"
+        required: true
+        encoding: "URL parameter, 0-based index, decimal"
+        declared:
+          source_lines: "1609"
+          quote: "start: 0-based index of first entry to retrieve, in decimal."
+        constrained_by:
+          - "rfc-9162#R-0080"
+          - "rfc-9162#R-0081"
+          - "rfc-9162#R-0084"
+          - "rfc-9162#R-0345"
+          - "rfc-9162#R-0481"
+      - name: "end"
+        type: "decimal string"
+        required: true
+        encoding: "URL parameter, 0-based index, decimal"
+        declared:
+          source_lines: "1611"
+          quote: "end: 0-based index of last entry to retrieve, in decimal."
+        constrained_by:
+          - "rfc-9162#R-0080"
+          - "rfc-9162#R-0081"
+          - "rfc-9162#R-0084"
+          - "rfc-9162#R-0346"
+    constrained_by:
+      - "rfc-9162#R-0061"
+      - "rfc-9162#R-0062"
+      - "rfc-9162#R-0344"
+      - "rfc-9162#R-0356"
+    notes:
+      - "Logs MAY restrict entries per request; if asked for more, the log SHALL return the maximum permissible, sequential from start (R-0085, R-0086, R-0087). The limit is not a log parameter (Section 5.6)."
+  - id: "MSG-29"
+    name: "get-entries response"
+    locator: "§5.6"
+    kind: "http-response"
+    encoding: "JSON body"
+    summary: "Entries, each with its leaf TransItem, original submission and SCT, and the latest STH."
+    schema: "schema/get-entries-response.derived.schema.json"
+    fields:
+      - name: "entries"
+        type: "array of entry objects"
+        required: true
+        encoding: "JSON array; may be empty"
+        declared:
+          source_lines: "1614"
+          quote: "entries: An array of objects, each consisting of:"
+        constrained_by:
+          - "rfc-9162#R-0088"
+          - "rfc-9162#R-0086"
+          - "rfc-9162#R-0087"
+          - "rfc-9162#R-0347"
+          - "rfc-9162#R-0355"
+          - "rfc-9162#R-0483"
+      - name: "entries[].log_entry"
+        type: "string (base64 TransItem)"
+        required: true
+        encoding: "base64 of a TransItem of type x509_entry_v2 or precert_entry_v2"
+        declared:
+          source_lines: "1616"
+          quote: "log_entry: The base64-encoded TransItem structure of type"
+        constrained_by:
+          - "rfc-9162#R-0078"
+          - "rfc-9162#R-0079"
+          - "rfc-9162#R-0348"
+          - "rfc-9162#R-0352"
+      - name: "entries[].submitted_entry"
+        type: "object"
+        required: true
+        encoding: "JSON object with the fields of the submit-entry request: submission, type, chain"
+        declared:
+          source_lines: "1619"
+          quote: "submitted_entry: JSON object equivalent to inputs that were"
+        constrained_by:
+          - "rfc-9162#R-0082"
+          - "rfc-9162#R-0083"
+          - "rfc-9162#R-0040"
+          - "rfc-9162#R-0349"
+          - "rfc-9162#R-0353"
+          - "rfc-9162#R-0354"
+          - "rfc-9162#R-0482"
+        note: "the trust anchor is added to chain if the submission did not include it; R-0040: the log MUST provide the stored chain for auditing on request (Section 5.6)"
+      - name: "entries[].sct"
+        type: "string (base64 TransItem)"
+        required: true
+        encoding: "base64 of x509_sct_v2 or precert_sct_v2"
+        declared:
+          source_lines: "1624"
+          quote: "sct: The base64-encoded TransItem of type x509_sct_v2 or"
+        constrained_by:
+          - "rfc-9162#R-0350"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+      - name: "entries[].sth"
+        type: "string (base64 TransItem)"
+        required: false
+        encoding: "base64 of signed_tree_head_v2"
+        declared:
+          source_lines: "1627"
+          quote: "sth: A base64-encoded TransItem of type signed_tree_head_v2,"
+        constrained_by:
+          - "rfc-9162#R-0089"
+          - "rfc-9162#R-0351"
+        note: "SD-04: the Outputs list indents sth under entries, i.e. inside each entry object, while \"the log server MUST return the latest STH it knows about\" in any case, including an empty entries array. The derived schema requires a top-level sth and allows the per-entry one."
+        inferred: true
+        inferred_reason: "placement of sth is ambiguous in the source; top-level is the reading consistent with the empty-entries case"
+      - name: "sth"
+        type: "string (base64 TransItem)"
+        required: true
+        encoding: "base64 of signed_tree_head_v2 (top level, inferred placement)"
+        constrained_by:
+          - "rfc-9162#R-0089"
+        inferred: true
+        inferred_reason: "see SD-04; not printed at this level in the Outputs list"
+    constrained_by:
+      - "rfc-9162#R-0084"
+      - "rfc-9162#R-0085"
+      - "rfc-9162#R-0061"
+      - "rfc-9162#R-0062"
+    notes:
+      - "This message is not signed; entries are verified by rebuilding the tree and comparing to the STH (Section 5.6, Section 2.1.2)."
+  - id: "MSG-30"
+    name: "get-anchors request and response"
+    locator: "§5.7"
+    kind: "http-exchange"
+    encoding: "GET, no inputs; JSON response"
+    summary: "Retrieve the accepted trust anchors."
+    http:
+      method: "GET"
+      path: "<Base URL>/ct/v2/get-anchors"
+    schema: "schema/get-anchors-response.derived.schema.json"
+    errors:
+      - type: "urn:ietf:params:trans:error:malformed"
+        token: "malformed"
+        detail_cell: "The request could not be parsed."
+        source_lines: "1334-1334"
+        endpoints: "all"
+    declared:
+      source_lines: "1690"
+      quote: "GET <Base URL>/ct/v2/get-anchors"
+    fields:
+      - name: "certificates"
+        type: "array of string (base64)"
+        required: true
+        encoding: "JSON array of base64 CA certificates acceptable to the log"
+        declared:
+          source_lines: "1695"
+          quote: "certificates: An array of JSON strings, each of which is a"
+        constrained_by:
+          - "rfc-9162#R-0031"
+          - "rfc-9162#R-0359"
+      - name: "max_chain_length"
+        type: "decimal (number or string, unspecified)"
+        required: false
+        encoding: "omitted when the log has no limit"
+        declared:
+          source_lines: "1698"
+          quote: "max_chain_length: If the server has chosen to limit the length of"
+        constrained_by:
+          - "rfc-9162#R-0037"
+          - "rfc-9162#R-0360"
+        note: "SD-05: \"in decimal\" does not say whether this JSON member is a number or a string; the derived schema admits both"
+    constrained_by:
+      - "rfc-9162#R-0061"
+      - "rfc-9162#R-0062"
+      - "rfc-9162#R-0357"
+      - "rfc-9162#R-0358"
+    notes:
+      - "\"This data is not signed, and the protocol depends on the security guarantees of TLS\" (Section 5.7); no get-anchors error is defined other than malformed."
+  - id: "MSG-31"
+    name: "Error response (problem details)"
+    locator: "§5"
+    kind: "http-error"
+    encoding: "JSON body, 4xx/5xx status"
+    summary: "Body returned when the log cannot process a request: a JSON problem details object (RFC 7807 Section 3)."
+    schema: "schema/error-response.derived.schema.json"
+    example_fixture: "examples/ex-10.verbatim.json"
+    declared:
+      source_lines: "1307"
+      quote: "type: A URN reference identifying the problem. To facilitate"
+    fields:
+      - name: "type"
+        type: "string (URN)"
+        required: true
+        encoding: "urn:ietf:params:trans:error: followed by the token of the Error Types registry"
+        declared:
+          source_lines: "1307"
+          quote: "type: A URN reference identifying the problem. To facilitate"
+        constrained_by:
+          - "rfc-9162#R-0063"
+          - "rfc-9162#R-0294"
+          - "rfc-9162#R-0295"
+        note: "body is SHOULD, so the field is required only if a body is sent"
+      - name: "detail"
+        type: "string"
+        required: true
+        encoding: "human-readable text"
+        declared:
+          source_lines: "1312"
+          quote: "detail: A human-readable string describing the error that prevented"
+        constrained_by:
+          - "rfc-9162#R-0063"
+          - "rfc-9162#R-0296"
+    constrained_by:
+      - "rfc-9162#R-0063"
+      - "rfc-9162#R-0064"
+      - "rfc-9162#R-0065"
+      - "rfc-9162#R-0066"
+      - "rfc-9162#R-0067"
+      - "rfc-9162#R-0292"
+      - "rfc-9162#R-0293"
+      - "rfc-9162#R-0297"
+      - "rfc-9162#R-0298"
+      - "rfc-9162#R-0299"
+      - "rfc-9162#R-0300"
+      - "rfc-9162#R-0480"
+    notes:
+      - "Status handling: 500 and 503 are transient (client SHOULD treat so and MAY retry unchanged); 503 MAY carry Retry-After; any 4xx is a problem with the request (client SHOULD NOT resubmit unmodified). The document \"deliberately does not provide more specific guidance on the use of HTTP status codes\" (Section 5)."
+      - "SD-06: the detail of treeSizeUnknown reads \"hash is before the latest known STH but is not from an existing STH\" in Table 4 and Table 18; the parameter that is not from an existing STH is tree_size, not hash. Copied as printed."
+      - "Error Types registry (Section 10.2.6) fields: Identifier, Meaning, Reference; the 14 initial values are the union of the per-endpoint tables and \"malformed\"."
+  - id: "MSG-32"
+    name: "transparency_info TLS extension (ClientHello)"
+    locator: "§6.5, §8.1.1, §10.1.1"
+    kind: "tls-extension"
+    encoding: "TLS extension_type 52 (0x0034)"
+    summary: "A client offers CT by sending the extension with empty extension_data."
+    layout: "[extension_type:2 = 0x0034][extension_data_len:2 = 0x0000]. Registry: value 52, name transparency_info, TLS 1.3 messages CH, CR, CT, DTLS-only N, Recommended Y (Table 7)."
+    fields:
+      - name: "extension_data"
+        type: "empty"
+        required: true
+        encoding: "zero length"
+        declared:
+          source_lines: "1913-1915"
+          quote: "TLS clients that support the transparency_info TLS extension (see Section 6.5) SHOULD include it in ClientHello messages, with empty extension_data. If a TLS server includes the transparency_info TLS"
+        constrained_by:
+          - "rfc-9162#R-0111"
+          - "rfc-9162#R-0095"
+          - "rfc-9162#R-0118"
+    constrained_by:
+      - "rfc-9162#R-0110"
+      - "rfc-9162#R-0369"
+      - "rfc-9162#R-0423"
+    notes:
+      - "R-0110: a CT-using TLS client MUST implement all three presentation mechanisms (this extension, OCSP stapling, the certificate extension)."
+      - "A client MUST NOT evaluate compliance unless it sent both transparency_info and status_request in the ClientHello (R-0118)."
+  - id: "MSG-33"
+    name: "transparency_info TLS extension (server)"
+    locator: "§6.5"
+    kind: "tls-extension"
+    encoding: "TLS extension_type 52; extension_data is a TransItemList"
+    summary: "The server carries SCTs, inclusion proofs and STHs to the client."
+    layout: "[extension_type:2 = 0x0034][extension_data_len:2][TransItemList]. Allowed only in ServerHello (TLS 1.2 or earlier) and Certificate or CertificateRequest (TLS 1.3)."
+    fields:
+      - name: "extension_data"
+        type: "TransItemList"
+        required: false
+        encoding: "MSG-15; may be omitted when the list is empty"
+        declared:
+          source_lines: "1830-1833"
+          quote: "* The TLS server MUST construct a TransItemList of relevant TransItems (see Section 6.4), which SHOULD omit any TransItems that are already embedded in the server certificate or the stapled OCSP response (see Section 7.1). If the constructed TransItemList"
+        constrained_by:
+          - "rfc-9162#R-0096"
+          - "rfc-9162#R-0097"
+          - "rfc-9162#R-0098"
+          - "rfc-9162#R-0093"
+          - "rfc-9162#R-0370"
+          - "rfc-9162#R-0371"
+          - "rfc-9162#R-0372"
+          - "rfc-9162#R-0373"
+      - name: "placement"
+        type: "message set"
+        required: true
+        encoding: "ServerHello (TLS 1.2 or earlier); Certificate or CertificateRequest (TLS 1.3)"
+        declared:
+          source_lines: "1839-1844"
+          quote: "TLS servers MUST only include this extension in the following messages: * the ServerHello message (for TLS 1.2 or earlier) * the Certificate or CertificateRequest message (for TLS 1.3)"
+        constrained_by:
+          - "rfc-9162#R-0099"
+          - "rfc-9162#R-0100"
+          - "rfc-9162#R-0374"
+          - "rfc-9162#R-0375"
+          - "rfc-9162#R-0486"
+          - "rfc-9162#R-0112"
+    constrained_by:
+      - "rfc-9162#R-0090"
+      - "rfc-9162#R-0091"
+      - "rfc-9162#R-0092"
+      - "rfc-9162#R-0361"
+    notes:
+      - "Not on session resumption (R-0100); a server that does it, the client MUST abort (R-0112). Other mechanisms: OCSP stapling (MSG-35) and the certificate extension (MSG-36). The TLS 1.3 extension_type registry column reads \"CH, CR, CT\" where Section 6.5 says Certificate: CT in the registry is read as Certificate."
+  - id: "MSG-34"
+    name: "Transparency Information X.509v3 extension"
+    locator: "§7.1, Appendix B"
+    kind: "x509-extension"
+    encoding: "DER Extension{extnID 1.3.101.75, critical FALSE, extnValue OCTET STRING}"
+    summary: "Carries a TransItemList in a certificate or an OCSP SingleResponse."
+    schema: "schema/rfc-9162-01.verbatim.asn1, schema/rfc-9162-02.verbatim.asn1"
+    declared:
+      source_lines: "1864"
+      quote: "TransparencyInformationSyntax ::= OCTET STRING"
+    layout: "Extension ::= SEQUENCE { extnID OID 1.3.101.75 (2b654b), critical BOOLEAN DEFAULT FALSE (omitted in DER), extnValue OCTET STRING { OCTET STRING { TransItemList octets } } }. A TransItemList is NOT put directly in extnValue; it is wrapped in an extra OCTET STRING."
+    fields:
+      - name: "extnID"
+        type: "OBJECT IDENTIFIER"
+        required: true
+        encoding: "1.3.101.75 (id-ce-transparencyInfo)"
+        declared:
+          source_lines: "1854-1856"
+          quote: "The Transparency Information X.509v3 extension, which has OID 1.3.101.75 and SHOULD be noncritical, contains one or more TransItem structures in a TransItemList. This extension MAY be included in"
+        constrained_by:
+          - "rfc-9162#R-0101"
+      - name: "critical"
+        type: "BOOLEAN"
+        required: false
+        encoding: "FALSE"
+        constrained_by:
+          - "rfc-9162#R-0101"
+        note: "SD-07: the Appendix B module fixes CRITICALITY { FALSE } while Section 7.1 says SHOULD be noncritical; a conforming module use is stricter than the text"
+      - name: "extnValue"
+        type: "OCTET STRING containing TransparencyInformationSyntax (OCTET STRING) containing the TransItemList"
+        required: true
+        encoding: "DER; double OCTET STRING wrap"
+        declared:
+          source_lines: "1858-1864"
+          quote: "Section 7.1.2). Since [RFC5280] requires the extnValue field (an OCTET STRING) of each X.509v3 extension to include the DER encoding of an ASN.1 value, a TransItemList MUST NOT be included directly. Instead, it MUST be wrapped inside an additional OCTET STRING, which is then put into the extnValue field: TransparencyInformationSyntax ::= OCTET STRING"
+        constrained_by:
+          - "rfc-9162#R-0103"
+          - "rfc-9162#R-0104"
+      - name: "TransparencyInformationSyntax"
+        type: "OCTET STRING"
+        required: true
+        encoding: "contains a TransItemList (MSG-15)"
+        declared:
+          source_lines: "1866"
+          quote: "TransparencyInformationSyntax contains a TransItemList."
+        constrained_by:
+          - "rfc-9162#R-0376"
+          - "rfc-9162#R-0377"
+        constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    constrained_by:
+      - "rfc-9162#R-0101"
+      - "rfc-9162#R-0102"
+      - "rfc-9162#R-0103"
+      - "rfc-9162#R-0104"
+    notes:
+      - "examples/wire-vectors.derived.json carries a DER vector of the whole extension."
+  - id: "MSG-35"
+    name: "OCSP response extension"
+    locator: "§7.1.1"
+    kind: "ocsp-extension"
+    encoding: "Transparency Information extension in SingleResponse.singleExtensions; OID id-pkix-ocsp-transparencyInfo = id-ce-transparencyInfo (1.3.101.75)"
+    summary: "CT information stapled with an OCSP response."
+    fields:
+      - name: "singleExtensions[]"
+        type: "Extension (MSG-34)"
+        required: false
+        encoding: "inside a SingleResponse of the OCSP response"
+        declared:
+          source_lines: "1870"
+          quote: "A certification authority MAY include a Transparency Information"
+        constrained_by:
+          - "rfc-9162#R-0105"
+      - name: "content scope"
+        type: "TransItem set"
+        required: true
+        encoding: "every SCT and inclusion proof is for the certificate identified by certID of that SingleResponse, or for a precertificate that corresponds to it"
+        constrained_by:
+          - "rfc-9162#R-0106"
+    constrained_by:
+      - "rfc-9162#R-0362"
+      - "rfc-9162#R-0363"
+      - "rfc-9162#R-0364"
+    constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    notes:
+      - "For TLS 1.3 the stapled response is carried in the status_request extension data (RFC 8446 Section 4.4.2.1); for TLS 1.2 in CertificateStatus (RFC 6066 Section 8) (Section 6)."
+  - id: "MSG-36"
+    name: "Certificate extension"
+    locator: "§7.1.2"
+    kind: "x509-extension"
+    encoding: "Transparency Information extension in a certificate"
+    summary: "Embeds SCTs and inclusion proofs for a precertificate in the final certificate."
+    fields:
+      - name: "extension"
+        type: "Extension (MSG-34)"
+        required: false
+        encoding: "in the certificate being issued"
+        declared:
+          source_lines: "1878"
+          quote: "A certification authority MAY include a Transparency Information"
+        constrained_by:
+          - "rfc-9162#R-0107"
+      - name: "content scope"
+        type: "TransItem set"
+        required: true
+        encoding: "every SCT and inclusion proof is for a precertificate that corresponds to this certificate"
+        constrained_by:
+          - "rfc-9162#R-0108"
+    constrained_by:
+      - "rfc-9162#R-0365"
+    constrained_by_note: "no BCP 14 keyword binds this; the keyword-less stated text (verb none) and inferred readings that do are wired above (pass 2, 2026-11-08)"
+    notes:
+      - "The TBSCertificate a verifier validates against is reconstructed by removing this extension and embedded v1 SCTs (OID 1.3.6.1.4.1.11129.2.4.2) (Section 8.1.2; Appendix B ext-embeddedSCT-CTv1, SignedCertificateTimestampList ::= OCTET STRING)."
+  - id: "MSG-37"
+    name: "TLS Feature extension (not defined here)"
+    locator: "§7.2"
+    kind: "x509-extension"
+    encoding: "RFC 7633 TLS Feature"
+    summary: "This document defines no value; it forbids a CA from listing the transparency_info extension in a TLS Feature extension."
+    fields:
+      - name: "features[]"
+        type: "INTEGER"
+        required: false
+        encoding: "must not contain 52 (transparency_info)"
+        declared:
+          source_lines: "1885-1888"
+          quote: "A certification authority SHOULD NOT issue any certificate that identifies the transparency_info TLS extension in a TLS feature extension [RFC7633], because TLS servers are not required to support the transparency_info TLS extension in order to participate in CT"
+        constrained_by:
+          - "rfc-9162#R-0109"
+    constrained_by: []
+    constrained_by_note: "no requirement with a BCP 14 keyword binds this structure as a whole"
+registries:
+  - name: "TLS ExtensionType Values (addition)"
+    locator: "§10.1.1"
+    source_lines: "2150-2157"
+    constrained_by:
+      - "rfc-9162#R-0423"
+    entries:
+      - value: 52
+        name: "transparency_info"
+        tls13: "CH, CR, CT"
+        dtls_only: "N"
+        recommended: "Y"
+        reference: "RFC 9162"
+  - name: "IETF URN sub-namespace trans"
+    locator: "§10.1.2"
+    source_lines: "2163-2170"
+    constrained_by:
+      - "rfc-9162#R-0424"
+    entries:
+      - registry_name: "trans"
+        specification: "RFC 9162"
+        repository: "https://www.iana.org/assignments/trans"
+        index_value: "No transformation needed."
+  - name: "Hash Algorithms"
+    locator: "§10.2.1"
+    source_lines: "2182-2214"
+    constrained_by:
+      - "rfc-9162#R-0425"
+      - "rfc-9162#R-0426"
+      - "rfc-9162#R-0427"
+    procedures:
+      - range: "0x00-0xDF"
+        procedure: "Specification Required"
+      - range: "0xE0-0xEF"
+        procedure: "Experimental Use"
+      - range: "0xF0-0xFF"
+        procedure: "Private Use"
+    entries:
+      - value: "0x00"
+        name: "SHA-256"
+        oid: "2.16.840.1.101.3.4.2.1"
+        reference: "RFC6234"
+      - value: "0x01-0xDF"
+        name: "Unassigned"
+      - value: "0xE0-0xEF"
+        name: "Reserved for Experimental Use"
+      - value: "0xF0-0xFF"
+        name: "Reserved for Private Use"
+  - name: "Signature Algorithms"
+    locator: "§10.2.2"
+    source_lines: "2221-2283"
+    constrained_by:
+      - "rfc-9162#R-0428"
+      - "rfc-9162#R-0429"
+      - "rfc-9162#R-0430"
+      - "rfc-9162#R-0431"
+      - "rfc-9162#R-0432"
+    procedures:
+      - range: "0x0000-0x0807"
+        procedure: "Specification Required"
+      - range: "0x0808-0xFDFF"
+        procedure: "Expert Review"
+      - range: "0xFE00-0xFEFF"
+        procedure: "Experimental Use"
+      - range: "0xFF00-0xFFFF"
+        procedure: "Private Use"
+    entries:
+      - value: "0x0000-0x0402"
+        name: "Unassigned"
+      - value: "0x0403"
+        name: "ecdsa_secp256r1_sha256"
+        algorithm: "ECDSA (NIST P-256) with SHA-256"
+        reference: "FIPS186-4"
+      - value: "0x0403"
+        name: "ecdsa_secp256r1_sha256"
+        algorithm: "Deterministic ECDSA (NIST P-256) with HMAC-SHA256"
+        reference: "RFC6979"
+      - value: "0x0404-0x0806"
+        name: "Unassigned"
+      - value: "0x0807"
+        name: "ed25519"
+        algorithm: "Ed25519 (PureEdDSA with the edwards25519 curve)"
+        reference: "RFC8032"
+      - value: "0x0808-0xFDFF"
+        name: "Unassigned"
+      - value: "0xFE00-0xFEFF"
+        name: "Reserved for Experimental Use"
+      - value: "0xFF00-0xFFFF"
+        name: "Reserved for Private Use"
+    note: "0x0403 appears twice by design: verification is the same for both (registry note, Section 10.2.2). The value is a TLS SignatureScheme code; no CT structure carries it (SCT and STH signatures have no algorithm field), so it is a log parameter."
+  - name: "VersionedTransTypes"
+    locator: "§10.2.3"
+    source_lines: "2290-2344"
+    constrained_by:
+      - "rfc-9162#R-0433"
+      - "rfc-9162#R-0434"
+      - "rfc-9162#R-0435"
+      - "rfc-9162#R-0436"
+    procedures:
+      - range: "0x0100-0xDFFF"
+        procedure: "Specification Required"
+      - range: "0xE000-0xEFFF"
+        procedure: "Experimental Use"
+      - range: "0xF000-0xFFFF"
+        procedure: "Private Use"
+    entries:
+      - value: "0x0100"
+        name: "x509_entry_v2"
+        reference: "RFC 9162"
+      - value: "0x0101"
+        name: "precert_entry_v2"
+        reference: "RFC 9162"
+      - value: "0x0102"
+        name: "x509_sct_v2"
+        reference: "RFC 9162"
+      - value: "0x0103"
+        name: "precert_sct_v2"
+        reference: "RFC 9162"
+      - value: "0x0104"
+        name: "signed_tree_head_v2"
+        reference: "RFC 9162"
+      - value: "0x0105"
+        name: "consistency_proof_v2"
+        reference: "RFC 9162"
+      - value: "0x0106"
+        name: "inclusion_proof_v2"
+        reference: "RFC 9162"
+      - value: "0x0000-0x00FF"
+        name: "Reserved"
+        reference: "RFC6962"
+      - value: "0x0107-0xDFFF"
+        name: "Unassigned"
+      - value: "0xE000-0xEFFF"
+        name: "Reserved for Experimental Use"
+      - value: "0xF000-0xFFFF"
+        name: "Reserved for Private Use"
+  - name: "Log Artifact Extensions"
+    locator: "§10.2.4"
+    source_lines: "2350-2398"
+    constrained_by:
+      - "rfc-9162#R-0437"
+      - "rfc-9162#R-0438"
+      - "rfc-9162#R-0439"
+      - "rfc-9162#R-0440"
+      - "rfc-9162#R-0441"
+      - "rfc-9162#R-0442"
+      - "rfc-9162#R-0443"
+    procedures:
+      - range: "0x0000-0xDFFF"
+        procedure: "Specification Required"
+      - range: "0xE000-0xEFFF"
+        procedure: "Experimental Use"
+      - range: "0xF000-0xFFFF"
+        procedure: "Private Use"
+    entries:
+      - value: "0x0000-0xDFFF"
+        status: "Unassigned"
+        use: "n/a"
+      - value: "0xE000-0xEFFF"
+        status: "Reserved for Experimental Use"
+        use: "n/a"
+      - value: "0xF000-0xFFFF"
+        status: "Reserved for Private Use"
+        use: "n/a"
+    use_column: "SCT and/or STH"
+  - name: "Log IDs"
+    locator: "§10.2.5"
+    source_lines: "2399-2448"
+    procedure: "First Come First Served"
+    entries:
+      - log_id: "1.3.101.8192 - 1.3.101.16383"
+        note: "8,192 OIDs of 4 octets each"
+      - log_id: "1.3.101.80.0 - 1.3.101.80.*"
+        note: "unlimited; the 128 OIDs 1.3.101.80.0 to 1.3.101.80.127 are 4 octets"
+    application_must_include: "the Log Base URL and the Log Operator contact details"
+    constrained_by:
+      - "rfc-9162#R-0124"
+      - "rfc-9162#R-0444"
+      - "rfc-9162#R-0445"
+      - "rfc-9162#R-0446"
+      - "rfc-9162#R-0447"
+      - "rfc-9162#R-0448"
+      - "rfc-9162#R-0449"
+      - "rfc-9162#R-0450"
+      - "rfc-9162#R-0451"
+      - "rfc-9162#R-0452"
+      - "rfc-9162#R-0453"
+  - name: "Error Types"
+    locator: "§10.2.6"
+    source_lines: "2450-2534"
+    constrained_by:
+      - "rfc-9162#R-0454"
+      - "rfc-9162#R-0455"
+      - "rfc-9162#R-0456"
+    procedure: "Specification Required"
+    fields:
+      - "Identifier (string)"
+      - "Meaning (string)"
+      - "Reference (string)"
+    entries:
+      - identifier: "malformed"
+        meaning_cell: "The request could not be parsed."
+        source_lines: "2478-2479"
+      - identifier: "badSubmission"
+        meaning_cell: "submission is neither a valid certificate nor a valid precertificate."
+        source_lines: "2481-2483"
+      - identifier: "badType"
+        meaning_cell: "type is neither 1 nor 2."
+        source_lines: "2485-2485"
+      - identifier: "badChain"
+        meaning_cell: "The first element of chain is not the certifier of the submission, or the second element does not certify the first, etc."
+        source_lines: "2487-2491"
+      - identifier: "badCertificate"
+        meaning_cell: "One or more certificates in chain are not valid (e.g., not properly encoded)."
+        source_lines: "2493-2495"
+      - identifier: "unknownAnchor"
+        meaning_cell: "The last element of chain (or, if chain is an empty array, the submission) is not, nor is it certified by, an accepted trust anchor."
+        source_lines: "2497-2501"
+      - identifier: "shutdown"
+        meaning_cell: "The log is no longer accepting submissions."
+        source_lines: "2503-2504"
+      - identifier: "firstUnknown"
+        meaning_cell: "first is before the latest known STH but is not from an existing STH."
+        source_lines: "2506-2508"
+      - identifier: "secondUnknown"
+        meaning_cell: "second is before the latest known STH but is not from an existing STH."
+        source_lines: "2510-2512"
+      - identifier: "secondBeforeFirst"
+        meaning_cell: "second is smaller than first."
+        source_lines: "2514-2515"
+      - identifier: "hashUnknown"
+        meaning_cell: "hash is not the hash of a known leaf (may be caused by skew or by a known certificate not yet merged)."
+        source_lines: "2517-2520"
+      - identifier: "treeSizeUnknown"
+        meaning_cell: "hash is before the latest known STH but is not from an existing STH."
+        source_lines: "2522-2524"
+      - identifier: "startUnknown"
+        meaning_cell: "start is greater than the number of entries in the Merkle Tree."
+        source_lines: "2526-2528"
+      - identifier: "endBeforeStart"
+        meaning_cell: "start cannot be greater than end."
+        source_lines: "2530-2531"
+  - name: "SMI Security for PKIX Module Identifier (assignment)"
+    locator: "§10.3"
+    source_lines: "2536-2548"
+    constrained_by:
+      - "rfc-9162#R-0457"
+    entries:
+      - decimal: 102
+        description: "id-mod-public-notary-v2"
+        reference: "RFC 9162"
+unwired_requirements:
+  - id: "rfc-9162#R-0025"
+    locator: "§4"
+    reason: "binds log operators' retrieval policy for every GET endpoint, not a field of any one message"
+  - id: "rfc-9162#R-0115"
+    locator: "§8.1.5"
+    reason: "client verification procedure (verify the inclusion proof to the provided STH); the steps are in protocol.yaml and examples/reproduce.py"
+  - id: "rfc-9162#R-0116"
+    locator: "§8.1.5"
+    reason: "client procedure (verify consistency between the provided STH and a known STH); no message field is named"
+  - id: "rfc-9162#R-0117"
+    locator: "§8.1.5"
+    reason: "client MAY request a new STH (get-sth) and a consistency proof (get-sth-consistency); an exchange sequence for protocol.yaml, not a field"
+  - id: "rfc-9162#R-0119"
+    locator: "§8.2"
+    reason: "monitor duty to inspect every new entry; behaviour, no message field"
+  - id: "rfc-9162#R-0120"
+    locator: "§8.2"
+    reason: "monitor call sequence (get-sth, verify, get-entries, ...); in protocol.yaml"
+  - id: "rfc-9162#R-0121"
+    locator: "§8.2"
+    reason: "monitor call sequence for new entries; in protocol.yaml"
+  - id: "rfc-9162#R-0125"
+    locator: "§11.3"
+    reason: "log mitigation of the tracking risk of 11.3 (deterministic signatures, or one SCT per submission and one STH per tree_size); a behaviour of the signer, not a field of any one message"
+  - id: "rfc-9162#R-0133"
+    locator: "§2.1.1"
+    reason: "notation of the Merkle Tree Hash definition (|| is concatenation); constrains nothing on the wire. Applied literally in MSG-16 (HASH(0x01 || left || right)) and in examples/reproduce.py. Cited by no messages, protocol or state-machine entry (pass 3 join)"
+  - id: "rfc-9162#R-0134"
+    locator: "§2.1.1"
+    reason: "notation of the Merkle Tree Hash definition (: is concatenation of lists); no message field, no flow step. Used in the algorithm text only (examples/reproduce.py). Cited by no messages, protocol or state-machine entry (pass 3 join)"
+  - id: "rfc-9162#R-0135"
+    locator: "§2.1.1"
+    reason: "notation of the Merkle Tree Hash definition (D[k1:k2] is a sublist); no message field, no flow step. The split point it indexes is R-0132, which is wired. Cited by no messages, protocol or state-machine entry (pass 3 join)"
+  - id: "rfc-9162#R-0202"
+    locator: "§3.2.1"
+    reason: "a permitted inference for observers (on seeing a precertificate a client can presume the certificate was issued): not observable, testable: no, no message field and no flow step. Cited by no messages, protocol or state-machine entry (pass 3 join)"
+coverage:
+  tls_structs: "every struct, enum and vector declared in the ten tls-presentation blocks (MSG-01..MSG-15), plus NodeHash and TBSCertificate vectors"
+  http: "all seven endpoints, each request and response, every error code of Tables 1-6 and 18 (MSG-19..MSG-31)"
+  carriers: "transparency_info TLS extension (MSG-32, MSG-33), Transparency Information X.509v3 extension, OCSP and certificate placements (MSG-34..MSG-36), TLS Feature (MSG-37)"
+  profiles: "CMS precertificate (MSG-17), log parameters (MSG-18)"
+  registries: "all nine entries of Section 10: the TLS ExtensionType and trans URN additions (10.1), the six new registries (10.2.1-10.2.6) and the SMI module identifier (10.3), each with its ranges, procedures and initial entries"
+  wiring: "pass 1: every requirement id of requirements.yaml (125 ids when this file was written, counted by script) is cited by a constrained_by in this file or listed in unwired_requirements with a reason. Pass 2 (2026-11-08), after requirements.yaml grew to 491 entries (488 from pass 1, 3 hunted by pass 2): 339 distinct ids were cited (414 links: pass 2 added 235, to keyword-less stated, split and inferred entries, by the same locator-plus-phrase selectors refusing zero or several matches, every pair read, and moved R-0112 from the ClientHello extension_data, which it does not constrain, to the server extension's placement) and 8 were listed in unwired_requirements. Pass 3 (cross-check, 2026-11-08) joined every requirement id against the three files: 41 were cited by none; it wired 37 of them (16 ids, as 21 links, in this file: the §1.2 and §5 encoding statements to ENC-01 and ENC-06, the Base URL construction rules, the §9 one-algorithm and freeze statements to the Hash and Signature Algorithm parameters, the §4.2.1 inputs sentence to the submit-entry inputs, the resubmission SHOULD to the SCT, the SCT and leaf type pairing, the Merkle Tree Hash definition to MSG-16; the rest in protocol.yaml and state-machine.yaml) and added the 4 it could not wire (R-0133, R-0134, R-0135, R-0202: notation and a permitted inference) to unwired_requirements. Now 435 links to 355 distinct ids are cited here and 12 ids are listed in unwired_requirements (the 8 pass-2 ones are cited by protocol.yaml or state-machine.yaml; the 4 pass-3 ones by no file); the other 124 are procedure and behaviour with no message field of their own (the 2.1 algorithms, 4 log operation, 8 client, monitor and audit steps, 9, 11), carried by protocol.yaml and state-machine.yaml. Across the three files 487 of the 491 ids are cited by a constrained_by and the other 4 are listed here. Counted by script with bin/_yaml.py, which reproduces the pass-2 figures (414 links to 339 ids here, 300 to 260 in protocol.yaml)."
