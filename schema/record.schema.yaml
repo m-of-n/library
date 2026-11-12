@@ -1,6 +1,6 @@
 schema: "library-record-schema/v5"
-version: "0.8.0"
-updated: "2026-10-09"
+version: "0.9.0"
+updated: "2026-11-09"
 description: Normative shape of library/records/<id>/record.yaml
 basis: >
   Envelope aligns with Google Cloud Open Knowledge Format (OKF) v0.1 — a
@@ -157,14 +157,34 @@ fields:
     type: list
     required: false
     note: >
-      ARCH-0001 DEC-*/R-* ids this record informs. MAY be empty for a stub —
+      Decision and requirement ids this record informs. MAY be empty for a stub —
       a reference kept because it may matter later. Empty bears_on plus
       status: stub is a legitimate, cheap record. Do not invent relevance.
+      Decision ids ONLY: a report (RPT-*) or design-log entry is not a
+      decision and does not go here. Empty bears_on is allowed at any verdict,
+      because usefulness.reason must say why the record is held (v0.9.0,
+      library#92 ruling (b)).
+
+      TWO REGISTERS, NAMED BY PREFIX (v0.9.0, library#133). A bare id is
+      mofn's: DEC-NNN and R-X-NN from mofn spec/ARCH-0001, or an ARCH-0002
+      principle ("ARCH-0002 P1"). An id from tmodel's register
+      (Threat-Radar/tmodel project/DECISIONS-0001.md and
+      spec/ARCH-0001-threat-model-architecture.md) is written
+      "tmodel:DEC-003" or "tmodel:R-044", QUOTED, because unquoted the colon
+      makes a map. The DEC numbers collide — mofn DEC-003 is identifiers on
+      the wire, tmodel DEC-003 the risk-metric scheme — so the prefix is the
+      only thing that keeps "everything bearing on DEC-003" one question.
+      bin/validate errors on any other shape, and names a bare R-NNN as the
+      tmodel id it is.
 
   applicability:
     type: map
     required: false
-    note: "why this matters, scored per axis; feeds review triage"
+    note: >
+      Why this matters, scored per axis; feeds review triage. Optional on a
+      scaffold only: every WRITTEN record (summary.md no longer a scaffold)
+      carries all three axes, and bin/validate errors otherwise (v0.9.0,
+      library#92).
     keys:
       security: {type: enum, values: [core, adjacent, none]}
       cryptography: {type: enum, values: [core, adjacent, none]}
@@ -183,13 +203,27 @@ fields:
     type: map
     required: false
     note: >
-      An explicit verdict, including a NEGATIVE one. A reference judged not
-      useful is recorded as such, never silently dropped — otherwise the same
+      Required on every WRITTEN record, as for applicability (v0.9.0,
+      library#92); optional on a scaffold only. An explicit verdict,
+      including a NEGATIVE one. A reference judged not useful is recorded as such, never silently dropped — otherwise the same
       document is re-evaluated every few weeks and the judgement is lost.
+      `unassessed` is legal only on a scaffold. A verdict is re-assessed when
+      a decision it bears on is reopened (docs/scope.md §7.2): that is a
+      trigger, not an expiry, and `reassess` is how it is recorded.
     keys:
       verdict: {type: enum, values: [useful, marginal, not-useful, unassessed]}
-      reason: {type: string, note: "one line; required when verdict is not-useful or marginal"}
-      assessed: {type: string, note: "YYYY-MM-DD"}
+      reason: {type: string, note: "one line; required for every verdict but unassessed (v0.9.0). With an empty bears_on it is the only record of why the reference is held"}
+      assessed: {type: string, note: "YYYY-MM-DD the verdict was last judged; required with a verdict"}
+      reassess:
+        type: string
+        required: false
+        note: >
+          Written by `bin/reassess <DEC-id>` when that decision is reopened in
+          mofn: "DEC-005 reopened 2026-11-09", further reopens appended with
+          "; ". The verdict is left as it was — the flag means look again, not
+          wrong. bin/validate warns while it is present. Clear it by
+          re-judging verdict and reason, updating `assessed`, and deleting the
+          line. Never written by hand.
 
   tags:       {type: list, of: string, note: "free tags; see schema/tags.yaml for the controlled set"}
   topic:      {type: string, required: false}

@@ -30,7 +30,7 @@ The Common Criteria make independent security evaluations comparable, by giving 
 | Cryptography | `adjacent` | Part 2 has Class FCS, but it specifies requirements on a product, not algorithms |
 | This project | `none` | ARCH-0001 has no product evaluation or certification requirement |
 
-`bears_on` is empty. The scaffold carried `DEC-003` and `R-011`, which come from the numbering of the Threat-Radar library folded in by #62, not from mofn. On mofn `origin/main` (`bec50fd`), `DEC-003` is issuer and subject identifiers on the wire and `R-011` does not exist. Those ids are removed rather than kept as a false edge. The Protection Profile and Security Target split resembles a profile and a claim, but that is an analogy of ours and no decision rests on it.
+`bears_on` is empty. The scaffold carried `DEC-003` and `R-011`, which come from the numbering of the Threat-Radar library folded in by #62, not from mofn. On mofn `origin/main` (`bec50fd`), `DEC-003` is issuer and subject identifiers on the wire and `R-011` does not exist. Those ids are removed rather than kept as a false edge. The Protection Profile and Security Target split resembles a profile and a claim, but that is an analogy of ours and no decision rests on it. **Restored 2026-11-09 as `tmodel:DEC-003`, `tmodel:R-011` (library#133).** The removal misread a register collision as a stale id: these are tmodel's live ids (Threat-Radar `project/DECISIONS-0001.md` and `spec/ARCH-0001-threat-model-architecture.md`), where DEC-003 is the risk-metric scheme; R-011 is the per-threat risk metric. They still bear on no mofn decision.
 
 ## Implementations
 

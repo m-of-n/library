@@ -24,7 +24,13 @@ The second edition of the ISO/IEC privacy framework. ISO Open Data says it repla
 
 ## Applicability
 
-Bears on DEC-003 (risk-metric scheme), through the privacy impact rating. Not rated further until read.
+| Axis | Rating | Why |
+|---|---|---|
+| Security | `adjacent` | From the title only: a privacy framework, not a security mechanism. Unread |
+| Cryptography | `none` | From the title only |
+| This project | `none` | Held for tmodel RPT-0007's privacy impact criteria; no mofn requirement concerns privacy impact rating |
+
+Bears on tmodel's DEC-003 (risk-metric scheme; Threat-Radar `project/DECISIONS-0001.md`), through the privacy impact rating. Not mofn's DEC-003, which is issuer and subject identifiers on the wire.
 
 ## Implementations
 

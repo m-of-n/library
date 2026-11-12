@@ -24,7 +24,13 @@ A deliverable of the EVITA (e-safety vehicle intrusion protected applications) p
 
 ## Applicability
 
-Bears on DEC-003 (risk-metric scheme), through impact rating. Not rated further until read.
+| Axis | Rating | Why |
+|---|---|---|
+| Security | `core` | From the title only: security requirements for automotive on-board networks. Unread |
+| Cryptography | `none` | From the title only |
+| This project | `none` | Held for tmodel RPT-0007's impact rating; no mofn requirement is automotive |
+
+Bears on tmodel's DEC-003 (risk-metric scheme; Threat-Radar `project/DECISIONS-0001.md`), through impact rating. Not mofn's DEC-003, which is issuer and subject identifiers on the wire.
 
 ## Implementations
 

@@ -195,15 +195,41 @@ What replaces the cap is an explicit verdict. Every record carries
 `usefulness`:
 
 ```yaml
+applicability:
+  security: core | adjacent | none
+  cryptography: core | adjacent | none
+  this_project: core | adjacent | none | unknown
 usefulness:
   verdict: useful | marginal | not-useful | unassessed
-  reason: "one line — required for not-useful and marginal"
+  reason: "one line — required for every verdict but unassessed"
   assessed: 2026-09-22
+  reassess: "DEC-005 reopened 2026-11-09"   # only while flagged; see §7.2
 ```
 
 **Recording that something is not useful is the deliverable**, not a failure.
-An unexplained negative verdict gets re-litigated; `bin/validate` requires the
-reason.
+An unexplained verdict gets re-litigated, so every verdict carries its reason.
+
+**Every written record is rated** (settled 2026-11-09, library#92). Once
+`summary.md` is no longer a scaffold, `bin/validate` **errors** on a missing
+`applicability` axis, a missing or `unassessed` verdict, a verdict with no
+reason, or a verdict with no `assessed` date. `unassessed` survives only on a
+scaffold, where a rating would be guesswork. An unread or paywalled record
+still gets an honest verdict: `not-useful`, or `marginal` with a reason that
+starts *"unread: …"*.
+
+**Empty `bears_on`.** A record that informs no decision is either
+`not-useful`, or `useful`/`marginal` with a `reason` saying why it is held:
+it informs a report (RPT-*), a code point, an argument. That is library#92
+ruling (b). `bears_on` stays decision ids (DEC-*, R-*) only — a report id
+there would make *"everything bearing on DEC-002"* return things that do not.
+
+**Two registers** (library#133). The library serves mofn and tmodel
+(Threat-Radar/tmodel), and both number their decisions `DEC-001`…, with
+different meanings: mofn's DEC-003 is identifiers on the wire, tmodel's is
+the risk-metric scheme. A bare id is mofn's. A tmodel id is written
+`"tmodel:DEC-003"` / `"tmodel:R-044"`, quoted. Never "fix" a tmodel id by
+deleting it as stale: tmodel's register is live. `bin/validate` rejects any
+other shape.
 
 Two rules survive the removal of caps:
 
@@ -219,6 +245,17 @@ Two rules survive the removal of caps:
 1. ~~**Does `versions/` hold the full record or just the metadata?**~~
    **Settled 2026-10-25: metadata only**, `record.yaml` plus a one-line
    `delta`. See §5.
-2. **Does `usefulness` need review dating?** A verdict of `not-useful` from
-   before a decision was reopened may be stale. `assessed` records when, but
-   nothing forces re-assessment.
+2. ~~**Does `usefulness` need review dating?**~~
+   **Settled 2026-11-09: re-assess when a decision it bears on is reopened** —
+   a trigger, not a fixed expiry (library#92). A verdict does not go stale
+   with time; it goes stale when the decision it was judged against moves.
+   The decisions live in mofn and tmodel, so the library cannot see a reopen
+   itself.
+   Whoever reopens one runs `bin/reassess <id>` — `DEC-005` for mofn,
+   `tmodel:DEC-003` for tmodel, exactly as `bears_on` writes it — which writes
+   `usefulness.reassess: "<DEC-id> reopened <date>"` into every record whose
+   `bears_on` names it and leaves the verdict alone. `bin/validate` **warns**
+   on each flagged record — a warning, so a reopen in mofn cannot turn
+   unrelated PRs red. Clearing it is re-judging the verdict and reason,
+   updating `assessed`, and deleting the line. A record with an empty
+   `bears_on` is never flagged: nothing it rests on can be reopened.

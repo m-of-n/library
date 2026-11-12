@@ -32,7 +32,7 @@ Per the catalogue abstract, J3061 is a recommended practice that provides a life
 | Cryptography | `none` | Nothing in the abstract concerns cryptography |
 | This project | `none` | Historical; read `iso-sae-21434-2021` instead |
 
-**Bears on none.** ARCH-0001 §5 and the design log have no automotive requirement. Earlier `bears_on: DEC-005` came from Threat-Radar's numbering and was removed (see `content.note`).
+**Bears on none.** ARCH-0001 §5 and the design log have no automotive requirement. Earlier `bears_on: DEC-005` came from Threat-Radar's numbering and was removed (see `content.note`). **Restored 2026-11-09 as `tmodel:DEC-005` (library#133).** The removal misread a register collision as a stale id: these are tmodel's live ids (Threat-Radar `project/DECISIONS-0001.md` and `spec/ARCH-0001-threat-model-architecture.md`), where DEC-005 is MVP scope. They still bear on no mofn decision.
 
 ## Implementations
 

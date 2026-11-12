@@ -32,7 +32,7 @@ Only bibliographic facts are kept, from ISO catalogue pages seen through Interne
 | Cryptography | `adjacent` | Same basis |
 | This project | `none` | mofn tests no cryptographic module for validation; no requirement says it will |
 
-**Bears on none.** ARCH-0001 §5 has no module-validation requirement. Earlier `bears_on: DEC-009` came from Threat-Radar's numbering and was removed (see `content.note`).
+**Bears on none.** ARCH-0001 §5 has no module-validation requirement. Earlier `bears_on: DEC-009` came from Threat-Radar's numbering and was removed (see `content.note`). **Restored 2026-11-09 as `tmodel:DEC-009` (library#133).** The removal misread a register collision as a stale id: these are tmodel's live ids (Threat-Radar `project/DECISIONS-0001.md` and `spec/ARCH-0001-threat-model-architecture.md`), where DEC-009 is generic-threat-to-product mapping and the mitigation lifecycle. They still bear on no mofn decision.
 
 ## Implementations
 

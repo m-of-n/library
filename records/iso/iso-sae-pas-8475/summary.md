@@ -24,7 +24,13 @@ A Publicly Available Specification from the committee behind ISO/SAE 21434, on c
 
 ## Applicability
 
-Bears on DEC-003 (risk-metric scheme), because it covers attack feasibility and assurance levels. Not rated further until read.
+| Axis | Rating | Why |
+|---|---|---|
+| Security | `core` | From the title only: automotive cybersecurity assurance levels and attack feasibility. Unread |
+| Cryptography | `none` | From the title only |
+| This project | `none` | An automotive companion of ISO/SAE 21434 held for tmodel RPT-0007; no mofn requirement is automotive |
+
+Bears on tmodel's DEC-003 (risk-metric scheme; Threat-Radar `project/DECISIONS-0001.md`), because it covers attack feasibility and assurance levels. Not mofn's DEC-003, which is issuer and subject identifiers on the wire.
 
 ## Implementations
 

@@ -30,7 +30,7 @@ The CEM is the evaluator's companion to the Common Criteria, turning assurance c
 | Cryptography | `none` | In §B.6 cryptography appears only as a field of expertise |
 | This project | `none` | ARCH-0001 has no attack potential or evaluation requirement |
 
-`bears_on` is empty. The scaffold carried `DEC-003` and `R-011`, which come from the numbering of the Threat-Radar library folded in by #62, not from mofn. On mofn `origin/main` (`bec50fd`), `DEC-003` is issuer and subject identifiers on the wire and `R-011` does not exist. Those ids are removed rather than kept as a false edge.
+`bears_on` is empty. The scaffold carried `DEC-003` and `R-011`, which come from the numbering of the Threat-Radar library folded in by #62, not from mofn. On mofn `origin/main` (`bec50fd`), `DEC-003` is issuer and subject identifiers on the wire and `R-011` does not exist. Those ids are removed rather than kept as a false edge. **Restored 2026-11-09 as `tmodel:DEC-003`, `tmodel:R-011` (library#133).** The removal misread a register collision as a stale id: these are tmodel's live ids (Threat-Radar `project/DECISIONS-0001.md` and `spec/ARCH-0001-threat-model-architecture.md`), where DEC-003 is the risk-metric scheme; R-011 is the per-threat risk metric. They still bear on no mofn decision.
 
 **Reuse on the record.** `etsi-ts-102-165-1` §6.7 applies Annex B's weighted sum and reproduces Table B.2's values, which were compared and match. It differs in writing Opportunity None as 999, where Table B.2 has a marker for not exploitable. `etsi-ts-102-165-1` §5a warns that these metrics can understate long-term risk. That is a disagreement about scope, so no `contradicts` edge is set.
 

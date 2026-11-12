@@ -70,7 +70,7 @@ records/<body>/<id>/  record.yaml · summary.md · distilled/  (FX-1, when built
 topics/<id>.yaml  the unit of parallel work
 exports/          GENERATED, untracked — CSL-JSON and BibTeX
 index/            GENERATED, untracked — bibliography, crosswalk, frontier
-bin/              ingest, validate, export, new-topic, render-html
+bin/              ingest, validate, export, new-topic, render-html, reassess
 ```
 
 Cross-references are **typed** — `supersedes`, `updates`, `cited_by`,

@@ -30,7 +30,7 @@ The publication treats security as a property to be engineered and argued throug
 | Cryptography | `none` | Four passing mentions in the extracted text, one listing algorithms as a design enabler (Appendix D) |
 | This project | `none` | Process guidance, with no bearing on object formats or verification |
 
-`bears_on` is empty. The scaffold carried `DEC-005`, which come from the numbering of the Threat-Radar library folded in by #62, not from mofn. On mofn `origin/main` (`bec50fd`), `DEC-005` is the envelope for `ArtifactStatement`, and the publication does not discuss envelopes. Those ids are removed rather than kept as a false edge.
+`bears_on` is empty. The scaffold carried `DEC-005`, which come from the numbering of the Threat-Radar library folded in by #62, not from mofn. On mofn `origin/main` (`bec50fd`), `DEC-005` is the envelope for `ArtifactStatement`, and the publication does not discuss envelopes. Those ids are removed rather than kept as a false edge. **Restored 2026-11-09 as `tmodel:DEC-005` (library#133).** The removal misread a register collision as a stale id: these are tmodel's live ids (Threat-Radar `project/DECISIONS-0001.md` and `spec/ARCH-0001-threat-model-architecture.md`), where DEC-005 is MVP scope. They still bear on no mofn decision.
 
 ## Implementations
 
