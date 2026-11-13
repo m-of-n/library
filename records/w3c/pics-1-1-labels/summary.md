@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: pics-1-1-labels
 record: pics-1-1-labels
 type: summary
-updated: "2026-11-12"
+updated: "2026-11-13"
 ---
 
 # PICS 1.1 Label Distribution: Label Syntax and Communication Protocols
@@ -143,7 +143,8 @@ requirements, but their flows are not modelled. The reason is in
 
 The source uses no BCP 14 keywords; its obligations are lowercase, extracted
 as `verb: none` requirements. Locators in `distilled/` are structural ordinals
-assigned by `bin/render-w3c --ordinal`, always beside the heading title; the
+assigned by `bin/render-w3c --ordinal`; prose gives the heading title beside an
+ordinal, while a requirement's script-written `locator:` is the bare ordinal. The
 document itself has no section numbers.
 
 ## Limits

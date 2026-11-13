@@ -13,9 +13,9 @@ Every binding statement of *PICS 1.1 Label Distribution: Label Syntax and Commun
 
 **Section numbers are not the source's.** The Recommendation numbers nothing; the ordinals are the rendering's, assigned from h2/h3 nesting, so every heading below gives the ordinal and the source's own heading title, and prose gives the title on an ordinal's first mention. Appendix A is the seventeenth top-level section and Appendix B the eighteenth.
 
-Built by pass 1 (requirements agent) over the `bin/fx1-skeleton` layer: 349 requirement ids, 326 stated (each quoted below, its id on the line after it) and 23 inferred (named in place, not quoted). The document predates RFC 2119 and uses no BCP 14 keyword; its obligations are lowercase, and every entry has verb `none` (requirements.yaml `reconciliation`). A parent that welds several statements, usually an HTML `dt` and its `dd` or a run of grammar productions, is followed by its `split_of` children, each quoted as the sub-span it is.
+Built by pass 1 (requirements agent) over the `bin/fx1-skeleton` layer and amended by pass 2 (verify): 353 requirement ids, 330 stated (each quoted below, its id on the line after it; R-0350 to R-0353, four glossary definitions, were added by pass 2) and 23 inferred (named in place, not quoted). The document predates RFC 2119 and uses no BCP 14 keyword; its obligations are lowercase, and every entry has verb `none` (requirements.yaml `reconciliation`). A parent that welds several statements, usually an HTML `dt` and its `dd` or a run of grammar productions, is followed by its `split_of` children, each quoted as the sub-span it is.
 
-What is not quoted, and why: §1 (Status of this document), §2 (Abstract), §3 (Table of Contents) and §4 (Overview), whose statements the body restates; the examples of §6 (Example), §8 (Semantics of PICS Labels and Label Lists), §11.1 (Example) and §12.1 (Sample Query) and all of §18 (Appendix B: Sample Label Bureau Queries and Responses), which are fixtures for `examples/`; §15 (References), §16 (Acknowledgments), the legal and RSAREF paragraphs of §13 (MICs and Digital Signatures), the motivation of §17 (Appendix A: An Algorithm for Locating a Label Bureau), advisory sentences (encouraged, advised), and glossary entries that only restate the body. Four sentences from those parts are quoted all the same, each because it is the only statement of a rule: R-0001 (overview), R-0103 and R-0141 (examples) and R-0329 (glossary). The candidate verdicts in `inferred-candidates.yaml` give the reason for every skeleton candidate left out.
+What is not quoted, and why: §1 (Status of this document), §2 (Abstract), §3 (Table of Contents) and §4 (Overview), whose statements the body restates; the examples of §6 (Example), §8 (Semantics of PICS Labels and Label Lists), §11.1 (Example) and §12.1 (Sample Query) and all of §18 (Appendix B: Sample Label Bureau Queries and Responses), which are fixtures for `examples/`; §15 (References), §16 (Acknowledgments), the legal and RSAREF paragraphs of §13 (MICs and Digital Signatures), the motivation of §17 (Appendix A: An Algorithm for Locating a Label Bureau), advisory sentences (encouraged, advised), and glossary entries that only restate the body or define a term no rule here uses (BNF, HTML, scale and the like). Four sentences from those parts are quoted all the same, each because it is the only statement of a rule: R-0001 (overview), R-0103 and R-0141 (examples) and R-0329 (glossary). The candidate verdicts in `inferred-candidates.yaml` give the reason for every skeleton candidate left out.
 
 ## §4 Overview
 
@@ -1620,6 +1620,11 @@ Inferred, not verbatim: R-0326 (what a signature binds). See requirements.yaml.
 
 ## §14 Glossary
 
+<!-- q L431 "The part" .. "for rating." -->
+> The part of a rating system which describes a particular criterion used for rating.
+
+R-0350 (none) (added by pass 2, verify)
+
 <!-- q L433-439 "The content" .. "a URL." -->
 > The content label may accompany the document it is about or be available separately. content rating See content label. dimension See category. document Any item that can be referred to by a URL.
 
@@ -1634,6 +1639,21 @@ R-0328 (none; split of R-0327)
 > If they match, for all practical purposes, it is a proof that the label really belongs to the information that has been retrieved.
 
 R-0329 (none)
+
+<!-- q L463 -->
+> An individual or organization that assigns labels according to some rating system, and then distributes them, perhaps via a label bureau or via CD-ROM.
+
+R-0351 (none) (added by pass 2, verify)
+
+<!-- q L465 -->
+> A method for rating information. A rating system consists of one or more categories.
+
+R-0352 (none) (added by pass 2, verify)
+
+<!-- q L471 "(of a category)" .. "to the category." -->
+> (of a category) The short name intended for use over a network to refer to the category.
+
+R-0353 (none) (added by pass 2, verify)
 
 <!-- q L471 "This is" .. "possible." -->
 > This is distinct from the category name in as much as the transmission name must be language-independent, encoded in US-ASCII, and as short as reasonably possible.
@@ -1904,7 +1924,7 @@ In the `get` production the `format`, `url` and `service` items each begin with 
 
 ### SD-16: the special form is under-specified
 
-Signer and verifier must build identical bytes, and the steps of §13.1 (Signature Details) leave seven things open. (a) Options at their default value are dropped, but no option's default is defined anywhere; generic has the only inferable one (R-0033). (b) No production has a defined shortest form: booleans have short forms, numbers several spellings, extension values none stated (R-0315, R-0316). (c) What separates one category's value from the next transmission name is not stated (R-0321). (d) The order of repeated comment or extension options, which §7 (Detailed Syntax) allows, is not stated (R-0309). (e) Whether a quoted value keeps its quotation marks is not stated (R-0316). (f) A category with no value may be omitted or sent as an empty multi-value (§7); the steps say for neither what is output. (g) For comment and extension, which may repeat, whether a label's occurrences override the service-info's or add to them is not stated, so the effective option set is undetermined (R-0325). Entries: R-0310, R-0313, R-0318, R-0074, R-0072, R-0067.
+Signer and verifier must build identical bytes, and the steps of §13.1 (Signature Details) leave eight things open. (a) Options at their default value are dropped, but no option's default is defined in this document (DSig 1.0, later, states generic's: false); generic has the only inferable one (R-0033). (b) No production has a defined shortest form: booleans have short forms, numbers several spellings, extension values none stated (R-0315, R-0316). (c) What separates one category's value from the next transmission name is not stated (R-0321). (d) The order of repeated comment or extension options, which §7 (Detailed Syntax) allows, is not stated (R-0309). (e) Whether a quoted value keeps its quotation marks is not stated (R-0316). (f) A category with no value may be omitted or sent as an empty multi-value (§7); the steps say for neither what is output. (g) For comment and extension, which may repeat, whether a label's occurrences override the service-info's or add to them is not stated, so the effective option set is undetermined (R-0325). (h) Whether a multi-value keeps its parentheses is not stated: line 418 allows a single space between multi-value items and says nothing of parentheses, and without them even a single space between rating pairs leaves the form ambiguous, `r (0 1 2 3)` being both {0: 1, 2: 3} and {0: (1 2 3)} (both valid ratings by the §7 grammar, digits being transmit-name characters) [added by pass 2]. Entries: R-0310, R-0313, R-0318, R-0074, R-0072, R-0067.
 
 <!-- q L415 "If a selected option" .. "this list." -->
 > If a selected option has a default value and it is the same as the value to be used in the label, the option is omitted from this list.
@@ -1937,7 +1957,7 @@ Signer and verifier must build identical bytes, and the steps of §13.1 (Signatu
 
 ### SD-19: whether a URL is its own prefix is never stated
 
-§12.3 (Response to Query for Labels Separate From Documents) defines descendants and ancestors by string prefix and never says whether a URL counts as its own. The prose implies not, by listing the requested URL beside its ancestors (opt=normal, opt=generic), and Appendix B's tree response follows that reading to a surprising end: it answers `not-labeled` for the RSAC service and TheProject.html, although the bureau holds RSAC's specific label for exactly that URL and returns it in the same response inside the first URL's set (and the §18.2 (Normal query) normal query returns it for this URL). A client that asks for a URL's tree gets nothing for the URL itself. Entries: R-0229, R-0231, R-0246, R-0249.
+§12.3 (Response to Query for Labels Separate From Documents) defines descendants and ancestors by string prefix and never says whether a URL counts as its own. The prose implies not, by listing the requested URL beside its ancestors (opt=normal, opt=generic), and Appendix B's tree response follows that reading to a surprising end: it answers `not-labeled` for the RSAC service and TheProject.html, although the bureau holds RSAC's specific label for exactly that URL and returns it in the same response inside the first URL's set (and the §18.2 (Normal query) normal query returns it for this URL). A client that asks for a URL's tree gets no specific label for the URL itself; a generic label for the URL itself still applies to its descendants and is returned (the ages set for http://www.w3.org/pub/WWW/, line 683). Entries: R-0229, R-0231, R-0246, R-0249.
 
 <!-- q L551 -->
 > "http://www.w3.org/pub/WWW/TheProject.html"
@@ -1987,6 +2007,13 @@ The label option set is closed by the grammar, yet §13.1 (Signature Details) ex
 
 <!-- q L653 -->
 > generic false
+
+### SD-24: the whitespace removed with an embedded label
+
+§13 (MICs and Digital Signatures) computes the MIC of an HTML document after removing every `META` element that includes a PICS label and any whitespace immediately following each. It does not say which characters count as whitespace, whether the whole run after the element goes or only part of it, which `META` elements include a PICS label (an http-equiv of PICS-Label, or any whose content holds a label list), or what happens to one inside a comment or with an entity-escaped content (§10, Embedding Labels in HyperText Markup Language (HTML)); for any other media type no embedding and no removal is defined. Two implementations can hash different bytes of one document and disagree on a match. Inferred reading: R-0279. Entries: R-0277, R-0278. [Found by the design-notes lane, which numbered it SD-4 in its own list; given this number by pass 2 so that the record has one SD series.]
+
+<!-- q L401 "For HTML documents" .. "meta elements)." -->
+> For HTML documents, this means that the digest must be computed after removing all META elements that include PICS labels (and any whitespace immediately following the end of each of these meta elements).
 
 ### SD-E: editorial defects, quoted where they sit (never healed)
 

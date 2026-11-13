@@ -59,12 +59,18 @@ by `lint`.
 Measured by the script at the time of writing: the label grammar has 52 rules
 (`labels` plus `http-headers`, token layer), the query grammar 25; the runner
 **examined 288 checks, 0 failed**: 79 label-list REJECT cases (each paired with
-the minimal edit that makes it acceptable, 158 checks), 23 ACCEPT cases, 12 + 4
-header cases, 3 `Protocol` cases, 22 + 6 query cases, the lint, the prose-vs-grammar
-readings, and a mutation sweep of 60 single-edit mutants over the four label lists
-of section 6 and section 8 (delete a parenthesis, delete a quotation mark, drop the
-last letter of a keyword, drop the version, drop the last character), all
-rejected. `reproduce.py` repeats the sweep over 9 lists and 370 mutants.
+the minimal edit that makes it acceptable, 158 checks), 23 ACCEPT cases, 12
+header REJECT pairs (24 checks) and 4 header ACCEPT cases, 3 `Protocol` REJECT
+pairs (6), 3 `PICS-Label` header checks, 22 query REJECT pairs (44) and 9 query
+ACCEPT checks (6 cases, one expanded to the four `opt` values), 4 lint checks, 2
+prose-vs-grammar completeness checks, 3 as-written readings, 5 `EXCLUDE`-hook
+checks, 2 POST checks, and 1 check for the mutation sweep. The sweep itself runs
+60 single-edit mutants over the four label lists of section 6 and section 8
+(delete a parenthesis, delete a quotation mark, drop the last letter of a
+keyword, drop the version, drop the last character) and adds one failing check
+per mutant accepted; none was. The 60 mutants are not among the 288 (counted by
+instrumenting `Counter.check`, pass 2). `reproduce.py` repeats the sweep over 9
+lists and 370 mutants.
 
 ## Two layers, and why
 
@@ -114,12 +120,12 @@ examples show (listed in `examples/README.md` with their evidence).
 | A6 | §7 L159, §12.2 L347 | `URL` is defined elsewhere (PICS Rating Services and Rating Systems, not held), and `url-fragment` only by description. | ASSUMED: URL is 1 or more printable ASCII except `"` and space; url-fragment the same without `?` |
 | A7 | §7 L214, §13 L404 | `base64-string` is by reference to RFC 1521, written inside double quotes; a signature is sent in 60-character lines, which whitespace-insensitivity and the quoted-string rule do not obviously allow. | ASSUMED: whitespace allowed inside the quotes between any two characters; at least one quantum |
 | A8 | §7 L164 vs §12.2 L362 | `boolean` is used in §7 and defined only in §12.2. | one rule used by both |
-| A9 | §7, §11.3, §12.2 | `option` means two things (a label option; the `opt=` values), `extension` two things (§11.3, §12.2) plus a literal in §7, `token`, `token-or-quoted-string` and `form`/`completeness` are defined twice (the last two identically). | the §12.2 rules carry a `bq-` prefix |
+| A9 | §7, §11.3, §12.2 | `option` means two things (a label option; the `opt=` values), `extension` two things (§11.3, §12.2) plus a literal in §7, `token`, `token-or-quoted-string` and `form`/`completeness` are defined twice, all three identically (`form` and `completeness` under two names: L301, L353; L304-305, L358-359). | the §12.2 rules carry a `bq-` prefix |
 | A10 | §11.3 L301, L310; §12.2 L353, L386 | The grammar lists four values for `completeness` and `form`; the prose says any alphanumeric string may be used and an unrecognised value means `minimal` (headers) or `full` (bureau). | the strict rule rejects `verbose`; `request-header-prose` accepts it; tested both ways |
 | A11 | §12.2 L360-364 | `[and]` is optional in the grammar; the note under `and` says it is required except right after the `?`. | derived: exact, first parameter has none, later ones have one |
 | A12 | §12.2 L354-357 | `extension` has no `[and]`, so as written an extension can be the first parameter of the query or be glued to the previous parameter with no `&`, and cannot follow `&`; and its token must not be `opt`, `format`, `u` or `s`, which BNF cannot say. | derived adds `&`; `get-as-written` keeps the source's reading and rejects `?opt=tree&x=1&...`; the exclusion is the `EXCLUDE` hook |
-| A13 | §12.2 L344; §11.4 L319; §11.1 L277-278 | `'get' url-fragment` has no space and no HTTP version, though every example has both. The query examples are folded across lines "for presentation"; the header example folds after `PICS-Label:` where the grammar has one space. | `request-line` adds the space and `HTTP/n.n`; the unfold rule is this file's (`unfold_request`: delete the break and its indentation, keep a space before `HTTP/`); headers are unfolded per RFC 822 |
-| A14 | §12.2 L365-370 | `encodedURL` is a quoted URL: double quotes (every one of 8 examples) or `%xx`-quoted (the explanation that follows)? | both accepted |
+| A13 | §12.2 L344; §11.4 L319; §11.1 L277-278 | `'get' url-fragment` has no space and no HTTP version, though every example has both. The query examples are folded across lines for presentation only (§12.1 L329, Appendix B L554); the header example folds after `PICS-Label:` where the grammar has one space. | `request-line` adds the space and `HTTP/n.n`; the unfold rule is this file's (`unfold_request`: delete the break and its indentation, keep a space before `HTTP/`); headers are unfolded per RFC 822 |
+| A14 | §12.2 L365-370 | `encodedURL` is a quoted URL: double quotes (all 26 printed in the five sample queries, 8 distinct values) or `%xx`-quoted (the explanation that follows)? | both accepted |
 | A15 | Appendix B (Sample Label Bureau Queries and Responses) L554, L578-608 | The responses carry comments that begin with `;`, which the source describes as comment lines. They are not in the grammar of §7, `;` is a transmit-name character, and the comments trail tokens on the same line as well as starting lines. | the raw responses 18.1 to 18.3 are rejected (first failing token reported); the same text with `;` to end of line removed is accepted (9, 4, 4 runs removed); 18.4 has none |
 | A16 | §12.2 L351 vs Appendix B 18.4 L733 | The grammar's option is the literal `generic+tree`; the example sends `generic%2Btree` (correct on the wire, where an unescaped `+` is a space). | the grammar keeps the literal; reproduce.py applies the repair `%2B` to `+` to a copy and reports it |
 | A17 | §12.2 L360-366 vs Appendix B L562-567 | In every Appendix B query the `&` that separates parameters sits **inside** the closing double quote of the previous URL, not after it. | rejected raw; accepted after moving 5 `&` per query |

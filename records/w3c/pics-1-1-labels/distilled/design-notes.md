@@ -42,7 +42,7 @@ R-I-01, R-O-03, R-O-05).
 5. **DEC-002, accepted by `ADR-0004`, and MD-3.** §6, including where this
    source cuts against option 5.
 6. **R-O-03.** The special form is a canonicalisation invented in prose, and
-   underdetermined (§9 SD-2).
+   underdetermined (SD-16, §9).
 7. **mofn report R-0006** §2.2 and its `unverified.md` §1 ask whether and how a
    PICS 1.1 label binds content. §7 answers.
 
@@ -98,7 +98,7 @@ declines it, A-06).
    `R-O-NN` are `ARCH-0001` §5; `P1` to `P7`, `P5.1`, `P5.2` are `ARCH-0002`;
    `V1` to `V9` are `SPEC-0002` §9.2; *condition (n)* is mofn report R-0006
    §3.2's; row ids are `A-nn` adopt, `D-nn` adapt, `X-nn` reject, `C-nn`
-   constrains, `K-nn` conflicts, `S-nn` silent; source defects are `SD-n`. **No
+   constrains, `K-nn` conflicts, `S-nn` silent; source defects are `SD-n` as `normative.md` numbers them. **No
    requirement id of this record is cited**: the requirements lane assigns them
    in this pass, and the verify pass joins quotations to ids.
 6. **Levels.** The source's *must*, *should* and *may* are lowercase prose. A row
@@ -363,7 +363,7 @@ Ours, `ADR-0003`'s rejected alternative and R-O-05:
 **Rejected natively, as `ADR-0003` did.** The verifier parses the received label
 list, merges service and label options, drops defaults, sorts, shortens and
 lowercases, and only then can hash and check. §4 scores it clause by clause; the
-special form's own gaps are §9 SD-2 and SD-3.
+special form's own gaps are SD-16 and its item (a) (§9).
 
 **X-02 — the algorithm outside the signature.**
 
@@ -505,7 +505,7 @@ bytes:
 > It MUST bound the work it performs on any input before V4 succeeds.
 
 **Constrains:** condition (3)'s reasoning applies to the content digest too.
-The whitespace rule is itself underdetermined (§9 SD-4).
+The whitespace rule is itself underdetermined (SD-24, §9).
 
 **C-04 — ratings that KSA cannot spell as they are.**
 
@@ -536,7 +536,7 @@ multi-value becomes several attributes, or is dropped. Open question 3.
 <!-- q L143 "An option that appears in the service-info" .. "applicable options." -->
 > An option that appears in the service-info applies to all labels in that service-info unless overridden by an option in a specific label. That is, a label is effectively lexically nested within the enclosing service-info for the purpose of understanding the applicable options.
 
-The special form is designed so that none of this breaks a signature (L420).
+The special form is designed so that the compaction, the abbreviations and moving options into the service-info do not break a signature (L416, L420). Moving signed options out behind a `full` URL does: the verifier rebuilds from the options it received, and §11.3 (Detailed Syntax of HTTP Requests for Labels With Document) has a signed label carry its information directly (L309) [pass 2].
 Ours allows one bounded case:
 
 <!-- qm spec/SPEC-0002-ksa-core.md L890-892 "A transport that abbreviates identifiers" .. "simply fails V4." -->
@@ -555,7 +555,7 @@ cost to ADR-0004.
 > All labels produced in response to this query must include a for option.
 
 The two sentences disagree, unless the query L386 speaks of is only the one
-its `format=` paragraph describes (§9 SD-1). *(inferred)* A label without `for` is
+its `format=` paragraph describes (SD-12, §9). *(inferred)* A label without `for` is
 bound to its URL by its place in an unsigned list; a signature over it covers no
 URL, so reordering the list moves a signed rating from one URL to another.
 **Constrains import:** a bureau-delivered label is imported only with `for` in
@@ -675,7 +675,7 @@ change of what one URL serves.
 | carried with an authenticated type indicator | none: no version, no service, no algorithm in the special form (§3.2) | **conflicts** |
 | verify before decoding | the client parses the label list and merges service options first (L405, L420) | **conflicts** |
 | no canonicalising during verification | the rebuild is a canonicalisation: sort, shorten, lowercase, drop defaults (L415-416) | **conflicts** |
-| any human-facing form regenerated from the verified bytes | the client shows the label it received; every transmitted option is in the special form, but the service identifier, which decides what the ratings mean, is not (X-03) | **conflicts** |
+| any human-facing form regenerated from the verified bytes | the client shows the label it received; every transmitted option but the signature and any at its default value is in the special form, but the service identifier, which decides what the ratings mean, is not (X-03) | **conflicts** |
 
 **Five of five.** The MIC, by contrast, keeps the discipline for the content and
 breaks it only to remove the labels (A-01, C-03). Ours:
@@ -784,7 +784,8 @@ algorithm for the same syntax (`pics-dsig-1-0` §6.1 compares the two).
 2. **Compaction by intermediaries: a driver `ADR-0004` never scored.** PICS 1.1
    lets a transmitter abbreviate, compress whitespace, move options into a
    service section and push optional information behind a URL, and designs its
-   signature to survive all of it (L121, L143, L420). A KSA signature survives
+   signature to survive all of it but the last, which a signed label is not to
+   use (L121, L143, L309, L420). A KSA signature survives
    none. **This names no DEC-002 option**: under R-O-05 every option pays it, and
    `SPEC-0002` §13.7 keeps the bounded case (C-05). Recorded as a cost R-O-05
    carries.
@@ -884,9 +885,9 @@ expectation, not a rule.
 
 ## 9. Source defects met while mapping
 
-Recorded, not repaired; each was re-read in the `.txt`, and SD-1 in the HTML.
+Recorded, not repaired; each was re-read in the `.txt`, and SD-12 in the HTML. Each item carries the id `normative.md` gives the same defect [pass 2: this list first numbered itself SD-1 to SD-9, which named different defects than the same ids in `normative.md` and `requirements.yaml`; SD-24 was added to `normative.md` for the one it lacked].
 
-- **SD-1. `for` may be omitted, and must be included.** L379 permits omitting
+- **SD-12. `for` may be omitted, and must be included.** L379 permits omitting
   `for`, with exceptions stated further on; the last item of the same list
   ends:
 
@@ -898,18 +899,18 @@ Recorded, not repaired; each was re-read in the `.txt`, and SD-1 in the HTML.
   sentence inside the `format=` list item. The same sentence also ends the
   `opt=tree` and `opt=generic+tree` items (L383, L384), where it plainly covers
   those queries alone.
-- **SD-2. The special form is underdetermined.** L418 states the separator between
+- **SD-16. The special form is underdetermined.** L418 states the separator between
   a transmit-name and its value, not between pairs (§8 check 1); L416 does not
   say whether a quoted value keeps its quotes, or what the shortest form of a
   quoted string or of an extension's data is.
-- **SD-3. Defaults that are never defined.** The special form drops an option
+- **SD-16 (a). Defaults that are never defined.** The special form drops an option
   equal to its default (L415), and L420 relies on defaults again, but no label
   option's default is stated (§8 check 3). DSig states one, `generic` false
   (`pics-dsig-1-0` §6.2 L153); PICS 1.1 does not.
-- **SD-4. The whitespace removed with a label.** L401's rule for the whitespace
+- **SD-24. The whitespace removed with a label.** L401's rule for the whitespace
   after each removed element does not say which characters count, or whether a
   run ends at the first non-space.
-- **SD-5. `by` cannot hold what it is offered for.**
+- **SD-7. `by` cannot hold what it is offered for.**
 
 <!-- q L84 "This may be human readable" .. "verify the signature on the label." -->
 > This may be human readable, or it may be used to contain a (base-64 encoded) set of certificates and other information used to verify the signature on the label.
@@ -918,24 +919,24 @@ Recorded, not repaired; each was re-read in the `.txt`, and SD-1 in the HTML.
   `/`, which base64 uses [the alphabet is RFC 1521's, outside this source]. Only
   `%2F` escapes would carry it, and nothing says to undo them before decoding.
   DSig makes the same point about its own data (`pics-dsig-1-0` §7.4.2 L437).
-- **SD-6. A message name the grammar lacks.**
+- **SD-2. A message name the grammar lacks.**
 
 <!-- q L382 "If no such generic label is available" .. "rather than sending back a specific label." -->
 > If no such generic label is available, the server should include the "no-label" message rather than sending back a specific label.
 
   The grammar has `not-labeled` and `no-ratings` (L218, L152), no `no-label`.
-- **SD-7. A prefix example that is not a prefix.**
+- **SD-E (line 256). A prefix example that is not a prefix.**
 
 <!-- q L256 "it may check further up the hierarchy" .. "or even at" -->
 > it may check further up the hierarchy, in "http://www.greatdoc.com/foo/" or even at
 
   The page in question is under `www.greatdocs.com`; `greatdoc` drops the `s`,
   and ancestry is case-sensitive string matching (L380).
-- **SD-8. Appendix B's queries put the separator inside the value.** Each `u=` and
+- **SD-13. Appendix B's queries put the separator inside the value.** Each `u=` and
   `s=` value but the last ends with `&` inside its quotes, and the first `u=`
   adds a `+` (L562-566, and the same in §18.2 to §18.4), where the grammar makes
   `&` a separator outside the value (L360-364).
-- **SD-9. Text**, as printed:
+- **SD-E (line 417). Text**, as printed:
 
 <!-- q L417 "After all of the options has been output" .. "has been output" -->
 > After all of the options has been output
@@ -952,7 +953,7 @@ them, in §10 and §7). This source shows PICS 1.1 had them in 1996:
 <!-- q L93 "An RSA digital signature encompassing the label." .. "by the rating service that issued the label." -->
 > An RSA digital signature encompassing the label. The signature is computed using the MD5 algorithm by the rating service that issued the label.
 
-and the MIC as well (L79-81). DSig *replaced* both, nineteen months later. R-001's
+and the MIC as well (L79-81). DSig *replaced* both, about nineteen months later (573 days). R-001's
 taxonomy row for PICS is consistent with this source on authority and on the
 absence of delegation:
 
@@ -964,14 +965,16 @@ label), or by digest (the MIC). `ARCH-0001` §3.1's PICS row matches the source:
 
 <!-- qm spec/ARCH-0001-authorization-attestation.md L261 "Signed labels; checksum of content; client chooses services" .. "client chooses services" -->
 > Signed labels; checksum of content; client chooses services
- Recorded
-for their owners; m-of-n is not edited here.
+
+Recorded for their owners; m-of-n is not edited here.
 
 ---
 
 ## 11. Scope: the kinds this PR does not cover
 
-The lead's scope gives `protocol` and `state-machine` as not applicable here.
+The lead's scope gives `protocol` and `state-machine` as **not covered**
+(`profile: partial`, `profile_reason` in `record.yaml`), not as not applicable:
+the source defines an exchange and, in Appendix A, client state.
 **This reading agrees, with one stated limit.** The design conclusions above do
 not need a protocol model: our import binds a subject only by a signed digest,
 so whatever the channel says is dropped (§5). But four rows rest on delivery
@@ -981,7 +984,9 @@ completeness downgrade), C-06 (positional binding in bureau responses) and S-04
 bureau-delivered labels, it needs this record's `protocol` kind, which this PR
 does not cover** (open questions 6 and 8). L405 states a verification procedure,
 an ordered local one, which is requirements and messages content, not a state
-machine; label expiry is a validity rule. No state machine is owed.
+machine; label expiry is a validity rule. The one state the source defines is
+Appendix A's bureau selection (primary, secondary, timer, threshold), part of
+the uncovered protocol; S-04 is the only row that touches it, and it is silent.
 
 ## 12. Method
 
@@ -989,7 +994,7 @@ machine; label expiry is a validity rule. No state machine is owed.
   this file cites was checked to occur there by a fixed-string search
   (`grep -rF`), by script over every id-shaped token in this file.
 - **The source** is `.cache/pics-1-1-labels.txt`, with the HTML
-  `.cache/pics-1-1-labels.bin` for SD-1, both sha256-checked against the brief and
+  `.cache/pics-1-1-labels.bin` for SD-12, both sha256-checked against the brief and
   `record.yaml` in this pass. `bin/bcp14-count`: 0.
 - **Quotations of the source** are `<!-- q -->` markers only, written by
   `bin/check-quotes --render --only` on this file and verified by
@@ -1000,7 +1005,7 @@ machine; label expiry is a validity rule. No state machine is owed.
 - **Quotations of `pics-dsig-1-0`**: none. It is cited by locator.
 - **Unmarked source text.** Every 8-word window of this file's prose
   (blockquotes, marker lines and backtick spans removed) was searched in
-  both sources' `.txt`: 7647 windows examined; every hit is a heading title
+  both sources' `.txt`: 7647 windows examined; every hit is a heading title [pass 2 re-ran it with its own tokenizer after its edits to this file: 7155 windows, no run outside a heading title]
   quoted as a locator, as the locator rule requires.
 - **Scripts** (lane scratch, not committed): `pics_special.py`, the special form
   of L413-419 from its text, with the pair separator as a parameter and the
@@ -1042,7 +1047,7 @@ not reopened; the PICS row of `ARCH-0001` §6 keeps its priority.
    digest (§10). Correct them when those reports are next revised; they are
    drafts and their owners decide.
 8. **Positional binding** (C-06). If bureau-delivered labels are ever imported,
-   require `for` in the signed set, and settle SD-1's two readings first. Protocol
+   require `for` in the signed set, and settle SD-12's two readings first. Protocol
    behaviour, as question 6.
 9. **Condition (5).** Repeated extensions and multi-value items are unordered in
    the special form (6.2). `SPEC-0002` still owes the rule for its own sets;

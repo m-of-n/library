@@ -183,7 +183,7 @@ def main():
         mini2 = re.sub(r"\( ", "(", re.sub(r" \)", ")", mini))
         print("    %s: Content-Length printed %d; body bytes LF %d, CRLF %d, comments stripped and whitespace collapsed %d (%d with no space inside parentheses)"
               % (k, printed, lf, crlf, len(mini), len(mini2)))
-        check("%s Content-Length is a number" % k, True)
+        check("%s Content-Length is a positive number" % k, printed > 0)
     # mutation sweep over every label list that parses (the schema runner sweeps only ex02-ex05)
     sweep = {k: fx[k] for k in ("ex02", "ex03", "ex04", "ex05")}
     for k in ("ex13", "ex15", "ex17", "ex19"):

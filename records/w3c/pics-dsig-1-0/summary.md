@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: pics-dsig-1-0
 record: pics-dsig-1-0
 type: summary
-updated: "2026-11-12"
+updated: "2026-11-13"
 ---
 
 # PICS Signed Labels (DSig) 1.0 Specification
