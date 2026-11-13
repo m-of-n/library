@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: pics-dsig-1-0
 record: pics-dsig-1-0
 type: summary
-updated: "2026-10-23"
+updated: "2026-11-12"
 ---
 
 # PICS Signed Labels (DSig) 1.0 Specification
@@ -141,20 +141,20 @@ left unfilled rather than guessed.
 
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata |
+| `record.yaml` | metadata; `distillation` declares `standard: FX-1`, `profile: partial` |
 | `summary.md` | this document |
+| `distilled/` | the FX-1 artifact set, indexed with coverage in `distilled/README.md`: normative, requirements, schema, messages, examples, design-notes |
 
-**No `distilled/`.** This pass (library#87) claims the **summary bar**: the
-record is `summarized`, declares no `distillation` block and adds nothing to
-`distilled/`, so FX-1 does not fire. FX-1 extraction of this record is owned by
-library#89. What it would add that this summary
-cannot: the *Canonicalization* rules and both extension BNFs as verbatim
-schema, and the *An Example* steps as test vectors — which would force a
-decision on the defects in Limits 2.
+**Bar: FX-1, `profile: partial`** (library#89, PR 5 of 5). Not covered:
+`state-machine` — the source never states a verification procedure, so the
+verifier side is carried as flagged `kind: inferred` requirements instead.
+`protocol` is not applicable: a data format with no exchange. The reasons are
+in `record.yaml` (`profile_reason`, `not_applicable`).
 
-**No verbatim normative text** beyond short, locator-bearing fragments; under
-FX-1 that belongs in `distilled/normative.md`. The source uses no BCP 14
-keywords; its obligations are lowercase "must"/"should".
+The source uses no BCP 14 keywords; its obligations are lowercase
+"must"/"should", extracted as `verb: none` requirements. Locators in
+`distilled/` are structural ordinals assigned by `bin/render-w3c --ordinal`,
+always beside the heading title; the document itself has no section numbers.
 
 ## Limits
 

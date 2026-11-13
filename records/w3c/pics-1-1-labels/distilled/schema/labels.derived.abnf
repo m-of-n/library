@@ -1,0 +1,93 @@
+; DERIVED, not verbatim. Written by this library (FX-1 pass 1, schema lane) from section 7
+; (Detailed Syntax) of PICS 1.1 Label Distribution, W3C REC 1996-10-31. The source grammar is
+; in labels-s07-detailed-syntax.verbatim.txt; this file is its machine-checkable rendering and is
+; EXECUTED by check-grammar.derived.py (an RFC 5234 subset interpreter written for this record).
+;
+; TWO LAYERS, because the source says "whitespace is ignored except in quoted strings" and never
+; says where a token ends (README.md, ambiguity A1):
+;   TOKEN LAYER (rules WITHOUT the lex- prefix): the input is first cut into tokens: "(" and ")"
+;     each, a quoted string (a double quote to the next double quote, one token) and a WORD (a
+;     maximal run of characters that are none of whitespace, ( ) "). A quoted string, "(" or ")"
+;     needs no whitespace beside it; two WORDs must be separated by whitespace. A string literal
+;     in a token-layer rule matches ONE WHOLE TOKEN, case-insensitively (section 7 note: option
+;     names and other tokens of the grammar are case insensitive).
+;   CHARACTER LAYER (rules lex-* and what they reference): a lex- rule is matched against the
+;     whole text of one token, character by character. Literals here are case-insensitive unless
+;     written %s"..." (RFC 7405).
+; Where the source production is prose rather than BNF, or this file had to choose, it says ASSUMED
+; and names the README.md ambiguity.
+
+labellist     = "(" version 1*service-info ")"
+version       = "PICS-1.1"
+service-info  = no-ratings-info
+              / serviceid service-error
+              / serviceid *option labelword *label
+; source: 'error' '(no-ratings' explanation* ')'  -- ONE literal in the source, two tokens here (A2)
+no-ratings-info = "error" "(" "no-ratings" *explanation ")"
+serviceid     = lex-quotedurl
+labelword     = "labels" / "l"
+label         = label-error / single-label / "(" *single-label ")"
+single-label  = *option ratingword "(" 1*rating ")"
+ratingword    = "ratings" / "r"
+option        = labeloption / documentoption / otheroption
+labeloption   = "by" lex-quotedname
+              / "generic" lex-boolean / "gen" lex-boolean
+              / "for" lex-quotedurl
+              / "on" lex-date
+              / "signature-rsa-md5" lex-base64q
+              / "until" lex-date / "exp" lex-date
+documentoption = "at" lex-date
+              / "mic-md5" lex-base64q / "md5" lex-base64q
+otheroption   = "comment" lex-quotedname
+              / "complete-label" lex-quotedurl / "full" lex-quotedurl
+              / "extension" "(" mandopt lex-quotedurl *data ")"
+mandopt       = "optional" / "mandatory"
+data          = lex-date / lex-quotedurl / lex-number / lex-quotedname / "(" *data ")"
+rating        = lex-tname lex-number
+              / lex-tname "(" *lex-multivalue ")"
+service-error = "error" "(" "request-denied" *explanation ")"
+              / "error" "service-unavailable"
+label-error   = "error" "(" "request-denied" [ lex-quotedurl *explanation ] ")"
+              / "error" "(" "not-labeled" *lex-quotedurl ")"
+explanation   = lex-quotedname
+
+; ---- character layer: each lex- rule matches the text of one whole token ----
+
+; quotedname :: '"' urlchar-or-space+ '"'
+lex-quotedname = DQUOTE 1*urlchar-or-space DQUOTE
+; quotedURL :: '"' URL '"'. URL is "as described and extended in" PICS Rating Services and Rating
+; Systems, which this library does not hold. ASSUMED (A6): one or more printable US-ASCII
+; characters other than the double quote and space.
+lex-quotedurl  = DQUOTE 1*url-char DQUOTE
+url-char       = %x21 / %x23-7E
+; quoted-ISO-date :: '"'YYYY'.'MM'.'DD'T'hh':'mmStz'"' with the ranges the source lists:
+; MM 01-12 (implied by 01=January), DD 01-31, hh 00-23, mm 00-60, tz four digits.
+lex-date       = DQUOTE 4DIGIT "." month "." day %s"T" hour ":" minute sign 4DIGIT DQUOTE
+month          = "0" %x31-39 / "1" %x30-32
+day            = "0" %x31-39 / %x31-32 DIGIT / "3" %x30-31
+hour           = %x30-31 DIGIT / "2" %x30-33
+minute         = %x30-35 DIGIT / "60"
+; number :: [sign]unsignedint['.' [unsignedint]]
+lex-number     = [ sign ] 1*DIGIT [ "." *DIGIT ]
+sign           = "+" / "-"
+; multi-value :: number | number ':' number   (no whitespace inside one token: ':' is also a
+; transmit-name-char, so "1 : 2" would be three tokens; A4)
+lex-multivalue = lex-number / lex-number ":" lex-number
+; transmit-name :: transmit-name-char+ ['/' transmit-name]
+lex-tname      = 1*transmit-name-char [ "/" lex-tname ]
+alphanumpm     = ALPHA / DIGIT / sign
+transmit-name-char = alphanumpm / "." / "$" / "," / ";" / ":" / "&" / "=" / "?" / "!" / "*"
+              / "~" / "@" / "#" / "_" / "%" HEXDIG HEXDIG
+urlchar        = transmit-name-char / "(" / ")"
+urlchar-or-space = urlchar / SP
+; boolean is defined only in section 12.2 of the source (A8): 't' | 'f' | 'true' | 'false'
+lex-boolean    = "t" / "f" / "true" / "false"
+; "base64-string" :: as defined in RFC-1521, written inside double quotes. ASSUMED (A7): at least
+; one 4-character quantum or one padded final quantum; whitespace (the 60-character line splits
+; of section 13) is allowed between any two characters inside the quotes.
+lex-base64q    = DQUOTE ( 1*( 4bchar ) [ final-quantum ] / final-quantum ) *b64ws DQUOTE
+final-quantum  = 2bchar b64eq b64eq / 3bchar b64eq
+bchar          = *b64ws base64char
+b64eq          = *b64ws "="
+b64ws          = SP / HTAB / CR / LF
+base64char     = ALPHA / DIGIT / "+" / "/"
