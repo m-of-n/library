@@ -24,8 +24,10 @@ expectation recorded below. (c), (d), (e) report source defects and do not fail.
 
 Signatures, and hashes of the labelled document, are NOT verified, and cannot be:
 the source discloses no key (the values of "N", "E", "P", "Q", "G", "Y" are
-placeholders, several are not even valid base64), no signed bytes, and not the
-document "http://www.w3.org/PICS/DSig/Overview" that Step 2 hashes. Nothing here
+placeholders, several are not even valid base64), no real signature value, no
+definition of how the mandatory suites turn the canonical form into the input
+of RSA or DSA (the Step 3 text is printed; the octets a suite signs are not),
+and not the document "http://www.w3.org/PICS/DSig/Overview" that Step 2 hashes. Nothing here
 fakes a verification.
 """
 import base64
@@ -214,7 +216,7 @@ def part_d():
             print(f"  {verdict:8s} {key}: {algo} value {val!r} {shown}; a {algo} digest is {size[algo]} bytes")
     print(f"  {bad} resinfo hash value(s) cannot be a digest of the algorithm named; the source does not say they are placeholders and prints no real digest")
     print("  other base64-looking values (keys, signatures) cannot be checked: the source names no length for them")
-    print("  every base64-position value of the example fixtures (keys, signatures, certificates, hashes):")
+    print("  every key, signature and certificate value of the example fixtures (resinfo hashes are above):")
     pat = [r'\(\s*"(N|E|P|Q|G|Y|R|S|SigCrypto|ByHash)"\s+"([^"]+)"\s*\)',
            r'\(\s*"(http://www\.w3\.org/PICS/DSig/[A-Za-z0-9_-]+)"\s+"([^"]+)"\s*\)']
     seen64, nbad = set(), 0
@@ -232,7 +234,7 @@ def part_d():
                 n = b64len(v)
                 nbad += n is None
                 print(f"    {stem:28s} {m.group(1)[-12:]:12s} {v!r:24s} " + (f"valid base64, {n} bytes" if n is not None else f"NOT base64 (length {len(v)}" + (", not a multiple of four)" if len(v) % 4 else ")")))
-    print(f"  {len(seen64)} distinct values examined, {nbad} not RFC 1521 base64; none can be checked against a key or a signed text")
+    print(f"  {len(seen64)} values examined (distinct within each fixture; {len({v for _, v in seen64})} distinct strings over all), {nbad} not RFC 1521 base64; none can be checked against a key or a signed text")
 
 
 # ----------------------------------------------------------------- (c) canonical form

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """DERIVED, not the standard's own grammar. A recogniser this library wrote
 from the three BNF displays of pics-dsig-1-0 (the verbatim files beside it) and
-from the PICS 1.1 label grammar of pics-1-1-labels section "General Format of
-PICS Labels" (the .txt rendering, lines 150-219 of .cache/pics-1-1-labels.txt).
+from the PICS 1.1 label grammar of pics-1-1-labels section 7, "Detailed Syntax"
+(the .txt rendering, lines 150-219 of .cache/pics-1-1-labels.txt; DSig links
+that document as "General Format of PICS Labels", which is its section 5).
 
     python3 -I check-grammar.derived.py            # self-test: every case below
     python3 -I check-grammar.derived.py FILE ...   # report each file against the grammar
@@ -444,11 +445,27 @@ def single_label(items, i, ctx, svc_opts):
     j = 0
     while j < len(body):
         j = rating(body, j)
-    opts = dict(found)
+    # semantic rules on generic labels. A label inherits the options of its
+    # service section unless it overrides them (5.1 L117; PICS 1.1 L143 names
+    # generic among them), so both rules read the label's own options first and
+    # then the service options. Pass 2 (verify) added the inheritance: the first
+    # version read the label's own options only and accepted resinfo in a label
+    # made generic by its service section, either way round.
+    opts, svc = dict(found), dict(svc_opts)
+
+    def eff(*names):
+        for src in (opts, svc):
+            for nme in names:
+                if nme in src:
+                    return src[nme]
+        return None
+    g = eff("generic", "gen")
+    generic = g is not None and is_sym(g) and g[1].lower() == "true"
+    if generic and eff("for") is None:
+        raise Reject("a generic label must include the for option (6.2 L153; PICS 1.1), as a label or service option")
     # semantic rule the source states about resinfo inside a label (6.2, generic)
-    g = opts.get("generic", opts.get("gen"))
-    if ctx.profile == "dsig" and g is not None and is_sym(g) and g[1].lower() == "true":
-        for w, v in found:
+    if ctx.profile == "dsig" and generic:
+        for w, v in list(found) + list(svc_opts):
             if w == "extension" and is_list(v) and len(v) > 1 and is_str(v[1]) and v[1][1] == RESINFO_URL:
                 raise Reject("resinfo in a generic label (6.2, generic)")
     return i + 2
@@ -589,7 +606,7 @@ CASES = [
     ("R-14", "label", "dsig", False, lab(sbx(SIG_OK.replace('("SigCrypto"', '("exclude" (("options" "by")) ("ratings" "x")) ("SigCrypto"'))), "REJECT", "SigData takes exactly one SigInfo"),
     ("R-15", "label", "dsig", False, lab(sbx(SIG_OK.replace('"1996-12-02T22:20-0000"', '"yesterday"'))), "REJECT", "on: not a quoted-ISO-date"),
     ("R-16", "label", "dsig", False, lab(sbx(SIG_OK.replace('"ByHash"', '"ByHash"').replace(B64SLASH, "AQID/wQ", 1))), "REJECT", "ByHash value: base64 length not a multiple of four"),
-    ("R-17", "label", "dsig", False, '(PICS-1.1 "http://www.gcf.org/v2.5" l for "http://x/a" ' + f'extension (optional {SB} ("AttribInfo")) ' + 'r (suds 0.5))', "ACCEPT", "sigblock as a label option, abbreviated keywords l and r"),
+    ("A-11", "label", "dsig", False, '(PICS-1.1 "http://www.gcf.org/v2.5" l for "http://x/a" ' + f'extension (optional {SB} ("AttribInfo")) ' + 'r (suds 0.5))', "ACCEPT", "sigblock as a label option, abbreviated keywords l and r (was R-17: an accept case misnamed as a reject)"),
     ("R-18", "label", "dsig", False, f'(PICS-1.1 "http://www.gcf.org/v2.5" extension (optional {SB} ("AttribInfo")) l r (suds 0.5))', "REJECT", "a sigblock is only valid as a label option, not a service option (7.3.1)"),
     ("R-19", "label", "dsig", False, lab(f'extension (optional {SB} ("AttribInfo" ("not a url" "AQID")))'), "REJECT", "CertificateFamilyID must be a quotedURL"),
     ("R-20", "label", "dsig", False, lab(f'extension (optional {SB} ("AttribInfo" ("http://ca.example/x509" "***")))'), "REJECT", "CertificateData is base64 or a URL"),
@@ -600,13 +617,18 @@ CASES = [
     ("R-25", "field-list", "dsig", False, '(("extensions" "not a url"))', "REJECT", "extension-list takes quoted-URLs"),
     ("R-26", "label", "dsig", False, '(PICS-1.1 "http://x.org/s" labels ratings ())', "REJECT", "rating+ needs one rating"),
     ("R-27", "label", "dsig", False, '(PICS-1.2 "http://x.org/s" labels ratings (a 1))', "REJECT", "version must be PICS-1.1"),
+    # --- added by pass 2 (verify): generic labels and option inheritance
+    ("R-28", "label", "dsig", False, f'(PICS-1.1 "http://www.gcf.org/v2.5" gen true labels for "http://x.org/" extension (optional {RS} ({SHA1} "{SHA1_OK}")) ratings (suds 0.5))', "REJECT", "resinfo in a label made generic by a service option (6.2; service options are inherited, 5.1)"),
+    ("R-29", "label", "dsig", False, f'(PICS-1.1 "http://www.gcf.org/v2.5" extension (optional {RS} ({SHA1} "{SHA1_OK}")) labels gen true for "http://x.org/" ratings (suds 0.5))', "REJECT", "resinfo inherited from a service option into a generic label (6.2, 7.2)"),
+    ("R-30", "label", "dsig", False, '(PICS-1.1 "http://www.gcf.org/v2.5" labels gen true ratings (suds 0.5))', "REJECT", "a generic label without the for option (6.2 L153; PICS 1.1 says the same)"),
+    ("A-10", "label", "dsig", False, '(PICS-1.1 "http://www.gcf.org/v2.5" for "http://x.org/" labels gen true ratings (suds 0.5))', "ACCEPT", "a generic label whose for is inherited from its service section"),
     # --- the source's own concession: DSig 1.0 is not a valid PICS 1.1 extension (7.4.2 note)
     ("P-01", "label", "dsig", False, lab(sbx(f'("Signature" {RSA} ("ByHash" "{B64SLASH}") ("SigCrypto" "AQID"))')), "ACCEPT", "base64 containing '/' and '+', DSig profile"),
     ("P-02", "label", "pics11", False, lab(sbx(f'("Signature" {RSA} ("ByHash" "{B64SLASH}") ("SigCrypto" "AQID"))')), "REJECT", "same text, PICS 1.1 profile: '/' is not in quotedname and the string is not a URL (the 7.4.2 note, F-01)"),
     ("P-03", "label", "pics11", False, lab(sbx(f'("Signature" {RSA} ("ByHash" "AQIDBAUG") ("SigCrypto" "AQID"))')), "ACCEPT", "base64 with no '/' lexes as a PICS 1.1 quotedname"),
     ("P-04", "label", "pics11", False, lab(sbx(f'("Signature" {RSA} ("on" "1996-12-02T22:20-0000") ("SigCrypto" "AQID"))')), "ACCEPT", "a hyphenated date lexes as a PICS 1.1 quotedname even though it is not a PICS 1.1 date"),
-    ("P-05", "label", "pics11", False, lab(f'extension (optional {RS} ({SHA1} "{SHA1_OK}"))'), "ACCEPT", "SHA1 digest of bytes 0..19 contains no '/': accepted by PICS 1.1 reading"),
-    ("P-06", "label", "pics11", False, lab(f'extension (optional {RS} ({SHA1} "{base64.b64encode(bytes([0xff]*20)).decode()}"))'), "REJECT", "a real 20-byte digest whose base64 has '/': PICS 1.1 profile rejects, so resinfo is no safer than sigblock (F-01)"),
+    ("P-05", "label", "pics11", False, lab(f'extension (optional {RS} ({SHA1} "{SHA1_OK}"))'), "ACCEPT", "a 20-byte value (the bytes 0..19, not a digest) whose base64 contains no '/': accepted by PICS 1.1 reading"),
+    ("P-06", "label", "pics11", False, lab(f'extension (optional {RS} ({SHA1} "{base64.b64encode(bytes([0xff]*20)).decode()}"))'), "REJECT", "a 20-byte value (twenty 0xFF bytes, not a digest) whose base64 has '/': PICS 1.1 profile rejects, so resinfo is no safer than sigblock (F-01)"),
     ("P-07", "label", "dsig", False, lab(f'extension (optional {RS} ({SHA1} "{base64.b64encode(bytes([0xff]*20)).decode()}"))'), "ACCEPT", "the same under the DSig profile"),
     # --- DSig's own quotedName admits '/', which its note says it does not
     ("N-01", "label", "dsig", False, lab(sbx('("Signature" ' + RSA + ' ("x/y" "AQID"))')), "ACCEPT", "SigTokenString quotedName contains '/': allowed by 7.4.2 urlChar, contradicting the note under the same grammar (F-02)"),

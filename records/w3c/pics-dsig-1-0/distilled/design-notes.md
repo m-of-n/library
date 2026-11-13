@@ -102,7 +102,7 @@ this source).
    *Condition (n)* is one of the six of mofn report R-0006 §3.2. `MD-n` are dated
    meeting decisions. Row ids here are `A-nn` adopt, `D-nn` adapt, `X-nn`
    reject, `C-nn` constrains, `K-nn` conflicts, `S-nn` silent; source defects
-   are `SD-n`. **No requirement id of this record is cited**: the requirements
+   are `SD-n`, numbered as in `normative.md`, the record's one register (§9). **No requirement id of this record is cited**: the requirements
    lane assigns them in this same pass, and joining quotations to ids is the
    verify pass's job, as it was for `w3c-vc-data-integrity-1-0`.
 6. **Levels.** The source's *must*, *should* and *may* are lowercase prose. A row
@@ -137,7 +137,7 @@ none can.
 | X-01 | reject | The verifier rebuilds the signed form: inherit service options, drop the sigblock, apply include or exclude, sort, lowercase, re-space | §8.1 L519; §8.1.1 (Creating an equivalent standalone label) L523, L530; §8.1.2 L534-538 | R-O-05; `ADR-0003` (rejected: sign a re-encoded statement); `SPEC-0002` §5, §13.1; P5.1; condition (3) | §4: conflicts on every clause |
 | X-02 | reject | Nothing in the sigblock is signed: suite identifier, key identification, signing time, coverage list, certificates | §7.3.2 L296; §7.3.4.6 L381; §7.3.5 (Hashing) L407 | R-O-05 (authenticated type indicator); `SPEC-0002` §6.1; condition (4) | the algorithm is covered only if a suite mixes it into the hash, which the source permits and does not require |
 | X-03 | reject | Partial coverage, declared in the unsigned sigblock | §7.3.4.7 L385, L390 | R-O-05 (human-facing form); P5.2; `SPEC-0002` §7.1 | §3.2: anyone can add fields the signature never covered, including `for` and `gen`, to a label signed whole, and it still verifies |
-| X-04 | reject (natively) | Algorithms, certificate families and suites named by URL: a registry of names rooted in DNS, each identifier's meaning a document fetched from it | §7.1 L187-199 | P1 (`ADR-0001`; R-M-12); `ADR-0004` item 3; `ARCH-0002` DEC-008; `SPEC-0002` §6.1, §12 | global names; at a boundary, lossy. Appendix 3 prints two of its four mandatory identifiers with a doubled slash (§9 SD-1) |
+| X-04 | reject (natively) | Algorithms, certificate families and suites named by URL: a registry of names rooted in DNS, each identifier's meaning a document fetched from it | §7.1 L187-199 | P1 (`ADR-0001`; R-M-12); `ADR-0004` item 3; `ARCH-0002` DEC-008; `SPEC-0002` §6.1, §12 | global names; at a boundary, lossy. Appendix 3 prints two of its four mandatory identifiers with a doubled slash (SD-9, §9) |
 | X-05 | reject (the mechanism) | The vocabulary is named by the service URL, signed by name only; Appendix 1's remedy is a trust-engine policy demanding a separate signed label on the description | §8.1.2 L535; §9 L613-614 | DEC-007 (`ADR-0007`, option 4 rejected); `SPEC-0003` §1, §4.4, §13.2; P4 (sponsor direction) | the remedy signs the description; nothing makes the label cite which description (open question 2) |
 | X-06 | reject (for us) | resinfo and sigblock are declared optional, so a client that does not understand them ignores the content binding and the signature | §6.2 L169; §7.2 L214; §7.3.1 (Format Specification) L282 | P5; `ARCH-0001` §3.4 (critical-bit row); `SPEC-0002` §13.5 | an explicit optional flag is P5's opt-in skippability; choosing it for the security-bearing fields is what we decline |
 | X-07 | reject | Whether to use an unsigned or unverified label is left to trust management | §4 L57; §7.3.1 L282 | `SPEC-0002` §3, §9.1; R-O-05 | KSA decodes only after the signature verifies |
@@ -155,7 +155,7 @@ none can.
 | S-02 | silent | Key distribution, revocation, rotation | none in the source | R-O-02; `ADR-0003` D5; `SPEC-0002` §8.7, §8.8 | left to the certificates and their PKI |
 | S-03 | silent | Which bytes resinfo hashes when the label sits inside the document it hashes, or the document is transfer-encoded | §7.2 L203; §10 (Appendix 2: Transporting DSig 1.0 Labels) L620 | R-M-07; `SPEC-0002` §7.2 | for HTML the source points back to PICS 1.1, whose MIC removes the labels first (`pics-1-1-labels` §13, L401) *(inferred)* |
 | S-04 | silent | A label has no identity: nothing names the label a cascaded signature signs | §7.4 L411 | `SPEC-0002` §3, §8.10 | KSA content-addresses a statement by SHA-256 of its TBS |
-| S-05 | silent | The verification procedure is never stated | the whole source; §8 (Signing) describes signing only | `SPEC-0002` §9.2 | why `state-machine` is not applicable (§11) |
+| S-05 | silent | The verification procedure is never stated | the whole source; §8 (Signing) describes signing only | `SPEC-0002` §9.2 | why `state-machine` is not covered (§11) |
 | S-06 | silent | Separation between a label signature and any other use of the key | none in the source | `SPEC-0002` §6.4, §13.2; `SPEC-0001` §5.3 | the canonical form opens with `( pics-1.1`, a prefix by accident of syntax, not a label |
 | S-07 | silent | DSSE or COSE_Sign1 | none in the source | DEC-005 (open) | DSig is the third road both options exclude (§6.5) |
 
@@ -701,7 +701,7 @@ verifies over the other (§8 check 2). **Conflicts** with condition (1), which
 R-O-05 assumes: the canonical form is not injective over the labels it signs.
 The precondition is a rating system with transmit-names that differ only in
 case; PICS 1.1 permits them, and whether any was ever published is not known.
-§9 SD-6 records it as a source defect as well.
+§9 and `normative.md` SD-20 record it as a source defect as well.
 
 ### 2.6 Silent
 
@@ -945,11 +945,16 @@ PICS 1.1's nor any other (A-07). PICS 1.1 locators are in `pics-1-1-labels`
    Against the option-5 **profile**, not the encoding: mofn report R-0006 §3.2
    places Group B above any encoding.
 2. **Re-serialisation by intermediaries: a driver `ADR-0004` never scored.** A
-   DSig signature survives re-spacing, option-name abbreviation, reordering of
-   options and ratings, and factoring of shared options into a service section,
-   because its verifier canonicalises (§6.1). PICS label bureaus and servers do
-   exactly those things to label lists (`pics-1-1-labels` §6, L121-133; §7,
-   L143). A KSA signature survives none of them. **This names no DEC-002
+   DSig signature survives re-spacing, reordering of options and ratings, and
+   factoring of shared options into a service section, because its verifier
+   canonicalises (§6.1); it survives option-name abbreviation only on the
+   reading that the canonical text writes the short name, which the source
+   leaves open (SD-7). PICS 1.1 lets a label list travel re-spaced, with `l`, `r`
+   and abbreviated option names (`pics-1-1-labels` §6, L121-133), and applies a
+   service section's options to each of its labels (§7, L143). A KSA signature
+   survives none of them. [Pass 2: this item first said PICS label bureaus and
+   servers *do* all of these to label lists; the cited lines permit the
+   compaction and state the inheritance, and say nothing of reordering.] **This names no DEC-002
    option**: under R-O-05 every option pays it, and `SPEC-0002` §13.7 keeps the
    one case that matters for size (C-04). It presses on R-O-05 and P5.1, both in
    force, and is recorded as a cost they carry, not as a reason to reopen.
@@ -1091,9 +1096,12 @@ says), not to the world. The intervals in A-07 and §10 are check 5's.
 ## 9. Source defects met while mapping
 
 Recorded, not repaired. Each was re-read in the `.txt`, and the ones on
-identifiers and examples were checked in the HTML.
+identifiers and examples were checked in the HTML. Numbered as `normative.md`'s
+register, SD-1 to SD-20 and SD-E, the record's one list of source defects.
+[Pass 2: pass 1 numbered these SD-1 to SD-10 on their own, so that SD-6 here
+and SD-6 there named different defects; renumbered, content unchanged.]
 
-- **SD-1. Appendix 3 prints two identifiers with a doubled slash.** SHA1 and DSS:
+- **SD-9. Appendix 3 prints two identifiers with a doubled slash.** SHA1 and DSS:
 
 <!-- q L627 -->
 > SHA1 hashing (http://www.w3.org//TR/1998/REC-DSig-label/SHA1-1_0)
@@ -1103,9 +1111,9 @@ identifiers and examples were checked in the HTML.
 
   The examples use one slash (L261, L429, L560), as do the HTML links under these
   very lines. The source states no rule for comparing identifiers (X-04).
-- **SD-2. The worked example contradicts the canonicalisation text** in two
-  places (A-07; §8 check 1).
-- **SD-3. One sentence has two readings.**
+- **SD-5, SD-6. The worked example contradicts the canonicalisation text** in
+  two places (A-07; §8 check 1).
+- **SD-4. One sentence has two readings.**
 
 <!-- q L534 "Do not insert spaces for either" .. "of a PICS 1.1 label list." -->
 > Do not insert spaces for either the leading left parenthesis or the the trailing right parenthesis of a PICS 1.1 label list.
@@ -1113,7 +1121,7 @@ identifiers and examples were checked in the HTML.
   Read as forbidding a space outside the outermost parentheses, it adds nothing
   to the rule of one space between tokens, and the example follows it. Read as
   forbidding one just inside them, the example breaks it too.
-- **SD-4. One or more signatures, or none.** §7.3.1 lists a sigblock's parts
+- **SD-2. One or more signatures, or none.** §7.3.1 lists a sigblock's parts
   (L278-280):
 
 <!-- q L278-280 -->
@@ -1126,13 +1134,13 @@ identifiers and examples were checked in the HTML.
 > SigBlockURL AttributionInfo Signature* ')'
 
   The structure on L288-290 also opens one parenthesis after `extension` and
-  closes two.
+  closes two (SD-E).
 
-- **SD-5. Token case.** Quoted strings are case-sensitive (L183), and the defined
+- **SD-8. Token case.** Quoted strings are case-sensitive (L183), and the defined
   tokens are `ByKey` (L333, L342) and `On` (L374, L376), while the examples write
   `byKey` (L424, L598) and the syntax and examples `on` (L379, L426, L431, L600).
-- **SD-6. Transmit-name case** (K-02): L534 lowercases what PICS 1.1 L141 keeps.
-- **SD-7. A standard PICS 1.1 label, and not a valid PICS 1.1 extension.**
+- **SD-20. Transmit-name case** (K-02): L534 lowercases what PICS 1.1 L141 keeps.
+- **SD-1. A standard PICS 1.1 label, and not a valid PICS 1.1 extension.**
 
 <!-- q L175 "A DSig 1.0 Signature Label is a standard PICS 1.1 label." .. "standard PICS 1.1 label." -->
 > A DSig 1.0 Signature Label is a standard PICS 1.1 label.
@@ -1141,13 +1149,13 @@ identifiers and examples were checked in the HTML.
 > Note: This extension is not a valid PICS 1.1 extension because Base64 encoding uses a '/' which cannot be represented as a PICS 1.1 datum.
 
   `record.yaml` already carries the `contradicts` edge for it.
-- **SD-8. Which spelling a field-list uses.** An option-list is a list of option
+- **SD-3, SD-7. Which spelling a field-list uses.** An option-list is a list of option
   names (L398), but the source does not say whether `generic` or `gen`, or in
   which case, so an `exclude` naming one may or may not match the other.
-- **SD-9. Name drift.** The grammar has `ratings-list` (L395); the text calls it
+- **SD-E. Name drift.** The grammar has `ratings-list` (L395); the text calls it
   `rating-list` (L537), and puts the include and exclude options in the suite
   (L536), where L390 makes them SigData fields of one signature.
-- **SD-10. Text**, as printed:
+- **SD-E. Text**, as printed:
 
 <!-- q L183 "Multiple contiguous space characters are be treated" .. "are be treated" -->
 > Multiple contiguous space characters are be treated
@@ -1212,12 +1220,18 @@ the interval is 84 days, twelve weeks.
 
 ## 11. Scope: the kinds this PR does not cover
 
-The lead's scope gives `protocol` and `state-machine` as not applicable for
-this record. **This reading agrees.** DSig defines a data format and no
+The lead's scope gives `protocol` as not applicable and leaves `state-machine`
+not covered (`record.yaml` `not_applicable` and `profile_reason`; pass 2
+corrected this sentence, which first gave both as not applicable). **This
+reading agrees.** DSig defines a data format and no
 exchange; Appendix 2 hands transport to PICS 1.1 (L618), and the bureau
 constraint in §7.3.4.7 (L385) and the `complete-label` fetch (§6.2 L166; §8.3
 L609) are PICS 1.1 protocol behaviour. DSig never states verification (S-05;
-§8 check 7), so a state machine would be our invention. No design question in
+§8 check 7), so a verifier state machine would be our invention. The signer's
+side has a lifecycle the source states only as separate rules (a label is
+built, gets its resinfo and is signed; parallel signatures may be added later;
+AttribInfo may change without invalidating; truncation after signing
+invalidates), and `requirements.yaml` carries those rules. No design question in
 this file needs a kind the PR does not cover. The one that comes close is
 PICS 1.1's: how a delivered label's subject is fixed by the channel (C-02),
 recorded in `pics-1-1-labels`'s design notes.
@@ -1240,8 +1254,11 @@ recorded in `pics-1-1-labels`'s design notes.
 - **Quotations of `pics-1-1-labels`**: none. It is cited by locator.
 - **Unmarked source text.** Every 8-word window of this file's prose
   (blockquotes, marker lines and backtick spans removed) was searched in
-  both sources' `.txt`: 9924 windows examined; every hit is a heading title
-  quoted as a locator, as the locator rule requires.
+  both sources' `.txt`: 9924 windows examined at pass 1; every hit is a heading title
+  quoted as a locator, as the locator rule requires. [Pass 2 edited this file and
+  re-ran the sweep, counting by the same method: 9975 windows over pass 1's text,
+  10153 over pass 2's before this note, and the same five hits, all heading
+  titles.]
 - **Scripts** (lane scratch, not committed): `dsig_canon.py`, DSig's §8.1.2 from
   its text (a tokenizer for parentheses, quoted strings and bare tokens;
   inheritance with label options overriding service options; the sigblock

@@ -27,11 +27,11 @@ requirement is `verb: none` or `kind: inferred`.
 
 | kind | file | coverage |
 |---|---|---|
-| normative | normative.md | every stated entry of requirements.yaml as a quotation marker in source order under its section; split children beside parents; inferred entries named in place; source defects SD-1 to SD-19 and SD-E |
-| requirements | requirements.yaml | 318 entries: 108 promoted candidates, 111 binding texts the skeleton missed, 76 split children, 23 inferred (the verifier side, which the source never states as a procedure). All 170 candidates have a verdict (108 stated, 1 inferred, 61 rejected). Keywords 0 = 0 |
-| schema | schema/ | the 3 source grammars verbatim (resinfo, field-list, sigblock); a derived recogniser (`check-grammar.derived.py`, 46 cases, 0 differing) and a mutation test (`mutate-grammar.derived.py`). Not covered: PICS 1.1 service-info `error` forms, RFC 1738 URL syntax |
+| normative | normative.md | every stated entry of requirements.yaml as a quotation marker in source order under its section; split children beside parents; inferred entries named in place; source defects SD-1 to SD-20 and SD-E |
+| requirements | requirements.yaml | 318 entries: 108 promoted candidates, 111 binding texts the skeleton missed, 76 split children, 23 inferred (chiefly the verifier side, which the source never states as a procedure). All 170 candidates have a verdict (108 stated, 1 inferred, 61 rejected). Keywords 0 = 0 |
+| schema | schema/ | the 3 source grammars verbatim (resinfo, field-list, sigblock); a derived recogniser (`check-grammar.derived.py`, 50 cases, 0 differing) and a mutation test (`mutate-grammar.derived.py`). Not covered: PICS 1.1 service-info `error` forms, RFC 1738 URL syntax |
 | messages | messages.yaml | 14 messages and 63 fields: signature label, resinfo, sigblock, AttribInfo, Signature, SigData and keyholder tokens, canonical form rules C-01..C-14, equivalent standalone label rules E-01..E-08; findings F-01 to F-12 |
-| examples | examples/ | all 27 `<pre>` blocks: 8 example fixtures, 16 structural templates, 3 grammars (in schema/); `reproduce.py` re-cuts each from the HTML (0 differing) and recomputes the Step 3 canonical form. No hash or signature is verifiable: the source prints no key, no signed bytes and not the hashed document |
+| examples | examples/ | all 27 `<pre>` blocks: 8 example fixtures, 16 structural templates, 3 grammars (in schema/); `reproduce.py` re-cuts each from the HTML (0 differing) and recomputes the Step 3 canonical form. No hash or signature is verifiable: the source prints no key, no real signature or hash value, no definition of how the mandatory suites turn the canonical form into a signature input, and not the hashed document |
 | design-notes | design-notes.md | adopt / adapt / reject / constrains / conflicts / silent against m-of-n at d7f7f89 (37 rows); MD-3 / DEC-002 and where DSig cuts against option 5; R-O-05, R-M-07, R-M-12, DEC-005, DEC-007, R-I-01; 12 open questions |
 | protocol | — | **not applicable**: see `distillation.not_applicable` |
 | state-machine | — | **not covered** (`profile_reason`) |

@@ -1302,7 +1302,7 @@ Step 2 of §8.2 lists the SHA1 hash before the MD5 hash; Step 3, the canonical f
 
 ### SD-8: ByKey or byKey, On or on, while quoted strings are case sensitive
 
-Quoted strings are case sensitive (R-0068), and SigData tokens are quoted strings (R-0227, R-0236). §7.3.4.1 and §7.3.4.2 define the token ByKey (R-0160, R-0162, R-0163); both examples write byKey. §7.3.4.6 defines the token On (R-0174); its own syntax line (R-0177) and every example write on. Either the definitions or the examples use a token this document does not define, and a verifier matching tokens exactly, as the case rule asks, rejects one or the other.
+Quoted strings are case sensitive (R-0068), and SigData tokens are quoted strings (R-0227, R-0236). §7.3.4.1 and §7.3.4.2 define the token ByKey (R-0160, R-0162, R-0163), and the §7.3.4.2 DSA example writes it so (L348); both sigblock examples, §7.4.1 (L424) and Step 4 of §8.2 (L598), write byKey. §7.3.4.6 defines the token On (R-0174); its own syntax line (R-0177) and every example write on. Either the definitions or the examples use a token this document does not define, and a verifier matching tokens exactly, as the case rule asks, rejects one or the other.
 
 <!-- q L183 "Quoted strings" .. "case insensitive." -->
 > Quoted strings are case sensitive but other literal elements are case insensitive.
@@ -1440,6 +1440,13 @@ Appendix 3 names one conformance class, an implementation (R-0294); §7.1 restat
 
 <!-- q L624 -->
 > In order to conform with this Recommendation, an implementation must support:
+
+### SD-20: symbols are lowercased, and a transmit-name is a symbol PICS 1.1 keeps case-sensitive
+
+Added by pass 2 (verify): `design-notes.md` K-02 and `messages.yaml` F-11 recorded this and the register did not. §8.1.2 (Canonicalization of the equivalent standalone label for signing) names four kinds of token and lowercases the symbols (R-0262, R-0263). A transmit-name in the ratings is neither a parenthesis, a quoted string nor a number, so on the natural reading it is a symbol and is lowercased; include and exclude name transmit-names in their ratings-list (R-0201), and the canonical form sorts them (R-0275). [outside this source] PICS 1.1 makes transmit-names case-sensitive, because a URL may serve as one (pics-1-1-labels §7, Detailed Syntax, .cache/pics-1-1-labels.txt L141; §14, Glossary, L471). Two labels PICS 1.1 reads as rating different categories, one with Suds and one with suds, then share one canonical form, and a signature over one verifies over the other. On the other reading, that a transmit-name is not a symbol, the rules say nothing about its case. Every transmit-name in this document's examples is lower case, so no example decides it.
+
+<!-- q L534 "PICS 1.1 tokens" .. "to lowercases." -->
+> PICS 1.1 tokens include left and right parenthesis, symbols, quoted-strings, and numbers. Symbols are case insensitive and converted to lowercases.
 
 ### SD-E: editorial
 

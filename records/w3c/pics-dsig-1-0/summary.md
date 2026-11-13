@@ -147,14 +147,18 @@ left unfilled rather than guessed.
 
 **Bar: FX-1, `profile: partial`** (library#89, PR 5 of 5). Not covered:
 `state-machine` — the source never states a verification procedure, so the
-verifier side is carried as flagged `kind: inferred` requirements instead.
+verifier side is carried as flagged `kind: inferred` requirements instead, and
+the signer's label lifecycle is stated only as separate rules, carried as
+requirements and not modelled.
 `protocol` is not applicable: a data format with no exchange. The reasons are
 in `record.yaml` (`profile_reason`, `not_applicable`).
 
 The source uses no BCP 14 keywords; its obligations are lowercase
 "must"/"should", extracted as `verb: none` requirements. Locators in
 `distilled/` are structural ordinals assigned by `bin/render-w3c --ordinal`,
-always beside the heading title; the document itself has no section numbers.
+given beside the heading title or a line number in prose (a requirement's
+script-owned `locator:` is the bare ordinal); the document itself has no
+section numbers.
 
 ## Limits
 

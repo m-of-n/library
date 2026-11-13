@@ -33,7 +33,7 @@ placeholder (see that README). "n/a" means the fixture is a fragment that is not
 | `ex05-step1-label.txt` | §8.2 (An Example), Step 1 | L1306 / 545-550 | 201 | label | ACCEPT \| ACCEPT \| ACCEPT | A plain PICS 1.1 label. Input of the example. |
 | `ex06-step2-label-resinfo.txt` | §8.2 (An Example), Step 2 | L1314 / 554-564 | 498 | label | ACCEPT \| ACCEPT \| ACCEPT | Step 1 plus a resinfo extension with a SHA1 and a dated MD5 hash. Both values are valid base64 of 8 bytes, which no SHA1 (20) or MD5 (16) digest is (F-10). |
 | `ex07-step3-canonical-form.txt` | §8.2 (An Example), Step 3 (canonicalize) | L1329 / 569-575 | 417 | label | ACCEPT \| ACCEPT \| ACCEPT | The text a signature suite signs, printed with display line breaks that the source says are not in the real text. See "Canonical form" below. |
-| `ex08-step4-signed-label.txt` | §8.2 (An Example), Step 4 | L1337 / 579-603 | 1304 | label | ACCEPT \| ACCEPT \| ACCEPT | "A valid DSig-1.0 label": Step 2 plus a sigblock extension. Valid in shape. The N value `"aba212412412="` is 13 characters, not base64, but a SigInfo accepts any name. |
+| `ex08-step4-signed-label.txt` | §8.2 (An Example), Step 4 | L1337 / 579-603 | 1304 | label | ACCEPT \| ACCEPT \| ACCEPT | Called "a valid DSig-1.0 label" (L605): Step 2 plus a sigblock extension. Valid in shape. The N value `"aba212412412="` is 13 characters, not base64, but a SigInfo accepts any name. |
 
 No example in the source states an expected verification result: the source says how to sign and never how
 to verify (`../messages.yaml`, applicability). The "expected result" column is what this library can check.
@@ -53,14 +53,19 @@ sigblock). Result:
 - The two resinfo hashes are printed MD5 then SHA1; Step 2 has SHA1 then MD5. The recipe sorts options and
   extensions and says nothing about the entries inside one extension. The printed order equals sorting them by
   identifier URL; that is the lane's reading, not the source's.
+- Transmit-names keep their received case in part (c): one reading of `../messages.yaml` F-11
+  (`../normative.md` SD-20), the other being that a transmit-name is a symbol and is lower-cased. Every
+  transmit-name in the example is lower case, so the comparison does not depend on it.
 
 ### Hashes and signatures — what cannot be verified, and why
 
 - **Resource hashes** (`SHA1-1_0`, `MD5-1_0` in ex01, ex06 to ex08) are over the document
   `http://www.w3.org/PICS/DSig/Overview`, whose bytes the source does not give.
 - **Signatures** (`SigCrypto`) are over the canonical form, but no key is given: `"N"`, `"E"` and the DSA
-  values are placeholders; of 18 key, signature and certificate values in the examples, **10 are not RFC 1521 base64**
-  (`reproduce.py` (d)).
+  values are placeholders; of 18 key, signature and certificate values in the examples (counted per fixture;
+  16 distinct strings), **10 are not RFC 1521 base64** (8 distinct) (`reproduce.py` (d)). And though Step 3 prints
+  the canonical text, no source defines how `RSA-MD5-1_0` or `DSS-1_0` turns it into the input of RSA or DSA
+  (`../normative.md` SD-17).
 - **Hash lengths** can be checked and fail: the eight resinfo hash entries in four fixtures do not
   decode to the digest size of the algorithm named (8 bytes against 20 and 16, or not base64 at all). The
   digest sizes are facts about SHA-1 and MD5; the source states none.
@@ -104,5 +109,5 @@ verdict differs from the table above. Parts (c) to (e) report **source defects**
   Appending a byte to a fixture makes it exit 1 (tested).
 - (b) 8 fixtures: 8 verdicts as expected; the token-case audit lists `"byKey"` in ex04 and ex08.
 - (c) canonical form, above.
-- (d) hash lengths, above; also the full list of the 18 base64-position values.
+- (d) hash lengths, above; also the full list of the 18 key, signature and certificate values.
 - (e) Appendix 3 spells two of four identifiers with `//TR` (F-09).

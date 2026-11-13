@@ -38,8 +38,8 @@ SigData values beyond the `field-list` display, none for the signature suites, a
 
 | file | what it is |
 |---|---|
-| `check-grammar.derived.py` | a recogniser for a PICS 1.1 label list that carries the two DSig extensions, built from the three displays above and the PICS 1.1 label grammar. `python3 -I check-grammar.derived.py` runs **46 cases** (17 accept, 29 reject) and prints the reason each reject is made. Two profiles (`pics11`, `dsig`) and two strictnesses (strict, placeholder). |
-| `mutate-grammar.derived.py` | removes one rule at a time from a scratch copy and runs the cases: **13 mutations, 12 killed, 1 equivalent, 0 survived**. The equivalent one drops the base64 length test alone; `b64decode(validate=True)` rejects the same strings, so no case can tell them apart (dropping both is killed by R-16). |
+| `check-grammar.derived.py` | a recogniser for a PICS 1.1 label list that carries the two DSig extensions, built from the three displays above and the PICS 1.1 label grammar. `python3 -I check-grammar.derived.py` runs **50 cases** (18 accept, 32 reject) and prints the reason each reject is made. Two profiles (`pics11`, `dsig`) and two strictnesses (strict, placeholder). |
+| `mutate-grammar.derived.py` | removes one rule at a time from a scratch copy and runs the cases: **16 mutations, 15 killed, 1 equivalent, 0 survived**. The equivalent one drops the base64 length test alone; `b64decode(validate=True)` rejects the same strings, so no case can tell them apart (dropping both is killed by R-16). |
 
 ### What the recogniser answers
 
@@ -47,8 +47,11 @@ SigData values beyond the `field-list` display, none for the signature suites, a
   `data` production (`quoted-ISO-date | quotedURL | number | quotedname | '(' data* ')'`)?
 - **`dsig`**: the PICS 1.1 structure, plus section 7.2.1 and 7.4.2 applied to the two DSig extensions,
   plus the rules the prose states and the BNF cannot (at most one include or exclude; two hashes with one
-  algorithm are invalid; resinfo not in a generic label; a sigblock only as a label option; both
-  extensions `optional`; one extension URL at most once per option set).
+  algorithm are invalid; resinfo not in a generic label, with `generic` and resinfo read through
+  service-section inheritance; a sigblock only as a label option; both extensions `optional`; one
+  extension URL at most once per option set).
+- **both profiles**: a generic label carries `for`, as a label or service option (§6.2 L153, which
+  restates PICS 1.1's own rule).
 - **strict**: `base64String` is RFC 1521 base64. The source's placeholders (`"base64 hash"`,
   `"base64-x.509-cert"`) and two printed values of length 13 and 17 are then rejected.
 - **placeholder**: any quotedName is also accepted at a base64 position. **Not the source's
@@ -72,6 +75,8 @@ reading the reasons, then by mutation).
 | R-04, R-05, R-06 | month 13; no time zone; minute 60 | `quoted-ISO-date` |
 | R-07 | `mandatory` resinfo | both DSig extensions are `optional` |
 | R-08 | resinfo in a generic label | §6.2 |
+| R-28, R-29 | resinfo in a label made generic by its service section; resinfo inherited from a service option into a generic label | §6.2, with §5.1's inheritance |
+| R-30 | a generic label without `for` | §6.2 L153 |
 | R-09 | sigblock with no `("AttribInfo")` | `AttributionInfo` has no `?` |
 | R-11, R-12 | a Signature with no SigData; suite id that is not a URL | `SigData+`, `SignatureSuiteID` |
 | R-13 | include and exclude together | §7.3.4.7 |
@@ -85,8 +90,8 @@ reading the reasons, then by mutation).
 
 ## DSig's grammar against PICS 1.1's — verified from both sources
 
-The PICS 1.1 grammar is the `<pre>` of pics-1-1-labels, section "General Format of PICS Labels"
-(`.cache/pics-1-1-labels.bin`, HTML line 419; `.cache/pics-1-1-labels.txt` lines 150-219). Compared with
+The PICS 1.1 grammar is the `<pre>` of pics-1-1-labels, section 7 "Detailed Syntax" (pass 2 corrected an
+earlier "General Format of PICS Labels", which is its section 5) (`.cache/pics-1-1-labels.bin`, HTML line 419; `.cache/pics-1-1-labels.txt` lines 150-219). Compared with
 the two displays here:
 
 | item | PICS 1.1 | DSig 1.0 |
@@ -100,7 +105,8 @@ the two displays here:
 So DSig 1.0's own note (L437) that its extension "is not a valid PICS 1.1 extension because Base64
 encoding uses a '/'" is shown by case **P-02**: base64 with `/` is rejected under `pics11`,
 accepted under `dsig`. The note sits under sigblock only; the same holds for a resinfo hash that contains
-`/` (**P-06**; our arithmetic: about 35 percent of 20-byte digests). The note's reason is itself
+`/` (**P-06**; our arithmetic: about one in three 20-byte digests, 1 - (63/64)^26 = 0.336, since only 26 of
+the 27 base64 data characters carry six random bits; pass 2 corrected an earlier "about 35 percent"). The note's reason is itself
 inconsistent with DSig's own grammar, whose `quotedName` accepts `/` (**N-01**, **N-02**).
 `quotedURL` "as described and extended in Rating Services and Rating Systems" is a third document, not
 read here: the source's claim that `quotedURL` allows `/` is taken as stated. The derived `pics11`
@@ -112,6 +118,11 @@ parser reads most DSig labels, and fails only on `/`.
 
 ## Checks
 
-`python3 -I check-grammar.derived.py` prints `CASES 46: 17 accept, 29 reject; DIFFERING from expectation 0`.
-`python3 -I mutate-grammar.derived.py` prints `MUTATIONS 13: 12 killed, 1 equivalent, 0 survived`.
+`python3 -I check-grammar.derived.py` prints `CASES 50: 18 accept, 32 reject; DIFFERING from expectation 0`.
+`python3 -I mutate-grammar.derived.py` prints `MUTATIONS 16: 15 killed, 1 equivalent, 0 survived`.
+
+Pass 2 (verify) added R-28 to R-30, A-10 and three mutations: the first version read a label's own options
+only, so it accepted resinfo in a label made generic by its service section (either way round) and a
+generic label with no `for`, while the list above claimed the generic rule. It also renamed R-17, an
+accept case, to A-11, and corrected P-05 and P-06, which called non-digest byte strings digests.
 `python3 -I ../examples/reproduce.py` parses the eight example fixtures with this recogniser.
