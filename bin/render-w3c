@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """render-w3c — render a W3C respec TR page to plain text for FX-1.
 
-    bin/render-w3c .cache/<id>.bin .cache/<id>.txt
+    bin/render-w3c [--ordinal] .cache/<id>.bin .cache/<id>.txt
 
 The W3C analogue of an RFC .txt: what bin/fx1-skeleton, bin/check-quotes,
 bin/check-locators and bin/bcp14-count read for a W3C Recommendation
@@ -15,6 +15,14 @@ function of the input bytes and this script.
 - <pre> content keeps its line breaks byte-for-byte (entities decoded).
 - Elsewhere whitespace is collapsed; each block element is one line.
 - <script>/<style> dropped.
+
+--ordinal is for a pre-respec page whose headings carry no numbers (the 1996
+PICS and 1998 DSig Recommendations): from the first <h2> on, each heading is
+given a STRUCTURAL ORDINAL from the h2..h6 nesting and rendered "3.2.  Title",
+so the section tools (bin/_source_text, bin/check-locators) can file text
+under it. The ordinal is the renderer's, not the source's: an extraction
+that uses it says so in its README, and its locators carry the heading
+title beside the "§3.2". Headings before the first <h2> stay unnumbered.
 
 Known artefacts: an inline-span boundary can insert a space (a compact JWS
 reads `eyJ… .eyJ…`), so example fixtures are taken from the HTML, never from
@@ -34,8 +42,9 @@ HEAD = {"h1", "h2", "h3", "h4", "h5", "h6"}
 
 
 class R(HTMLParser):
-    def __init__(self):
+    def __init__(self, ordinal=False):
         super().__init__(convert_charrefs=True)
+        self.ordinal, self.counters, self.level = ordinal, [], 0
         self.out, self.buf = [], []
         self.pre = 0
         self.skip = 0
@@ -66,6 +75,7 @@ class R(HTMLParser):
         if tag in HEAD:
             self.flush()
             self.head = []
+            self.level = int(tag[1])
             return
         if tag in BLOCK:
             self.flush()
@@ -92,7 +102,13 @@ class R(HTMLParser):
             m = re.match(r"^(\d+(?:\.\d+)*)\.? (.*)$", s)
             a = re.match(r"^([A-Z])\. (.*)$", s)
             sa = re.match(r"^([A-Z](?:\.\d+)+) (.*)$", s)
-            if m:
+            if self.ordinal and s and (self.level == 2 or (self.counters and self.level > 2)):
+                d = self.level - 1
+                self.counters = (self.counters + [0] * d)[:d]
+                self.counters[-1] += 1
+                n = ".".join(str(c or 1) for c in self.counters)
+                self.out.append(f"\n{n}.  {s}\n")
+            elif m:
                 self.out.append(f"\n{m.group(1)}.  {m.group(2)}\n")
             elif a:
                 self.out.append(f"\nAppendix {a.group(1)}.  {a.group(2)}\n")
@@ -113,10 +129,13 @@ class R(HTMLParser):
             self.buf.append(data)
 
 
-if len(sys.argv) != 3:
+args = sys.argv[1:]
+ordinal = "--ordinal" in args
+args = [a for a in args if a != "--ordinal"]
+if len(args) != 2:
     print(__doc__); sys.exit(2)
-src, dst = sys.argv[1], sys.argv[2]
-r = R()
+src, dst = args
+r = R(ordinal)
 r.feed(open(src, encoding="utf-8", errors="replace").read())
 r.flush()
 text = "\n".join(r.out)
