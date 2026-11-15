@@ -327,11 +327,13 @@ def check_pass(x, where, errs):
                    "a pass runs at max, or is `tiered` with its agents listed"))
 
 
-def check_skeleton_requirements(recdir, entries, where, errs):
+def check_skeleton_requirements(recdir, entries, where, errs, vocab="bcp14"):
     """A requirements.yaml bin/fx1-skeleton generated carries the stricter
     contract it was generated under (library#86). Older files keep their own
     vocabulary: `verb` is free text across 76 records, and FX-1 is not
-    retroactive."""
+    retroactive. `vocab` is the file's keyword_vocabulary: BCP 14 binds in
+    capitals, the ETSI/ISO `directives` forms in lowercase (library#69)."""
+    verbs = BCP14_VERBS if vocab == "bcp14" else set(_bcp14.VOCABULARIES[vocab]) | {"none"}
     for e in entries:
         rid, kind = e.get("id", "?"), str(e.get("kind", ""))
         verb, text = str(e.get("verb", "")), str(e.get("text", ""))
@@ -339,9 +341,12 @@ def check_skeleton_requirements(recdir, entries, where, errs):
             errs.append(f"{where}: FX-1 — {rid} kind '{kind}'; stated (verbatim) or inferred")
         if verb.startswith("TODO"):
             continue  # the TODO scan reports it
-        if verb not in BCP14_VERBS:
-            errs.append(f"{where}: FX-1 — {rid} verb '{verb}'; one BCP 14 keyword or none")
-        elif kind == "stated" and verb != "none" and verb not in re.sub(r"\s+", " ", text):
+        said = re.sub(r"\s+", " ", text)
+        if vocab != "bcp14":
+            said = said.lower()
+        if verb not in verbs:
+            errs.append(f"{where}: FX-1 — {rid} verb '{verb}'; one {vocab} keyword or none")
+        elif kind == "stated" and verb != "none" and verb not in said:
             errs.append(f"{where}: FX-1 — {rid} verb {verb} is not in its text")
         if kind == "stated" and not e.get("source_lines"):
             errs.append(f"{where}: FX-1 — {rid} is stated but has no source_lines "
@@ -415,9 +420,14 @@ def check_full(recdir, d, where, errs):
         # A `split_of` child quotes part of its parent, whose text already
         # carries the keyword; counting both counted it twice (library#86).
         texts = " ".join(str(x.get("text", "")) for x in entries if not x.get("split_of"))
+        vocab = str(r.get("keyword_vocabulary") or "bcp14").strip()
+        if vocab not in _bcp14.VOCABULARIES:
+            errs.append(f"{where}: FX-1 — keyword_vocabulary '{vocab}'; one of "
+                        f"{', '.join(sorted(_bcp14.VOCABULARIES))}")
+            vocab = "bcp14"
         if str(r.get("generated_by", "")).strip() == "bin/fx1-skeleton":
-            check_skeleton_requirements(recdir, entries, where, errs)
-        got = _bcp14.count(texts, boilerplate=False)
+            check_skeleton_requirements(recdir, entries, where, errs, vocab)
+        got = _bcp14.count_v(texts, vocab, boilerplate=False)
         def num(v, dflt):
             try:
                 return int(str(v).split("#")[0].strip().strip('"'))

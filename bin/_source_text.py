@@ -17,6 +17,10 @@ output, not text the author wrote; undoing them is reading, not healing.
    with no space. A hyphen the word did not have never appears at a line end.
 
 Everything else is whitespace-collapsed, as every pass has always compared.
+
+A PDF source has its own reading (the "PDF profile" at the end of this file,
+library#69), chosen by `profile_of(record)`; every *_for function defaults to
+the RFC reading above.
 Never `splitlines()`: it splits on the form feed and shifts every line number.
 """
 import re
@@ -140,3 +144,211 @@ def looks_like_text(src):
     content.url at the .html rendering; library#86)."""
     head = "\n".join(src[:20]).lstrip().lower()
     return not head.startswith(("<!doctype", "<html", "<?xml"))
+
+
+# ---------------------------------------------------------------------------
+# The PDF profile (library#69). A standard published as a PDF — ETSI, ISO/IEC,
+# NIST — is read through a pinned `pdftotext -layout` rendering, and its page
+# furniture and headings are not xml2rfc's. Everything above is the RFC
+# profile and is unchanged: every function below takes `profile` and the
+# default reproduces the RFC behaviour exactly, so no count measured through
+# the RFC reader moves (hazards.md §6, "fixing a reader falsifies counts").
+#
+# Two artefacts are undone for a PDF, and only these:
+#
+# 1. Page furniture. A line in the first or last two non-blank lines of a
+#    page whose shape (digits folded to '#', whitespace collapsed) recurs on
+#    at least half the pages, and at least three, is a running header or
+#    footer. It is removed with the blank run between it and the page edge,
+#    as an RFC page break is. Found by recurrence, not by a pattern per
+#    publisher, so an ETSI "N   ETSI EN 304 223 V2.1.1 (2025-12)" header and
+#    a NIST footer both fall out without a rule naming either.
+# 2. Line-end hyphens, exactly as rule 3 above. pdftotext emits the hyphen a
+#    line ends on; it never inserts one, so the same join is reading.
+#
+# A page that ends on a sentence-final line keeps ONE blank line in place of
+# its break, so a paragraph that ends at the foot of a page is not welded to
+# the first paragraph of the next.
+# ---------------------------------------------------------------------------
+import hashlib
+import shutil
+import subprocess
+
+PROFILES = ("rfc", "pdf")
+PDF_TOOL = ["pdftotext", "-layout", "-enc", "UTF-8"]
+# Numbered clause: "5.1.2    Principle 2: ...", ISO "5.1 General" (one space).
+PDF_NUMBERED = re.compile(r"^(\d{1,2}(?:\.\d{1,3})*)\.?\s+([A-Z(\"'].*)$")
+# "Annex A (normative):  Title", "Annex B (informative)".
+PDF_ANNEX = re.compile(r"^Annex\s+([A-Z])\b(.*)$")
+PDF_SUBANNEX = re.compile(r"^([A-Z](?:\.\d{1,3})+)\s+([A-Z(\"'].*)$")
+# A table-of-contents entry: dot leaders to a page number.
+TOC_ENTRY = re.compile(r"(?:\.\s?){4,}\s*[ivxlc\d]+\s*$")
+# Unnumbered clauses of the ETSI and ISO/IEC drafting rules. Matched whole,
+# at column 0, so a sentence that begins "Introduction of ..." is not one.
+PDF_TITLED = ("Intellectual Property Rights", "Foreword", "Modal verbs terminology",
+              "Introduction", "Executive summary", "History", "Bibliography",
+              "Contents", "Abstract")
+# Informative by the ETSI Drafting Rules and ISO/IEC Directives Part 2:
+# these clauses and NOTE/EXAMPLE blocks "shall not contain requirements".
+INFORMATIVE_TITLED = {"Intellectual Property Rights", "Foreword", "Modal verbs terminology",
+                      "Introduction", "Executive summary", "History", "Bibliography",
+                      "Contents", "Abstract"}
+
+
+def profile_of(meta):
+    """'pdf' when the record's source of record is a PDF, else 'rfc'."""
+    mt = str(((meta or {}).get("content") or {}).get("media_type") or "")
+    return "pdf" if mt == "application/pdf" else "rfc"
+
+
+def pdf_tool_version():
+    if not shutil.which(PDF_TOOL[0]):
+        return None
+    p = subprocess.run([PDF_TOOL[0], "-v"], capture_output=True, text=True)
+    m = re.search(r"pdftotext version (\S+)", p.stdout + p.stderr)
+    return m.group(1) if m else "unknown"
+
+
+def render_pdf(pdf_path):
+    """(text, rendered_by) — the one rendering every tool reads a PDF through.
+    `rendered_by` names the tool and version; a different version may break
+    lines differently, which is why the digest of the text is recorded."""
+    v = pdf_tool_version()
+    if v is None:
+        raise SystemExit("pdftotext not found — brew install poppler (library#69)")
+    p = subprocess.run(PDF_TOOL + [str(pdf_path), "-"], capture_output=True, check=True)
+    return p.stdout.decode("utf-8"), f"pdftotext {v} {' '.join(PDF_TOOL[1:])}"
+
+
+def sha256_text(text):
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _shape(line):
+    return re.sub(r"\d+", "#", " ".join(line.split()))
+
+
+def furniture_lines(src):
+    """Line numbers (1-based) of running headers and footers in a pdftotext
+    rendering. Pages are delimited by form feeds."""
+    pages, cur = [], []
+    for i, l in enumerate(src, 1):
+        parts = l.split("\f")
+        cur.append((i, parts[0]))
+        for p in parts[1:]:
+            pages.append(cur)
+            cur = [(i, p)]
+    pages.append(cur)
+    edges = []
+    for pg in pages:
+        nb = [(i, l) for i, l in pg if l.strip()]
+        edges.append(nb[:2] + nb[-2:] if len(nb) > 4 else nb)
+    count = {}
+    for e in edges:
+        for s in {_shape(l) for _, l in e}:
+            count[s] = count.get(s, 0) + 1
+    need = max(3, (len(pages) + 1) // 2)
+    hot = {s for s, n in count.items() if n >= need}
+    return {i for e in edges for i, l in e if _shape(l) in hot}, pages
+
+
+def clean_pdf(src):
+    """[(lineno, text or None)] for a pdftotext rendering; see the header."""
+    furn, pages = furniture_lines(src)
+    out = [[i, l.replace("\f", "")] for i, l in enumerate(src, 1)]
+    for pg in pages:
+        idx = [i for i, _ in pg]
+        if not idx:
+            continue
+        nb = [i for i, l in pg if l.strip() and i not in furn]
+        first, last = (nb[0], nb[-1]) if nb else (idx[-1] + 1, idx[0] - 1)
+        for i in idx:
+            if i in furn or i < first or i > last:
+                out[i - 1][1] = None
+        # keep one paragraph break where the page ends on a finished sentence
+        if nb and re.search(r"[.:;!?)\"']\s*$", src[last - 1]) and last < idx[-1]:
+            out[last][1] = ""
+    return [(i, l) for i, l in out]
+
+
+def clean_for(src, profile="rfc"):
+    return clean_pdf(src) if profile == "pdf" else clean(src)
+
+
+def pdf_heading_key(line):
+    """'§5.1.2', 'Annex A', 'Annex A.2', a drafting-rules title, or None."""
+    line = line.replace("\f", "")
+    if not line or line[0] == " " or TOC_ENTRY.search(line):
+        return None
+    s = line.rstrip()
+    if s in PDF_TITLED:
+        return s
+    m = PDF_ANNEX.match(s)
+    if m and (not m.group(2) or re.match(r"\s*(\(|:|$)", m.group(2))):
+        return "Annex " + m.group(1)
+    m = PDF_SUBANNEX.match(s)
+    if m and not s.endswith("."):
+        return "Annex " + m.group(1)
+    m = PDF_NUMBERED.match(s)
+    if m and not s.endswith(".") and len(m.group(2)) < 160:
+        return "§" + m.group(1)
+    return None
+
+
+def pdf_headings(src):
+    """{lineno: key} for every heading line, including the indented
+    continuation of a wrapped title ("5.1.2   Principle 2: Design ... \\n
+    <indent>and performance"). A heading counts after a blank line, at the
+    top of a page, or directly after another heading (ETSI prints
+    "5.1  Secure Design" and "5.1.1  Principle 1" on consecutive lines)."""
+    furn, _ = furniture_lines(src)
+    heads, prev_ok, last_head, title_col = {}, True, None, None
+    for i, l in enumerate(src, 1):
+        line = l.replace("\f", "")
+        if i in furn or not line.strip():
+            prev_ok = prev_ok or not line.strip() or i in furn
+            if not line.strip():
+                last_head = None
+            continue
+        k = pdf_heading_key(line) if prev_ok else None
+        if k:
+            heads[i] = k
+            m = re.match(r"^\S+(?:\s+\([^)]*\):?)?\s+", line)
+            title_col = m.end() if m and k.startswith(("§", "Annex")) else None
+            last_head, prev_ok = i, True
+            continue
+        if (last_head == i - 1 and title_col and line.startswith(" ")
+                and len(line) - len(line.lstrip()) == title_col):
+            heads[i] = heads[last_head]
+            last_head = i
+            continue
+        prev_ok, last_head = False, None
+    return heads
+
+
+def headings_for(src, profile="rfc"):
+    """{lineno: key} of heading lines, in either profile."""
+    if profile == "pdf":
+        return pdf_headings(src)
+    letters = appendix_letters(src)
+    out = {}
+    for i, l in enumerate(src, 1):
+        k = heading_key(l.replace("\f", ""), letters)
+        if k:
+            out[i] = k
+    return out
+
+
+def section_of_line_for(src, profile="rfc"):
+    if profile != "pdf":
+        return section_of_line(src)
+    heads, cur, out = pdf_headings(src), None, []
+    for i in range(1, len(src) + 1):
+        cur = heads.get(i, cur)
+        out.append(cur)
+    return out
+
+
+def informative(key):
+    """True for a clause the drafting rules make informative by its kind."""
+    return bool(key) and (key in INFORMATIVE_TITLED)
