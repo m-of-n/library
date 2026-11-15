@@ -88,12 +88,16 @@ def lines_field(a, b):
     return f"'{a}-{b}'" if a != b else f"'{a}'"
 
 
-def blocks(cleaned, heads):
-    """Paragraph and list-item blocks, each a [(lineno, text)]."""
+def blocks(cleaned, heads, starts=()):
+    """Paragraph and list-item blocks, each a [(lineno, text)]. A line in
+    `starts` opens a block and is kept: a run-in heading carries body text."""
     cur, res = [], []
     for ln, l in cleaned:
         if l is None:
             continue
+        if ln in starts and cur:
+            res.append(cur)
+            cur = []
         if not l.strip() or ln in heads:
             if cur:
                 res.append(cur)
@@ -219,8 +223,13 @@ def main():
     cleaned = st.clean_for(src, profile)
     sec = st.section_of_line_for(src, profile)
     heads, titles = set(), {}
+    runin = set()
     for i, k in st.headings_for(src, profile).items():
         l = src[i - 1].replace("\f", "")
+        if k.startswith("¶"):
+            runin.add(i)
+            titles.setdefault(k, st.PDF_RUNIN.match(l.strip()).group(2))
+            continue
         heads.add(i)
         if k not in titles:
             titles[k] = l.split(None, 1)[1] if " " in l.strip() else l.strip()
@@ -262,7 +271,7 @@ def main():
     code, xkw = read_xml(xmlp) if xmlp.exists() else ([], {})
 
     reqs, cands, per_sec = [], [], {}
-    for b in blocks(cleaned, heads):
+    for b in blocks(cleaned, heads, runin):
         is_item = bool(BULLET.match(b[0][1]))
         is_step = bool(STEP.match(b[0][1]))
         for text, l1, l2 in sentences(b):
@@ -304,9 +313,10 @@ def main():
         # Computed, not written: the arithmetic closes exactly.
         parts = ", ".join(f"{n} in {w}" for w, n in sorted(inform.items()))
         recon = q(f"{src_count} verbal forms in the source = {ext_count} in requirements "
-                  f"+ {n_inf} in informative text ({parts}), each filed as a candidate; "
-                  f"informative text states no provision (ETSI Drafting Rules, "
-                  f"ISO/IEC Directives Part 2)")
+                  f"+ {n_inf} in informative text ({parts}), each filed as a candidate "
+                  f"for pass 1 to confirm: informative text states no provision "
+                  f"(ETSI Drafting Rules 3.2, ISO/IEC Directives Part 2 — and pass 1 "
+                  f"checks each for a publisher that does not follow them)")
     else:
         recon = q(f"TODO: the skeleton carries {ext_count} of {src_count}"
                   f"{f' (+{n_inf} informative)' if n_inf else ''}; "

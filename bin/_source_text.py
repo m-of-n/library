@@ -182,7 +182,10 @@ PDF_NUMBERED = re.compile(r"^(\d{1,2}(?:\.\d{1,3})*)\.?\s+([A-Z(\"'].*)$")
 PDF_ANNEX = re.compile(r"^Annex\s+([A-Z])\b(.*)$")
 PDF_SUBANNEX = re.compile(r"^([A-Z](?:\.\d{1,3})+)\s+([A-Z(\"'].*)$")
 # A table-of-contents entry: dot leaders to a page number.
-TOC_ENTRY = re.compile(r"(?:\.\s?){4,}\s*[ivxlc\d]+\s*$")
+TOC_ENTRY = re.compile(r"(?:\.\s?){3,}\s*[ivxlc\d]+\s*$")
+# FIPS announcement paragraphs run their title in: "10. Approved Security
+# Functions. Cryptographic modules that conform ...".
+PDF_RUNIN = re.compile(r"^(\d{1,2})\.\s+([A-Z][A-Za-z/&,' -]{2,60}?)\.\s+\S")
 # Unnumbered clauses of the ETSI and ISO/IEC drafting rules. Matched whole,
 # at column 0, so a sentence that begins "Introduction of ..." is not one.
 PDF_TITLED = ("Intellectual Property Rights", "Foreword", "Modal verbs terminology",
@@ -249,7 +252,18 @@ def furniture_lines(src):
             count[s] = count.get(s, 0) + 1
     need = max(3, (len(pages) + 1) // 2)
     hot = {s for s, n in count.items() if n >= need}
-    return {i for e in edges for i, l in e if _shape(l) in hot}, pages
+    furn = {i for e in edges for i, l in e if _shape(l) in hot}
+    # A long line recurring VERBATIM on half the pages is furniture wherever
+    # it falls: NIST prints its "available free of charge" sidebar rotated,
+    # and pdftotext places it mid-page. 30 characters keeps a short repeated
+    # body line ("Not applicable.") out.
+    every = {}
+    for pg in pages:
+        for t in {" ".join(l.split()) for _, l in pg if len(" ".join(l.split())) >= 30}:
+            every[t] = every.get(t, 0) + 1
+    side = {t for t, n in every.items() if n >= need}
+    furn |= {i for pg in pages for i, l in pg if " ".join(l.split()) in side}
+    return furn, pages
 
 
 def clean_pdf(src):
@@ -284,15 +298,48 @@ def pdf_heading_key(line):
     if s in PDF_TITLED:
         return s
     m = PDF_ANNEX.match(s)
-    if m and (not m.group(2) or re.match(r"\s*(\(|:|$)", m.group(2))):
+    if m and (not m.group(2) or re.match(r"\s*(\(|:|[\u2013\u2014-]\s|$)", m.group(2))):
         return "Annex " + m.group(1)
     m = PDF_SUBANNEX.match(s)
     if m and not s.endswith("."):
         return "Annex " + m.group(1)
+    m = PDF_RUNIN.match(s)
+    if m:
+        return "¶" + m.group(1)     # a FIPS announcement paragraph, not a clause
     m = PDF_NUMBERED.match(s)
     if m and not s.endswith(".") and len(m.group(2)) < 160:
         return "§" + m.group(1)
     return None
+
+
+def body_margin(src):
+    """The indent most body lines share. 0 for an ETSI rendering; NIST SP
+    renderings put the body ~90 columns in, behind a rotated sidebar, so a
+    heading is "at the margin", not at column 0."""
+    furn, _ = furniture_lines(src)
+    count = {}
+    for i, l in enumerate(src, 1):
+        line = l.replace("\f", "")
+        if line.strip() and i not in furn:
+            n = len(line) - len(line.lstrip(" "))
+            count[n] = count.get(n, 0) + 1
+    return max(count, key=lambda n: (count[n], -n)) if count else 0
+
+
+def toc_keys(src, margin=0):
+    """Clause keys a table of contents lists: every dot-leader line, and the
+    two lines before one (a long title wraps its page number down)."""
+    keys = set()
+    for i, l in enumerate(src):
+        if TOC_ENTRY.search(l):
+            before = [x for x in src[max(0, i - 6):i] if x.strip()][-2:]
+            for c in before + [l]:
+                c = c.replace("\f", "").strip()
+                c = TOC_ENTRY.sub("", c).rstrip(" .")
+                k = pdf_heading_key(c)
+                if k and k not in PDF_TITLED:
+                    keys.add(k)
+    return keys
 
 
 def pdf_headings(src):
@@ -302,15 +349,34 @@ def pdf_headings(src):
     top of a page, or directly after another heading (ETSI prints
     "5.1  Secure Design" and "5.1.1  Principle 1" on consecutive lines)."""
     furn, _ = furniture_lines(src)
+    margin = body_margin(src)
+    # With a table of contents, a numbered heading must be one it lists: a
+    # NIST reference list ("7.    Barker EB ...") and numbered table notes
+    # ("12 The module is ...") have the heading's shape and no TOC entry.
+    toc = toc_keys(src)
+    depth = lambda k: k.split(" ")[-1].lstrip("§").count(".") + 1
+    toc_depth = max((depth(k) for k in toc), default=0)
     heads, prev_ok, last_head, title_col = {}, True, None, None
+    prev_indent = 0
     for i, l in enumerate(src, 1):
+        if l.startswith("\f"):
+            prev_ok = True          # top of a page
         line = l.replace("\f", "")
+        if margin and line[:margin].strip() == "":
+            line = line[margin:]
         if i in furn or not line.strip():
             prev_ok = prev_ok or not line.strip() or i in furn
             if not line.strip():
                 last_head = None
             continue
+        # A heading back at the margin straight after an indented list or
+        # table line (NIST: "    ● rules of operation" / "B.2.3 Interfaces").
+        if not prev_ok and prev_indent > 2 and not line.startswith(" "):
+            prev_ok = True
+        prev_indent = len(line) - len(line.lstrip(" "))
         k = pdf_heading_key(line) if prev_ok else None
+        if k and toc and k[0] in "§A" and k not in toc and depth(k) <= toc_depth:
+            k = None
         if k:
             heads[i] = k
             m = re.match(r"^\S+(?:\s+\([^)]*\):?)?\s+", line)

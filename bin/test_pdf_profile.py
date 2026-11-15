@@ -31,7 +31,11 @@ def page(n, body):
 PAGES = [
     "Contents\n\nForeword.................................................... 2\n"
     "1        Scope ..................................................... 3\n"
-    "5.1.1           Principle 1: Do a thing ........................... 4\n",
+    "5        Provisions ................................................ 3\n"
+    "5.1           Secure Design ........................................ 3\n"
+    "5.1.1           Principle 1: Do a thing\n"
+    "                and more ........................................... 4\n"
+    "Annex A (informative): Background ................................. 5\n",
     "Foreword\nThis document can be downloaded from the ETSI web site.\n\n"
     "Modal verbs terminology\n"
     'In the present document "shall", "shall not", "should", "should not", "may", "need not", "will", "will not", "can" and\n'
@@ -48,7 +52,10 @@ PAGES = [
     "Provision 5.1.1-2 System Operators should monitor the system.\n\n"
     "    NOTE:      An operator can use any tool for this.\n\n"
     "Provision 5.1.1-3 Shall we continue? Data Custodians may delete the data.",
-    "Annex A (informative):\nBackground\n\nA reader can find more here.",
+    "Annex A (informative):\nBackground\n\nA reader can find more here.\n\n"
+    "7.    Barker EB (2018) Recommendation for Key-Derivation Methods\n"
+    "      in Key-Establishment Schemes.\n\n"
+    "10. Approved Security Functions. Modules shall use them.",
 ]
 SRC = "\f".join(page(i + 1, b) for i, b in enumerate(PAGES))
 
@@ -102,6 +109,11 @@ def main():
     wrapped = line_of(src, "              functionality")
     results.append(check("wrapped title continuation is the heading", heads.get(wrapped) == "§5.1.1", heads))
     results.append(check("'Provision ...' is not a heading", line_of(src, "Provision 5.1.1-2") not in heads))
+    results.append(check("a reference item the TOC does not list is not a heading",
+                         line_of(src, "7.    Barker") not in heads, heads))
+    results.append(check("a FIPS run-in paragraph is keyed ¶N",
+                         heads.get(line_of(src, "10. Approved")) == "¶10", heads))
+    results.append(check("a wrapped TOC title still lists its clause", "§5.1.1" in st.toc_keys(src)))
 
     # 3. vocabulary
     rx = _bcp14.regex("directives")
