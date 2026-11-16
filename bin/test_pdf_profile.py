@@ -208,6 +208,25 @@ def main():
     results.append(check("a BCP 14 verb fails under directives", "R-2 verb 'MUST'" in j, j))
     results.append(check("verb missing from text fails", "R-3 verb should" in j, j))
 
+    # YAML profile (library#69, OWASP DSOMM)
+    ysrc = ("---\nmeta:\n  version: 1\n---\nDim A:\n  Sub B:\n    Act C:\n      uuid: 1234\n"
+            "      description: |-\n        The team shall do a thing\n        well.\n"
+            "      measure: Run the scanner on every build and review\n        the findings.\n"
+            "      tags:\n      - ci\n      implementation:\n      - name: Tool X\n"
+            "        description: A tool that may help.\n      - name: Tool Y\n").split("\n")
+    yh = st.headings_for(ysrc, "yaml")
+    results.append(check("yaml: activity path", "Dim A / Sub B / Act C" in yh.values(), yh))
+    results.append(check("yaml: list item under its key", "Dim A / Sub B / Act C / implementation / [1] / description" in yh.values(), yh))
+    yc = st.clean_yaml(ysrc)
+    prose = st.span(yc, 1, len(ysrc))
+    results.append(check("yaml: block and inline prose, keys blanked",
+                         "The team shall do a thing well." in prose and "Run the scanner on every build and review the findings." in prose
+                         and "measure:" not in prose and "1234" not in prose, prose))
+    cl2 = load("check-locators")
+    ysp = cl2.section_spans(ysrc, "yaml")
+    results.append(check("yaml: spans nest", ysp["Dim A / Sub B"][1] >= ysp["Dim A / Sub B / Act C / measure"][1], ysp))
+    results.append(check("yaml: profile from media_type", st.profile_of({"content": {"media_type": "application/yaml"}}) == "yaml"))
+
     n = len(results)
     print(f"test_pdf_profile: {sum(results)}/{n} passed")
     return 0 if all(results) else 1

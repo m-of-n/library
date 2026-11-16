@@ -323,6 +323,12 @@ informative annex goes to `inferred-candidates.yaml`, not `requirements.yaml`.
 When the source count is exactly requirements plus informative, the skeleton
 writes the reconciliation itself; otherwise it leaves a TODO.
 
+A YAML data model (`content.media_type: application/yaml`, e.g. OWASP DSOMM's
+`generated/model.yaml`) is its own source of record, digest-pinned like an RFC
+.txt. Sections are key paths (`Dimension / Sub-dimension / Activity /
+measure`, list items `[n]`); only block-scalar text and multi-word inline
+values are prose, with the `key: ` prefix blanked, so no key is ever quoted.
+
 What the PDF reading does NOT do: split table columns. A sentence built from
 a `-layout` table row can weld two cells; `skeleton-report.txt` counts the
 lines where that can happen, and pass 1 checks them.

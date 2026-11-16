@@ -199,9 +199,14 @@ INFORMATIVE_TITLED = {"Intellectual Property Rights", "Foreword", "Modal verbs t
 
 
 def profile_of(meta):
-    """'pdf' when the record's source of record is a PDF, else 'rfc'."""
+    """'pdf' for a PDF source of record, 'yaml' for a YAML data model
+    (library#69: OWASP DSOMM), else 'rfc'."""
     mt = str(((meta or {}).get("content") or {}).get("media_type") or "")
-    return "pdf" if mt == "application/pdf" else "rfc"
+    if mt == "application/pdf":
+        return "pdf"
+    if mt in ("application/yaml", "application/x-yaml", "text/yaml"):
+        return "yaml"
+    return "rfc"
 
 
 def pdf_tool_version():
@@ -322,6 +327,8 @@ def clean_pdf(src):
 
 
 def clean_for(src, profile="rfc"):
+    if profile == "yaml":
+        return clean_yaml(src)
     return clean_pdf(src) if profile == "pdf" else clean(src)
 
 
@@ -463,7 +470,9 @@ def pdf_headings(src):
 
 
 def headings_for(src, profile="rfc"):
-    """{lineno: key} of heading lines, in either profile."""
+    """{lineno: key} of heading lines, in any profile."""
+    if profile == "yaml":
+        return yaml_structure(src)[0]
     if profile == "pdf":
         return pdf_headings(src)
     letters = appendix_letters(src)
@@ -476,6 +485,8 @@ def headings_for(src, profile="rfc"):
 
 
 def section_of_line_for(src, profile="rfc"):
+    if profile == "yaml":
+        return yaml_structure(src)[2]
     if profile != "pdf":
         return section_of_line(src)
     heads, cur, out = pdf_headings(src), None, []
@@ -488,3 +499,97 @@ def section_of_line_for(src, profile="rfc"):
 def informative(key):
     """True for a clause the drafting rules make informative by its kind."""
     return bool(key) and (key in INFORMATIVE_TITLED)
+
+
+# ---------------------------------------------------------------------------
+# The YAML profile (library#69). A data model published as YAML — OWASP
+# DSOMM's generated/model.yaml — is its own source of record, digest-pinned
+# like an RFC .txt. Its prose lives in block scalars (`description: |-`);
+# everything else is structure.
+#
+# - A mapping key whose value is empty or a block scalar is a heading, keyed
+#   by its path: "Build and Deployment / Build / Defined build process /
+#   measure". A list item is a path component "[n]" (1-based).
+# - Only block-scalar content is prose. Every other line reads as a blank, so
+#   each block scalar is its own paragraph and no key or value is ever welded
+#   into a quotation.
+# ---------------------------------------------------------------------------
+YAML_KEY = re.compile(r"^(\s*)((?:- )*)([^\s#\-][^:#]*?|\"[^\"]*\"|'[^']*'):(?=\s|$)")
+YAML_ITEM = re.compile(r"^(\s*)- ")
+
+
+def yaml_structure(src):
+    """({lineno: path} heading lines, {prose lineno: text}, [path per line]).
+
+    Prose is block-scalar content, and a multi-word inline value (with its
+    plain-scalar continuation lines), its `key: ` prefix blanked."""
+    heads, prose, per = {}, {}, []
+    plain = None         # indent of a key whose plain scalar may continue
+    stack = []           # [(indent, component)]
+    counters = {}        # path of a list's parent -> items seen
+    block = None         # indent of the key that opened a block scalar
+    cur = None
+    for i, l in enumerate(src, 1):
+        line = l.replace("\f", "")
+        if block is not None:
+            if not line.strip() or len(line) - len(line.lstrip(" ")) > block:
+                if line.strip():
+                    prose[i] = line
+                per.append(cur)
+                continue
+            block = None
+        if plain is not None:
+            if (line.strip() and len(line) - len(line.lstrip(" ")) > plain
+                    and not YAML_KEY.match(line) and not YAML_ITEM.match(line)):
+                prose[i] = line
+                per.append(cur)
+                continue
+            plain = None
+        if not line.strip() or line.lstrip().startswith("#") or line.strip() in ("---", "..."):
+            per.append(cur)
+            continue
+        ind = len(line) - len(line.lstrip(" "))
+        m_item = YAML_ITEM.match(line)
+        if m_item:
+            # "- " may sit at its parent key's own indent (YAML allows it):
+            # pop deeper entries and sibling items, never the parent key
+            while stack and (stack[-1][0] > ind or
+                             (stack[-1][0] == ind and stack[-1][1].startswith("["))):
+                stack.pop()
+            parent = " / ".join(c for _, c in stack)
+            counters[(parent, ind)] = counters.get((parent, ind), 0) + 1
+            stack.append((ind, f"[{counters[(parent, ind)]}]"))
+            # forget the counters of lists nested deeper than this item
+            for k in [k for k in counters if k[1] > ind and k[0].startswith(parent)]:
+                if k[0] != parent:
+                    del counters[k]
+            ind += 2
+            line = " " * ind + line[m_item.end():]
+        m = YAML_KEY.match(line)
+        if m:
+            kind = len(m.group(1)) + 2 * len(m.group(2))
+            while stack and stack[-1][0] >= kind:
+                stack.pop()
+            name = m.group(3).strip("\"'")
+            raw = line[m.end(3) + 1:]
+            rest = re.sub(r"\s+#.*$", "", raw).strip()
+            stack.append((kind, name))
+            cur = " / ".join(c for _, c in stack)
+            heads[i] = cur
+            if rest and rest[0] in "|>":
+                block = kind
+            elif rest and rest[0] not in "[{&*!" and " " in rest:
+                # a multi-word inline value is prose; blank the key prefix
+                prose[i] = " " * (m.end(3) + 1) + raw.rstrip()
+                if rest[0] not in "\"'":
+                    plain = kind
+            if rest and not (rest[0] in "|>"):
+                stack.pop()      # a scalar has no children
+        per.append(cur)
+    return heads, prose, per
+
+
+def clean_yaml(src):
+    """[(lineno, text)]: block-scalar lines as prose, all else a blank."""
+    _, prose, _ = yaml_structure(src)
+    return [(i, prose.get(i, "")) for i, l in enumerate(src, 1)]
