@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: fips-140-3
 record: fips-140-3
 type: summary
-updated: "2026-09-26"
+updated: "2026-11-15"
 ---
 
 # FIPS 140-3 — Security Requirements for Cryptographic Modules
@@ -37,7 +37,7 @@ A deliberately **contrasting** requirement framework to ISO/SAE 21434:
 | Cryptography | core | Defines crypto-module security requirements & approved functions |
 | This project | adjacent | A compliance/validation regime we may reference & model, not the core threat-model |
 
-Bears on `DEC-005` (scope), `DEC-009` (compliance / product conformance).
+Bears on `tmodel:DEC-005` (scope) and `tmodel:DEC-009` (compliance / product conformance), tmodel's register, not mofn's.
 
 ## Implementations
 
@@ -50,12 +50,10 @@ Validated via the **CMVP** (NIST/CCCS); a large public list of validated modules
 
 | File | What it is |
 |---|---|
-| `record.yaml` | metadata (adopts ISO 19790/24759; cites SP 800-140x; supersedes FIPS 140-2) |
-| `distilled/requirements.yaml` | 4 levels, 11 requirement areas, native statements + security-policy deliverable |
-| `distilled/normative.md` | adoption model, levels, areas, SP 800-140x, CMVP |
-| `distilled/README.md` | distilled index + what's not held |
+| `record.yaml` | metadata (adopts ISO 19790/24759; cites SP 800-140x; supersedes FIPS 140-2); `distillation` holds the FX-1 coverage counts |
+| `distilled/` | the FX-1 artifact set (library#69): every requirement and the normative text, the derived message structures and schemas, protocol flows and lifecycles, and design notes; `distilled/README.md` is the index |
 
 ## Limits
 
-- **Umbrella standard** — the detailed, auditable requirements are in **ISO/IEC 19790:2012** (paywalled, held only as a stub) and the **SP 800-140x** modifications (free, cited, not yet ingested). This record captures structure + native statements, not the full requirement set.
-- Native normative statements are few (~a handful of shall/must); derived typing not human-reviewed.
+- **Umbrella standard** — the detailed, auditable requirements are in **ISO/IEC 19790:2012** (paywalled, held only as a stub) and the **SP 800-140x** modifications (held as `nist-sp-800-140` to `nist-sp-800-140f`). The FX-1 extraction holds all of FIPS 140-3's own text; it cannot hold a per-area or per-level requirement, because the document states none.
+- Native normative statements are few: the source's verbal forms include four shall and two must. No artifact is human-reviewed yet.
