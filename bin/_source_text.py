@@ -399,6 +399,20 @@ def toc_keys(src, margin=0):
     return keys
 
 
+def toc_titles(src):
+    """Unnumbered titles a table of contents lists ("Configuration
+    Management ....... 8"): CISA guides number nothing."""
+    furn, _ = furniture_lines(src)
+    out = set()
+    for i, l in enumerate(src):
+        if i + 1 in furn or not TOC_ENTRY.search(l):
+            continue
+        c = TOC_ENTRY.sub("", l.replace("\f", "").strip()).rstrip(" .")
+        if c and not pdf_heading_key(c) and len(c) < 90:
+            out.add(c)
+    return out
+
+
 def _title_words(line):
     """The first two words of a heading's title, for matching a heading
     against its table-of-contents entry."""
@@ -427,6 +441,7 @@ def pdf_headings(src):
     # NIST reference list ("7.    Barker EB ...") and numbered table notes
     # ("12 The module is ...") have the heading's shape and no TOC entry.
     toc = toc_keys(src)
+    titled = toc_titles(src)
     depth = lambda k: k.split(" ")[-1].lstrip("§").count(".") + 1
     toc_depth = max((depth(k) for k in toc), default=0)
     heads, prev_ok, last_head, title_col = {}, True, None, None
@@ -448,7 +463,12 @@ def pdf_headings(src):
             prev_ok = True
         prev_indent = len(line) - len(line.lstrip(" "))
         k = pdf_heading_key(line) if prev_ok else None
-        if k and toc and k[0] in "§A" and k not in toc and depth(k) <= toc_depth:
+        if prev_ok and not k and line.strip() in titled and not line.startswith(" "):
+            k = line.strip()          # an unnumbered title the TOC lists
+        if k and toc and k.startswith(("§", "Annex ")) and k not in toc and depth(k) <= toc_depth:
+            k = None
+        # a TOC of titles only: a numbered line it does not list is a footnote
+        if k and titled and not toc and k.startswith(("§", "Annex ")):
             k = None
         # listed, but not under this title: a numbered footnote or list item
         # ("1 Examples may be ports ..." against "1  Scope")
@@ -525,6 +545,7 @@ def yaml_structure(src):
     plain-scalar continuation lines), its `key: ` prefix blanked."""
     heads, prose, per = {}, {}, []
     plain = None         # indent of a key whose plain scalar may continue
+    quoted = False       # inside a double-quoted scalar spanning lines
     stack = []           # [(indent, component)]
     counters = {}        # path of a list's parent -> items seen
     block = None         # indent of the key that opened a block scalar
@@ -538,6 +559,13 @@ def yaml_structure(src):
                 per.append(cur)
                 continue
             block = None
+        if quoted:
+            prose[i] = line
+            per.append(cur)
+            end = (r'(?<!\\)"\s*(?:#.*)?$' if quoted == '"' else r"'\s*(?:#.*)?$")
+            if re.search(end, line) and not line.rstrip().endswith("''"):
+                quoted = False
+            continue
         if plain is not None:
             if (line.strip() and len(line) - len(line.lstrip(" ")) > plain
                     and not YAML_KEY.match(line) and not YAML_ITEM.match(line)):
@@ -565,6 +593,13 @@ def yaml_structure(src):
                     del counters[k]
             ind += 2
             line = " " * ind + line[m_item.end():]
+            body = line.strip()
+            if body and not YAML_KEY.match(line) and " " in re.sub(r"\s+#.*$", "", body):
+                # a list of strings: each multi-word item is prose
+                prose[i] = line
+                per.append(cur)
+                stack.pop()
+                continue
         m = YAML_KEY.match(line)
         if m:
             kind = len(m.group(1)) + 2 * len(m.group(2))
@@ -583,6 +618,10 @@ def yaml_structure(src):
                 prose[i] = " " * (m.end(3) + 1) + raw.rstrip()
                 if rest[0] not in "\"'":
                     plain = kind
+                elif rest[0] == '"' and not re.search(r'(?<!\\)"\s*$', rest[1:]):
+                    quoted = '"'
+                elif rest[0] == "'" and not re.search(r"'\s*$", rest[1:]):
+                    quoted = "'"
             if rest and not (rest[0] in "|>"):
                 stack.pop()      # a scalar has no children
         per.append(cur)

@@ -230,6 +230,10 @@ def main():
             runin.add(i)
             titles.setdefault(k, st.PDF_RUNIN.match(l.strip()).group(2))
             continue
+        if profile == "yaml" and cleaned[i - 1][1]:
+            runin.add(i)            # `measure: text` — the key line holds prose
+            titles.setdefault(k, k.rsplit(" / ", 1)[-1])
+            continue
         heads.add(i)
         if k not in titles:
             titles[k] = l.split(None, 1)[1] if " " in l.strip() else l.strip()
@@ -306,6 +310,11 @@ def main():
     (d / "examples").mkdir(parents=True, exist_ok=True)
 
     src_count = _bcp14.count_v("\n".join(src), vocab)
+    raw_count = src_count
+    if profile == "yaml":
+        # a YAML model's text is its prose; keys, ids, URLs and comments are
+        # structure. The raw-file count is reported beside it.
+        src_count = _bcp14.count_v("\n".join(l for _, l in cleaned if l), vocab)
     ext_count = sum(len(r["kw"]) for r in reqs)
     n_inf = sum(inform.values())
     if src_count == ext_count:
@@ -331,8 +340,10 @@ def main():
     if rendered_by:
         out += [f"source_text: {q(rendered_by)}",
                 f"source_text_digest: {q(hashlib.sha256(data).hexdigest())}"]
-    out += [f"source_keyword_count: {src_count}        # bin/bcp14-count"
-            f"{' --vocabulary ' + vocab if vocab != 'bcp14' else ''}",
+    out += [f"source_keyword_count: {src_count}        # "
+            + ("prose of the YAML (bin/_source_text.clean_yaml); the raw file holds "
+               f"{raw_count}" if profile == "yaml" else
+               f"bin/bcp14-count{' --vocabulary ' + vocab if vocab != 'bcp14' else ''}"),
            f"extracted_keyword_count: {ext_count}",
            f"reconciliation: {recon}",
            'reviewed_by: ""',

@@ -208,6 +208,16 @@ def main():
     results.append(check("a BCP 14 verb fails under directives", "R-2 verb 'MUST'" in j, j))
     results.append(check("verb missing from text fails", "R-3 verb should" in j, j))
 
+    # a TOC of unnumbered titles (CISA): titles are headings, footnotes are not
+    cisa = ("      Table of Contents\n      Summary ........................ 2\n"
+            "      Acknowledgements ............... 9\n\n\f      Summary\n      Owners should ask.\n\n"
+            "      1 CISA urges providers to take ownership of their customers security\n\n"
+            "      outcomes by design.\n\n      Acknowledgements\n      Thanks.\n").split("\n")
+    chh = st.pdf_headings(cisa)
+    results.append(check("TOC titles are headings", {"Summary", "Acknowledgements"} <= set(chh.values()), chh))
+    results.append(check("a footnote is not a heading under a titles-only TOC",
+                         not any(v.startswith("§") for v in chh.values()), chh))
+
     # YAML profile (library#69, OWASP DSOMM)
     ysrc = ("---\nmeta:\n  version: 1\n---\nDim A:\n  Sub B:\n    Act C:\n      uuid: 1234\n"
             "      description: |-\n        The team shall do a thing\n        well.\n"
