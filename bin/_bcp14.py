@@ -44,7 +44,8 @@ def by_keyword(text):
 # deliverable is exactly what an extractor needs to see. `will` is in the
 # ETSI list but states no provision, and is left to the candidate cues.
 #
-# "May" followed by a year is the month, and is not counted.
+# "May" followed by a year, or by a day and a year ("May 20, 2022"), is the
+# month, and is not counted.
 # ---------------------------------------------------------------------------
 DIRECTIVES = ["shall not", "should not", "must not", "need not",
               "shall", "should", "must", "may", "cannot", "can"]
@@ -56,7 +57,7 @@ def _ci(word):
 
 _DRX = re.compile(r"(?<![A-Za-z-])(" + "|".join(
     r"\s+".join(_ci(w) if j == 0 else w for j, w in enumerate(k.split()))
-    for k in DIRECTIVES) + r")(?![A-Za-z-])(?!\s+\d{4})")
+    for k in DIRECTIVES) + r")(?![A-Za-z-])(?!\s+(?:\d{1,2},?\s+)?\d{4})")
 _DBOILERPLATE = re.compile(
     r"In the present document \"shall\".{0,400}?interpreted as described.{0,200}?\.(?=\s|$)"
     r"|\"must\" and \"must not\" are NOT allowed[^.]*\.", re.S)

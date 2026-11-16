@@ -227,6 +227,9 @@ def sha256_text(text):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+PAGE_NO = re.compile(r"(?:\d{1,4}|[ivxlc]{1,7}|Page \d+(?: of \d+)?)", re.I)
+
+
 def _shape(line):
     return re.sub(r"\d+", "#", " ".join(line.split()))
 
@@ -237,7 +240,11 @@ def furniture_lines(src):
     pages, cur = [], []
     for i, l in enumerate(src, 1):
         parts = l.split("\f")
-        cur.append((i, parts[0]))
+        # A line that BEGINS with a form feed belongs to the new page only;
+        # counting its empty prefix in the old page let that page's edge trim
+        # blank the line (FIPS 140-3 L131, L181, L237 — library#69).
+        if parts[0] or len(parts) == 1:
+            cur.append((i, parts[0]))
         for p in parts[1:]:
             pages.append(cur)
             cur = [(i, p)]
@@ -253,6 +260,20 @@ def furniture_lines(src):
     need = max(3, (len(pages) + 1) // 2)
     hot = {s for s, n in count.items() if n >= need}
     furn = {i for e in edges for i, l in e if _shape(l) in hot}
+    # A page edge that is only a page number (arabic or roman) is furniture
+    # on any page; so is an edge line repeated EXACTLY on three pages (a
+    # running title on the body pages only, FIPS 140-3).
+    exact = {}
+    for e in edges:
+        for t in {" ".join(l.split()) for _, l in e}:
+            exact[t] = exact.get(t, 0) + 1
+    for pg, e in zip(pages, edges):
+        nb = [(i, l) for i, l in pg if l.strip()]
+        ends = nb[:1] + nb[-1:]
+        for i, l in e:
+            t = " ".join(l.split())
+            if ((i, l) in ends and PAGE_NO.fullmatch(t)) or (exact.get(t, 0) >= 3 and len(t) >= 8):
+                furn.add(i)
     # A long line recurring VERBATIM on half the pages is furniture wherever
     # it falls: NIST prints its "available free of charge" sidebar rotated,
     # and pdftotext places it mid-page. 30 characters keeps a short repeated
@@ -282,6 +303,21 @@ def clean_pdf(src):
         # keep one paragraph break where the page ends on a finished sentence
         if nb and re.search(r"[.:;!?)\"']\s*$", src[last - 1]) and last < idx[-1]:
             out[last][1] = ""
+        # furniture INSIDE the page (NIST's rotated sidebar): drop it with the
+        # blank run around it, so a sentence it interrupts stays one; keep one
+        # break if the text before it had finished a sentence
+        for i in idx:
+            if i in furn and first < i < last:
+                j = i - 1
+                while j >= first and not (out[j - 1][1] or "").strip():
+                    out[j - 1][1] = None
+                    j -= 1
+                k = i + 1
+                while k <= last and not (out[k - 1][1] or "").strip():
+                    out[k - 1][1] = None
+                    k += 1
+                if j >= first and re.search(r"[.:;!?)\"']\s*$", src[j - 1]):
+                    out[i - 1][1] = ""
     return [(i, l) for i, l in out]
 
 
@@ -329,17 +365,47 @@ def body_margin(src):
 def toc_keys(src, margin=0):
     """Clause keys a table of contents lists: every dot-leader line, and the
     two lines before one (a long title wraps its page number down)."""
-    keys = set()
+    furn, _ = furniture_lines(src)
+    keys = {}
+
+    def key_of(c):
+        c = TOC_ENTRY.sub("", c.replace("\f", "").strip()).rstrip(" .")
+        k = pdf_heading_key(c)
+        return (k, c) if k and k not in PDF_TITLED else (None, c)
+
     for i, l in enumerate(src):
-        if TOC_ENTRY.search(l):
-            before = [x for x in src[max(0, i - 6):i] if x.strip()][-2:]
-            for c in before + [l]:
-                c = c.replace("\f", "").strip()
-                c = TOC_ENTRY.sub("", c).rstrip(" .")
-                k = pdf_heading_key(c)
-                if k and k not in PDF_TITLED:
-                    keys.add(k)
+        if i + 1 in furn or not TOC_ENTRY.search(l):
+            continue
+        k, c = key_of(l)
+        if not k:
+            # a wrapped title: its number is on one of the two lines above
+            for j in range(i - 1, max(-1, i - 7), -1):
+                if j + 1 in furn or not src[j].strip():
+                    continue
+                if TOC_ENTRY.search(src[j]):
+                    break
+                k, c = key_of(src[j])
+                if k:
+                    break
+        if k and k not in keys:
+            keys[k] = _title_words(c)
     return keys
+
+
+def _title_words(line):
+    """The first two words of a heading's title, for matching a heading
+    against its table-of-contents entry."""
+    parts = line.split(None, 1)
+    t = parts[1] if len(parts) > 1 else ""
+    if line.startswith("Annex "):
+        t = re.sub(r"^[A-Z]\S*\s*(\([^)]*\))?[:\s\u2013\u2014-]*", "", t)
+    return [w.lower() for w in re.findall(r"[A-Za-z0-9]+", t)][:2]
+
+
+def _toc_agrees(toc_words, line):
+    h = _title_words(line)
+    n = min(len(h), len(toc_words))
+    return n == 0 or h[:n] == toc_words[:n]
 
 
 def pdf_headings(src):
@@ -376,6 +442,10 @@ def pdf_headings(src):
         prev_indent = len(line) - len(line.lstrip(" "))
         k = pdf_heading_key(line) if prev_ok else None
         if k and toc and k[0] in "§A" and k not in toc and depth(k) <= toc_depth:
+            k = None
+        # listed, but not under this title: a numbered footnote or list item
+        # ("1 Examples may be ports ..." against "1  Scope")
+        if k and k in toc and not _toc_agrees(toc[k], line.strip()):
             k = None
         if k:
             heads[i] = k

@@ -115,7 +115,24 @@ def main():
                          heads.get(line_of(src, "10. Approved")) == "¶10", heads))
     results.append(check("a wrapped TOC title still lists its clause", "§5.1.1" in st.toc_keys(src)))
 
+    # 2b. library#69 NIST/FIPS defects
+    fips = ("i\n\n1. Name. A thing.\n\n\nii\n\f2. Category. Text that\nruns on.\n\n\niii\n"
+            "\fBODY TITLE OF STANDARD\n\n1   Scope\nThe module shall work.\n\n1 Examples may be ports.\n\n1\n"
+            "\fBODY TITLE OF STANDARD\n\nMore text.\n\n2\n\fBODY TITLE OF STANDARD\n\nEnd.\n\n3\n")
+    fs = fips.split("\n")
+    fc = st.clean_pdf(fs)
+    kept = [l for _, l in fc if l]
+    results.append(check("a line starting with a form feed is kept", "2. Category. Text that" in kept, kept))
+    results.append(check("lone page numbers are furniture", not any(l.strip() in ("i", "ii", "iii", "1", "2", "3") for l in kept), kept))
+    results.append(check("a running title on three pages is furniture", "BODY TITLE OF STANDARD" not in kept, kept))
+    toc = ("Contents\n\n1        Scope .................... 1\n\n\f" + "\n".join(fs[fs.index("\fBODY TITLE OF STANDARD"):]))
+    th = st.pdf_headings(toc.split("\n"))
+    tl = toc.split("\n")
+    results.append(check("a numbered footnote is not its TOC namesake",
+                         th.get(line_of(tl, "1 Examples may")) is None and "§1" in th.values(), th))
+
     # 3. vocabulary
+    results.append(check("'May 20, 2022' is a month", not _bcp14.regex("directives").findall("withdrawn May 20, 2022 and")))
     rx = _bcp14.regex("directives")
     results.append(check("'May 2026' is a month", not rx.findall("approved in May 2026 and")))
     results.append(check("sentence-initial capital counts", rx.findall("Shall we go") == ["Shall"]))
