@@ -3,50 +3,37 @@ schema: "library-doc/v1"
 id: etsi-en-304-223-distilled-index
 record: etsi-en-304-223
 type: index
-audience: human   # orientation for people; the machine source is requirements.yaml
-updated: "2026-10-01"
+audience: human
+updated: "2026-11-15"
 ---
 
 # Distilled artifacts — ETSI EN 304 223 V2.1.1
 
-**Audience of each file:** `requirements.yaml` is the **machine/AI** source of truth (one entry
-per provision, verbatim text). `requirements.md` is the **human** view, *generated* from the
-YAML (do not hand-edit). `normative.md` is the compacted reading for people and agents.
+FX-1 extraction (library#69). The source of record is the ETSI PDF
+(`content.sha256` in `record.yaml`); every artifact cites the pinned
+`pdftotext -layout` rendering named in `requirements.yaml` (`source_text`,
+`source_text_digest`), by line number. Coverage figures live once, in
+`record.yaml` `distillation.artifacts`, so they are not restated here.
 
-Nothing here is reviewed line by line yet (`reviewed_by` is empty on each artifact).
-
-| artifact | what it is | coverage |
-|---|---|---|
-| `requirements.yaml` | **machine source.** All 72 provisions of clause 5, keyed by ETSI's designator (`#5.1.2-3`), with normativity, every modal verb, actor, principle, phase, locator, verbatim text, nature, expected deliverables, verification | all 72 provisions: 49 requirements (*shall*), 23 recommendations (*should*) |
-| `requirements.md` | **human view, generated.** One table per principle | all 72 |
-| `normative.md` | stakeholder roles, the 13 principles by lifecycle phase, the AI-specific threats the standard names, scope, and how it relates to tmodel | overview; the provisions themselves are in the YAML |
-
-## Checks run (docs/distillation.md §4), 2026-10-01
-
-| check | result |
+| artifact | what it is |
 |---|---|
-| **Verb baseline** — modal verbs in the clause-5 body vs. in the extracted `text` | shall 59 = 59 · should 28 = 28 · can 5 = 5 · shall not / should not / may 0 |
-| **1. Verbatim** — every `text` appears in the source, whitespace normalised | pass, 72/72 |
-| **2. Coverage** — every principle subsection (§5.1.1–§5.5.1) cited | pass, 13/13; provisions per principle 5, 9, 7, 5, 7, 6, 6, 6, 6, 5, 4, 4, 2 |
-| **3. Verb** — no provision containing *shall* typed weaker than `requirement` | pass |
+| `requirements.yaml` | **machine source.** Each of the 72 provisions under its original id (`etsi-en-304-223#5.1.2-3`), split into one entry per sentence (`#R-NNNN`), with actor, object, field, testability; plus scope, stakeholder and applicability statements, and inferred obligations flagged `kind: inferred`. |
+| `inferred-candidates.yaml` | every keyword-less sentence that might bind, and every verbal form in informative text, each with a verdict. |
+| `normative.md` | the normative text by clause, quoted by line marker, and the source defects found. |
+| `messages.yaml`, `schema/` | the work products the provisions require, and JSON Schemas derived from them. The EN defines no encoding or schema. |
+| `protocol.yaml`, `protocol.md` | the process flows between stakeholder roles, with Mermaid diagrams. The EN defines no wire protocol. |
+| `state-machine.yaml` | the lifecycles the provisions imply, stated vs inferred per state and transition. |
+| `examples/` | the finding that the EN has no examples or test vectors; our own schema test cases (`*.derived.json`). |
+| `design-notes.md` | adopt / adapt / reject against tmodel's and mofn's decisions, and open questions. |
+| `skeleton-report.txt` | `bin/fx1-skeleton`'s counts, regenerable. |
 
-The baseline is a verb count, not a marker count: the standard numbers every provision
-(`Provision 5.x.y-n`) but tags none as requirement or recommendation, so normativity is read
-from the verb. Four provisions mix *shall* and *should* (5.1.2-7, 5.1.3-1, 5.1.3-2,
-5.2.4-1); they take the strongest, and `verbs` keeps the full list.
+**Id stability.** The provision ids predate this extraction and are cited by
+tmodel; they are never renumbered. Cite a provision by its provision id, a
+sentence by its `R-` id.
 
-## Derived fields — what to review
+**Keywords.** `keyword_vocabulary: directives` — the ETSI Drafting Rules 3.2
+verbal forms, which bind in lowercase. The reconciliation in
+`requirements.yaml` accounts for every one.
 
-- `actor`: the stakeholders named before each modal verb. Four provisions name none
-  (5.1.1-1.1, 5.1.1-2.1, 5.1.3-1.1, 5.2.4-2.1) and carry `(implied)` actors; two were set by
-  hand where the first-named party is not the one obliged (5.1.2-1.1, 5.1.3-3).
-- `short_title`, `nature`, `expects_deliverables`, `verification`: written for this
-  distillation. EN 304 223 names no work products, so 22 provisions marked
-  deliverable-producing carry plain-language descriptions, not designators.
-
-## Not yet done
-
-- Line-by-line human review (set `reviewed_by`).
-- Conformance mapping to ETSI TS 104 216 once it is published (still a draft work item).
-- Mapping each provision to the tmodel object model (#15/#17) and to automated compliance
-  checks (#19).
+Nothing here is reviewed by a person yet: `reviewed_by` is empty on every
+artifact.
