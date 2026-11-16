@@ -16,7 +16,11 @@ this skill is how to do it well.
 - `summary.md` exists and is reviewed. Labels are set: `tags`, `bears_on`, `topic`.
 - The source is fetched and hashed: `bin/fetch-source <id> --xml` writes the
   verified `.cache/<id>.txt` and, for an RFC, the XML v3 rendering beside it
-  (structure only, never quoted). For a PDF, `pdftotext -layout`. For a W3C
+  (structure only, never quoted). For a PDF (`content.media_type:
+  application/pdf`), the same command writes the `pdftotext -layout`
+  rendering to `.cache/<id>.txt` and every tool reads that; the skeleton
+  pins it and uses the lowercase ETSI/ISO `directives` vocabulary
+  (`docs/extraction.md`, "A PDF source"). For a W3C
   Recommendation (respec HTML), `bin/render-w3c .cache/<id>.bin
   .cache/<id>.txt`, record the rendering's sha256 in `distilled/README.md`,
   and pass `--txt` to the skeleton; take example fixtures from the HTML.

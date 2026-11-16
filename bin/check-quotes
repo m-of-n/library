@@ -145,7 +145,18 @@ def main():
     txt = pathlib.Path(a.txt) if a.txt else ROOT / ".cache" / f"{rec.name}.txt"
     if not txt.exists():
         sys.exit(f"check-quotes: no {txt} — bin/fetch-source {rec.name}")
-    cleaned = st.clean(st.read_lines(txt))
+    meta = miniyaml((rec / "record.yaml").read_text()) if (rec / "record.yaml").exists() else {}
+    profile = st.profile_of(meta)
+    # A PDF is quoted through its pdftotext rendering; line numbers mean
+    # something only against the rendering the skeleton recorded (library#69).
+    rq = rec / "distilled" / "requirements.yaml"
+    pinned = str((miniyaml(rq.read_text()) if rq.exists() else {}).get("source_text_digest") or "")
+    if pinned and not a.txt:
+        have = st.sha256_text(txt.read_bytes().decode("utf-8", errors="replace"))
+        if have != pinned.strip("'\""):
+            sys.exit(f"check-quotes: {txt.name} is sha256:{have[:16]}…, requirements.yaml "
+                     f"pins {pinned[:16]}… — another rendering; every line number differs")
+    cleaned = st.clean_for(st.read_lines(txt), profile)
     only = {pathlib.Path(o).resolve() for o in a.only}
     bad, seen = [], 0
     dist = rec / "distilled"

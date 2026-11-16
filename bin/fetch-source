@@ -21,6 +21,14 @@ record (RFC 8650 onward; earlier RFCs have none). The XML is STRUCTURE, never
 the source of record: it is not digest-pinned, and nothing quotes from it.
 `bin/fx1-skeleton` reads it for `<sourcecode>` blocks and to cross-count
 `<bcp14>` tags per section against the .txt (library#86).
+
+For a PDF (`content.media_type: application/pdf`) the verified bytes go to
+`.cache/<id>.bin` and their `pdftotext -layout` rendering to `.cache/<id>.txt`,
+which every FX-1 tool reads (library#69). The PDF stays the source of record;
+the rendering is pinned by the digest and tool version `bin/fx1-skeleton`
+writes into requirements.yaml, so a different pdftotext cannot silently move
+a line number. The rendering is rewritten whenever the PDF is (re)written, and
+on its own when it is missing.
 """
 import re
 import argparse, hashlib, pathlib, sys, urllib.request
@@ -28,10 +36,11 @@ import argparse, hashlib, pathlib, sys, urllib.request
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "bin"))
 from _record_yaml import load_yaml  # noqa: E402
+import _source_text as st  # noqa: E402
 
 RECORDS = ROOT / "records"
 CACHE = ROOT / ".cache"
-TEXTUAL = (".txt", ".md", ".json", ".xml", ".html", ".xhtml", ".cddl", ".abnf")
+TEXTUAL = (".txt", ".md", ".json", ".xml", ".html", ".xhtml", ".cddl", ".abnf", ".yaml", ".yml")
 
 
 def resolve(token):
@@ -67,8 +76,11 @@ def main():
             continue
         ext = ".txt" if any(url.endswith(e) for e in TEXTUAL) else ".bin"
         dest = CACHE / f"{rid}{ext}"
+        is_pdf = st.profile_of(rec) == "pdf"
         if dest.exists() and not a.force:
             print(f"  = {rid}: already cached ({dest.stat().st_size} bytes)")
+            if is_pdf and not (CACHE / f"{rid}.txt").exists():
+                rc |= render(rid, dest, want)
             continue
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "mofn-library/0.1"})
@@ -96,9 +108,25 @@ def main():
         else:
             tick, note = "!", f"DIGEST OVERRIDDEN; actual bytes are sha256:{got}"
         print(f"  {tick} {rid}: {len(data)} bytes -> {dest.relative_to(ROOT)}  ({note})")
+        if is_pdf:
+            rc |= render(rid, dest, want)
     if a.xml:
         rc |= fetch_xml(a.records, a.force)
     return rc
+
+
+def render(rid, pdf, want):
+    """Write .cache/<id>.txt, the pdftotext rendering of a VERIFIED PDF."""
+    got = hashlib.sha256(pdf.read_bytes()).hexdigest()
+    if want and got != want:
+        print(f"  ! {rid}: {pdf.name} does not match content.sha256; not rendered")
+        return 1
+    text, by = st.render_pdf(pdf)
+    out = CACHE / f"{rid}.txt"
+    out.write_bytes(text.encode("utf-8"))
+    print(f"  + {rid}: rendered -> {out.relative_to(ROOT)}  ({by}, "
+          f"sha256:{st.sha256_text(text)[:16]}…)")
+    return 0
 
 
 def fetch_xml(tokens, force):
