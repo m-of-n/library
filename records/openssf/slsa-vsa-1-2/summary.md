@@ -15,8 +15,8 @@ updated: "2026-11-04"
 | **Authors** | SLSA project contributors (slsa-framework) |
 | **Published** | 2025-11-24, Open Source Security Foundation (OpenSSF) |
 | **Identifier** | `https://slsa.dev/verification_summary/v1` |
-| **Source** | https://slsa.dev/spec/v1.2/verification_summary |
-| **Digest** | `sha256:f6234a9f…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Source** | `spec/verification_summary.md`, slsa-framework/slsa `releases/v1.2` @ `ae7fc76` (the Markdown https://slsa.dev/spec/v1.2/verification_summary is built from; see `content.note`) |
+| **Digest** | `sha256:71adb7cc…` (full value in `record.yaml`), fetched 2026-11-17; the HTML page read for this summary on 2026-11-01 was `sha256:f6234a9f…` |
 
 ## Overview
 
@@ -48,8 +48,9 @@ A VSA is an in-toto predicate in which a verifier states that it checked artifac
 |---|---|
 | `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
 | `summary.md` | this document |
+| `distilled/` | the FX-1 artifact set: normative text, requirements, schemas, messages, protocol, state machines, examples, design notes |
 
-**No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. A `spec` record owes FX-1 when someone extracts it, and no issue owns that yet. No keyword count is given because none has been reconciled.
+**FX-1 extraction at `profile: full`** (library#136, passes 1–3, not yet human-reviewed). The page declares no keyword convention; its 21 capitalised BCP 14 keywords are reconciled one by one into 94 requirements, the §5 verification steps among them. The 27 source defects are SD-1 to SD-27 in `distilled/normative.md`; `distilled/README.md` indexes the set.
 
 **Relations.** No `see_also`. The page links in-toto's Statement, ResourceDescriptor and parsing rules (`in-toto-attestation-v1`), Build Provenance's `resolvedDependencies` (`slsa-provenance-1-2`) and Verified properties (`slsa-1-2`), so all three sit under `cites`.
 
@@ -59,4 +60,4 @@ A VSA is an in-toto predicate in which a verifier states that it checked artifac
 - **`resourceUri` can be anything agreed.** *Fields* allows another value if the producer communicates it out of band.
 - **The result is only as good as the verifier.** The page says so, and offers no mitigation beyond choosing verifiers carefully.
 - **A cross-version link.** The second worked example sends the reader to *Verifying artifacts* at `/spec/v1.0/`, not the v1.2 page.
-- **Read scope.** The whole page was read as rendered HTML. The Verifying Artifacts page is not covered.
+- **Read scope.** The whole page was read as rendered HTML for this summary; the extraction reads the Markdown it is built from (`content.note`). The Verifying Artifacts page is not covered.
