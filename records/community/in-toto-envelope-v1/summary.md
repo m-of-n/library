@@ -59,8 +59,9 @@ The envelope is the outermost of in-toto's three layers. It does serialization a
 |---|---|
 | `record.yaml` | metadata, relations (`part_of: in-toto-attestation-v1`), `bears_on`, implementations survey |
 | `summary.md` | this document |
+| `distilled/` | FX-1 extraction at `profile: full` (library#136); `distilled/README.md` indexes it |
 
-**No `distilled/`, and FX-1 extraction is not claimed.** This is a `spec` record at the summary bar for issue #45's post-quantum calibration batch. A full extraction would be owed if one is wanted, and no issue owns it yet. The file is short: a raw grep finds 10 MUST, 15 SHOULD, 3 MAY, 1 REQUIRED and 1 RECOMMENDED (4 of the SHOULDs are SHOULD NOT). That is an unreconciled grep, not an FX-1 count. The same text is already read, and its defects recorded, under `in-toto-attestation-v1`, which holds the whole v1.2.0 tree. This record holds only the envelope file, pinned to a current commit. The `.cache/` copy is local and gitignored.
+**FX-1 extraction at `profile: full`** (library#136, passes 1–3, not yet human-reviewed). The file has 30 BCP 14 keywords, reconciled one by one into 50 requirements, and its 15 source defects are listed in `distilled/normative.md` as SD-1 to SD-15. The same text is also extracted as §8 of `in-toto-attestation-v1` (library#134), which holds the whole v1.2.0 tree. This record holds only the envelope file, pinned to a current commit; the bytes are the same. The `.cache/` copy is local and gitignored.
 
 ## Limits
 
@@ -70,7 +71,7 @@ The envelope is the outermost of in-toto's three layers. It does serialization a
 
   For export, take the stricter reading in both cases. Neither was fixed between v1.2.0 and main `50bf017`: the bytes are identical.
 - **Stale COSE reference.** `[COSE_Sign]` links RFC 8152 §4.1. RFC 9052 obsoleted RFC 8152 in 2022. The ITE-5 judgement about COSE_Sign and COSE_Sign1 still holds under RFC 9052.
-- **The media type is unauthenticated metadata, and the file says so.** §Fields and §Storage convention both tell consumers not to rely on `<predicate>` in the media type, and to verify, then read `predicateType`. That is correct. The consequence is that file naming (§File naming convention) and storage media types carry no security meaning.
+- **The media type is not authoritative, and the file says so.** The storage media type (§Storage convention) is unauthenticated. The DSSE `payloadType` is signed with the payload (§Fields), yet both sections still tell consumers not to rely on the media type for predicate type, and to rely only on `predicateType`. To get authenticated predicate information, consumers must parse the payload and verify it against the signatures. The file names both operations in one sentence and gives no order (SD-3); verifying before parsing is our reading, not the file's. So file names and storage media types carry no security meaning.
 - **Silent on algorithm, key size and payload size.** That is the PQ gap above. Large PQ signatures and keys are not a problem the envelope even mentions. Whether consumers cap envelope size is not addressed.
 - **Trust is out of scope.** Who may sign which predicate, and how many signatures are needed, sit outside this file. `keyid` is only a hint (§Schema, §Fields).
 - **Read scope.** The whole file was read. DSSE v1.0.2 itself was not re-read for this record; see `secure-systems-lab-dsse`. ITE-5 was not fetched.

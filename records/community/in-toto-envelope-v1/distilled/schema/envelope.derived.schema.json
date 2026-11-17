@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:library:in-toto-envelope-v1:envelope.derived",
+  "title": "in-toto-envelope-v1 - Envelope field requirements (generic and DSSE profile), media types, file names",
+  "$comment": "DERIVED - not verbatim. The source (spec/v1/envelope.md) contains no schema, no code block and no grammar; every constraint here was written by this library from its prose (section numbers are those of the .cache rendering: 1 Schema, 2 Fields, 3 File naming convention, 4 Storage convention, 4.1 Examples). Do not cite this file as the in-toto specification's schema. What each definition cannot bind is listed in its own $comment and in x-open. Checked by check-envelope.derived.py against ../examples/cases.derived.json (accept and reject instances, with a mutation pass proving the keywords bind). JSON Schema validators treat contentEncoding/contentMediaType/contentSchema as annotations; check-envelope.derived.py asserts them.",
+  "x-open": [
+    "encoding of the signature bytes: 'determined by the envelope schema' (section 2); a signature element is unconstrained in GenericEnvelope",
+    "whether keyid sits at the top level or inside each signature: section 2 lets the envelope schema nest it (R-0011); both are accepted by GenericEnvelope",
+    "keyid typing: the source gives keyid no type. A keyid nested in a signature element (one per signature) is typed as a string, as DSSE v1.0 does; a top-level keyid is left unconstrained, because one per signing key used (section 2, line 34, R-0010) makes a list as natural as a string",
+    "DsseSignature members (sig, keyid) are DSSE v1.0 fields defined OUTSIDE this source; sig is typed but not required here because this source says nothing about it",
+    "base64 alphabet and padding for payload: the source says 'base64-encoded' only; both RFC 4648 alphabets are accepted and padding is optional, but padding that is present must be what the length calls for (check-envelope.derived.py's content check)",
+    "character set of <encoding>, <predicate>, <step-name>, <env-name>: the source defines none (a <predicate> is to match a predicate specification filename without its extension, R-0016 and R-0026, the files lying under ../predicates, outside this source); the pattern RN below is a library assumption",
+    "whether an empty signatures array is acceptable: the source requires an array and multi-signature support, never a minimum",
+    "unknown top-level members, media-type parameters and letter case of media types: the source is silent",
+    "not wire-observable and therefore not bound: that payloadType is signed with the payload, that a verifier must not parse the payload before verifying, canonicalization independence, algorithm hints, consumers' reliance on predicateType"
+  ],
+  "$ref": "#/$defs/DsseEnvelope",
+  "$defs": {
+    "RN": {
+      "$comment": "ASSUMPTION, not source: the character class used inside the media-type and file-name patterns below is [A-Za-z0-9][A-Za-z0-9!#$&^_.-]* (an RFC 6838 restricted-name without '+', so '+' stays the delimiter before the suffix). Kept as documentation; patterns inline it because $ref cannot be spliced into a regex.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9!#$&^_.-]*$"
+    },
+    "PayloadTypeGeneric": {
+      "$comment": "section 2, lines 39-40 (R-0014): the general form application/vnd.in-toto+<encoding>. NOTE the predicate-specific form of line 45 (application/vnd.in-toto.<predicate>+json, R-0015) does NOT match this form: source defect SD-1 in ../normative.md.",
+      "type": "string",
+      "pattern": "^application/vnd\\.in-toto\\+[A-Za-z0-9][A-Za-z0-9!#$&^_.-]*$"
+    },
+    "PayloadTypeDsse": {
+      "$comment": "section 2, lines 45-46 (R-0015): one of two values, application/vnd.in-toto.<predicate>+json or application/vnd.in-toto+json. <predicate> is not checked against ../predicates (outside the source).",
+      "type": "string",
+      "pattern": "^application/vnd\\.in-toto(\\.[A-Za-z0-9][A-Za-z0-9!#$&^_.-]*)?\\+json$"
+    },
+    "StorageMediaType": {
+      "$comment": "section 4, lines 78-79 (R-0025): the media type application/vnd.in-toto.<predicate>+dsse, recommended for denoting an individual attestation in a storage system. Names the stored Envelope, never a payloadType; the no-predicate form application/vnd.in-toto+dsse is not given by the source and is rejected (SD-6).",
+      "type": "string",
+      "pattern": "^application/vnd\\.in-toto\\.[A-Za-z0-9][A-Za-z0-9!#$&^_.-]*\\+dsse$"
+    },
+    "EnvelopeFileName": {
+      "$comment": "section 3, lines 62-74 (R-0021 to R-0024): an Envelope kept alone in a file, not in a Bundle, is recommended the suffix .json; <step-name>.json, <env-name>.json. A file name is a single path segment: no separator, no line break.",
+      "type": "string",
+      "pattern": "^[^/\\\\\\n\\r]+\\.json$"
+    },
+    "EnvelopeFileNameWithKeyid": {
+      "$comment": "section 3, lines 71-74: <step/env-name>.<keyid[0:8]>.json - exactly 8 characters of the truncated KEYID. The character set of a KEYID is defined outside this source (in-toto spec 4.2.1), so no hex is assumed. Every such name also matches EnvelopeFileName and cannot be told from a step name that itself contains a dot (SD-10).",
+      "type": "string",
+      "pattern": "^[^/\\\\\\n\\r]+\\.[^./\\\\\\s]{8}\\.json$"
+    },
+    "Base64Text": {
+      "$comment": "section 2, line 58 (R-0020): base64-encoded. Alphabet and padding are not stated; both RFC 4648 alphabets accepted and '=' padding optional. The pattern admits 0-2 '='; the content check in check-envelope.derived.py also rejects padding other than what the length calls for, and a string mixing '+/' with '-_'.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/_-]*={0,2}$"
+    },
+    "Statement": {
+      "$comment": "section 2, lines 46-47 (R-0039): the payload is to be a JSON object whose _type field names its schema. The Statement layer (statement.md) is outside this source; only the presence of _type is bound.",
+      "type": "object",
+      "required": ["_type"]
+    },
+    "DsseSignature": {
+      "$comment": "OUTSIDE THIS SOURCE: sig and keyid are DSSE v1.0 members; the source only defers to DSSE (line 8) and says keyid may be nested in the signature array (lines 34-35). sig is not required here because nothing in this source requires it.",
+      "type": "object",
+      "properties": {
+        "sig": { "type": "string" },
+        "keyid": { "type": "string" }
+      }
+    },
+    "GenericSignature": {
+      "$comment": "section 2, lines 32-33 (R-0037): signature bytes are encoded as the envelope schema says, so an element is unconstrained, except that when it is an object a nested keyid is typed as a string (lines 34-35, R-0011, permit the nesting; the string type is this schema's assumption, x-open).",
+      "if": { "type": "object" },
+      "then": { "properties": { "keyid": { "type": "string" } } }
+    },
+    "GenericEnvelope": {
+      "$comment": "section 2, lines 28-40 (R-0034 and the rules it scopes): general field requirements. Binds the canonical names only; '(or equivalent)' names of other envelope formats are outside what a JSON Schema can say. signatures is REQUIRED (line 31, R-0035); keyid and payload are SHOULD (lines 34 and 36, R-0010 and R-0012), so not required. payloadType has no presence rule: line 38 (R-0013) has it signed and lines 39-40 (R-0014) fix its form. This schema reads it as optional, the form applying when it is present; R-0043 infers that it must be present. Two readings: SD-2. Line 13 (R-0004) is an ITE-5 criterion on a format, not a rule on this field. A top-level keyid is unconstrained (x-open). payload content is unconstrained here: only the DSSE profile says base64 JSON.",
+      "type": "object",
+      "required": ["signatures"],
+      "properties": {
+        "signatures": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/GenericSignature" }
+        },
+        "keyid": { "$comment": "no type: see x-open, keyid typing" },
+        "payload": {},
+        "payloadType": { "$ref": "#/$defs/PayloadTypeGeneric" }
+      }
+    },
+    "DsseEnvelope": {
+      "$comment": "sections 1-2, lines 8 and 42-58 (R-0001, R-0038 and the rules it scopes): the DSSE profile. payloadType is required here because line 45 (R-0015) says it MUST be set (interpretation: 'set' read as present). payload stays optional, also a reading: line 36 (R-0012) asks only that it be included, and line 58 (R-0020) is read as applying when it is present; DSSE v1.0's own rules, outside this source, are not consulted. The payloadType forms of PayloadTypeDsse are NOT a subset of PayloadTypeGeneric (SD-1).",
+      "type": "object",
+      "required": ["payloadType", "signatures"],
+      "properties": {
+        "payloadType": { "$ref": "#/$defs/PayloadTypeDsse" },
+        "payload": {
+          "$ref": "#/$defs/Base64Text",
+          "contentEncoding": "base64",
+          "contentMediaType": "application/json",
+          "contentSchema": { "$ref": "#/$defs/Statement" }
+        },
+        "signatures": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/DsseSignature" }
+        }
+      }
+    }
+  }
+}
