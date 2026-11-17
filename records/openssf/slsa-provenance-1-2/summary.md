@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: slsa-provenance-1-2
 record: slsa-provenance-1-2
 type: summary
-updated: "2026-11-04"
+updated: "2026-11-17"
 ---
 
 # SLSA Build Provenance (SLSA Specification v1.2)
@@ -15,8 +15,8 @@ updated: "2026-11-04"
 | **Authors** | SLSA project contributors (slsa-framework) |
 | **Published** | 2025-11-24, Open Source Security Foundation (OpenSSF) |
 | **Identifier** | `https://slsa.dev/provenance/v1` |
-| **Source** | https://slsa.dev/spec/v1.2/build-provenance |
-| **Digest** | `sha256:04a97c9b…` (full value in `record.yaml`), fetched 2026-11-01 |
+| **Source** | `spec/build-provenance.md`, slsa-framework/slsa `releases/v1.2` @ `ae7fc76` (the Markdown https://slsa.dev/spec/v1.2/build-provenance is built from; see `content.note`) |
+| **Digest** | `sha256:182ab5cf…` (full value in `record.yaml`), fetched 2026-11-16; the HTML page read for this summary on 2026-11-01 was `sha256:04a97c9b…` |
 
 ## Overview
 
@@ -50,8 +50,9 @@ Provenance is an in-toto predicate, `https://slsa.dev/provenance/v1`, stating th
 |---|---|
 | `record.yaml` | metadata, relations, `bears_on`, usefulness verdict |
 | `summary.md` | this document |
+| `distilled/` | the FX-1 artifact set: normative text, requirements, schemas, messages, protocol, state machines, examples, design notes |
 
-**No `distilled/`, and FX-1 extraction is not claimed here.** This is the summary bar. A `spec` record owes FX-1 when someone extracts it, and no issue owns that yet. No keyword count is given because none has been reconciled.
+**FX-1 extraction at `profile: full`** (library#136, passes 1–3, not yet human-reviewed). `bin/bcp14-count` finds 53 BCP 14 keywords in the source, reconciled one by one into 170 requirements; the texts carry 63, the ten more being the RFC 2119 recital, kept as a withdrawn entry. The 14 source defects are SD-1 to SD-14 in `distilled/normative.md`; `distilled/README.md` indexes the set.
 
 **Relations.** No `see_also`. The page links in-toto's Statement, ResourceDescriptor and parsing rules (`in-toto-attestation-v1`) and other pages of SLSA v1.2 (`slsa-1-2`), so both sit under `cites`. `slsa-vsa-1-2` cites this record, and `in-toto-attestation-v1` and `slsa-2026-mini-shai-hulud` author their own edges to it. The page does not mention DSSE.
 
@@ -59,7 +60,7 @@ Provenance is an in-toto predicate, `https://slsa.dev/provenance/v1`, stating th
 
 - **Provenance is evidence, not a verdict.** The page defers verification to *Verifying Artifacts*, which this record does not hold separately (it is part of `slsa-1-2`, which this record cites).
 - **Unknown fields are ignored.** *Parsing rules* carries the in-toto rule, the opposite of a must-understand design. `in-toto-attestation-v1` records why that matters.
-- **Stale version reference.** *Purpose* still calls this predicate the RECOMMENDED way to satisfy the SLSA v1.0 provenance requirements, on the v1.2 page.
+- **Stale version reference.** *Purpose* still recommends this predicate for SLSA v1.0's provenance requirements, on the v1.2 page (SD-1).
 - **The field-level text wins over the schemas.** Both the cue summary and the protobuf are marked informative.
 - **Mini Shai-Hulud shows the boundary.** `slsa-2026-mini-shai-hulud` records attestations that stayed accurate while the build was compromised.
 - **Read scope.** The whole build provenance page was read as rendered HTML, plus the hub at the recorded URL. Source provenance, the sibling page, was not read and is not covered.

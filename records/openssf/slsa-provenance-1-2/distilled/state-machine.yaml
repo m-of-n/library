@@ -1,0 +1,787 @@
+# slsa-provenance-1-2 state machines, FX-1 pass 1 (extract), protocol and state-machine agent. Flows are in protocol.yaml; prose in protocol.md.
+record: "slsa-provenance-1-2"
+reviewed_by: ""
+kind: "state-machine"
+extracted: "2026-11-16"
+extracted_by: >-
+  FX-1 pass 1 (extract), protocol and state-machine agent, effort max, from the source only,
+  blind as protocol.yaml says.
+source:
+  file: ".cache/slsa-provenance-1-2.txt"
+  sha256: "1a3828724437a0fc24bb492bca6db28df114e318bbaace85cc9f75204035db55"
+applicability: >-
+  The source defines no stateful protocol: nothing is registered, issued, renewed or revoked, and
+  the build's own phases carry no guard or error state. Three things it does give a lifecycle with
+  guards of its own, and they are modelled: what a consumer does with one attestation (M01, guards
+  from §3, §4.3 and §4.5, with what Verifying Artifacts decides as opaque exits), how one member of
+  a predicate object is read (M02, §3, §4.3 and §4.7), and how a predicate type lives across
+  versions of the specification (M03, front matter, §3, §8).
+note: >-
+  Conventions. States are name, meaning and kind; error states carry error yes and are listed in
+  error_states; terminal states carry terminal yes. Every trigger is an event defined under events
+  (trigger_kind event): the source defines no message whose arrival drives a transition, and
+  messages.yaml was not read. guard and action are this file's wording; the source's words are in
+  each transition's quotes, written from the source by script and checked by bin/check-quotes.
+  kind stated means the source states the transition or the rule it applies; inferred means this
+  model added it, with inferred_reason; opaque marks a state or exit standing for a document
+  outside this source. constrained_by ids were emitted by script from requirements.yaml (skeleton
+  ids R-0002 to R-0050 only) and every resolved pair was read; pass 2 added the ids the requirements
+  lane appended (R-0051 to R-0170) where a transition quotes or applies their statements, by script, and
+  read each added pair. A conflict key names a transition
+  whose guard overlaps another's on some input with a different target, and the source defect that
+  causes it.
+events:
+  - name: "attestation-received"
+    meaning: "An attestation said to carry this predicate is in hand (the carrier is outside this source)."
+  - name: "signer-identified"
+    meaning: "The signer's identity has been established (outside this source)."
+  - name: "signer-not-established"
+    meaning: "The envelope or signature could not be verified (outside this source)."
+  - name: "advance"
+    meaning: "The machine moves to its next check; no input is consumed."
+  - name: "fields-read"
+    meaning: "Every member outside externalParameters has had an M02 run."
+  - name: "level-read"
+    meaning: "The Build level has been read from builder.id (Verifying Artifacts step 1, outside this source)."
+  - name: "external-parameters-checked"
+    meaning: "The verifier has examined externalParameters: the buildType against its expectations, every member under M02 with the reader verifying, and the values against the expectation."
+  - name: "verifying-artifacts-checks-passed"
+    meaning: "The checks Verifying Artifacts adds have passed (outside this source)."
+  - name: "verifying-artifacts-check-failed"
+    meaning: "A check Verifying Artifacts adds has failed (outside this source)."
+  - name: "member-examined"
+    meaning: "A member's name, value, location (inside externalParameters or not) and the reader's role are known."
+  - name: "candidate-release"
+    meaning: "The first release candidate of a major version is published."
+  - name: "next-candidate"
+    meaning: "A further release candidate of the same major version is published."
+  - name: "final-release"
+    meaning: "The final version of a major version is published."
+  - name: "minor-release"
+    meaning: "A new minor version of the specification is published."
+  - name: "incompatible-change"
+    meaning: "A version with a backwards-incompatible change is published."
+machines:
+  - id: "M01"
+    name: "provenance-acceptance"
+    title: "What a consumer does with one attestation said to carry SLSA Provenance v1"
+    locator: "front matter, §3, §4.2, §4.3, §4.4, §4.5, §4.7, §5"
+    actor: "consumer; verifier from l1-fields-present on"
+    protocol_flow: "F05, F06"
+    purpose: >-
+      The document-level sequence. Guards are the source's where it has them. The order is this
+      model's (F06 order_note), as is every state or exit marked opaque, which stands for Verifying
+      Artifacts or the in-toto attestation framework. accepted means accepted as far as this source
+      defines acceptance; Verifying Artifacts adds checks of its own (T16, T17).
+    initial: "idle"
+    states:
+      - name: "idle"
+        meaning: "No attestation in hand."
+        kind: "inferred"
+        inferred_reason: "An entry state for the machine."
+      - name: "received"
+        meaning: "An attestation said to carry this predicate is in hand; nothing has been checked."
+        kind: "inferred"
+        inferred_reason: "The source defines no carrier and no receipt."
+      - name: "signer-established"
+        meaning: "The signer's identity is known (opaque: established outside this source)."
+        kind: "inferred"
+        inferred_reason: "The pair check (T09) needs it; how it is established is outside the source."
+      - name: "type-matched"
+        meaning: "predicateType is https://slsa.dev/provenance/v1."
+        kind: "inferred"
+        inferred_reason: "The type string is stated (L17); a consumer-side match is not."
+      - name: "fields-interpreted"
+        meaning: "Every member outside externalParameters has been read under M02."
+        kind: "stated"
+      - name: "l1-fields-present"
+        meaning: "buildDefinition, runDetails, buildType, externalParameters, builder and builder.id are all set."
+        kind: "inferred"
+        inferred_reason: "The fields are stated REQUIRED for SLSA Build L1 (§4.2 to §4.5); that a consumer checks them is not."
+      - name: "pair-accepted"
+        meaning: "(signer, builder.id) is a pair the verifier accepts."
+        kind: "stated"
+      - name: "level-determined"
+        meaning: "The Build level read from builder.id meets the verifier's expectation (opaque procedure: Verifying Artifacts step 1)."
+        kind: "inferred"
+        inferred_reason: "builder.id's role as the determiner of the level is stated (L449-451); comparing the level with an expectation belongs to Verifying Artifacts."
+      - name: "external-parameters-verified"
+        meaning: "The buildType is one the verifier expects, and externalParameters hold only recognized, expected members whose values match."
+        kind: "stated"
+        note: "The buildType clause is this model's (T13); the rest is L74-75 and L302-303."
+      - name: "accepted"
+        meaning: "Accepted as far as this source goes: the ALLOW of L553."
+        kind: "inferred"
+        inferred_reason: "The source names ALLOW and DENY only inside the monotonic principle (L551-553)."
+        terminal: "yes"
+      - name: "other-predicate-type"
+        meaning: "Not SLSA Provenance v1; this source does not apply."
+        kind: "inferred"
+        inferred_reason: "Follows from the single type string (L17, L20-21); the consequence is not stated."
+        error: "yes"
+        terminal: "yes"
+      - name: "rejected-missing-l1-field"
+        meaning: "A field REQUIRED for SLSA Build L1 is unset, null or empty."
+        kind: "inferred"
+        inferred_reason: "What a consumer does with such provenance is not stated (OI-02); rejection where L1 or above is expected is this model's reading."
+        error: "yes"
+        terminal: "yes"
+      - name: "rejected-signer-builder-pair"
+        meaning: "The pair is not one the verifier accepts."
+        kind: "stated"
+        error: "yes"
+        terminal: "yes"
+      - name: "rejected-external-parameters"
+        meaning: "externalParameters could not be verified, or held an unrecognized or unexpected member, or differed from the expectation."
+        kind: "stated"
+        error: "yes"
+        terminal: "yes"
+      - name: "rejected-outside-source"
+        meaning: "Rejected by a check this source delegates: envelope or signature, Build level, or another Verifying Artifacts check (opaque)."
+        kind: "inferred"
+        inferred_reason: "Stands for outcomes defined outside this source."
+        error: "yes"
+        terminal: "yes"
+    error_states:
+      - "other-predicate-type"
+      - "rejected-missing-l1-field"
+      - "rejected-signer-builder-pair"
+      - "rejected-external-parameters"
+      - "rejected-outside-source"
+    transitions:
+      - id: "M01.T01"
+        from: "idle"
+        to: "received"
+        trigger_kind: "event"
+        trigger: "attestation-received"
+        kind: "inferred"
+        inferred_reason: "No receipt is described."
+      - id: "M01.T02"
+        from: "received"
+        to: "signer-established"
+        trigger_kind: "event"
+        trigger: "signer-identified"
+        kind: "inferred"
+        inferred_reason: "Opaque: the signer's identity is established outside this source."
+      - id: "M01.T03"
+        from: "received"
+        to: "rejected-outside-source"
+        trigger_kind: "event"
+        trigger: "signer-not-established"
+        kind: "inferred"
+        inferred_reason: "Opaque: envelope and signature failures are outside this source."
+      - id: "M01.T04"
+        from: "signer-established"
+        to: "type-matched"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "predicateType == https://slsa.dev/provenance/v1"
+        kind: "inferred"
+        inferred_reason: "The source fixes the string producers use; the consumer-side comparison is this model's."
+        quotes:
+          - source_lines: "17"
+            quote: |-
+              "predicateType": "https://slsa.dev/provenance/v1"
+          - source_lines: "20-21"
+            quote: |-
+              Always use the above string for `predicateType` rather than what is > in the URL bar.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0051"
+          - "slsa-provenance-1-2#R-0052"
+          - "slsa-provenance-1-2#R-0160"
+      - id: "M01.T05"
+        from: "signer-established"
+        to: "other-predicate-type"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "predicateType is any other value (near misses: OI-03)"
+        kind: "inferred"
+        inferred_reason: "The consequence of another type is not stated."
+        quotes:
+          - source_lines: "106-107"
+            quote: |-
+              The `predicateType` URI includes the major version number and will always change whenever there is a backwards incompatible change.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0070"
+          - "slsa-provenance-1-2#R-0160"
+      - id: "M01.T06"
+        from: "type-matched"
+        to: "fields-interpreted"
+        trigger_kind: "event"
+        trigger: "fields-read"
+        action: >-
+          Run M02 on every member outside externalParameters, reader consuming. Ignoring an
+          unrecognized extension is safe only because extensions are to be monotonic.
+        kind: "stated"
+        quotes:
+          - source_lines: "103"
+            quote: |-
+              This predicate follows the in-toto attestation [parsing rules].
+          - source_lines: "105"
+            quote: |-
+              Consumers MUST ignore unrecognized fields unless otherwise noted.
+          - source_lines: "110"
+            quote: |-
+              Unset, null, and empty field values MUST be interpreted equivalently.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0009"
+          - "slsa-provenance-1-2#R-0010"
+          - "slsa-provenance-1-2#R-0046"
+          - "slsa-provenance-1-2#R-0047"
+          - "slsa-provenance-1-2#R-0069"
+      - id: "M01.T07"
+        from: "fields-interpreted"
+        to: "l1-fields-present"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "buildDefinition, runDetails, buildType, externalParameters, builder and builder.id are all set; unset, null and empty all count as not set (L110; OI-01)"
+        kind: "inferred"
+        inferred_reason: "The REQUIRED lists are stated; a consumer's check of them is not."
+        quotes:
+          - source_lines: "250"
+            quote: |-
+              REQUIRED for SLSA Build L1: `buildDefinition`, `runDetails`
+          - source_lines: "272"
+            quote: |-
+              REQUIRED for SLSA Build L1: `buildType`, `externalParameters`
+          - source_lines: "407"
+            quote: |-
+              REQUIRED for SLSA Build L1: `builder`
+          - source_lines: "441"
+            quote: |-
+              REQUIRED for SLSA Build L1: `id`
+        constrained_by:
+          - "slsa-provenance-1-2#R-0011"
+          - "slsa-provenance-1-2#R-0012"
+          - "slsa-provenance-1-2#R-0032"
+          - "slsa-provenance-1-2#R-0035"
+          - "slsa-provenance-1-2#R-0010"
+          - "slsa-provenance-1-2#R-0040"
+          - "slsa-provenance-1-2#R-0162"
+      - id: "M01.T08"
+        from: "fields-interpreted"
+        to: "rejected-missing-l1-field"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "any of those six is not set"
+        kind: "inferred"
+        inferred_reason: "OI-02: no consequence is stated for missing REQUIRED fields."
+        constrained_by:
+          - "slsa-provenance-1-2#R-0011"
+          - "slsa-provenance-1-2#R-0012"
+          - "slsa-provenance-1-2#R-0032"
+          - "slsa-provenance-1-2#R-0035"
+          - "slsa-provenance-1-2#R-0040"
+          - "slsa-provenance-1-2#R-0162"
+      - id: "M01.T09"
+        from: "l1-fields-present"
+        to: "pair-accepted"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "(signer, runDetails.builder.id) is in the verifier's accepted set"
+        kind: "stated"
+        quotes:
+          - source_lines: "496-499"
+            quote: |-
+              Consumers MUST accept only specific signer-builder pairs. For example, "GitHub" can sign provenance for the "GitHub Actions" builder, and "Google" can sign provenance for the "Google Cloud Build" builder, but "GitHub" cannot sign for the "Google Cloud Build" builder.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0039"
+      - id: "M01.T10"
+        from: "l1-fields-present"
+        to: "rejected-signer-builder-pair"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "(signer, runDetails.builder.id) is not in the accepted set"
+        kind: "stated"
+        quotes:
+          - source_lines: "496"
+            quote: |-
+              Consumers MUST accept only specific signer-builder pairs.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0039"
+      - id: "M01.T11"
+        from: "pair-accepted"
+        to: "level-determined"
+        trigger_kind: "event"
+        trigger: "level-read"
+        guard: "the level read from builder.id meets the verifier's expectation"
+        kind: "inferred"
+        inferred_reason: "builder.id is stated to determine the level; the comparison with an expectation is Verifying Artifacts' (opaque)."
+        quotes:
+          - source_lines: "449-451"
+            quote: |-
+              This is [intended](verifying-artifacts#step-1-check-slsa-build-level) to be the sole determiner of the SLSA Build level.
+          - source_lines: "258-259"
+            quote: |-
+              The accuracy and completeness are implied by `runDetails.builder.id`.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0108"
+          - "slsa-provenance-1-2#R-0078"
+          - "slsa-provenance-1-2#R-0164"
+      - id: "M01.T12"
+        from: "pair-accepted"
+        to: "rejected-outside-source"
+        trigger_kind: "event"
+        trigger: "level-read"
+        guard: "the level is below the verifier's expectation"
+        kind: "inferred"
+        inferred_reason: "Opaque: the consequence belongs to Verifying Artifacts."
+      - id: "M01.T13"
+        from: "level-determined"
+        to: "rejected-external-parameters"
+        trigger_kind: "event"
+        trigger: "external-parameters-checked"
+        guard: "buildType is not one the verifier holds an expectation for"
+        kind: "inferred"
+        inferred_reason: "The buildType says how to read the parameters (L280-281) and consumers should hold an expectation (L299-300); a check that the buildType is known is not stated."
+        quotes:
+          - source_lines: "280-281"
+            quote: |-
+              Identifies the template for how to perform the build and interpret the parameters and dependencies.
+          - source_lines: "299-300"
+            quote: |-
+              Consumers SHOULD have an expectation of what "good" looks like; the more information that they need to check, the harder that task becomes.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0017"
+          - "slsa-provenance-1-2#R-0082"
+      - id: "M01.T14"
+        from: "level-determined"
+        to: "rejected-external-parameters"
+        trigger_kind: "event"
+        trigger: "external-parameters-checked"
+        guard: >-
+          buildType expected, and either some member of externalParameters ended in M02
+          field-rejected (unrecognized or unexpected) or some value differs from the expectation
+        kind: "stated"
+        conflict: "SD-5: for an unrecognized extension field the M02 run itself is undetermined (M02.T03 against M02.T06)"
+        quotes:
+          - source_lines: "73-75"
+            quote: |-
+              In SLSA, these values are untrusted; they MUST be included in the provenance and MUST be verified downstream.
+          - source_lines: "302-303"
+            quote: |-
+              Verifiers SHOULD reject unrecognized or unexpected fields within `externalParameters`.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0005"
+          - "slsa-provenance-1-2#R-0018"
+          - "slsa-provenance-1-2#R-0166"
+      - id: "M01.T15"
+        from: "level-determined"
+        to: "external-parameters-verified"
+        trigger_kind: "event"
+        trigger: "external-parameters-checked"
+        guard: "buildType expected; every member of externalParameters recognized and expected; every value matches"
+        kind: "stated"
+        quotes:
+          - source_lines: "299-300"
+            quote: |-
+              Consumers SHOULD have an expectation of what "good" looks like; the more information that they need to check, the harder that task becomes.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0005"
+          - "slsa-provenance-1-2#R-0017"
+          - "slsa-provenance-1-2#R-0018"
+      - id: "M01.T16"
+        from: "external-parameters-verified"
+        to: "accepted"
+        trigger_kind: "event"
+        trigger: "verifying-artifacts-checks-passed"
+        action: "Leave internalParameters unverified; decide ALLOW."
+        kind: "inferred"
+        inferred_reason: "Opaque remainder (Verifying Artifacts); internalParameters' exemption is stated (L77-79, L311-313)."
+        quotes:
+          - source_lines: "77-79"
+            quote: |-
+              In SLSA, these values are trusted because the platform is trusted; they are OPTIONAL and need not be verified downstream.
+          - source_lines: "551-553"
+            quote: |-
+              Extension fields SHOULD follow the [monotonic principle][parsing rules], meaning that deleting or ignoring the extension SHOULD NOT turn a DENY decision into an ALLOW.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0006"
+          - "slsa-provenance-1-2#R-0047"
+      - id: "M01.T17"
+        from: "external-parameters-verified"
+        to: "rejected-outside-source"
+        trigger_kind: "event"
+        trigger: "verifying-artifacts-check-failed"
+        kind: "inferred"
+        inferred_reason: "Opaque: Verifying Artifacts, which §5 only points to."
+        quotes:
+          - source_lines: "559-560"
+            quote: |-
+              Please see [Verifying Artifacts][Verification] for a detailed discussion of provenance verification.
+  - id: "M02"
+    name: "member-interpretation"
+    title: "How one member of a predicate object is read"
+    locator: "§3, §4.3, §4.7"
+    actor: "consumer; verifier where a guard says so"
+    protocol_flow: "F05 steps 3 and 4, F06 step 5"
+    purpose: >-
+      One run per member (a name and its value) present in a JSON object of the predicate, the two
+      parameter objects included. A field the object lacks is unset and has no run. Entries of the
+      maps digest, version and annotations are values rather than fields and have no run; that
+      scoping is this model's. Inputs: the name, the value, whether the member sits inside
+      externalParameters, and whether the reader is verifying. Recognized means a field this version
+      of the predicate defines, or inside a parameter object a parameter the reader's buildType
+      schema defines; expected means inside the verifier's expectation.
+    determinism: >-
+      Deterministic but for one input: an unrecognized extension field inside externalParameters
+      read by a verifier satisfies both T03 and T06, and the source does not rank them (SD-5). T01
+      is tested first: a null or empty member is simply absent, never ignored or rejected (inferred
+      from equivalently, L110).
+    initial: "member-read"
+    states:
+      - name: "member-read"
+        meaning: "A member is in hand with its name, value, location and the reader's role."
+        kind: "inferred"
+        inferred_reason: "An entry state for the machine."
+      - name: "as-if-unset"
+        meaning: "Read exactly as if the member were absent."
+        kind: "stated"
+        terminal: "yes"
+      - name: "interpreted"
+        meaning: "Read with the meaning its definition gives."
+        kind: "inferred"
+        inferred_reason: "The complement of the ignore rule (L105); stated nowhere as such."
+        terminal: "yes"
+      - name: "interpreted-extension"
+        meaning: "A recognized extension field, read by its own definition; it changes no other field's meaning."
+        kind: "stated"
+        terminal: "yes"
+      - name: "ignored"
+        meaning: "Unrecognized and ignored: the attestation reads as if the member were absent."
+        kind: "stated"
+        terminal: "yes"
+      - name: "field-rejected"
+        meaning: "A verifier rejects the attestation for this member (M01.T14)."
+        kind: "stated"
+        error: "yes"
+        terminal: "yes"
+    error_states:
+      - "field-rejected"
+    transitions:
+      - id: "M02.T01"
+        from: "member-read"
+        to: "as-if-unset"
+        trigger_kind: "event"
+        trigger: "member-examined"
+        guard: "value is null or empty (empty is undefined in the source; this model reads it as an empty string, object or array)"
+        kind: "stated"
+        quotes:
+          - source_lines: "110"
+            quote: |-
+              Unset, null, and empty field values MUST be interpreted equivalently.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0010"
+      - id: "M02.T02"
+        from: "member-read"
+        to: "interpreted"
+        trigger_kind: "event"
+        trigger: "member-examined"
+        guard: "value set; name recognized and not an extension field; and not (inside externalParameters, reader verifying, member unexpected)"
+        kind: "inferred"
+        inferred_reason: "The source states only what happens to unrecognized fields (L105); reading a recognized one by its definition is the implied default."
+        constrained_by:
+          - "slsa-provenance-1-2#R-0009"
+      - id: "M02.T03"
+        from: "member-read"
+        to: "field-rejected"
+        trigger_kind: "event"
+        trigger: "member-examined"
+        guard: "value set; inside externalParameters; reader verifying; name unrecognized or member unexpected"
+        kind: "stated"
+        conflict: "SD-5, with M02.T06, when the member is an unrecognized extension field"
+        quotes:
+          - source_lines: "302-303"
+            quote: |-
+              Verifiers SHOULD reject unrecognized or unexpected fields within `externalParameters`.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0018"
+          - "slsa-provenance-1-2#R-0166"
+      - id: "M02.T04"
+        from: "member-read"
+        to: "interpreted-extension"
+        trigger_kind: "event"
+        trigger: "member-examined"
+        guard: >-
+          value set; an extension field (a name of the form vendor_fieldname; an underscore marks it,
+          tested on predicate fields only, SD-4) that the reader recognizes; and not (inside
+          externalParameters, reader verifying, member unexpected)
+        kind: "stated"
+        quotes:
+          - source_lines: "540-541"
+            quote: |-
+              Implementations MAY add extension fields to any JSON object to describe information that is not captured in a standard field.
+          - source_lines: "543-546"
+            quote: |-
+              Extension fields SHOULD use names of the form `<vendor>_<fieldname>`, e.g. `examplebuilder_isCodeReviewed`. This practice avoids field name collisions by namespacing each vendor. Non-extension field names never contain an underscore.
+          - source_lines: "547"
+            quote: |-
+              Extension fields MUST NOT alter the meaning of any other field.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0043"
+          - "slsa-provenance-1-2#R-0044"
+          - "slsa-provenance-1-2#R-0045"
+          - "slsa-provenance-1-2#R-0129"
+      - id: "M02.T05"
+        from: "member-read"
+        to: "ignored"
+        trigger_kind: "event"
+        trigger: "member-examined"
+        guard: "value set; name unrecognized and not an extension field; and not (inside externalParameters and reader verifying)"
+        kind: "stated"
+        quotes:
+          - source_lines: "105"
+            quote: |-
+              Consumers MUST ignore unrecognized fields unless otherwise noted.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0009"
+          - "slsa-provenance-1-2#R-0166"
+      - id: "M02.T06"
+        from: "member-read"
+        to: "ignored"
+        trigger_kind: "event"
+        trigger: "member-examined"
+        guard: "value set; an extension field the reader does not recognize, wherever it sits"
+        kind: "stated"
+        conflict: "SD-5, with M02.T03, when the member is inside externalParameters and the reader is verifying"
+        quotes:
+          - source_lines: "547-550"
+            quote: |-
+              In other words, an attestation with an absent extension field MUST be interpreted identically to an attestation with an unrecognized (and thus ignored) extension field.
+          - source_lines: "551-553"
+            quote: |-
+              Extension fields SHOULD follow the [monotonic principle][parsing rules], meaning that deleting or ignoring the extension SHOULD NOT turn a DENY decision into an ALLOW.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0046"
+          - "slsa-provenance-1-2#R-0047"
+  - id: "M03"
+    name: "predicate-type-lineage"
+    title: "One predicateType across the versions of this specification"
+    locator: "front matter, §3, §7, §8"
+    actor: "spec-maintainers; producers and consumers follow"
+    protocol_flow: "F09"
+    purpose: >-
+      One instance per predicateType, that is per major version. The rule: the URI carries the major
+      version and changes on every backwards-incompatible change; minor changes are backwards
+      compatible and monotonic and keep it; it resolves to the latest minor version. Release
+      candidates are known only for v1.0. Nothing records the minor version a document was written
+      to (OI-04).
+    initial: "unpublished"
+    states:
+      - name: "unpublished"
+        meaning: "No version of this line exists yet."
+        kind: "inferred"
+        inferred_reason: "An entry state for the machine."
+      - name: "candidate"
+        meaning: "Published as a release candidate; field names may still change before the final version (v1.0 had RC1 and RC2)."
+        kind: "stated"
+        note: "Whether candidates used the final predicateType is not said (OI-11)."
+      - name: "current"
+        meaning: "This line's newest minor version is published and the predicateType URI resolves to it."
+        kind: "stated"
+      - name: "superseded"
+        meaning: "A backwards-incompatible version exists under a newer predicateType."
+        kind: "inferred"
+        inferred_reason: "What becomes of the older line (still served, still given minor versions) is not said."
+        terminal: "yes"
+    error_states: []
+    transitions:
+      - id: "M03.T01"
+        from: "unpublished"
+        to: "candidate"
+        trigger_kind: "event"
+        trigger: "candidate-release"
+        kind: "inferred"
+        inferred_reason: >-
+          §8.2 names RC1 and RC2 of v1.0; that they were published under the predicateType of the
+          final version, and so belong to its line, is not said (OI-11). Pass 2: was kind stated.
+        quotes:
+          - source_lines: "669"
+            quote: |-
+              Differences from RC1 and RC2:
+      - id: "M03.T02"
+        from: "unpublished"
+        to: "current"
+        trigger_kind: "event"
+        trigger: "final-release"
+        kind: "inferred"
+        inferred_reason: "§8 lists release candidates for v1.0 only, so earlier lines started at a final version; the source does not say so."
+      - id: "M03.T03"
+        from: "candidate"
+        to: "candidate"
+        trigger_kind: "event"
+        trigger: "next-candidate"
+        kind: "stated"
+        quotes:
+          - source_lines: "669"
+            quote: |-
+              Differences from RC1 and RC2:
+          - source_lines: "673"
+            quote: |-
+              Renamed `localName` (RC1) -> `name` (RC2).
+      - id: "M03.T04"
+        from: "candidate"
+        to: "current"
+        trigger_kind: "event"
+        trigger: "final-release"
+        kind: "stated"
+        quotes:
+          - source_lines: "671"
+            quote: |-
+              Renamed `systemParameters` (RC1 + RC2) -> `internalParameters` (final).
+      - id: "M03.T05"
+        from: "current"
+        to: "current"
+        trigger_kind: "event"
+        trigger: "minor-release"
+        guard: "the change is backwards compatible and monotonic"
+        action: "predicateType unchanged; its URI now resolves to this minor version"
+        kind: "stated"
+        quotes:
+          - source_lines: "108-109"
+            quote: |-
+              Minor version changes are always backwards compatible and "monotonic." Such changes do not update the `predicateType`.
+          - source_lines: "21-22"
+            quote: |-
+              The `predicateType` URI will always resolve to the latest > minor version of this specification.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0071"
+          - "slsa-provenance-1-2#R-0072"
+          - "slsa-provenance-1-2#R-0170"
+      - id: "M03.T06"
+        from: "current"
+        to: "superseded"
+        trigger_kind: "event"
+        trigger: "incompatible-change"
+        action: >-
+          The new version gets a new predicateType carrying its major number, starting a new
+          instance; migration guidance is published (§7 for v0.2 to v1.0) and the buildType updated
+          (a MUST stated for v1.0 only, whose object inputArtifacts is undefined, SD-6).
+        kind: "stated"
+        quotes:
+          - source_lines: "106-107"
+            quote: |-
+              The `predicateType` URI includes the major version number and will always change whenever there is a backwards incompatible change.
+          - source_lines: "576-577"
+            quote: |-
+              To migrate from [version 0.2](/provenance/v0.2) (`old`), use the following pseudocode.
+          - source_lines: "582-583"
+            quote: |-
+              The `buildType` MUST be updated for v1.0 to describe how to // interpret `inputArtifacts`.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0048"
+          - "slsa-provenance-1-2#R-0070"
+          - "slsa-provenance-1-2#R-0132"
+          - "slsa-provenance-1-2#R-0134"
+    trace:
+      note: >-
+        §8's entries against the machine, oldest first. The printed text is quoted; the transition
+        is this model's classification wherever kind is inferred. No predicateType string is given
+        for any version before v1.
+      entries:
+        - version: "v0.1"
+          locator: "§8.6"
+          quotes:
+            - source_lines: "697"
+              quote: |-
+                Initial version, named "in-toto.io/Provenance"
+          transition: "M03.T02: start of the line, without candidates"
+          kind: "inferred"
+        - version: "v0.1.1"
+          locator: "§8.5"
+          quotes:
+            - source_lines: "693"
+              quote: |-
+                Added `metadata.buildInvocationId`.
+          transition: "M03.T05: an added field, which an older reader ignores"
+          kind: "inferred"
+        - version: "rename: slsa.dev/provenance"
+          locator: "§8.4"
+          quotes:
+            - source_lines: "689"
+              quote: |-
+                Renamed to "slsa.dev/provenance".
+          transition: "M03.T06 for the old name, M03.T02 for the new: a new name is a new predicate type; §8 does not call the change incompatible"
+          kind: "inferred"
+        - version: "v0.2"
+          locator: "§8.3"
+          quotes:
+            - source_lines: "678"
+              quote: |-
+                Refactored to aid clarity and added `buildConfig`. The model is unchanged.
+            - source_lines: "681"
+              quote: |-
+                Renamed `recipe` to `invocation`.
+          transition: "M03.T06: renamed fields break older readers; §7 links v0.2 at its own path, /provenance/v0.2"
+          kind: "inferred"
+        - version: "v1.0 RC1, RC2"
+          locator: "§8.2"
+          quotes:
+            - source_lines: "669"
+              quote: |-
+                Differences from RC1 and RC2:
+          transition: "M03.T01, then M03.T03 from RC1 to RC2, if the candidates belong to the v1 line (OI-11)"
+          kind: "inferred"
+        - version: "v1.0"
+          locator: "§8.2"
+          quotes:
+            - source_lines: "642"
+              quote: |-
+                Major refactor to reduce misinterpretation, including a minor change in model.
+          transition: "M03.T04 into the line of https://slsa.dev/provenance/v1 (L17); M03.T06 for the v0.2 line"
+          kind: "inferred"
+        - version: "v1.2"
+          locator: "§8.1"
+          quotes:
+            - source_lines: "637-638"
+              quote: |-
+                Note the difference between the *provenance* build model diagram and the general SLSA build model diagram.
+          transition: "M03.T05: this v1.2 page still gives the v1 predicateType (L17); no v1.1 entry is printed (OI-09)"
+          kind: "stated"
+source_tensions:
+  - id: "SD-5"
+    pass1_id: "SD-02"
+    where: "M02.T03, M02.T06, M01.T14"
+    text: "An unrecognized extension field inside externalParameters, read by a verifier, is both rejected and ignored. protocol.yaml SD-5."
+  - id: "SD-4"
+    pass1_id: "SD-03"
+    where: "M02.T04"
+    text: "The underscore test is scoped to predicate fields by this model; as printed it also catches the Statement's _type. protocol.yaml SD-4."
+  - id: "SD-6"
+    pass1_id: "SD-01"
+    where: "M03.T06"
+    text: "The buildType update the v1.0 migration requires is to describe inputArtifacts, which no version defines. protocol.yaml SD-6."
+  - id: "OI-01"
+    where: "M01.T07, M01.T08"
+    text: "An empty externalParameters counts as not set, so a build with no external parameters ends in rejected-missing-l1-field."
+  - id: "OI-03"
+    where: "M01.T05"
+    text: "A near-miss predicateType (a version-specific URL) goes to other-predicate-type by this model's exact match; the source does not say."
+  - id: "OI-04"
+    where: "M03.T05"
+    text: "A consumer cannot tell minor versions apart; the self-loop changes nothing a document carries."
+  - id: "OI-11"
+    where: "M03.T01, M03.T03"
+    text: "Whether release candidates used the final predicateType is not said."
+not_modelled:
+  - text: >-
+      The build's own phases (started, initialization or execution, completed; §2, §4.6). They are
+      protocol.yaml F03 steps 2 to 6. The source attaches no guard, trigger or error state to them
+      and says nothing of a failed build (OI-08), so a machine would restate F03.
+  - text: "buildType versioning: one statement (L582-584), carried by M03.T06 and F02 step 6; no rule says when a buildType changes on its own."
+  - text: "Client-side configuration (§4.3): alternatives rather than a lifecycle; protocol.yaml F04."
+  - text: "Migration from v0.2 (§7): a field mapping; protocol.yaml F08."
+  - text: "Assigning builder.id and signer identities (§4.5): one-off setup; protocol.yaml F01."
+  - text: "Signing, the envelope, distribution, and the checks Verifying Artifacts adds: outside this source; opaque states and exits of M01."
+coverage: >-
+  3 machines, 25 states (14 kind inferred, 6 error), 29 transitions (15 kind inferred; pass 2 moved
+  M03.T01 from stated), 15 events (all used), counted by script with bin/_yaml.py. By script: every
+  transition's from and to is a state of its machine, every state is reachable from its initial
+  state, every non-terminal state has an exit and no terminal state has one, error_states equals the
+  set of states marked error, and every trigger is a defined event. M02's six guards were evaluated
+  as predicates over all 64 combinations of its six inputs: exactly one transition fires on 62; on
+  the other 2, which are SD-5's input (an unrecognized extension field inside externalParameters,
+  read by a verifier, with the expected flag moot for an unrecognized member), T03 and T06 both
+  fire. constrained_by: 57 links to 35 distinct ids (pass 1: 33 links to 17 skeleton ids), emitted
+  by script and read. 47 quotations, checked by bin/check-quotes. Pass 3 re-joined the triggers to messages.yaml: all 29 are events defined under events (none names a message, 15 of 15 events used),
+  and every structure or field name in a guard, action or state meaning (47 tokens examined in this file; 283 across it, protocol.yaml and protocol.md) is a name of messages.yaml or a v0.2 name of its §7 section.
