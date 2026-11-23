@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: sigstore-bundle-0-3
 record: sigstore-bundle-0-3
 type: summary
-updated: "2026-11-20"
+updated: "2026-11-22"
 ---
 
 # Sigstore Bundle format v0.3
@@ -21,25 +21,32 @@ updated: "2026-11-20"
 ## Overview
 
 A Sigstore bundle is the unit a Sigstore verifier is handed: **one** signature
-over an artifact plus everything needed to check it offline except the trust
-root. The `Bundle` message (§1.3 of our rendering) is a media type, a
-`VerificationMaterial`, and a `content` that is exactly one of a bare
-`MessageSignature` over an artifact digest or a DSSE envelope, which in a
-bundle must hold exactly one signature. `VerificationMaterial` (§1.2) carries
-the key as one of three forms — a public-key hint, an X.509 chain, or (new in
-0.3, and required for public-instance keyless signing) a single leaf
-certificate — plus zero or more Rekor transparency-log entries (inclusion
-proof with checkpoint, and optionally a signed entry timestamp) and zero or
-more RFC 3161 timestamps. The versioning note (§1) and the media-type comment
-(§1.3) give the version history: 0.1, 0.2 and 0.3 media types, in two
-spellings. The point of the design is that a short-lived Fulcio certificate is
-verifiable after it expires, because the log or a TSA proves *when* the
-signature was made.
+over an artifact plus the verification material that travels with it. The page
+calls that everything a verifier needs; it is not — the trust root, log keys,
+timestamp-authority trust, the artifact itself and the client specification's
+procedure all come from outside (SD-33). The `Bundle` message (§1.3 of our
+rendering) is a media type, a `VerificationMaterial`, and a `content` that is
+exactly one of a bare `MessageSignature` (over the artifact, its digest
+carried beside it; the source leaves artifact-versus-digest open, SD-15) or a
+DSSE envelope, which in a bundle must hold exactly one signature.
+`VerificationMaterial` (§1.2) carries the key as one of three forms — a
+public-key hint, an X.509 chain, or (required in v0.3 for public-instance
+keyless signing) a single leaf certificate — plus zero or more Rekor
+transparency-log entries (inclusion proof with checkpoint, and optionally a
+signed entry timestamp) and zero or more RFC 3161 timestamps. The versioning
+note (§1) and the media-type comment (§1.3) give the version history: 0.1, 0.2
+and 0.3 media types, in two spellings. The point of the design is that a
+short-lived Fulcio certificate is verifiable after it expires, because the log
+or a TSA proves *when* the signature was made.
 
-The docs page (§5) restates the structure for humans and prints two real
-bundles — a `hashedrekord` message signature from Maven Central and a DSSE
-SLSA-provenance bundle from the Sigstore conformance suite — which are the
-record's test vectors.
+The docs page (§5) restates the structure for humans and prints two complete
+bundles — a `hashedrekord` message signature from Maven Central, and a DSSE
+SLSA-provenance bundle that the page presents as public-infrastructure output
+but that was made against a test instance (`sigstore.mock`, log
+`localhost:8000`; SD-13). They are the record's test vectors: their
+signatures, inclusion proofs and log-body bindings verify; the checkpoint,
+signed-entry-timestamp and TSA signatures and the certificate chains cannot be
+checked without keys the source does not hold.
 
 ## Applicability
 
@@ -53,7 +60,9 @@ record's test vectors.
   this format first: the DSSE envelope sits inside a bundle, with the
   verification material beside it rather than inside it.
 - **R-O-05.** DSSE signs the payload bytes verbatim under PAE (§2.1); the
-  bundle adds no canonicalization of its own. The log entry's
+  bundle adds no canonicalization to what is signed, though checking a log's
+  inclusion promise makes the verifier rebuild canonical JSON (protocol
+  OF-02). The log entry's
   `canonicalized_body` (§4.5) is a different object — the log's record of the
   entry — and is where a byte-faithfulness question lives.
 - **DEC-005.** A bundle permits only one DSSE signature (§1.3; docs §5.1.2.2),
