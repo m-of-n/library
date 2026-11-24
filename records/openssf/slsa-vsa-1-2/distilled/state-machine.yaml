@@ -1,0 +1,1092 @@
+# slsa-vsa-1-2 state machines, FX-1 pass 1 (extract), protocol and state-machine lane. Flows are in protocol.yaml; prose in protocol.md.
+record: "slsa-vsa-1-2"
+reviewed_by: ""
+kind: "state-machine"
+extracted: "2026-11-17"
+extracted_by: >-
+  FX-1 pass 1 (extract), protocol and state-machine lane, claude-opus-5-5, effort max, from the source
+  only
+source:
+  file: ".cache/slsa-vsa-1-2.txt"
+  sha256: "9cfab2e205860f67ea6052450f0445dcbd31dcf754d8cf9becf8d8ef3d1056e8"
+note: >-
+  Conventions. States are {name, meaning, kind}; error states carry error yes and are listed in
+  error_states; terminal states carry terminal yes. Every trigger is an event defined under events
+  (trigger_kind event); the message an event carries is named in its meaning and in protocol.yaml.
+  guard and action are this file's notation; the source's words are in each transition's quotes, cut
+  from .cache/slsa-vsa-1-2.txt by script and checked by bin/check-quotes. kind stated means the source
+  describes the transition; inferred means this model added it, with inferred_reason. Every failing
+  branch of a §5 check is inferred, because §5 never says what a failed check leads to. protocol_step
+  names the protocol.yaml step a transition carries out. constrained_by and candidates are emitted by
+  script from the skeleton tables (requirements.yaml R-0001 to R-0015, inferred-candidates.yaml) and
+  every resolved pair was read. Pass 2 (verify) rewired them to the full table (R-0001 to R-0094) by
+  script from the id table: the split child that carries a statement in place of its parent, the
+  requirement id for every promoted candidate, and R-0085 (the inferred outcome of a failed check) on
+  every failing branch of M01; candidates now lists rejected candidates only. Source-defect ids are
+  normative.md's canonical ones (lane_id keeps this lane's pass 1 id).
+events:
+  - name: "vsa-received"
+    meaning: >-
+      The consumer holds a VSA envelope and the artifact or its digest (protocol.yaml F04 step 1).
+  - name: "inputs-received"
+    meaning: "The verifier holds an artifact, a bundle of attestations and a policy (F01 step 1)."
+  - name: "dependency-check-requested"
+    meaning: "The verifier sets out to claim dependency levels for the artifact (F01 step 3)."
+  - name: "sub-verification-complete"
+    meaning: >-
+      M01, run by the verifier on a dependency's VSA, has ended in accepted or in an error state.
+  - name: "vsa-delivered"
+    meaning: "The signed VSA leaves the verifier (F01 step 15); the channel is not specified."
+  - name: "advance"
+    meaning: "The machine moves on; no input is consumed, and the guard picks the branch."
+machines:
+  - id: "M01"
+    name: "vsa-verification"
+    locator: "§3.1, §5, §5.1"
+    actor: "consumer"
+    protocol_flow: "F04"
+    purpose: >-
+      §5 as a machine: seven mandatory checks in printed order, a read of the payload placed after the
+      signature, the optional further check, and one error state per failing check. The verdict is the
+      conjunction of side-effect-free checks, so any order that keeps the signature first and the read
+      before the field checks reaches the same verdict; only the error state reached may differ.
+    initial: "idle"
+    states:
+      - name: "idle"
+        meaning: "No verification running."
+        kind: "inferred"
+        inferred_reason: "An entry state; §5 begins with a VSA in hand."
+      - name: "received"
+        meaning: >-
+          The consumer holds the VSA envelope, the artifact (or its digest) and its F03 configuration: roots
+          of trust, accepted pairs, expected resourceUri, expected levels, goal.
+        kind: "inferred"
+        inferred_reason: "§5 presupposes all of it without saying how it is obtained."
+      - name: "signature-verified"
+        meaning: "§5 step 1 passed."
+        kind: "stated"
+      - name: "statement-parsed"
+        meaning: "The payload has been read as an in-toto Statement, unrecognized fields ignored."
+        kind: "inferred"
+        inferred_reason: "The source has no parse step (protocol.yaml F04 step 3)."
+      - name: "subject-matched"
+        meaning: "§5 step 2 passed."
+        kind: "stated"
+      - name: "predicate-type-checked"
+        meaning: "§5 step 3 passed."
+        kind: "stated"
+      - name: "verifier-matched"
+        meaning: "§5 step 4 passed."
+        kind: "stated"
+      - name: "resource-matched"
+        meaning: "§5 step 5 passed."
+        kind: "stated"
+      - name: "result-passed"
+        meaning: "§5 step 6 passed."
+        kind: "stated"
+      - name: "levels-matched"
+        meaning: "§5 step 7 passed; every mandatory step is done."
+        kind: "stated"
+      - name: "additional-checked"
+        meaning: "The optional step passed for every further field the goal names."
+        kind: "stated"
+      - name: "accepted"
+        meaning: "The VSA is verified; the consumer relies on the verifier's decision about the artifact."
+        kind: "stated"
+        terminal: "yes"
+      - name: "rejected-signature"
+        meaning: "The envelope signature does not verify under the roots of trust (E02)."
+        kind: "inferred"
+        inferred_reason: >-
+          The source names the check and never its failure; a failed Verify that is read as not verified.
+        error: "yes"
+        terminal: "yes"
+      - name: "rejected-malformed"
+        meaning: "The payload is not an in-toto Statement (E01)."
+        kind: "inferred"
+        inferred_reason: "The source defines no parse failure."
+        error: "yes"
+        terminal: "yes"
+      - name: "rejected-subject"
+        meaning: "No subject entry matches the artifact's digest (E03)."
+        kind: "inferred"
+        inferred_reason: >-
+          The source names the check and never its failure; a failed Verify that is read as not verified.
+        error: "yes"
+        terminal: "yes"
+      - name: "rejected-predicate-type"
+        meaning: "predicateType is not the VSA v1 type (E04)."
+        kind: "inferred"
+        inferred_reason: >-
+          The source names the check and never its failure; a failed Verify that is read as not verified.
+        error: "yes"
+        terminal: "yes"
+      - name: "rejected-verifier"
+        meaning: "The (signer, verifier) pair is not accepted (E05)."
+        kind: "inferred"
+        inferred_reason: >-
+          The source names the check and never its failure; a failed Verify that is read as not verified.
+        error: "yes"
+        terminal: "yes"
+      - name: "rejected-resource-uri"
+        meaning: "resourceUri does not match the expected value, or none is known (E06, E10)."
+        kind: "inferred"
+        inferred_reason: >-
+          The source names the check and never its failure; a failed Verify that is read as not verified.
+        error: "yes"
+        terminal: "yes"
+      - name: "rejected-result"
+        meaning: "verificationResult is not PASSED (E07)."
+        kind: "inferred"
+        inferred_reason: >-
+          The source names the check and never its failure; a failed Verify that is read as not verified.
+        error: "yes"
+        terminal: "yes"
+      - name: "rejected-levels"
+        meaning: "verifiedLevels does not contain an expected value (E08)."
+        kind: "inferred"
+        inferred_reason: >-
+          The source names the check and never its failure; a failed Verify that is read as not verified.
+        error: "yes"
+        terminal: "yes"
+      - name: "rejected-additional"
+        meaning: "A further field fails the goal (E09, E14, E15)."
+        kind: "inferred"
+        inferred_reason: >-
+          The source names the check and never its failure; a failed Verify that is read as not verified.
+        error: "yes"
+        terminal: "yes"
+    transitions:
+      - id: "M01.T01"
+        from: "idle"
+        to: "received"
+        trigger_kind: "event"
+        trigger: "vsa-received"
+        kind: "inferred"
+        inferred_reason: "§5 presupposes the VSA in hand."
+        protocol_step: "F04.1"
+        constrained_by:
+          - "slsa-vsa-1-2#R-0083"
+      - id: "M01.T02"
+        from: "received"
+        to: "signature-verified"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "the envelope signature verifies with a key from roots_of_trust"
+        kind: "stated"
+        protocol_step: "F04.2"
+        opaque: "yes"
+        quotes:
+          - source_lines: "283-285"
+            quote: |-
+              Verify the signature on the VSA envelope using the preconfigured roots of trust. This step ensures that the VSA was produced by a trusted producer and that it hasn't been tampered with.
+        constrained_by:
+          - "slsa-vsa-1-2#R-0011"
+          - "slsa-vsa-1-2#R-0067"
+        candidates:
+          - "C-0009"
+      - id: "M01.T03"
+        from: "received"
+        to: "rejected-signature"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "NOT (the envelope signature verifies with a key from roots_of_trust)"
+        kind: "inferred"
+        inferred_reason: "The failing branch of the check before it."
+        protocol_step: "F04.2"
+        constrained_by:
+          - "slsa-vsa-1-2#R-0085"
+      - id: "M01.T04"
+        from: "signature-verified"
+        to: "statement-parsed"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "the payload parses as an in-toto Statement"
+        action: "ignore every field not recognized"
+        kind: "inferred"
+        inferred_reason: "R-0001 binds the read; the read's place in the order is this model's."
+        protocol_step: "F04.3"
+        quotes:
+          - source_lines: "113-114"
+            quote: |-
+              Minor version changes are always backwards compatible and "monotonic." Such changes do not update the `predicateType`.
+        constrained_by:
+          - "slsa-vsa-1-2#R-0024"
+          - "slsa-vsa-1-2#R-0001"
+          - "slsa-vsa-1-2#R-0026"
+          - "slsa-vsa-1-2#R-0027"
+      - id: "M01.T05"
+        from: "signature-verified"
+        to: "rejected-malformed"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "the payload is not an in-toto Statement"
+        kind: "inferred"
+        inferred_reason: "The source defines no parse failure."
+        protocol_step: "F04.3"
+        constrained_by:
+          - "slsa-vsa-1-2#R-0085"
+      - id: "M01.T06"
+        from: "statement-parsed"
+        to: "subject-matched"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: >-
+          some subject entry's digest matches digest(artifact); the match rule is in-toto's (OI-04)
+        kind: "stated"
+        protocol_step: "F04.4"
+        quotes:
+          - source_lines: "287-288"
+            quote: |-
+              Verify the statement's `subject` matches the digest of the artifact in question. This step ensures that the VSA pertains to the intended artifact.
+        constrained_by:
+          - "slsa-vsa-1-2#R-0011"
+          - "slsa-vsa-1-2#R-0068"
+        candidates:
+          - "C-0011"
+      - id: "M01.T07"
+        from: "statement-parsed"
+        to: "rejected-subject"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "no subject entry's digest matches digest(artifact)"
+        kind: "inferred"
+        inferred_reason: "The failing branch of the check before it."
+        protocol_step: "F04.4"
+        constrained_by:
+          - "slsa-vsa-1-2#R-0085"
+      - id: "M01.T08"
+        from: "subject-matched"
+        to: "predicate-type-checked"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "predicateType == https://slsa.dev/verification_summary/v1, compared as an exact string"
+        kind: "stated"
+        protocol_step: "F04.5"
+        quotes:
+          - source_lines: "290-292"
+            quote: |-
+              Verify that the `predicateType` is `https://slsa.dev/verification_summary/v1`. This step ensures that the in-toto predicate is using this version of the VSA format.
+        constrained_by:
+          - "slsa-vsa-1-2#R-0011"
+          - "slsa-vsa-1-2#R-0069"
+        candidates:
+          - "C-0013"
+      - id: "M01.T09"
+        from: "subject-matched"
+        to: "rejected-predicate-type"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "predicateType != https://slsa.dev/verification_summary/v1"
+        kind: "inferred"
+        inferred_reason: "The failing branch of the check before it."
+        protocol_step: "F04.5"
+        constrained_by:
+          - "slsa-vsa-1-2#R-0085"
+      - id: "M01.T10"
+        from: "predicate-type-checked"
+        to: "verifier-matched"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "(key used at M01.T02, predicate.verifier.id) in accepted_pairs"
+        kind: "stated"
+        protocol_step: "F04.6"
+        quotes:
+          - source_lines: "294-296"
+            quote: |-
+              Verify that the `verifier` matches the public key (or equivalent) used to verify the signature in step 1. This step identifies the VSA producer in cases where their identity is not implicitly revealed in step 1.
+        note: >-
+          §5 step 4 says the verifier matches the key; the pairs are the relation it matches by (OI-05).
+        constrained_by:
+          - "slsa-vsa-1-2#R-0011"
+          - "slsa-vsa-1-2#R-0070"
+          - "slsa-vsa-1-2#R-0004"
+          - "slsa-vsa-1-2#R-0082"
+      - id: "M01.T11"
+        from: "predicate-type-checked"
+        to: "rejected-verifier"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "(key used at M01.T02, predicate.verifier.id) not in accepted_pairs"
+        kind: "inferred"
+        inferred_reason: "The failing branch of the check before it."
+        protocol_step: "F04.6"
+        constrained_by:
+          - "slsa-vsa-1-2#R-0085"
+      - id: "M01.T12"
+        from: "verifier-matched"
+        to: "resource-matched"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: >-
+          predicate.resourceUri matches expected_resource_uri (the fetch URI, the value communicated out of
+          band, or the value a communicated rule yields)
+        kind: "stated"
+        protocol_step: "F04.7"
+        quotes:
+          - source_lines: "298-300"
+            quote: |-
+              Verify that the value for `resourceUri` in the VSA matches the expected value. This step ensures that the consumer is using the VSA for the producer's intended purpose.
+        constrained_by:
+          - "slsa-vsa-1-2#R-0011"
+          - "slsa-vsa-1-2#R-0071"
+          - "slsa-vsa-1-2#R-0094"
+          - "slsa-vsa-1-2#R-0006"
+          - "slsa-vsa-1-2#R-0091"
+        candidates:
+          - "C-0016"
+      - id: "M01.T13"
+        from: "verifier-matched"
+        to: "rejected-resource-uri"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "predicate.resourceUri does not match, or no expected value is known (E10)"
+        kind: "inferred"
+        inferred_reason: "The failing branch of the check before it."
+        protocol_step: "F04.7"
+        constrained_by:
+          - "slsa-vsa-1-2#R-0085"
+      - id: "M01.T14"
+        from: "resource-matched"
+        to: "result-passed"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "predicate.verificationResult == PASSED"
+        kind: "stated"
+        protocol_step: "F04.8"
+        quotes:
+          - source_lines: "302-303"
+            quote: |-
+              Verify that the value for `verificationResult` is `PASSED`. This step ensures the artifact is suitable for the consumer's purposes.
+        note: "§5.1 writes slsaResult for this field (SD-15)."
+        constrained_by:
+          - "slsa-vsa-1-2#R-0011"
+          - "slsa-vsa-1-2#R-0072"
+        candidates:
+          - "C-0018"
+      - id: "M01.T15"
+        from: "resource-matched"
+        to: "rejected-result"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "predicate.verificationResult != PASSED (FAILED, or any other value)"
+        kind: "inferred"
+        inferred_reason: "The failing branch of the check before it."
+        protocol_step: "F04.8"
+        constrained_by:
+          - "slsa-vsa-1-2#R-0085"
+      - id: "M01.T16"
+        from: "result-passed"
+        to: "levels-matched"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: >-
+          predicate.verifiedLevels contains a member of expected_levels; an expectation of level n in a track
+          puts every level n and above of that track in expected_levels
+        kind: "stated"
+        protocol_step: "F04.9"
+        quotes:
+          - source_lines: "305-306"
+            quote: |-
+              Verify that `verifiedLevels` contains the expected value. This step ensures that the artifact is suitable for the consumer's purposes.
+          - source_lines: "392-394"
+            quote: |-
+              Note that each SLSA level implies the levels below it in the same track. For example, `SLSA_BUILD_LEVEL_3` means (`SLSA_BUILD_LEVEL_1` + `SLSA_BUILD_LEVEL_2` + `SLSA_BUILD_LEVEL_3`).
+        note: >-
+          contains is stated; widening an expected level to the levels above it is this model's reading of the
+          implication rule (§5.1 example 2 spells it out; SD-14).
+        constrained_by:
+          - "slsa-vsa-1-2#R-0011"
+          - "slsa-vsa-1-2#R-0073"
+          - "slsa-vsa-1-2#R-0054"
+          - "slsa-vsa-1-2#R-0055"
+          - "slsa-vsa-1-2#R-0079"
+          - "slsa-vsa-1-2#R-0084"
+        candidates:
+          - "C-0020"
+      - id: "M01.T17"
+        from: "result-passed"
+        to: "rejected-levels"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "predicate.verifiedLevels contains no member of expected_levels"
+        kind: "inferred"
+        inferred_reason: "The failing branch of the check before it."
+        protocol_step: "F04.9"
+        constrained_by:
+          - "slsa-vsa-1-2#R-0085"
+      - id: "M01.T18"
+        from: "levels-matched"
+        to: "accepted"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "the goal names no further field"
+        kind: "stated"
+        protocol_step: "F04.11"
+        quotes:
+          - source_lines: "342-343"
+            quote: |-
+              The consumer does not need to check additional fields, as C fully delegates the decision to V.
+        candidates:
+          - "C-0032"
+      - id: "M01.T19"
+        from: "levels-matched"
+        to: "additional-checked"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: >-
+          the goal names further fields and each satisfies it (dependencyLevels: protocol.yaml F07)
+        kind: "stated"
+        protocol_step: "F04.10"
+        quotes:
+          - source_lines: "310-311"
+            quote: |-
+              (Optional) Verify additional fields required to determine whether the VSA meets your goal.
+        constrained_by:
+          - "slsa-vsa-1-2#R-0012"
+          - "slsa-vsa-1-2#R-0074"
+      - id: "M01.T20"
+        from: "levels-matched"
+        to: "rejected-additional"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "a further field the goal names does not satisfy it"
+        kind: "inferred"
+        inferred_reason: "The failing branch of the check before it."
+        protocol_step: "F04.10"
+        constrained_by:
+          - "slsa-vsa-1-2#R-0085"
+      - id: "M01.T21"
+        from: "additional-checked"
+        to: "accepted"
+        trigger_kind: "event"
+        trigger: "advance"
+        kind: "inferred"
+        inferred_reason: "Nothing remains once the optional step has passed."
+        protocol_step: "F04.11"
+    error_states:
+      - "rejected-signature"
+      - "rejected-malformed"
+      - "rejected-subject"
+      - "rejected-predicate-type"
+      - "rejected-verifier"
+      - "rejected-resource-uri"
+      - "rejected-result"
+      - "rejected-levels"
+      - "rejected-additional"
+  - id: "M02"
+    name: "vsa-issuance"
+    locator: "§2, §3, §3.2, §6"
+    actor: "verifier"
+    protocol_flow: "F01"
+    purpose: >-
+      One evaluation by a verifier, from inputs to a delivered VSA. The source fixes the outcome encoding
+      (PASSED or FAILED, and what verifiedLevels holds in each case) and the predicate's content; the
+      order, signing and delivery are this model's. There is no error state: the source defines no failure
+      of issuance, and a failed evaluation is an outcome the VSA carries (E11).
+    initial: "idle"
+    states:
+      - name: "idle"
+        meaning: "No evaluation running."
+        kind: "inferred"
+        inferred_reason: "An entry state."
+      - name: "inputs-held"
+        meaning: "The verifier holds the artifact, a bundle of attestations and the policy."
+        kind: "inferred"
+        inferred_reason: "§2 names the inputs; how they arrive is not stated (OI-01)."
+      - name: "evaluated"
+        meaning: "The evaluation against the policy is done; the outcome is a pass or a fail."
+        kind: "stated"
+      - name: "result-encoded"
+        meaning: "verificationResult and verifiedLevels are set from the outcome."
+        kind: "stated"
+      - name: "dependencies-encoded"
+        meaning: "dependencyLevels is set (M03) or deliberately left unset."
+        kind: "inferred"
+        inferred_reason: "A modelling step; the source orders nothing in issuance."
+      - name: "predicate-built"
+        meaning: "Every predicate field is set."
+        kind: "stated"
+      - name: "signed"
+        meaning: "The Statement is signed as a VSA envelope."
+        kind: "inferred"
+        inferred_reason: "Presupposed by §5 step 1; signing is never described."
+      - name: "issued"
+        meaning: "The VSA has left the verifier."
+        kind: "inferred"
+        inferred_reason: "Delivery is not described (OI-01)."
+        terminal: "yes"
+      - name: "withheld"
+        meaning: "No VSA is issued for a failed evaluation."
+        kind: "inferred"
+        inferred_reason: "Whether a failure must be issued is not stated (OI-07)."
+        terminal: "yes"
+    transitions:
+      - id: "M02.T01"
+        from: "idle"
+        to: "inputs-held"
+        trigger_kind: "event"
+        trigger: "inputs-received"
+        kind: "inferred"
+        inferred_reason: "§2 names the inputs, not their arrival."
+        protocol_step: "F01.1"
+        quotes:
+          - source_lines: "44-45"
+            quote: |-
+              by evaluating the artifact and a `bundle` of attestations against some `policy`.
+        constrained_by:
+          - "slsa-vsa-1-2#R-0019"
+      - id: "M02.T02"
+        from: "inputs-held"
+        to: "evaluated"
+        trigger_kind: "event"
+        trigger: "advance"
+        action: "evaluate artifact and bundle against the policy"
+        kind: "stated"
+        protocol_step: "F01.2"
+        opaque: "yes"
+        quotes:
+          - source_lines: "169"
+            quote: |-
+              Describes the policy that the `subject` was verified against.
+        constrained_by:
+          - "slsa-vsa-1-2#R-0019"
+          - "slsa-vsa-1-2#R-0041"
+      - id: "M02.T03"
+        from: "evaluated"
+        to: "result-encoded"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "outcome is pass"
+        action: >-
+          verificationResult = PASSED; verifiedLevels = per track the highest level verified for the artifact
+          itself, plus any verified properties; at most one level per track; SLSA_<TRACK>_LEVEL_UNEVALUATED
+          for a track with no claim
+        kind: "stated"
+        protocol_step: "F01.9, F01.10"
+        quotes:
+          - source_lines: "190"
+            quote: |-
+              Either “PASSED” or “FAILED” to indicate if the artifact passed or failed the policy verification.
+          - source_lines: "195-197"
+            quote: |-
+              Indicates the highest level of each track verified for the artifact (and not > its dependencies) and any [verified properties](verified-properties) verified > for the artifact or "FAILED" if policy verification failed.
+        constrained_by:
+          - "slsa-vsa-1-2#R-0051"
+          - "slsa-vsa-1-2#R-0053"
+          - "slsa-vsa-1-2#R-0054"
+          - "slsa-vsa-1-2#R-0055"
+          - "slsa-vsa-1-2#R-0014"
+          - "slsa-vsa-1-2#R-0076"
+          - "slsa-vsa-1-2#R-0077"
+          - "slsa-vsa-1-2#R-0080"
+          - "slsa-vsa-1-2#R-0081"
+          - "slsa-vsa-1-2#R-0090"
+      - id: "M02.T04"
+        from: "evaluated"
+        to: "result-encoded"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "outcome is fail and the verifier issues a VSA for it"
+        action: "verificationResult = FAILED; verifiedLevels = [FAILED]"
+        kind: "stated"
+        protocol_step: "F01.9, F01.10"
+        quotes:
+          - source_lines: "190"
+            quote: |-
+              Either “PASSED” or “FAILED” to indicate if the artifact passed or failed the policy verification.
+          - source_lines: "390"
+            quote: |-
+              `FAILED` (Indicates policy evaluation failed)
+        note: >-
+          That FAILED stands alone in verifiedLevels is this model's reading of §3.2; no rule ties the two
+          fields (OI-07, SD-8; read through R-0090). Pass 1's guard was outcome is fail, which also held
+          where M02.T05 applies, so the two exits from evaluated were not exclusive; pass 2 added the
+          condition that separates them.
+        constrained_by:
+          - "slsa-vsa-1-2#R-0051"
+          - "slsa-vsa-1-2#R-0053"
+          - "slsa-vsa-1-2#R-0078"
+          - "slsa-vsa-1-2#R-0090"
+      - id: "M02.T05"
+        from: "evaluated"
+        to: "withheld"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "outcome is fail and the verifier issues nothing"
+        kind: "inferred"
+        inferred_reason: "The encoding of a failure is stated; the duty to issue one is not (OI-07)."
+        protocol_step: "F01.2"
+      - id: "M02.T06"
+        from: "result-encoded"
+        to: "dependencies-encoded"
+        trigger_kind: "event"
+        trigger: "dependency-check-requested"
+        guard: "the verifier claims dependency levels"
+        action: "run M03; dependencyLevels = its result ({} for an artifact with no dependencies)"
+        kind: "stated"
+        protocol_step: "F01.3, F01.11"
+        quotes:
+          - source_lines: "212-214"
+            quote: |-
+              A set but empty `dependencyLevels` object means that the artifact has **no** > dependency at all, while an unset or null `dependencyLevels` means that the > verifier makes no claims about the artifact's dependencies.
+        constrained_by:
+          - "slsa-vsa-1-2#R-0060"
+          - "slsa-vsa-1-2#R-0088"
+      - id: "M02.T07"
+        from: "result-encoded"
+        to: "dependencies-encoded"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "the verifier makes no claim about dependencies"
+        action: "dependencyLevels unset or null"
+        kind: "stated"
+        protocol_step: "F01.11"
+        constrained_by:
+          - "slsa-vsa-1-2#R-0060"
+          - "slsa-vsa-1-2#R-0088"
+      - id: "M02.T08"
+        from: "dependencies-encoded"
+        to: "predicate-built"
+        trigger_kind: "event"
+        trigger: "advance"
+        action: >-
+          verifier.id (verifier.version optional); timeVerified optional; resourceUri; policy.uri and
+          policy.digest; inputAttestations, every attestation used if non-empty; slsaVersion optional
+        kind: "stated"
+        protocol_step: "F01.4 to F01.8, F01.12"
+        constrained_by:
+          - "slsa-vsa-1-2#R-0029"
+          - "slsa-vsa-1-2#R-0031"
+          - "slsa-vsa-1-2#R-0032"
+          - "slsa-vsa-1-2#R-0093"
+          - "slsa-vsa-1-2#R-0034"
+          - "slsa-vsa-1-2#R-0036"
+          - "slsa-vsa-1-2#R-0038"
+          - "slsa-vsa-1-2#R-0094"
+          - "slsa-vsa-1-2#R-0040"
+          - "slsa-vsa-1-2#R-0042"
+          - "slsa-vsa-1-2#R-0043"
+          - "slsa-vsa-1-2#R-0044"
+          - "slsa-vsa-1-2#R-0046"
+          - "slsa-vsa-1-2#R-0047"
+          - "slsa-vsa-1-2#R-0048"
+          - "slsa-vsa-1-2#R-0049"
+          - "slsa-vsa-1-2#R-0063"
+          - "slsa-vsa-1-2#R-0064"
+      - id: "M02.T09"
+        from: "predicate-built"
+        to: "signed"
+        trigger_kind: "event"
+        trigger: "advance"
+        action: >-
+          wrap in an in-toto Statement (subject, predicateType https://slsa.dev/verification_summary/v1) and
+          sign it as a VSA envelope
+        kind: "inferred"
+        inferred_reason: "Signing is presupposed by §5 step 1, never described."
+        protocol_step: "F01.13, F01.14"
+        opaque: "yes"
+        quotes:
+          - source_lines: "14"
+            quote: |-
+              "predicateType": "https://slsa.dev/verification_summary/v1"
+          - source_lines: "17-18"
+            quote: |-
+              Important: Always use the above string for `predicateType` rather than what is > in the URL bar.
+        constrained_by:
+          - "slsa-vsa-1-2#R-0016"
+          - "slsa-vsa-1-2#R-0017"
+          - "slsa-vsa-1-2#R-0021"
+          - "slsa-vsa-1-2#R-0002"
+          - "slsa-vsa-1-2#R-0025"
+          - "slsa-vsa-1-2#R-0086"
+          - "slsa-vsa-1-2#R-0092"
+      - id: "M02.T10"
+        from: "signed"
+        to: "issued"
+        trigger_kind: "event"
+        trigger: "vsa-delivered"
+        kind: "inferred"
+        inferred_reason: "Delivery is not described (OI-01)."
+        protocol_step: "F01.15"
+        note: >-
+          Where resourceUri is not the fetch URI, the expected value also goes to consumers out of band
+          (protocol.yaml F03 step 5).
+        constrained_by:
+          - "slsa-vsa-1-2#R-0006"
+    error_states: []
+  - id: "M03"
+    name: "dependency-level-determination"
+    locator: "§2, §3.2"
+    actor: "verifier"
+    protocol_flow: "F02"
+    purpose: >-
+      §2's two methods over a work list of dependencies, ending in a dependencyLevels map or in no claim.
+      Recursion (method a) appends a dependency's own dependencies to the work list. The source gives no
+      outcome for a dependency neither method determines, nor for a source dependency; the exits from
+      those two states are inferred alternatives (OI-09).
+    initial: "idle"
+    states:
+      - name: "idle"
+        meaning: "No determination running."
+        kind: "inferred"
+        inferred_reason: "An entry state."
+      - name: "dependencies-listed"
+        meaning: "The resolvedDependencies of the artifact being verified form the work list."
+        kind: "stated"
+      - name: "selecting"
+        meaning: "The next dependency on the work list is taken."
+        kind: "inferred"
+        inferred_reason: "Iteration is this model's."
+      - name: "source-dependency"
+        meaning: "The dependency is a source dependency, which neither method covers."
+        kind: "inferred"
+        inferred_reason: "Both methods name non-source dependencies only (OI-09)."
+      - name: "verifying-provenance"
+        meaning: "Method (a): the dependency's provenance is being verified."
+        kind: "stated"
+      - name: "matching-vsa"
+        meaning: "Method (b): a VSA for the dependency is being looked for."
+        kind: "stated"
+      - name: "vsa-verifying"
+        meaning: "M01 runs on the matched dependency VSA."
+        kind: "inferred"
+        inferred_reason: "§2 only says the VSA is matched and used (OI-08)."
+      - name: "level-determined"
+        meaning: "The dependency's level in each track is known."
+        kind: "stated"
+      - name: "undetermined"
+        meaning: >-
+          No level for this dependency: provenance missing or failed, no VSA matched, or the VSA failed M01.
+        kind: "inferred"
+        inferred_reason: "The source names no such outcome (E12, E13)."
+        error: "yes"
+      - name: "counted"
+        meaning: "The dependency is counted once per track, at its highest level."
+        kind: "stated"
+      - name: "complete"
+        meaning: "dependencyLevels is emitted."
+        kind: "stated"
+        terminal: "yes"
+      - name: "no-claims"
+        meaning: "The verifier withdraws its claim: dependencyLevels is left unset."
+        kind: "inferred"
+        inferred_reason: "One of the readings OI-09 leaves open."
+        terminal: "yes"
+    transitions:
+      - id: "M03.T01"
+        from: "idle"
+        to: "dependencies-listed"
+        trigger_kind: "event"
+        trigger: "dependency-check-requested"
+        action: "work list = the resolvedDependencies of the artifact being verified, from its provenance"
+        kind: "stated"
+        protocol_step: "F02.1"
+        opaque: "yes"
+        quotes:
+          - source_lines: "51-54"
+            quote: |-
+              The verifier does this by either a) verifying the provenance of each non-source dependency listed in the [resolvedDependencies](build-provenance#resolvedDependencies) of the artifact being verified (recursively)
+        constrained_by:
+          - "slsa-vsa-1-2#R-0020"
+      - id: "M03.T02"
+        from: "dependencies-listed"
+        to: "complete"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "work list empty"
+        action: "dependencyLevels = {} (an artifact with no dependencies)"
+        kind: "stated"
+        protocol_step: "F02.7"
+        quotes:
+          - source_lines: "212-214"
+            quote: |-
+              A set but empty `dependencyLevels` object means that the artifact has **no** > dependency at all, while an unset or null `dependencyLevels` means that the > verifier makes no claims about the artifact's dependencies.
+        constrained_by:
+          - "slsa-vsa-1-2#R-0060"
+      - id: "M03.T03"
+        from: "dependencies-listed"
+        to: "selecting"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "work list not empty"
+        kind: "inferred"
+        inferred_reason: "Iteration is this model's."
+        protocol_step: "F02.1"
+      - id: "M03.T04"
+        from: "selecting"
+        to: "source-dependency"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "the dependency is a source dependency"
+        kind: "inferred"
+        inferred_reason: >-
+          Both methods name non-source dependencies only; a source dependency's treatment is not stated
+          (OI-09).
+        protocol_step: "F02.1"
+      - id: "M03.T05"
+        from: "selecting"
+        to: "verifying-provenance"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "non-source dependency; method (a)"
+        kind: "stated"
+        protocol_step: "F02.2"
+        opaque: "yes"
+        constrained_by:
+          - "slsa-vsa-1-2#R-0020"
+      - id: "M03.T06"
+        from: "selecting"
+        to: "matching-vsa"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "non-source dependency; method (b)"
+        kind: "stated"
+        protocol_step: "F02.3"
+        quotes:
+          - source_lines: "54-57"
+            quote: |-
+              or b) matching the non-source dependency listed in `resolvedDependencies` (`subject.digest` == `resolvedDependencies.digest` and, ideally, `vsa.resourceUri` == `resolvedDependencies.uri`) to a VSA _for that dependency_
+        constrained_by:
+          - "slsa-vsa-1-2#R-0020"
+      - id: "M03.T07"
+        from: "verifying-provenance"
+        to: "level-determined"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "the dependency's provenance verifies"
+        action: >-
+          levels per track from that verification; append the dependency's own resolvedDependencies not yet on
+          the work list, compared by digest
+        kind: "stated"
+        protocol_step: "F02.2"
+        opaque: "yes"
+        note: >-
+          Comparing by digest is this model's (inferred); it is what lets method (a) count a shared dependency
+          once.
+        constrained_by:
+          - "slsa-vsa-1-2#R-0020"
+      - id: "M03.T08"
+        from: "verifying-provenance"
+        to: "undetermined"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "provenance absent or not verified"
+        kind: "inferred"
+        inferred_reason: "Method (a)'s failure is not described (E13)."
+        protocol_step: "F02.2"
+      - id: "M03.T09"
+        from: "matching-vsa"
+        to: "vsa-verifying"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: >-
+          a VSA exists whose subject digest equals the dependency's digest, preferably with resourceUri equal
+          to the dependency's uri
+        kind: "stated"
+        protocol_step: "F02.3"
+        quotes:
+          - source_lines: "54-57"
+            quote: |-
+              or b) matching the non-source dependency listed in `resolvedDependencies` (`subject.digest` == `resolvedDependencies.digest` and, ideally, `vsa.resourceUri` == `resolvedDependencies.uri`) to a VSA _for that dependency_
+        constrained_by:
+          - "slsa-vsa-1-2#R-0020"
+      - id: "M03.T10"
+        from: "matching-vsa"
+        to: "undetermined"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "no such VSA"
+        kind: "inferred"
+        inferred_reason: "Method (b)'s failure is not described (E12)."
+        protocol_step: "F02.3"
+      - id: "M03.T11"
+        from: "vsa-verifying"
+        to: "level-determined"
+        trigger_kind: "event"
+        trigger: "sub-verification-complete"
+        guard: "M01 ended in accepted"
+        action: "levels per track = vsa.verifiedLevels; inherited counts += vsa.dependencyLevels"
+        kind: "inferred"
+        inferred_reason: >-
+          Using the two fields is stated; requiring the VSA to pass M01 first is this model's (OI-08).
+        protocol_step: "F02.4, F02.5"
+        quotes:
+          - source_lines: "57-58"
+            quote: |-
+              and using `vsa.verifiedLevels` and `vsa.dependencyLevels`.
+        constrained_by:
+          - "slsa-vsa-1-2#R-0020"
+      - id: "M03.T12"
+        from: "vsa-verifying"
+        to: "undetermined"
+        trigger_kind: "event"
+        trigger: "sub-verification-complete"
+        guard: "M01 ended in an error state"
+        kind: "inferred"
+        inferred_reason: "As M03.T11 (E12)."
+        protocol_step: "F02.4"
+      - id: "M03.T13"
+        from: "level-determined"
+        to: "counted"
+        trigger_kind: "event"
+        trigger: "advance"
+        action: >-
+          count the dependency once per track at its highest level in that track; add any inherited counts
+        kind: "stated"
+        protocol_step: "F02.6"
+        quotes:
+          - source_lines: "216-219"
+            quote: |-
+              Users MUST count each dependency only once per SLSA track, at the highest > level verified. For example, if a dependency meets `SLSA_BUILD_LEVEL_2`, > you include it with the count for `SLSA_BUILD_LEVEL_2` but not the count for > `SLSA_BUILD_LEVEL_1`.
+        note: >-
+          Adding inherited counts counts twice a dependency that two dependency VSAs share (SD-20).
+        constrained_by:
+          - "slsa-vsa-1-2#R-0061"
+          - "slsa-vsa-1-2#R-0062"
+      - id: "M03.T14"
+        from: "counted"
+        to: "selecting"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "work list not exhausted"
+        kind: "inferred"
+        inferred_reason: "Iteration is this model's."
+        protocol_step: "F02.6"
+      - id: "M03.T15"
+        from: "counted"
+        to: "complete"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "work list exhausted"
+        action: >-
+          dependencyLevels = the counts, a map from SlsaResult to integer; a level with no dependency may be
+          left out, since it reads as 0
+        kind: "stated"
+        protocol_step: "F02.7"
+        quotes:
+          - source_lines: "209-211"
+            quote: |-
+              Map from [SlsaResult] to the number of the artifact's _transitive_ dependencies > that were verified at the indicated level. Absence of a given level of > [SlsaResult] MUST be interpreted as reporting _0_ dependencies at that level.
+        constrained_by:
+          - "slsa-vsa-1-2#R-0058"
+          - "slsa-vsa-1-2#R-0059"
+          - "slsa-vsa-1-2#R-0089"
+          - "slsa-vsa-1-2#R-0014"
+      - id: "M03.T16"
+        from: "undetermined"
+        to: "selecting"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "work list not exhausted; carry on"
+        kind: "inferred"
+        inferred_reason: >-
+          The source has no rule for a dependency without a level (OI-09); going on without counting it is one
+          reading.
+        protocol_step: "F02.6"
+      - id: "M03.T17"
+        from: "undetermined"
+        to: "complete"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "work list exhausted; carry on"
+        kind: "inferred"
+        inferred_reason: >-
+          The source has no rule for a dependency without a level (OI-09); going on without counting it is one
+          reading.
+        protocol_step: "F02.7"
+      - id: "M03.T18"
+        from: "undetermined"
+        to: "no-claims"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "the verifier withdraws its claim"
+        action: "dependencyLevels unset or null"
+        kind: "inferred"
+        inferred_reason: "The other reading: an unset dependencyLevels claims nothing, which cannot be false."
+        protocol_step: "F01.11"
+        quotes:
+          - source_lines: "212-214"
+            quote: |-
+              A set but empty `dependencyLevels` object means that the artifact has **no** > dependency at all, while an unset or null `dependencyLevels` means that the > verifier makes no claims about the artifact's dependencies.
+        constrained_by:
+          - "slsa-vsa-1-2#R-0060"
+          - "slsa-vsa-1-2#R-0088"
+      - id: "M03.T19"
+        from: "source-dependency"
+        to: "selecting"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "work list not exhausted"
+        kind: "inferred"
+        inferred_reason: "As M03.T16, for a dependency neither method covers."
+        protocol_step: "F02.1"
+      - id: "M03.T20"
+        from: "source-dependency"
+        to: "complete"
+        trigger_kind: "event"
+        trigger: "advance"
+        guard: "work list exhausted"
+        kind: "inferred"
+        inferred_reason: "As M03.T17."
+        protocol_step: "F02.7"
+    error_states:
+      - "undetermined"
+source_tensions:
+  - id: "SD-15"
+    lane_id: "SD-01"
+    where: "M01.T14"
+    text: "§5.1 checks slsaResult; the guard reads verificationResult. protocol.yaml SD-15."
+  - id: "SD-14"
+    lane_id: "SD-02"
+    where: "M01.T16"
+    text: >-
+      §5.1 example 2 tests verifiedLevels with is; the guard uses contains. protocol.yaml SD-14.
+  - id: "SD-20"
+    lane_id: "SD-03"
+    where: "M03.T11, M03.T13"
+    text: >-
+      Inherited dependencyLevels counts cannot be deduplicated, so count-once (R-0061) fails for a shared
+      dependency under method (b). protocol.yaml SD-20.
+  - id: "OI-07"
+    where: "M02.T04, M02.T05"
+    text: >-
+      No rule ties verificationResult to verifiedLevels, and issuing a FAILED VSA is not required.
+      protocol.yaml OI-07; source defect SD-8.
+  - id: "OI-09"
+    where: "M03.T16 to M03.T20"
+    text: >-
+      A dependency without a level, and any source dependency, has no counting rule; the exits are
+      inferred alternatives. protocol.yaml OI-09; source defects SD-11 and SD-2.
+not_modelled:
+  - text: >-
+      VSA lifetime (validity period, expiry, revocation, renewal, supersession): the source defines none.
+      Measured on the 432 lines: 0 occurrences each of expir, revo, fresh, renew, supersed and rotat,
+      case-insensitive; timeVerified (§3.2) is optional and no step reads it (protocol.yaml OI-11).
+  - text: >-
+      Trust configuration over time (adding or removing a verifier, key rotation): one SHOULD (R-0013) and
+      the word preconfigured (L283, L326, L350), no procedure; the setup is protocol.yaml F03.
+  - text: >-
+      Reading dependencyLevels: a three-way decision with no lifecycle, modelled as guarded steps in
+      protocol.yaml F07 and as the guard of M01.T19.
+  - text: "Format versioning (§3.1): a parsing rule, not a lifecycle; M01.T04 applies R-0001."
+  - text: >-
+      Policy evaluation, signing, signature checking and provenance verification: single opaque
+      transitions (M02.T02, M02.T09, M01.T02, M03.T07), defined by other documents.
+  - text: >-
+      §5.1's two examples: runs of M01 with fixed expected values, not machines of their own;
+      protocol.yaml F05, F06.
+coverage: >-
+  3 machines, 42 states (24 kind inferred), 51 transitions (28 kind inferred), 10 error states,
+  counted by script over the model this file was written from and recounted over the written file with
+  both bin/_yaml.py and bin/_record_yaml.py. Checked by script: every from and to is a state of its
+  machine, every state is reachable from the initial state, every non-terminal state has an exit and
+  no terminal state has one, error_states equals the set of states marked error, every trigger is a
+  defined event and every event is used, every protocol_step names a protocol.yaml step.
+  Pass 1's links, over the skeleton ids: constrained_by 29 links to 14 distinct requirement ids,
+  candidates 23 links to 22 distinct candidate ids. After pass 2's rewiring, recounted with both
+  readers: constrained_by 101 links to 68 distinct requirement ids on 38 of the 51 transitions,
+  candidates 7 links to 7 distinct rejected candidates; 28 quotations, checked by bin/check-quotes.
+  Pass 2 also re-ran the structural checks above by script (all hold) and found M02.T04's guard
+  overlapping M02.T05's (see M02.T04's note); M01's guard pairs are a predicate and its negation, and
+  levels-matched's three a partition, so they are exclusive and exhaustive by form.
