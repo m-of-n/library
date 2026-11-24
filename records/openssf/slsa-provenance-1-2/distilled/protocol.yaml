@@ -1,0 +1,2781 @@
+# slsa-provenance-1-2 protocol model, FX-1 pass 1 (extract), protocol and state-machine agent. Prose and one sequence diagram per flow in protocol.md; lifecycles in state-machine.yaml.
+record: "slsa-provenance-1-2"
+reviewed_by: ""
+extracted: "2026-11-16"
+extracted_by: >-
+  FX-1 pass 1 (extract), protocol and state-machine agent, effort max, from the source only.
+  Blind: summary.md not read, no other lane's output read; requirements.yaml read for its
+  skeleton id table (id, locator, source_lines, text) only; messages.yaml not read.
+source:
+  file: ".cache/slsa-provenance-1-2.txt"
+  sha256: "1a3828724437a0fc24bb492bca6db28df114e318bbaace85cc9f75204035db55"
+  lines: "704"
+  built_from: >-
+    distilled/render-source.py over spec/build-provenance.md (sha256
+    182ab5cf823c374874136371466ba43f99f0a9ba87a8046757d26a2ed74854a0, record.yaml content.sha256,
+    retrieved 2026-11-16) with spec/schema/provenance.cue spliced in at L125-172 and
+    spec/schema/provenance.proto at L189-238, slsa-framework/slsa releases/v1.2 at ae7fc76.
+  version: "SLSA Build Provenance, SLSA Specification v1.2; predicateType https://slsa.dev/provenance/v1"
+applicability: >-
+  Protocol applies. The source is a data format (an in-toto predicate) but it also names the
+  parties that make and use it and puts obligations on each: a build platform that runs a
+  tenant's build and records provenance (§2, §4.2 to §4.6), the author of a buildType that
+  defines the build template (§2, §4.3, §6), a client that evaluates build configuration before
+  the server sees it (§4.3), consumers that parse (§3, §4.7) and verify (§2, §4.3, §4.5) the
+  result, a migration from v0.2 (§7), and a versioning rule for the predicate type (front
+  matter, §3). It defines no transport, envelope, signature or distribution, and it hands
+  verification proper to Verifying Artifacts (§5), a page outside this source; those steps
+  appear here as opaque steps, marked inferred where this model supplies them.
+conventions:
+  quoting: >-
+    Every quotation is a quotes item with source_lines and quote. The words were written from
+    .cache/slsa-provenance-1-2.txt by script (bin/_source_text reading, whitespace collapsed),
+    never typed, with the tightest range that holds them; bin/check-quotes verifies every one.
+    The source is Markdown, so a quotation keeps its Markdown: list bullets, backticks, link
+    brackets, and the blockquote marker of the front-matter note (L20-23), which appears
+    mid-sentence as a lone > where that note wraps. Text in action, guard, note and on_error is
+    this file's wording; where it repeats source words, the step's quotes carry them.
+  step_kind: >-
+    kind is stated (the source says this step happens or this obligation exists) or inferred
+    (this model's step, with inferred_reason saying what the source does and does not say). An
+    order the source does not fix is called out in the flow's order_note.
+  on_error_basis: >-
+    stated: the source says what follows a failure. unspecified: the source names the operation
+    and says nothing about its failure; on_error then reads unspecified by source. inferred: this
+    file's reading, and on_error says so. opaque: the outcome belongs to a document outside this
+    source (Verifying Artifacts, the in-toto attestation framework).
+  constrained_by: >-
+    slsa-provenance-1-2#R-NNNN ids of requirements.yaml, emitted by script from a locator and a
+    phrase of the requirement text, refusing zero or several matches, then every resolved pair
+    read. Only skeleton ids R-0002 to R-0050 are cited: R-0001 is the RFC 2119 recital, not a
+    requirement, and ids the requirements lane adds during pass 1 did not exist when this file was
+    written. Keyword-less statements a step relies on are listed under uncited_statements by
+    line, for pass 2 or 3 to wire to whatever ids they receive. Pass 2 (verify) wired them: the ids requirements.yaml
+    gave those statements (R-0051 to R-0170) were added to the steps and error paths that quote them, emitted by
+    script from the id table, and each added pair was read.
+  messages: >-
+    message names the source's own structure where there is one (Statement, Provenance,
+    BuildDefinition, RunDetails, Builder, BuildMetadata, ResourceDescriptor: the §4.1 summaries
+    and §4.2 to §4.6) with message_defined_in_source yes, or describes an exchange the source
+    names but does not define (a build request, a configuration object, a document at a URI) with
+    message_defined_in_source no. messages.yaml was not read, so pass 3 joined these names to it: see message_join at the end of this file.
+  roles: "from and to name roles of the roles list; from equal to to marks a local step."
+roles:
+  - name: "build-platform-implementer"
+    locator: "§2"
+    definition: "Designs the build platform and its security model; decides what builder.id names."
+    kind: "stated"
+    quotes:
+      - source_lines: "59-61"
+        quote: |-
+          The build platform implementer SHOULD define a security model for the build platform in order to clearly identify the platform's boundaries, actors, and interfaces.
+  - name: "build-platform"
+    locator: "§2, §4.4, §4.5"
+    definition: >-
+      The builder: everything trusted to run the build faithfully and record its provenance,
+      people and hardware included, identified by builder.id. Its parts include the trusted control
+      plane (L89-90 makes it the platform's; L464) and, since builderDependencies sits
+      under Builder, the orchestrator (L470). The source also calls it the server or the build
+      server when a client sends it configuration (§4.3, L375, L397, L400); that these name the
+      same party is this model's reading.
+    kind: "stated"
+    quotes:
+      - source_lines: "481-483"
+        quote: |-
+          The build platform, or <dfn>builder</dfn> for short, represents the transitive closure of all the entities that are, by necessity, [trusted] to faithfully run the build and record the provenance.
+      - source_lines: "415-416"
+        quote: |-
+          Identifies the build platform that executed the invocation, which is trusted to have correctly performed the operation and populated this provenance.
+  - name: "build-process"
+    locator: "§2, §4.5"
+    definition: >-
+      The build itself, run as an independent process on the platform and controlled by the
+      tenant; the workload of L470 is read here as the same thing. It may generate provenance fields the
+      control plane does not verify, which builder.id's documentation should list (L463-464).
+    kind: "stated"
+    quotes:
+      - source_lines: "53"
+        quote: |-
+          Each build runs as an independent process on a multi-tenant build platform.
+      - source_lines: "463-464"
+        quote: |-
+          Any fields that are generated by the tenant-controlled build process and not verified by the trusted control plane, except for the `subject`.
+  - name: "build-cache"
+    locator: "§2"
+    definition: "A cache the build process may talk to during execution; the exchange is not recorded."
+    kind: "stated"
+    quotes:
+      - source_lines: "89-90"
+        quote: |-
+          During execution, the build process might communicate with the build platform's control plane and/or build caches.
+  - name: "tenant"
+    locator: "§2, §4.3"
+    definition: >-
+      The user or tenant who starts a build and controls its external parameters; at Build L3 those
+      parameters are complete, leaving an external party no other way to influence the build
+      (L293-295).
+    kind: "stated"
+    quotes:
+      - source_lines: "292-293"
+        quote: |-
+          The parameters that are under external control, such as those set by a user or tenant of the build platform.
+  - name: "client"
+    locator: "§4.3"
+    definition: >-
+      The tenant-side tool that evaluates build configuration before sending it to the build
+      server, usually on an untrusted workstation (L389).
+    kind: "stated"
+    quotes:
+      - source_lines: "374-376"
+        quote: |-
+          When build configuration is evaluated client-side before being sent to the server, such as transforming version-controlled YAML into ephemeral JSON, some solution is needed to make [verification] practical.
+      - source_lines: "396-398"
+        quote: |-
+          If clients send the evaluated configuration object directly to the build server, record the digest directly in `externalParameters`.
+  - name: "version-control"
+    locator: "§4.3"
+    definition: "Where build configuration originates and where consumers expect to trace it back to."
+    kind: "stated"
+    quotes:
+      - source_lines: "376-379"
+        quote: |-
+          Consumers need a way to know what configuration is expected and the usual way to do that is to map it back to version control, but that is not possible if the server cannot verify the configuration's origins.
+  - name: "temporary-storage"
+    locator: "§4.3"
+    definition: "A location a client may upload an evaluated configuration object to (footnote of §4.3)."
+    kind: "stated"
+    quotes:
+      - source_lines: "398-400"
+        quote: |-
+          If clients upload the configuration object to a temporary storage location and send that location to the build server,
+  - name: "dependency-host"
+    locator: "§2, §4.3"
+    definition: >-
+      Any place an artifact is fetched from during the build (a git server, example.com in §4.3's
+      example). The source names the fetched artifacts, not their hosts; the role name is this
+      model's.
+    kind: "inferred"
+    inferred_reason: "Fetching is stated (L82-84, L319-322); a party that serves the fetch is implied."
+    quotes:
+      - source_lines: "82-84"
+        quote: |-
+          All artifacts fetched during initialization or execution of the build process are considered dependencies, including those referenced directly by parameters.
+  - name: "signer"
+    locator: "§4.5"
+    definition: >-
+      The identity that signs provenance. Distinct from the builder: one signer may sign for
+      several builders. Consumers judge a signer and a builder.id together (L496). How signing
+      works is outside this source.
+    kind: "stated"
+    quotes:
+      - source_lines: "501-503"
+        quote: |-
+          The builder is distinct from the signer in order to support the case where one signer generates attestations for more than one builder, as in the GitHub Actions example above.
+  - name: "consumer"
+    locator: "§1, §3, §4.3, §4.5"
+    definition: >-
+      Any party that reads provenance. Bound by the parsing rules (§3), by accepting only specific
+      signer-builder pairs (§4.5), and expected to hold an expectation of good externalParameters
+      (§4.3).
+    kind: "stated"
+    quotes:
+      - source_lines: "33-34"
+        quote: |-
+          Consumers of the provenance can verify that the artifact was built according to expectations.
+  - name: "verifier"
+    locator: "§4.3, §5"
+    definition: >-
+      A consumer checking provenance against its expectations. The source says Verifiers once
+      (L302) and Consumers elsewhere, and does not define how the two relate; that a verifier is a
+      consumer that verifies is this model's reading (§1 has consumers verify).
+    kind: "stated"
+    quotes:
+      - source_lines: "302-303"
+        quote: |-
+          Verifiers SHOULD reject unrecognized or unexpected fields within `externalParameters`.
+  - name: "rebuilder"
+    locator: "§1, §4.3"
+    definition: "Anyone rebuilding the artifact from its provenance (the Others of §1)."
+    kind: "stated"
+    quotes:
+      - source_lines: "35"
+        quote: |-
+          Others can rebuild the artifact, if desired.
+  - name: "buildtype-author"
+    locator: "§4.3, §6"
+    definition: >-
+      Whoever defines and publishes a buildType: the template, its parameter schemas, the
+      document its URI resolves to. The source never names this party; both indexed buildTypes are
+      marked community-maintained (L569-570), and the platform often defines its own (L67-68).
+    kind: "inferred"
+    inferred_reason: "The source puts obligations on the buildType's URI and documentation, not on a named party."
+    quotes:
+      - source_lines: "283-286"
+        quote: |-
+          The URI SHOULD resolve to a human-readable specification that includes: overall description of the build type; schema for `externalParameters` and `internalParameters`; unambiguous instructions for how to initiate the build given this BuildDefinition, and a complete example.
+      - source_lines: "569"
+        quote: |-
+          GitHub Actions Workflow (community-maintained)
+  - name: "spec-maintainers"
+    locator: "§3, §6, §8"
+    definition: >-
+      Whoever publishes versions of this specification and keeps the index of build types. Never
+      named: §6 asks for a pull request on GitHub, §8 is their change history.
+    kind: "inferred"
+    inferred_reason: "The versioning rule (§3) and the index (§6) imply a publisher the source does not name."
+    quotes:
+      - source_lines: "572"
+        quote: |-
+          To add an entry here, please send a pull request on GitHub.
+  - name: "migrator"
+    locator: "§7"
+    definition: >-
+      Whoever turns v0.2 provenance (old) into v1 provenance, a generator being updated or a
+      converter; §7 addresses an unnamed reader.
+    kind: "inferred"
+    inferred_reason: "§7 gives pseudocode without naming who runs it."
+    quotes:
+      - source_lines: "576-577"
+        quote: |-
+          To migrate from [version 0.2](/provenance/v0.2) (`old`), use the following pseudocode.
+flows:
+  - id: "F01"
+    name: "platform-establishment"
+    title: "A build platform fixes its trust boundary, a builder.id per mode, and the documentation behind each id"
+    locator: "§2, §4.3, §4.5"
+    kind_of_flow: "setup"
+    participants:
+      - "build-platform-implementer"
+      - "build-platform"
+      - "signer"
+      - "consumer"
+    summary: >-
+      Before any provenance exists, the implementer models the platform's security, draws from
+      that model the boundary builder.id will name, gives every mode of operation that differs in
+      security attributes or Build level its own builder.id (and preferably its own signer
+      identity), and publishes behind each builder.id URI what the id covers. Consumers in turn
+      decide which signer-builder pairs they accept; how they learn the pairs is not defined.
+    order_note: >-
+      The source orders step 1 before step 2 (the model is then used, L61). The other steps have no
+      stated order beyond preceding the first build, which is this model's reading.
+    steps:
+      - n: "1"
+        from: "build-platform-implementer"
+        to: "build-platform-implementer"
+        message: "security model of the build platform"
+        message_defined_in_source: "no"
+        action: "Define a security model that fixes where the platform begins and ends, who acts in it, and its interfaces."
+        locator: "§2"
+        kind: "stated"
+        quotes:
+          - source_lines: "59-61"
+            quote: |-
+              The build platform implementer SHOULD define a security model for the build platform in order to clearly identify the platform's boundaries, actors, and interfaces.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0003"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "build-platform-implementer"
+        to: "build-platform-implementer"
+        message: "security model of the build platform"
+        message_defined_in_source: "no"
+        action: >-
+          Use the model to settle what builder.id will stand for (the whole trusted platform,
+          transitively) and which control plane is trusted.
+        locator: "§2"
+        kind: "stated"
+        quotes:
+          - source_lines: "61-63"
+            quote: |-
+              This model SHOULD then be used to identify the transitive closure of the trusted build platform for the `builder.id` as well as the trusted control plane.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0004"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "build-platform-implementer"
+        to: "build-platform"
+        message: "builder.id"
+        message_defined_in_source: "yes"
+        action: >-
+          Assign builder.id: a URI for the trusted platform's transitive closure that reflects the
+          trust base consumers care about. Every mode of operation whose security attributes or
+          SLSA Build level differ gets its own builder.id. How finely to split is left to judgement
+          (§4.5 contrasts GitHub-hosted with self-hosted runners).
+        locator: "§4.5"
+        kind: "stated"
+        quotes:
+          - source_lines: "449"
+            quote: |-
+              URI indicating the transitive closure of the trusted build platform.
+          - source_lines: "453-455"
+            quote: |-
+              If a build platform has multiple modes of operations that have differing security attributes or SLSA Build levels, each mode MUST have a different `builder.id` and SHOULD have a different signer identity.
+          - source_lines: "489"
+            quote: |-
+              The `id` MUST reflect the trust base that consumers care about.
+          - source_lines: "489-490"
+            quote: |-
+              How detailed to be is a judgement call.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0036"
+          - "slsa-provenance-1-2#R-0038"
+          - "slsa-provenance-1-2#R-0107"
+          - "slsa-provenance-1-2#R-0109"
+        on_error: >-
+          Modes sharing one builder.id break the MUST of L453-455. The source states the risk this
+          prevents (a less secure mode compromising a more secure one, L455-456) and no means of
+          detecting the breach.
+        on_error_basis: "stated"
+      - n: "4"
+        from: "build-platform-implementer"
+        to: "signer"
+        message: "signer identity per mode"
+        message_defined_in_source: "no"
+        action: >-
+          Give each such mode its own signer identity (SHOULD). The identity scheme and the signing
+          mechanism are outside this source.
+        locator: "§4.5"
+        kind: "stated"
+        quotes:
+          - source_lines: "455-456"
+            quote: |-
+              This is to minimize the risk that a less secure mode compromises a more secure one.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0036"
+          - "slsa-provenance-1-2#R-0110"
+        on_error: >-
+          unspecified by source. Where modes share a signer, the signer-builder pair check of F06
+          step 2 cannot separate the modes by signer, only by builder.id (inferred).
+        on_error_basis: "inferred"
+      - n: "5"
+        from: "build-platform-implementer"
+        to: "consumer"
+        message: "builder.id documentation (the document the builder.id URI resolves to)"
+        message_defined_in_source: "no"
+        action: >-
+          Make the builder.id URI resolve to documentation of five things: the scope of the id, the
+          Build level it claims, what it guarantees about each provenance field's accuracy and
+          completeness, every field the tenant-controlled build process generates without control-plane
+          verification (the subject excepted), and how to interpret any extension fields.
+        locator: "§4.5"
+        kind: "stated"
+        quotes:
+          - source_lines: "458-465"
+            quote: |-
+              The `builder.id` URI SHOULD resolve to documentation explaining: - The scope of what this ID represents. - The claimed SLSA Build level. - The accuracy and completeness guarantees of the fields in the provenance. - Any fields that are generated by the tenant-controlled build process and not verified by the trusted control plane, except for the `subject`. - The interpretation of any extension fields.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0037"
+          - "slsa-provenance-1-2#R-0111"
+          - "slsa-provenance-1-2#R-0112"
+          - "slsa-provenance-1-2#R-0113"
+          - "slsa-provenance-1-2#R-0114"
+          - "slsa-provenance-1-2#R-0115"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+        note: "Why the subject is excepted is not said (OI-05)."
+      - n: "6"
+        from: "build-platform-implementer"
+        to: "build-platform"
+        message: "build platform design"
+        message_defined_in_source: "no"
+        action: >-
+          Design the platform so externalParameters stay small and simple, and where possible so
+          the BuildDefinition is its only top-level input, which guarantees the definition suffices
+          to run the build.
+        locator: "§4.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "297-298"
+            quote: |-
+              The build platform SHOULD be designed to minimize the size and complexity of `externalParameters`, in order to reduce fragility and ease [verification].
+          - source_lines: "370-372"
+            quote: |-
+              If possible, architect the build platform to use this definition as its sole top-level input, in order to guarantee that the information is sufficient to run the build.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0016"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "7"
+        from: "consumer"
+        to: "consumer"
+        message: "accepted signer-builder pairs and expectations"
+        message_defined_in_source: "no"
+        action: >-
+          Settle, ahead of verification, the signer-builder pairs to accept and an expectation of
+          good externalParameters for each buildType to be verified.
+        locator: "§4.3, §4.5"
+        kind: "inferred"
+        inferred_reason: >-
+          The source requires consumers to accept only specific pairs and to hold an expectation;
+          that both are settled before any provenance is checked, and from what source, is this
+          model's reading. The source does not say how a consumer learns either.
+        quotes:
+          - source_lines: "496"
+            quote: |-
+              Consumers MUST accept only specific signer-builder pairs.
+          - source_lines: "299-300"
+            quote: |-
+              Consumers SHOULD have an expectation of what "good" looks like; the more information that they need to check, the harder that task becomes.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0039"
+          - "slsa-provenance-1-2#R-0017"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+  - id: "F02"
+    name: "buildtype-definition"
+    title: "A buildType is defined, published at its URI, optionally indexed, and updated for v1.0 of the predicate (for later major versions, inferred)"
+    locator: "§2, §4.3, §6, §7"
+    kind_of_flow: "setup"
+    participants:
+      - "buildtype-author"
+      - "spec-maintainers"
+      - "consumer"
+    summary: >-
+      The buildType names a parameterized build template. Its author defines the parameter
+      schemas, keeps them minimal, says how a parameter becomes a dependency uri, and publishes a
+      human-readable specification at the buildType URI. Listing it in §6's index is by pull
+      request. On the v0.2 to v1.0 change the buildType had to be updated; the source states
+      this for that change only.
+    order_note: "Steps 1 to 4 precede any build that names the buildType (inferred); step 5 is optional and unordered; step 6 is stated for the change to v1.0 only, and placing it on every major version change is inferred."
+    steps:
+      - n: "1"
+        from: "buildtype-author"
+        to: "buildtype-author"
+        message: "build template"
+        message_defined_in_source: "no"
+        action: >-
+          Define the parameterized template the buildType URI identifies: the process that ran,
+          whatever platform ran it, and how to read the parameters and dependencies. It is often
+          specific to one platform.
+        locator: "§2, §4.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "65-68"
+            quote: |-
+              The build process is defined by a parameterized template, identified by `buildType`. This encapsulates the process that ran, regardless of what platform ran it. Often the build type is specific to the build platform because most build platforms have their own unique interfaces.
+          - source_lines: "280-281"
+            quote: |-
+              Identifies the template for how to perform the build and interpret the parameters and dependencies.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0055"
+          - "slsa-provenance-1-2#R-0082"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "buildtype-author"
+        to: "buildtype-author"
+        message: "schemas of externalParameters and internalParameters"
+        message_defined_in_source: "no"
+        action: >-
+          Define both parameter schemas: simple structure with string values (RECOMMENDED), no
+          field name used in both (SHOULD NOT), everything that is the same for every build left
+          implicit in the buildType (SHOULD), configuration moved into input artifacts wherever
+          possible so verifying the artifact verifies it.
+        locator: "§4.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "331-334"
+            quote: |-
+              Each is an arbitrary JSON object, though it is RECOMMENDED to keep the structure simple with string values to aid verification. The same field name SHOULD NOT be used for both `externalParameters` and `internalParameters`.
+          - source_lines: "355-357"
+            quote: |-
+              Maximize the amount of information that is implicit from the meaning of `buildType`. In particular, any value that is boilerplate and the same for every build SHOULD be implicit.
+          - source_lines: "359-363"
+            quote: |-
+              Reduce parameters by moving configuration to input artifacts whenever possible. For example, instead of passing in compiler flags via an external parameter that has to be [verified][Verification] separately, require the flags to live next to the source code or build configuration so that verifying the latter automatically verifies the compiler flags.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0022"
+          - "slsa-provenance-1-2#R-0023"
+          - "slsa-provenance-1-2#R-0027"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "buildtype-author"
+        to: "buildtype-author"
+        message: "parameter-to-dependency conversion"
+        message_defined_in_source: "no"
+        action: "Document how a parameter value converts to the uri of the dependency it resolves to."
+        locator: "§4.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "339-340"
+            quote: |-
+              The documentation for `buildType` SHOULD explain how to convert from a parameter to the dependency `uri`.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0026"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "buildtype-author"
+        to: "consumer"
+        message: "buildType specification (the document the buildType URI resolves to)"
+        message_defined_in_source: "no"
+        action: >-
+          Publish at the buildType URI a human-readable specification: an overall description,
+          schemas for both parameter objects, instructions clear enough to start the build from a
+          BuildDefinition, and a complete example.
+        locator: "§4.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "283-286"
+            quote: |-
+              The URI SHOULD resolve to a human-readable specification that includes: overall description of the build type; schema for `externalParameters` and `internalParameters`; unambiguous instructions for how to initiate the build given this BuildDefinition, and a complete example.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0013"
+        on_error: >-
+          unspecified by source. Without the specification a verifier has no schema to hold
+          externalParameters against (F06 step 4) and a rebuilder no instructions (F07 step 2);
+          inferred.
+        on_error_basis: "inferred"
+      - n: "5"
+        from: "buildtype-author"
+        to: "spec-maintainers"
+        message: "pull request adding an index entry"
+        message_defined_in_source: "no"
+        action: >-
+          Optionally ask for the buildType to be listed in §6's index, by pull request on GitHub.
+          The index is partial; each listed definition carries a complete example predicate; a
+          comment in the Markdown (L567, not shown on the rendered page) asks for alphabetical
+          order.
+        locator: "§6"
+        kind: "stated"
+        quotes:
+          - source_lines: "564-565"
+            quote: |-
+              The following is a partial index of build type definitions. Each contains a complete example predicate.
+          - source_lines: "572"
+            quote: |-
+              To add an entry here, please send a pull request on GitHub.
+        on_error: "unspecified by source (no criteria for accepting an entry)"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "buildtype-author"
+        to: "buildtype-author"
+        message: "updated buildType"
+        message_defined_in_source: "no"
+        action: >-
+          On a backwards-incompatible version of the predicate, publish an updated buildType. Stated
+          for v0.2 to v1.0 only (a MUST, whose object inputArtifacts is undefined, SD-6); that the
+          same holds for any later major version is this model's reading.
+        locator: "§7"
+        kind: "inferred"
+        inferred_reason: >-
+          Stated for the change to v1.0 only (L582-583); an updated buildType on any
+          later major version is this model's generalisation (pass 2: was kind stated).
+        quotes:
+          - source_lines: "582-584"
+            quote: |-
+              The `buildType` MUST be updated for v1.0 to describe how to // interpret `inputArtifacts`. "buildType": /* updated version of */ old.buildType,
+        constrained_by:
+          - "slsa-provenance-1-2#R-0048"
+          - "slsa-provenance-1-2#R-0134"
+          - "slsa-provenance-1-2#R-0135"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+  - id: "F03"
+    name: "build-and-provenance-generation"
+    title: "A tenant's build runs on the platform, which records provenance and has it signed"
+    locator: "§2, §4.2, §4.3, §4.4, §4.5, §4.6, §4.7, front matter"
+    kind_of_flow: "main"
+    participants:
+      - "tenant"
+      - "build-platform"
+      - "build-process"
+      - "dependency-host"
+      - "build-cache"
+      - "signer"
+      - "consumer"
+    summary: >-
+      The tenant starts a build through the platform's external interface; what it passes becomes
+      externalParameters. The platform runs the build as an independent process with its own
+      internalParameters; everything the build fetches is a dependency; talk with the control
+      plane or caches is not recorded and should not shape the build; the outputs are the subject.
+      The platform then records BuildDefinition and RunDetails, may add extension fields, wraps the
+      predicate in an in-toto Statement with the fixed predicateType, and a signer signs it. How the
+      provenance reaches consumers is not defined.
+    order_note: >-
+      The source gives the order of steps 1 to 6 only through its wording (initialization or
+      execution, during execution, finally). It does not say when the platform records each field;
+      steps 7 to 10 are placed after the build ends (finishedOn needs the end), which is this
+      model's reading. A platform may record some fields earlier.
+    steps:
+      - n: "1"
+        from: "tenant"
+        to: "build-platform"
+        message: "build request through the platform's external interface (the values become externalParameters)"
+        message_defined_in_source: "no"
+        action: >-
+          Start a build, passing the values under the tenant's control. Only values actually passed
+          in belong in externalParameters; at Build L3 they are complete, leaving an external party
+          no other way to influence the build; below L3 completeness may be best effort.
+        locator: "§2, §4.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "73"
+            quote: |-
+              `externalParameters`: the external interface to the build.
+          - source_lines: "336-337"
+            quote: |-
+              The parameters SHOULD only contain the actual values passed in through the interface to the build platform.
+          - source_lines: "293-295"
+            quote: |-
+              They MUST be complete at SLSA Build L3, meaning that there is no additional mechanism for an external party to influence the build. (At lower SLSA Build levels, the completeness MAY be best effort.)
+        constrained_by:
+          - "slsa-provenance-1-2#R-0024"
+          - "slsa-provenance-1-2#R-0014"
+          - "slsa-provenance-1-2#R-0015"
+          - "slsa-provenance-1-2#R-0057"
+        on_error: "unspecified by source (each platform's own interface; refusal not described)"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "build-platform"
+        to: "build-process"
+        message: "start of the build process (internalParameters set by the platform)"
+        message_defined_in_source: "no"
+        action: >-
+          Run the build as an independent process. The platform sets internalParameters itself.
+          startedOn, if recorded, is the time the build started.
+        locator: "§2, §4.6"
+        kind: "stated"
+        quotes:
+          - source_lines: "53"
+            quote: |-
+              Each build runs as an independent process on a multi-tenant build platform.
+          - source_lines: "77"
+            quote: |-
+              `internalParameters`: set internally by the platform.
+          - source_lines: "527"
+            quote: |-
+              The timestamp of when the build started.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0060"
+          - "slsa-provenance-1-2#R-0126"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "build-process"
+        to: "dependency-host"
+        message: "artifact fetch"
+        message_defined_in_source: "no"
+        action: >-
+          Fetch artifacts during initialization or execution. Each is a dependency, including any a
+          parameter names directly, and anything a fetched script fetches in turn is listed too
+          (§4.3's foo.sh and bar.tar.gz). Completeness is best effort up to at least Build L3.
+        locator: "§2, §4.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "82-84"
+            quote: |-
+              All artifacts fetched during initialization or execution of the build process are considered dependencies, including those referenced directly by parameters.
+          - source_lines: "318-319"
+            quote: |-
+              Completeness is best effort, at least through SLSA Build L3.
+          - source_lines: "319-322"
+            quote: |-
+              For example, if the build script fetches and executes "example.com/foo.sh", which in turn fetches "example.com/bar.tar.gz", then both "foo.sh" and "bar.tar.gz" SHOULD be listed here.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0020"
+          - "slsa-provenance-1-2#R-0063"
+          - "slsa-provenance-1-2#R-0090"
+        on_error: "unspecified by source (a failed fetch is not described)"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "build-process"
+        to: "build-platform"
+        message: "control-plane communication"
+        message_defined_in_source: "no"
+        action: >-
+          Optionally talk with the platform's control plane during execution. Not recorded as such:
+          builder.id implies it. It should not shape the build definition; if it does, it goes in
+          resolvedDependencies.
+        locator: "§2"
+        kind: "stated"
+        quotes:
+          - source_lines: "89-92"
+            quote: |-
+              During execution, the build process might communicate with the build platform's control plane and/or build caches. This communication is not captured directly in the provenance, but is instead implied by `builder.id` and subject to [SLSA Requirements](requirements.md).
+        constrained_by:
+          - "slsa-provenance-1-2#R-0008"
+          - "slsa-provenance-1-2#R-0065"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "build-process"
+        to: "build-cache"
+        message: "build-cache communication"
+        message_defined_in_source: "no"
+        action: "As step 4, for build caches."
+        locator: "§2"
+        kind: "stated"
+        quotes:
+          - source_lines: "89-90"
+            quote: |-
+              During execution, the build process might communicate with the build platform's control plane and/or build caches.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0008"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "build-process"
+        to: "build-platform"
+        message: "output artifacts (become subject) and byproducts"
+        message_defined_in_source: "no"
+        action: >-
+          Output one or more artifacts; they are the subject. Logs and similar byproducts may also
+          be produced. finishedOn, if recorded, is the time the build completed. Which party
+          computes the subject digests is not stated; L463-464 lets the tenant-controlled process
+          generate fields the control plane does not verify and exempts the subject from being
+          documented as such (OI-05).
+        locator: "§2, §4.4, §4.6"
+        kind: "stated"
+        quotes:
+          - source_lines: "96-97"
+            quote: |-
+              Finally, the build process outputs one or more artifacts, identified by `subject`.
+          - source_lines: "532"
+            quote: |-
+              The timestamp of when the build completed.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0068"
+          - "slsa-provenance-1-2#R-0128"
+        on_error: "unspecified by source (a failed build, and whether it yields provenance, is not described; OI-08)"
+        on_error_basis: "unspecified"
+      - n: "7"
+        from: "build-platform"
+        to: "build-platform"
+        message: "BuildDefinition"
+        message_defined_in_source: "yes"
+        action: >-
+          Record buildDefinition. buildType (REQUIRED for L1). externalParameters (REQUIRED for L1,
+          always included, minus extra parameters shown after careful analysis to have no security
+          impact). internalParameters (OPTIONAL; may be included to help reproduce, debug or respond
+          to incidents). resolvedDependencies: the fetched dependencies, plus the digests of artifacts
+          the parameters reference, plus any control-plane or cache exchange that shaped the build.
+          Together these should be enough to start the build.
+        locator: "§2, §4.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "73-75"
+            quote: |-
+              In SLSA, these values are untrusted; they MUST be included in the provenance and MUST be verified downstream.
+          - source_lines: "77-79"
+            quote: |-
+              In SLSA, these values are trusted because the platform is trusted; they are OPTIONAL and need not be verified downstream.
+          - source_lines: "79-80"
+            quote: |-
+              They MAY be included to enable reproducible builds, debugging, or incident response.
+          - source_lines: "326-328"
+            quote: |-
+              It SHOULD contain all the information necessary and sufficient to initialize the build and begin execution.
+          - source_lines: "337-339"
+            quote: |-
+              Metadata about those parameter values, particularly digests of artifacts referenced by those parameters, SHOULD instead go in `resolvedDependencies`.
+          - source_lines: "366-368"
+            quote: |-
+              These extra parameters SHOULD be excluded from the provenance after careful analysis that they indeed pose no security impact.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0012"
+          - "slsa-provenance-1-2#R-0005"
+          - "slsa-provenance-1-2#R-0006"
+          - "slsa-provenance-1-2#R-0007"
+          - "slsa-provenance-1-2#R-0021"
+          - "slsa-provenance-1-2#R-0025"
+          - "slsa-provenance-1-2#R-0028"
+          - "slsa-provenance-1-2#R-0008"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "8"
+        from: "build-platform"
+        to: "build-platform"
+        message: "RunDetails"
+        message_defined_in_source: "yes"
+        action: >-
+          Record runDetails. builder, REQUIRED for L1 and, by §4.5's design rationale, even where
+          the signer implies it, with id (REQUIRED for L1), builderDependencies (what the
+          orchestrator used outside the workload: no effect on the build, a possible one on
+          provenance generation or security guarantees) and version. metadata, none of it
+          REQUIRED: invocationId (globally unique, SHOULD), startedOn, finishedOn. byproducts: only
+          files worth keeping that cannot easily be regenerated, not every intermediate file.
+          buildDefinition and runDetails are both REQUIRED for L1.
+        locator: "§4.2, §4.4, §4.5, §4.6"
+        kind: "stated"
+        quotes:
+          - source_lines: "250"
+            quote: |-
+              REQUIRED for SLSA Build L1: `buildDefinition`, `runDetails`
+          - source_lines: "407"
+            quote: |-
+              REQUIRED for SLSA Build L1: `builder`
+          - source_lines: "441"
+            quote: |-
+              REQUIRED for SLSA Build L1: `id`
+          - source_lines: "503-504"
+            quote: |-
+              The field is REQUIRED, even if it is implicit from the signer, to aid readability and debugging.
+          - source_lines: "470-472"
+            quote: |-
+              Dependencies used by the orchestrator that are not run within the workload and that do not affect the build, but might affect the provenance generation or security guarantees.
+          - source_lines: "511"
+            quote: |-
+              REQUIRED: (none)
+          - source_lines: "522"
+            quote: |-
+              The value SHOULD be globally unique.
+          - source_lines: "431-433"
+            quote: |-
+              In most cases, this SHOULD NOT contain all intermediate files generated during the build. Instead, this SHOULD only contain files that are likely to be useful later and that cannot be easily reproduced.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0011"
+          - "slsa-provenance-1-2#R-0032"
+          - "slsa-provenance-1-2#R-0035"
+          - "slsa-provenance-1-2#R-0040"
+          - "slsa-provenance-1-2#R-0041"
+          - "slsa-provenance-1-2#R-0042"
+          - "slsa-provenance-1-2#R-0033"
+          - "slsa-provenance-1-2#R-0034"
+          - "slsa-provenance-1-2#R-0117"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "9"
+        from: "build-platform"
+        to: "build-platform"
+        message: "extension fields"
+        message_defined_in_source: "no"
+        action: >-
+          Optionally add extension fields, in any object, named vendor_fieldname (SHOULD), never
+          changing what another field means (MUST NOT), and monotonic, so that dropping or ignoring
+          one should never turn DENY into ALLOW (SHOULD). The source says Implementations; placing this at the
+          producer is this model's reading.
+        locator: "§4.7"
+        kind: "stated"
+        quotes:
+          - source_lines: "540-541"
+            quote: |-
+              Implementations MAY add extension fields to any JSON object to describe information that is not captured in a standard field.
+          - source_lines: "543-544"
+            quote: |-
+              Extension fields SHOULD use names of the form `<vendor>_<fieldname>`, e.g. `examplebuilder_isCodeReviewed`.
+          - source_lines: "547"
+            quote: |-
+              Extension fields MUST NOT alter the meaning of any other field.
+          - source_lines: "551-553"
+            quote: |-
+              Extension fields SHOULD follow the [monotonic principle][parsing rules], meaning that deleting or ignoring the extension SHOULD NOT turn a DENY decision into an ALLOW.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0043"
+          - "slsa-provenance-1-2#R-0044"
+          - "slsa-provenance-1-2#R-0045"
+          - "slsa-provenance-1-2#R-0047"
+        on_error: >-
+          An extension that alters another field's meaning breaks the MUST NOT; the source gives
+          consumers no way to detect it (inferred).
+        on_error_basis: "inferred"
+      - n: "10"
+        from: "build-platform"
+        to: "build-platform"
+        message: "Statement"
+        message_defined_in_source: "yes"
+        action: >-
+          Wrap the predicate in an in-toto Statement with the subject and predicateType
+          https://slsa.dev/provenance/v1, that exact string and never the address of the page being
+          read (the URL bar). Using this predicate is RECOMMENDED for meeting SLSA's provenance
+          requirements (named SLSA v1.0 in this v1.2 page, OI-06). The Statement's other fields are
+          the in-toto Statement's (L245-246).
+        locator: "front matter, §1, §4.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "17"
+            quote: |-
+              "predicateType": "https://slsa.dev/provenance/v1"
+          - source_lines: "20-21"
+            quote: |-
+              Always use the above string for `predicateType` rather than what is > in the URL bar.
+          - source_lines: "37-38"
+            quote: |-
+              This predicate is the RECOMMENDED way to satisfy the SLSA v1.0 [provenance requirements](requirements#provenance-generation).
+        constrained_by:
+          - "slsa-provenance-1-2#R-0002"
+          - "slsa-provenance-1-2#R-0051"
+          - "slsa-provenance-1-2#R-0052"
+        on_error: "unspecified by source; a consumer matching the type string would not process a different one (F05 step 2, inferred)"
+        on_error_basis: "inferred"
+      - n: "11"
+        from: "build-platform"
+        to: "signer"
+        message: "Statement for signing"
+        message_defined_in_source: "no"
+        action: >-
+          Have the Statement signed by the signer for this builder.id. The source shows signers
+          signing provenance for builders (§4.5) and defines neither the hand-off nor the signature.
+        locator: "§4.5"
+        kind: "inferred"
+        inferred_reason: "Signing is stated by example (L496-499); who hands what to the signer, and how it signs, is not."
+        quotes:
+          - source_lines: "496-499"
+            quote: |-
+              For example, "GitHub" can sign provenance for the "GitHub Actions" builder, and "Google" can sign provenance for the "Google Cloud Build" builder, but "GitHub" cannot sign for the "Google Cloud Build" builder.
+        on_error: "opaque: signing is outside this source"
+        on_error_basis: "opaque"
+      - n: "12"
+        from: "signer"
+        to: "consumer"
+        message: "signed provenance"
+        message_defined_in_source: "no"
+        action: "Deliver the signed provenance to consumers. No channel is defined."
+        locator: "§1"
+        kind: "inferred"
+        inferred_reason: "Consumers receive provenance (§1, §3); how it reaches them is not described."
+        quotes:
+          - source_lines: "33-34"
+            quote: |-
+              Consumers of the provenance can verify that the artifact was built according to expectations.
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+  - id: "F04"
+    name: "client-side-configuration"
+    title: "Configuration evaluated by a client before the server sees it, and the two ways the source offers to keep it verifiable"
+    locator: "§4.3 (guideline 5 and its footnote)"
+    kind_of_flow: "variant of F03"
+    participants:
+      - "client"
+      - "version-control"
+      - "temporary-storage"
+      - "build-platform"
+      - "consumer"
+    summary: >-
+      When a client turns version-controlled configuration into something else (YAML into
+      ephemeral JSON) before sending it, consumers can no longer trace the configuration back to
+      version control unless the server can verify where it came from. The RECOMMENDED fix moves
+      the reading of version control to the server. The alternative records a digest and leaves the
+      link to version control to a separate provenance attestation, treating the client-side
+      evaluation as a build of its own; the footnote then splits on whether the client sends the
+      object itself or a location it uploaded the object to.
+    order_note: "The two solutions are alternatives (alt A, alt B); B1 and B2 are alternatives inside B. Within each, the order is this model's."
+    steps:
+      - n: "1"
+        from: "client"
+        to: "version-control"
+        message: "configuration read"
+        message_defined_in_source: "no"
+        action: "Read the version-controlled configuration."
+        locator: "§4.3"
+        kind: "inferred"
+        inferred_reason: "The example's YAML is version-controlled (L375); that the client reads it from there is implied, not stated."
+        quotes:
+          - source_lines: "374-376"
+            quote: |-
+              When build configuration is evaluated client-side before being sent to the server, such as transforming version-controlled YAML into ephemeral JSON, some solution is needed to make [verification] practical.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0159"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "client"
+        to: "client"
+        message: "evaluated configuration object"
+        message_defined_in_source: "no"
+        action: "Evaluate the configuration client-side, for example YAML into ephemeral JSON."
+        locator: "§4.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "374-376"
+            quote: |-
+              When build configuration is evaluated client-side before being sent to the server, such as transforming version-controlled YAML into ephemeral JSON, some solution is needed to make [verification] practical.
+          - source_lines: "376-379"
+            quote: |-
+              Consumers need a way to know what configuration is expected and the usual way to do that is to map it back to version control, but that is not possible if the server cannot verify the configuration's origins.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0159"
+        on_error: >-
+          The source's own error path: when the server has no way to check where the
+          configuration came from, consumers cannot trace it to version control, and verification
+          is impractical unless one of the solutions below is used.
+        on_error_basis: "stated"
+      - n: "3"
+        from: "client"
+        to: "build-platform"
+        message: "build request naming the configuration in version control"
+        message_defined_in_source: "no"
+        action: "alt A (RECOMMENDED): send the server a reference to the configuration rather than the evaluated object."
+        locator: "§4.3"
+        kind: "inferred"
+        inferred_reason: "Implied by the server reading version control itself (step 4); the request is not described."
+        quotes:
+          - source_lines: "381-383"
+            quote: |-
+              Rearchitect the build platform to read configuration directly from version control, recording the server-verified URI in `externalParameters` and the digest in `resolvedDependencies`.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0029"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "build-platform"
+        to: "version-control"
+        message: "configuration read"
+        message_defined_in_source: "no"
+        action: "alt A: the build platform reads the configuration directly from version control."
+        locator: "§4.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "381-383"
+            quote: |-
+              Rearchitect the build platform to read configuration directly from version control, recording the server-verified URI in `externalParameters` and the digest in `resolvedDependencies`.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0029"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "build-platform"
+        to: "build-platform"
+        message: "BuildDefinition"
+        message_defined_in_source: "yes"
+        action: "alt A: externalParameters get the URI the server verified; resolvedDependencies get the digest."
+        locator: "§4.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "381-383"
+            quote: |-
+              Rearchitect the build platform to read configuration directly from version control, recording the server-verified URI in `externalParameters` and the digest in `resolvedDependencies`.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0029"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "client"
+        to: "client"
+        message: "separate provenance attestation for the client-side evaluation"
+        message_defined_in_source: "no"
+        action: >-
+          alt B: treat the client-side evaluation as a separate build, secured with SLSA in its own
+          right (SHOULD, though hard on an untrusted workstation), whose provenance links the
+          configuration digest back to version control. Who issues that attestation is not said.
+        locator: "§4.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "385-386"
+            quote: |-
+              Record the digest in the provenance[^digest-param] and use a separate provenance attestation to link that digest back to version control.
+          - source_lines: "386-389"
+            quote: |-
+              In this solution, the client-side evaluation is considered a separate "build" that SHOULD be independently secured using SLSA, though securing it can be difficult since it usually runs on an untrusted workstation.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0030"
+          - "slsa-provenance-1-2#R-0096"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "7"
+        from: "client"
+        to: "build-platform"
+        message: "evaluated configuration object"
+        message_defined_in_source: "no"
+        action: "alt B1: the client sends the evaluated object itself to the build server."
+        locator: "§4.3 footnote"
+        kind: "stated"
+        quotes:
+          - source_lines: "396-398"
+            quote: |-
+              If clients send the evaluated configuration object directly to the build server, record the digest directly in `externalParameters`.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0031"
+          - "slsa-provenance-1-2#R-0098"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "8"
+        from: "build-platform"
+        to: "build-platform"
+        message: "BuildDefinition"
+        message_defined_in_source: "yes"
+        action: "alt B1: record the object's digest directly in externalParameters."
+        locator: "§4.3 footnote"
+        kind: "stated"
+        quotes:
+          - source_lines: "396-398"
+            quote: |-
+              If clients send the evaluated configuration object directly to the build server, record the digest directly in `externalParameters`.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0031"
+          - "slsa-provenance-1-2#R-0098"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "9"
+        from: "client"
+        to: "temporary-storage"
+        message: "evaluated configuration object (upload)"
+        message_defined_in_source: "no"
+        action: "alt B2: the client uploads the object to temporary storage."
+        locator: "§4.3 footnote"
+        kind: "stated"
+        quotes:
+          - source_lines: "398-400"
+            quote: |-
+              If clients upload the configuration object to a temporary storage location and send that location to the build server,
+        constrained_by:
+          - "slsa-provenance-1-2#R-0099"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "10"
+        from: "client"
+        to: "build-platform"
+        message: "location of the configuration object"
+        message_defined_in_source: "no"
+        action: "alt B2: the client gives the build server that location."
+        locator: "§4.3 footnote"
+        kind: "stated"
+        quotes:
+          - source_lines: "398-400"
+            quote: |-
+              If clients upload the configuration object to a temporary storage location and send that location to the build server,
+        constrained_by:
+          - "slsa-provenance-1-2#R-0099"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "11"
+        from: "build-platform"
+        to: "temporary-storage"
+        message: "configuration fetch"
+        message_defined_in_source: "no"
+        action: "alt B2: fetch the object from the location."
+        locator: "§4.3 footnote"
+        kind: "inferred"
+        inferred_reason: "Recording the object's uri and digest (step 12) implies the server fetched it; the fetch is not stated."
+        constrained_by:
+          - "slsa-provenance-1-2#R-0099"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "12"
+        from: "build-platform"
+        to: "build-platform"
+        message: "BuildDefinition"
+        message_defined_in_source: "yes"
+        action: "alt B2: externalParameters get the location, as a URI; resolvedDependencies get the object's uri and digest."
+        locator: "§4.3 footnote"
+        kind: "stated"
+        quotes:
+          - source_lines: "400-401"
+            quote: |-
+              record the location in `externalParameters` as a URI and record the `uri` and `digest` in `resolvedDependencies`.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0031"
+          - "slsa-provenance-1-2#R-0099"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "13"
+        from: "consumer"
+        to: "consumer"
+        message: "Statement"
+        message_defined_in_source: "yes"
+        action: >-
+          alt B: verify the build's provenance and, through the separate attestation, that the
+          recorded digest leads back to version control (F06 run on each).
+        locator: "§4.3"
+        kind: "inferred"
+        inferred_reason: "The source says the separate attestation links the digest to version control; what a consumer does with the pair is not described."
+        quotes:
+          - source_lines: "385-386"
+            quote: |-
+              Record the digest in the provenance[^digest-param] and use a separate provenance attestation to link that digest back to version control.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0096"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+  - id: "F05"
+    name: "consumer-parsing"
+    title: "A consumer reads a provenance Statement under the parsing rules"
+    locator: "front matter, §3, §4.1, §4.6, §4.7"
+    kind_of_flow: "main"
+    participants:
+      - "consumer"
+    summary: >-
+      A local procedure. The consumer matches the predicate type, then reads every field under the
+      in-toto parsing rules this page summarises: unrecognized fields ignored unless otherwise
+      noted, unset, null and empty read alike, an unrecognized extension read as if absent. Where
+      §4.1's informative schemas disagree with the prose, the prose wins. Field-by-field outcomes
+      are state-machine.yaml M02; the document-level sequence is M01.
+    order_note: "Step 2 precedes the rest because the other rules are this predicate's (inferred). Steps 3 to 6 apply together, field by field."
+    steps:
+      - n: "1"
+        from: "consumer"
+        to: "consumer"
+        message: "Statement"
+        message_defined_in_source: "yes"
+        action: "Take the in-toto Statement out of whatever carried it. Envelope and signature handling are outside this source."
+        locator: "§4.1, §4.2"
+        kind: "inferred"
+        inferred_reason: "The source shows the Statement (§4.1) and defines no carrier."
+        quotes:
+          - source_lines: "245-246"
+            quote: |-
+              This section describes the fields within `predicate`. For a description of the other top-level fields, such as `subject`, see [Statement].
+        constrained_by:
+          - "slsa-provenance-1-2#R-0075"
+        on_error: "opaque: envelope and signature failures belong to the in-toto attestation framework and Verifying Artifacts"
+        on_error_basis: "opaque"
+      - n: "2"
+        from: "consumer"
+        to: "consumer"
+        message: "Statement"
+        message_defined_in_source: "yes"
+        action: >-
+          Check predicateType is https://slsa.dev/provenance/v1. The URI carries the major version
+          only, so every minor version shares it, and it resolves to the newest minor version.
+        locator: "front matter, §3"
+        kind: "inferred"
+        inferred_reason: "The source tells producers to use this one string and says when it changes; a consumer-side match is not stated."
+        quotes:
+          - source_lines: "17"
+            quote: |-
+              "predicateType": "https://slsa.dev/provenance/v1"
+          - source_lines: "106-107"
+            quote: |-
+              The `predicateType` URI includes the major version number and will always change whenever there is a backwards incompatible change.
+          - source_lines: "108-109"
+            quote: |-
+              Minor version changes are always backwards compatible and "monotonic." Such changes do not update the `predicateType`.
+          - source_lines: "21-22"
+            quote: |-
+              The `predicateType` URI will always resolve to the latest > minor version of this specification.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0051"
+          - "slsa-provenance-1-2#R-0070"
+          - "slsa-provenance-1-2#R-0071"
+          - "slsa-provenance-1-2#R-0072"
+          - "slsa-provenance-1-2#R-0170"
+          - "slsa-provenance-1-2#R-0160"
+        on_error: >-
+          Any other value is not this predicate and this source does not apply (inferred); what a
+          near miss such as a version-specific URL means is not said (OI-03).
+        on_error_basis: "inferred"
+      - n: "3"
+        from: "consumer"
+        to: "consumer"
+        message: "Provenance"
+        message_defined_in_source: "yes"
+        action: >-
+          Apply the in-toto parsing rules (outside this source; §3 summarises them): skip
+          any field not recognized, except where the page notes otherwise, and read unset, null and
+          empty values as the same thing.
+        locator: "§3"
+        kind: "stated"
+        quotes:
+          - source_lines: "103"
+            quote: |-
+              This predicate follows the in-toto attestation [parsing rules].
+          - source_lines: "105"
+            quote: |-
+              Consumers MUST ignore unrecognized fields unless otherwise noted.
+          - source_lines: "110"
+            quote: |-
+              Unset, null, and empty field values MUST be interpreted equivalently.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0009"
+          - "slsa-provenance-1-2#R-0010"
+          - "slsa-provenance-1-2#R-0069"
+        on_error: >-
+          stated for unrecognized fields: ignore them. The only otherwise-noted case a search of the
+          source finds is inside externalParameters, where verifiers should reject (F06 step 5). A value of the
+          wrong type is unspecified by source.
+        on_error_basis: "stated"
+      - n: "4"
+        from: "consumer"
+        to: "consumer"
+        message: "Provenance"
+        message_defined_in_source: "yes"
+        action: >-
+          Read extension fields: an unrecognized one is ignored, so an attestation with it reads
+          exactly as one without it; a recognized one never changes another field's meaning. An
+          underscore in a name marks an extension field, since standard names have none (but see
+          SD-4).
+        locator: "§4.7"
+        kind: "stated"
+        quotes:
+          - source_lines: "545-546"
+            quote: |-
+              Non-extension field names never contain an underscore.
+          - source_lines: "547-550"
+            quote: |-
+              In other words, an attestation with an absent extension field MUST be interpreted identically to an attestation with an unrecognized (and thus ignored) extension field.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0045"
+          - "slsa-provenance-1-2#R-0046"
+          - "slsa-provenance-1-2#R-0129"
+        on_error: "Inside externalParameters, ignoring and rejecting collide (SD-5)."
+        on_error_basis: "stated"
+      - n: "5"
+        from: "consumer"
+        to: "consumer"
+        message: "Provenance"
+        message_defined_in_source: "yes"
+        action: >-
+          Take the prose as authoritative where the cue or protobuf summary of §4.1 disagrees with
+          it; the provenance is always JSON with lowerCamelCase names, whatever the protobuf file
+          spells.
+        locator: "§4.1"
+        kind: "stated"
+        quotes:
+          - source_lines: "116-117"
+            quote: |-
+              This summary (in cue) is informative. In the event of a disagreement with the text description, the text is authoritative.
+          - source_lines: "178-179"
+            quote: |-
+              This summary (in protobuf) is informative. In the event of a disagreement with the text description, the text is authoritative.
+          - source_lines: "196-198"
+            quote: |-
+              While file uses snake_case as per the Protocol Buffers Style Guide, the // provenance is always serialized using JSON with lowerCamelCase. Protobuf // tooling performs this case conversion automatically.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0073"
+          - "slsa-provenance-1-2#R-0074"
+          - "slsa-provenance-1-2#R-0158"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "consumer"
+        to: "consumer"
+        message: "BuildMetadata"
+        message_defined_in_source: "yes"
+        action: "Treat invocationId as opaque and case-sensitive unless builder.id defines its meaning and format."
+        locator: "§4.6"
+        kind: "stated"
+        quotes:
+          - source_lines: "520-521"
+            quote: |-
+              The exact meaning and format is defined by `builder.id`; by default it is treated as opaque and case-sensitive.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0124"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+  - id: "F06"
+    name: "consumer-verification"
+    title: "A verifier checks provenance against its expectations, as far as this source defines verification"
+    locator: "§1, §2, §4.2, §4.3, §4.5, §4.7, §5"
+    kind_of_flow: "main"
+    participants:
+      - "verifier"
+    summary: >-
+      A local procedure, most of it delegated: §5 is a pointer to Verifying Artifacts. What this
+      source does fix is that only specific signer-builder pairs are acceptable, that builder.id
+      alone is meant to fix the Build level and stands behind the accuracy of the
+      BuildDefinition, that externalParameters must be verified and unrecognized or unexpected
+      fields in them rejected, and that internalParameters need no verification. The guarded
+      version is state-machine.yaml M01.
+    order_note: >-
+      The source orders nothing here. This model puts the signer-builder pair and builder.id first,
+      because builder.id is what vouches for the BuildDefinition's accuracy and completeness
+      (L258-259), which are worth nothing until the builder is trusted; that ordering is inferred.
+    steps:
+      - n: "1"
+        from: "verifier"
+        to: "verifier"
+        message: "Statement"
+        message_defined_in_source: "yes"
+        action: "Establish who signed the attestation. Outside this source; step 2 needs the result."
+        locator: "§4.5"
+        kind: "inferred"
+        inferred_reason: "The pair check (step 2) needs the signer's identity; how it is established is not in this source."
+        on_error: "opaque: an envelope or signature failure belongs to the in-toto attestation framework and Verifying Artifacts"
+        on_error_basis: "opaque"
+      - n: "2"
+        from: "verifier"
+        to: "verifier"
+        message: "Builder"
+        message_defined_in_source: "yes"
+        action: "Accept the attestation only if (signer, runDetails.builder.id) is one of the pairs the verifier accepts."
+        locator: "§4.5"
+        kind: "stated"
+        quotes:
+          - source_lines: "496-499"
+            quote: |-
+              Consumers MUST accept only specific signer-builder pairs. For example, "GitHub" can sign provenance for the "GitHub Actions" builder, and "Google" can sign provenance for the "Google Cloud Build" builder, but "GitHub" cannot sign for the "Google Cloud Build" builder.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0039"
+        on_error: "A pair outside the accepted set is not accepted: reject."
+        on_error_basis: "stated"
+      - n: "3"
+        from: "verifier"
+        to: "verifier"
+        message: "Builder"
+        message_defined_in_source: "yes"
+        action: >-
+          Read the SLSA Build level from builder.id, which is meant to determine it alone; how is
+          step 1 of Verifying Artifacts. builder.id also stands behind the accuracy and completeness
+          of the BuildDefinition.
+        locator: "§4.2, §4.5"
+        kind: "stated"
+        quotes:
+          - source_lines: "449-451"
+            quote: |-
+              This is [intended](verifying-artifacts#step-1-check-slsa-build-level) to be the sole determiner of the SLSA Build level.
+          - source_lines: "258-259"
+            quote: |-
+              The accuracy and completeness are implied by `runDetails.builder.id`.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0108"
+          - "slsa-provenance-1-2#R-0078"
+          - "slsa-provenance-1-2#R-0164"
+        on_error: "opaque: a level below what the verifier expects is handled by Verifying Artifacts"
+        on_error_basis: "opaque"
+      - n: "4"
+        from: "verifier"
+        to: "verifier"
+        message: "BuildDefinition"
+        message_defined_in_source: "yes"
+        action: "Check buildType is one the verifier holds expectations for; the buildType says how to read the parameters."
+        locator: "§4.3"
+        kind: "inferred"
+        inferred_reason: >-
+          The buildType governs how parameters are interpreted (L280-281) and consumers should hold
+          an expectation (L299-300); a check that the buildType is known is not stated.
+        quotes:
+          - source_lines: "280-281"
+            quote: |-
+              Identifies the template for how to perform the build and interpret the parameters and dependencies.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0017"
+          - "slsa-provenance-1-2#R-0082"
+        on_error: "With no expectation for the buildType, externalParameters cannot be verified as step 5 requires; reject (inferred)."
+        on_error_basis: "inferred"
+      - n: "5"
+        from: "verifier"
+        to: "verifier"
+        message: "BuildDefinition"
+        message_defined_in_source: "yes"
+        action: >-
+          Verify externalParameters against the expectation, rejecting any field in them that is
+          unrecognized or unexpected. The more there is to check the harder this is, which is why
+          §4.3 asks platforms to keep externalParameters small (F01 step 6).
+        locator: "§2, §4.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "73-75"
+            quote: |-
+              In SLSA, these values are untrusted; they MUST be included in the provenance and MUST be verified downstream.
+          - source_lines: "299-300"
+            quote: |-
+              Consumers SHOULD have an expectation of what "good" looks like; the more information that they need to check, the harder that task becomes.
+          - source_lines: "302-303"
+            quote: |-
+              Verifiers SHOULD reject unrecognized or unexpected fields within `externalParameters`.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0005"
+          - "slsa-provenance-1-2#R-0017"
+          - "slsa-provenance-1-2#R-0018"
+          - "slsa-provenance-1-2#R-0166"
+        on_error: >-
+          stated: an unrecognized or unexpected field is rejected (SHOULD). A value that differs
+          from the expectation fails the MUST of L74-75; what follows is Verifying Artifacts'
+          (opaque). An unrecognized extension field here meets SD-5.
+        on_error_basis: "stated"
+      - n: "6"
+        from: "verifier"
+        to: "verifier"
+        message: "BuildDefinition"
+        message_defined_in_source: "yes"
+        action: "Leave internalParameters unverified: the platform is already trusted, and checking them is often impractical."
+        locator: "§2, §4.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "77-79"
+            quote: |-
+              In SLSA, these values are trusted because the platform is trusted; they are OPTIONAL and need not be verified downstream.
+          - source_lines: "311-313"
+            quote: |-
+              There is no need to [verify][Verification] these parameters because the build platform is already trusted, and in many cases it is not practical to do so.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0006"
+          - "slsa-provenance-1-2#R-0087"
+          - "slsa-provenance-1-2#R-0062"
+        on_error: "none: nothing is checked"
+        on_error_basis: "stated"
+      - n: "7"
+        from: "verifier"
+        to: "verifier"
+        message: "ResourceDescriptor"
+        message_defined_in_source: "yes"
+        action: "Optionally analyse the supply chain recursively through resolvedDependencies. The purpose is stated; no procedure is."
+        locator: "§4.3"
+        kind: "inferred"
+        inferred_reason: >-
+          The source states the purpose of resolvedDependencies (L391-392), not that
+          a verifier, or anyone, performs the analysis (pass 2: was kind stated).
+        quotes:
+          - source_lines: "391-392"
+            quote: |-
+              The purpose of `resolvedDependencies` is to facilitate recursive analysis of the software supply chain.
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "8"
+        from: "verifier"
+        to: "verifier"
+        message: "Provenance"
+        message_defined_in_source: "yes"
+        action: >-
+          Decide ALLOW or DENY. Ignoring an unrecognized extension field is safe only because
+          extensions are meant to be monotonic: dropping or ignoring one should never turn a DENY
+          into an ALLOW.
+        locator: "§4.7"
+        kind: "inferred"
+        inferred_reason: "The source names DENY and ALLOW only inside the monotonic principle; the decision itself belongs to Verifying Artifacts."
+        quotes:
+          - source_lines: "551-553"
+            quote: |-
+              Extension fields SHOULD follow the [monotonic principle][parsing rules], meaning that deleting or ignoring the extension SHOULD NOT turn a DENY decision into an ALLOW.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0047"
+        on_error: "opaque"
+        on_error_basis: "opaque"
+      - n: "9"
+        from: "verifier"
+        to: "verifier"
+        message: "Statement"
+        message_defined_in_source: "yes"
+        action: "Everything else in verification is Verifying Artifacts, which §5 only points to. No check of the subject against an artifact appears in this source."
+        locator: "§5"
+        kind: "stated"
+        quotes:
+          - source_lines: "559-560"
+            quote: |-
+              Please see [Verifying Artifacts][Verification] for a detailed discussion of provenance verification.
+        on_error: "opaque"
+        on_error_basis: "opaque"
+  - id: "F07"
+    name: "rebuild"
+    title: "Someone other than the platform rebuilds the artifact from its provenance"
+    locator: "§1, §2, §4.3, §7"
+    kind_of_flow: "main"
+    participants:
+      - "rebuilder"
+      - "buildtype-author"
+      - "dependency-host"
+    summary: >-
+      §1 names rebuilding as one of the two purposes of provenance and §4.3 asks the
+      BuildDefinition to hold enough to initialize the build. The source gives no rebuild
+      procedure and no rule for comparing the result; steps 3 and 6 are this model's.
+    order_note: "inferred throughout"
+    steps:
+      - n: "1"
+        from: "rebuilder"
+        to: "rebuilder"
+        message: "BuildDefinition"
+        message_defined_in_source: "yes"
+        action: "Read the BuildDefinition: all the build's inputs, and meant to be enough to start the build."
+        locator: "§4.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "326-328"
+            quote: |-
+              The BuildDefinition describes all of the inputs to the build. It SHOULD contain all the information necessary and sufficient to initialize the build and begin execution.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0021"
+          - "slsa-provenance-1-2#R-0091"
+        on_error: "unspecified by source (an insufficient BuildDefinition is not described)"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "rebuilder"
+        to: "buildtype-author"
+        message: "buildType specification (the document the buildType URI resolves to)"
+        message_defined_in_source: "no"
+        action: "Resolve the buildType URI and follow its instructions for initiating the build from this BuildDefinition."
+        locator: "§4.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "283-286"
+            quote: |-
+              The URI SHOULD resolve to a human-readable specification that includes: overall description of the build type; schema for `externalParameters` and `internalParameters`; unambiguous instructions for how to initiate the build given this BuildDefinition, and a complete example.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0013"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "rebuilder"
+        to: "dependency-host"
+        message: "artifact fetch"
+        message_defined_in_source: "no"
+        action: "Fetch the resolvedDependencies by uri and check them by digest."
+        locator: "§2, §4.3"
+        kind: "inferred"
+        inferred_reason: "resolvedDependencies records what was fetched, where known (L84-85); that a rebuilder fetches it again is not stated."
+        quotes:
+          - source_lines: "84-85"
+            quote: |-
+              The `resolvedDependencies` captures these dependencies, if known.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0064"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "rebuilder"
+        to: "rebuilder"
+        message: "BuildDefinition"
+        message_defined_in_source: "yes"
+        action: "Use internalParameters where reproducing the build needs them; they may be present for that reason."
+        locator: "§2, §4.3"
+        kind: "stated"
+        quotes:
+          - source_lines: "310-311"
+            quote: |-
+              The values here MAY be necessary for reproducing the build.
+          - source_lines: "79-80"
+            quote: |-
+              They MAY be included to enable reproducible builds, debugging, or incident response.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0019"
+          - "slsa-provenance-1-2#R-0007"
+        on_error: "unspecified by source (absent internalParameters are not described as blocking)"
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "rebuilder"
+        to: "rebuilder"
+        message: "rebuild"
+        message_defined_in_source: "no"
+        action: "Run the build."
+        locator: "§1"
+        kind: "stated"
+        quotes:
+          - source_lines: "35"
+            quote: |-
+              Others can rebuild the artifact, if desired.
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "rebuilder"
+        to: "rebuilder"
+        message: "Statement"
+        message_defined_in_source: "yes"
+        action: >-
+          Compare the rebuilt artifacts' digests with the subject. Not stated: v1 dropped the
+          reproducible flag, which is now implicit from builder.id (§7), and no comparison rule is
+          given.
+        locator: "§7"
+        kind: "inferred"
+        inferred_reason: "No comparison of a rebuild with the provenance is described."
+        quotes:
+          - source_lines: "631"
+            quote: |-
+              `metadata.reproducible`: Now implicit from `builder.id`.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0157"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+  - id: "F08"
+    name: "migration-from-v0.2"
+    title: "Mapping v0.2 provenance (old) onto the v1 fields"
+    locator: "§7"
+    kind_of_flow: "transformation"
+    participants:
+      - "migrator"
+    summary: >-
+      A local mapping given as pseudocode. Every field keeps its meaning unless noted. buildType
+      must be updated; the v0.2 invocation and configSource split into externalParameters,
+      internalParameters and resolvedDependencies; three v1 fields with no v0.2 ancestor are null;
+      buildConfig is replaced by a digest in one of two places or dropped; completeness and
+      reproducible become implicit in builder.id.
+    order_note: "The pseudocode is a single expression; the steps follow its field order and are independent of one another."
+    steps:
+      - n: "1"
+        from: "migrator"
+        to: "migrator"
+        message: "BuildDefinition"
+        message_defined_in_source: "yes"
+        action: "buildType: an updated version of old.buildType, updated to say how to interpret inputArtifacts (MUST; SD-6)."
+        locator: "§7"
+        kind: "stated"
+        quotes:
+          - source_lines: "582-584"
+            quote: |-
+              The `buildType` MUST be updated for v1.0 to describe how to // interpret `inputArtifacts`. "buildType": /* updated version of */ old.buildType,
+        constrained_by:
+          - "slsa-provenance-1-2#R-0048"
+          - "slsa-provenance-1-2#R-0134"
+          - "slsa-provenance-1-2#R-0135"
+        on_error: "inputArtifacts names no field of v1 or v0.2 (SD-6); what the update must describe is undetermined"
+        on_error_basis: "inferred"
+      - n: "2"
+        from: "migrator"
+        to: "migrator"
+        message: "BuildDefinition"
+        message_defined_in_source: "yes"
+        action: >-
+          externalParameters: old.invocation.parameters plus entryPoint (from
+          configSource.entryPoint; renaming it RECOMMENDED) and source (from configSource.uri;
+          renaming it OPTIONAL). The removed entryPoint field becomes externalParameters[name].
+        locator: "§7"
+        kind: "stated"
+        quotes:
+          - source_lines: "585-593"
+            quote: |-
+              "externalParameters": old.invocation.parameters + { // It is RECOMMENDED to rename "entryPoint" to something more // descriptive. "entryPoint": old.invocation.configSource.entryPoint, // It is OPTIONAL to rename "source" to something more descriptive, // especially if "source" is ambiguous or confusing. "source": old.invocation.configSource.uri, },
+          - source_lines: "621"
+            quote: |-
+              `entryPoint`: Use `externalParameters[<name>]` instead.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0049"
+          - "slsa-provenance-1-2#R-0050"
+          - "slsa-provenance-1-2#R-0136"
+          - "slsa-provenance-1-2#R-0137"
+          - "slsa-provenance-1-2#R-0138"
+          - "slsa-provenance-1-2#R-0139"
+          - "slsa-provenance-1-2#R-0140"
+          - "slsa-provenance-1-2#R-0151"
+        on_error: "unspecified by source (the + of the pseudocode, and an old with no configSource, are not defined; OI-07)"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "migrator"
+        to: "migrator"
+        message: "BuildDefinition"
+        message_defined_in_source: "yes"
+        action: "internalParameters: old.invocation.environment."
+        locator: "§7"
+        kind: "stated"
+        quotes:
+          - source_lines: "594"
+            quote: |-
+              "internalParameters": old.invocation.environment,
+        constrained_by:
+          - "slsa-provenance-1-2#R-0141"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "migrator"
+        to: "migrator"
+        message: "ResourceDescriptor"
+        message_defined_in_source: "yes"
+        action: "resolvedDependencies: old.materials plus one entry with configSource's uri and digest."
+        locator: "§7"
+        kind: "stated"
+        quotes:
+          - source_lines: "595-602"
+            quote: |-
+              "resolvedDependencies": old.materials + [ { "uri": old.invocation.configSource.uri, "digest": old.invocation.configSource.digest, } ] },
+        constrained_by:
+          - "slsa-provenance-1-2#R-0142"
+          - "slsa-provenance-1-2#R-0143"
+        on_error: "unspecified by source (OI-07)"
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "migrator"
+        to: "migrator"
+        message: "Builder"
+        message_defined_in_source: "yes"
+        action: "builder.id: old.builder.id. builderDependencies and version: null, absent from v0.2."
+        locator: "§7"
+        kind: "stated"
+        quotes:
+          - source_lines: "604-608"
+            quote: |-
+              "builder": { "id": old.builder.id, "builderDependencies": null, // not in v0.2 "version": null, // not in v0.2 },
+        constrained_by:
+          - "slsa-provenance-1-2#R-0144"
+          - "slsa-provenance-1-2#R-0145"
+          - "slsa-provenance-1-2#R-0146"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "migrator"
+        to: "migrator"
+        message: "BuildMetadata"
+        message_defined_in_source: "yes"
+        action: "metadata: invocationId, startedOn and finishedOn from old.metadata's buildInvocationId, buildStartedOn and buildFinishedOn."
+        locator: "§7"
+        kind: "stated"
+        quotes:
+          - source_lines: "609-613"
+            quote: |-
+              "metadata": { "invocationId": old.metadata.buildInvocationId, "startedOn": old.metadata.buildStartedOn, "finishedOn": old.metadata.buildFinishedOn, },
+        constrained_by:
+          - "slsa-provenance-1-2#R-0147"
+          - "slsa-provenance-1-2#R-0148"
+          - "slsa-provenance-1-2#R-0149"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "7"
+        from: "migrator"
+        to: "migrator"
+        message: "RunDetails"
+        message_defined_in_source: "yes"
+        action: "byproducts: null, absent from v0.2."
+        locator: "§7"
+        kind: "stated"
+        quotes:
+          - source_lines: "614"
+            quote: |-
+              "byproducts": null, // not in v0.2
+        constrained_by:
+          - "slsa-provenance-1-2#R-0150"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "8"
+        from: "migrator"
+        to: "migrator"
+        message: "BuildDefinition"
+        message_defined_in_source: "yes"
+        action: >-
+          buildConfig is no longer inlined: when the configuration is itself a top-level input,
+          its digest goes in externalParameters under config; failing that, if someone has a known
+          use for the exact resolved configuration, its digest goes in byproducts; otherwise it is
+          dropped.
+        locator: "§7"
+        kind: "stated"
+        quotes:
+          - source_lines: "622-629"
+            quote: |-
+              `buildConfig`: No longer inlined into the provenance. Instead, either: - If the configuration is a top-level input, record its digest in `externalParameters["config"]`. - Else if there is a known use case for knowing the exact resolved build configuration, record its digest in `byproducts`. An example use case might be someone who wishes to parse the configuration to look for bad patterns, such as `curl | bash`. - Else omit it.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0152"
+          - "slsa-provenance-1-2#R-0153"
+          - "slsa-provenance-1-2#R-0154"
+          - "slsa-provenance-1-2#R-0155"
+        on_error: "none: the three branches cover every case"
+        on_error_basis: "stated"
+      - n: "9"
+        from: "migrator"
+        to: "migrator"
+        message: "BuildMetadata"
+        message_defined_in_source: "yes"
+        action: "Drop metadata.completeness and metadata.reproducible; both are now implicit from builder.id."
+        locator: "§7"
+        kind: "stated"
+        quotes:
+          - source_lines: "630-631"
+            quote: |-
+              - `metadata.completeness`: Now implicit from `builder.id`. - `metadata.reproducible`: Now implicit from `builder.id`.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0156"
+          - "slsa-provenance-1-2#R-0157"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "10"
+        from: "migrator"
+        to: "migrator"
+        message: "Statement"
+        message_defined_in_source: "yes"
+        action: "Set predicateType to https://slsa.dev/provenance/v1; the pseudocode shows only the predicate."
+        locator: "§7, front matter"
+        kind: "inferred"
+        inferred_reason: "§7 maps predicate fields only; the new predicateType follows from the front matter, not from §7."
+        quotes:
+          - source_lines: "17"
+            quote: |-
+              "predicateType": "https://slsa.dev/provenance/v1"
+        constrained_by:
+          - "slsa-provenance-1-2#R-0051"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+  - id: "F09"
+    name: "predicate-version-release"
+    title: "A new version of the predicate is published, minor or major, and what producers and consumers do about it"
+    locator: "front matter, §3, §7, §8"
+    kind_of_flow: "lifecycle"
+    participants:
+      - "spec-maintainers"
+      - "build-platform"
+      - "consumer"
+    summary: >-
+      A minor version is backwards compatible and monotonic and keeps the predicateType, whose URI
+      then resolves to it; nothing changes for producers or consumers. A backwards-incompatible
+      change gets a new predicateType with the new major number; v1.0 is the worked case, with
+      release candidates before it, a migration (§7, F08) and an updated buildType. The guarded
+      version is state-machine.yaml M03.
+    order_note: "alt minor (steps 1 to 3) or alt major (steps 4 to 7)."
+    steps:
+      - n: "1"
+        from: "spec-maintainers"
+        to: "spec-maintainers"
+        message: "minor version of this specification"
+        message_defined_in_source: "no"
+        action: "alt minor: publish a backwards-compatible, monotonic change under the same predicateType."
+        locator: "§3"
+        kind: "stated"
+        quotes:
+          - source_lines: "108-109"
+            quote: |-
+              Minor version changes are always backwards compatible and "monotonic." Such changes do not update the `predicateType`.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0071"
+          - "slsa-provenance-1-2#R-0072"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "2"
+        from: "spec-maintainers"
+        to: "consumer"
+        message: "predicateType URI (resolves to the specification)"
+        message_defined_in_source: "no"
+        action: "alt minor: the predicateType URI now resolves to the new minor version."
+        locator: "front matter"
+        kind: "stated"
+        quotes:
+          - source_lines: "21-22"
+            quote: |-
+              The `predicateType` URI will always resolve to the latest > minor version of this specification.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0170"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "3"
+        from: "consumer"
+        to: "consumer"
+        message: "Statement"
+        message_defined_in_source: "yes"
+        action: >-
+          alt minor: keep accepting the same predicateType. A field added by the newer minor
+          version is unrecognized to an older consumer and is ignored. No document says which minor
+          version it was written to (OI-04).
+        locator: "§3"
+        kind: "inferred"
+        inferred_reason: "Follows from compatibility (L108-109) and the ignore rule (L105); not stated as a consumer step."
+        quotes:
+          - source_lines: "105"
+            quote: |-
+              Consumers MUST ignore unrecognized fields unless otherwise noted.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0009"
+          - "slsa-provenance-1-2#R-0160"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "4"
+        from: "spec-maintainers"
+        to: "spec-maintainers"
+        message: "major version of this specification"
+        message_defined_in_source: "no"
+        action: >-
+          alt major: publish a backwards-incompatible change under a new predicateType carrying the
+          new major number. v1.0 went through two release candidates, whose field names the final
+          version changed (systemParameters became internalParameters).
+        locator: "§3, §8.2"
+        kind: "stated"
+        quotes:
+          - source_lines: "106-107"
+            quote: |-
+              The `predicateType` URI includes the major version number and will always change whenever there is a backwards incompatible change.
+          - source_lines: "642"
+            quote: |-
+              Major refactor to reduce misinterpretation, including a minor change in model.
+          - source_lines: "669"
+            quote: |-
+              Differences from RC1 and RC2:
+          - source_lines: "671"
+            quote: |-
+              Renamed `systemParameters` (RC1 + RC2) -> `internalParameters` (final).
+        constrained_by:
+          - "slsa-provenance-1-2#R-0070"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "5"
+        from: "spec-maintainers"
+        to: "build-platform"
+        message: "migration guidance"
+        message_defined_in_source: "no"
+        action: "alt major: publish how to migrate; §7 is the instance for v0.2 to v1.0, including the buildType update (F02 step 6)."
+        locator: "§7"
+        kind: "stated"
+        quotes:
+          - source_lines: "576-577"
+            quote: |-
+              To migrate from [version 0.2](/provenance/v0.2) (`old`), use the following pseudocode.
+        constrained_by:
+          - "slsa-provenance-1-2#R-0132"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "6"
+        from: "build-platform"
+        to: "build-platform"
+        message: "Statement"
+        message_defined_in_source: "yes"
+        action: "alt major: migrate the generator (F08) and emit the new predicateType."
+        locator: "§7"
+        kind: "inferred"
+        inferred_reason: >-
+          §7 gives v0.2 to v1.0 migration pseudocode and the v1.0 buildType update;
+          that a build platform migrates its generator and emits the new predicateType
+          on every major release is this model's reading (pass 2: was kind stated).
+        quotes:
+          - source_lines: "582-584"
+            quote: |-
+              The `buildType` MUST be updated for v1.0 to describe how to // interpret `inputArtifacts`. "buildType": /* updated version of */ old.buildType,
+        constrained_by:
+          - "slsa-provenance-1-2#R-0048"
+          - "slsa-provenance-1-2#R-0134"
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+      - n: "7"
+        from: "consumer"
+        to: "consumer"
+        message: "Statement"
+        message_defined_in_source: "yes"
+        action: "alt major: learn the new predicateType before accepting provenance of the new major version."
+        locator: "§3"
+        kind: "inferred"
+        inferred_reason: "An old consumer meets an unknown predicate type; the source does not say what it does."
+        on_error: "unspecified by source"
+        on_error_basis: "unspecified"
+error_paths:
+  - id: "E01"
+    condition: "The (signer, builder.id) pair is not one the consumer accepts."
+    detected_by: "verifier"
+    outcome: "Not accepted: reject."
+    basis: "stated"
+    steps:
+      - "F06.2"
+    machine: "M01.T10"
+    constrained_by:
+      - "slsa-provenance-1-2#R-0039"
+  - id: "E02"
+    condition: "externalParameters holds a field the verifier does not recognize or does not expect."
+    detected_by: "verifier"
+    outcome: "Reject (SHOULD)."
+    basis: "stated"
+    steps:
+      - "F06.5"
+    machine: "M01.T14, M02.T03"
+    constrained_by:
+      - "slsa-provenance-1-2#R-0018"
+  - id: "E03"
+    condition: "externalParameters differ from the verifier's expectation."
+    detected_by: "verifier"
+    outcome: "The MUST-verify of L74-75 fails; the consequence is Verifying Artifacts'."
+    basis: "opaque"
+    steps:
+      - "F06.5"
+    machine: "M01.T14"
+    constrained_by:
+      - "slsa-provenance-1-2#R-0005"
+      - "slsa-provenance-1-2#R-0017"
+  - id: "E04"
+    condition: "buildType is one the verifier holds no expectation for."
+    detected_by: "verifier"
+    outcome: "externalParameters cannot be verified; reject (inferred)."
+    basis: "inferred"
+    steps:
+      - "F06.4"
+    machine: "M01.T13"
+    constrained_by:
+      - "slsa-provenance-1-2#R-0017"
+  - id: "E05"
+    condition: "predicateType is not https://slsa.dev/provenance/v1."
+    detected_by: "consumer"
+    outcome: "Not this predicate; this source does not apply (inferred). Near misses: OI-03."
+    basis: "inferred"
+    steps:
+      - "F05.2"
+    machine: "M01.T05"
+    constrained_by:
+      - "slsa-provenance-1-2#R-0051"
+      - "slsa-provenance-1-2#R-0052"
+      - "slsa-provenance-1-2#R-0160"
+  - id: "E06"
+    condition: "A field §4.2 to §4.5 make REQUIRED for Build L1 (buildDefinition, runDetails, buildType, externalParameters, builder, builder.id) is unset, null or empty."
+    detected_by: "consumer"
+    outcome: "The provenance does not meet this format's Build L1 requirements; what a consumer then does is not stated (inferred: reject when L1 or above is expected). Empty externalParameters: OI-01."
+    basis: "inferred"
+    steps:
+      - "F03.7"
+      - "F03.8"
+    machine: "M01.T08"
+    constrained_by:
+      - "slsa-provenance-1-2#R-0011"
+      - "slsa-provenance-1-2#R-0012"
+      - "slsa-provenance-1-2#R-0032"
+      - "slsa-provenance-1-2#R-0035"
+      - "slsa-provenance-1-2#R-0010"
+      - "slsa-provenance-1-2#R-0040"
+      - "slsa-provenance-1-2#R-0162"
+  - id: "E07"
+    condition: "The Build level read from builder.id is below what the verifier expects."
+    detected_by: "verifier"
+    outcome: "Handled by Verifying Artifacts."
+    basis: "opaque"
+    steps:
+      - "F06.3"
+    machine: "M01.T12"
+  - id: "E08"
+    condition: "Envelope or signature cannot be verified, or another Verifying Artifacts check fails."
+    detected_by: "verifier"
+    outcome: "Outside this source."
+    basis: "opaque"
+    steps:
+      - "F06.1"
+      - "F06.9"
+    machine: "M01.T03, M01.T17"
+  - id: "E09"
+    condition: "Configuration evaluated client-side whose origins the server cannot verify."
+    detected_by: "consumer"
+    outcome: "Consumers cannot map the configuration back to version control, so verification is impractical unless one of §4.3's solutions is used."
+    basis: "stated"
+    steps:
+      - "F04.2"
+    constrained_by:
+      - "slsa-provenance-1-2#R-0159"
+  - id: "E10"
+    condition: "Two modes of operation that differ in security attributes or Build level share one builder.id."
+    detected_by: "nobody named"
+    outcome: "Breach of the MUST of L453-455; the risk named is a less secure mode compromising a more secure one."
+    basis: "stated"
+    steps:
+      - "F01.3"
+    constrained_by:
+      - "slsa-provenance-1-2#R-0036"
+  - id: "E11"
+    condition: "An extension field alters the meaning of another field."
+    detected_by: "nobody named"
+    outcome: "Breach of the MUST NOT of L547; no detection is described."
+    basis: "inferred"
+    steps:
+      - "F03.9"
+    constrained_by:
+      - "slsa-provenance-1-2#R-0045"
+  - id: "E12"
+    condition: "An unrecognized extension field inside externalParameters, read by a verifier."
+    detected_by: "verifier"
+    outcome: "Two rules give two outcomes: ignore it (as if absent) and reject it (SD-5)."
+    basis: "stated"
+    steps:
+      - "F05.4"
+      - "F06.5"
+    machine: "M02.T03, M02.T06"
+    constrained_by:
+      - "slsa-provenance-1-2#R-0018"
+      - "slsa-provenance-1-2#R-0046"
+  - id: "E13"
+    condition: "A fetch fails or the build fails."
+    detected_by: "build-platform"
+    outcome: "Not described: no outcome field, no rule on whether a failed build yields provenance (OI-08)."
+    basis: "unspecified"
+    steps:
+      - "F03.3"
+      - "F03.6"
+source_defects:
+  - id: "SD-6"
+    pass1_id: "SD-01"
+    title: "The §7 MUST asks the updated buildType to describe inputArtifacts, a field that exists in neither version"
+    locators:
+      - "§7 (L582-583)"
+      - "§4.3 (L315-318)"
+      - "§8.2 (L651)"
+    quotes:
+      - source_lines: "582-583"
+        quote: |-
+          The `buildType` MUST be updated for v1.0 to describe how to // interpret `inputArtifacts`.
+      - source_lines: "318"
+        quote: |-
+          Unordered collection of artifacts needed at build time.
+      - source_lines: "651"
+        quote: |-
+          `materials` -> `resolvedDependencies` (slight change in semantics)
+    description: >-
+      inputArtifacts occurs once in the source, inside the pseudocode comment that carries the
+      MUST. No v1 field has that name (§4.2 to §4.6), and §8.2 records the v0.2 materials field
+      as renamed to resolvedDependencies, not to inputArtifacts. The MUST therefore names an
+      object a migrator cannot find. resolvedDependencies, the v1 home of what v0.2 called
+      materials, is the likeliest referent; that is this model's reading.
+    consequence: "A buildType author cannot tell when the update the MUST requires is complete."
+    modelled_as: "F02 step 6 and F08 step 1 carry the MUST as printed; M03.T06 notes it."
+    constrained_by:
+      - "slsa-provenance-1-2#R-0048"
+  - id: "SD-5"
+    pass1_id: "SD-02"
+    title: "An unrecognized extension field inside externalParameters is to be both ignored and rejected"
+    locators:
+      - "§3 (L105)"
+      - "§4.3 (L302-303)"
+      - "§4.7 (L540-541, L547-553)"
+    quotes:
+      - source_lines: "105"
+        quote: |-
+          Consumers MUST ignore unrecognized fields unless otherwise noted.
+      - source_lines: "302-303"
+        quote: |-
+          Verifiers SHOULD reject unrecognized or unexpected fields within `externalParameters`.
+      - source_lines: "540-541"
+        quote: |-
+          Implementations MAY add extension fields to any JSON object to describe information that is not captured in a standard field.
+      - source_lines: "547-550"
+        quote: |-
+          In other words, an attestation with an absent extension field MUST be interpreted identically to an attestation with an unrecognized (and thus ignored) extension field.
+      - source_lines: "551-553"
+        quote: |-
+          Extension fields SHOULD follow the [monotonic principle][parsing rules], meaning that deleting or ignoring the extension SHOULD NOT turn a DENY decision into an ALLOW.
+    description: >-
+      Extension fields may go in any JSON object, externalParameters included. §4.7 requires an
+      attestation carrying an unrecognized extension field to be read exactly as one without it,
+      on the premise that unrecognized fields are ignored. Inside externalParameters that premise
+      fails: §4.3 has verifiers reject unrecognized fields there, the only rule in this source
+      that departs from ignoring them (a search for unrecogni, unexpected, ignor, reject and
+      unknown finds no other), and so the case the unless otherwise noted of §3 leaves room for. A verifier following §4.3 therefore
+      rejects the attestation with the field and may accept it without, so the two are not read
+      identically, against the MUST of L547-550; and removing the field turns its DENY into an
+      ALLOW, against the wording of the monotonic principle. The source does not say whether
+      extension fields are exempt from §4.3's rejection or should stay out of externalParameters.
+    consequence: >-
+      Two conforming verifiers can disagree on the same attestation; a producer cannot know whether
+      an extension field in externalParameters is safe to emit.
+    modelled_as: "M02.T03 and M02.T06 both fire on this input, marked conflict SD-5."
+    constrained_by:
+      - "slsa-provenance-1-2#R-0009"
+      - "slsa-provenance-1-2#R-0018"
+      - "slsa-provenance-1-2#R-0043"
+      - "slsa-provenance-1-2#R-0046"
+      - "slsa-provenance-1-2#R-0047"
+  - id: "SD-4"
+    pass1_id: "SD-03"
+    title: "No standard field name has an underscore, yet the Statement's own _type does"
+    locators:
+      - "§4.7 (L543-546)"
+      - "§4.1 (L126-127)"
+      - "§4.3 (L331-332)"
+    quotes:
+      - source_lines: "543-544"
+        quote: |-
+          Extension fields SHOULD use names of the form `<vendor>_<fieldname>`, e.g. `examplebuilder_isCodeReviewed`.
+      - source_lines: "545-546"
+        quote: |-
+          Non-extension field names never contain an underscore.
+      - source_lines: "126-127"
+        quote: |-
+          // Standard attestation fields: "_type": "https://in-toto.io/Statement/v1",
+      - source_lines: "331-332"
+        quote: |-
+          Each is an arbitrary JSON object,
+    description: >-
+      §4.7 says field names other than extension fields never contain an underscore, which would
+      let a reader classify any underscored name as an extension field. The claim holds for every
+      field §4.2 to §4.6 define and fails for _type, a standard attestation field in §4.1's own
+      summary, inside the Statement that §4.7's any JSON object also covers. The parameter objects
+      are arbitrary JSON whose names the buildType defines (L331-332), so the rule either binds
+      buildType authors or does not reach them; the source says neither.
+    consequence: "A consumer classifying by underscore over the whole Statement misreads _type as an extension field."
+    modelled_as: "M02 restricts the underscore test to predicate fields, a scoping this model supplies."
+    constrained_by:
+      - "slsa-provenance-1-2#R-0044"
+open_issues:
+  - id: "OI-01"
+    text: >-
+      An empty externalParameters reads the same as an unset one (§3), and externalParameters is
+      REQUIRED for Build L1 (§4.3). A build with no external parameters therefore cannot show a
+      present externalParameters, and the §7 mapping can produce one (OI-07). Whether REQUIRED means present-and-non-empty is not said.
+    locator: "§3, §4.3, §7"
+    quotes:
+      - source_lines: "110"
+        quote: |-
+          Unset, null, and empty field values MUST be interpreted equivalently.
+      - source_lines: "272"
+        quote: |-
+          REQUIRED for SLSA Build L1: `buildType`, `externalParameters`
+  - id: "OI-02"
+    text: >-
+      REQUIRED is qualified for SLSA Build L1 in four of its six uses (L503-504 and L511 name no
+      level); the source does not say what a consumer does with provenance missing such a field
+      (M01.T08 is inferred).
+    locator: "§4.2 to §4.5"
+  - id: "OI-03"
+    text: >-
+      Producers are told to use the exact predicateType string, not the URL the specification is
+      viewed at. A consumer's handling of a near miss (a version-specific URL, a trailing slash) is
+      not stated; the in-toto rules may govern it and are outside this source.
+    locator: "front matter"
+    quotes:
+      - source_lines: "20-21"
+        quote: |-
+          Always use the above string for `predicateType` rather than what is > in the URL bar.
+  - id: "OI-04"
+    text: >-
+      The predicateType carries only the major version and resolves to the latest minor version,
+      and no field records the minor version, so a consumer cannot tell which v1.x a document was
+      written to. Harmless only while every minor version stays backwards compatible and
+      monotonic, as §3 promises.
+    locator: "front matter, §3"
+    quotes:
+      - source_lines: "108-109"
+        quote: |-
+          Minor version changes are always backwards compatible and "monotonic." Such changes do not update the `predicateType`.
+  - id: "OI-05"
+    text: >-
+      builder.id's documentation lists fields the tenant-controlled build process generates without
+      control-plane verification, the subject excepted. The source does not say why. One reading is
+      that the subject is always taken from what the build outputs, and so may always come from the
+      tenant side; then a verifier cannot learn from the documentation whether a given platform
+      checks the subject.
+    locator: "§4.5"
+    quotes:
+      - source_lines: "463-464"
+        quote: |-
+          Any fields that are generated by the tenant-controlled build process and not verified by the trusted control plane, except for the `subject`.
+  - id: "OI-06"
+    text: >-
+      §1 recommends this predicate for satisfying SLSA v1.0's provenance requirements, in a v1.2
+      page, through a relative link whose target is whatever requirements page sits beside
+      this one in the release that serves it. Label and target can disagree.
+    locator: "§1"
+    quotes:
+      - source_lines: "37-38"
+        quote: |-
+          This predicate is the RECOMMENDED way to satisfy the SLSA v1.0 [provenance requirements](requirements#provenance-generation).
+  - id: "OI-07"
+    text: >-
+      The §7 pseudocode does not define its + (object merge, array append), nor the case of a v0.2
+      provenance with no configSource, where the old.invocation.configSource expressions have no
+      value. Read literally it then yields an entryPoint and a source with no value (unset under
+      §3) and a resolvedDependencies entry with neither uri nor digest.
+    locator: "§7"
+    quotes:
+      - source_lines: "586"
+        quote: |-
+          old.invocation.parameters + {
+      - source_lines: "596-601"
+        quote: |-
+          old.materials + [ { "uri": old.invocation.configSource.uri, "digest": old.invocation.configSource.digest, } ]
+  - id: "OI-08"
+    text: >-
+      finishedOn is when the build completed, and nothing records how it completed. Whether a failed
+      build produces provenance, and how a consumer would tell, is not described.
+    locator: "§4.6"
+    quotes:
+      - source_lines: "532"
+        quote: |-
+          The timestamp of when the build completed.
+  - id: "OI-09"
+    text: >-
+      The change history goes from v1.0 to v1.2 with no v1.1 entry. The source does not say whether
+      a v1.1 of this predicate exists; M03's trace records only what §8 lists.
+    locator: "§8.1, §8.2"
+  - id: "OI-10"
+    text: >-
+      The provenance model diagram (L45) is an image the rendering does not carry. Whatever it shows
+      about roles and their relations is not extracted here.
+    locator: "§2"
+    quotes:
+      - source_lines: "45"
+        quote: |-
+          ![Build Model](images/provenance-model.svg)
+  - id: "OI-11"
+    text: >-
+      Whether the v1.0 release candidates already used predicateType https://slsa.dev/provenance/v1
+      is not said. If they did, a v1 consumer meets candidate-era names (systemParameters, localName)
+      as unrecognized fields and ignores them silently.
+    locator: "§8.2"
+    quotes:
+      - source_lines: "671"
+        quote: |-
+          Renamed `systemParameters` (RC1 + RC2) -> `internalParameters` (final).
+      - source_lines: "673"
+        quote: |-
+          Renamed `localName` (RC1) -> `name` (RC2).
+  - id: "OI-12"
+    text: >-
+      A different signer identity per mode is only a SHOULD. Where modes share a signer, the
+      signer-builder pair check separates them by builder.id alone, which a compromised less secure
+      mode could claim; the source names this risk as the reason for the rule, not as a residue.
+    locator: "§4.5"
+    quotes:
+      - source_lines: "453-456"
+        quote: |-
+          If a build platform has multiple modes of operations that have differing security attributes or SLSA Build levels, each mode MUST have a different `builder.id` and SHOULD have a different signer identity. This is to minimize the risk that a less secure mode compromises a more secure one.
+not_defined:
+  - text: "Signing, the envelope, and checking the signature (the in-toto attestation framework is cited; no envelope is named)."
+    locator: "front matter, §4.5"
+  - text: "How provenance travels from the platform or signer to consumers."
+    locator: "§1"
+  - text: "How consumers learn the signer-builder pairs to accept, their expectations, and buildType schemas."
+    locator: "§4.3, §4.5"
+  - text: "The verification procedure (Verifying Artifacts, §5), including how the Build level is read from builder.id. No check of the subject against an artifact appears in this source."
+    locator: "§4.5, §5"
+  - text: "The interface through which a tenant starts a build (each platform's own), and what happens when a fetch or the build fails."
+    locator: "§2, §4.3"
+  - text: "The format of the buildType specification and of the builder.id documentation: human-readable only."
+    locator: "§4.3, §4.5"
+  - text: "A procedure for recursive analysis through resolvedDependencies (purpose only, L391-392)."
+    locator: "§4.3"
+  - text: "The Statement fields other than predicateType and predicate (see the in-toto Statement, L245-246), and the full in-toto parsing rules (§3 summarises them)."
+    locator: "§3, §4.2"
+uncited_statements:
+  note: >-
+    Keyword-less statements the flows rely on, which had no requirement id when this file was
+    written (the requirements lane rules on candidates concurrently). By line; the steps that rely
+    on each carry its words as quotes. Pass 2 gave each item its ids and wired the same ids into the steps'
+    constrained_by; an item with no_id rests on candidates the requirements lane rejected, or on no candidate.
+  items:
+    - lines: "20-23"
+      what: "always use the predicateType string; the URI resolves to the latest minor version"
+      steps: "F03.10, F05.2, F09.2"
+      ids:
+        - "slsa-provenance-1-2#R-0052"
+        - "slsa-provenance-1-2#R-0170"
+    - lines: "53-57"
+      what: "each build an independent process; builder.id identifies the platform"
+      steps: "F03.2"
+      ids:
+        - "slsa-provenance-1-2#R-0054"
+    - lines: "65-68"
+      what: "the build process is a template with parameters, named by buildType"
+      steps: "F02.1"
+      ids:
+        - "slsa-provenance-1-2#R-0055"
+    - lines: "82-87"
+      what: "every fetched artifact is a dependency; resolvedDependencies records them if known"
+      steps: "F03.3, F07.3"
+      ids:
+        - "slsa-provenance-1-2#R-0063"
+        - "slsa-provenance-1-2#R-0064"
+    - lines: "89-92"
+      what: "control-plane and cache communication not captured, implied by builder.id"
+      steps: "F03.4, F03.5"
+      ids:
+        - "slsa-provenance-1-2#R-0065"
+    - lines: "96-97"
+      what: "outputs identified by subject"
+      steps: "F03.6"
+      ids:
+        - "slsa-provenance-1-2#R-0068"
+    - lines: "103"
+      what: "the predicate follows the in-toto parsing rules"
+      steps: "F05.3"
+      ids:
+        - "slsa-provenance-1-2#R-0069"
+    - lines: "106-109"
+      what: "predicateType carries the major version; minor changes compatible and keep it"
+      steps: "F05.2, F09.1, F09.4"
+      ids:
+        - "slsa-provenance-1-2#R-0070"
+        - "slsa-provenance-1-2#R-0071"
+        - "slsa-provenance-1-2#R-0072"
+    - lines: "116-117, 178-179"
+      what: "the cue and protobuf summaries are informative; the text is authoritative"
+      steps: "F05.5"
+      ids:
+        - "slsa-provenance-1-2#R-0073"
+        - "slsa-provenance-1-2#R-0074"
+    - lines: "196-198"
+      what: "provenance serialized as JSON with lowerCamelCase names"
+      steps: "F05.5"
+      ids:
+        - "slsa-provenance-1-2#R-0158"
+    - lines: "258-259"
+      what: "accuracy and completeness of buildDefinition implied by builder.id"
+      steps: "F06.3"
+      ids:
+        - "slsa-provenance-1-2#R-0077"
+        - "slsa-provenance-1-2#R-0078"
+    - lines: "280-281"
+      what: "buildType names the template: how the build runs and how its parameters read"
+      steps: "F02.1, F06.4"
+      ids:
+        - "slsa-provenance-1-2#R-0082"
+    - lines: "311-313"
+      what: "no need to verify internalParameters"
+      steps: "F06.6"
+      ids:
+        - "slsa-provenance-1-2#R-0087"
+    - lines: "318-319"
+      what: "resolvedDependencies unordered; completeness best effort through Build L3"
+      steps: "F03.3"
+      ids:
+        - "slsa-provenance-1-2#R-0089"
+        - "slsa-provenance-1-2#R-0090"
+    - lines: "355-363, 370-372"
+      what: "guidelines without a keyword: maximize implicit information, move configuration to input artifacts, BuildDefinition as sole top-level input"
+      steps: "F01.6, F02.2"
+      no_id: "the guidelines of L355-356, L359-363 and L370-372 are candidates C-0026, C-0027, C-0028 and C-0030, rejected as guidelines; L356-357 is R-0027, a keyword sentence"
+    - lines: "376-379"
+      what: "consumers cannot map client-evaluated configuration to version control unless the server verifies its origins"
+      steps: "F04.2"
+      ids:
+        - "slsa-provenance-1-2#R-0159"
+    - lines: "385-386"
+      what: "record the digest and link it to version control by a separate attestation"
+      steps: "F04.6, F04.13"
+      ids:
+        - "slsa-provenance-1-2#R-0096"
+    - lines: "396-401"
+      what: "footnote: where the digest, location, uri and digest are recorded"
+      steps: "F04.7, F04.8, F04.9, F04.10, F04.12"
+      ids:
+        - "slsa-provenance-1-2#R-0098"
+        - "slsa-provenance-1-2#R-0099"
+    - lines: "449-451"
+      what: "builder.id meant to fix the Build level alone"
+      steps: "F01.3, F06.3"
+      ids:
+        - "slsa-provenance-1-2#R-0107"
+        - "slsa-provenance-1-2#R-0108"
+    - lines: "458-465"
+      what: "the five things builder.id documentation explains (the items under slsa-provenance-1-2#R-0037)"
+      steps: "F01.5"
+      ids:
+        - "slsa-provenance-1-2#R-0111"
+        - "slsa-provenance-1-2#R-0112"
+        - "slsa-provenance-1-2#R-0113"
+        - "slsa-provenance-1-2#R-0114"
+        - "slsa-provenance-1-2#R-0115"
+    - lines: "470-472"
+      what: "builderDependencies: orchestrator dependencies outside the workload"
+      steps: "F03.8"
+      ids:
+        - "slsa-provenance-1-2#R-0117"
+    - lines: "520-521"
+      what: "invocationId opaque and case-sensitive by default"
+      steps: "F05.6"
+      ids:
+        - "slsa-provenance-1-2#R-0124"
+    - lines: "545-546"
+      what: "standard field names have no underscore"
+      steps: "F05.4"
+      ids:
+        - "slsa-provenance-1-2#R-0129"
+    - lines: "559-560"
+      what: "verification is in Verifying Artifacts"
+      steps: "F06.9"
+      no_id: "a pointer to SLSA Verifying Artifacts, no candidate and no requirement"
+    - lines: "564-565, 572"
+      what: "the index is partial, entries carry complete examples, additions by pull request"
+      steps: "F02.5"
+      no_id: "L564-565 is C-0049, rejected (describes the external build-type documents); L572 is no candidate"
+    - lines: "576-577"
+      what: "migration pseudocode; field meanings unchanged unless noted"
+      steps: "F08"
+      ids:
+        - "slsa-provenance-1-2#R-0132"
+        - "slsa-provenance-1-2#R-0133"
+    - lines: "585-616"
+      what: "the field-by-field pseudocode mapping"
+      steps: "F08.2 to F08.7"
+      ids:
+        - "slsa-provenance-1-2#R-0135"
+        - "slsa-provenance-1-2#R-0136"
+        - "slsa-provenance-1-2#R-0137"
+        - "slsa-provenance-1-2#R-0138"
+        - "slsa-provenance-1-2#R-0139"
+        - "slsa-provenance-1-2#R-0140"
+        - "slsa-provenance-1-2#R-0141"
+        - "slsa-provenance-1-2#R-0142"
+        - "slsa-provenance-1-2#R-0143"
+        - "slsa-provenance-1-2#R-0144"
+        - "slsa-provenance-1-2#R-0145"
+        - "slsa-provenance-1-2#R-0146"
+        - "slsa-provenance-1-2#R-0147"
+        - "slsa-provenance-1-2#R-0148"
+        - "slsa-provenance-1-2#R-0149"
+        - "slsa-provenance-1-2#R-0150"
+    - lines: "619-631"
+      what: "v0.2 fields no longer present and where they went"
+      steps: "F08.2, F08.8, F08.9"
+      ids:
+        - "slsa-provenance-1-2#R-0151"
+        - "slsa-provenance-1-2#R-0152"
+        - "slsa-provenance-1-2#R-0153"
+        - "slsa-provenance-1-2#R-0154"
+        - "slsa-provenance-1-2#R-0155"
+        - "slsa-provenance-1-2#R-0156"
+        - "slsa-provenance-1-2#R-0157"
+    - lines: "669-674"
+      what: "release candidates and the renames between them and the final v1.0"
+      steps: "F09.4"
+      no_id: "release-candidate history, candidates C-0083 to C-0086, rejected"
+coverage: >-
+  16 roles (4 kind inferred: dependency-host, buildtype-author, spec-maintainers, migrator), 9
+  flows, 76 steps (20 kind inferred: F01.7, F02.6, F03.11, F03.12, F04.1, F04.3, F04.11, F04.13,
+  F05.1, F05.2, F06.1, F06.4, F06.7, F06.8, F07.3, F07.6, F08.10, F09.3, F09.6, F09.7; pass 2 moved
+  F02.6, F06.7 and F09.6 from stated), counted by script over this file with bin/_yaml.py.
+  on_error_basis over the 76 steps: 55 unspecified, 8 stated, 7 inferred, 6 opaque. 13 error
+  paths, 3 source defects, 12 open issues, 8 not_defined entries, 29 uncited_statements items, 25
+  of them with ids (60 in all) and 4 with no_id. constrained_by on steps: 157 links to 119
+  distinct ids (pass 1: 69 links to the 49 skeleton ids R-0002 to R-0050). The file holds 245
+  citations of 124 distinct ids, each emitted by script and its resolved text read. 170
+  quotations, all checked by bin/check-quotes. By script: every participant is a role, every
+  step's from and to is a participant of its flow, and every step and machine reference in
+  error_paths resolves. Pass 3 joined the messages to messages.yaml: see message_join (40 distinct step messages: 17 join to a message, field or the migration section of messages.yaml, 8 of them the names the flows mark defined in the source and 9 by this mapping; 23 name an exchange or document the source defines no message for).
+
+# Pass 3 (cross-check): every flow step's `message` joined to messages.yaml. The names were chosen blind by the protocol lane,
+# so most are not the structure names of messages.yaml; join none means the source names the exchange but defines no message for it.
+# Built by script over the 76 steps; the build asserts that the set of keys equals the set of distinct step messages.
+message_join:
+  - message: "BuildDefinition"
+    join: "message"
+    messages_yaml: ["MSG-03"]
+    steps: ["F03.7", "F04.5", "F04.8", "F04.12", "F06.4", "F06.5", "F06.6", "F07.1", "F07.4", "F08.1", "F08.2", "F08.3", "F08.8"]
+  - message: "BuildMetadata"
+    join: "message"
+    messages_yaml: ["MSG-06"]
+    steps: ["F05.6", "F08.6", "F08.9"]
+  - message: "Builder"
+    join: "message"
+    messages_yaml: ["MSG-05"]
+    steps: ["F06.2", "F06.3", "F08.5"]
+  - message: "Provenance"
+    join: "message"
+    messages_yaml: ["MSG-02"]
+    steps: ["F05.3", "F05.4", "F05.5", "F06.8"]
+  - message: "ResourceDescriptor"
+    join: "message"
+    messages_yaml: ["MSG-07"]
+    steps: ["F06.7", "F08.4"]
+  - message: "RunDetails"
+    join: "message"
+    messages_yaml: ["MSG-04"]
+    steps: ["F03.8", "F08.7"]
+  - message: "Statement"
+    join: "message"
+    messages_yaml: ["MSG-01"]
+    steps: ["F03.10", "F04.13", "F05.1", "F05.2", "F06.1", "F06.9", "F07.6", "F08.10", "F09.3", "F09.6", "F09.7"]
+  - message: "Statement for signing"
+    join: "message"
+    messages_yaml: ["MSG-01"]
+    steps: ["F03.11"]
+    note: "the same Statement as MSG-01, handed to a signer; the signing envelope is outside this source"
+  - message: "extension fields"
+    join: "message"
+    messages_yaml: ["MSG-08"]
+    steps: ["F03.9"]
+    note: "MSG-08 is a naming rule, not a structure, which is why the flow calls it not defined in the source as a message"
+  - message: "build request naming the configuration in version control"
+    join: "field"
+    messages_yaml: ["predicate.buildDefinition.externalParameters"]
+    steps: ["F04.3"]
+    note: "the request is not defined; the URI it names is recorded in externalParameters (L380-382)"
+  - message: "build request through the platform's external interface (the values become externalParameters)"
+    join: "field"
+    messages_yaml: ["predicate.buildDefinition.externalParameters"]
+    steps: ["F03.1"]
+    note: "the request is not defined by the source; the values it carries become externalParameters"
+  - message: "builder.id"
+    join: "field"
+    messages_yaml: ["predicate.runDetails.builder.id"]
+    steps: ["F01.3"]
+  - message: "output artifacts (become subject) and byproducts"
+    join: "field"
+    messages_yaml: ["subject", "predicate.runDetails.byproducts"]
+    steps: ["F03.6"]
+    note: "artifacts are not a defined message; they are identified by the Statement subject and by byproducts"
+  - message: "predicateType URI (resolves to the specification)"
+    join: "field"
+    messages_yaml: ["predicateType"]
+    steps: ["F09.2"]
+    note: "the URI string is MSG-01.predicateType; the page it resolves to is a document, not a message"
+  - message: "start of the build process (internalParameters set by the platform)"
+    join: "field"
+    messages_yaml: ["predicate.buildDefinition.internalParameters"]
+    steps: ["F03.2"]
+    note: "the start is an event; what the platform sets becomes internalParameters"
+  - message: "updated buildType"
+    join: "field"
+    messages_yaml: ["predicate.buildDefinition.buildType"]
+    steps: ["F02.6"]
+    note: "the migrated value of MSG-03 buildType (\u00a77)"
+  - message: "accepted signer-builder pairs and expectations"
+    join: "none"
+    messages_yaml: []
+    steps: ["F01.7"]
+    note: "consumer policy; the source does not define a format (R-0039)"
+  - message: "artifact fetch"
+    join: "none"
+    messages_yaml: []
+    steps: ["F03.3", "F07.3"]
+    note: "an exchange with a dependency host; the fetched artifacts become resolvedDependencies entries (MSG-07)"
+  - message: "build platform design"
+    join: "none"
+    messages_yaml: []
+    steps: ["F01.6"]
+    note: "a design duty (R-0016)"
+  - message: "build template"
+    join: "none"
+    messages_yaml: []
+    steps: ["F02.1"]
+    note: "what buildType names; defined by the buildType's own specification, outside this source"
+  - message: "build-cache communication"
+    join: "none"
+    messages_yaml: []
+    steps: ["F03.5"]
+    note: "not recorded in the provenance (L89-90)"
+  - message: "buildType specification (the document the buildType URI resolves to)"
+    join: "none"
+    messages_yaml: []
+    steps: ["F02.4", "F07.2"]
+    note: "a document at the buildType URI, not a message; its required parts are R-0013"
+  - message: "builder.id documentation (the document the builder.id URI resolves to)"
+    join: "none"
+    messages_yaml: []
+    steps: ["F01.5"]
+    note: "a document at the builder.id URI, not a message; its required topics are R-0037, R-0111 to R-0115"
+  - message: "configuration fetch"
+    join: "none"
+    messages_yaml: []
+    steps: ["F04.11"]
+    note: "an exchange with version control; the result is a resolvedDependencies entry (MSG-07)"
+  - message: "configuration read"
+    join: "none"
+    messages_yaml: []
+    steps: ["F04.1", "F04.4"]
+    note: "a read of the platform's own configuration; not recorded"
+  - message: "control-plane communication"
+    join: "none"
+    messages_yaml: []
+    steps: ["F03.4"]
+    note: "not recorded in the provenance; implied by builder.id (L89-90)"
+  - message: "evaluated configuration object"
+    join: "none"
+    messages_yaml: []
+    steps: ["F04.2", "F04.7"]
+    note: "a client-side object the source names but does not define; only its digest is recorded (externalParameters or resolvedDependencies, R-0096)"
+  - message: "evaluated configuration object (upload)"
+    join: "none"
+    messages_yaml: []
+    steps: ["F04.9"]
+    note: "as above, sent to temporary storage"
+  - message: "location of the configuration object"
+    join: "none"
+    messages_yaml: []
+    steps: ["F04.10"]
+    note: "a URI that a build request carries; recorded in externalParameters (R-0099), not itself a message"
+  - message: "major version of this specification"
+    join: "none"
+    messages_yaml: []
+    steps: ["F09.4"]
+    note: "a release, reflected in the predicateType string (MSG-01 predicateType)"
+  - message: "migration guidance"
+    join: "section"
+    messages_yaml: ["migration_v0_2_to_v1"]
+    steps: ["F09.5"]
+    note: "the \u00a77 pseudocode and removed-fields list in messages.yaml"
+  - message: "minor version of this specification"
+    join: "none"
+    messages_yaml: []
+    steps: ["F09.1"]
+    note: "a release that does not change predicateType (R-0071, R-0072)"
+  - message: "parameter-to-dependency conversion"
+    join: "none"
+    messages_yaml: []
+    steps: ["F02.3"]
+    note: "documentation duty on the buildType (R-0026)"
+  - message: "pull request adding an index entry"
+    join: "none"
+    messages_yaml: []
+    steps: ["F02.5"]
+    note: "a GitHub contribution step of \u00a76; no message"
+  - message: "rebuild"
+    join: "none"
+    messages_yaml: []
+    steps: ["F07.5"]
+    note: "an action by a rebuilder; compared outputs are not defined"
+  - message: "schemas of externalParameters and internalParameters"
+    join: "none"
+    messages_yaml: []
+    steps: ["F02.2"]
+    note: "part of the buildType specification (R-0013)"
+  - message: "security model of the build platform"
+    join: "none"
+    messages_yaml: []
+    steps: ["F01.1", "F01.2"]
+    note: "a design artifact of the implementer (R-0003, R-0004)"
+  - message: "separate provenance attestation for the client-side evaluation"
+    join: "none"
+    messages_yaml: []
+    steps: ["F04.6"]
+    note: "another provenance of the same format (MSG-01..MSG-06), about a different build; the source only says to use one (R-0096)"
+  - message: "signed provenance"
+    join: "none"
+    messages_yaml: []
+    steps: ["F03.12"]
+    note: "the signing envelope is outside this source"
+  - message: "signer identity per mode"
+    join: "none"
+    messages_yaml: []
+    steps: ["F01.4"]
+    note: "signer identity is the signing envelope's; outside this source"
