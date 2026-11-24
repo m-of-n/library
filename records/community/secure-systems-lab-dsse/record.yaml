@@ -15,7 +15,7 @@ content:
   sha256: "88fc65fd66d7250445dc08a65a2cb68c942fb88517152246f859a70d6dac3ac1"
   retrieved: "2026-10-03"
   local: false
-  note: "A repository has no single digest, so content.url is the source archive at the pinned commit and the digest is of that archive. All specification text was read at that commit: background.md and protocol.md on 2026-10-03, envelope.md, envelope.proto and hypothetical_signature_attack.ipynb on 2026-10-08. The archive was re-fetched on 2026-10-08 and the digest re-verified against this field. The implementation/ and governance/ sub-trees are not specification text and are not read."
+  note: "A repository has no single digest, so content.url is the source archive at the pinned commit and the digest is of that archive. All specification text was read at that commit: background.md and protocol.md on 2026-10-03, envelope.md, envelope.proto and hypothetical_signature_attack.ipynb on 2026-10-08. The archive was re-fetched on 2026-10-08 and the digest re-verified against this field. Re-verified again on 2026-11-20 for the FX-1 extraction (library#152); distilled/render-source.py checks the archive and each of the five files against its own sha256. The implementation/ and governance/ sub-trees are not specification text and are not read."
 relations:
   supersedes: []
   superseded_by: []
@@ -50,6 +50,67 @@ tags:
   - canonicalization
   - attestation
   - prior-art
+distillation:
+  standard: "FX-1"
+  profile: full
+  artifacts:
+    - kind: normative
+      path: distilled/normative.md
+      coverage: "Every requirement text with source lines verbatim as check-quotes markers over distilled/render-source.py's rendering of the five specification files at 1d3370f (protocol.md, envelope.md, envelope.proto, background.md, the notebook's cells): 123 quotations (100 requirement-bearing, 23 context), all 36 BCP 14 keywords, and the canonical source-defect list SD-1 to SD-20 (50 quotations) with a crosswalk to the lane ids in messages, protocol and design-notes."
+      reviewed_by: ""
+    - kind: requirements
+      path: distilled/requirements.yaml
+      coverage: "110 entries: 33 skeleton BCP 14 sentences, 7 split children, 48 promoted from candidates, 15 hunted, 7 inferred (103 stated, 7 inferred; testable 54 yes, 36 partial, 20 no). All 36 keywords reconciled line by line as a bijection (bin/bcp14-count 36). All 153 candidates have a verdict (51 stated in 48 entries, 102 reject)."
+      reviewed_by: ""
+    - kind: schema
+      path: distilled/schema/
+      coverage: "envelope.verbatim.proto (byte-identical to the source's envelope.proto) and derived envelope.derived.schema.json (JSON Schema 2020-12; Envelope and EnvelopeStrict), pae.derived.abnf, and stdlib checkers; 61 cases (25 accept, 36 reject, each for a named reason), 19/19 removal and 12/12 insertion mutants flip a case; python-jsonschema 4.23.0 agrees on 54 of 61, the 7 being the documented contentEncoding rejects."
+      reviewed_by: ""
+    - kind: messages
+      path: distilled/messages.yaml
+      coverage: "9 messages (PAE, the protocol parameters, the JSON Envelope and its Signature, the protobuf Envelope and Signature, the (t, n)-ENVELOPE, the Base64 encodings, the old in-toto/TUF format as referenced) with 28 fields; 114 constrained_by links to 57 ids; 13 source silences."
+      reviewed_by: ""
+    - kind: protocol
+      path: distilled/protocol.yaml
+      coverage: "5 roles (1 inferred), 8 flows (out-of-band agreement, sign, encode and transmit, single-signature verify, threshold verify, a multi-signature envelope at a single-signature verifier, old/new format detection, the type-confusion attack), 45 steps (8 inferred), 24 error paths (12 stated, 4 inferred, 8 unspecified), one Mermaid diagram per flow in protocol.md; 185 step links to 91 ids, error paths 48 more; message names joined to messages.yaml."
+      reviewed_by: ""
+    - kind: state-machine
+      path: distilled/state-machine.yaml
+      coverage: "Applicable: M1 single-signature verification (12 states, 11 transitions) and M2 (t,n) multi-signature verification (15 states, 19 transitions, 5 inferred); 60 links to 34 ids; both machines run by script (16 inputs on M1, 4080 on M2)."
+      reviewed_by: ""
+    - kind: examples
+      path: distilled/examples/
+      coverage: "13 verbatim fixtures with derived expected results; the §1.4 PAE test vector and its ECDSA P-256 signature recomputed byte-exact by reproduce.py (stdlib, RFC 6979 self-tested on A.2.5; d·G checked; the printed signature verifies and recomputes); 17 PAE build vectors, 19 rejects, 61 envelope cases, 19 negative signature checks; 161 checks."
+      reviewed_by: ""
+    - kind: design-notes
+      path: distilled/design-notes.md
+      coverage: "40 rows against m-of-n at 656bac0 (10 adopt, 5 adapt, 4 reject, 10 constrains, 3 conflicts, 8 silent); 310 id citations of 103 ids; cross-check with in-toto-envelope-v1 (CC-01 to CC-14); earlier findings re-checked against the source (the envelope carries neither t nor n; a coded payloadType is not authenticated by PAE); 16 open questions. Decides nothing."
+      reviewed_by: ""
+  not_applicable: []
+  passes:
+    - pass: extract
+      by: "claude (4 lanes over bin/fx1-skeleton run with --txt on distilled/render-source.py's rendering)"
+      effort: tiered
+      date: "2026-11-20"
+      note: "Token figures are the harness's subagent totals, summed over runs cut by network errors and usage limits; the protocol+state-machine lane's figure was lost with its cut-off run, and the design-notes figure is the finishing run only."
+      agents:
+        - {role: requirements, model: claude-opus-5-5, effort: max, tokens: 1014687}
+        - {role: schema+examples+messages, model: claude-sonnet-5-5, effort: high, tokens: 406174}
+        - {role: protocol+state-machine, model: claude-opus-5-5, effort: max}
+        - {role: design-notes, model: claude-opus-5-5, effort: max, tokens: 662776}
+    - pass: verify
+      by: "claude (independent; two forks, design-notes and protocol+state-machine)"
+      effort: max
+      date: "2026-11-23"
+      tokens: 2209750
+      note: "Verifier 457222 + 531690 harness figures across runs cut by network errors; forks 604908 and 615930. 27 defects of its own (15 in the smaller-model lane): wrong-statement joins, a rejected candidate cited as binding, unwired hunted ids, a locator on a closing brace, an elided and a case-folded quotation, false blanket claims about signature ownership (SD-14, SD-15 and 7 protocol sites), wrong counts, a schema pattern ending in $ that a real validator read differently; forks fixed 29 more. DN-SD-2 accepted as SD-19; SD-20 added. §1.4 recomputed independently."
+    - pass: cross-check
+      by: "claude"
+      effort: tiered
+      date: "2026-11-23"
+      agents:
+        - {role: cross-check, model: claude-sonnet-5-5, effort: high, tokens: 406130}
+      note: "306 promoted candidate citations rewired to R-ids; fields, messages, roles, error paths, triggers, cases and SD ids cross-checked (0 defects); every count recounted (1 fossil in protocol.yaml fixed); distilled/README.md rewritten as the FX-1 index; summary.md and topics/canonical-encoding.yaml corrected to the design-notes findings."
 status: distilled
 confidence: medium
 owner: S1

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:library:secure-systems-lab-dsse:envelope.derived",
+  "title": "secure-systems-lab-dsse - the DSSE JSON envelope (envelope.md 2.1, 2.1.1, 2.1.2; envelope.proto)",
+  "$comment": "DERIVED - not verbatim. The source gives the JSON envelope as a template with <...> placeholders (envelope.md 2.1, 2.1.1) and a protobuf message (envelope.proto, the verbatim sibling envelope.verbatim.proto); it ships no JSON Schema. Every constraint below was written by this library from that prose and those two shapes. Do not cite this file as the DSSE specification's schema. Section numbers are those of the .cache rendering (1 protocol.md, 2 envelope.md, 3 envelope.proto). What each definition cannot bind is in its own $comment and in x-open. Checked by check-envelope.derived.py against ../examples/cases.derived.json (accept and reject instances, a mutation pass proving every asserting keyword binds). JSON Schema validators treat contentEncoding as an annotation; check-envelope.derived.py asserts it.",
+  "x-open": [
+    "base64 padding: the source says only that either standard or URL-safe encoding is allowed (protocol 1.2, envelope 2.1); it never says whether '=' padding is required, forbidden or optional. Both are accepted here. Padding that IS present must be what RFC 4648 gives for the length (a padded string has a length divisible by 4). This is the library's reading of 'Base64 encoding' (RFC 4648), not a statement of the source",
+    "base64 alphabet mixing: a string using '+' or '/' AND '-' or '_' is neither standard nor URL-safe; rejected here. The source says signers may use either, verifiers MUST accept either, and is silent on a mix",
+    "base64 canonical form: trailing bits of the last character are not checked; the source never asks for it",
+    "empty signatures array: envelope.md 2.1.2 says signatures is REQUIRED and MUST be set, even if empty, so Envelope accepts []; envelope.proto says signatures is REQUIRED (length >= 1), so EnvelopeStrict rejects []. The two statements of one field disagree and the source does not choose; both readings are kept (source defect candidate)",
+    "JSON null: the source is silent on null for any member. proto3's JSON mapping treats null as the field default, and envelope.md says an unset field MUST be treated the same as set-but-empty; but null is neither unset nor an empty string in envelope.md's JSON. Rejected here, as a type error",
+    "member-name spelling: envelope.md 2.1.2 names `signature` and `signature.sig` where the 2.1 template and envelope.proto say `signatures` and `sig` inside each element; this schema follows the template and the proto (source defect candidate)",
+    "keyid: any string, including the empty string (unset MUST be treated the same as set-but-empty); its format is out of band (protocol 1.1: 'details are agreed upon out-of-band')",
+    "payloadType: any string, including the empty string. The source calls it opaque and case-sensitive (protocol 1.1) and gives only SHOULD-level forms (media type, URI); no pattern is bound. A lone surrogate cannot be UTF-8 encoded for the PAE (UTF8() is undefined on it in the source) and is not excluded here",
+    "unknown members: allowed at the top level and inside a signature element; consumers MUST ignore them (envelope.md 2.1.2). The schema leaves additionalProperties unset; the checker's insertion mutants prove an additionalProperties:false would be caught",
+    "duplicate signatures, duplicate keyids, member order and JSON whitespace: the source says nothing and a JSON Schema cannot see duplicate member names",
+    "not wire-observable and therefore not bound: that the payload is verified before it is parsed (R-0107, inferred) and that the bytes verified are the bytes passed on (R-0008, R-0009), that payloadType is authenticated (it is, through the PAE), that sig verifies (algorithm out of band), that the envelope decodes to SERIALIZED_BODY exactly"
+  ],
+  "$ref": "#/$defs/Envelope",
+  "$defs": {
+    "Base64Text": {
+      "$comment": "envelope.md 2.1 (Base64() is Base64 encoding, RFC 4648, either standard or URL-safe encoding is allowed; R-0089, R-0090) and protocol 1.2 (signers may use either, verifiers MUST accept either; R-0007). The pattern admits both alphabets, the empty string, and 0-2 trailing '='. It ends in a lookahead for end of input, not in '$': under ECMA-262 the two agree, but Python's re, which the python-jsonschema validator uses, lets '$' match before a trailing newline, so with '$' that validator accepted ENV-R24 (pass 2, jsonschema 4.23.0). The content check in check-envelope.derived.py (contentEncoding) also rejects a string that mixes the two alphabets, an impossible length (1 mod 4 once padding is removed) and padding that does not complete a multiple of 4. Padding itself is optional: x-open.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/_-]*={0,2}(?![\\s\\S])",
+      "contentEncoding": "base64"
+    },
+    "Signature": {
+      "$comment": "envelope.md 2.1 and 2.1.2, envelope.proto message Signature. sig is REQUIRED and MUST be set, even if empty (R-0011): a present base64 string, possibly the empty string. keyid is OPTIONAL and MAY be unset (R-0012), and an unset keyid MUST be treated the same as set-but-empty (R-0013): optional, any string, empty allowed. Additional members are allowed and ignored (R-0014, R-0015): additionalProperties is deliberately not set.",
+      "type": "object",
+      "required": ["sig"],
+      "properties": {
+        "sig": { "$ref": "#/$defs/Base64Text" },
+        "keyid": { "type": "string" }
+      }
+    },
+    "Envelope": {
+      "$comment": "envelope.md 2.1, 2.1.1, 2.1.2. payload, payloadType and signatures are REQUIRED and MUST be set, even if empty (R-0011): required, present with the right type; payload is Base64(SERIALIZED_BODY) (possibly empty), payloadType is the PAYLOAD_TYPE string (possibly empty), signatures is an array of Signature, and the multi-signature form is the same array with more elements (R-0010). The array may be empty: 'even if empty' read literally (x-open; EnvelopeStrict is the proto reading). Additional members are allowed and ignored (R-0014, R-0015).",
+      "type": "object",
+      "required": ["payload", "payloadType", "signatures"],
+      "properties": {
+        "payload": { "$ref": "#/$defs/Base64Text" },
+        "payloadType": { "type": "string" },
+        "signatures": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Signature" }
+        }
+      }
+    },
+    "EnvelopeStrict": {
+      "$comment": "envelope.proto, the comment above 'repeated Signature signatures = 3': REQUIRED (length >= 1). Envelope plus a non-empty signatures array. Where Envelope accepts [] (envelope.md 'even if empty'), this definition rejects it: the source states both and does not say which governs (x-open).",
+      "$ref": "#/$defs/Envelope",
+      "properties": {
+        "signatures": { "minItems": 1 }
+      }
+    }
+  }
+}
