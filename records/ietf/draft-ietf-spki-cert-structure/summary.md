@@ -93,8 +93,11 @@ fill. They feed report §2.2, the mechanism frame.
   shape, `(<pub-sig-alg-id> <sig-params>)`: one integer for RSA, `(r ..)
   (s ..)` for DSA. Neither revision says whether the signature primitive takes
   the hash value, the canonical bytes of the `(hash ...)` object, or the
-  certificate bytes. The §3.8.3.2 sample signatures do not settle it either,
-  because the object they sign is never shown. The hash algorithm is named in
+  certificate bytes. The §3.8.3.2 sample signatures settle it by example,
+  though the object they sign is never shown: the DSA sample verifies with the
+  printed hash value as its digest, not with the hash of the `(hash ...)`
+  object, and the RSA sample's recovered block ends in the printed hash value
+  (`distilled/examples/reproduce.py`). The hash algorithm is named in
   two places that can disagree: in `<hash>` (`md5` | `sha1` | URI, §9.2) and
   inside `<pub-sig-alg-id>` (`rsa-pkcs1-md5`, `rsa-pkcs1-sha1`, `dsa-sha1`,
   §9.2). -05's Status section says the WG was still weighing *"the proper
@@ -119,8 +122,9 @@ fill. They feed report §2.2, the mechanism frame.
   based so the parameter fields may be in any order, but the BNF suggests a
   fixed order"* (§3.8). So one certificate content has several valid
   canonical encodings and several hashes. A cert is identified, and revoked,
-  by the hash of the bytes its issuer produced (`(canceled <hash>*)` in §7.1;
-  `(object-hash ..)` in §4.5.1), not by its content. §3.2.1 leaves a second
+  by a hash (`(canceled <hash>*)` in §7.1; `(object-hash ..)` in §4.5.1), not
+  by its content. The draft never says over which bytes; the bytes its issuer
+  produced is our reading (`draft-ietf-spki-cert-structure#R-0422`). §3.2.1 leaves a second
   gap in integers: a sign byte may be needed, *"but redundant bytes of sign
   need not be"*. Redundant sign bytes are therefore not forbidden.
 
@@ -247,15 +251,15 @@ reader of the other.
 |---|---|
 | `record.yaml` | metadata, revision choice, digest, relations, `bears_on`, implementations |
 | `summary.md` | this document |
+| `distilled/` | the FX-1 artifact set added under library#89, indexed by `distilled/README.md`: `normative.md`, `requirements.yaml`, `inferred-candidates.yaml`, `schema/`, `messages.yaml`, `protocol.yaml` and `protocol.md`, `state-machine.yaml`, `examples/`, `design-notes.md` |
 
-**No `distilled/`, and none is owed by this pass.** This pass (library#87)
-claims the **summary bar**: `status: summarized`, no `distillation` block,
-nothing added under `distilled/`, so FX-1 does not fire. The record's type is
-`draft`, so a full FX-1 extraction is still owed eventually. It is owned by
-library#89. That extraction has to handle two
-things a summary cannot: the §9.2 BNF against the prose sections (the
-defects below), and a stated choice of revision for `normative.md`. -06 has
-no IETF-archived copy and -05 has no RFC 2119 boilerplate at all.
+**`distilled/` came after this summary.** The summary was written under
+library#87 at the **summary bar**, with nothing under `distilled/`. The FX-1
+extraction is owned by library#89, which added the directory above. It takes
+up the two things a summary cannot: the §9.2 BNF against the prose sections
+(the defects below), and a stated choice of revision for `normative.md`,
+which quotes -06. -06 has no IETF-archived copy and -05 has no RFC 2119
+boilerplate at all.
 
 **No `versions/`.** The -05 alternative is described above with its URL and
 digest. Its bytes and metadata were not kept as a version directory, because

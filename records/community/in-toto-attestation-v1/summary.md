@@ -91,8 +91,10 @@ took the Statement fields second-hand from `slsa-1-2`. Locators are at
 3. **DigestSet** (`spec/v1/digest_set.md`) — the ∅ cell, now filled.
    *Shape* (§Fields): a JSON object mapping algorithm name to a string encoding
    of the digest; usually one pair, several MAY be used for agility. *Names and
-   encoding* (§Supported algorithms): `sha256` … `md5` use the NIST names
-   lowercased with `-`→`_` and lowercase hex values; `dirHash` (Go `h1:`
+   encoding* (§Supported algorithms): `sha256` … `md5`, keyed as the heading
+   spells them, with lowercase hex values (the text says the keys are the NIST
+   names lowercased with `-`→`_`, which holds for only 6 of the 19 —
+   `distilled/normative.md` SD-25); `dirHash` (Go `h1:`
    dirhash, rendered in hex); `gitCommit`/`gitTree`/`gitBlob`/`gitTag` (40-char
    SHA-1 or 64-char SHA-256 git object id, with the hashed framing spelled out).
    *Immutability* (§Fields): every entry MUST be an immutable reference; a
@@ -238,20 +240,13 @@ assessed; they exist and none was checked.
 |---|---|
 | `record.yaml` | metadata — pinned source, per-file read list in `content.note`, cites, relations |
 | `summary.md` | this document |
+| `distilled/` | the FX-1 artifact set: normative, requirements, schema, messages, protocol, state machine, examples, design notes — start at `distilled/README.md` |
 
-**No `distilled/`, no `distillation` block.** library#87 is this pass and it
-claims the **summary bar**: the record is `summarized`, declares no
-`distillation`, and adds no file under `distilled/`, so FX-1 does not fire. The
-record is type `spec`, so it **owes an FX-1 extraction** when one is taken on —
-owned by library#89. That extraction would produce
-`normative.md` / `requirements.yaml` over `spec/v1/*.md` and
-`spec/versioning.md` (BCP 14 keywords plus the non-BCP "STRONGLY RECOMMENDED"
-in `digest_set.md`), `schema/` from `protos/` and the jsonc schemas,
-`examples/` from the DigestSet and ResourceDescriptor examples, and a
-`protocol.yaml` of the `docs/validation.md` model with its defects recorded.
-
-**No verbatim normative text beyond short locator-bearing fragments** — under
-FX-1 it belongs in `distilled/normative.md`.
+**The FX-1 artifacts under `distilled/` have landed** — extract, verify and
+cross-check complete, `profile: full` — and they, not this summary, are the
+citable detail. Where the two differ, the artifacts win. Verbatim normative
+text lives in `distilled/normative.md`, not here; this summary keeps only short
+locator-bearing fragments. Extraction was owned by library#89.
 
 **`in-toto-envelope-v1` is the same text as this record's
 `spec/v1/envelope.md`**, held as a separate stub at the unpinned `main` URL.

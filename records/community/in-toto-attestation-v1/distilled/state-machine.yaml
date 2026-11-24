@@ -1,0 +1,1718 @@
+# in-toto-attestation-v1 state machines, FX-1 pass 1 (protocol and state-machine agent). Written
+# by script with protocol.yaml; quotes and ids follow its conventions.
+record: "in-toto-attestation-v1"
+reviewed_by: ""
+kind: "state-machine"
+extracted: "2026-11-09"
+extracted_by: >-
+  FX-1 pass 1 (extract), protocol and state-machine agent, claude-opus-5-5, effort max, from the
+  source only (blind to summary.md and the other lanes)
+source:
+  file: ".cache/in-toto-attestation-v1.bin"
+  sha256: "c66cbb44b115cd0745e0f22dfedb069729a081a7f56372e3fca8ead667795d91"
+  commit: "df02077bf97218a8860a5c534eff1f1381f56984"
+  rendering: ".cache/in-toto-attestation-v1.txt"
+  rendering_sha256: "87260bf00f01cbbe4e9c85795f29043ffc8801416958a8bde232139cb1ed13d0"
+applicability: >-
+  Applicable. Six machines: M01 is §12's validation model exactly as written (the one procedure
+  with states and reject outcomes in the source); M02 is the per-line processing of a Bundle the
+  §9 rules imply, around M01; M03 is the life of a Bundle file as the §9.4 example shows it; M04
+  and M05 are §2.2 and §11's version lifecycle from the author's and the consumer's side; M06 is
+  §1.1's release lifecycle. The source defines no producer-side lifecycle beyond M03, no key or
+  attestation lifecycle (issuance, expiry, revocation) and no session.
+conventions:
+  fields: >-
+    kind is stated or inferred on every state and transition; inferred ones carry
+    inferred_reason. error: true and terminal: true mark states, repeated per machine in
+    error_states and terminal_states. reachable_as_written: false marks what M01 cannot reach as
+    the source writes it. A guard is the source's condition in this file's words;
+    guard_evaluates says what it comes to when that is not obvious; intended_guard is this
+    model's repair, always inferred. quotes, constrained_by and the locator rules are
+    protocol.yaml's. protocol_steps names the protocol.yaml steps a transition renders.
+  triggers: >-
+    A trigger is a spec structure (kind message, resolves_to the structure's name) or a named
+    event with a definition, listed once under triggers_used.
+triggers_used:
+  - name: "validation-requested"
+    kind: "event"
+    definition: >-
+      The consumer starts §12 with its four inputs; the attestation is a JSON-encoded Envelope.
+    carries: "Envelope"
+    quotes:
+      - at: "§12"
+        source_lines: "1122-1125"
+        quote: |-
+          Inputs: - `artifactToVerify`: blob of data - `attestation`: JSON-encoded [Envelope]
+        status: "docs-pseudocode"
+  - name: "completion"
+    kind: "event"
+    definition: >-
+      The source state's activity has finished; the guards choose the transition (the UML
+      completion event).
+    quotes: []
+  - name: "next-pair"
+    kind: "event"
+    definition: "The signature loop takes its next (signature, (name, publicKey)) pair."
+    carries: "Envelope"
+    quotes:
+      - at: "§12"
+        source_lines: "1136"
+        quote: |-
+          For each `signature` in `envelope.signatures`:
+        status: "docs-pseudocode"
+      - at: "§12"
+        source_lines: "1137"
+        quote: |-
+          For each (`name`, `publicKey`) in `recognizedAttesters`:
+        status: "docs-pseudocode"
+  - name: "pairs-exhausted"
+    kind: "event"
+    definition: "Every (signature, recognized attester) pair has been examined."
+    quotes:
+      - at: "§12"
+        source_lines: "1142"
+        quote: |-
+          Reject if `attesterNames` is empty
+        status: "docs-pseudocode"
+  - name: "bundle-line"
+    kind: "message"
+    resolves_to: "Bundle"
+    definition: "One line of a Bundle, downloaded and parsed on its own."
+    quotes:
+      - at: "§9.3"
+        source_lines: "912-913"
+        quote: |-
+          To obtain predicate information that is authenticated, consumers MUST download and parse each line in a Bundle separately.
+        status: "spec"
+  - name: "validation-finished"
+    kind: "event"
+    definition: "The M01 instance run for a line has reached a terminal state."
+    quotes: []
+  - name: "attestations-produced"
+    kind: "event"
+    definition: "A producer has signed Envelopes to store in a new Bundle."
+    carries: "Envelope"
+    quotes:
+      - at: "§9.4.1"
+        source_lines: "926-928"
+        quote: |-
+          The builder places _both_ of these signed attestations in a new file named `fooly.apk.intoto.jsonl`.
+        status: "example"
+  - name: "attestation-appended"
+    kind: "event"
+    definition: "A later producer's Envelope is appended to the Bundle."
+    carries: "Envelope"
+    quotes:
+      - at: "§9.4.2"
+        source_lines: "944"
+        quote: |-
+          The TestResult is then appended to the contents of `fooly.apk.intoto.jsonl`
+        status: "example"
+  - name: "policy-check"
+    kind: "event"
+    definition: "A policy engine is given the Bundle to check an artifact."
+    carries: "Bundle"
+    quotes:
+      - at: "§9.4.4"
+        source_lines: "968-970"
+        quote: |-
+          Just prior to deployment the CI/CD system checks `fooly.apk` with a policy engine (providing `fooly.apk.intoto.jsonl` as it does so) to ensure the app is safe to publish.
+        status: "example"
+  - name: "publish"
+    kind: "event"
+    definition: "The holder of the Bundle publishes a filtered copy."
+    carries: "Bundle"
+    quotes:
+      - at: "§9.4.5"
+        source_lines: "979-981"
+        quote: |-
+          The CI/CD system then iterates through all the attestations, removing the attestation with `predicateType=https://fooly.app/Builder/v1` and publishes to their website:
+        status: "example"
+  - name: "attack"
+    kind: "event"
+    definition: "Someone with write access deletes, replays or injects lines."
+    quotes:
+      - at: "§9"
+        source_lines: "864-868"
+        quote: |-
+          The Bundle is not authenticated as a whole. Instead each individual attestation is authenticated using signature formats like [DSSE]. As such, an attacker might be able to delete valid attestations, replay obsolete attestations, and/or inject invalid or irrelevant attestations in a Bundle without being detected.
+        status: "spec"
+  - name: "change-proposed"
+    kind: "event"
+    definition: >-
+      A predicate author (or, for the Statement, the maintainers) proposes a change to a type.
+    quotes:
+      - at: "§11.1"
+        source_lines: "1065"
+        quote: |-
+          This document explains how version changes and extension fields are handled.
+        status: "spec"
+  - name: "type-received"
+    kind: "message"
+    resolves_to: "Statement"
+    definition: >-
+      A Statement, or a predicate inside one, arrives for parsing; Predicate for predicateType.
+    quotes:
+      - at: "§11.2"
+        source_lines: "1076-1077"
+        quote: |-
+          Any message MUST be semantically correct when parsed as any other version with the same major number.
+        status: "spec"
+  - name: "release-tagged"
+    kind: "event"
+    definition: "The maintainers tag a framework release."
+    quotes:
+      - at: "§1.1"
+        source_lines: "33-34"
+        quote: |-
+          The latest [tagged release] version matches the [SemVer](https://semver.org) MAJOR.MINOR version of the Attestation Framework spec.
+        status: "spec"
+machines:
+  - id: "M01"
+    name: "validation-model"
+    title: "docs/validation.md as written: one artifact, one attestation"
+    run_by: "consumer"
+    locator: "§12"
+    status: "docs-pseudocode"
+    summary: >-
+      The pseudocode of §12 as a machine, every guard and action in the source's order and
+      nothing repaired. Two guards are defective as written (SD-01 at T09/T10, SD-02 at
+      T13/T14); each carries the source's guard in guard and this model's reading in
+      intended_guard (inferred). The signature loop is one state with self-transitions per
+      (signature, recognized attester) pair, in the nesting SD-04 says the source meant. Every
+      error state is a reject: validation ends, nothing is output, nothing is sent to anyone.
+    initial: "S01"
+    states:
+      - id: "S01"
+        name: "inputs-received"
+        kind: "stated"
+        initial: true
+        description: >-
+          artifactToVerify, attestation, recognizedAttesters and acceptableDigestAlgorithms are
+          bound.
+      - id: "S02"
+        name: "envelope-decoded"
+        kind: "stated"
+        description: "envelope is the decoded Envelope; attesterNames is the empty set."
+      - id: "S03"
+        name: "checking-signatures"
+        kind: "stated"
+        description: >-
+          Iterating every (signature in envelope.signatures, (name, publicKey) in
+          recognizedAttesters) pair, adding name to attesterNames for each match.
+      - id: "S04"
+        name: "envelope-layer-passed"
+        kind: "stated"
+        description: >-
+          The source's Intermediate state: envelope.payloadType, envelope.payload and a
+          non-empty attesterNames.
+      - id: "S05"
+        name: "payload-type-accepted"
+        kind: "stated"
+        reachable_as_written: false
+        description: >-
+          payloadType passed the Statement layer's first check. Unreachable as written (SD-01).
+      - id: "S06"
+        name: "statement-decoded"
+        kind: "stated"
+        reachable_as_written: false
+        description: "statement is the decoded Statement."
+      - id: "S07"
+        name: "statement-type-accepted"
+        kind: "stated"
+        reachable_as_written: false
+        description: "The Statement's type is Statement/v1; matchedSubjects is computed on entry."
+      - id: "S08"
+        name: "output"
+        kind: "stated"
+        terminal: true
+        reachable_as_written: false
+        description: >-
+          Success: statement.predicateType, statement.predicate, matchedSubjects and
+          attesterNames are output to the policy engine.
+      - id: "E01"
+        name: "rejected-envelope-not-decoded"
+        kind: "stated"
+        error: true
+        terminal: true
+        description: "attestation did not decode as a JSON-encoded Envelope."
+      - id: "E02"
+        name: "rejected-no-recognized-attester"
+        kind: "stated"
+        error: true
+        terminal: true
+        description: "No signature matched any recognized attester's publicKey."
+      - id: "E03"
+        name: "rejected-payload-type"
+        kind: "stated"
+        error: true
+        terminal: true
+        description: >-
+          payloadType failed the Statement layer's check; as written, every payloadType does.
+      - id: "E04"
+        name: "rejected-statement-not-decoded"
+        kind: "stated"
+        error: true
+        terminal: true
+        reachable_as_written: false
+        description: "envelope.payload did not decode as a JSON-encoded Statement."
+      - id: "E05"
+        name: "rejected-statement-type"
+        kind: "stated"
+        error: true
+        terminal: true
+        reachable_as_written: false
+        description: "The Statement's type is not https://in-toto.io/Statement/v1."
+      - id: "E06"
+        name: "rejected-no-matched-subject"
+        kind: "stated"
+        error: true
+        terminal: true
+        reachable_as_written: false
+        description: "No subject has an acceptable digest equal to the artifact's."
+    transitions:
+      - id: "T01"
+        from: "S01"
+        to: "S02"
+        trigger: "validation-requested"
+        guard: "attestation decodes as a JSON-encoded Envelope"
+        actions:
+          - "envelope := the decoded Envelope"
+          - "attesterNames := empty set of names"
+        locator: "§12 L1133-1134, §12 L1135"
+        kind: "stated"
+        quotes:
+          - at: "§12"
+            source_lines: "1133-1134"
+            quote: |-
+              `envelope` := decode `attestation` as a JSON-encoded [Envelope]; reject if decoding fails
+            status: "docs-pseudocode"
+          - at: "§12"
+            source_lines: "1135"
+            quote: |-
+              `attesterNames` := empty set of names
+            status: "docs-pseudocode"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0187"
+          - "in-toto-attestation-v1#R-0188"
+          - "in-toto-attestation-v1#R-0189"
+        protocol_steps:
+          - "F03.0"
+          - "F03.E1"
+          - "F03.E2"
+      - id: "T02"
+        from: "S01"
+        to: "E01"
+        trigger: "validation-requested"
+        guard: "decoding attestation as a JSON-encoded Envelope fails"
+        actions:
+          - "reject"
+        locator: "§12 L1133-1134"
+        kind: "stated"
+        quotes:
+          - at: "§12"
+            source_lines: "1133-1134"
+            quote: |-
+              `envelope` := decode `attestation` as a JSON-encoded [Envelope]; reject if decoding fails
+            status: "docs-pseudocode"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0188"
+        protocol_steps:
+          - "F03.E1"
+      - id: "T03"
+        from: "S02"
+        to: "S03"
+        trigger: "completion"
+        guard: "none"
+        actions:
+          - "begin the outer loop over envelope.signatures and the inner loop over recognizedAttesters"
+        locator: "§12 L1136, §12 L1137"
+        kind: "stated"
+        quotes:
+          - at: "§12"
+            source_lines: "1136"
+            quote: |-
+              For each `signature` in `envelope.signatures`:
+            status: "docs-pseudocode"
+          - at: "§12"
+            source_lines: "1137"
+            quote: |-
+              For each (`name`, `publicKey`) in `recognizedAttesters`:
+            status: "docs-pseudocode"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0046"
+          - "in-toto-attestation-v1#R-0189"
+        protocol_steps:
+          - "F03.E3"
+          - "F03.E3.1"
+      - id: "T04"
+        from: "S03"
+        to: "S03"
+        trigger: "next-pair"
+        guard: >-
+          the implementation takes the optional keyid check AND signature.keyid does not match
+          publicKey
+        actions:
+          - "skip this pair"
+        locator: "§12 L1138-1139"
+        kind: "stated"
+        quotes:
+          - at: "§12"
+            source_lines: "1138-1139"
+            quote: |-
+              Optional: skip if `signature.keyid` does not match `publicKey`
+            status: "docs-pseudocode"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0053"
+          - "in-toto-attestation-v1#R-0189"
+          - "in-toto-attestation-v1#R-0210"
+        protocol_steps:
+          - "F03.E3.1.1"
+        note: >-
+          The comparison of a keyid with a publicKey, and the case of an absent keyid, are not
+          stated (unspecified U-02, U-03).
+        source_defects:
+          - "SD-04"
+          - "SD-14"
+      - id: "T05"
+        from: "S03"
+        to: "S03"
+        trigger: "next-pair"
+        guard: "the pair was not skipped AND signature.sig matches publicKey"
+        actions:
+          - "add name to attesterNames"
+        locator: "§12 L1140, §12 L1141"
+        kind: "stated"
+        quotes:
+          - at: "§12"
+            source_lines: "1140"
+            quote: |-
+              If `signature.sig` matches `publicKey`:
+            status: "docs-pseudocode"
+          - at: "§12"
+            source_lines: "1141"
+            quote: |-
+              Add `name` to `attesterNames`
+            status: "docs-pseudocode"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0062"
+          - "in-toto-attestation-v1#R-0072"
+          - "in-toto-attestation-v1#R-0056"
+          - "in-toto-attestation-v1#R-0189"
+          - "in-toto-attestation-v1#R-0211"
+        protocol_steps:
+          - "F03.E3.1.2"
+          - "F03.E3.1.2.1"
+        source_defects:
+          - "SD-04"
+      - id: "T06"
+        from: "S03"
+        to: "S03"
+        trigger: "next-pair"
+        guard: "the pair was not skipped AND signature.sig does not match publicKey"
+        actions:
+          - "none"
+        locator: "§12 L1140"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The If at L1140 has no else branch; this transition is what that absence means:
+          nothing is added and the loop goes on.
+        quotes:
+          - at: "§12"
+            source_lines: "1140"
+            quote: |-
+              If `signature.sig` matches `publicKey`:
+            status: "docs-pseudocode"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0189"
+          - "in-toto-attestation-v1#R-0211"
+        protocol_steps:
+          - "F03.E3.1.2"
+        source_defects:
+          - "SD-04"
+      - id: "T07"
+        from: "S03"
+        to: "S04"
+        trigger: "pairs-exhausted"
+        guard: "attesterNames is not empty"
+        actions:
+          - "hand envelope.payloadType, envelope.payload and attesterNames to the Statement layer"
+        locator: "§12 L1142, §12 L1143-1144"
+        kind: "stated"
+        quotes:
+          - at: "§12"
+            source_lines: "1142"
+            quote: |-
+              Reject if `attesterNames` is empty
+            status: "docs-pseudocode"
+          - at: "§12"
+            source_lines: "1143-1144"
+            quote: |-
+              Intermediate state: `envelope.payloadType`, `envelope.payload`, `attesterNames`
+            status: "docs-pseudocode"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0190"
+        protocol_steps:
+          - "F03.E4"
+          - "F03.I"
+      - id: "T08"
+        from: "S03"
+        to: "E02"
+        trigger: "pairs-exhausted"
+        guard: "attesterNames is empty"
+        actions:
+          - "reject"
+        locator: "§12 L1142"
+        kind: "stated"
+        quotes:
+          - at: "§12"
+            source_lines: "1142"
+            quote: |-
+              Reject if `attesterNames` is empty
+            status: "docs-pseudocode"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0190"
+        protocol_steps:
+          - "F03.E4"
+      - id: "T09"
+        from: "S04"
+        to: "E03"
+        trigger: "completion"
+        guard: >-
+          payloadType != 'application/vnd.in-toto+json' or not matches(payloadType,
+          'application/vnd.in-toto.<predicate>+json'), payloadType being envelope.payloadType
+        guard_evaluates: >-
+          true for every payloadType: a value equal to application/vnd.in-toto+json does not
+          match the predicate pattern, so the second clause holds; a value matching the pattern
+          is not that string, so the first holds; any other value makes both hold
+        intended_guard: >-
+          payloadType != 'application/vnd.in-toto+json' and not matches(payloadType,
+          'application/vnd.in-toto.<predicate>+json') (inferred from §8.2, which allows both
+          values)
+        actions:
+          - "reject"
+        locator: "§12 L1146"
+        kind: "stated"
+        quotes:
+          - at: "§12"
+            source_lines: "1146"
+            quote: |-
+              Reject if (`envelope.payloadType` != `application/vnd.in-toto+json` OR `envelope.payloadType` does not match `application/vnd.in-toto.<predicate>+json`)
+            status: "docs-pseudocode"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0058"
+          - "in-toto-attestation-v1#R-0191"
+          - "in-toto-attestation-v1#R-0212"
+        protocol_steps:
+          - "F03.S1"
+        source_defects:
+          - "SD-01"
+      - id: "T10"
+        from: "S04"
+        to: "S05"
+        trigger: "completion"
+        guard: >-
+          not T09's guard: payloadType == 'application/vnd.in-toto+json' and
+          matches(payloadType, 'application/vnd.in-toto.<predicate>+json')
+        guard_evaluates: "false for every payloadType (no value is both)"
+        intended_guard: >-
+          payloadType == 'application/vnd.in-toto+json' or matches(payloadType,
+          'application/vnd.in-toto.<predicate>+json') (inferred)
+        reachable_as_written: false
+        locator: "§12 L1146"
+        kind: "stated"
+        quotes:
+          - at: "§12"
+            source_lines: "1146"
+            quote: |-
+              Reject if (`envelope.payloadType` != `application/vnd.in-toto+json` OR `envelope.payloadType` does not match `application/vnd.in-toto.<predicate>+json`)
+            status: "docs-pseudocode"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0058"
+          - "in-toto-attestation-v1#R-0191"
+          - "in-toto-attestation-v1#R-0212"
+        protocol_steps:
+          - "F03.S1"
+        note: >-
+          The complement of a stated reject, so kind is stated; only its guard is unsatisfiable.
+        source_defects:
+          - "SD-01"
+      - id: "T11"
+        from: "S05"
+        to: "S06"
+        trigger: "completion"
+        guard: "envelope.payload decodes as a JSON-encoded Statement"
+        actions:
+          - "statement := the decoded Statement (after base64 decoding, F03.S2a, inferred)"
+        locator: "§12 L1147-1148"
+        kind: "stated"
+        quotes:
+          - at: "§12"
+            source_lines: "1147-1148"
+            quote: |-
+              `statement` := decode `envelope.payload` as a JSON-encoded [Statement]; reject if decoding fails
+            status: "docs-pseudocode"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0063"
+          - "in-toto-attestation-v1#R-0001"
+          - "in-toto-attestation-v1#R-0192"
+          - "in-toto-attestation-v1#R-0214"
+          - "in-toto-attestation-v1#R-0197"
+        protocol_steps:
+          - "F03.S2a"
+          - "F03.S2"
+        source_defects:
+          - "SD-13"
+      - id: "T12"
+        from: "S05"
+        to: "E04"
+        trigger: "completion"
+        guard: >-
+          decoding envelope.payload as a JSON-encoded Statement fails (including invalid base64,
+          inferred)
+        actions:
+          - "reject"
+        locator: "§12 L1147-1148"
+        kind: "stated"
+        quotes:
+          - at: "§12"
+            source_lines: "1147-1148"
+            quote: |-
+              `statement` := decode `envelope.payload` as a JSON-encoded [Statement]; reject if decoding fails
+            status: "docs-pseudocode"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0192"
+        protocol_steps:
+          - "F03.S2a"
+          - "F03.S2"
+      - id: "T13"
+        from: "S06"
+        to: "E05"
+        trigger: "completion"
+        guard: "statement.type != https://in-toto.io/Statement/v1"
+        intended_guard: >-
+          statement._type != https://in-toto.io/Statement/v1 (inferred: §3 names the field
+          _type, L165 and L183; read literally, a Statement carrying only §3's fields has no
+          field type and is rejected here, SD-02)
+        actions:
+          - "reject"
+        locator: "§12 L1149"
+        kind: "stated"
+        quotes:
+          - at: "§12"
+            source_lines: "1149"
+            quote: |-
+              Reject if `statement.type` != `https://in-toto.io/Statement/v1`
+            status: "docs-pseudocode"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0193"
+          - "in-toto-attestation-v1#R-0136"
+          - "in-toto-attestation-v1#R-0199"
+        protocol_steps:
+          - "F03.S3"
+        source_defects:
+          - "SD-02"
+      - id: "T14"
+        from: "S06"
+        to: "S07"
+        trigger: "completion"
+        guard: "statement.type == https://in-toto.io/Statement/v1"
+        intended_guard: "statement._type == https://in-toto.io/Statement/v1 (inferred, SD-02)"
+        actions:
+          - "matchedSubjects := the entries s of statement.subject for which there exists (alg, value) in s.digest with alg in acceptableDigestAlgorithms AND hash(alg, artifactToVerify) == hexDecode(value)"
+        locator: "§12 L1149"
+        kind: "stated"
+        quotes:
+          - at: "§12"
+            source_lines: "1149"
+            quote: |-
+              Reject if `statement.type` != `https://in-toto.io/Statement/v1`
+            status: "docs-pseudocode"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0105"
+          - "in-toto-attestation-v1#R-0106"
+          - "in-toto-attestation-v1#R-0034"
+          - "in-toto-attestation-v1#R-0193"
+          - "in-toto-attestation-v1#R-0199"
+          - "in-toto-attestation-v1#R-0194"
+          - "in-toto-attestation-v1#R-0093"
+          - "in-toto-attestation-v1#R-0204"
+          - "in-toto-attestation-v1#R-0206"
+        protocol_steps:
+          - "F03.S3"
+          - "F03.S4"
+        note: >-
+          The quotes for the action are T15's; matchedSubjects is computed on entering S07.
+        source_defects:
+          - "SD-02"
+          - "SD-05"
+      - id: "T15"
+        from: "S07"
+        to: "E06"
+        trigger: "completion"
+        guard: "matchedSubjects is empty"
+        actions:
+          - "reject"
+        locator: "§12 L1150-1154, §12 L1155"
+        kind: "stated"
+        quotes:
+          - at: "§12"
+            source_lines: "1150-1154"
+            quote: |-
+              `matchedSubjects` := the subset of entries `s` in `statement.subject` where: - there exists at least one `(alg, value)` in `s.digest` where: - `alg` is in `acceptableDigestAlgorithms` AND - `hash(alg, artifactToVerify)` == `hexDecode(value)`
+            status: "docs-pseudocode"
+          - at: "§12"
+            source_lines: "1155"
+            quote: |-
+              Reject if `matchedSubjects` is empty
+            status: "docs-pseudocode"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0195"
+        protocol_steps:
+          - "F03.S4"
+          - "F03.S5"
+      - id: "T16"
+        from: "S07"
+        to: "S08"
+        trigger: "completion"
+        guard: "matchedSubjects is not empty"
+        actions:
+          - "output statement.predicateType, statement.predicate, matchedSubjects and attesterNames to the policy engine"
+        locator: "§12 L1155, §12 L1157, §12 L1159-1162"
+        kind: "stated"
+        quotes:
+          - at: "§12"
+            source_lines: "1155"
+            quote: |-
+              Reject if `matchedSubjects` is empty
+            status: "docs-pseudocode"
+          - at: "§12"
+            source_lines: "1157"
+            quote: |-
+              Output (to be fed into policy engine):
+            status: "docs-pseudocode"
+          - at: "§12"
+            source_lines: "1159-1162"
+            quote: |-
+              - `statement.predicateType` - `statement.predicate` - `matchedSubjects` - `attesterNames`
+            status: "docs-pseudocode"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0061"
+          - "in-toto-attestation-v1#R-0071"
+          - "in-toto-attestation-v1#R-0195"
+          - "in-toto-attestation-v1#R-0196"
+        protocol_steps:
+          - "F03.S5"
+          - "F03.O"
+        source_defects:
+          - "SD-11"
+    as_written_outcome: >-
+      Reachable as written: S01 to S04 and E01, E02, E03. Every attestation that survives the
+      Envelope layer ends in E03, so the machine as written never produces output. With
+      T09/T10's intended_guard alone, a Statement carrying only §3's fields reaches E05 at T13,
+      because it has no field type; only with both intended guards does such a Statement reach
+      S08.
+    unspecified:
+      - id: "U-01"
+        text: "Processing several artifacts or several attestations (L1120); see M02."
+        quotes:
+          - at: "§12"
+            source_lines: "1120"
+            quote: |-
+              Explain how to process multiple artifacts and/or multiple attestations.
+            status: "docs-pseudocode"
+      - id: "U-02"
+        text: >-
+          How signature.keyid is compared with a publicKey (KEYID is defined by the in-toto
+          specification, L844, not here).
+        quotes:
+          - at: "§12"
+            source_lines: "1138-1139"
+            quote: |-
+              Optional: skip if `signature.keyid` does not match `publicKey`
+            status: "docs-pseudocode"
+      - id: "U-03"
+        text: >-
+          What the optional keyid check does when a signature has no keyid; keyid is only a
+          SHOULD (L774).
+        quotes:
+          - at: "§8.2"
+            source_lines: "774"
+            quote: |-
+              A `keyid` (or equivalent) SHOULD be included for each signing key used.
+            status: "spec"
+      - id: "U-04"
+        text: >-
+          What signature.sig is verified over; the pseudocode never says the payload or
+          payloadType is covered (L778 says they are signed together).
+        quotes:
+          - at: "§12"
+            source_lines: "1140"
+            quote: |-
+              If `signature.sig` matches `publicKey`:
+            status: "docs-pseudocode"
+      - id: "U-05"
+        text: >-
+          How <predicate> in application/vnd.in-toto.<predicate>+json is matched (any token, or
+          only an existing predicate specification filename).
+        quotes:
+          - at: "§12"
+            source_lines: "1146"
+            quote: |-
+              Reject if (`envelope.payloadType` != `application/vnd.in-toto+json` OR `envelope.payloadType` does not match `application/vnd.in-toto.<predicate>+json`)
+            status: "docs-pseudocode"
+      - id: "U-06"
+        text: >-
+          Whether predicateType is present and a TypeURI, and whether every subject has a
+          digest: §12 checks neither, though §3.2 requires both.
+        quotes:
+          - at: "§3.2"
+            source_lines: "212"
+            quote: |-
+              `predicateType` _string ([TypeURI]), required_
+            status: "spec"
+          - at: "§3.2"
+            source_lines: "190-191"
+            quote: |-
+              Set of software artifacts that the attestation applies to. Each element > represents a single software artifact. Each element MUST have `digest` set.
+            status: "spec"
+      - id: "U-07"
+        text: >-
+          hash(alg, artifactToVerify) for algorithms that are not a hash of the artifact's
+          bytes: gitBlob, gitTree, gitCommit, gitTag (a typed header first) and dirHash (a file
+          tree).
+        quotes:
+          - at: "§5.2.1.3"
+            source_lines: "521"
+            quote: |-
+              This hash is computed over `<type> SP <size> NUL <content>`, where:
+            status: "spec"
+          - at: "§12"
+            source_lines: "1154"
+            quote: |-
+              `hash(alg, artifactToVerify)` == `hexDecode(value)`
+            status: "docs-pseudocode"
+      - id: "U-08"
+        text: >-
+          Envelopes that are not DSSE JSON (COSE_Sign is allowed by §8.1.1); the machine reads
+          signature.sig, signature.keyid and envelope.payloadType, the field names of DSSE's
+          JSON envelope (record secure-systems-lab-dsse).
+        quotes:
+          - at: "§8.1.1"
+            source_lines: "763-764"
+            quote: |-
+              The [COSE_Sign] structure is [ITE-5] compliant, whereas the `COSE_Sign1` format that supports only one signer is NOT compliant.
+            status: "spec"
+          - at: "§12"
+            source_lines: "1125"
+            quote: |-
+              - `attestation`: JSON-encoded [Envelope]
+            status: "docs-pseudocode"
+      - id: "U-09"
+        text: >-
+          An Envelope without payload: the general requirements make payload a SHOULD (L776),
+          and the machine decodes it unconditionally.
+        quotes:
+          - at: "§8.2"
+            source_lines: "776-777"
+            quote: |-
+              `payload` (or equivalent) SHOULD be included and contain the in-toto [Statement] that was signed.
+            status: "spec"
+    source_defects:
+      - "SD-12"
+    error_states:
+      - "E01"
+      - "E02"
+      - "E03"
+      - "E04"
+      - "E05"
+      - "E06"
+    terminal_states:
+      - "S08"
+      - "E01"
+      - "E02"
+      - "E03"
+      - "E04"
+      - "E05"
+      - "E06"
+  - id: "M02"
+    name: "bundle-line-processing"
+    title: "Consumer processes one line of a Bundle"
+    run_by: "consumer"
+    locator: "§9.1, §9.3, §12"
+    status: "spec"
+    summary: >-
+      One instance per line of a Bundle, all independent. The Bundle rules give only two
+      outcomes for a line, processed or ignored; there is no error state, because nothing in §9
+      fails a Bundle. Running M01 per Envelope line, and mapping its rejects onto the four kinds
+      of unrecognized attestation that §9.1 says to ignore, are this model's (marked inferred):
+      §12 covers a single attestation and leaves multiple ones unexplained.
+    initial: "L01"
+    states:
+      - id: "L01"
+        name: "line-read"
+        kind: "stated"
+        initial: true
+        description: "One line of the Bundle, downloaded and parsed on its own."
+      - id: "L02"
+        name: "envelope-recognized"
+        kind: "stated"
+        description: "The line is a recognized Envelope."
+      - id: "L03"
+        name: "validating"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: "§9 never refers to §12; validating each line with M01 is this model's."
+        description: "M01 runs with this Envelope as attestation and the consumer's other inputs."
+      - id: "L04"
+        name: "validated"
+        kind: "stated"
+        description: "M01 reached S08: predicateType, predicate, matchedSubjects, attesterNames."
+      - id: "L05"
+        name: "accepted"
+        kind: "stated"
+        terminal: true
+        description: "The output joins the set handed to the policy engine."
+      - id: "X01"
+        name: "line-ignored"
+        kind: "stated"
+        terminal: true
+        description: "An unrecognized line, ignored (MUST). Not an error: the Bundle is unaffected."
+      - id: "X02"
+        name: "attestation-ignored"
+        kind: "stated"
+        terminal: true
+        description: >-
+          An attestation with unrecognized keys, types, subjects or predicates, ignored (MUST).
+          Not an error.
+    transitions:
+      - id: "T01"
+        from: "L01"
+        to: "L02"
+        trigger: "bundle-line"
+        guard: "the line parses as an Envelope the consumer recognizes"
+        locator: "§9.1, §9.3"
+        kind: "stated"
+        quotes:
+          - at: "§9.1"
+            source_lines: "880"
+            quote: |-
+              Each line within a Bundle SHOULD be an [Envelope].
+            status: "spec"
+          - at: "§9.3"
+            source_lines: "912-913"
+            quote: |-
+              To obtain predicate information that is authenticated, consumers MUST download and parse each line in a Bundle separately.
+            status: "spec"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0074"
+          - "in-toto-attestation-v1#R-0084"
+          - "in-toto-attestation-v1#R-0215"
+        protocol_steps:
+          - "F06.2"
+      - id: "T02"
+        from: "L01"
+        to: "X01"
+        trigger: "bundle-line"
+        guard: "the line is not recognized"
+        actions:
+          - "ignore the line"
+        locator: "§9.1"
+        kind: "stated"
+        quotes:
+          - at: "§9.1"
+            source_lines: "880-881"
+            quote: |-
+              Consumers MUST ignore unrecognized lines.
+            status: "spec"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0075"
+        protocol_steps:
+          - "F06.3"
+      - id: "T03"
+        from: "L02"
+        to: "L03"
+        trigger: "completion"
+        guard: "none"
+        actions:
+          - "run M01 with attestation := this line"
+        locator: "§12 L1116-1117, §12 L1120"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: "§12 is for a single attestation; applying it per line is this model's."
+        quotes:
+          - at: "§12"
+            source_lines: "1116-1117"
+            quote: |-
+              The following pseudocode shows how to verify and extract metadata about a single artifact from a single attestation.
+            status: "docs-pseudocode"
+          - at: "§12"
+            source_lines: "1120"
+            quote: |-
+              Explain how to process multiple artifacts and/or multiple attestations.
+            status: "docs-pseudocode"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0084"
+          - "in-toto-attestation-v1#R-0186"
+        protocol_steps:
+          - "F06.4"
+        source_defects:
+          - "SD-10"
+      - id: "T04"
+        from: "L03"
+        to: "X02"
+        trigger: "validation-finished"
+        guard: >-
+          M01 ended in E02 (no recognized key: unrecognized keys), E03 or E05 (unrecognized
+          types), or E06 (unrecognized subjects)
+        actions:
+          - "ignore the attestation"
+        locator: "§9.1"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          §9.1 names four kinds of unrecognized attestation to ignore; which M01 outcome counts
+          as which is this model's mapping.
+        quotes:
+          - at: "§9.1"
+            source_lines: "882-883"
+            quote: |-
+              Consumers MUST ignore attestations with unrecognized keys, types, subjects, or predicates.
+            status: "spec"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0076"
+        protocol_steps:
+          - "F06.4"
+          - "F06.5"
+        source_defects:
+          - "SD-10"
+      - id: "T05"
+        from: "L03"
+        to: "X02"
+        trigger: "validation-finished"
+        guard: "M01 ended in E01 or E04 (the line or its payload did not decode)"
+        actions:
+          - "ignore the attestation"
+        locator: "§9.1"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          A line whose Envelope or payload does not decode is treated as unrecognized; the
+          source does not say so.
+        quotes:
+          - at: "§9.1"
+            source_lines: "880-881"
+            quote: |-
+              Consumers MUST ignore unrecognized lines.
+            status: "spec"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0075"
+        protocol_steps:
+          - "F06.4"
+        source_defects:
+          - "SD-10"
+      - id: "T06"
+        from: "L03"
+        to: "L04"
+        trigger: "validation-finished"
+        guard: "M01 ended in S08"
+        locator: "§12 L1157, §12 L1159-1162"
+        kind: "stated"
+        quotes:
+          - at: "§12"
+            source_lines: "1157"
+            quote: |-
+              Output (to be fed into policy engine):
+            status: "docs-pseudocode"
+          - at: "§12"
+            source_lines: "1159-1162"
+            quote: |-
+              - `statement.predicateType` - `statement.predicate` - `matchedSubjects` - `attesterNames`
+            status: "docs-pseudocode"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0196"
+        protocol_steps:
+          - "F06.4"
+      - id: "T07"
+        from: "L04"
+        to: "X02"
+        trigger: "completion"
+        guard: "the consumer does not recognize predicateType"
+        actions:
+          - "ignore the attestation"
+        locator: "§9.1, §9.4.4"
+        kind: "stated"
+        quotes:
+          - at: "§9.1"
+            source_lines: "882-883"
+            quote: |-
+              Consumers MUST ignore attestations with unrecognized keys, types, subjects, or predicates.
+            status: "spec"
+          - at: "§9.4.4"
+            source_lines: "970-971"
+            quote: |-
+              The policy engine used doesn't understand `predicateType=https://spdx.dev/Document`, so it is ignored.
+            status: "example"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0076"
+          - "in-toto-attestation-v1#R-0216"
+        protocol_steps:
+          - "F06.5"
+          - "F08.5"
+      - id: "T08"
+        from: "L04"
+        to: "L05"
+        trigger: "completion"
+        guard: "the consumer recognizes predicateType"
+        actions:
+          - "add the output to the set handed to the policy engine"
+        locator: "§9.4.4"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          How the outputs of several lines are combined for the policy engine is not stated.
+        quotes:
+          - at: "§9.4.4"
+            source_lines: "968-970"
+            quote: |-
+              Just prior to deployment the CI/CD system checks `fooly.apk` with a policy engine (providing `fooly.apk.intoto.jsonl` as it does so) to ensure the app is safe to publish.
+            status: "example"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0061"
+          - "in-toto-attestation-v1#R-0071"
+        protocol_steps:
+          - "F06.7"
+        source_defects:
+          - "SD-10"
+    invariants:
+      - id: "I-01"
+        text: >-
+          The set of accepted outputs depends on the set of lines, never on their order (MUST
+          NOT depend).
+        quotes:
+          - at: "§9.1"
+            source_lines: "884"
+            quote: |-
+              - Processing of a Bundle MUST NOT depend on the order of the attestations.
+            status: "spec"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0077"
+      - id: "I-02"
+        text: >-
+          No line's outcome rejects the Bundle: the only outcomes are processed and ignored.
+        quotes:
+          - at: "§9.1"
+            source_lines: "880-881"
+            quote: |-
+              Consumers MUST ignore unrecognized lines.
+            status: "spec"
+          - at: "§9.1"
+            source_lines: "882-883"
+            quote: |-
+              Consumers MUST ignore attestations with unrecognized keys, types, subjects, or predicates.
+            status: "spec"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0075"
+          - "in-toto-attestation-v1#R-0076"
+      - id: "I-03"
+        text: >-
+          A deleted, replayed or injected line is processed like any other: the Bundle is not
+          authenticated as a whole.
+        quotes:
+          - at: "§9"
+            source_lines: "864-868"
+            quote: |-
+              The Bundle is not authenticated as a whole. Instead each individual attestation is authenticated using signature formats like [DSSE]. As such, an attacker might be able to delete valid attestations, replay obsolete attestations, and/or inject invalid or irrelevant attestations in a Bundle without being detected.
+            status: "spec"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0176"
+    error_states: []
+    terminal_states:
+      - "L05"
+      - "X01"
+      - "X02"
+  - id: "M03"
+    name: "bundle-file-lifecycle"
+    title: "A Bundle file over time, from the §9.4 example"
+    run_by: "producer, storage"
+    locator: "§9.2, §9.3, §9.4"
+    status: "example"
+    summary: >-
+      The only lifecycle the source shows for a stored object, and it shows it in a
+      non-normative example. Every legitimate transition adds or removes whole lines; none is
+      visible to a consumer, because nothing signs the Bundle as a whole. The adversarial
+      transitions of T06 are stated as a risk in §9 and have the same shape as the legitimate
+      ones.
+    initial: "B00"
+    states:
+      - id: "B00"
+        name: "absent"
+        kind: "stated"
+        initial: true
+        description: "No Bundle exists for the file."
+      - id: "B01"
+        name: "created"
+        kind: "stated"
+        description: "<filename>.intoto.jsonl holds the first producer's Envelope lines."
+      - id: "B02"
+        name: "extended"
+        kind: "stated"
+        description: "Later producers' Envelope lines have been appended."
+      - id: "B03"
+        name: "published"
+        kind: "stated"
+        terminal: true
+        description: >-
+          A filtered copy (some lines removed) is published; the source does not say what
+          becomes of the original.
+    transitions:
+      - id: "T01"
+        from: "B00"
+        to: "B01"
+        trigger: "attestations-produced"
+        guard: >-
+          the file name is <filename>.intoto.jsonl for the file the attestations are relevant to
+          (SHOULD)
+        actions:
+          - "write one Envelope per line"
+        locator: "§9.4.1, §9.2"
+        kind: "stated"
+        quotes:
+          - at: "§9.4.1"
+            source_lines: "926-928"
+            quote: |-
+              The builder places _both_ of these signed attestations in a new file named `fooly.apk.intoto.jsonl`.
+            status: "example"
+          - at: "§9.2"
+            source_lines: "890-891"
+            quote: |-
+              A Bundle of attestations relevant for `<filename>` SHOULD be named `<filename>.intoto.jsonl`.
+            status: "spec"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0078"
+          - "in-toto-attestation-v1#R-0079"
+          - "in-toto-attestation-v1#R-0122"
+          - "in-toto-attestation-v1#R-0177"
+          - "in-toto-attestation-v1#R-0215"
+        protocol_steps:
+          - "F05.1"
+          - "F05.2"
+          - "F08.1"
+      - id: "T02"
+        from: "B01"
+        to: "B02"
+        trigger: "attestation-appended"
+        guard: "the new attestation is relevant to the file or its dependencies (SHOULD)"
+        actions:
+          - "append one Envelope line"
+        locator: "§9.4.2, §9.2"
+        kind: "stated"
+        quotes:
+          - at: "§9.4.2"
+            source_lines: "944"
+            quote: |-
+              The TestResult is then appended to the contents of `fooly.apk.intoto.jsonl`
+            status: "example"
+          - at: "§9.2"
+            source_lines: "892-893"
+            quote: |-
+              Attestations in the Bundle MAY have different subjects, but they SHOULD all be relevant to that file or its dependencies.
+            status: "spec"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0119"
+          - "in-toto-attestation-v1#R-0120"
+        protocol_steps:
+          - "F05.3"
+          - "F08.3"
+      - id: "T03"
+        from: "B02"
+        to: "B02"
+        trigger: "attestation-appended"
+        guard: "as T02"
+        actions:
+          - "append one Envelope line"
+        locator: "§9.4.3, §9.2"
+        kind: "stated"
+        quotes:
+          - at: "§9.4.3"
+            source_lines: "957"
+            quote: |-
+              and appending that to the contents of `fooly.apk.intoto.jsonl`.
+            status: "example"
+          - at: "§9.2"
+            source_lines: "892-893"
+            quote: |-
+              Attestations in the Bundle MAY have different subjects, but they SHOULD all be relevant to that file or its dependencies.
+            status: "spec"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0119"
+          - "in-toto-attestation-v1#R-0120"
+        protocol_steps:
+          - "F05.3"
+          - "F08.4"
+      - id: "T04"
+        from: "B02"
+        to: "B02"
+        trigger: "policy-check"
+        guard: "none"
+        actions:
+          - "none: the Bundle is read, not changed (M02 runs per line)"
+        locator: "§9.4.4"
+        kind: "stated"
+        quotes:
+          - at: "§9.4.4"
+            source_lines: "968-970"
+            quote: |-
+              Just prior to deployment the CI/CD system checks `fooly.apk` with a policy engine (providing `fooly.apk.intoto.jsonl` as it does so) to ensure the app is safe to publish.
+            status: "example"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0076"
+          - "in-toto-attestation-v1#R-0216"
+        protocol_steps:
+          - "F08.5"
+      - id: "T05"
+        from: "B02"
+        to: "B03"
+        trigger: "publish"
+        guard: "the publisher selects lines by predicateType"
+        actions:
+          - "remove the selected lines"
+          - "publish the rest"
+        locator: "§9.4.5"
+        kind: "stated"
+        quotes:
+          - at: "§9.4.5"
+            source_lines: "979-981"
+            quote: |-
+              The CI/CD system then iterates through all the attestations, removing the attestation with `predicateType=https://fooly.app/Builder/v1` and publishes to their website:
+            status: "example"
+        constrained_by: []
+        protocol_steps:
+          - "F05.5"
+          - "F08.7"
+        note: "The published lines do not reproduce the retained ones (SD-07)."
+        source_defects:
+          - "SD-07"
+      - id: "T06"
+        from: "B01"
+        to: "B01"
+        trigger: "attack"
+        guard: >-
+          an attacker with write access deletes valid lines, replays obsolete ones or injects
+          invalid or irrelevant ones
+        actions:
+          - "lines change; no consumer can detect it"
+        locator: "§9"
+        kind: "stated"
+        quotes:
+          - at: "§9"
+            source_lines: "864-868"
+            quote: |-
+              The Bundle is not authenticated as a whole. Instead each individual attestation is authenticated using signature formats like [DSSE]. As such, an attacker might be able to delete valid attestations, replay obsolete attestations, and/or inject invalid or irrelevant attestations in a Bundle without being detected.
+            status: "spec"
+          - at: "§9"
+            source_lines: "870-872"
+            quote: |-
+              Our Bundle specification aims to reduce the risks of such attacks. In addition, predicates that follow the [monotonic principle] should not have any issues with deletion attacks.
+            status: "spec"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0176"
+        note: >-
+          Stands for the same self-transition on B02 and B03. Predicates that follow the
+          monotonic principle are said to have no issue with deletion; for replay and injection
+          the source names no mechanism, saying only that the Bundle specification aims to
+          reduce the risks (L870).
+    error_states_note: "None: the source defines no failure for a Bundle file."
+    error_states: []
+    terminal_states:
+      - "B03"
+  - id: "M04"
+    name: "type-version-lifecycle"
+    title: "A type (the Statement or a predicate) moving through SemVer versions"
+    run_by: "predicate-author"
+    locator: "§2.2, §11.2, §11.3"
+    status: "spec"
+    summary: >-
+      §11 applies to Statement and predicate versioning alike. The state is the type's current
+      version under its TypeURI; a version bump is a transition whose guard is the kind of
+      change. 0.X versions count as major versions.
+    initial: "V01"
+    states:
+      - id: "V01"
+        name: "version-M.m.p"
+        kind: "stated"
+        initial: true
+        description: "The type at version M.m.p under the TypeURI of major version M."
+      - id: "V02"
+        name: "version-M.(m+1).0"
+        kind: "stated"
+        description: "A new minor version under the same TypeURI."
+      - id: "V03"
+        name: "version-(M+1).0.0"
+        kind: "stated"
+        description: "A new major version under a new TypeURI."
+    transitions:
+      - id: "T01"
+        from: "V01"
+        to: "V01"
+        trigger: "change-proposed"
+        guard: "a PATCH-level change (the source says PATCH is kept only for SemVer compliance)"
+        actions:
+          - "increment p; TypeURI unchanged"
+        locator: "§11.2"
+        kind: "stated"
+        quotes:
+          - at: "§11.2"
+            source_lines: "1071-1072"
+            quote: |-
+              (PATCH isn't really needed, but we do it just so we're SemVer compliant.)
+            status: "spec"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0180"
+      - id: "T02"
+        from: "V01"
+        to: "V02"
+        trigger: "change-proposed"
+        guard: >-
+          the change follows the monotonic principle: new fields whose absence has no meaning
+          and whose presence does not change any other field
+        actions:
+          - "increment m; TypeURI unchanged"
+        locator: "§2.2, §11.2, §11.3"
+        kind: "stated"
+        quotes:
+          - at: "§2.2"
+            source_lines: "118"
+            quote: |-
+              Minor version changes always follow the monotonic principle.
+            status: "spec"
+          - at: "§11.2"
+            source_lines: "1080-1082"
+            quote: |-
+              (All fields present in both versions have the same meaning, and the absence of any new fields has no semantic meaning.)
+            status: "spec"
+          - at: "§11.3"
+            source_lines: "1098-1101"
+            quote: |-
+              Provenance 1.1.0 (minor version) adds a new `buildFinished` timestamp. This is OK because the absence of the `buildFinished` has no semantic meaning and the presence or absence of `buildFinished` does not affect the rest of the message. The type ID is still `https://slsa.dev/provenance/v1`.
+            status: "example"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0085"
+          - "in-toto-attestation-v1#R-0086"
+          - "in-toto-attestation-v1#R-0087"
+          - "in-toto-attestation-v1#R-0130"
+          - "in-toto-attestation-v1#R-0128"
+          - "in-toto-attestation-v1#R-0182"
+          - "in-toto-attestation-v1#R-0183"
+      - id: "T03"
+        from: "V01"
+        to: "V03"
+        trigger: "change-proposed"
+        guard: >-
+          a new field changes the meaning of an existing one, or an existing field's meaning
+          changes
+        actions:
+          - "increment M; new TypeURI"
+        locator: "§11.2, §11.3"
+        kind: "stated"
+        quotes:
+          - at: "§11.2"
+            source_lines: "1076-1077"
+            quote: |-
+              Any message MUST be semantically correct when parsed as any other version with the same major number.
+            status: "spec"
+          - at: "§11.3"
+            source_lines: "1103-1105"
+            quote: |-
+              Provenance 2.0.0 (major version) adds a new `recipe.extraArgs` field. This is required because the meaning of `recipe` changes if `extraArgs` is present. Parsing it as 1.x.y will result in an incorrect interpretation.
+            status: "example"
+          - at: "§11.3"
+            source_lines: "1107-1108"
+            quote: |-
+              Provenance 3.0.0 (major version) modifies the meaning of `builder.id`. This is required because an existing field was modified.
+            status: "example"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0085"
+          - "in-toto-attestation-v1#R-0128"
+          - "in-toto-attestation-v1#R-0184"
+        note: >-
+          The rule is R-0085: a change that would make some message parse wrongly under another
+          minor version cannot be a minor version; §11.3's examples show the two kinds.
+      - id: "T04"
+        from: "V01"
+        to: "V03"
+        trigger: "change-proposed"
+        guard: >-
+          the type is at a 0.X version: a change to X is a new major version, so a new TypeURI
+        actions:
+          - "new TypeURI for each 0.X"
+        locator: "§11.2, §2.2"
+        kind: "stated"
+        quotes:
+          - at: "§11.2"
+            source_lines: "1073-1074"
+            quote: |-
+              NOTE: 0.X.Y versions are considered major versions for the purposes of this doc, consistent with semantic versioning.
+            status: "spec"
+          - at: "§2.2"
+            source_lines: "119"
+            quote: |-
+              NOTE: 0.X versions are considered major versions.
+            status: "spec"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0131"
+          - "in-toto-attestation-v1#R-0181"
+    error_states: []
+    terminal_states: []
+  - id: "M05"
+    name: "consumer-version-handling"
+    title: "Consumer handling of a received type by its TypeURI"
+    run_by: "consumer"
+    locator: "§2.2, §11.2, §12"
+    status: "spec"
+    summary: >-
+      The consumer's side of M04: a TypeURI it implements is parsed across minor versions; any
+      other TypeURI, including another major version of a known type, is not recognized. The
+      outcome for an unrecognized type is stated for a Statement (§12 rejects) and inside a
+      Bundle (ignore), and not stated elsewhere.
+    initial: "C01"
+    states:
+      - id: "C01"
+        name: "type-received"
+        kind: "stated"
+        initial: true
+        description: "A Statement or predicate with TypeURI U."
+      - id: "C02"
+        name: "parsed"
+        kind: "stated"
+        terminal: true
+        description: "Parsed as the implemented version: semantically correct, unknown fields ignored."
+      - id: "C03"
+        name: "unrecognized"
+        kind: "stated"
+        terminal: true
+        description: "U is not a TypeURI the consumer implements."
+    transitions:
+      - id: "T01"
+        from: "C01"
+        to: "C02"
+        trigger: "type-received"
+        guard: >-
+          U equals, as an opaque string, a TypeURI the consumer implements (same major version)
+        actions:
+          - "parse as the implemented minor version"
+          - "ignore unrecognized fields"
+        locator: "§11.2"
+        kind: "stated"
+        quotes:
+          - at: "§11.2"
+            source_lines: "1088-1091"
+            quote: |-
+              The type ID only includes the major version. This allows implementations to support any major version without having to parse the URI to pull out the version. (Parsing is impossible since we don't mandate the format of the URI.) Implementations just use the URI as an opaque string.
+            status: "spec"
+          - at: "§11.2"
+            source_lines: "1076-1077"
+            quote: |-
+              Any message MUST be semantically correct when parsed as any other version with the same major number.
+            status: "spec"
+          - at: "§11.2"
+            source_lines: "1079-1080"
+            quote: |-
+              Parsing an older message as a newer minor/patch version MUST be semantically equivalent to parsing it as the original version.
+            status: "spec"
+          - at: "§11.2"
+            source_lines: "1083-1084"
+            quote: |-
+              Parsing a newer message as an older minor/patch version MUST be semantically equivalent to parsing it as the newer version with all new fields removed.
+            status: "spec"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0085"
+          - "in-toto-attestation-v1#R-0086"
+          - "in-toto-attestation-v1#R-0087"
+          - "in-toto-attestation-v1#R-0001"
+          - "in-toto-attestation-v1#R-0185"
+          - "in-toto-attestation-v1#R-0129"
+          - "in-toto-attestation-v1#R-0197"
+        protocol_steps:
+          - "F09.1"
+          - "F09.2"
+          - "F09.3"
+      - id: "T02"
+        from: "C01"
+        to: "C03"
+        trigger: "type-received"
+        guard: "U matches no implemented TypeURI"
+        actions:
+          - "reject (Statement, §12) or ignore (Bundle, §9.1)"
+        locator: "§1.1.1, §9.1"
+        kind: "inferred"
+        inferred: true
+        inferred_reason: >-
+          The source makes a major version a new TypeURI and says what happens to an
+          unrecognized type in a Bundle (ignore) and to a Statement in §12 (reject); it states
+          no general rule.
+        quotes:
+          - at: "§1.1.1"
+            source_lines: "57-59"
+            quote: |-
+              Tagged release v2.0.0 (MAJOR version) changes the meaning of the `predicateType` field. A new `v2` directory is added to `/spec` and the `_type` of a `Statement` becomes `https://in-toto.io/Statement/v2`.
+            status: "example"
+          - at: "§9.1"
+            source_lines: "882-883"
+            quote: |-
+              Consumers MUST ignore attestations with unrecognized keys, types, subjects, or predicates.
+            status: "spec"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0076"
+          - "in-toto-attestation-v1#R-0199"
+          - "in-toto-attestation-v1#R-0131"
+        protocol_steps:
+          - "F09.4"
+    error_states: []
+    terminal_states:
+      - "C02"
+      - "C03"
+  - id: "M06"
+    name: "framework-release-lifecycle"
+    title: "Tagged releases of the Attestation Framework"
+    run_by: "maintainers"
+    locator: "§1.1, §1.1.1, §10"
+    status: "spec"
+    summary: >-
+      Distinct from M04: the version of the framework's tagged releases, whose MAJOR.MINOR
+      matches the spec's. The CHANGELOG records the history v1, v1.1, v1.2, all under
+      Statement/v1.
+    initial: "R01"
+    states:
+      - id: "R01"
+        name: "release-vM.m.p"
+        kind: "stated"
+        initial: true
+        description: "A tagged release vM.m.p; the spec is vM.m."
+      - id: "R02"
+        name: "release-vM.m.(p+1)"
+        kind: "stated"
+        description: "A PATCH release."
+      - id: "R03"
+        name: "release-vM.(m+1).0"
+        kind: "stated"
+        description: "A MINOR release with a new CHANGELOG entry."
+      - id: "R04"
+        name: "release-v(M+1).0.0"
+        kind: "stated"
+        description: "A MAJOR release: a new spec directory and Statement _type."
+    transitions:
+      - id: "T01"
+        from: "R01"
+        to: "R02"
+        trigger: "release-tagged"
+        guard: >-
+          predicate specifications changed, or language bindings changed compatibly; the core
+          spec's semantics unchanged
+        actions:
+          - "Statement _type unchanged"
+        locator: "§1.1, §1.1.1"
+        kind: "stated"
+        quotes:
+          - at: "§1.1"
+            source_lines: "38-39"
+            quote: |-
+              We use new tagged PATCH version releases to indicate updates to predicate specifications and/or backwards-compatible changes to the language bindings.
+            status: "spec"
+          - at: "§1.1.1"
+            source_lines: "43-47"
+            quote: |-
+              Attestation Framework tagged release v1.0.2 (PATCH version) incorporates refinements to the predicate specification process, a new predicate type, and a small patch to the Golang language bindings. None of these changes affects the semantics of the core spec. The `_type` of a `Statement` is still `https://in-toto.io/Statement/v1`.
+            status: "example"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0126"
+      - id: "T02"
+        from: "R01"
+        to: "R03"
+        trigger: "release-tagged"
+        guard: "a backwards-compatible semantic update to the spec, predicates excepted"
+        actions:
+          - "add a CHANGELOG entry"
+          - "Statement _type unchanged"
+        locator: "§1.1, §1.1.1"
+        kind: "stated"
+        quotes:
+          - at: "§1.1"
+            source_lines: "36-37"
+            quote: |-
+              Backwards-compatible semantic updates to the spec (except predicates) are indicated through new tagged MINOR version releases.
+            status: "spec"
+          - at: "§1.1.1"
+            source_lines: "49-55"
+            quote: |-
+              Tagged release v1.1.0 (MINOR version) generalizes the semantics of the `DigestSet` field type to support any type of immutable identifier. This change is backwards comptabile because cryptographic digests are strongly recommended to achieve immutability, so any implementations that only support cryptographic `DigestSet` still meet the modified semantics. The `_type` of a `Statement` is still `https://in-toto.io/Statement/v1` but a new entry in the `v1` CHANGELOG is added.
+            status: "example"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0125"
+          - "in-toto-attestation-v1#R-0124"
+        note: "SD-15: v1.2 (L1035-1036) widened payloadType in a MINOR release."
+        source_defects:
+          - "SD-15"
+      - id: "T03"
+        from: "R01"
+        to: "R04"
+        trigger: "release-tagged"
+        guard: "a change to the meaning of the spec, e.g. of predicateType"
+        actions:
+          - "add spec/v2"
+          - "Statement _type becomes https://in-toto.io/Statement/v2"
+        locator: "§1.1.1"
+        kind: "stated"
+        quotes:
+          - at: "§1.1.1"
+            source_lines: "57-59"
+            quote: |-
+              Tagged release v2.0.0 (MAJOR version) changes the meaning of the `predicateType` field. A new `v2` directory is added to `/spec` and the `_type` of a `Statement` becomes `https://in-toto.io/Statement/v2`.
+            status: "example"
+        constrained_by:
+          - "in-toto-attestation-v1#R-0124"
+    history:
+      - version: "v1"
+        text: "Initial release."
+        quotes:
+          - at: "§10.3"
+            source_lines: "1046"
+            quote: |-
+              Initial release.
+            status: "spec"
+      - version: "v1.1"
+        text: "Subjects assumed immutable; non-cryptographic digests acceptable."
+        quotes:
+          - at: "§10.2"
+            source_lines: "1040-1042"
+            quote: |-
+              Clarified that subjects are assumed to be immutable and that it is acceptable to use a non-cryptographic digest (though cryptographic digests are still strongly recommended).
+            status: "spec"
+      - version: "v1.2"
+        text: "payloadType may be application/vnd.in-toto.<predicate>+json."
+        quotes:
+          - at: "§10.1"
+            source_lines: "1035-1036"
+            quote: |-
+              Expanded the allowed values for the envelope's `payloadType` field to `application/vnd.in-toto.<predicate>+json`. See [Envelope Fields].
+            status: "spec"
+    error_states: []
+    terminal_states: []
+source_defects: >-
+  Recorded once, in protocol.yaml source_defects_and_tensions (SD-01 to SD-18); each entry's
+  affects list is copied by script onto the steps, transitions and machines it names, as
+  source_defects. Here: M01 SD-01, SD-02, SD-04, SD-05, SD-11, SD-12, SD-13, SD-14; M02 SD-10;
+  M03 SD-07; M06 SD-15.
+coverage: >-
+  6 machines, 35 states (6 error states), 39 transitions (6 inferred), 14 triggers; M01 14
+  states, 16 transitions (1 inferred); M02 7 states, 8 transitions (4 inferred); M03 4 states, 6
+  transitions (0 inferred); M04 3 states, 4 transitions (0 inferred); M05 3 states, 2
+  transitions (1 inferred); M06 4 states, 3 transitions (0 inferred). Counted by the script
+  that wrote this file, on 2026-11-09. constrained_by, recounted by pass 2 (verify): pass 1's
+  figure of 23 distinct ids counted transitions only (24 with invariant I-01's R-0077), all R-0001
+  to R-0087; pass 2 re-emitted the lists against all 218 entries as protocol.yaml's were (split
+  parents to their children, the validation model's steps R-0186 to R-0196 and the other
+  keyword-less and inferred entries added), giving 99 links in transitions to 63 distinct ids,
+  103 links and 64 ids with the invariants. One transition has an empty list: M03.T05 (the
+  example's filtered publication, which no rule governs).
