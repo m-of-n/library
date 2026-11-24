@@ -3,7 +3,7 @@ schema: "library-summary/v1"
 id: secure-systems-lab-dsse
 record: secure-systems-lab-dsse
 type: summary
-updated: "2026-10-08"
+updated: "2026-11-23"
 ---
 
 # Dead Simple Signing Envelope (DSSE)
@@ -68,9 +68,10 @@ Canonical JSON scheme TUF and in-toto used:
    verifying, which is both error-prone—too easy to forget to verify—and an
    unnecessarily increased attack surface."*
 
-Separately, the old scheme carried no authenticated context indicator, so a
-signer could obtain a CBOR message meaning X and have a verifier read it as a
-protobuf message meaning Y.
+Separately, the old scheme carried no authenticated context indicator, so an
+attacker could get a signer to produce a CBOR message meaning X and have a
+verifier read it as a protobuf message meaning Y (background.md's own wording
+gives the attacker's part to the signer; `distilled/normative.md` SD-20).
 
 **Worth noting precisely:** in DSSE's own design-requirements list these are
 **SHOULD**, not MUST — *"SHOULD avoid depending on canonicalization for
@@ -101,8 +102,12 @@ target therefore gave R-M-06 a cheaper interchange story than expected. It does
 not. The sentence continues *"where `t` is application-specific"* — `t` is a
 verifier-side parameter supplied out of band, not an envelope field — and
 `envelope.md` adds that multiple signatures are *"equivalent to separate
-envelopes with individual signatures"*. A DSSE envelope carries `n` and cannot
-carry `k`. See `distilled/design-notes.md` §1.
+envelopes with individual signatures"*. A DSSE envelope carries neither `n` nor
+`k`: it carries a list of signatures, and `n` is the count of trusted keys on
+the verifier's side, so signatures by untrusted keys, failing ones and repeats
+by one key all sit in the list and count toward nothing; `k` and the member set
+have to travel inside the signed payload. See `distilled/design-notes.md` §1
+and Part 4.3.
 
 ## Limits
 
@@ -114,11 +119,15 @@ carry `k`. See `distilled/design-notes.md` §1.
   type or a URI. Under R-M-12 (accepted as ARCH-0002 P1 via ADR-0001) that is
   exactly the centrally allocated extension point the native model excludes. But
   the recommendation is a **SHOULD**, and `envelope.md` §Other data structures
-  licenses the escape — *"code `payloadType` as a shorter string or enum"* —
-  which PAE authenticates just as well. So DSSE does not force a global
-  identifier; its default recommends one, and the cost of declining is ecosystem
-  divergence rather than non-conformance. This corrects a stronger claim made
-  here earlier; see `distilled/design-notes.md` §2.
+  permits other encodings that keep the signature valid — *"code `payloadType`
+  as a shorter string or enum"* — but a coded type is only a transmission
+  spelling: PAE authenticates the full string, so the code is mapped back to it
+  before PAE is computed, and that mapping lies outside every signature. So
+  DSSE does not force a global identifier — declining the SHOULD departs from a
+  SHOULD and from nothing stronger — but the type that is authenticated is
+  still the full string, and a locally scoped code is not authenticated by
+  PAE. This corrects a stronger claim made here earlier, and a first correction
+  that went too far; see `distilled/design-notes.md` §2 (Part 2.4).
 - **`envelope.md` requires consumers to `MUST ignore unrecognized fields`**,
   which is the opposite default to ARCH-0002 **P5**'s reject-unknown — at the
   envelope layer only, since unsupported *payload types* are rejected. A
@@ -135,6 +144,7 @@ carry `k`. See `distilled/design-notes.md` §1.
   `implementation/` and `governance/` sub-trees are not specification text and
   are not read. Reading the last three changed two conclusions recorded here;
   both retractions are above and in `distilled/design-notes.md`.
-- This record is type `repo`, so FX-1 full extraction does not apply to it. If
-  DSSE becomes a selected envelope under DEC-005 rather than an export target,
-  that exemption should be revisited.
+- This record has an FX-1 full extraction (`distilled/`, library#152), against
+  a rendering of the five specification files; `distilled/README.md` indexes
+  it. If DSSE becomes a selected envelope under DEC-005 rather than an export
+  target, its design notes are the place to start.

@@ -1,0 +1,45 @@
+; DERIVED - not verbatim. Written by this library from protocol.md 1.1 (rendering
+; lines 60-69) and the identical definition in envelope.proto (rendering
+; lines 297-304). Neither source gives a grammar; both give the formula
+;
+;   PAE(type, body) = "DSSEv1" + SP + LEN(type) + SP + type + SP + LEN(body) + SP + body
+;
+; with SP, "DSSEv1" and LEN() defined beneath it. Do not cite this file as
+; the DSSE specification's grammar. Dialect: RFC 5234 ABNF, with one extension
+; ABNF cannot express (marked LENGTH-BOUND). Checked by check-pae.derived.py
+; against ../examples/pae-vectors.derived.json.
+;
+; PAE is applied to byte sequences: `type` is UTF8(PAYLOAD_TYPE) and `body` is
+; SERIALIZED_BODY (protocol 1.1: "parameters `type` and `body` are byte
+; sequences"; the signature is Sign(PAE(UTF8(PAYLOAD_TYPE), SERIALIZED_BODY))).
+
+pae         = version SP type-len SP type SP body-len SP body
+
+version     = %x44.53.53.45.76.31          ; "DSSEv1" = ASCII [0x44, 0x53, 0x53, 0x45, 0x76, 0x31]
+SP          = %x20                         ; ASCII space [0x20]
+
+type-len    = LEN
+body-len    = LEN
+
+; LEN(s) = ASCII decimal encoding of the byte length of s, with no leading zeros.
+; Zero: the source does not say how zero is written. "No leading zeros" read as
+; "the shortest decimal numeral" gives "0"; the grammar below says so and this
+; is the library's reading (DERIVED ASSUMPTION), not a statement of the source.
+LEN         = "0" / ( %x31-39 *DIGIT )
+DIGIT       = %x30-39                      ; ASCII digits only (RFC 5234 core rule)
+
+; LENGTH-BOUND: the octet count of `type` is the integer that type-len spells,
+; and the octet count of `body` is the integer that body-len spells. Any octet
+; value 0x00-0xFF may appear in either, including SP.
+type        = *OCTET
+body        = *OCTET
+OCTET       = %x00-FF
+
+; Consequences a conforming parser must show (all checked by check-pae.derived.py):
+;   - the encoding is the concatenation of exactly five SP-separated fields in
+;     the order above, so with empty type and empty body it is "DSSEv1 0  0 "
+;     (two consecutive spaces, a trailing space);
+;   - there is no terminator after body: PAE ends where body ends;
+;   - SP inside type or body is data, never a delimiter, because the lengths
+;     say how many octets to take;
+;   - LEN counts BYTES, not characters: U+00E9 in PAYLOAD_TYPE contributes 2.
