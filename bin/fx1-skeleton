@@ -10,6 +10,13 @@ XML v3 rendering (`bin/fetch-source --xml`), for `<sourcecode>` blocks and a
 per-section `<bcp14>` cross-count. RFCs before ~8650 have no v3 XML; the .txt
 alone still yields every requirement and candidate.
 
+A PDF source (`content.media_type: application/pdf`, library#69) is read
+through the pdftotext rendering `bin/fetch-source` writes: the PDF is checked
+against `content.sha256`, the .txt against a fresh rendering of it, and both
+pinned in requirements.yaml. Keywords default to `--vocabulary directives`
+(ETSI/ISO verbal forms, lowercase); one in informative text is filed as a
+candidate, not a requirement. See docs/extraction.md, "A PDF source".
+
 Writes, under distilled/:
 
   requirements.yaml       one entry per BCP 14-bearing sentence: id, locator,
@@ -81,12 +88,16 @@ def lines_field(a, b):
     return f"'{a}-{b}'" if a != b else f"'{a}'"
 
 
-def blocks(cleaned, heads):
-    """Paragraph and list-item blocks, each a [(lineno, text)]."""
+def blocks(cleaned, heads, starts=()):
+    """Paragraph and list-item blocks, each a [(lineno, text)]. A line in
+    `starts` opens a block and is kept: a run-in heading carries body text."""
     cur, res = [], []
     for ln, l in cleaned:
         if l is None:
             continue
+        if ln in starts and cur:
+            res.append(cur)
+            cur = []
         if not l.strip() or ln in heads:
             if cur:
                 res.append(cur)
@@ -170,10 +181,15 @@ def main():
     ap.add_argument("--txt")
     ap.add_argument("--out", help="write here instead of <rec>/distilled")
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--vocabulary", choices=sorted(_bcp14.VOCABULARIES),
+                    help="keyword set; default bcp14 for an RFC, directives "
+                         "(ETSI/ISO verbal forms, lowercase) for a PDF source")
     a = ap.parse_args()
     rec = pathlib.Path(a.rec).resolve()
     meta = load_yaml(rec / "record.yaml") if (rec / "record.yaml").exists() else {}
     rid = str(meta.get("id") or rec.name)
+    profile = st.profile_of(meta)
+    vocab = a.vocabulary or ("bcp14" if profile == "rfc" else "directives")
     txtp = pathlib.Path(a.txt) if a.txt else ROOT / ".cache" / f"{rid}.txt"
     xmlp = pathlib.Path(a.xml) if a.xml else ROOT / ".cache" / f"{rid}.xml"
     if not txtp.exists():
@@ -181,45 +197,99 @@ def main():
     data = txtp.read_bytes()
     want = str((meta.get("content") or {}).get("sha256") or "")
     got = hashlib.sha256(data).hexdigest()
-    if want and got != want and not a.txt:
+    rendered_by = None
+    if profile == "pdf" and not a.txt:
+        # The source of record is the PDF; the .txt is its pinned rendering.
+        # Verify the PDF, then that the .txt IS its rendering by this
+        # pdftotext, so every line number below means one thing (library#69).
+        binp = ROOT / ".cache" / f"{rid}.bin"
+        if not binp.exists():
+            sys.exit(f"fx1-skeleton: no {binp} — bin/fetch-source {rid}")
+        got = hashlib.sha256(binp.read_bytes()).hexdigest()
+        if want and got != want:
+            sys.exit(f"fx1-skeleton: {binp.name} is sha256:{got[:16]}…, record cites "
+                     f"{want[:16]}… — not the source of record")
+        fresh, rendered_by = st.render_pdf(binp)
+        if fresh.encode("utf-8") != data:
+            sys.exit(f"fx1-skeleton: {txtp.name} is not this pdftotext's rendering of "
+                     f"{binp.name} — bin/fetch-source {rid} --force")
+    elif want and got != want and not a.txt:
         sys.exit(f"fx1-skeleton: {txtp.name} is sha256:{got[:16]}…, record cites "
                  f"{want[:16]}… — not the source of record")
     src = data.decode(errors="replace").split("\n")
     if not st.looks_like_text(src):
         sys.exit(f"fx1-skeleton: {txtp.name} is HTML, not the RFC .txt — point "
                  f"content.url at rfcNNNN.txt (library#86)")
-    cleaned = st.clean(src)
-    sec = st.section_of_line(src)
-    letters = st.appendix_letters(src)
+    cleaned = st.clean_for(src, profile)
+    sec = st.section_of_line_for(src, profile)
     heads, titles = set(), {}
-    for i, l in enumerate(src, 1):
-        k = st.heading_key(l.replace("\f", ""), letters)
-        if k:
-            heads.add(i)
-            titles[k] = l.split(None, 1)[1] if " " in l else ""
+    runin = set()
+    for i, k in st.headings_for(src, profile).items():
+        l = src[i - 1].replace("\f", "")
+        if k.startswith("¶"):
+            runin.add(i)
+            titles.setdefault(k, st.PDF_RUNIN.match(l.strip()).group(2))
+            continue
+        if profile == "yaml" and cleaned[i - 1][1]:
+            runin.add(i)            # `measure: text` — the key line holds prose
+            titles.setdefault(k, k.rsplit(" / ", 1)[-1])
+            continue
+        heads.add(i)
+        if k not in titles:
+            titles[k] = l.split(None, 1)[1] if " " in l.strip() else l.strip()
+        else:
+            titles[k] += " " + l.strip()
 
     def title_chain(key):
         """Titles of `key` and its ancestors: §6.1's References parent counts."""
         parts, k = [], key or ""
+        sep = " / " if profile == "yaml" else "."
         while k:
-            parts.append(titles.get(k, ""))
-            k = k.rsplit(".", 1)[0] if "." in k else ""
+            parts.append(titles.get(k, "") if profile != "yaml" else k.rsplit(sep, 1)[-1])
+            k = k.rsplit(sep, 1)[0] if sep in k else ""
         return " ".join(parts)
 
     full = "\n".join(l for _, l in cleaned if l is not None)
-    bp = _bcp14._BOILERPLATE.search(full)
-    bp_text = re.sub(r"\s+", " ", bp.group(0)) if bp else None
+    bp_rx = _bcp14._DBOILERPLATE if vocab == "directives" else _bcp14._BOILERPLATE
+    bp_texts = [re.sub(r"\s+", " ", m.group(0)) for m in bp_rx.finditer(full)]
+    if vocab == "bcp14":
+        bp_texts = bp_texts[:1]
+    kw_rx = _bcp14.regex(vocab)
+
+    def informative_why(s, block, title):
+        """Why a sentence sits in informative text under the drafting rules,
+        or None. Only for `directives`: BCP 14 binds by capitals, not place."""
+        if vocab != "directives":
+            return None
+        if not s:
+            return "front matter"
+        if st.informative(s):
+            return s
+        if re.match(r"\s*(NOTE|EXAMPLE)\b", block[0][1]):
+            return re.match(r"\s*(NOTE|EXAMPLE)", block[0][1]).group(1)
+        if re.search(r"\(informative\)", title, re.I):
+            return "informative annex"
+        if re.search(r"\breferences\b", title, re.I):
+            return "references clause"
+        return None
+    inform = {}
     code, xkw = read_xml(xmlp) if xmlp.exists() else ([], {})
 
     reqs, cands, per_sec = [], [], {}
-    for b in blocks(cleaned, heads):
+    for b in blocks(cleaned, heads, runin):
         is_item = bool(BULLET.match(b[0][1]))
         is_step = bool(STEP.match(b[0][1]))
         for text, l1, l2 in sentences(b):
-            if bp_text and text in bp_text:
+            if any(text in t for t in bp_texts):
                 continue
             s = sec[l1 - 1]
-            k = [re.sub(r"\s+", " ", x) for x in _bcp14._RX.findall(text)]
+            k = [_bcp14.canonical(x, vocab) for x in kw_rx.findall(text)]
+            why = informative_why(s, b, title_chain(s)) if k else None
+            if why:
+                inform[why] = inform.get(why, 0) + len(k)
+                cands.append(dict(locator=s or "front matter", l1=l1, l2=l2, text=text,
+                                  cue=f"informative ({why}): {', '.join(k)}"))
+                continue
             if k:
                 per_sec[s or "front"] = per_sec.get(s or "front", 0) + len(k)
                 reqs.append(dict(locator=s or "front matter", l1=l1, l2=l2, text=text, kw=k))
@@ -239,16 +309,41 @@ def main():
     (d / "schema").mkdir(parents=True, exist_ok=True)
     (d / "examples").mkdir(parents=True, exist_ok=True)
 
-    src_count = _bcp14.count("\n".join(src))
+    src_count = _bcp14.count_v("\n".join(src), vocab)
+    raw_count = src_count
+    if profile == "yaml":
+        # a YAML model's text is its prose; keys, ids, URLs and comments are
+        # structure. The raw-file count is reported beside it.
+        src_count = _bcp14.count_v("\n".join(l for _, l in cleaned if l), vocab)
     ext_count = sum(len(r["kw"]) for r in reqs)
-    recon = ('""' if src_count == ext_count else
-             q(f"TODO: the skeleton carries {ext_count} of {src_count}; "
-               f"see skeleton-report.txt and account for each"))
+    n_inf = sum(inform.values())
+    if src_count == ext_count:
+        recon = '""'
+    elif vocab == "directives" and src_count == ext_count + n_inf:
+        # Computed, not written: the arithmetic closes exactly.
+        parts = ", ".join(f"{n} in {w}" for w, n in sorted(inform.items()))
+        recon = q(f"{src_count} verbal forms in the source = {ext_count} in requirements "
+                  f"+ {n_inf} in informative text ({parts}), each filed as a candidate "
+                  f"for pass 1 to confirm: informative text states no provision "
+                  f"(ETSI Drafting Rules 3.2, ISO/IEC Directives Part 2 — and pass 1 "
+                  f"checks each for a publisher that does not follow them)")
+    else:
+        recon = q(f"TODO: the skeleton carries {ext_count} of {src_count}"
+                  f"{f' (+{n_inf} informative)' if n_inf else ''}; "
+                  f"see skeleton-report.txt and account for each")
     out = ['schema: "library-requirements/v1"', f"record: {rid}",
            "generated_by: bin/fx1-skeleton",
            f"source_version: {q(meta.get('title') or 'TODO')}",
-           f"source_digest: {q(got)}",
-           f"source_keyword_count: {src_count}        # bin/bcp14-count",
+           f"source_digest: {q(got)}"]
+    if vocab != "bcp14":
+        out += [f"keyword_vocabulary: {vocab}"]
+    if rendered_by:
+        out += [f"source_text: {q(rendered_by)}",
+                f"source_text_digest: {q(hashlib.sha256(data).hexdigest())}"]
+    out += [f"source_keyword_count: {src_count}        # "
+            + ("prose of the YAML (bin/_source_text.clean_yaml); the raw file holds "
+               f"{raw_count}" if profile == "yaml" else
+               f"bin/bcp14-count{' --vocabulary ' + vocab if vocab != 'bcp14' else ''}"),
            f"extracted_keyword_count: {ext_count}",
            f"reconciliation: {recon}",
            'reviewed_by: ""',
@@ -324,11 +419,23 @@ def main():
         nm += ["## Code blocks and figures (verbatim from the RFC XML)", ""] + listing + [""]
     (d / "normative.md").write_text("\n".join(nm) + "\n")
 
-    rep = [f"txt keyword count (bcp14-count): {src_count}",
+    tableish = sum(1 for _, l in cleaned if l and len(re.findall(r"\S\s{6,}\S", l)) >= 1
+                   and not st.TOC_ENTRY.search(l))
+    hyph = sum(1 for _, l in cleaned if l and re.search(r"[A-Za-z0-9]-$", l.rstrip()))
+    rep = [f"profile: {profile}   vocabulary: {vocab}"
+           f"{'   rendered by: ' + rendered_by if rendered_by else ''}",
+           f"txt keyword count (bcp14-count): {src_count}",
            f"skeleton sentences: {len(reqs)}  keywords in them: {ext_count}",
            f"XML <bcp14> total: {sum(xkw.values()) if xkw else 'no XML'}",
            f"candidates (no keyword): {len(cands)}",
-           f"code blocks: {n_s} schema, {n_e} examples, {n_f} figures", "",
+           f"code blocks: {n_s} schema, {n_e} examples, {n_f} figures"]
+    if profile == "pdf":
+        rep += [f"informative keywords filed as candidates: {n_inf}"
+                + "".join(f"\n  {w:24} {n:3}" for w, n in sorted(inform.items())),
+                f"lines with an interior gap of 6+ spaces (table cells, NOTE labels; a "
+                f"sentence built across them may weld two columns): {tableish}",
+                f"line-end hyphens joined with no space (rule 3): {hyph}"]
+    rep += ["",
            "per section: skeleton / xml"]
     for s in sorted(set(per_sec) | set(xkw), key=lambda x: (x.startswith("A"), x)):
         flag = "" if not xkw or per_sec.get(s, 0) == xkw.get(s, 0) else "   <-- differs"

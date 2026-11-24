@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
-"""bcp14-count — count normative BCP 14 keywords in a source document.
+"""bcp14-count — count normative keywords in a source document.
 
-    bin/bcp14-count <source.txt> [--by-keyword]
+    bin/bcp14-count <source.txt> [--by-keyword] [--vocabulary bcp14|directives]
 
 Put the result in distilled/requirements.yaml as source_keyword_count. Run it
-on the plain-text source (RFC .txt, or a pdftotext rendering) — never on our
-own summary or normative.md.
+on the plain-text source (RFC .txt, or the pdftotext rendering bin/fetch-source
+writes for a PDF) — never on our own summary or normative.md.
+
+`bcp14` (default): RFC 2119/8174 keywords, UPPERCASE only. `directives`: the
+ETSI Drafting Rules / ISO/IEC Directives verbal forms, which bind in lowercase
+(library#69); use the vocabulary requirements.yaml names.
 """
-import pathlib, sys
+import argparse, pathlib, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import _bcp14
 
-if len(sys.argv) < 2:
-    print(__doc__); sys.exit(2)
-t = pathlib.Path(sys.argv[1]).read_text(errors="replace")
-print(_bcp14.count(t))
-if "--by-keyword" in sys.argv:
-    for k, v in sorted(_bcp14.by_keyword(t).items(), key=lambda x: -x[1]):
+ap = argparse.ArgumentParser(usage=__doc__)
+ap.add_argument("source")
+ap.add_argument("--by-keyword", action="store_true")
+ap.add_argument("--vocabulary", default="bcp14", choices=sorted(_bcp14.VOCABULARIES))
+a = ap.parse_args()
+t = pathlib.Path(a.source).read_text(errors="replace")
+print(_bcp14.count_v(t, a.vocabulary))
+if a.by_keyword:
+    for k, v in sorted(_bcp14.by_keyword_v(t, a.vocabulary).items(), key=lambda x: -x[1]):
         print(f"  {k:16} {v}")

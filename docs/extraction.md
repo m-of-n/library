@@ -296,6 +296,43 @@ bin/check-locators records/ietf/rfc-9943     # every locator contains its text
 bin/validate                                 # enforces all of the above that CI can see
 ```
 
+### A PDF source (library#69)
+
+A standard published as a PDF — ETSI, ISO/IEC, NIST — runs the same pipeline.
+The PDF stays the source of record (`content.sha256`); every tool reads its
+`pdftotext -layout` rendering, which `bin/fetch-source` writes to
+`.cache/<id>.txt` beside the verified `.cache/<id>.bin` (`brew install
+poppler`). `bin/fx1-skeleton` checks that the .txt is this pdftotext's
+rendering of that PDF and pins it in `requirements.yaml`
+(`source_text`, `source_text_digest`), and `bin/check-quotes` refuses any other
+rendering, because a different pdftotext version moves every line number.
+
+A record is read this way when `content.media_type` is `application/pdf`.
+`bin/_source_text` then removes running headers and footers by recurrence
+across pages, keys clauses as `§5.1.2`, `Annex A.2`, or a drafting-rules title
+(`Foreword`, `Introduction`, `Modal verbs terminology`, ...), and joins a
+wrapped clause title. The RFC reading is unchanged.
+
+The keywords are `keyword_vocabulary: directives`: the verbal forms of the
+ETSI Drafting Rules §3.2 and ISO/IEC Directives Part 2 — shall, shall not,
+should, should not, may, need not, can, cannot, plus must and must not — in
+lowercase, because these documents have no capitals convention. Informative
+text states no provision under those rules, so a verbal form in front matter,
+an informative clause, a NOTE or EXAMPLE, the references clause, or an
+informative annex goes to `inferred-candidates.yaml`, not `requirements.yaml`.
+When the source count is exactly requirements plus informative, the skeleton
+writes the reconciliation itself; otherwise it leaves a TODO.
+
+A YAML data model (`content.media_type: application/yaml`, e.g. OWASP DSOMM's
+`generated/model.yaml`) is its own source of record, digest-pinned like an RFC
+.txt. Sections are key paths (`Dimension / Sub-dimension / Activity /
+measure`, list items `[n]`); only block-scalar text and multi-word inline
+values are prose, with the `key: ` prefix blanked, so no key is ever quoted.
+
+What the PDF reading does NOT do: split table columns. A sentence built from
+a `-layout` table row can weld two cells; `skeleton-report.txt` counts the
+lines where that can happen, and pass 1 checks them.
+
 `.cache/` is not in CI, so `bin/check-quotes` and `bin/check-locators` are run
 by the passes and their results written into `coverage`; `bin/validate`
 enforces what it can without the source — for a skeleton-generated
