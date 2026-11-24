@@ -52,5 +52,30 @@ check("body text filed under its section", sec.get("Intro MUST text.") == "§1",
 check("subsection text filed under §1.1", sec.get("Goal text.") == "§1.1", repr(sec))
 check("appendix text filed under the appendix", sec.get("Ref.") == "Appendix A", repr(sec))
 
+# --ordinal: a pre-respec page with bare <h2>..<h4> headings (PICS, DSig).
+OLD = """<html><body><h1>Title</h1><h3>Status</h3><p>Front.</p>
+<h2>Overview</h2><p>Over text.</p>
+<h2>Syntax</h2><h3>Labels</h3><p>Label text.</p><h4>Deep</h4><p>Deep text.</p>
+<h3>Options</h3><p>Opt text.</p><h2>Appendix A: More</h2><p>App text.</p>
+</body></html>
+"""
+with tempfile.TemporaryDirectory() as d:
+    src, dst = pathlib.Path(d, "o.bin"), pathlib.Path(d, "o.txt")
+    src.write_text(OLD)
+    subprocess.run([sys.executable, "-I", str(BIN / "render-w3c"), "--ordinal", str(src), str(dst)], check=True)
+    ol = dst.read_text().split("\n")
+    subprocess.run([sys.executable, "-I", str(BIN / "render-w3c"), str(src), str(dst)], check=True)
+    plain = dst.read_text().split("\n")
+osec = dict(zip(ol, st.section_of_line(ol)))
+check("ordinal: h2 numbered", "1.  Overview" in ol, repr(ol))
+check("ordinal: h3 under second h2", "2.1.  Labels" in ol, repr(ol))
+check("ordinal: h4 nests", "2.1.1.  Deep" in ol, repr(ol))
+check("ordinal: h3 counter resets per h2, continues per h3", "2.2.  Options" in ol, repr(ol))
+check("ordinal: appendix heading is an ordinal, not a letter", "3.  Appendix A: More" in ol, repr(ol))
+check("ordinal: pre-h2 heading unnumbered", "   Status" in ol, repr(ol))
+check("ordinal: front matter unfiled", osec.get("Front.") is None, repr(osec))
+check("ordinal: deep text filed", osec.get("Deep text.") == "§2.1.1", repr(osec))
+check("without --ordinal nothing is numbered", "   Overview" in plain and "1.  Overview" not in plain, repr(plain))
+
 print(f"test_render_w3c: {total - fail}/{total} passed")
 sys.exit(1 if fail else 0)

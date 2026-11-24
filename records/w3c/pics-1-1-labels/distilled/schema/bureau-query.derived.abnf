@@ -1,0 +1,64 @@
+; DERIVED, not verbatim. Written by this library (FX-1 pass 1, schema lane) from section 12.2
+; (Detailed Syntax of HTTP Query for Labels Separate From Documents) of PICS 1.1 Label
+; Distribution (W3C REC 1996-10-31). The source grammar is in bureau-query-s12-2.verbatim.txt.
+; Executed by check-grammar.derived.py in CHARACTER mode (no token layer) on one request line
+; after the presentation line breaks of the examples are removed (README.md, A13). Literals are
+; case-insensitive (the source writes 'get' and 'post' in lower case; every example sends GET).
+;
+; Changes from the source, each listed in README.md:
+;  * names that collide with section 7 or section 11.3 carry a bq- prefix (A9);
+;  * the source writes [and] before format, u and s. The prose says "&" "must be included unless
+;    it immediately follows the ?": the first parameter has none and every later one has one (A11);
+;  * the source's extension has no [and] at all, which makes any extension after the first
+;    parameter unwritable; here it takes "&" like the others. get-as-written keeps the source's
+;    reading so the difference can be tested (A12);
+;  * the source's get has no space after 'get' and no HTTP version; request-line adds both (A13);
+;  * encodedURL is "a quoted URL": all 26 printed in the five sample queries (8 distinct values) put
+;    it between double quotes, the text can also mean %xx-quoted; both are accepted (A14).
+
+request-line   = get SP %s"HTTP/" 1*DIGIT "." 1*DIGIT
+get            = "get" SP url-fragment "?" ordered-params
+; the source's order: [opt] [format] extension* url+ service+ ; the first parameter present has no "&"
+ordered-params = bq-opt after-opt
+               / bq-format after-format
+               / bq-extension after-format
+               / bq-url after-url
+after-opt      = [ "&" bq-format ] after-format
+after-format   = *( "&" bq-extension ) 1*( "&" bq-url ) 1*( "&" bq-service )
+after-url      = *( "&" bq-url ) 1*( "&" bq-service )
+; the source's own reading: every "&" optional, extension has none
+get-as-written = "get" SP url-fragment "?" [ bq-opt ] [ [ "&" ] bq-format ] *bq-extension
+                 1*( [ "&" ] bq-url ) 1*( [ "&" ] bq-service )
+bq-opt         = "opt=" bq-option
+bq-option      = "generic" / "normal" / "tree" / "generic+tree"
+bq-format      = "format=" form
+form           = "minimal" / "short" / "full" / "signed"
+; source (L354-357): extension :: token '=' token-or-quoted-string where the token is not one of
+; opt, format, u, or s; and token-or-quoted-string follows the quoting conventions specified in
+; RFC-1738
+; The exclusion is applied as the named hook EXCLUDE on bq-ext-token (A12).
+bq-extension   = bq-ext-token "=" bq-token-or-quoted-string
+bq-ext-token   = 1*alphanumpm
+bq-token-or-quoted-string = bq-token / quotedname
+bq-token       = 1*alphanumpm
+quotedname     = DQUOTE 1*urlchar-or-space DQUOTE
+bq-url         = "u=" encodedurl
+bq-service     = "s=" encodedurl
+encodedurl     = DQUOTE 1*enc-char DQUOTE / 1*enc-char
+; "Alphabetic characters, digits, and the special characters $_-.+!*'(), need not be quoted, but
+; other characters must be."
+enc-char       = ALPHA / DIGIT / "$" / "_" / "-" / "." / "+" / "!" / "*" / "'" / "(" / ")" / ","
+               / "%" HEXDIG HEXDIG
+alphanumpm     = ALPHA / DIGIT / "+" / "-"
+transmit-name-char = alphanumpm / "." / "$" / "," / ";" / ":" / "&" / "=" / "?" / "!" / "*"
+               / "~" / "@" / "#" / "_" / "%" HEXDIG HEXDIG
+urlchar-or-space = transmit-name-char / "(" / ")" / SP
+; url-fragment: "the part of the original URL after the host name, as specified in HTTP 1.0".
+; ASSUMED (A6): printable US-ASCII other than space and "?".
+url-fragment   = 1*( %x21-3E / %x40-7E )
+; post :: 'post' url-fragment crlf crlf formencodeddata. Source (L371-373):
+; formencodeddata :: The query as specified for get but encoded into MIME type
+; application/x-www-form-encoded as described in sections 8.2.1 and 8.2.3 of HTML 2.0.
+; The media type is as printed (sic: HTML 2.0 names application/x-www-form-urlencoded; normative.md
+; SD-E). The body is not modelled beyond printable bytes.
+post           = "post" SP url-fragment CR LF CR LF 1*( %x20-7E )
