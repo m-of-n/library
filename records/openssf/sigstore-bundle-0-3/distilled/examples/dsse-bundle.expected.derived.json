@@ -1,0 +1,201 @@
+{
+ "kind": "derived-expected-results",
+ "note": "DERIVED - written by this library. Results of reproduce.py on the verbatim fixture. result: pass | FAIL | NOT VERIFIABLE (the source does not hold what the check needs). negative_control, where a check has one: the same check on a damaged copy, which must fail.",
+ "fixture": "bundle-dsse.verbatim.json",
+ "base64_fields": [
+  {
+   "path": "/verificationMaterial/x509CertificateChain/certificates/0/rawBytes",
+   "bytes": 824,
+   "alphabet": "standard",
+   "padded": true
+  },
+  {
+   "path": "/verificationMaterial/tlogEntries/0/logId/keyId",
+   "bytes": 32,
+   "alphabet": "standard",
+   "padded": true
+  },
+  {
+   "path": "/verificationMaterial/tlogEntries/0/inclusionPromise/signedEntryTimestamp",
+   "bytes": 70,
+   "alphabet": "standard",
+   "padded": true
+  },
+  {
+   "path": "/verificationMaterial/tlogEntries/0/inclusionProof/rootHash",
+   "bytes": 32,
+   "alphabet": "standard",
+   "padded": true
+  },
+  {
+   "path": "/verificationMaterial/tlogEntries/0/canonicalizedBody",
+   "bytes": 4448,
+   "alphabet": "either",
+   "padded": true
+  },
+  {
+   "path": "/verificationMaterial/timestampVerificationData/rfc3161Timestamps/0/signedTimestamp",
+   "bytes": 543,
+   "alphabet": "standard",
+   "padded": false
+  },
+  {
+   "path": "/dsseEnvelope/payload",
+   "bytes": 1344,
+   "alphabet": "either",
+   "padded": false
+  },
+  {
+   "path": "/dsseEnvelope/signatures/0/sig",
+   "bytes": 71,
+   "alphabet": "standard",
+   "padded": true
+  }
+ ],
+ "checks": [
+  {
+   "check": "parse as JSON",
+   "result": "pass",
+   "detail": "json.loads"
+  },
+  {
+   "check": "decode every base64 field",
+   "result": "pass",
+   "detail": "8 fields decoded; alphabets ['either', 'standard']; padded 6, unpadded 2"
+  },
+  {
+   "check": "canonicalizedBody is compact JSON, apiVersion/kind match kindVersion",
+   "result": "pass",
+   "detail": "kind intoto apiVersion 0.0.2; re-serialised compactly in the same key order: True"
+  },
+  {
+   "check": "X.509 leaf parsed (own DER reader)",
+   "result": "pass",
+   "detail": {
+    "not_before": "2023-02-01T00:00:00+00:00",
+    "not_after": "2023-02-01T00:10:00+00:00",
+    "curve_oid": "1.2.840.10045.3.1.7",
+    "extension_oids": [
+     "2.5.29.15",
+     "2.5.29.37",
+     "2.5.29.17",
+     "2.5.29.14",
+     "2.5.29.35",
+     "1.3.6.1.4.1.57264.1.8",
+     "1.3.6.1.4.1.57264.1.1",
+     "1.3.6.1.4.1.11129.2.4.2"
+    ]
+   }
+  },
+  {
+   "check": "Fulcio OID extensions (1.3.6.1.4.1.57264.1.N) present",
+   "result": "pass",
+   "detail": "arcs ['1', '8']; the source only points at the Fulcio oid-info page, it lists none"
+  },
+  {
+   "check": "integratedTime inside notBefore..notAfter",
+   "result": "pass",
+   "detail": "integratedTime 2023-02-01T00:00:00+00:00; window 2023-02-01T00:00:00+00:00 .. 2023-02-01T00:10:00+00:00",
+   "negative_control": "pass"
+  },
+  {
+   "check": "decoded DSSE payload vs the printed 'embedded attestation' block (L271-317)",
+   "result": "pass",
+   "detail": "byte-identical (the block cut by line, with its final newline)",
+   "negative_control": "pass (stripping the final newline makes them differ)"
+  },
+  {
+   "check": "intoto body payloadHash == SHA-256(decoded payload)",
+   "result": "pass",
+   "detail": "0ebbdbc21d182007b78b5770dea249f110946b7ded857a4ec00ccb692c1e25af"
+  },
+  {
+   "check": "intoto body envelope.payload is base64 of the bundle's base64 payload (double encoding)",
+   "result": "pass",
+   "detail": "body payload decodes to the bundle payload text, not to the statement"
+  },
+  {
+   "check": "intoto body signature is base64 of the bundle's base64 sig; publicKey is the bundle certificate (R-0067)",
+   "result": "pass",
+   "detail": "double-encoded sig; PEM body == chain[0]"
+  },
+  {
+   "check": "intoto body content.hash reproduced",
+   "result": "pass",
+   "detail": "c8ef87a3fb811da45a418865596ab916032458cd13592c7ff1a53e8fd157c580 = SHA-256 of the sorted, compact JSON of {payload, payloadType, signatures: [{publicKey: the certificate PEM, sig}]}, payload and sig in the bundle's base64, keyid left out (it is empty). The source does not state this scheme (Rekor's, outside it); found by trying serialisations.",
+   "negative_control": "pass (keeping the empty keyid gives another hash)"
+  },
+  {
+   "check": "ECDSA(P-256, SHA-256) signature over PAE(payloadType, payload), chain[0] key, via openssl",
+   "result": "pass",
+   "detail": "PAE = DSSEv1 SP LEN(type) SP type SP LEN(payload) SP payload (envelope.proto comment, L237-245)",
+   "negative_control": "pass (altered payloadType rejected)"
+  },
+  {
+   "check": "RFC 3161 messageImprint == SHA-256(DSSE signature) (R-0003)",
+   "result": "pass",
+   "detail": "imprint 9b72f4419437d16d5c1a06199442839370a4bb5eb16ce72e93a7f303679b5036"
+  },
+  {
+   "check": "RFC 3161 genTime inside certificate validity",
+   "result": "pass",
+   "detail": "genTime 2023-02-01T00:00:00+00:00 == notBefore 2023-02-01T00:00:00+00:00: True (boundary, inclusive)"
+  },
+  {
+   "check": "RFC 3161 signedAttrs messageDigest == SHA-256(TSTInfo)",
+   "result": "pass",
+   "detail": "consistent; the TSA signature itself is not checked"
+  },
+  {
+   "check": "RFC 3161 TSA signature",
+   "result": "NOT VERIFIABLE",
+   "detail": "the timestamp carries 0 certificates and the source holds no TSA certificate"
+  },
+  {
+   "check": "chain: order, leaf first, no root (R-0005..R-0007)",
+   "result": "pass",
+   "detail": "one certificate, the leaf; its issuer is not in the bundle"
+  },
+  {
+   "check": "checkpoint tree size and root hash equal inclusionProof",
+   "result": "pass",
+   "detail": "origin 'localhost:8000 - 124190645164477'; size 1; root pc42iecujVMfPva3JcoWyQU9W6llYb+A2LsgE2O5pg0=; extra lines ['Timestamp: 1675209600000000000']"
+  },
+  {
+   "check": "checkpoint signature key hint (first 4 bytes) vs logId.keyId",
+   "result": "pass",
+   "detail": "hint f726caa3 == keyId[:4] f726caa3 (an observation; the source does not say how they relate)"
+  },
+  {
+   "check": "checkpoint signature",
+   "result": "NOT VERIFIABLE",
+   "detail": "the log's public key is not in the source"
+  },
+  {
+   "check": "signedEntryTimestamp (inclusion promise)",
+   "result": "NOT VERIFIABLE",
+   "detail": "the log's public key is not in the source; canonicalizedBody + logIndex + logId + integratedTime are present for rebuilding the payload"
+  },
+  {
+   "check": "Merkle inclusion proof, leaf = SHA-256(0x00 || canonicalizedBody) (RFC 9162 2.1.3.2)",
+   "result": "pass",
+   "detail": "index 0 size 1 0 hashes, each - bytes",
+   "negative_control": "pass (altered leaf rejected)"
+  },
+  {
+   "check": "tlog entry logIndex vs inclusionProof.logIndex",
+   "result": "pass",
+   "detail": "4288993 vs 0: different numbers (global index vs tree index); the source defines both without relating them"
+  },
+  {
+   "check": "derived schema Bundle accepts the bundle",
+   "result": "pass",
+   "detail": ""
+  },
+  {
+   "check": "derived schema BundleV03 accepts the bundle",
+   "result": "pass",
+   "detail": ""
+  }
+ ]
+}
